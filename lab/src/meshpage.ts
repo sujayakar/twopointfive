@@ -1,0 +1,78 @@
+// THE STONE YARD: the meshes, to look at and to measure on whatever machine opens the page. One file; what takes long is made in a worker.
+import { Lab, TICK, type Method } from './lab';
+import { Present } from './present';
+import { realtime } from './stages/realtime';
+import { pathTracer } from './stages/path';
+import { withMeshes, rasterOnly, RASTER, drawn, type Drawn } from './stages/meshes';
+import { buildMeshes, give, FINE, type Meshes } from './scene/meshes';
+import type { Stage } from './graph';
+import { showError } from './gpu';
+
+const Q = new URLSearchParams(typeof location === 'undefined' ? '' : location.search);
+const fine = (q: URLSearchParams) => { FINE.column = Number(q.get('column') ?? 1); FINE.pebble = Number(q.get('pebble') ?? 5); };
+const MODES = ['Picture', 'Triangles', 'Clusters', 'Levels', 'Normals'];
+/** what each pixel's triangle, cluster or level is, as a color */
+const look = (lab: Lab): Stage => ({ name: 'mesh look', over: 'render', when: () => ui.mode > 0, reads: { id: 'idT', surf: 'surfT' }, writes: { outL: 'meshLook' }, buffers: { meshSlots: ['meshSlots', 'array<vec4f>', 'read'], lookK: ['lookK', 'vec4u', 'uniform'] }, code: `
+fn hue(h0: u32) -> vec3f { let h = pcg(h0); return 0.25 + 0.75 * vec3f(f32(h & 255u), f32((h >> 8u) & 255u), f32((h >> 16u) & 255u)) / 255.0; }
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let dim = vec2u(frame.size.xy); if (any(id.xy >= dim)) { return; } let a = textureLoad(idT, id.xy, 0).x; let s = textureLoad(surfT, id.xy, 0); let n = octUnpack(s.y); let shade = 0.35 + 0.65 * max(dot(n, normalize(vec3f(0.4, 0.8, 0.3))), 0.0); var c = vec3f(0.04) + 0.1 * shade;
+  if ((a >> 30u) == 1u) { let slot = (a >> 7u) & 0x7fffffu; let r = bitcast<vec4u>(meshSlots[slot * 4u + 3u]); let key = r.z * 7919u + (r.w >> 8u); if (lookK.x == 1u) { c = hue(key * 128u + (a & 127u)) * shade; } else if (lookK.x == 2u) { c = hue(key) * shade; } else if (lookK.x == 3u) { let h = mrowU(pieces[r.z >> 11u].planes); let m = mrowU(h.z + (r.z & 2047u) * 4u + 3u).x; let lv = mrowU(bitcast<u32>(mrow(m + 1u).w) + (r.w >> 8u)).w; let t = f32(lv) / 10.0; c = clamp(vec3f(abs(t * 4.0 - 3.0) - 1.0, 2.0 - abs(t * 4.0 - 2.0), 2.0 - abs(t * 4.0 - 1.0)), vec3f(0.08), vec3f(1.0)) * shade; } }
+  if (lookK.x == 4u) { c = n * 0.5 + 0.5; } textureStore(outL, id.xy, vec4f(c, 1.0)); }` });
+const withLook = (m: Method): Method => { const s = m.stages.bind(m), g = m.signals.bind(m); m.signals = (gr, lab) => { g(gr, lab); gr.signal('meshLook', 'rgba16float', 'render'); lab.uniform('lookK', new Uint32Array(4)); }; m.stages = lab => [...s(lab), look(lab)]; return m; };
+const ui = { mode: 0, hour: 15.4, rays: 1, ref: false, busy: false };
+const $ = (id: string) => document.getElementById(id)!, wait = () => new Promise(r => setTimeout(r));
+
+async function made(): Promise<Meshes> {
+  const text = document.querySelector('script[type=module]')?.textContent ?? '';
+  try {
+    if (text.length < 1000) throw new Error('no text of its own'); const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' })), w = new Worker(url, { type: 'module' });
+    return await new Promise<Meshes>((ok, no) => { w.onmessage = e => { if (e.data.say) $('what').textContent = e.data.say; else { ok(e.data.meshes); w.terminate(); } }; w.onerror = e => no(e); w.postMessage({ make: location.search }); });
+  } catch { $('what').textContent = 'Making the stones (this page may not use a worker, so it stands still meanwhile)'; await wait(); await wait(); return buildMeshes(); }
+}
+async function page() {
+  fine(Q); const canvas = $('c') as HTMLCanvasElement, t0 = performance.now(); $('what').textContent = 'Making the stones'; const m = await made(); give(m); const tMade = performance.now() - t0;
+  $('what').textContent = 'Opening the GPU'; await wait(); const lab = new Lab(); await lab.open(canvas, 'meshes'); const present = new Present(lab.gpu); await present.init(); (window as never as { lab: Lab }).lab = lab;
+  const rt = withLook(withMeshes(realtime())), ref = pathTracer(), raster = rasterOnly(), cap = Number(Q.get('cap') ?? 2.4e6); let scale = Number(Q.get('scale') ?? 0.8);
+  const fit = () => { const dpr = window.devicePixelRatio || 1, w = Math.max(64, innerWidth * dpr), h = Math.max(64, innerHeight * dpr), k = Math.min(1, Math.sqrt(cap / (w * h))), ow = Math.round(w * k), oh = Math.round(h * k); if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; } lab.resize([Math.round(ow * scale), Math.round(oh * scale)], [ow, oh]); };
+  fit(); $('what').textContent = 'Compiling'; await lab.use(rt); await wait();
+  const c = lab.camera, s = lab.building.place.start; Object.assign(c.want, { look: [...s.look], yaw: s.yaw, pitch: s.pitch, dist: 9 }); c.snap(); lab.smooth = true;
+  // ---- near by coming nearer to four metres, then by a longer lens
+  let near = 9; const zoom = () => { c.want.dist = Math.max(4, near); lens = Math.min(0.4, 0.4 * near / 4); }; let lens = 0.4;
+  const mm = () => 2 * Math.tan(c.fov / 2) * c.dist / lab.graph.render[1] * 1000;
+  let drag: { x: number; y: number; pan: boolean } | null = null;
+  canvas.onpointerdown = e => { drag = { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey }; canvas.setPointerCapture(e.pointerId); }; canvas.onpointerup = () => { drag = null; }; canvas.oncontextmenu = e => e.preventDefault();
+  canvas.onpointermove = e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; if (drag.pan) { const k = near * 0.0009, sn = Math.sin(c.want.yaw), cs = Math.cos(c.want.yaw); c.want.look = [c.want.look[0] + (-dx * cs - dy * sn) * k, Math.max(0, Math.min(1.7, c.want.look[1])), c.want.look[2] + (dx * sn - dy * cs) * k]; } else { c.want.yaw -= dx * 0.005; c.want.pitch = Math.max(0.06, Math.min(1.5, c.want.pitch + dy * 0.004)); } };
+  canvas.onwheel = e => { e.preventDefault(); near = Math.max(0.12, Math.min(60, near * Math.exp(e.deltaY * 0.0012))); zoom(); };
+  const held = new Set<string>(); onkeydown = e => { if (e.metaKey || e.ctrlKey) return; held.add(e.key.toLowerCase()); if (e.key === 'p') setRef(!ui.ref); if (e.key >= '1' && e.key <= '5') { ui.mode = +e.key - 1; paint(); } if (e.key === 'f') { RASTER.freeze = !RASTER.freeze; paint(); } }; onkeyup = e => held.delete(e.key.toLowerCase()); onblur = () => held.clear(); onresize = fit;
+  // ---- the panel
+  const buttons = (id: string, names: string[], get: () => number, set: (i: number) => void) => { const el = $(id); el.innerHTML = names.map((n, i) => `<button data-i="${i}">${n}</button>`).join(''); el.onclick = e => { const b = (e.target as HTMLElement).closest('button'); if (b) { set(Number(b.dataset.i)); paint(); } }; paints.push(() => el.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === get()))); }, paints: (() => void)[] = [], paint = () => paints.forEach(f => f());
+  const slider = (id: string, get: () => number, set: (v: number) => void, text: (v: number) => string) => { const el = $(id) as HTMLInputElement, out = $(id + 'T'); el.oninput = () => { set(Number(el.value)); paint(); }; paints.push(() => { el.value = String(get()); out.textContent = text(get()); }); };
+  buttons('mode', MODES, () => ui.mode, i => { ui.mode = i; if (i) setRef(false); }); slider('tau', () => Math.log2(RASTER.tau), v => { RASTER.tau = 2 ** v; }, v => `${(2 ** v).toFixed(2)} px`);
+  buttons('cull', ['Both', 'No cones', 'No depth', 'Neither'], () => (RASTER.cone ? 0 : 1) + (RASTER.hide ? 0 : 2), i => { RASTER.cone = !(i & 1); RASTER.hide = !(i & 2); }); buttons('share', ['Shared', 'Fetched'], () => RASTER.share ? 0 : 1, i => { RASTER.share = i === 0; });
+  buttons('freeze', ['Each frame', 'Held'], () => RASTER.freeze ? 1 : 0, i => { RASTER.freeze = i === 1; }); slider('rays', () => ui.rays, v => { ui.rays = v; }, v => v === 0 ? 'finest' : `${v.toFixed(2)} x`); slider('hour', () => ui.hour, v => { ui.hour = v; }, v => `${Math.floor(v)}:${String(Math.floor(v % 1 * 60)).padStart(2, '0')}`);
+  const setRef = (on: boolean) => { if (ui.busy || on === ui.ref) return; ui.ref = on; ui.busy = true; void lab.use(on ? ref : rt).then(() => { ui.busy = false; paint(); }); }; buttons('ref', ['Real time', 'Path traced'], () => ui.ref ? 1 : 0, i => setRef(i === 1));
+  // ---- measured here: the same two tables as tools/meshcard.cjs rate
+  let measuring = false; $('measure').onclick = () => { if (!measuring) void measure(); };
+  async function measure() {
+    measuring = true; while (ui.busy) await wait(); const out = $('out'), was = { ...RASTER }, cam = { ...c.want, look: [...c.want.look] as [number, number, number], fov: c.fov }, lines: string[] = [`${lab.gpu.info || navigator.userAgent}`, `${m.list.reduce((a, l) => a + l.packed.triangles, 0) / 1e6 | 0} M triangles of ${m.list.length} meshes in ${(m.data.byteLength / 1e6).toFixed(0)} MB, made in ${(tMade / 1000).toFixed(1)} s`]; out.hidden = false; const say = (l: string) => { lines.push(l); out.textContent = lines.join('\n'); };
+    if (!lab.gpu.timestamps) say('This browser gives no GPU times: nothing to measure.');
+    else for (const [w, h] of [[1920, 1080]] as const) {
+      lab.resize([w, h], [w, h]); await lab.use(raster); lab.smooth = false;
+      const row = async (name: string, dist: number, fov: number, how: Partial<typeof RASTER>) => { Object.assign(RASTER, was, { freeze: false }, how); Object.assign(c.want, { look: [0.25, 0.5, 0.2], yaw: 0.62, pitch: 0.5, dist }); c.snap(); c.fov = fov; const sum: Record<string, number> = {}; let n = 0; for (let i = 0; i < 40; i++) { lab.draw(); await lab.gpu.device.queue.onSubmittedWorkDone(); if (i >= 12) { n++; for (const [k, x] of lab.graph.timer.last) sum[k] = (sum[k] ?? 0) + x; } } const d = await drawn(lab), draw = ((sum['mesh draw'] ?? 0) + (sum['mesh second'] ?? 0)) / n, ix = ((sum['mesh draw indices'] ?? 0) + (sum['mesh second indices'] ?? 0)) / n, pick = (sum['mesh pick'] ?? 0) / n; say(`${name.padEnd(26)} ${(d.triangles / 1e6).toFixed(2).padStart(6)} M   pick ${pick.toFixed(2)}  indices ${ix.toFixed(2)}  draw ${draw.toFixed(2)} ms   ${(d.triangles / 1e6 / draw).toFixed(2)} M a ms`); };
+      say('The finest column and drum, smaller and smaller, 1920 x 1080'); for (const share of [true, false]) for (const dist of [4, 9, 22, 55]) await row(`${share ? 'shared' : 'fetched'} at ${dist} m`, dist, 0.4, { fixed: 1e-9, heroes: true, hide: false, cone: false, share });
+      say('The yard, picked by the pixel'); for (const [n, dist, fov] of [['30 m', 30, 0.4], ['9 m', 9, 0.4], ['4 m', 4, 0.4], ['4 m, long lens', 4, 0.1]] as const) for (const tau of [0.5, 1, 2]) await row(`${n}, ${tau} px`, dist, fov, { tau });
+    }
+    Object.assign(RASTER, was); Object.assign(c.want, cam); c.snap(); c.fov = cam.fov; lab.smooth = true; fit(); await lab.use(ui.ref ? ref : rt); say('(select and copy, or press Measure again)'); (window as never as { benchText: string }).benchText = lines.join('\n'); measuring = false;
+  }
+  // ---- the loop
+  paint(); $('load').remove(); let last = performance.now(), acc = 0, frames = 0, flight = 0, seen: Drawn | null = null, asking = false, fps = 60;
+  const loop = (now: number) => {
+    requestAnimationFrame(loop); if (measuring || ui.busy || flight > 2) return; const dt = Math.min(0.1, (now - last) / 1000); last = now; fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05; const k = dt * near * 0.5, sn = Math.sin(c.want.yaw), cs = Math.cos(c.want.yaw), x = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0), z = (held.has('s') ? 1 : 0) - (held.has('w') ? 1 : 0); c.want.look = [c.want.look[0] + (x * cs + z * sn) * k, c.want.look[1] + ((held.has('e') ? 1 : 0) - (held.has('q') ? 1 : 0)) * k, c.want.look[2] + (-x * sn + z * cs) * k];
+    acc += dt; let n = 0; while (acc >= TICK && n++ < 4) { acc -= TICK; lab.step(); } if (n >= 4) acc = 0; c.step(dt); c.fov += (lens - c.fov) * (1 - Math.exp(-dt * 7)); if (Math.abs(c.fov - lens) < 1e-5) c.fov = lens; lab.hour = ui.hour; lab.knobs[1] = ui.ref ? 0 : ui.rays; lab.uniform('lookK', new Uint32Array([ui.mode, 0, 0, 0])); fit(); frames++; lab.graph.timer.on = frames % 12 === 0; present.set(lab); flight++;
+    lab.draw((e, result) => present.run(e, lab, ui.mode && !ui.ref ? lab.graph.texture('meshLook') : result, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, ui.ref ? 'ref' : 'rt', ui.mode && !ui.ref ? { plain: 1 } : {})); void lab.gpu.device.queue.onSubmittedWorkDone().then(() => { flight--; });
+    if (frames % 20 === 0 && !asking && !ui.ref) { asking = true; void drawn(lab).then(d => { seen = d; asking = false; }); }
+    if (frames % 15 === 0) { const t = lab.graph.timer.ms, g = (k: string) => (t.get(k) ?? 0), all = [...t.values()].reduce((a, b) => a + b, 0), mesh = g('mesh pick') + g('mesh draw indices') + g('mesh draw') + g('mesh depth') + g('mesh second') + g('mesh second indices'); $('stats').textContent = `${fps.toFixed(0)} fps   GPU ${all.toFixed(1)} ms   ${lab.graph.render.join(' x ')}\na pixel is ${mm() < 1 ? mm().toFixed(3) : mm().toFixed(1)} mm\n` + (ui.ref ? `${ref.samples} paths a pixel, on the finest` : `${((seen?.triangles ?? 0) / 1e6).toFixed(2)} M triangles in ${seen?.slots ?? 0} clusters\nof ${(total() / 1e6).toFixed(0)} M placed; ${seen?.hid ?? 0} clusters hidden\npick ${g('mesh pick').toFixed(2)}  indices ${(g('mesh draw indices') + g('mesh second indices')).toFixed(2)}\ndraw ${(g('mesh draw') + g('mesh second')).toFixed(2)}  all of it ${mesh.toFixed(2)} ms${seen?.full ? '\nTHE LIST IS FULL' : ''}`) + `\n${(m.data.byteLength / 1e6).toFixed(0)} MB of meshes, made in ${(tMade / 1000).toFixed(1)} s`; }
+  };
+  const total = () => lab.building.world.pieces.reduce((a, p) => { const o = p.mesh === undefined ? null : m.objects.find(x => x.row === p.mesh); return a + (o ? o.levels[0]!.children.reduce((q, k) => q + k.mesh.triangles, 0) : 0); }, 0); requestAnimationFrame(loop);
+}
+if (typeof document === 'undefined') (globalThis as never as { onmessage: unknown }).onmessage = (e: MessageEvent) => { fine(new URLSearchParams(e.data.make)); const post = postMessage as (m: unknown, t?: Transferable[]) => void, meshes = buildMeshes(say => post({ say })); post({ meshes }, [meshes.data.buffer]); };
+else page().catch(e => { showError(String(e.stack ?? e)); console.error(e); });

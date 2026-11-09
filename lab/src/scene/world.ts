@@ -4,7 +4,7 @@ import { buildBvh, type Bounds, type Bvh } from '../bvh';
 import { classOf } from '../core2/blocks';
 
 /** what a piece is to a ray */
-export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29 } as const;
+export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29, /** triangles: what it is stands in the rows at `mesh` (quad's first is its scale) */ MESH: 1 << 6 } as const;
 
 /** ONE PIECE: a frame and half extents, cut by up to 8 planes, one quadric (A x² + B y² + C z² + D y ≤ 1) and up to 3 curves: ellipsoids, or cylinders (a radius of 0 is no end), anywhere in its frame.
  *  Where two of them meet is a crisp edge, as on a car between flank and shoulder */
@@ -14,6 +14,7 @@ export interface Piece {
   tint?: V3; lamp?: number; marks?: Mark[]; seed?: number;
   /** what it is a part of */ thing?: { name: string };
   /** what moves it, by name */ rig?: string;
+  /** of triangles: its object's row (mesh/pack.ts) */ mesh?: number;
   /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
 }
 /** a sign painted on one face: rect in metres about the face's middle, a cell of the atlas, a color */
@@ -27,7 +28,7 @@ export interface Cluster { leaves: Leaf[]; kind: number }
 export interface Instance { cluster: number; at: V3; rot: Rot; scale: number; base: V3; sway: number; phase: number; tint: V3; /** out of doors: the section leaves it whole */ open?: boolean }
 
 export class World {
-  pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = []; plumes: { at: V3; r: number; h: number; k: number }[] = [];
+  pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = []; plumes: { at: V3; r: number; h: number; k: number }[] = []; /** what is made of triangles, packed */ meshes?: import('./meshes').Meshes;
   /** what is made inside is one thing, by this name: two things may not be in the same place */
   as<T>(name: string, make: () => T): T { const was = this.thing; this.thing = { name }; try { return make(); } finally { this.thing = was; } } private thing: { name: string } | undefined;
   add(p: Partial<Piece> & { at: V3; half: V3; mat: number }): Piece {
@@ -64,7 +65,7 @@ export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, 
   const t = p.tint ?? [1, 1, 1], q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
   u[o + 20] = (p.mat | ((p.marks?.length ?? 0) << 8) | (markAt << 12)) >>> 0;
   u[o + 21] = (q(t[0]) | (q(t[1]) << 8) | (q(t[2]) << 16)) >>> 0;
-  u[o + 22] = p.cell ? (Math.round((p.cell[0] + 32) * 1000) | (Math.round((p.cell[1] + 32) * 1000) << 16)) >>> 0 : planeAt >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
+  u[o + 22] = p.cell ? (Math.round((p.cell[0] + 32) * 1000) | (Math.round((p.cell[1] + 32) * 1000) << 16)) >>> 0 : (p.mesh ?? planeAt) >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
 }
 /** HOW OPEN each side of each leaf is: how much of what it faces its own twig's leaves leave to be seen. Found once */
 export function ownShade(c: Cluster): [number, number][] {
