@@ -718,7 +718,7 @@ fn lands(g: &crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
 /// A live hostage in what a grenade there would reach.
 fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
     let reach = g.k.frag.wound_m + g.k.frag.def_scatter[1];
-    g.rescue.hostages.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && flat(g.ch[g.gd[h].ch].pos, p) < reach)
+    crate::mission::captives_up(g).iter().any(|&h| flat(g.ch[g.gd[h].ch].pos, p) < reach)
 }
 
 /// Nobody of the thrower's own side within defOwnM of where it would land with a line to it, and he not within his own arm's error.

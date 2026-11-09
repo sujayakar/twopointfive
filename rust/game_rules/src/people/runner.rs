@@ -61,9 +61,9 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.cond[o.ch].down && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
 }
 
-/// nobody's to take: the hostage rescue's cast and the response team
+/// nobody's to take: the men a mission leads itself and the response team
 fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    (g.rescue.active && g.rescue.hostiles.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
+    g.staged.leads(gd) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame
@@ -199,11 +199,10 @@ pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// the rectangle round every room of the level's structure [x0, x1, z0, z1], worked out once a level
 fn rect_of(g: &mut crate::game::Game) -> Option<[f64; 4]> {
-    let none = match g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()) { Some(s) => s.rooms.is_empty(), None => true };
-    if none { return None; }
+    if g.level.rooms().is_empty() { return None; }
     if let Some(r) = g.m.runner.rects { return Some(r); }
     let mut r = [m::INF, -m::INF, m::INF, -m::INF];
-    for room in &g.level.scenarios.as_ref().unwrap().room_clear.as_ref().unwrap().rooms {
+    for room in g.level.rooms() {
         r[0] = m::min(r[0], room.bounds.x0);
         r[1] = m::max(r[1], room.bounds.x1);
         r[2] = m::min(r[2], room.bounds.z0);

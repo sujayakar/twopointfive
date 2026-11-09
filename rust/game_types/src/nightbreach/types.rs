@@ -38,10 +38,7 @@ pub enum NightBreachState {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NightBreach {
-    pub active: bool,
     pub drill: Option<crate::breach::BreachDrill>,
-    pub ops: Vec<GuardId>,
-    pub hostiles: Vec<GuardId>,
     pub layout: Option<crate::nightbreach::NightBreachLayout>,
     pub marks: Vec<crate::nightbreach::NightBreachMark>,
     pub staged: f64,

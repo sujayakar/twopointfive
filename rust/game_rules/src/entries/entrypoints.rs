@@ -64,7 +64,7 @@ fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg: f6
     let (at, n, half) = opening_shape(g, o);
     for k in [0.0, 0.6, -0.6] {
         let q: V3 = [at[0] + n[1] * half * k + n[0] * sg * 0.3, CHEST, at[2] - n[0] * half * k + n[1] * sg * 0.3];
-        let clear = if open { !crate::roomclear::wall_between(g, eye, q) } else { !crate::scene_collision::segment_blocked(g, eye, q, None, None, None) };
+        let clear = if open { !crate::scene_collision::wall_between(g, eye, q) } else { !crate::scene_collision::segment_blocked(g, eye, q, None, None, None) };
         if clear { return true; }
     }
     false
@@ -106,7 +106,7 @@ pub(super) fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Optio
         for j in [0.0, 0.7, -0.7] {
             let ax = at[0] + n[1] * half * j + n[0] * sg * 0.2;
             let az = at[2] - n[0] * half * j + n[1] * sg * 0.2;
-            if !crate::roomclear::wall_between(g, [ax, EYE, az], to) { seen = true; break; }
+            if !crate::scene_collision::wall_between(g, [ax, EYE, az], to) { seen = true; break; }
         }
         if !seen { continue; }
         best = Some(o);

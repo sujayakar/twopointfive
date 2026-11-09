@@ -64,7 +64,7 @@ fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
 /// Fresh civilians on their first marks; nothing with the switch off or none authored.
 pub fn spawn_civilians(g: &mut crate::game::Game) {
     g.civilians = Vec::new();
-    if !g.tune.civilians || g.night_breach.active || g.rescue.active {
+    if !g.tune.civilians || g.staged.facts.fight {
         return;
     }
     let defs = g.level.civilians.clone().unwrap_or_default();

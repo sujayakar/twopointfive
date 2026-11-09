@@ -55,7 +55,7 @@ const PROP_CLEAR_M: f64 = 0.45;
 const SAM_CLEAR_M: f64 = 8.0;
 fn free(g: &Game, p: [f64; 3], taken: &[[f64; 3]]) -> bool {
     !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
-        && !g.props.props.iter().any(|&i| { let r = &g.tab.props_prop[i]; game::roomclear::prop_gap(game::roomclear::PropGapP { home: r.home, hx: r.hx, hz: r.hz }, p) < PROP_CLEAR_M })
+        && !g.props.props.iter().any(|&i| { let r = &g.tab.props_prop[i]; game::props::prop_gap(r.home, r.hx, r.hz, p) < PROP_CLEAR_M })
         && !taken.iter().any(|t| m::hyp2(t[0] - p[0], t[2] - p[2]) < SPACING_M)
 }
 fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
@@ -70,7 +70,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
     taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     let mut out: Vec<Spot> = Vec::new();
     if game::roomclear::room_clear_scenario_active(g) {
-        let rooms: Vec<_> = g.room_clear.rooms.iter().map(|r| r.def.clone()).collect();
+        let rooms: Vec<_> = g.staged.rooms.iter().map(|r| r.def.clone()).collect();
         let mut lists: Vec<Vec<Spot>> = Vec::new();
         for r in &rooms {
             let mut spots: Vec<Spot> = r.marks.iter().enumerate().filter(|(k, _)| !g.room_clear.placement.iter().any(|p| p.room == r.id && p.mark == *k as f64)).map(|(k, q)| Spot { pos: q.pos, aim_at: q.aim_at, room: Some(r.id.clone()), watch: q.watch.clone(), mark: k as f64 }).collect();
@@ -81,7 +81,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
                 while z <= b.z1 - 0.7 {
                     let pos = [m::round(x * 100.0) / 100.0, 0.0, m::round(z * 100.0) / 100.0];
                     let eye = [pos[0], 1.6, pos[2]];
-                    let q = r.marks.iter().find(|q| !game::roomclear::wall_between(g, eye, q.aim_at)).or(r.marks.first());
+                    let q = r.marks.iter().find(|q| !game::scene_collision::wall_between(g, eye, q.aim_at)).or(r.marks.first());
                     if let Some(q) = q { floor.push(Spot { pos, aim_at: q.aim_at, room: Some(r.id.clone()), watch: q.watch.clone(), mark: -1.0 }); }
                     z += 0.8;
                 }
@@ -125,7 +125,7 @@ fn stand_extra(g: &mut Game, n: f64) {
         let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
-        if g.night_breach.active { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }
+        if game::nightbreach::night_breach_up(g) { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }
         if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;
     }

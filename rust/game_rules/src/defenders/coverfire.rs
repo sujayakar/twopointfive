@@ -387,8 +387,8 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         if lane_hit(g, cc, from, dx, dz, l2, t_max, l) { return false; }
     }
     let mut i = 0;
-    while i < g.rescue.hostages.len() {
-        let h = g.rescue.hostages[i];
+    while i < g.staged.captives.len() {
+        let h = g.staged.captives[i];
         i += 1;
         let hc = g.gd[h].ch;
         if !crate::condition::down(g, g.gd[h].ch) && g.ch[hc].alive && lane_hit(g, hc, from, dx, dz, l2, t_max, l) { return false; }

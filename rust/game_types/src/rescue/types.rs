@@ -5,10 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Rescue {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
-    pub hostiles: Vec<GuardId>,
-    pub hostages: Vec<GuardId>,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
     pub entry: Option<crate::rescue::Entry>,
     pub staged: f64,
@@ -82,7 +78,6 @@ pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
     pub why: String,
-    pub hostages: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

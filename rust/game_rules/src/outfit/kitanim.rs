@@ -119,10 +119,7 @@ pub fn kit_sling_front(g: &mut crate::game::Game) -> bool {
     if js::truthy(g.k.kitanim.sling) {
         return g.k.kitanim.sling == 1.0;
     }
-    match crate::scenario_run::active_scenario(g) {
-        None | Some(crate::scenario_run::ActiveScenario::Quiet) => false,
-        Some(_) => true,
-    }
+    g.staged.facts.fight
 }
 
 /// How far the rifle in front is swung onto his thighs, eased on the game's clock; None = not in front.

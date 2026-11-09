@@ -14,26 +14,4 @@ pub struct StartFromQuery {
     pub why: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum ActiveScenario {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RunningScenario {
-    pub kind: crate::scenario_run::RunningScenarioKind,
-    pub entry: Option<crate::scene_scenarios::ScenarioEntry>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum RunningScenarioKind {
-    #[default] Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-
 pub fn words() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("nightbreach"), String::from("night breach")); t.set(String::from("roomclear"), String::from("room clear")); t.set(String::from("rescue"), String::from("hostage rescue")); t.set(String::from("quiet"), String::from("quiet mission")); t } }

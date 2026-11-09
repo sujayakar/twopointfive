@@ -90,10 +90,10 @@ pub fn thing(g: &Game, f: &str, i: u32) -> Option<&'static str> {
     }
 }
 /// the man of the open card (member i is the team's [i - 1])
-pub(super) fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
+pub(super) fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { g.staged.team.get(st.who as usize - 1).copied() } else { None } }
 /// the card asked for, if its man is on the team as it now stands. True: another card.
 pub(super) fn open_card(g: &Game, st: &mut KitStage) -> bool {
-    let n = crate::scenario_run::team_of(g).len() as u32;
+    let n = g.staged.team.len() as u32;
     let i = if st.want >= 1 && st.want <= n { st.want } else { 0 };
     if i == st.who { return false; }
     st.who = i;
@@ -1286,7 +1286,7 @@ pub(in crate::outfit) fn live(g: &mut Game, st: &mut KitStage) {
     stay(g, st, false);
     spare_sam(g, st, false);
     for i in 0..st.order.len() { let x = st.order[i]; let p = home_of(g, st, x).0; go(g, st, x, vec![p], K.pace, 0.0, false); }
-    let team = crate::scenario_run::team_of(g);
+    let team = g.staged.team.clone();
     for (k, &x) in team.iter().enumerate() {
         let i = k as u32 + 1;
         let c = g.gd[x].ch;

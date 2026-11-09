@@ -402,7 +402,7 @@ pub(super) fn door_tools_last_call(g: &mut crate::game::Game, op: DoorOpId) -> b
     let r = &o!(g, op);
     if !(r.kind == DoorToolKind::Threshold && !r.on_word && r.word.is_none() && r.gate.is_none() && r.thr_hold != Some(true)) { return false; }
     let d = r.door;
-    crate::rescue::rescue_last_warning(g, d)
+    crate::mission::last_warning(g, d)
 }
 
 fn stack_on(g: &Game, op: DoorOpId, m_: GuardId) -> bool { match o!(g, op).post.get(m_) { Some(p) => v3::dist_xz(pos_of(g, m_), p.pos) <= 0.6, None => false } }
@@ -803,7 +803,7 @@ pub(super) fn door_tools_cuts_owe(g: &mut crate::game::Game, op: DoorOpId) -> bo
     }
     if last_held(g, op) { return false; }
     let d = o!(g, op).door;
-    !crate::rescue::rescue_last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
+    !crate::mission::last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
 }
 
 /// is the stage waiting for men who ran from a grenade
@@ -811,7 +811,7 @@ pub(super) fn door_tools_thr_frag_wait(g: &mut crate::game::Game, op: DoorOpId) 
     let th = o!(g, op).thr.as_ref().unwrap();
     if !(th.fled.as_ref().map_or(false, |f| !f.is_empty()) && th.hand_done != Some(true) && th.hand_w.unwrap_or(0.0) < g.k.doortools.thr_hand_wait && !last_held(g, op)) { return false; }
     let d = o!(g, op).door;
-    !crate::rescue::rescue_last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
+    !crate::mission::last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
 }
 
 /// is this order waiting for men who ran from a grenade (Sam's own squad only)
@@ -822,7 +822,7 @@ pub(super) fn door_tools_frag_wait(g: &mut crate::game::Game, op: DoorOpId) -> b
     if !(o!(g, op).fled_w.unwrap_or(0.0) < g.k.doortools.frag_hold_cap) { return false; }
     if !door_tools_frag_holds(g, op) || last_held(g, op) { return false; }
     let d = o!(g, op).door;
-    !crate::rescue::rescue_last_warning(g, d)
+    !crate::mission::last_warning(g, d)
 }
 
 /// the orders on a word that has been given and is held for men who ran, where these men are on one of its doors

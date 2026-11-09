@@ -65,7 +65,7 @@ fn par_secs(g: &Game) -> f64 {
 
 /// teammates down now, of how many
 fn lost(g: &Game) -> (f64, f64) {
-    let ops = &g.night_breach.ops;
+    let ops = &g.staged.team;
     (ops.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64, ops.len() as f64)
 }
 
