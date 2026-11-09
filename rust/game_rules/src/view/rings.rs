@@ -77,12 +77,14 @@ pub fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
     Some(HandRingView { x: r.ax, y: r.ay, zoom: r.z, lit, wedges, pin })
 }
 
-/// the word of a tap that found no row, for as long as it is up and is still what a tap would say: a step into reach, or away, takes it down
+/// why a press did nothing, for as long as it is up. An empty tap's word goes sooner, when it is no longer what a tap would say: a step into reach, or away, takes it down
 pub fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
     let pl = &g.pl[seat.player];
-    if g.puppet.is_some() || pl.down || pl.sel.word.is_empty() || !seat.nearby.is_empty() { return None; }
+    if g.puppet.is_some() || pl.down || pl.sel.word.is_empty() { return None; }
     let age = g.time - pl.sel.word_t;
     if !(age >= 0.0 && age < crate::handring::EMPTY_SHOW_SECS) { return None; }
+    if let Some(kind) = pl.sel.word_kind { return Some(EmptyView { word: pl.sel.word.clone(), kind, dist: None }); }
+    if !seat.nearby.is_empty() { return None; }
     let t = crate::interact::empty_thing(g, seat);
     if crate::interact::empty_word(t.as_ref()) != pl.sel.word { return None; }
     Some(match t {

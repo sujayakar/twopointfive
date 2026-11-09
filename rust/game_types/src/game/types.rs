@@ -1188,7 +1188,7 @@ impl Player {
             hand_wait: 0.0,
             near_sel: 0,
             near_key: String::from(""),
-            sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None },
+            sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, file_t: -1000000000.0, ring: None },
             pace: 1.0,
             nv: false,
             nv_amount: 0.0,
@@ -1298,6 +1298,8 @@ pub struct PlayerSel {
     pub move_latch: f64,
     pub word: String,
     pub word_t: f64,
+    /// the word is why a press did nothing (`interact::refuse`), and this is what it is about. None: an empty tap's, which the view reads off what he stands beside
+    pub word_kind: Option<crate::view::ThingKind>,
     pub file_t: f64,
     pub ring: Option<crate::game::PlayerSelRing>,
 }

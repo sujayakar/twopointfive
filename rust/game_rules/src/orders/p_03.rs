@@ -405,16 +405,14 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         match w { Some(w) if !w.is_empty() => why = Some(w), _ => men.push(gd) }
     }
     if men.is_empty() {
-        let words = squad_orders_who_words(g, &crate::seats::here(g), Some(&all));
-        let line = format!("{}: {}", words, why.as_deref().unwrap_or("null"));
-        crate::game::game_msg(g, &line);
+        let line = why.clone().unwrap_or_default();
+        crate::interact::say_why(g, all.first().copied(), crate::view::ThingKind::Wall, &line, line.trim_end_matches('.'));
         return why;
     }
     g.orders.group += 1.0;
     let was_silent = crate::holdfire::hold_fire_silent(g, &crate::seats::here(g), id_2);
     if let Some(refused) = order_issue(g, def, &men, &t, opts) {
-        let line = format!("{}: {}", squad_orders_who_words(g, &crate::seats::here(g), Some(&men)), refused);
-        crate::game::game_msg(g, &line);
+        crate::interact::say_why(g, men.first().copied(), crate::view::ThingKind::Wall, &refused, refused.trim_end_matches('.'));
         return Some(refused);
     }
     if men.len() > 1 { squad_orders_same_ways(g, &men); }

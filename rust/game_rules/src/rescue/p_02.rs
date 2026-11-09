@@ -74,18 +74,23 @@ pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::Res
         let set = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), door).is_some();
         if set || g.tab.doortools_door_op[ch].phase == crate::doortools::Phase::Place {
             let set = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), door).is_some();
-            crate::game::game_msg(g, if set { "the charge is set. press F to blow it" } else { "the charge is not set yet" });
+            if set { crate::game::game_msg(g, "the charge is set. press F to blow it"); }
+            else {
+                let by = g.tab.doortools_door_op[ch].men.first().copied();
+                crate::interact::say_why(g, by, crate::view::ThingKind::Door, "charge isn't set yet.", "the charge isn't set yet");
+            }
             return None;
         }
     }
-    if on.iter().any(|&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
-        crate::game::game_msg(g, "they are on that door already");
+    if let Some(&o) = on.iter().find(|&&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
+        let by = g.tab.doortools_door_op[o].men.first().copied();
+        crate::interact::say_why(g, by, crate::view::ThingKind::Door, "we're on that door already.", "they're on that door already");
         return None;
     }
     let who = match rescue_pick(g) {
         Some(who) => who,
         None => {
-            crate::game::game_msg(g, if g.rescue.ops.is_empty() { "you're alone, so you'll have to take the hostage room yourself" } else { "nobody's free for the hostage room. everyone still up is covering where you put them (X, then fall in)" });
+            crate::interact::say_why(g, None, crate::view::ThingKind::Door, "we're all holding what you gave us. call us in first.", "you'll have to take the room yourself");
             return None;
         }
     };
@@ -210,11 +215,12 @@ pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, 
         let line = if cans > 0 {
             let side_can = ops.iter().find(|e| is_bang(g, e)).unwrap().side;
             let door = if side_can { "side" } else if crate::dialogue::is_office(g) { "corridor" } else { "main" };
-            format!("one flashbang left, so it'll go in through the {} door and the teammates at the other door will go in after it", door)
+            format!("one bang left. it goes in the {} door.", door)
         } else {
-            String::from("no flashbangs left, so they'll go in without one")
+            String::from("no bangs left. going in without one.")
         };
-        crate::game::game_msg(g, &line);
+        let by = g.tab.doortools_door_op[ops[0].op].men.first().copied();
+        crate::interact::say_why(g, by, crate::view::ThingKind::Door, &line, line.trim_end_matches('.'));
     }
     let mut taken: Vec<GuardId> = Vec::new();
     for e in &ops { taken.extend(g.tab.doortools_door_op[e.op].men.iter().copied()); }

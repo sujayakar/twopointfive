@@ -107,7 +107,7 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
     }
     g.stats.planmode.goals += 1;
     let Some(goal) = goal_men(g, t) else {
-        crate::game::game_msg(g, crate::planmode::GOAL_NONE);
+        crate::interact::say_why(g, None, crate::view::ThingKind::Wall, crate::planmode::GOAL_NONE, crate::planmode::GOAL_NONE.trim_end_matches('.'));
         return;
     };
     if goal.how == crate::planmode::GoalMenHow::Split {
