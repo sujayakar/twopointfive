@@ -393,7 +393,7 @@ mod tests {
         assert_eq!(g.mission.stats.elapsed, 0.0);
     }
 
-    /// The HUD's percent, against the TypeScript's for the same times; it stops at 99 until the drive is out.
+    /// The HUD's percent stops at 99 until the drive is out.
     #[test]
     fn the_drive_percent_stops_at_99() {
         assert_eq!(drive_percent(0.0), "0");

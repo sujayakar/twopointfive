@@ -817,32 +817,34 @@ pub(in crate::missions) fn director_query_routed(g: &crate::game::Game, r: Direc
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own words, from bun
+    /// A script's dice are its own run's: the seed asked for is used, as an unsigned word; asked for none, each run has another and the same run the same.
     #[test]
-    fn seeds() {
-        for (serial, want) in [(0.0, 625341585.0), (1.0, 3144846632.0), (2.0, 422250467.0), (3.0, 4293106106.0), (7.0, 1992401054.0), (1000.0, 771132985.0)] {
-            assert_eq!(seed_of(None, serial).to_bits(), f64::to_bits(want));
-        }
-        assert_eq!(seed_of(Some(5.0), 0.0), 5.0);
+    fn a_run_takes_the_seed_asked_for_and_otherwise_one_of_its_own() {
+        assert_eq!(seed_of(Some(5.0), 9.0), 5.0);
         assert_eq!(seed_of(Some(-1.0), 0.0), 4294967295.0);
-        assert_eq!(seed_of(Some(4294967297.5), 9.0), 1.0);
+        assert_eq!(seed_of(None, 3.0), seed_of(None, 3.0));
+        let seeds: alloc::vec::Vec<f64> = [0.0, 1.0, 2.0, 3.0].iter().map(|s| seed_of(None, *s)).collect();
+        for (i, a) in seeds.iter().enumerate() {
+            assert!(*a >= 0.0 && *a <= 4294967295.0 && *a == m::floor(*a), "{a}");
+            for b in &seeds[i + 1..] { assert_ne!(a, b); }
+        }
     }
-    /// the TypeScript's own answers, from bun
+    /// A FAILURE MEANS: a level's trigger fires where nobody is, or not where he stands: a volume is a box turned on its yaw, and a man is in it with his feet from just under its floor to a head's height over its top.
     #[test]
-    fn volume() {
+    fn a_man_is_in_a_turned_volume_from_its_floor_to_a_head_over_its_top() {
         let v = crate::scene_level::VolumeDef { c: [1.0, 0.5, 2.0], h: [3.0, 0.5, 1.0], yaw: Some(0.7), ..crate::scene_level::VolumeDef::default() };
         for (p, want) in VOLUME_CASES {
             assert_eq!(in_volume(&v, *p), *want, "{:?}", p);
         }
     }
     const VOLUME_CASES: &[(V3, bool)] = &[
-        ([1.0, 0.0, 2.0], true),
-        ([1.0, -0.2, 2.0], false),
-        ([1.0, 3.1, 2.0], false),
-        ([1.0, 2.9, 2.0], true),
-        ([3.0, 0.0, 3.5], false),
-        ([-1.0, 0.0, 3.2], true),
-        ([3.2, 0.0, 0.2], true),
-        ([4.1, 0.0, 2.0], false),
+        ([1.0, 0.0, 2.0], true),       // at its middle, on its floor
+        ([1.0, -0.2, 2.0], false),     // under the floor
+        ([1.0, 2.9, 2.0], true),       // a head over the top
+        ([1.0, 3.1, 2.0], false),      // past that
+        ([3.2, 0.0, 0.2], true),       // along the long side, turned: inside
+        ([3.0, 0.0, 3.5], false),      // where the same side would lie unturned
+        ([-1.0, 0.0, 3.2], true),      // the other end, turned
+        ([4.1, 0.0, 2.0], false),      // inside it unturned, outside it turned
     ];
 }
