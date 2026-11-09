@@ -4,6 +4,7 @@
 //   a name of the code (`doors_kick_in`, `DoorContact`, `face_step`, `k.doorthrow`, `?doorcost=0`)      it is a word of rust/, src/, tools/, cloud/ or the page's own files
 //   a command (`bun run tools/qa/pages.ts boot`, `gate tests`)                                          what it runs is there
 // A plain lower-case word or a phrase is nobody's name and is not asked. A page holds no date: git has the history.
+// The same is asked of the other documents people work from (OTHER).
 //   bun run tools/qa/docs-check.ts [page …]       exit 0 · 1 and each fault
 //   DOCS_BREAK=1 bun run tools/qa/docs-check.ts   the red path: a page with one fault of each kind planted, in memory: exit 1 with every one found (3: it missed one)
 import { execFileSync } from 'node:child_process';
@@ -11,9 +12,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK === '1', asked = process.argv.slice(2);
-const INDEX = { bytes: 14_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
+const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
 /** pages still to be written over: named by the index, asked nothing. This list only gets shorter */
-const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel', 'workflow'].map(a => `docs/agents/${a}.md`);
+const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel'].map(a => `docs/agents/${a}.md`);
+
+/** the other documents people work from, and the most each may be */
+const OTHER: Readonly<Record<string, number>> = { 'CLAUDE.md': 12_000, 'README.md': 8_000, 'STYLE.md': 18_000, 'docs/level-format.md': 42_000, '.claude/skills/verify/SKILL.md': 11_000, '.claude/skills/level/SKILL.md': 20_000,
+  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/fold/README.md': 12_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
 
 const read = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 const files: string[] = (execFileSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 }) as string).split('\n').filter(f => f && existsSync(resolve(ROOT, f)));
@@ -87,5 +92,7 @@ if (!asked.length) {
 }
 for (const f of areas.filter(a => asked.length ? asked.some(w => a.endsWith(`/${w.replace(/\.md$/, '')}.md`) || a === w) : !OLD.includes(a))) {
   const found = faults(read(f), PAGE); line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes, every name in it is there`}`); for (const x of found) console.log(`    ${x}`); }
+for (const [f, most] of Object.entries(OTHER)) if (!asked.length || asked.includes(f)) {
+  const found = files.includes(f) ? faults(read(f), most) : ['it is not in the tree']; line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes`}`); for (const x of found) console.log(`    ${x}`); }
 console.log(bad ? `=== docs: ${bad} FAILED ===` : '=== docs: ALL PASS ===');
 process.exit(bad ? 1 : 0);
