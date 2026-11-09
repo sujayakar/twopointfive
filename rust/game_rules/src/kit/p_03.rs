@@ -425,6 +425,10 @@ fn gun_short_words(g: &Game, w: crate::weapons::WeaponId) -> String {
 /// A card in a line.   (kit.ts kitWords)
 pub fn kit_words(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
+    kit_card_words(g, i, &m)
+}
+/// A card he has been handed, in a line
+pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> String {
     let suit = if m.suit != SuitId::Issued { suits().get(String::from(m.suit.as_str())).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
     let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().get(String::from(m.trim.as_str())).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
     let look = line_of(&[suit, trim], ", ");

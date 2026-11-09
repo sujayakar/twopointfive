@@ -47,7 +47,7 @@ off = main hash for hash (the GPU side is a compile-time prelude const `GLASS_BR
 - `src/render/frame.ts` — `glassBreakConfig` + the prelude line `const GLASS_BREAK: bool = …; const GB_BASE: u32 = MAX_BOXES * 4u + MARK_TABLE_ROWS;` (generated — the review's literal
   drift trap closed). `common.wgsl` — `gbHeader / gbSite / gbEnergy / gbUV / gbLocal / gbCell / glassCellOpen` + one `if (GLASS_BREAK)` line each in `glassTrace` and `glassTransmit`.
   `composite.wgsl` — `gbCracks` (network + radials + hole rims) + one `if (GLASS_BREAK)` line at each of the two `glassMarks` sites (`let gm` → `var gm`).
-- `src/main.ts` — the const raised BEFORE the Engine from the persisted switch (`?glassbreak` / `?glassbreak=0` force one boot), `__glassbreak {on, gpu, live, knobs, stats, log,
+- `src/main.ts` — the const raised BEFORE the Engine, always (the words that put it down are gone: a pane breaks by the rule on every host, so a page with it down left holes it could not show), `__glassbreak {on, gpu, live, knobs, stats, log,
   panes(), openAt(p, bi?), hit(bi, p, dir, n), blast(p), test(), reset(), summary()}`. `src/ui/bindings.ts` — Tab ▸ Destruction ▸ Glass: the switch (its tip and its message
   say RELOAD for the renderer's half; the section summary flags a const/switch mismatch), annealed / tempered fail counts, support threshold, blast reach, 'break test' (star + hole
   the pane under the cursor: three hits through glass.ts's path), 'reset glass'.
@@ -90,7 +90,7 @@ furniture / debris / statics' flags identical with the module's three seams null
 ## GPU validation
 
 `__gbs.validate()`: three panes holed and their shards down in the 'wide' view, then every preset × debug views 0 / 1 / 3 / 10, a `validation` error scope round 12 frames each +
-the uncaptured-error list. Const ON (`?glassbreak`): 20 / 20 clean. Const OFF (`?glassbreak=0`, cells dropping on the CPU under main's programs): 20 / 20 clean. No console error on any
+the uncaptured-error list. Const ON: 20 / 20 clean. Const OFF (a word this lane had, gone since): 20 / 20 clean. No console error on any
 boot of the lane's page (104 / 104 pipelines with the const either way; the one 'Failed to load resource 404' is the favicon, as on main).
 
 ## Cost

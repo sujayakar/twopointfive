@@ -82,8 +82,8 @@ export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[
  *  without, the first choice unasked (the HUD's line, every frame: no path search, nothing written). */
 export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick { return crossToRust('autoPick', undefined, [g, t, check, men]) as any; }
 
-/** The quick key, pressed on `t`: true when the press was the autopilot's (an order given and stamped as its own in the order book, or refused aloud, or
- *  a charge left alone on its word). False: nothing was there to give. */
+/** The quick key, pressed on `t`: true when a new group of men was sent (autopilot `quick`). False: nothing was, as when it was refused aloud, answered by men on
+ *  their marks, or a charge was left alone on its word. */
 export function autoQuick(g: Game, t: OrderTarget): boolean { return crossToRust('autoQuick', undefined, [g, t]) as any; }
 
 /** the quick key's line on the HUD: the row's own words for the squad's first choice on what the cursor is on (null: nothing) */

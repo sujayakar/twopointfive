@@ -347,14 +347,6 @@ pub extern "C" fn layer_act_pose(g: usize, at: usize, at_b: usize, at_rest: usiz
     layers::act_pose(g, at, at_b, at_rest)
 }
 #[no_mangle]
-pub extern "C" fn layer_wound_body(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    layers::wound_body(g, at, at_b, at_rest)
-}
-#[no_mangle]
-pub extern "C" fn layer_wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    layers::wound_limbs(g, at, at_b, at_rest)
-}
-#[no_mangle]
 pub extern "C" fn layer_long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize) -> u32 {
     layers::long_arms(g, at, at_b, at_aim, at_rest)
 }
@@ -848,8 +840,7 @@ fn scratch() -> &'static mut [f64; SCRATCH_LEN] {
 pub extern "C" fn sight_contact(w: usize, set: i32, through: u32, q: u32, e0: f64, e1: f64, e2: f64, l0: f64, l1: f64, l2: f64, range: f64, half_deg: f64, near_m: f64, near_deg: f64, v_half_deg: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> u32 {
     sight::contact(w, set, through, q, [e0, e1, e2], [l0, l1, l2], range, half_deg, near_m, near_deg, v_half_deg, [c0, c1, c2], [h0, h1, h2], &mut scratch()[0])
 }
-#[no_mangle]
-pub extern "C" fn light_cap() -> usize {
+pub fn light_cap() -> usize {
     light::MAX_LAMPS
 }
 /// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point) · 2 the cells a
@@ -920,12 +911,10 @@ pub extern "C" fn grid_reset(g: usize, home: u32) {
     bricks::reset(g, home != 0)
 }
 /// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
-#[no_mangle]
-pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
+pub fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)
 }
-#[no_mangle]
-pub extern "C" fn grid_wind_cap() -> usize {
+pub fn grid_wind_cap() -> usize {
     bricks::MAX_GLOW
 }
 

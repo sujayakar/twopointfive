@@ -6,7 +6,7 @@
 //   node tools/qa/pricerun-page.cjs --real [--size 1920x1080] [--quality high] [--look "<the look page's words>"] [level …]
 //       THE RUN AS THE PAGE RUNS IT, for a machine with a GPU: no short turns, the run's own quality unless one is named, every level on the
 //       mission list unless some are named. The same checks; what it times is that machine's, named in the file. Files go to --out, or $OUT.
-//       --look "look=walls:0&firefit=0" = the look page's own words for the whole run (default `look`).
+//       --look "look=walls:0&longfoot=0" = the look page's own words for the whole run (default `look`).
 //       --play N = the mission is played N seconds of its own clock before its picture is held (the run's own: 4), to see what a longer stand-up changes.
 //       --live N = THE WORLD RUNS TO SECOND N of the game's clock before each page's running read (the run's own: PRICE.runS, 20; 0 = held pictures only, the walk as
 //       it was until 11-05: `pricelive` on the address). The running read about doubles a level's time on the walk.
@@ -68,7 +68,7 @@ async function inParts(list) {
   browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(([real, play]) => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, runS: +((play > 0 ? play : 0.5) + 0.2).toFixed(4) /* (twelve more steps before the running read) */, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600, lateMs: 0 /* (the late answer's rule is not asked here: a frame is seconds long and the timer drops a pass over a second, so there is nothing for it to read) */ }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
+  await ctx.addInitScript(([real, play]) => { if (!real) window.__priceOpts = { playS: 0.5, runS: +((play > 0 ? play : 0.5) + 0.2).toFixed(4) /* (twelve more steps before the running read) */, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600, lateMs: 0 /* (the late answer's rule is not asked here: a frame is seconds long and the timer drops a pass over a second, so there is nothing for it to read) */ }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
   const page = await ctx.newPage(), errors = [], pages = []; let saved = null, gaveUp = '';
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)

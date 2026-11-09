@@ -614,7 +614,7 @@ export class Bench {
     { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); if (size === SIZE_HELD && !visitTier(this.query)) this.notes.push(SIZE_UNNAMED); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
     // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
-    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), wait: pageRoom({ calibrating: false, measuring: true, kitView: false }), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
+    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), wait: pageRoom({ calibrating: false, measuring: true }), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);

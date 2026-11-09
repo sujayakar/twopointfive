@@ -392,7 +392,6 @@ impl Default for Scratch { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct State {
     pub last: JsMap<GuardId, f64>,
-    pub noted: bool,
     pub shown: Option<crate::squadthrow::StateShown>,
     pub walks: JsMap<GuardId, crate::squadthrow::Walk>,
     /// the throws the menu shows, one a kind, as they were last worked out (Rust's own: not on the wire)
@@ -404,7 +403,6 @@ impl State {
     pub fn zeroed() -> Self {
         State {
             last: JsMap::new(),
-            noted: false,
             shown: None,
             walks: JsMap::new(),
             plans: JsMap::new(),
@@ -866,17 +864,5 @@ pub struct SquadthrowStats {
 /// (src/game/squadthrow.ts:117 THROW_PAGE)
 pub const THROW_PAGE: &str = "throw";
 
-/// (src/game/squadthrow.ts:117 THROW_OPEN)
-pub const THROW_OPEN: &str = "throwThere";
-
-/// (src/game/squadthrow.ts:117 FRAG_THERE)
-pub const FRAG_THERE: &str = "fragThere";
-
-/// (src/game/squadthrow.ts:117 STUN_THERE)
-pub const STUN_THERE: &str = "stunThere";
-
 /// (src/game/squadthrow.ts:143 TICK_KEPT: a table nothing writes)
 pub fn tick_kept() -> Vec<String> { alloc::vec![String::from("frag.WALLS_FOR"), String::from("seenwalk.shared")] }
-
-/// (src/game/squadthrow.ts:244 RESUMED: a table nothing writes)
-pub fn resumed() -> Vec<String> { alloc::vec![String::from("move"), String::from("stack"), String::from("cover"), String::from("hold"), String::from("fallIn")] }

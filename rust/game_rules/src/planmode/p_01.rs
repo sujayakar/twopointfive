@@ -40,13 +40,12 @@ pub fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
 }
 
 /// Who takes a goal added on `t`, and how they come to; None: every group is one man and nobody is free. Orders and counts nothing. (planmode.ts goalMen)
-pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<crate::planmode::GoalMen> {
+pub fn goal_men(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> Option<crate::planmode::GoalMen> {
     use crate::orders::OrderTarget;
     use crate::planmode::{GoalMen, GoalMenHow};
 
     let all = crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None);
     let crate::planmode::GoalParts { idle, groups } = goal_parts(g, &crate::seats::here(g));
-    let spot = is_spot(t);
     if let OrderTarget::None(n) = t {
         if n.man.is_some() {
             return Some(GoalMen { men: crate::orders::squad_orders_recipients(g, &crate::seats::here(g), Some(t), None), how: GoalMenHow::His });
@@ -72,7 +71,7 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
         return None;
     }
     let biggest: Vec<Vec<GuardId>> = pool.into_iter().filter(|x| x.len() == size).collect();
-    let group = best(g, &biggest, t, spot).clone();
+    let group = best(g, &biggest, t).clone();
     let mut parts: Vec<Vec<GuardId>> = Vec::new();
     for id in crate::orders::squad_orders_pairs(g, &crate::seats::here(g)) {
         let mut l: Vec<GuardId> = Vec::new();
@@ -86,13 +85,10 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
         }
     }
     let men = if !parts.is_empty() {
-        best(g, &parts, t, spot).clone()
+        best(g, &parts, t).clone()
     } else {
         let mut sorted = group.clone();
-        js::sort_by(&mut sorted, |a, b| {
-            let by_line = line(g, &[*b], t, spot) - line(g, &[*a], t, spot);
-            if js::truthy(by_line) { by_line } else { far(g, &[*a], t) - far(g, &[*b], t) }
-        });
+        js::sort_by(&mut sorted, |a, b| far(g, &[*a], t) - far(g, &[*b], t));
         sorted.truncate(group.len() >> 1);
         sorted
     };
@@ -104,32 +100,20 @@ pub fn goal_ring_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
     goals_on(g, seat)
 }
 
-/// Shift + the key on `t`: a part of the squad takes it through the order book and the rest go on as they were. (planmode.ts planGoal)
+/// Shift + the key on `t`: a part of the squad takes what the key alone gives there, and the rest go on as they were. (planmode.ts planGoal)
 pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
-    use crate::planmode::GoalMenHow;
-
     if crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None).is_empty() {
         return;
     }
     g.stats.planmode.goals += 1;
-    let goal = goal_men(g, t);
-    let spot = is_spot(t);
-    let Some(goal) = goal else {
+    let Some(goal) = goal_men(g, t) else {
         crate::game::game_msg(g, crate::planmode::GOAL_NONE);
         return;
     };
-    if goal.how == GoalMenHow::His || goal.how == GoalMenHow::Same {
-        let _ = crate::orders::squad_orders_quick_for(g, &goal.men, t);
-        return;
-    }
-    if goal.how == GoalMenHow::Split {
+    if goal.how == crate::planmode::GoalMenHow::Split {
         g.stats.planmode.split += 1;
     }
-    if spot {
-        let _ = crate::orders::squad_orders_cover_for(g, &goal.men, target_at(t));
-    } else {
-        let _ = crate::orders::squad_orders_quick_for(g, &goal.men, t);
-    }
+    crate::autopilot::quick(g, t, Some(&goal.men));
 }
 
 /// Shift + the ring's key is the goal's own this frame, only where the ring has no hold to wait out. (planmode.ts goalShift)
@@ -147,11 +131,6 @@ pub fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         let t = crate::orders::squad_orders_target_under(g, input, cam, canvas);
         plan_goal(g, &t);
     }
-}
-
-/// `t.kind === 'floor' && !t.thing`: a bare spot, by a wall or not, a place to watch. (planmode.ts:41, :63)
-fn is_spot(t: &crate::orders::OrderTarget) -> bool {
-    matches!(t, crate::orders::OrderTarget::Floor(f) if f.thing.is_none())
 }
 
 /// `t.at`, which every kind of target has.
@@ -180,7 +159,7 @@ fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: 
 }
 
 /// The men's mean distance to `t` on the floor. (planmode.ts:48 far)
-fn far(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
+fn far(g: &Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
     let at = target_at(t);
     let mut s = 0.0;
     for &m in men {
@@ -190,26 +169,11 @@ fn far(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
     s / men.len() as f64
 }
 
-/// A spot to watch: the share of the men who can see it; anything else 0. (planmode.ts:49 line)
-fn line(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, spot: bool) -> f64 {
-    if !spot {
-        return 0.0;
-    }
-    let mut seeing = 0usize;
-    for &m in men {
-        if crate::orders::squad_orders_has_line(g, m, t) {
-            seeing += 1;
-        }
-    }
-    seeing as f64 / men.len() as f64
-}
-
-/// The list with the best line, then the nearest; ties keep the earlier. `ls` is never empty here. (planmode.ts:50 best)
-fn best<'a>(g: &mut Game, ls: &'a [Vec<GuardId>], t: &crate::orders::OrderTarget, spot: bool) -> &'a Vec<GuardId> {
+/// The nearest list; ties keep the earlier. `ls` is never empty here. (planmode.ts:50 best)
+fn best<'a>(g: &Game, ls: &'a [Vec<GuardId>], t: &crate::orders::OrderTarget) -> &'a Vec<GuardId> {
     let mut a = &ls[0];
     for b in &ls[1..] {
-        let (lb, la) = (line(g, b, t, spot), line(g, a, t, spot));
-        if lb > la || (lb == la && far(g, b, t) < far(g, a, t) - 1e-6) {
+        if far(g, b, t) < far(g, a, t) - 1e-6 {
             a = b;
         }
     }

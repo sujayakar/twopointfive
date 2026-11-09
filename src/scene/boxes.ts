@@ -45,7 +45,6 @@ export const MAX_GLASS = 32;
 export const BOX_ROUND_BIT = 8;
 
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
-import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
 /** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
@@ -157,7 +156,7 @@ export interface Box {
   shaped?: boolean;
   /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
    *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
-   *  the picture (shapes.ts withPieces) */
+   *  the picture */
   piece?: boolean;
   of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
@@ -265,8 +264,6 @@ export class BoxWorld {
    *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
    *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
   undrawn: { has(i: number): boolean } | null = null;
-  /** is static `i` in the picture: drawn by its own flags (boxDrawn) and not left out by `undrawn` */
-  staticDrawn(i: number): boolean { const b = this.statics[i]; return !!b && boxDrawn(this.statics, b) && !(this.undrawn !== null && this.undrawn.has(i)); }
   /** MOTION IDENTITY (Box.mkey): on = a keyed dynamic box hands the g-buffer the index its key had LAST frame in the top 16 bits of its `visible` word (upload();
    *  gbuffer.wgsl vsBox reads its previous transform there); off = every word is the bare index and the vertex stage index-matches as it always did — mirrored from
    *  engine.settings.motionIds each frame. `mkeyPrev` = key → index in last frame's combined list. */
@@ -382,7 +379,7 @@ export class BoxWorld {
   // packed before (the geo / mat arrays are written only by this class); anything else — a hidden static, a dimmed fixture, a moved editor box, a replaced Box object with other
   // values — is repacked on the spot. Writers need raise no flag: the compare IS the truth (~25 field reads a box, a few µs for the office). What is not per box is an EPOCH:
   // the marking table's state (a list registered / repacked / the table reset) and the markings switch — `packEpoch` bumps and every static repacks. Bytes: identical by
-  // construction (the pack is a pure function of the shadowed inputs), proven by tools/cpu-frame/tables-hash.ts against the pre-lane recording.
+  // construction (the pack is a pure function of the shadowed inputs).
   private static readonly SS = 24;   // shadow floats per static: c0 c1 c2 yaw h0 h1 h2 flags owner a0 a1 a2 e0 e1 e2 cutHeight matWord markGain hasRot r0 r1 r2 r3 marksLen
   private statShadow = new Float64Array(0);
   private statShadowMarks: (MarkingDef[] | undefined)[] = [];
@@ -411,7 +408,7 @@ export class BoxWorld {
   // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
   // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
   // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
-  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
+  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did.
   static readonly RAY_PAD = 1e-3;
   private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
   private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
@@ -460,12 +457,6 @@ export class BoxWorld {
   cutTraced = 0;
   private cutVisible = new Uint32Array(0);
   private statShadowCut: (CutPlane[] | undefined)[] = [];
-  /** the boxes carrying a record in the last uploaded list, and their planes (counted when asked: the debug hook's and the probes' number) */
-  get cutStats(): { boxes: number; planes: number } {
-    let boxes = 0, planes = 0;
-    if (this.cutOn) for (const b of this.all) { const c = b.cut; if (c !== undefined && c.length > 0) { boxes++; planes += Math.min(c.length, MAX_CUT_PLANES); } }
-    return { boxes, planes };
-  }
 
   constructor(protected device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
     this.maxBoxes = maxBoxes;
@@ -527,23 +518,6 @@ export class BoxWorld {
   forgetSent() { this.packEpoch++; this.visibleSent.fill(0xffffffff); this.gbSent.fill(0xffffffff); this.gbLive = true; this.markDirty = true; this.gridLiveN = -1; this.rowsStatN = -1; }
   /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (game.ts registers the lights after the first upload) */
   repackMarkings(texel = this.markingTexel) { this.markingTexel = texel; for (const ent of this.markByKey.values()) if (ent.slot) this.packList(ent); this.packEpoch++; }   // (every static repacks: the secondary albedos may have moved)
-  /** how full the append-only marking table is: rows taken / MARK_TABLE_ROWS (the editor compacts past two thirds; its lint warns on a level that alone nears it) */
-  get markTableFill(): number { return this.markRows / MARK_TABLE_ROWS; }
-  /** Forget every registered marking list (the table is append-only: right for the game's fixed set of lists, but an editor session paints a new list per
-   *  stroke). The next upload re-registers exactly the lists the boxes then carry. Returns the rows that were taken. */
-  resetMarkTable(): number {
-    const taken = this.markRows;
-    this.markRows = 0; this.markByKey.clear(); this.markOfBox = new SideMap(); this.markDirty = true; this.packEpoch++;   // (every static repacks — and so re-registers its list)
-    this.markStatsInfo.lists = 0; this.markStatsInfo.records = 0; this.markStatsInfo.rows = 0;
-    return taken;
-  }
-  /** the records of box b's list as packed (for the panel / __mark.list) — [] when it has none */
-  markRecordsOf(b: Box): { row: number; rows: number; head: number[] }[] {
-    if (!b.marks?.length) return []; const { slot } = this.markSlotOf(b); if (!slot) return [];
-    const out: { row: number; rows: number; head: number[] }[] = []; const n = Math.min(b.marks.length, MAX_MARKS_PER_BOX); let row = slot - 1;
-    for (let k = 0; k < n; k++) { const rows = markRecordRows(b.marks[k]); out.push({ row, rows, head: Array.from(this.markData.subarray(row * 4, row * 4 + 32)) }); row += rows; }
-    return out;
-  }
 
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each via addCharacterCapsules(). */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
@@ -1138,7 +1112,7 @@ export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== unde
 /** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
  *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
 export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
-export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rayBox', undefined, [ro, rd, b, tmax]); if (__r !== RUST_PASS) return __r as any; } }
+export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   return rayBoxOwn(ro, rd, b, tmax);
 }
 /** The test itself, with no crossing: for the box world's own raycast (BoxWorld.raycast is the host's and walks the host's list, a thousand boxes a ray:

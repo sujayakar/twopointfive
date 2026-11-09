@@ -289,7 +289,7 @@ export class RustHost {
    *  FROM A STAND-UP TO THE NEXT START NO CALL CROSSES. A stand asks about things a process shares (the cast's rig, numbered in the book of the game that met it
    *  first, so the call names that game), and the answer's apply wrote the older game's rows over what `freshStart` had just put back: its men, some of them
    *  made in Rust with no rig, stood in the new game's start (`SkeletonInstance.rig: no object for RigId`). So a stand and its staging run their TypeScript,
-   *  as the process's first stand does (tools/blitz/stand-after.ts). */
+   *  as the process's first stand does. */
   private static waiting = new Set<WeakRef<RustHost>>(); private static standing = false; private startThrew: unknown = null;
   private beCurrent(): void { useDice(this.g.dice); this.g.quiet?.current?.(); }   // (what `Game.update` opens with: a start outside its own game's update reads this game's)
   static standComing(collect: () => void): void { (globalThis as any).__tpsCall?.newGame?.(); const c = (globalThis as any).__tpsCall; if (c) c.inHook = undefined; RustHost.last = null; collect();
@@ -788,7 +788,7 @@ export class RustHost {
     // before it as without (19.8 against 19.5 ms, night-breach:1), and no step grows the memory once room is reserved. So the first tick's cost is the
     // game's own (what a game builds the first time it is asked), not the module's compiling.
     if (this.warmDue) { this.warmDue = false; const t1 = now(), n = this.o.warmSteps ?? 0, h2 = n > 0 && this.lastState && this.lastBlock ? this.F.hand(this.lastState, (p, m) => this.F.hand(this.lastBlock!, (bp, bn) => X.face_new(p, m, bp, bn))) : 0;
-      if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_lights(h2, dt); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
+      if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
       this.T.start += now() - t1; }
     this.memPages = this.F.mem.buffer.byteLength;
     t = now(); try { X.face_step(this.h, dt, 0); } catch (e) { throw new Error(`the Rust game's tick ${k} panicked: ${this.F.panicText() || String(e)}`); } const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
@@ -804,8 +804,8 @@ export class RustHost {
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
     if (process.env.RH_HALF?.split(',').includes(String(k))) halfSay(B, g, cmds, k);
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hw, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
-    // ---- the host's steps after a tick, on the Rust side: the lights' update, the host's view of a level on rails, the camera's ask
-    t = now(); X.face_lights(this.h, dt); X.face_view(this.h); X.face_follow?.(this.h);
+    // ---- the host's steps after a tick, on the Rust side: the host's view of a level on rails, the camera's ask
+    t = now(); X.face_view(this.h); X.face_follow?.(this.h);
     this.T.after += now() - t;
     // ---- A QUIET STEP (`quietBegin`): the tool that asked for this run of steps has said none of its code runs between them, so nothing of the state
     // goes to the puppet until the run ends. The host's own camera needs two things of the game after every tick: asked for by `face_look`.
@@ -878,7 +878,7 @@ export class RustHost {
   private tsUpload: (() => void) | null = null;
   /** true where the host can step quietly (the fast way, a face that answers `face_look`) */
   // NOT YET THE SAME PLAY, so it is asked for by name (RH_QUIET=1): the Rust tick writes the lens's own row at times (a start snaps it onto the man), a
-  // quiet run does not bring that across, and the host hands its own lens back with the next record. tools/blitz/quiet-check.ts: the die and the
+  // quiet run does not bring that across, and the host hands its own lens back with the next record: the die and the
   // block equal on every one of 2,340 ticks, the host's half not (FollowCamera.target at tick 2). It wants the camera's rows on the quiet path.
   quietBegin(): boolean { if (this.audit || !this.F.X.face_look || OFF.has('quiet') || process.env.RH_QUIET !== '1') return false; this.quietOn = true; this.quietOwed = 0; return true; }
   quietEnd(): void { if (!this.quietOn) return; this.quietOn = false; this.lookNow = null; if (!this.quietOwed || !this.h) return; this.quietRuns++;
@@ -946,7 +946,7 @@ export async function standRust(g: any, word: string, o: { /** the dressing rows
 // ---- RH_STALE=<file>: WHAT THE PUPPET HAS LET FALL BEHIND. As the process ends, every game that still stands on the Rust game has its puppet exported
 // whole and held to the Rust game's whole state, and so every RH_STALE_EVERY ticks before it (300; a whole apply puts every field back, so the end alone
 // would miss what fell behind between two): a line a field in which the two differed (how many places, one of them, in how many looks). A field on the every-tick list
-// should never be there; a field on no list that something outside the tick reads is a fault waiting (tools/blitz/stale.ts makes the table).
+// should never be there; a field on no list that something outside the tick reads is a fault waiting.
 // (The games are held here until the end: with this word a process frees none.)
 const STALE: RustHost[] = [];
 const STALE_EVERY = +(process.env.RH_STALE_EVERY ?? 300);

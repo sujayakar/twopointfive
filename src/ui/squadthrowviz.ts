@@ -2,10 +2,10 @@
 // visualize who's doing it and the path on the ground?)". No words: a ring at the thrower's feet in his element's colour, a dashed line along his walk to a
 // small ring where he will throw from, the arc, a ring where the thing comes to rest and, for a frag, two dotted ones: the radius it kills in and, fainter, the radius it wounds in. Fainter while it
 // is only the highlighted row of the throw page; full from the order until the thing leaves his hand. Drawn into the overlay's #traj SVG, under Sam's own
-// throw arc. While the plan on the floor is drawn it draws a frag and a can itself (ui/planfloor.ts), and this draws the 40 mm's. Reads only; no state but its nodes.
+// throw arc. The plan on the floor draws a frag and a can itself (ui/planfloor.ts), and this draws the 40 mm's. Reads only; no state but its nodes.
 import type { Vec3 } from '../math/vec';
-import type { Game } from '../game/game';
-import type { FollowCamera } from '../game/camera';
+import type { HudCam, HudSource } from '../view/hud';
+import type { TickView } from '../view/read';
 
 const NS = 'http://www.w3.org/2000/svg';
 const TONE: Record<string, string> = { red: '#ff9a8a', blue: '#9cc8ff', gold: '#f2cf6b' };
@@ -27,8 +27,8 @@ export class SquadThrowViz {
     const E: Els = { g, p, d: { who: '', walk: '', spot: '', arc: '', land: '', kill: '', wound: '' }, tone: '', op: '' };
     this.root.appendChild(g); return E;
   }
-  update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const plans = game.view.plan ? game.view.throws.filter(t => t.kind === 'shell') : game.view.throws;
+  update(src: HudSource, view: TickView, cam: HudCam, w: number, h: number, edge: number) {
+    const plans = view.throws.filter(t => t.kind === 'shell');
     // one path per part: a point out of the view BREAKS the line there (never a chord across the gap), and a ring the view's edge cuts keeps the part of it in view
     const path = (pts: Vec3[] | undefined, closed: boolean) => {
       if (!pts || pts.length < 2) return '';
@@ -47,7 +47,7 @@ export class SquadThrowViz {
     };
     const set = (E: Els, k: Part, d: string) => { if (E.d[k] !== d) { E.d[k] = d; E.p[k].setAttribute('d', d); } };   // (a still plan writes nothing)
     for (let i = 0; i < plans.length; i++) {
-      const P = plans[i], E = this.els[i] ?? (this.els[i] = this.make()), tone = TONE[P.tone ?? 'gold'] ?? TONE.gold, feet = game.guards.find(m => m.char.id === P.man)?.char.pos ?? null, walking = !!P.walk && P.walk.length > 1, op = P.preview ? '0.6' : '0.95';
+      const P = plans[i], E = this.els[i] ?? (this.els[i] = this.make()), tone = TONE[P.tone ?? 'gold'] ?? TONE.gold, feet = src.at(P.man), walking = !!P.walk && P.walk.length > 1, op = P.preview ? '0.6' : '0.95';
       if (i >= this.shown) E.g.style.display = 'block';
       if (E.tone !== tone) { E.tone = tone; E.g.style.color = tone; }
       if (E.op !== op) { E.op = op; E.g.setAttribute('opacity', op); }

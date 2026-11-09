@@ -8,7 +8,7 @@
 //     fittings and rounds as tiles inside it; a click on another gun puts it on the card (tile, bars, chips, the kept kit); a click off it shuts it;
 //   · by the keys alone: S walks the tiles as they lie, Enter on a gun opens its pop-up, A D change, W S stay inside it, Esc shuts it and the screen stays,
 //     and S walks on through the kit, the colours and the sets to Deploy;
-//   · a quiet mission's lent rounds read whole in the pop-up and are counted on the tile's chips;
+//   · a quiet mission's sponge rounds read whole in the pop-up and are counted on the tile's chips;
 //   · at the largest text size nothing on the card is cut and the pop-up still ends over the foot.
 //   node tools/qa/kitdense-page.cjs [outDir]      env: PORT (the dev server's, default 5199)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Software adapter: nothing here has been seen on a GPU.
@@ -32,7 +32,7 @@ const read = () => {
   const guns = [...kc.querySelectorAll('.kc-gun')].map(g => { const t = tile(g), pop = g.querySelector('.kc-pop');
     return { slot: g.getAttribute('data-gun'), name: t?.querySelector('.kc-val')?.textContent ?? '', tile: t ? box(t) : null, sel: !!t?.classList.contains('sel'),
       bars: [...(t?.querySelectorAll('.kc-stats .kc-stat') ?? [])].filter(shown).map(b => Number(b.getAttribute('data-score'))),
-      chips: [...(t?.querySelectorAll('.kc-chip') ?? [])].map(c => ({ f: c.getAttribute('data-chip'), on: !c.classList.contains('off'), lent: c.classList.contains('lent'), n: c.querySelector('b')?.textContent ?? '', shown: shown(c) })),
+      chips: [...(t?.querySelectorAll('.kc-chip') ?? [])].map(c => ({ f: c.getAttribute('data-chip'), on: !c.classList.contains('off'), n: c.querySelector('b')?.textContent ?? '', shown: shown(c) })),
       pop: pop && shown(pop) ? { ...box(pop), picks: [...pop.querySelectorAll('.kc-pick')].map(p => ({ v: p.getAttribute('data-pick'), name: p.querySelector('.kc-pick-name')?.textContent ?? '', on: p.classList.contains('on'), bars: [...p.querySelectorAll('.kc-pick-bars:not(.off) .fill')].map(f => f.getBoundingClientRect().width), ...box(p) })),
         kids: [...pop.querySelectorAll('.kc-kids > .kc-row')].filter(shown).map(k => ({ f: k.getAttribute('data-field'), val: k.querySelector('.kc-val')?.textContent ?? '', sel: k.classList.contains('sel'), ...box(k) })) } : null }; });
   const rows = (sel) => [...kc.querySelectorAll(sel)].filter(shown).map(r => ({ f: r.getAttribute('data-field'), val: r.querySelector('.kc-val')?.textContent ?? '', sel: r.classList.contains('sel'), ...box(r) }));
@@ -118,12 +118,12 @@ const read = () => {
       [['you', you, yo], ['teammate', mate, mo]].map(([w, c, o]) => `${w}: card to ${c?.card.b.toFixed(0)}, pop-up to ${gun(o, 'primary')?.pop?.b.toFixed(0) ?? '—'}, foot at ${c?.footTop.toFixed(0)}${c?.scroller ? ' · scrolls ' + c.scroller : ''}${[...(c?.cut ?? []), ...(o?.cut ?? [])].length ? ' · cut ' + [...c.cut, ...o.cut].join(' | ') : ''}`).join(' · '));
     await ctx.close(); }
 
-  // a quiet mission: what the mission lends
+  // a quiet mission: its rounds are on your stealth card (kit.ts KITDEAL.stealth: no tile is the mission's)
   { const { ctx, page } = await open('police-post-quiet', 1317, 775);
     const c = await page.evaluate(read), rings = gun(c, 'primary')?.chips.find(x => x.f === 'rings');
     await click(page, TILE('primary')); const o = await page.evaluate(read), kid = gun(o, 'primary')?.pop?.kids.find(k => k.f === 'rings'); await shot(page, 'kitdense-quiet-pop');
-    check(!!rings?.on && rings.lent && rings.n === '5' && !!kid && /5/.test(kid.val) && !o.cut.length && gun(o, 'primary').pop.b <= o.footTop + 0.5, 'a quiet mission\'s sponge rounds are counted on the gun\'s chip and read whole in its pop-up',
-      `chip ${rings ? `${rings.on ? 'lit' : 'faint'} ${rings.n}${rings.lent ? ' lent' : ''}` : 'none'} · tile '${kid?.val ?? ''}'${o.cut.length ? ' · cut ' + o.cut.join(' | ') : ''}`);
+    check(!!rings?.on && rings.n === '5' && !!kid && /5/.test(kid.val) && !o.cut.length && gun(o, 'primary').pop.b <= o.footTop + 0.5, 'a quiet mission\'s sponge rounds are counted on the gun\'s chip and read whole in its pop-up',
+      `chip ${rings ? `${rings.on ? 'lit' : 'faint'} ${rings.n}` : 'none'} · tile '${kid?.val ?? ''}'${o.cut.length ? ' · cut ' + o.cut.join(' | ') : ''}`);
     await ctx.close(); }
 
   // a quiet mission in a small window (the maintainer's own is about 1000 × 673): its cursor moves no tile, and a pop-up of two lines of things still ends over the foot

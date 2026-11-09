@@ -29,9 +29,9 @@ pub fn parts(b: &[u8]) -> Result<Vec<&[u8]>, String> {
     Ok(out)
 }
 
-/// STAND A GAME FROM WHAT A HOST HANDED. `commands` does the host's commands to the game before anything is read (it is the host's list: game_run `command`). `o.link` is the handed address's words (what `o` held of it is not read). A run of bytes that is not a
+/// STAND A GAME FROM WHAT A HOST HANDED. `host` does the host's commands and its address's words to the game before anything is read (the host's lists: game_run `command`, `words`). `o.link` is the handed address's words (what `o` held of it is not read). A run of bytes that is not a
 /// start's, a text that is not text, or a level file that does not read stops with its reason, as `stand` does for a file it does not carry.
-pub fn stand_handed(b: &[u8], o: &StartOpts, commands: &mut dyn FnMut(&mut game::game::Game, &[u8])) -> Stood {
+pub fn stand_handed(b: &[u8], o: &StartOpts, host: &mut dyn FnMut(&mut game::game::Game, &str, &[u8])) -> Stood {
     let p = parts(b).unwrap_or_else(|e| panic!("a start was handed bytes that are not a start's: {}", e));
     let text = |i: usize| core::str::from_utf8(p[i]).unwrap_or_else(|_| panic!("{} is not text", PARTS[i]));
     let some = |i: usize| if p[i].is_empty() { None } else { Some(GltfFile { text: text(i), bin: None }) };
@@ -48,7 +48,7 @@ pub fn stand_handed(b: &[u8], o: &StartOpts, commands: &mut dyn FnMut(&mut game:
             assert!(r.p == p[6].len(), "{}: {} bytes were handed and the knob tables are {}", PARTS[6], p[6].len(), r.p);
         }
         // (the commands after them: a table read whole would take back what one wrote)
-        if !p[7].is_empty() { commands(g, p[7]); }
+        host(g, text(1), p[7]);
     })
 }
 

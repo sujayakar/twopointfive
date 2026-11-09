@@ -30,7 +30,6 @@ pub fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
             g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
             g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, want.fire_wait);
             if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
-            if g.gd[gd].reload_t >= 0.0 { tick_reload_beat(g, gd, dt); }
             let threat = match want.threat {
                 Some(s) => s,
                 None => match (crate::belief::gun_point(g, gd), pc) {
@@ -249,8 +248,8 @@ fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f6
     let weapon = g.gd[gd].weapon;
     if crate::gunslots::side_locked(g, gd) {
         // his hands are between his two guns, or off his gun for a charge: no round, no magazine
-    } else if g.gd[gd].reload_t >= 0.0 {
-        tick_reload_beat(g, gd, dt);
+    } else if crate::control::man::changing_magazine(g, gd) {
+        // no round while it lasts (frame.rs `hands` counts it)
     } else if g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row").burst.is_some() {
         let muzzle_down = g.gd[gd].muzzle_down;
         let start_ok = !shield && facing_err < 0.25 && !blocked && !twisted && !poked && !muzzle_down && crate::aim::aim_ready(g, gd);

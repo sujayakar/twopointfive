@@ -275,7 +275,7 @@ Each was seen in a render before and after (Workbench close-ups with back-face c
 
 ## Stage 6: the look — a second file, `cast-gwot.gltf` (2026-10-10)
 
-The game's default look (src/scene/look.ts `LOOK.on`; the page: on unless `?look=plain`; headless: off unless `TPS_LOOK=1`) draws the men out of a
+The game's default look (src/scene/look.ts `LOOK.on`; the page: on; headless: off unless `TPS_LOOK=1`) draws the men out of a
 SECOND file built by the same builder. `cast.gltf` is untouched: `python3 tools/chars/build_cast.py` still writes it byte for byte.
 
     python3 tools/chars/build_cast.py --look gwot          # → public/assets/chars/cast-gwot.gltf
@@ -309,8 +309,7 @@ variant name under either look). What differs:
 - Responders and civilians: the same parts, the same colours.
 
 Look sheets of this file: `CAST_GLTF=<repo>/public/assets/chars/cast-gwot.gltf TPS_LOOK=1` in front of tools/chars/look's two steps (dump_look.ts reads
-the tables the switch selects; render_look.py refuses a look.json of another cast). Page stills: `QUERY=look=plain` in front of look-stills.cjs gives the
-'before' off the same served tree.
+the tables the switch selects; render_look.py refuses a look.json of another cast).
 
 Still rough: the shawl lies as close as a yoke (no hanging fold, and where a man's pick of wrap is near his shirt's colour it is hard to see at all); the turban is a smooth dome with shallow ridges; the shirt's hem does
 not swing (it is skinned to the thighs); nobody has a rolled sleeve.

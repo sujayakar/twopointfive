@@ -353,6 +353,8 @@ pub struct MarksView {
     pub stalk: Option<f64>,
     /// he waits at a corner for a man to come round it
     pub stalk_waits: bool,
+    /// what the hearing model has his feet on (None: the floors are all one)
+    pub floor: Option<crate::view::FloorWord>,
 }
 
 /// what the auto-aim has snapped to
@@ -482,12 +484,22 @@ pub struct TickView {
     pub hand: Option<crate::view::HandRingView>,
     /// what a tap of the key that found no row says, while it is still up and still so
     pub empty: Option<crate::view::EmptyView>,
-    /// the plan on the floor, the seat's and each other player's: empty with nothing to show (None: the plan is switched off)
-    pub plan: Option<crate::view::PlanView>,
+    /// the plan on the floor, the seat's and each other player's: empty with nothing to show
+    pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
     /// a quiet mission's words for its room, its holder, its thing and its ways out
     pub quiet: Option<crate::view::QuietView>,
+    /// his own list: what the key would do now, and the things it could be done to
+    pub interact: crate::view::InteractView,
+    /// the alarm's stage (None: calm)
+    pub alarm: Option<crate::view::AlarmView>,
+    /// the mission's stage
+    pub stage: crate::view::Stage,
+    /// the rule tables' numbers that say how the HUD lays out what it is told
+    pub look: crate::view::HudLook,
+    /// each man whose attention has been taken, as the floor shows it
+    pub attention: Vec<crate::view::AttentionLine>,
 }
 
 /// which pair of the squad a man is of
@@ -511,6 +523,8 @@ pub struct MateLine {
     /// his pair, while the squad is in pairs
     pub pair: Option<crate::view::Pair>,
     pub down: bool,
+    /// the card he was staged with in a line ('' = none)
+    pub kit: String,
 }
 
 /// a line of the squad's block
@@ -1093,7 +1107,7 @@ pub struct HandRingView {
 #[derive(Clone, Debug, Default)]
 pub struct EmptyView {
     pub word: String,
-    pub kind: String,
+    pub kind: crate::view::ThingKind,
     pub dist: Option<f64>,
 }
 
@@ -1140,9 +1154,9 @@ pub struct PlanWho {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum WaitWhy { #[default] Stack, Tool, Charge, Thr, Drill, Wall, Pair }
 
-/// how a door's key is drawn: none · on its plate · it waits on the key and is not set · they stand there and the press sends them
+/// how a door's key is drawn: none · it waits on the key and is not set · they stand there and the press sends them
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum KeyCap { #[default] None, Plate, Dark, Lit }
+pub enum KeyCap { #[default] None, Dark, Lit }
 
 /// something waiting on the player's key: a doorway's two jambs (a wall's foot), whose it is, the key that sends it and whether that key would send this one now
 #[derive(Clone, Debug, Default)]
@@ -1199,4 +1213,201 @@ pub struct QuietView {
     pub thing: String,
     pub outs: String,
     pub bare: String,
+}
+
+/// what sort of thing the key is about
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ThingKind { #[default] Cam, Guard, Breaker, Door, Light, Body, Objective, Held, Wall, Switch, Charge, Cancel }
+
+/// the mission's stage
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Stage { Drive, #[default] Infiltrate, Exfil, Done, Failed }
+
+/// what a held attention is: he goes over, he only looks, or another rule has lent it
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum AttentionMode { #[default] Go, Look, Lent }
+
+/// what a floor is, as a man's feet are heard on it
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum FloorWord { #[default] Carpet, Lino, Stone, Tile, Asphalt, Grass }
+
+/// the key that backs out
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum BackKey { Tab, #[default] Esc }
+
+/// a line of a row of his list: the key that does it ('' = a line no key gives), by its default name for the page to name as bound
+#[derive(Clone, Debug, Default)]
+pub struct RowOpt {
+    pub key: String,
+    pub text: String,
+}
+
+/// a row of his list
+#[derive(Clone, Debug, Default)]
+pub struct ListRow {
+    /// what sort of thing it is about
+    pub kind: crate::view::ThingKind,
+    /// the thing's name and state
+    pub label: String,
+    pub opts: Vec<crate::view::RowOpt>,
+    pub in_reach: bool,
+    /// a thrown breaker, a light that is out
+    pub off: bool,
+    /// how far off, in metres, out of reach
+    pub dist: Option<f64>,
+    /// how far a running verb has got, 0 to 1
+    pub progress: Option<f64>,
+    /// about the same thing as the row above it
+    pub cont: bool,
+}
+
+/// the thing the highlighted row is about, which the HUD rings
+#[derive(Clone, Debug, Default)]
+pub struct ThingRing {
+    pub kind: crate::view::ThingKind,
+    pub at: V3,
+    /// the man it is on, whose figure it rides between ticks, `up` over his feet (None: a thing that stays at `at`, a body with them)
+    pub man: Option<f64>,
+    pub up: f64,
+    pub off: bool,
+    pub in_reach: bool,
+    pub progress: Option<f64>,
+}
+
+/// a thing the key could act on, whether or not it is in reach
+#[derive(Clone, Debug, Default)]
+pub struct ThingDot {
+    pub kind: crate::view::ThingKind,
+    pub at: V3,
+    /// as on `ThingRing`
+    pub man: Option<f64>,
+    pub up: f64,
+    pub off: bool,
+    /// about a man the fog hides from the seat's team
+    pub hidden: bool,
+    /// the highlighted row is about it, and the ring is on it
+    pub ringed: bool,
+}
+
+/// his list as the panel shows it, and the things on the floor it is about
+#[derive(Clone, Debug, Default)]
+pub struct InteractView {
+    pub rows: Vec<crate::view::ListRow>,
+    /// the highlighted row among them (-1: none)
+    pub lit: f64,
+    /// how many were left off the end
+    pub more: f64,
+    /// the selector is open: he holds the key and the list is its rows
+    pub open: bool,
+    /// the panel is the corner's three things (a tour's puppet keeps the list as it was)
+    pub corner: bool,
+    /// (None: no thing, or a row about none)
+    pub ring: Option<crate::view::ThingRing>,
+    pub dots: Vec<crate::view::ThingDot>,
+}
+
+/// the alarm's stage
+#[derive(Clone, Debug, Default)]
+pub struct AlarmView {
+    /// 1 heightened, 2 lockdown
+    pub level: f64,
+    /// seconds left on its clock (0: none is running)
+    pub left: f64,
+    /// an episode is running
+    pub live: bool,
+}
+
+/// how a ring with one row is drawn: the numbers the game reads the cursor by (ringlone)
+#[derive(Clone, Debug, Default)]
+pub struct LoneLook {
+    pub r: f64,
+    pub h: f64,
+    pub pad: f64,
+    /// a letter's width
+    pub letter: f64,
+    /// the most letters a pill is drawn for
+    pub max: f64,
+    pub lead: f64,
+}
+
+/// the numbers of a ring as the game reads a cursor by them
+#[derive(Clone, Debug, Default)]
+pub struct RingLook {
+    /// the places on the wheel
+    pub places: f64,
+    pub hole: f64,
+    pub rim: f64,
+    /// how far each way from its middle its words may lie
+    pub box_x: f64,
+    pub box_y: f64,
+    /// a ring with one row is a pill, on these numbers
+    pub lone: crate::view::LoneLook,
+}
+
+/// the plan on the floor's numbers
+#[derive(Clone, Debug, Default)]
+pub struct PlanLook {
+    pub fresh_secs: f64,
+    pub walk_dim: f64,
+    pub rest_dim: f64,
+    pub ring_m: f64,
+    pub sector_m: f64,
+    pub sector_deg: f64,
+    pub reask_secs: f64,
+    /// how strong another player's plan is drawn (0: not at all)
+    pub others: f64,
+}
+
+/// where a line from off the screen goes
+#[derive(Clone, Debug, Default)]
+pub struct NetLook {
+    /// at the edge of the view on his side (false: near you)
+    pub edge: bool,
+    pub near: f64,
+    pub edge_in: f64,
+}
+
+/// a held attention's numbers
+#[derive(Clone, Debug, Default)]
+pub struct AttentionLook {
+    pub ring_m: f64,
+    pub way_reask: f64,
+}
+
+/// the rule tables' numbers that say how the HUD lays out what it is told. Whatever a rule of the tick reads is read here too, so a page holds no second copy of it
+#[derive(Clone, Debug, Default)]
+pub struct HudLook {
+    pub ring: crate::view::RingLook,
+    pub plan: crate::view::PlanLook,
+    pub net: crate::view::NetLook,
+    pub attention: crate::view::AttentionLook,
+    /// a tutorial's big line keeps clear of your men
+    pub line_clear: bool,
+    /// a tutorial step's mark gives way to a ring over it
+    pub mark_clear: bool,
+    /// the key that backs out of the selector
+    pub back: crate::view::BackKey,
+}
+
+/// one man's held attention: a thread from his feet to the place and a ring there
+#[derive(Clone, Debug, Default)]
+pub struct AttentionLine {
+    /// his character's id
+    pub man: f64,
+    pub at: V3,
+    /// how much of the ring is still to run (1 while he walks to it or it is lent)
+    pub left: f64,
+    pub mode: crate::view::AttentionMode,
+    /// he has said he is done
+    pub ending: bool,
+    /// not his first inside the memory
+    pub worn: bool,
+    /// he is on his way over to it
+    pub walking: bool,
+    /// the fog hides him from the team
+    pub hidden: bool,
+    /// the thread is the way he will walk, not a straight line
+    pub walks: bool,
+    /// that way, where it is his own path, from where he is on it. (None: the floor is asked)
+    pub own: Option<Vec<V3>>,
 }

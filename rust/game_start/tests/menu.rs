@@ -130,7 +130,7 @@ fn the_quick_keys_line_is_the_order_it_gives() {
             let now = game::view::host_now(&p.g, p.host.input, p.host.cam, p.host.canvas);
             let t = game::orders::hover(&p.g, &game::seats::seat(&p.g, p.g.seats[0]), &now).expect("the key is live");
             let n = p.g.orders.log.len();
-            game::orders::squad_orders_quick_give(&mut p.g, &t);
+            game::autopilot::auto_quick(&mut p.g, &t);
             assert!(p.g.orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
             let id = p.g.orders.log.last().unwrap().order.clone();
             let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();

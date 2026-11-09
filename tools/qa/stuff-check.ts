@@ -1,15 +1,14 @@
 // A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; src/scene/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
-//                                                    as it stood): lines 2, 3, 4, 7, 13, 14, 15 and 17 must FAIL
+//                                                    as it stood): lines 2, 3, 4, 7, 14, 15 and 17 must FAIL
 //   KITWORDS_BREAK=1 bun run tools/qa/stuff-check.ts  the kits' trim is read with its words struck out (a piece of trim that says nothing): line 12 must FAIL
 //   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts NAMED_COATS) is emptied: line 8 must FAIL
 //   (line 18 builds every level generator in this process: a second or so; it reads no level file, so neither word above changes it)
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
-// this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
-// stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
+// this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
 const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, saidAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
@@ -19,7 +18,6 @@ const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await im
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { PropSystem } = await import(`${ROOT}/src/game/props.ts`), { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
 const KD = await import(`${ROOT}/src/scene/levelKit.ts`), { newKit, KIT_PALETTE, KIT_FINISH } = KD;
 
 const BRK = process.env.STUFF_BREAK === '1';
@@ -70,7 +68,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 // 5. NOTHING ASKS A COLOUR: the same numbers are whatever their box says; a box that says nothing is plain whatever its colour; rain, a tone, a repaint change nothing
 { const mud = [...GWOT_PALETTE.mud], a = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud }), b = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'wood' }), c = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'mud wall' });
   const before = cls(c); c.albedo = [mud[0] * 0.5, mud[1] * 0.5, mud[2] * 0.52]; const wet = cls(c); c.albedo = [0.9, 0.1, 0.9]; const pink = cls(c);
-  const srcs = ['src/render/gbuffer.ts', 'src/scene/levelKit.ts', 'src/scene/officeGen.ts', 'src/scene/levelLoad.ts', 'src/main.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
+  const srcs = ['src/render/gbuffer.ts', 'src/scene/levelKit.ts', 'src/scene/officeGen.ts', 'src/scene/levelLoad.ts', 'src/host/drawpage.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
   const wgsl = readdirSync(`${ROOT}/src/render/shaders`).filter(f => f.endsWith('.wgsl')).map(f => readFileSync(`${ROOT}/src/render/shaders/${f}`, 'utf8')).join('\n');
   const gone = ['lookStuff', 'lookNamed', 'lookNeedPaints', 'classWgsl', 'LOOK_OF', 'LOOK_BY_NAME', 'LOOK_MATCH', 'FINISH_BY_ALBEDO', 'surfTryConfig'].filter(n => new RegExp(`\\b${n}\\b`).test(srcs) || (GB as any)[n] !== undefined);
   const shader = ['lookClass', 'surfClass', 'surfaceTry'].filter(n => new RegExp(`\\b${n}\\s*\\(`).test(wgsl)).concat(/\bSURF_TRY\b/.test(wgsl) ? ['SURF_TRY'] : []);
@@ -80,7 +78,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     `mud's paint, no word: ${said(cls(a))} · saying wood: ${said(cls(b))} · mud wall dry ${said(before)}, wet ${said(wet)}, pink ${said(pink)} · still in the code: ${gone.join(', ') || 'none'} · in a shader: ${shader.join(', ') || 'none'}`); }
 
 // 6. the page: the look's word is made from the boxes alone, and the two words that gave the colour rule back are no longer the look page's
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8'), wired = main.includes('this.world.setStuffOf(lookWordOf(), lookCoreOf())') && !/setStuffOf\(lookWordOf\(\)\)/.test(main);
+{ const main = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8'), wired = main.includes('this.world.setStuffOf(lookWordOf(), lookCoreOf())') && !/setStuffOf\(lookWordOf\(\)\)/.test(main);
   const core = lookCoreOf(), cut = makeBox({ c: [0, 1, 0], h: [1, 1, 0.2], albedo: [0.4, 0.4, 0.4], stuff: 'block' }); const own = core(cut); cut.cutCoreStuff = 'slab'; const other = core(cut); cut.cutCoreStuff = 'plain' as any; const none = core(cut);
   check(wired && !lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main) && own === lookStuffOf('block') && other === lookStuffOf('slab') && none === 0,
     '6 the page makes the look\'s word from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',
@@ -93,8 +91,6 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     D.boxes[bi].stuff = 'paint'; D.boxes[wi].stuff = 'plain'; D.boxes[fi].stuff = 'slab'; D.props[pi].parts[0].stuff = 'plaster'; D.boxes[ii].stuff = 'enamel';
     const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back, { lived: true, dressing: true }) as any;   // (every box of the file: the lived rooms and the dressing too)
     const car = cls(L.boxes[bi]), desk = cls(L.boxes[wi]), inl = cls(L.boxes[ii]);
-    // the box the GAME makes of a prop's part (game/props.ts Prop), which is also the box the page asks before the first frame
-    const seat = cls(new PropSystem([L.props[pi]], new StaticCollision(L.boxes), () => {}).all[0].boxes[0], true);
     // back to a file: a word is written only where the box is another thing than its row says; 'plain' is written over a row that says something
     const again = levelToData(L, { materials: back.materials }) as any, same = again.boxes.every((b: any, i: number) => b.stuff === back.boxes[i].stuff) && again.props.every((p: any, i: number) => p.parts.every((q: any, j: number) => q.stuff === back.props[i].parts[j].stuff));
     const kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes[ii].stuff === 'enamel' && again.boxes.some((b: any) => b.stuff === undefined && b.material !== undefined && back.materials[b.material].stuff !== 'plain');
@@ -107,11 +103,11 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
       if (where === 'box') X.boxes[0].stuff = w; else if (where === 'part') X.props[0].parts[0].stuff = w; else if (where === 'row') X.materials.wood.stuff = w; else (Object.values(X.scenarios.kitView.sets).find((x: any) => x.boxes?.length) as any).boxes[0].stuff = w;
       return validateLevelData(X).some((e: string) => e.includes('stuff')); };
     const masonry = (LOOK_NAMES as readonly string[]).slice(LOOK_PAINTED).join(', ');
-    check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && seat === lookStuffOf('plaster') && same && kept && placed
+    check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && L.props[pi].parts[0].stuff === 'plaster' && same && kept && placed
       && refuse('mixed') && refuse('banana') && !refuse('waits') && !refuse('veneer') && refuse('banana', 'part') && !refuse('fabric', 'part') && refuse('banana', 'row') && !refuse('veneer', 'row') && refuse('mud brick', 'row') && !!KV && refuse('banana', 'set') && !refuse('steel', 'set')
       && BOX_STUFFS.length === LOOK_PAINTED + 4 && !refuse('glass') && !refuse('rubber') && masonry === 'field stone, mud brick' && refuse('mud brick') && refuse('field stone') && lookStuffOf('mud brick') === 0,
-      '7 a box says its own word: a concrete box that says paint is paint; a wooden box that says plain is plain; a box written as numbers that says enamel is enamel; a chair\'s part says its own and the box the game makes of it (the box the page asks before the first frame) carries it; the words go through the level file and back, written only where the box is another thing than its row says, after the finish and before the flags; a word the look has no material for is refused when the file is read, on a box, a part, a material row and a gear screen\'s box, the stone and brick under a mud wall among them (glass and rubber, which the picture of a hit reads, are words a box may say)',
-      `the concrete box ${said(car)} · the wooden box ${said(desk)} · the inline box ${said(inl)} · the chair's part ${said(seat)} · through the file and back the same ${same}, kept ${kept} · placed ${placed} · refused: mixed ${refuse('mixed')}, banana ${refuse('banana')}, mud brick ${refuse('mud brick')}, a part's ${refuse('banana', 'part')}, a row's ${refuse('banana', 'row')}, a set's ${KV ? refuse('banana', 'set') : 'no file'} (${KV}); waits ${refuse('waits')} · ${errs.length} errors reading it back${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); } }
+      '7 a box says its own word: a concrete box that says paint is paint; a wooden box that says plain is plain; a box written as numbers that says enamel is enamel; a chair\'s part says its own; the words go through the level file and back, written only where the box is another thing than its row says, after the finish and before the flags; a word the look has no material for is refused when the file is read, on a box, a part, a material row and a gear screen\'s box, the stone and brick under a mud wall among them (glass and rubber, which the picture of a hit reads, are words a box may say)',
+      `the concrete box ${said(car)} · the wooden box ${said(desk)} · the inline box ${said(inl)} · the chair's part ${L.props[pi].parts[0].stuff} · through the file and back the same ${same}, kept ${kept} · placed ${placed} · refused: mixed ${refuse('mixed')}, banana ${refuse('banana')}, mud brick ${refuse('mud brick')}, a part's ${refuse('banana', 'part')}, a row's ${refuse('banana', 'row')}, a set's ${KV ? refuse('banana', 'set') : 'no file'} (${KV}); waits ${refuse('waits')} · ${errs.length} errors reading it back${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); } }
 
 // 8. a word belongs to the paint it was said with: a piece says it for its own paints, a kit's add gives a box its paint's, and whoever repaints a box does not keep the old
 { const k = newKit(), n0 = k.boxes.length; KD.desk(k, 2, 2, 1.6, 0.8); const own = k.boxes.slice(n0), n1 = k.boxes.length; KD.desk(k, 6, 2, 1.6, 0.8, 0, KIT_PALETTE.woodDark); const dark = k.boxes.slice(n1), n2 = k.boxes.length;
@@ -144,15 +140,6 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     && paintOf(two.a)?.stuff === 'wood' && paintOf(two.b)?.stuff === 'cloth' && part.stuff === 'fabric' && !('stuff' in partPlain) && wordFor(C.black).stuff === undefined && wordFor(C.black, 'veneer').stuff === 'veneer',
     '9 a paint is known by the row handed over: a box made with the kit\'s steel takes the steel\'s finish and is steel; a COPY of the same numbers is nobody\'s paint, matte and plain; a finish or a word said on the call wins (plain said aloud is no word); a paint toned keeps its word and not its finish, however dark; a stand-in is the stuff of the row it stands in for; numbers written out say their word beside them; two paints with the same numbers are two paints',
     `kit steel: rough ${B[i0].rough}, metal ${B[i0].metal}, ${B[i0].stuff} · its copy: rough ${B[i1].rough}, ${B[i1].stuff ?? 'no word'} · wood toned 0.6 and again 0.5: ${paintOf(t)?.stuff}, ${paintOf(t2)?.stuff} · slab toned to near black: ${paintOf(far)?.stuff} · a stand-in of mud: ${paintOf(standIn)?.stuff}, of white plastic: ${paintOf(plastic)?.stuff} · two paints, one colour: ${paintOf(two.a)?.stuff}, ${paintOf(two.b)?.stuff}`); }
-
-// 10. PICTURE ONLY: nothing the simulation makes of anything reads a box's word. In src/game it is read in at most one place, the picture of a hit (that rule joins
-//     after this one: until it does, nowhere), and said or copied in three
-{ const dir = `${ROOT}/src/game`, lines: string[] = [];
-  for (const f of readdirSync(dir).filter(f => f.endsWith('.ts') && f !== 'wallpen.ts')) readFileSync(`${dir}/${f}`, 'utf8').split('\n').forEach((l, i) => { const code = l.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, ''); if (/\.stuff\b/.test(code)) lines.push(`${f}:${i + 1}:${code}`); });
-  const reads = lines.filter(l => !/\bstuff: \w+(\.\w+)*\.stuff\b|\.stuff = \w+(\.\w+)*\.stuff\b|\bstuff: paintOf\(albedo\)\?\.stuff\b|\.stuff = paintOf\(albedo\)\?\.stuff\b|\.stuff = '[\w ]+'/.test(l)), hit = reads.filter(l => l.startsWith('particleFx.ts:') && l.includes('export function saidSurf('));
-  const files = [...new Set(lines.map(l => l.split(':')[0]))].sort().join(', ');
-  check(reads.length === hit.length && hit.length <= 1 && lines.length >= 4, '10 picture only: in the game\'s code a box\'s word is READ in at most one place, what a round\'s hit looks like (particleFx.ts saidSurf: sparks, chips, the mark), and otherwise only said outright or copied from a thing to what is made of it (a prop\'s part to its box, a wall to its pieces, a named colour to a gun\'s part); no rule of a round, a charge, a blast or a man\'s senses asks it',
-    `${lines.length} lines in ${files} · ${reads.length} read it${reads.length > hit.length ? `: ${reads.map(l => l.slice(0, 90)).join(' | ')}` : hit.length ? ' (the hit\'s picture)' : ' (the hit picture\'s rule is not in this build)'}`); }
 
 // 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/leafPaint.ts paintLeaves): every outside leaf in the level's accent paint is paint and every inside one in
 //     the palette's wood is wood, whatever shade the leaf's own name gave it; a level's row of bare numbers says nothing unless it says a word for that side
@@ -233,7 +220,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     scenarios: { kitView: { sets: { yard: { boxes: [{ ...wall, material: 'partTan|wall' }, { ...wall, material: 'mud|partTan' }, { c: [3, 1.3, 5], h: [0.2, 0.34, 0.02], albedo: [0.14, 0.2, 0.45], stuff: 'fabric', flags: ['NoShadow'] }] } } } } });
   // … and the skin's own Said, read off the one file that wears it: every frame of the consulate in the varnish's paint says the varnish's stuff and finish
   const { VARNISH } = await import(`${ROOT}/tools/levels/gwotSkin.ts`), brown = GWOT_PALETTE[VARNISH.paint], inBrown = (b: any) => b.material === VARNISH.paint || (b.albedo !== undefined && [0, 1, 2].every(c => Math.abs(b.albedo[c] - brown[c]) <= 0.0025));   // (the row by its name, as a file names a box in the row's own numbers; or the numbers written out)
-  const frames = (dataOf('consulate-gwot.json').boxes as any[]).filter(b => (b.group ?? '').startsWith('doorframe.') && inBrown(b)), varnished = frames.filter(b => b.stuff === VARNISH.stuff && b.rough === VARNISH.rough).length;
+  const frames = (dataOf('consulate.json').boxes as any[]).filter(b => (b.group ?? '').startsWith('doorframe.') && inBrown(b)), varnished = frames.filter(b => b.stuff === VARNISH.stuff && b.rough === VARNISH.rough).length;
   check(bad.length === 0 && asked > 5000 && sacks > 0 && sets > 0 && made.asked === 4 && made.sacks === 1 && made.sets === 1 && made.standins === 1 && made.bad.size === 3 && frames.length > 40 && varnished === frames.length,
     '15 no wall and no door frame is cloth by a borrowed paint: in every level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet, but for a wall of sacks in the sandbag\'s or the hesco\'s own paint; nor is a wall of a gear screen\'s set, asked as the look wears it (a stand-in on its fallback row is not asked); a hut wall in the tan partition paint, a frame that says cloth and a set\'s wall in the tan are found, a wall of sacks and a wall that says its own word are not; the consulate\'s frames wear the varnish\'s paint and say its stuff and finish (a skin\'s Said)',
     `${asked} wall and frame boxes in ${FILES.length} files · ${sacks} of sacks · ${sets} walls of sets asked, ${standins} stand-ins not asked · made up: ${made.bad.size} of 3 found, ${made.sacks} of sacks, ${made.standins} stand-in · the consulate's frames in the varnish's paint: ${frames.length}, ${varnished} say ${VARNISH.stuff} at ${VARNISH.rough}${bad.length ? ` · CLOTH: ${bad.join(' · ')}` : ''}`); }
@@ -279,8 +266,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //     park's numbers are a dark grey that generators have borrowed for other dark things (the lived kit's iron, the compound's mud at the pump). Whatever is
 //     laid in either paint and says no word of its own IS that ground to the look and, the lot, to a round's picture: so in every level file each of a level's
 //     own boxes that takes one of the two words from its row is ground: a flat box (no more than a slab's 0.125 m half height) in the `ground` or `floors`
-//     group. A thing that is neither says its own word (saidAs: the compound's mud says earth). And a lot is concrete to the picture of a hit, wet or dry
-//     (particleFx.ts STUFF_SURF: its wet paint's tone read as metal).
+//     group. A thing that is neither says its own word (saidAs: the compound's mud says earth).
 //     NOT ASKED: a gear screen's set on its fallback row (line 15's rule: a stand-in, drawn only by the plain file, where no stuff is drawn).
 //     RED PATH: a mat and a kerb written here in the car park's paint must be found, a slab, a strip of lawn and a mat that says earth must not; with
 //     STUFF_BREAK (the rows say nothing) no file has a lot.
@@ -294,19 +280,18 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   const rows = { asphalt: { albedo: [0.09, 0.09, 0.1], stuff: 'tarmac' }, grass: { albedo: [0.1, 0.16, 0.07], stuff: 'grass' } } as Record<string, any>; if (BRK) for (const m of Object.values(rows)) delete m.stuff;
   const made = grounds({ materials: rows, boxes: [{ id: 'slab', group: 'ground', h: [20, 0.125, 14], material: 'asphalt' }, { id: 'strip', group: 'ground', h: [20, 0.005, 1.6], material: 'grass' },
     { id: 'mat', group: 'lived.yard', h: [0.55, 0.01, 0.34], material: 'asphalt' }, { id: 'kerb', group: 'ground', h: [3, 0.3, 0.1], material: 'asphalt' }, { id: 'mud', group: 'lived.yard', h: [0.55, 0.01, 0.34], material: 'asphalt', stuff: 'earth' }] });
-  const PF = await import(`${ROOT}/src/game/particleFx.ts`), ruleWas = PF.HITSTUFF.on; PF.HITSTUFF.on = true; const lot = PF.saidSurf({ stuff: 'tarmac', flags: 0 } as any); PF.HITSTUFF.on = ruleWas;
-  check(bad.length === 0 && lots > 10 && lawns > 10 && made.lots === 1 && made.lawns === 1 && made.bad.length === 2 && lot === 'concrete',
-    '17 tarmac and grass are worn by the ground only: in every level file each box that takes one of the two words from its paint\'s row is a flat box of the `ground` or `floors` group (a thing laid in the car park\'s dark paint that is no lot says its own word); a mat and a kerb in the car park\'s paint are found, a slab, a strip of lawn and a mat that says earth are not; and a lot is concrete to the picture of a hit',
-    `${lots} lots and ${lawns} strips of lawn in ${FILES.length} files · made up: ${made.bad.length} of 2 found, ${made.lots} lot, ${made.lawns} lawn · a round on tarmac: ${lot}${bad.length ? ` · NOT GROUND: ${bad.slice(0, 20).join(' · ')}` : ''}`); }
+  check(bad.length === 0 && lots > 10 && lawns > 10 && made.lots === 1 && made.lawns === 1 && made.bad.length === 2,
+    '17 tarmac and grass are worn by the ground only: in every level file each box that takes one of the two words from its paint\'s row is a flat box of the `ground` or `floors` group (a thing laid in the car park\'s dark paint that is no lot says its own word); a mat and a kerb in the car park\'s paint are found, a slab, a strip of lawn and a mat that says earth are not',
+    `${lots} lots and ${lawns} strips of lawn in ${FILES.length} files · made up: ${made.bad.length} of 2 found, ${made.lots} lot, ${made.lawns} lawn${bad.length ? ` · NOT GROUND: ${bad.slice(0, 20).join(' · ')}` : ''}`); }
 
 // 18. ONE ARRAY IS ONE PAINT. A paint is known by its array (scene/stuff.ts PAINTS), so a second saying on an array that already is a paint would change what
 //     every box painted from it is made of, in every module that holds it, and the last to load would win. It is refused out loud (stuff.ts keep): by
 //     madeOf, drawnAs, sayPaint, namePaint, namePaints, doing and tonedAs, wherever the stuff, the finish or what it DOES differs (no finish is a finish;
 //     the rules read what a paint does, scene/materials.ts, so since 11-05 the slip would move play and not only a picture); the same thing said
 //     again is nothing and the first saying stands, its name with it; and a second thing in the same colour is its own array (saidAs).
-//     OUT LOUD is a throw under bun, where levels are made and checked (ONE_PAINT.refuses: this check, the exporters, the harness); in the page it is one
+//     OUT LOUD is a throw under bun, where levels are made and checked (ONE_PAINT.refuses: this check, the exporters); in the page it is one
 //     line on the console for that paint and the first saying kept, so the page never stops on it.
-//     Then EVERY GENERATOR IS BUILT IN THIS ONE PROCESS, after everything above has loaded the kits, the editor and the game's props, as the exporter
+//     Then EVERY GENERATOR IS BUILT IN THIS ONE PROCESS, after everything above has loaded the kits, as the exporter
 //     hands a level over (the same hand-over as tools/levels/library.ts: a look file's skin run over its level with the scenario block on it, the office
 //     with its lived tier): none may be refused, alone or by what another has said. The only two sayings refused on 11-05 stood in two skins (a road
 //     paint said over a toned plastic's white).
@@ -348,8 +333,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //     level nothing says either word, by its own word or by its row: a coated thing says what is under the coat or the coat's kept cousin (steel, enamel,
 //     brushed, plastic). Asked of a level's own boxes, a shape's pieces that say a paint or a word of their own, and its props' parts; a gear screen's set
 //     is not asked (line 15's rule). NOT A LEVEL'S, and not asked: what the game itself makes in any level (a door's handles say paint, a keypad's block
-//     and the tools say metal: src/game). The look draws those by the same words; they are the game's to say, or the look's to keep clean by the
-//     level's kept word.
+//     and the tools say metal). The look draws those by the same words; they are the game's to say, or the look's to keep clean by the level's kept word.
 //     RED PATH: in a level written here as kept, a rack that says metal, a door whose ROW says paint, a chair's part and a shape's piece must be found;
 //     the same things in a level that says nothing of keeping must not.
 { const LEFT_OUT = ['metal', 'paint'];

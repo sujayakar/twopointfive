@@ -1,4 +1,4 @@
-// THE NEW PAGE DRAWS A SNOW LEVEL, A WET NIGHT AND A FIRE: draw.html on the software adapter, stepped by hand, read by what its picture holds, a still of each. Never a GPU's judgement: what
+// THE NEW PAGE DRAWS A SNOW LEVEL, A WET NIGHT AND A FIRE: the page on the software adapter, stepped by hand, read by what its picture holds, a still of each. Never a GPU's judgement: what
 // it holds is that the rows reach the picture and nothing throws. The page's own map of prints, flakes in the ring, the drip lines, a crater, the air's map, a fire's records.
 //   PORT=<a dev server> node tools/draw/weather-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
@@ -11,7 +11,7 @@ async function open(browser, words) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }), errors = [];
   page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
   page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-  await page.goto(`http://localhost:${PORT}/draw.html?paused&quality=verylow&mute&seed=5&${words}`, { timeout: 300000 });
+  await page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&seed=5&${words}`, { timeout: 300000 });
   await page.evaluate(() => window.__ready);
   return { page, errors };
 }

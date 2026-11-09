@@ -292,7 +292,7 @@ interface Op {
   stepT: number; stepBy: { by: Guard; t: number; at: Vec3 } | null;
   /** ROOMFIGHT.doorEars: the door an enemy's hand has just opened where he heard it and has a line to its doorway — who worked it, when, the doorway point he looks at */
   doorBy: { by: Guard; t: number; at: Vec3; door: Door } | null;
-  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; reloadUntil: number; saidT: number;
+  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; saidT: number;
   rounds: number; heldForFriend: number; heldForLine: number; blockT: number;
   /** the feet his hands still remember (aimcost.ts `feetHold`; only fed under AIMCOST.move) */
   feetSm?: number;
@@ -541,8 +541,7 @@ export class RoomFight {
   private breakOff(D: Def) {
     const g = this.g, gd = D.gd, c = gd.char, nav = g.col.nav; const threat = this.threatOf(D);
     D.movedAt = g.time;
-    const stays = hasHim(D.gd, OWN.stand);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
-    const rp = stays ? null : squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
+    const rp = squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
     if (rp) {
       pressRun(g, D, rp, null, 0.3);   // (pressure.ts's leg on a script: the move this file's own fall-back makes, with no door behind him to hold)
       this.stats.fellBack++; this.note(gd, 'falls back to his squad\'s rally point'); g.say(gd, 'fall back — back to the others!');
@@ -562,7 +561,7 @@ export class RoomFight {
       return L > 18 || toward || flat(q, spot) > 0.8 ? null : L;
     };
     const here = ask ? ask(c.pos) : 0;
-    (stays || gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
+    (gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
       if (D.ev[i] > 0.3 || flat(e.at, threat) < 3 || e.door.def.steel || g.doors.lockedOut(e.door, c.pos)) return;
       // a spot beyond the door, off its line (to either side of the opening) so the doorway is his to shoot into and not to stand in
       const F = frameOf(e.door); let spot: Vec3 | null = null, safe: Vec3 | null = null;
@@ -602,12 +601,12 @@ export class RoomFight {
   private tickMove(D: Def, dt: number): void { return goneWithTick('RoomFight.tickMove') as any; }
 
   /** a friend — Sam, or another living operative — within a body's breadth of the line from → to (and a metre past it), wider for one on the move */
-  friendInLine(from: Vec3, to: Vec3, self: Guard, samStill = false): 'player' | Guard | null {   // (samStill: asked AS IF the player stood still where he is — clearline.ts's question, never the fire gate's)
+  friendInLine(from: Vec3, to: Vec3, self: Guard): 'player' | Guard | null {
     const g = this.g; const dx = to[0] - from[0], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 0.0025) return null;
     const L = Math.sqrt(L2), tMax = 1 + 1.0 / L;
     const hit = (ch: Character, mate: boolean): boolean => {
       const h = ch.bones.hips ?? ch.pos; const tr = ((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / L2, t = clamp(tr, 0, tMax);
-      const sam = !mate && !!manOf(g, ch), pace = samStill && sam ? 0 : Math.hypot(ch.vel[0], ch.vel[2]), wide = 0.45 + Math.min(0.5, 0.3 * (ROOMFIGHT.samTravel && sam ? Math.min(pace, this.samSpeedOf(ch)) : pace)), clear = mate ? closeLane(wide, tr, L) : ROOMFIGHT.samBehind && tr > 1 ? Math.min(wide, 0.3 + 0.2 * (tr - 1) * L) : ROOMFIGHT.samBeside ? (tr <= 0 ? 0 : Math.min(wide, 0.3 + tr * L)) : wide;   // (the narrow lane at arm's length is between the team's own men: the player BETWEEN a gun and its man is owed the whole lane, always — standing PAST the man he is owed his own body's breadth and a fifth of how far past, samBehind)
+      const sam = !mate && !!manOf(g, ch), pace = Math.hypot(ch.vel[0], ch.vel[2]), wide = 0.45 + Math.min(0.5, 0.3 * (ROOMFIGHT.samTravel && sam ? Math.min(pace, this.samSpeedOf(ch)) : pace)), clear = mate ? closeLane(wide, tr, L) : ROOMFIGHT.samBehind && tr > 1 ? Math.min(wide, 0.3 + 0.2 * (tr - 1) * L) : ROOMFIGHT.samBeside ? (tr <= 0 ? 0 : Math.min(wide, 0.3 + tr * L)) : wide;   // (the narrow lane at arm's length is between the team's own men: the player BETWEEN a gun and its man is owed the whole lane, always — standing PAST the man he is owed his own body's breadth and a fifth of how far past, samBehind)
       return Math.hypot(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < clear;
     };
     for (const pl of men(g)) if (!pl.down && hit(pl.char, false)) return 'player';

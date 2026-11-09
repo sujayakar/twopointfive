@@ -88,7 +88,7 @@ pub fn sneak_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// A walk to a mark an order or the level's flow gave him: the pace he keeps to, low. (sneak.ts sneakPost)
 pub fn sneak_post(g: &mut crate::game::Game, gd: GuardId, order: &str) -> Option<f64> {
-    if sneak_low(g, gd) && posted().iter().any(|o| o == order) { Some(g.k.sneak.low_pace) } else { None }
+    if sneak_low(g, gd) && crate::orders::rows::id_is(order, crate::orders::Is::WalksLow) { Some(g.k.sneak.low_pace) } else { None }
 }
 
 /// A crouched, sneaking teammate's footfall; None: silent's own. (sneak.ts sneakStep)

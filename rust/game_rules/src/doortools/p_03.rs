@@ -272,7 +272,7 @@ pub fn door_tools_stack_held(g: &crate::game::Game, seat: &crate::seats::SeatRef
         if is_dead(g, m) { continue; }
         let Some(b) = crate::orders::squad_orders_of(g, seat, m) else { continue };
         let b = &g.tab.orders_assignment[b];
-        if b.order == "stack" && b.door == Some(d) && b.held_fire.unwrap_or(false) && b.arrived && b.yield_t < 0.0 { return true; }
+        if crate::orders::rows::id_is(&b.order, crate::orders::Is::Stacks) && b.door == Some(d) && b.held_fire.unwrap_or(false) && b.arrived && b.yield_t < 0.0 { return true; }
     }
     false
 }
@@ -287,7 +287,7 @@ pub fn door_tools_test_stacks(g: &mut crate::game::Game) {
         let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) else { continue };
         let at = pos_of(g, gd);
         let row = &g.tab.orders_assignment[a];
-        if row.order != "stack" || !row.arrived || row.stance != crate::character::Stance::Stack { continue; }
+        if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) || !row.arrived || row.stance != crate::character::Stance::Stack { continue; }
         let (Some(door), Some(post)) = (row.door, row.post) else { continue };
         if v3::dist_xz(at, post) > 0.6 { continue; }
         if crate::holdfire::hold_fire_holds_target(g, gd) || door_tools_stack_held(g, &crate::seats::here(g), door) { continue; }
@@ -463,7 +463,7 @@ pub fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<
     for &m in left {
         let p = post.get(m).unwrap();
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from("stack"),
+            order: String::from(crate::orders::rows::stack::ORDER.id),
             post: Some(p.pos),
             face: Some(p.face),
             watch: Some([c[0], 1.05, c[2]]),

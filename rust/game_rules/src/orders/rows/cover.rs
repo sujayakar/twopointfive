@@ -1,12 +1,13 @@
 //! COVER: "cover this door", "cover that way". Each man stays where he is and watches it.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::Covers, Is::Resumed, Is::KeepsLane, Is::WalksLow],
     can: Some(can),
     ..Row::new("cover", label, issue)
 };
@@ -32,7 +33,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         };
         let words = format!("covering {}", place);
         let a = SquadOrdersAssignA {
-            order: String::from("cover"), post: Some([p[0], 0.0, p[2]]), face: Some(yaw), watch: Some(watch), door,
+            order: String::from(ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(yaw), watch: Some(watch), door,
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
             going: words.clone(), there: words,
             ..Default::default()

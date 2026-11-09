@@ -86,8 +86,6 @@ export class PlaceField {
       { binding: 0, resource: { buffer: this.ubo[k] } }, { binding: 1, resource: dice }, { binding: 3, resource: this.maskView }, { binding: 4, resource: { buffer: this.buffer } }, { binding: 5, resource: { buffer: this.skyBuf } }] }));
   }
 
-  /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
-  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean { this.own.update(statics, dynamics, gaps); return this.setMap(this.own); }
   /** … from a map the caller keeps (the engine's, which the wall sides read too). True when it was sent. */
   setMap(map: PlaceMap): boolean {
     if (this.dead || (map === this.sentMap && map.drawn === this.sentDrawn)) return false;
@@ -124,13 +122,6 @@ export class PlaceField {
     this.device.queue.writeBuffer(this.buffer, 0, f); this.fresh = true;
   }
 
-  /** the open air's table read back (a tool's): SKY_WORDS words, all zero between frames */
-  async readSky(): Promise<Uint32Array> {
-    if (this.dead) return new Uint32Array(SKY_WORDS);
-    const buf = this.device.createBuffer({ label: 'place sky read-back', size: SKY_WORDS * 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const enc = this.device.createCommandEncoder(); enc.copyBufferToBuffer(this.skyBuf, 0, buf, 0, SKY_WORDS * 4); this.device.queue.submit([enc.finish()]);
-    await buf.mapAsync(GPUMapMode.READ); const res = new Uint32Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy(); return res;
-  }
 
   destroy(): void { if (this.dead) return; this.dead = true; this.buffer.destroy(); this.skyBuf.destroy(); this.maskTex.destroy(); for (const b of this.ubo) b.destroy(); }
 

@@ -7,7 +7,7 @@ import * as m3 from '../../src/game/aimweight';
 import * as m4 from '../../src/game/airDust';
 import * as m5 from '../../src/game/breach';
 import * as m6 from '../../src/game/breakTable';
-import * as m7 from '../../src/game/camera';
+import * as m7 from '../../src/host/camera';
 import * as m8 from '../../src/game/character';
 import * as m9 from '../../src/game/chronicle';
 import * as m10 from '../../src/game/cleared';
@@ -28,7 +28,7 @@ import * as m25 from '../../src/game/fogofwar';
 import * as m26 from '../../src/game/furnblast';
 import * as m27 from '../../src/game/game';
 import * as m28 from '../../src/game/glassbreak';
-import * as m29 from '../../src/game/input';
+import * as m29 from '../../src/host/input';
 import * as m30 from '../../src/game/lesson';
 import * as m31 from '../../src/game/moths';
 import * as m32 from '../../src/game/nightbreach';
@@ -174,7 +174,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   "anim_skeleton::SkeletonInstance": (m1 as any).SkeletonInstance,
   "character::Spring": (m8 as any).Spring,
   "destruction::RateCap": (m16 as any).RateCap,
-  "wind::PoolList": (m61 as any).PoolList,
   "game::AsideOwn": (m27 as any).AsideOwn,
   "par::Par": (m77 as any).Par,
   "verdict::Verdict": (m75 as any).Verdict,

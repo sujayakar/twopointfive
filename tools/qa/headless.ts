@@ -85,7 +85,7 @@ if (process.env.TPS_FELL && process.env.TPS_FELL !== '0') { const S = await impo
  *  another way than the file was written with, and that is a fact about the writing tool, not a stale file. Besides exact-check.ts, which tests the switch, the one place a tool flips it under itself. */
 export function asExporter<T>(fn: () => T): T { const was = EXACT_SWITCH.on; EXACT_SWITCH.on = false; try { return fn(); } finally { EXACT_SWITCH.on = was; } }
 { const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); if (pinned('TPS_LIVED')) LIVED.on = process.env.TPS_LIVED === '1'; }   // TPS_LIVED=1 = lived-in rooms (scene/lived.ts): a level's lived things are loaded with it (off = each level as it was before there were any)
-{ const { LOOK } = await import(`${ROOT}/src/scene/look.ts`); if (pinned('TPS_LOOK')) LOOK.on = process.env.TPS_LOOK === '1'; }   // TPS_LOOK=1 = the default look (scene/look.ts): a level that has a file in it is loaded from that file (playthrough.ts levelOfFile), the men wear its kit
+{ const { LOOK } = await import(`${ROOT}/src/scene/look.ts`); if (pinned('TPS_LOOK')) LOOK.on = process.env.TPS_LOOK === '1'; }   // TPS_LOOK=1 = the default look (scene/look.ts): the men wear its kit
 { const { MUSIC } = await import(`${ROOT}/src/audio/pieces.ts`); if (pinned('TPS_MUSIC')) MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = process.env.TPS_MUSIC === '1'; }   // TPS_MUSIC=1 = more music than the one theme (audio/pieces.ts): the score plays its newer pieces, each level its own two of them (MUSIC.byLevel, audio/setlist.ts) and its tension reads the opposition's nerves alone (MUSIC.theirs, game/guards.ts tension): the one word raises all three; off = the theme alone, every man counted. No harness run hears it (audio is a null object here): the row is the stand's, and tools/qa/music-check.ts drives the sequencer itself
 { const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`); if (pinned('ONEWAY')) DOORWAY.oneWay = process.env.ONEWAY === '1'; if (pinned('QA_EXITSOUT')) DOORWAY.exitsOut = process.env.QA_EXITSOUT === '1'; }
 // DOORWAY MANNERS (src/game/doorway.ts DOORMANNERS — the shipped default is ON): the same rule as the other door switches. The harness stands the game up with
@@ -113,7 +113,7 @@ export const fake: (name?: string) => any = stubMod.fake;
 
 const { loadGltfCharacter, loadGltfCast, castFile } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
-const { Input } = await import(`${ROOT}/src/game/input.ts`);
+const { Input } = await import(`${ROOT}/src/host/input.ts`);
 const { WEATHER_BOOT, snowLevel, snowLevelOfQuery } = await import(`${ROOT}/src/game/weatherKinds.ts`), { HOUR } = await import(`${ROOT}/src/game/hours.ts`), { levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 // the movement pass (character.ts MOVES) is ON in the page and OFF under the harness — pinned here too, so tools that build a bare Character (gait.ts) and never
@@ -229,7 +229,7 @@ async function standBody(opts: { /** a recipe's or a tape's knob tables, laid ov
       const bad = Object.keys(turn).filter(k => !(k in engine.settings)); if (bad.length) throw new Error(`QA_PICTURE: the engine has no setting ${bad.join(', ')} (src/settings.ts): a turn of nothing would read as a run that did not move`);
       Object.assign(engine.settings, turn); } }
   if (opts.env) { const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = !!opts.env.destruction?.on; const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); LIVED.on = !!opts.env.lived; }   // (a recording made with the destruction switch on replays with it on: the roof rule, the dressing, the loud rules)
-  if (opts.env) { const { applyEnvSettings } = await import(`${ROOT}/src/game/journal.ts`); applyEnvSettings(engine.settings, opts.env); if (typeof opts.env.glassFracture === 'boolean') engine.glassFracture = opts.env.glassFracture;   /* (the recording's renderer drew the glass fracture's cracks, or said it could not: glass.ts's star decal and glassBreakLive read it) */ if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
+  if (opts.env) { const { applyEnvSettings } = await import(`${ROOT}/src/game/journal.ts`); applyEnvSettings(engine.settings, opts.env); if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
   if (opts.reach) { const { ReachKeep } = await import(`${ROOT}/src/render/reachKeep.ts`); engine.reach = new ReachKeep(engine.world, engine.lights); }
   const smoke: any = standMod.nullSmoke();
   if (opts.env?.canister) smoke.params = { ...opts.env.canister };
@@ -320,13 +320,9 @@ async function standBody(opts: { /** a recipe's or a tape's knob tables, laid ov
     snapshot(label = 'harness', force = true) { const s = saveState(game, { label, kind: 'harness', force }); (game as any).rustHost?.keptFor?.(s); return s; },
     restore(s) { if (!(game as any).rustHost?.backFor?.(s)) loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
   };
-  // TPS_GAME in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
-  // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
-  // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
-  { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word, { dress: !!opts.dress, ...(opts.scan === false ? { scan: false } : {}), ...(opts.draws === false ? { draws: false } : {}) }); }
-  // QA_PERTURB=<seed> in front of any headless tool: a seeded stream of the things a person does between two ticks (orders, throws, kills, saves and loads)
-  // laid over the tool's own play (tools/blitz/perturb.ts; PLAY.md, "The fuzz"). Unset: nothing is loaded.
-  if (process.env.QA_PERTURB) await (await import('../blitz/perturb.ts')).lay(W);
+  // THE GAME STOOD HERE IS A PUPPET OF THE RUST GAME, which steps it from the first `game.update`: with no word, as with `TPS_GAME=rust` in front of the tool
+  // (`audit`: the same, audited; `none`: nothing is loaded, a game that can be read and not stepped). Which is tools/blitz/word.ts's to say, the one switch.
+  { const S = (await import('../blitz/word.ts')).resolve(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word, { dress: !!opts.dress, ...(opts.scan === false ? { scan: false } : {}), ...(opts.draws === false ? { draws: false } : {}) }); }
   return W;
 }
 

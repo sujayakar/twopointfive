@@ -89,7 +89,7 @@ const STORE_W: Vec3 = [27.9, 1.1, 8.25], STORE_E: Vec3 = [28.1, 1.1, 8.25], INNE
  *    out of the east window and the bunk room's. With the mains out the gate lamp and the bulbs are gone and the tea room is a stove's glow and a lantern;
  *    the brazier still burns in front of it.
  *  SQUADS: House (the tea room and the kitchen) and Lines (the store and the bunk room). What either does when the other is hit is the AI's call. Each may
- *  wedge only its own yard door ('tea', 'bunk'): the kitchen's yard door and its back door are never theirs to shut (tools/qa/second-way-check.ts). */
+ *  wedge only its own yard door ('tea', 'bunk'): the kitchen's yard door and its back door are never theirs to shut (rust/game_start levels second-way). */
 export const PASS_STRUCTURE: StructureData = {
   name: 'the halt', maxMen: 8,
   team: { sam: PASS_ROAD, samYaw: HALF, ops: [[10.6, 0, 24.5], [12.6, 0, 24.5], [9.8, 0, 25.3], [11.8, 0, 25.3]], opsYaw: HALF },
@@ -133,7 +133,7 @@ export const PASS_STRUCTURE: StructureData = {
     { id: 'lines', name: 'Lines', rooms: ['store', 'bunk'], rally: [30.2, 0, 15.8], barricade: ['bunk'] },
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set for both ways in — the compound's mud wall
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
  *  on the road, the wicket in the truck gate under its one lamp, the lorry behind the wall, snow on everything. The level's own two starts stand in the open dark
  *  with no door near them; the set is what the place looks like from the road. */
 const PASS_KITVIEW: KitViewData = {
@@ -286,7 +286,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.wallPatch('x', 11, 16.2, 1, 0.55, 1.0, 1.1, 'paintRust', 0.9); G.skirt('x', 11, 17.8, 18.8, 1, 'paintRust', 0.4);
   G.dado('z', 28, 12.3, 13.2, -1, 'paintRust'); G.skirt('z', 28, 14.3, 15.2, -1, 'paintBlue', 0.84);   // … and the bunk room's (one was done another year, in another paint and not as high)
   // ---- THE FRONT, gone over as people left it (the kit's pieces for a wall's face). Every window on it is in some defender's view, so each is dressed OPEN:
-  // the boards down, the shutters folded back, the blanket rolled over the lintel. (tools/qa/marksight-check.ts holds it: with the boards and shutters shut
+  // the boards down, the shutters folded back, the blanket rolled over the lintel. (rust/game_start levels sight holds it: with the boards and shutters shut
   // the tea room's two men at the glass lose a half and a sixth of the yard they watch, and the kitchen's blanket nailed shut costs the man on its yard
   // door a quarter of his.) ----
   grp('front');
@@ -504,7 +504,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- doors (closedDir 0: the leaf runs +x from the hinge along an x-wall; π/2: +z along a z-wall; swing +1 opens toward +z / −x, −1 toward −z / +x).
   // Every id is its room's plain name ----
   const doors: LevelDoorDef[] = [
-    // ANOTHER WAY IN (tools/qa/second-way-check.ts): a man wedges only a door that opens toward him, and only one on his squad's list ('tea', 'bunk').
+    // ANOTHER WAY IN (rust/game_start levels second-way): a man wedges only a door that opens toward him, and only one on his squad's list ('tea', 'bunk').
     // 'back' opens OUT behind the range; 'pass' and 'store' open into the kitchen, 'inner' into the store. So with every yard door shut against the team it
     // still walks back → kitchen → tea room, and kitchen → store → bunk room, each door opened by hand from the side it is on.
     // The three yard doors author NO swing: the room rule deals each into its own room (what the lines above need), and the outward rule for outside doors

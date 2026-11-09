@@ -176,7 +176,7 @@ pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
     let p = g.ch[c].pos;
     let was = crate::orders::squad_orders_of(g, seat, gd);
     let back = match was {
-        Some(a) if resumed().iter().any(|r| *r == g.tab.orders_assignment[a].order) => {
+        Some(a) if crate::orders::rows::is(g, a, crate::orders::Is::Resumed) => {
             let w = g.tab.orders_assignment[a].clone();
             Some(LentBack {
                 order: w.order,
@@ -233,8 +233,8 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
         return;
     }
     crate::orders::squad_orders_new_group(g);
-    if b.as_ref().map_or(false, |b| b.order == "fallIn") {
-        let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == "fallIn");
+    if b.as_ref().map_or(false, |b| crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows)) {
+        let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
         if let Some(d) = d {
             crate::orders::order_issue(g, d, &[gd], &w.t, None);
             return;
@@ -242,7 +242,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     }
     let mut stale = false;
     if let Some(b) = &b {
-        if b.order != "hold" && !w.mates.is_empty() {
+        if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Holds) && !w.mates.is_empty() {
             let mut any = false;
             for m in w.mates.iter().copied() {
                 if g.gd[m].state != crate::game::GuardState::Dead {
@@ -258,7 +258,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
         }
     }
     if let Some(b) = b {
-        if b.order != "fallIn" && !stale {
+        if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows) && !stale {
             let post = Some(b.post.unwrap_or_else(|| v3::copy(w.home)));
             let face = Some(b.face.unwrap_or(w.home_yaw));
             let mut a = back_as!(b, crate::orders::SquadOrdersAssignA);
@@ -271,7 +271,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     let at: V3 = if back { w.home } else { [p[0], 0.0, p[2]] };
     let face = if back { w.home_yaw } else { g.ch[c].body_yaw };
     crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some(v3::copy(at)),
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
@@ -346,7 +346,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         let face = g.ch[c].body_yaw;
         crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from("hold"),
+            order: String::from(crate::orders::rows::hold::ORDER.id),
             post: Some([p[0], 0.0, p[2]]),
             face: Some(face),
             stance: Some(crate::character::Stance::LowReady),
@@ -521,19 +521,14 @@ pub fn sync(g: &mut crate::game::Game) {
         return;
     }
     state_key(g);
-    let smoke = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "smokeThere");
-    let hold = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "hold");
+    let smoke = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
+    let hold = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let after = if smoke.is_some() { smoke } else { hold };
     let made = rows(g);
     let before = after.and_then(|a| g.orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());
     crate::orders::squad_orders_register(g, made[0], before.as_deref());
     for d in &made[1..] {
         crate::orders::squad_orders_register(g, *d, None);
-    }
-    let s = state(g);
-    if !s.noted {
-        s.noted = true;
-        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadThrow);
     }
 }
 

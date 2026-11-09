@@ -39,7 +39,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['veil', 'Blowing snow', 'on a snow level, the wind picks loose powder up off lying snow where it blows hard enough (the two wind rows of the Snow wisps section say how hard) and carries it low over the ground. It rides the same air the falling snow does, so it bends around a wall, gathers where the wind squeezes through a gap and drops out in a wall\'s shelter. 0 = the wind picks none up (the game\'s own wisps and grains are not touched by this row)', 1],
   ['puffs', 'Snow puffs', 'on a snow level, each boot that lands kicks powder into that same air, more the harder it lands, and the wind takes what is left of it. It is drawn on the ground under it, with that spot\'s own light and shadow. 0 = none', 1],
   ['stir', 'Stirred smoke curls', 'a man moving through smoke is a body the smoke has to go round, he kicks the air behind him to one side and then the other as he strides, and the eddies he sheds are kept turning while he is near. Smoke nobody walks through is not touched. Guards see through the same smoke, so this changes sight lines too. 0 = the two soft shoves along his heading, as the game has them', 2],
-  ['firesmoke', 'Fire smoke', 'a fire\'s smoke is born in the flame and climbs out of its tips, and the fire puffs a few times a second so the smoke rolls as it rises. 0 = the smoke as the game has it, a steady column that starts well above the flame. A change shows over the next few seconds', 1],
+  ['firesmoke', 'Fire smoke', 'a fire\'s smoke is born in the flame and climbs out of its tips, and the fire puffs a few times a second so the smoke rolls as it rises. Higher is thicker. 0 = no smoke from a fire, just the soot painted on its flame', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
   ['glare', 'Glare outside', 'with Sam in a dim room, how much brighter than itself the open ground outside is shown. 0 = the yard exactly as it is when he stands in it, 1 = up to four times brighter, which burns the snow out flat', 1],
   ['rooms', 'Light stays in its room', 'the bounced light no longer leaks through walls: a shut room with no window holds its own lamps\' light and not a share of the yard\'s daylight, a room with a window holds what comes in at the window, and by day a lamp\'s bounce is kept. Day and night. It changes the light itself, so the light meter and what guards see change with it on this page. 0 = the bounce as it was (with the Walls have two sides row down as well: that row stands in place of the older wall guards)', 1],
@@ -65,7 +65,14 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
 // were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
 // The page still OPENS with them up (panel.show), as the box did.
-export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, /** the page's hour, sun and moon can be turned */ sky = true): void {
+/** THE SKY OF A PAGE, read and set for the visit by this panel's rows. `cover` null: no weather is picked; `moon` null: the level has none */
+export interface SkyTurns {
+  hour(): string; setHour(id: string): void;
+  cover(): number | null; setCover(v: number): void;
+  sun(): number; setSun(v: number): void;
+  moon(): { k: number; elev: number; bearing: number; up: boolean } | null; setMoon(o: { k?: number; elev?: number; bearing?: number }): void;
+}
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, /** the page's hour, sun and moon, where they can be turned */ sky: SkyTurns | null): void {
   const w = window as any;
   const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · performance takes' });
   here();
@@ -74,7 +81,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   let stayPlain = false;
   /** a row of the panel's that takes buttons with manners of their own (a hold, a text that changes) */
   const row = (sec: HTMLElement, label: string) => { const r = panel.buttons(sec, label, []); return (r.querySelector('.btns') as HTMLElement | null) ?? r; };
-  const btn = (host: HTMLElement, text: string, tip = '') => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (tip) b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); host.append(b); return b; };   // (no focus: a focused control takes the game's keys, game/input.ts typingTarget)
+  const btn = (host: HTMLElement, text: string, tip = '') => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (tip) b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); host.append(b); return b; };   // (no focus: a focused control takes the game's keys, host/input.ts typingTarget)
   const words = (sec: HTMLElement, text = '') => { const d = document.createElement('div'); d.className = 'row textrow'; d.style.cssText = 'color:#8aa;white-space:pre-wrap'; d.textContent = text; sec.append(d); return d; };
   /** a slider of the panel's whose value can be absent (the moon by day): it greys out and shows a dot */
   const slide = (sec: HTMLElement, name: string, tip: string, min: number, max: number, step: number, get: () => number | null, set: (v: number) => void) => {
@@ -144,16 +151,17 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   panel.toggleBox(cmp, 'stay plain', () => stayPlain, v => { stayPlain = v; plain(v); }, 'the boxes stay plain until this is put off');
   // THE SUN AND THE MOON (the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big reason why it looks flat. and perhaps we should also
   // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (game/hours.ts), which a snow level's cloud leaves 9 % of, and the level's
-  // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (window.__hour.sun: it then stands
-  // against the cloud), Moon / height / bearing = the level's moon (window.__moon). The page shows what it has: a row follows the hour and the level.
+  // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (it then stands
+  // against the cloud), Moon / height / bearing = the level's moon (`SkyTurns`: the page's own way to them). The page shows what it has: a row follows the hour and the level.
   if (sky) {
-    const hour = panel.section('Hour, sun and moon', { open: true, summary: () => String(w.__hour?.id ?? '') });
-    panel.buttons(hour, 'hour', ['night', 'dawn', 'midday', 'overcast', 'dusk'].map(h => ({ text: h, run: () => { w.__hour?.set(h); } })));
-    slide(hour, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.cover() : null, v => w.__hour?.cover(v));
-    slide(hour, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
-    slide(hour, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, () => { const m = w.__moon?.get(); return m && m.up ? m.k : null; }, v => w.__moon?.set({ k: v }));
-    slide(hour, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
-    slide(hour, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
+    const H = sky, night = () => H.hour() === 'night', moon = () => { const m = H.moon(); return m && m.up ? m : null; };
+    const hour = panel.section('Hour, sun and moon', { open: true, summary: () => H.hour() });
+    panel.buttons(hour, 'hour', ['night', 'dawn', 'midday', 'overcast', 'dusk'].map(h => ({ text: h, run: () => H.setHour(h) })));
+    slide(hour, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, () => night() ? null : H.cover(), v => H.setCover(v));
+    slide(hour, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, () => night() ? null : H.sun(), v => H.setSun(v));
+    slide(hour, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, () => moon()?.k ?? null, v => H.setMoon({ k: v }));
+    slide(hour, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => moon()?.elev ?? null, v => H.setMoon({ elev: v }));
+    slide(hour, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => moon()?.bearing ?? null, v => H.setMoon({ bearing: v }));
   }
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
   panel.buttons(qual, 'preset', ['low', 'medium', 'high'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)

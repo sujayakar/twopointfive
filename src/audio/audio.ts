@@ -6,7 +6,7 @@
 // placement and levels, the reverb sized by the traced free path, the footstep material — exactly as it was.
 import type { WorldAsk } from '../view/worldask';
 import { Vec3, v3 } from '../math/vec';
-import type { GameAudioLike } from '../game/audio_iface';
+import type { GameAudioLike } from './iface';
 import { FLOOR, type FloorMat } from './floors';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';

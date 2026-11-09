@@ -489,7 +489,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   turned: state 'patrol') has no sum: the hold breaks when his awareness itself is at `breakGain`, with no line. NOT A FOOL: each taking inside `memorySecs`
   60 of the last is × `wearK` 0.6 as long and he says so ('again?' in place of the 'huh?': guards.ts asks `attentionAgain`), the `spent`-th (3rd) is a
   search of the place; things inside `sameSecs` 2.5 of each other are ONE happening (a canister's bounces, a dragged body's scrape) and get one taking however
-  long they go on; a whistle keeps whistle.ts's own 'twice'. SHOWN (`attentionMarks` → `src/ui/attentionviz.ts`, the overlay's `#traj`): a dotted amber
+  long they go on; a whistle keeps whistle.ts's own 'twice'. SHOWN (`view.attention` → `src/ui/attentionviz.ts`, the overlay's `#traj`): a dotted amber
   thread from the man to the place and a ring there that runs down like a clock once he is at it, part-spent from the start when worn, flickering for the
   last beat; nothing of a man the fog of war hides; no word, no number. FOR OTHER FILES: `attentionLend(g, gd, at, { ears?, noises? })` called every frame a
   standing claim holds (a man at a lit screen, headphones = the lender's two numbers): the same narrowing and mark, a real thing takes it over, and a man a
@@ -576,7 +576,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and 568 frames, both stands). NO CLIP shows a kill from a hold: the pose is our own, off the knife from behind. Seen only as stick-figure strips on the software path
   (`--move grab-kill,choke-beats,grab-choke`), never on a GPU, never played; the viewer's hold page has the phase (`kill`) with both halves shown.
 - **Stealth poses = the crouch, the creep and the look under a door posed against the reference** (`src/game/stealthpose.ts` = the table `STEALTHPOSE`, a LEAF nothing of the
-  game is imported into; `src/game/stealthfeed.ts stealthFeed(g)` = the feed, called from player.ts; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
+  game is imported into; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
   `STEALTHPOSE.on` — ON in the page, `?nostealthpose` = every pose as it was; OFF in the module and on the frozen stand, `TPS_STEALTHPOSE=1`; a `FROZEN_HOLDS` row, in the knob
   registry and a journal's tables, a recording from before the table replays with it off; halves `idle / walk / rise / creep / cable` + `nod` (below); Tab ▸ Player & weapons ▸ 'Stealth poses
   (crouch, creep, the look under a door)'). The maintainer, 10-12, on a fourth clip of Chaos Theory: "we should use all these videos as references for our stealthy animations"
@@ -661,8 +661,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both stands: Space to the lens through 1.63 s → 0.42 s (hands on it at 0.12 s there), a teammate from on his mark 1.52 s → 0.42 s. QA: `bun run tools/qa/wand-check.ts quick`
   (`probes.ts wand-quick`, family `wand`; both stands; `WANDQUICK_BREAK=1` must fail): off = the feed and the ring on every frame of the row, two log lines; on = through inside
   the animation's time, more than a second sooner, the same time to hands-on as before, no ring on any frame, one log line; a teammate's the same; the stands' row and a
-  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. The kit picture's page check
-  (`tools/qa/kitview-page.cjs`) reads the wait off the page's own table and holds the key off for its one pick-half-way-through-the-feed line. On the real page (software
+  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. On the real page (software
   adapter) `ONLY=play node tools/qa/wand-page.cjs` times it: the lens through 24 frames after the Space, no ring on the row and no bar in the panel on any of them; `ONLY=slow`
   is the same page under `?nowandquick`, the 1.5 s feed with its ring. Never seen on a GPU and never
   played by anybody: whether the lens coming up as the squat lands reads right is a call for an eye (the two sliders are there for it).
@@ -1724,9 +1723,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,
   from above); it reads `pose-mesh.ts` / `ready-pose-probes.ts` PLYs too. `pose-mesh-render.py` (Blender) is the better picture where there is one. No light,
   no cloth, no camera framing: it is the mesh the page skins at the poses the game reaches.
-- **The attention thread runs the way he will walk** (`ATTENTION.way`, attention.ts `attentionWay`, drawn by ui/attentionviz.ts `threadPoints`; the maintainer,
+- **The attention thread runs the way he will walk** (`ATTENTION.way`, `view.attention`, drawn by ui/attentionviz.ts `attentionWay`, `threadPoints`; the maintainer,
   10-22, off the stealth tutorial mission, of a thread drawn from a man in a hut straight through its wall: "weird that the line here is a straight line, not a
-  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionMark.walking`: a `go` hold not yet at the thing) the dotted
+  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionLine.walking`: a `go` hold not yet at the thing) the dotted
   thread is his feet, every corner of his way, the place: his own nav path from where he is on it when it is the walk to this place, else the nav grid's answer
   kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
   floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads

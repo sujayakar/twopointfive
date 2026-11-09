@@ -1,11 +1,12 @@
 //! BREACH WITH A CHARGE: a charge on the door, blown from a stand-off; the charge already on it is blown.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Blows, Is::Loud, Is::Enters],
     valid: Some(valid),
     gone: Some(gone),
     ..Row::new("charge", label, issue)
@@ -15,8 +16,7 @@ pub const ORDER: Row = Row {
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     if let OrderTarget::Door(x) = t {
         if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return String::from("stand off · in behind the charge"); }
-        if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_some() {
-            let c = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).unwrap();
+        if let Some(c) = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door) {
             return format!("blow the charge{}", crate::doortools::door_tools_close_words(g, c));
         }
     }

@@ -160,6 +160,12 @@ pub fn reset_guards(g: &mut crate::game::Game) {
 pub fn escalation_of(g: &crate::game::Game) -> f64 {
     if g.quiet_utility { 0.0 } else { g.escalation }
 }
+/// The alarm's stage as a HUD is told it (None: calm)
+pub fn alarm_view(g: &crate::game::Game) -> Option<crate::view::AlarmView> {
+    let level = escalation_of(g);
+    if level <= 0.0 { return None; }
+    Some(crate::view::AlarmView { level, left: if g.escalation_t > g.time { g.escalation_t - g.time } else { 0.0 }, live: g.alarm.episode })
+}
 /// The living man best placed to radio something about `pos`: the nearest not mid-fight, else the nearest at all, never `except`.   (guards.ts spokesman)
 pub fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;

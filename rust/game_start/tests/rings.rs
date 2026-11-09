@@ -156,7 +156,7 @@ fn a_taps_word_and_live_are_told() {
         // on open floor
         p.key_down(game::consts::INTERACT_KEY); p.frame(); p.key_up(game::consts::INTERACT_KEY); p.run(0.4);
         let e = p.view().empty.unwrap_or_else(|| panic!("seed {seed}: a tap on open floor says nothing: {:?} nearby {}", p.g.pl[p.g.player].sel.word, p.g.nearby.len()));
-        assert_eq!((e.word.as_str(), e.kind.as_str(), e.dist), (game::handring::EMPTY_WORD, "wall", None), "seed {seed}");
+        assert_eq!((e.word.as_str(), e.kind, e.dist), (game::handring::EMPTY_WORD, game::view::ThingKind::Wall, None), "seed {seed}");
         // a step up to a door takes it down
         p.sam_put([door[0], door[1] + 0.9]);
         p.run(0.2);
@@ -222,7 +222,7 @@ fn asking_writes_nothing_with_a_ring_up() {
             for k in 0..120 {
                 if k == 30 { let key = p.g.k.cmdring.key.clone(); p.point_at(door); p.key_down(&key); }
                 p.frame();
-                if ask { let v = p.view(); assert!(v.plan.is_some()); }
+                if ask { let v = p.view(); assert!(!v.plan.own.men.is_empty(), "seed {seed}: the plan on the floor has nobody"); }
                 if k % 30 == 29 { out.push(p.words()); }
             }
             out
@@ -278,7 +278,7 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
     }
 }
 
-fn plan(p: &Play, seat: usize) -> PlanView { p.view_of(seat).plan.expect("the plan") }
+fn plan(p: &Play, seat: usize) -> PlanView { p.view_of(seat).plan }
 
 /// THE RULE: an order just given shows who goes and where, and goes out; with the menu up it stands; what waits on the key is listed on its door, and the key is lit only with the men set.
 /// A FAILURE MEANS: the floor shows a plan the squad does not have. The control is the plan before any order, with nothing in it.

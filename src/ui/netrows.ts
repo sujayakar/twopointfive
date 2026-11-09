@@ -1,5 +1,5 @@
 // THE DEBUGGER'S NETWORK PAGE (2026-11-02), on a page that is a client of a networked game and on no other. Two players on one good network see none of
-// what a real connection does to a game, so this page's connection can be made worse from here, LIVE, with no reload (net/page.ts NETWAY has where the
+// what a real connection does to a game, so this page's connection can be made worse from here, LIVE, with no reload (net/door.ts NETWAY has where the
 // numbers live and how long they are kept; net/delay.ts what each does). A page's numbers are its own: each player sets them on their own page.
 //   Connection        a named kind of connection (a row of numbers below), or 'Your own numbers'
 //   Delay each way    every message that much later, up and down: the round trip grows by twice this
@@ -11,7 +11,7 @@
 // and a read-out of how the page is doing against the server. Nothing here is read by the simulation: the game's ticks are the server's either way.
 import type { Panel } from './panel';
 import { NET } from '../net/wire';
-import { NETWAY, netTry, netTried, netStall, type NetPlay, type NetTry } from '../net/page';
+import { NETWAY, netTry, netTried, netStall, type NetPageState, type NetTry } from '../net/door';
 
 export const NET_SYSTEM = 'Network';
 /** the named kinds: one way's numbers (a round trip is twice the delay). Rough figures for a home connection, not measurements of anybody's. LOSS IS A
@@ -27,11 +27,11 @@ export const NET_KINDS: { name: string; lagMs: number; jitterMs: number; lossPct
 const OWN = 'Your own numbers';
 const kindOf = (t: NetTry): number => NET_KINDS.findIndex(k => k.lagMs === t.lagMs && k.jitterMs === t.jitterMs && k.lossPct === t.lossPct);
 const tickMs = 1000 / NET.hz;
-/** the long stall: well past the ticks from which a page catches up as a seek does (NETPAGE.far), whatever else is on the way */
+/** the long stall: well past the ticks from which a page catches up as a seek does (NETDOOR.far), whatever else is on the way */
 const STALL_LONG_S = 3;
 
 /** how the page is doing, in words (the read-out row; `__net.state` has the numbers) */
-export function netSummary(net: NetPlay): string {
+export function netSummary(net: { state(): NetPageState }): string {
   const s = net.state(), t = netTried(), k = kindOf(t), stall = NETWAY.stallUntil - performance.now();
   const link = k === 0 ? 'the connection as it is' : `${k > 0 ? NET_KINDS[k].name + ': ' : ''}${t.lagMs} ms each way${t.jitterMs ? ` + up to ${t.jitterMs} ms` : ''}${t.lossPct ? `, ${t.lossPct}% resent` : ''}`;
   const role = s.seat < 0 ? 'watching' : `seat ${s.seat + 1}`;
@@ -41,7 +41,7 @@ export function netSummary(net: NetPlay): string {
   return `${role} · ${state} · ${s.wordsOk} checks matched\n${link}${stall > 0 ? ` · STALLED for ${(stall / 1000).toFixed(1)} s more` : ''}${s.heldMs >= 1 ? ` · the server's messages are reaching you ${Math.round(s.heldMs)} ms late` : ''}\n${s.seat < 0 ? 'no inputs: this page only watches' : wait}\n${ahead}\n${s.behind} tick${s.behind === 1 ? '' : 's'} waiting to be played${s.seat < 0 || !Number.isFinite(s.lead) ? '' : s.lead > 0 ? ` · your inputs reach the server ${s.lead} tick${s.lead === 1 ? '' : 's'} early (you aim ${s.margin} past it)` : ' · your inputs are reaching the server LATE, so it is repeating your last one'}`;
 }
 
-export function netRows(panel: Panel, net: NetPlay): void {
+export function netRows(panel: Panel, net: { state(): NetPageState }): void {
   panel.system(NET_SYSTEM, { icon: '⇄', short: 'Net', title: 'this page\'s connection to the game\'s server: make it worse on purpose, and see how the game holds up' });
   const now = panel.section('Right now', { open: true });
   panel.text(now, () => netSummary(net));
@@ -52,7 +52,7 @@ export function netRows(panel: Panel, net: NetPlay): void {
   panel.slider(sec, 'Delay each way (ms)', 0, 400, 5, () => NETWAY.lagMs, v => netTry({ lagMs: v }), 'Every message to and from the server arrives this much later. The round trip grows by twice this.', 0);
   panel.slider(sec, 'Jitter (ms)', 0, 300, 5, () => NETWAY.jitterMs, v => netTry({ jitterMs: v }), 'Each message is late by up to this much more, a different amount every time.', 0);
   panel.slider(sec, 'Loss (%)', 0, 20, 0.5, () => NETWAY.lossPct, v => netTry({ lossPct: v }), 'The share of messages that get lost and have to be sent again. A resent message arrives late by a round trip and a little more, and it holds up every message behind it, so loss feels like short freezes.', 0);
-  // (a short one and a long one, on purpose either side of NETPAGE.far: the page gets level again in two different ways, and each button always shows its own)
+  // (a short one and a long one, on purpose either side of NETDOOR.far: the page gets level again in two different ways, and each button always shows its own)
   panel.buttons(sec, 'Stall', [
     { text: 'Half a second', run: () => netStall(500), title: 'Nothing gets through for half a second, either way, and then everything arrives at once. The page plays what it missed at double speed.' },
     { text: `${STALL_LONG_S} seconds`, run: () => netStall(STALL_LONG_S * 1000), title: `Nothing gets through for ${STALL_LONG_S} seconds, either way, and then everything arrives at once. The page says it's catching up and skips ahead.` }]);

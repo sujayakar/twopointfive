@@ -10,11 +10,15 @@
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
+pub mod actions;
 pub mod command;
 pub mod desk;
 pub mod hands_off;
 pub mod kept;
 pub mod knobs;
+pub mod words;
+
+pub mod shown;
 mod knobs_list;
 use game::ids::Id;
 use game::io::Io;
@@ -47,12 +51,15 @@ pub fn part_hashes(slot: usize) -> [u32; 13] {
 /// `Game.sim`, and the block is copied by bytes by whoever holds the slot: here. Answers the game and the lines for the log.
 pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>, Vec<String>) {
     let mut g = Box::new(game::io::import(state));
+    game::kit::kit_words_again(&mut g);
     let mut said: Vec<String> = Vec::new();
     sim::state::put(slot, block);
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
+    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
+    game::scene_collision::light_ready(&mut g);
     (g, said)
 }
 
@@ -311,9 +318,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
     stopped
 }
-
-/// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
-pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }
 
 /// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
 /// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).

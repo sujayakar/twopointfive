@@ -12,5 +12,3 @@
 // of the game is changed between ticks for it. The order menu and a running verb are still there after the pause.
 // The objectives card (ui/tabcard.ts) has the key whenever there is nothing to back out of (Game.backable). Imports nothing.
 export const BACKKEY = { tab: false };
-/** the name a hint row shows */
-export function backName(): string { return BACKKEY.tab ? 'Tab' : 'Esc'; }

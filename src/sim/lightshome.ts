@@ -24,8 +24,8 @@ type Col = (typeof LIGHT_COLS)[number];
 let C: Record<Col, number> = null as unknown as Record<Col, number>;
 let X: SimExports = null as unknown as SimExports;
 export const WORD_COLS: ReadonlySet<string> = new Set<string>(['n', 'rows', 'beacons', 'cameras', 'lasers', 'mains', 'bits', 'row_bits', 'row_target', 'beacon_row', 'beacon_target', 'cam_state', 'cam_bits', 'cam_target', 'cam_row', 'las_trips', 'las_bits', 'las_target']);
-/** what the part holds (lights.rs TARGETS, ROWS, BEACONS, CAMERAS, LASERS: game/levelfit.ts refuses a level over one of these, by its name) */
-export const LIGHT_CAPS = { targets: 256, rows: 256, beacons: 32, cameras: 32, lasers: 32 } as const;
+import { LIGHT_CAPS } from '../scene/caps';
+export { LIGHT_CAPS };
 function columns(): void {
   if (C) return;
   const x = sim(), base = simPart(P_LIGHTS), o = {} as Record<Col, number>;

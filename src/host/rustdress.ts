@@ -38,9 +38,8 @@ import { civiliansShown } from '../game/civilians';
 export const DRESS_MS = { last: {} as Record<string, number>, sum: {} as Record<string, number>, n: 0, threw: {} as Record<string, string> };
 export interface SideList { list: unknown[]; of: unknown; base: number }
 
-/** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow go to the smoke's solver, and the ones the tick picked for the
- *  particles (the jets near the view, then the storm) to the particle pool. Both lists are the Rust tick's, as the host put them on the puppet
- *  (the filtered export); nothing is chosen here. */
+/** THE WIND'S HAND-OVER the sources that blow go to the smoke's solver, as the Rust tick left them on the puppet, and the particle pool is handed what
+ *  `Wind.forParticles` makes of the standing game: the jets near the view, then the storm. It is the host's list, so it is made here and no record holds it. */
 function windOut(g: Game): void {
   const W = g.wind as unknown as { active: unknown[]; forParticles: unknown[] }, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
   P?.setWind(W.forParticles as never, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);
@@ -57,8 +56,9 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   if (DRESS.snow) run('snowLook', () => G.syncSnowLook());
   if (DRESS.rain) run('rain', () => updateRainFx(g, dt, me.cam));
   run('wetGround', () => G.wetGround.follow(g));
-  if (DRESS.fires) run('fires', () => fireDraws(g));
-  const all: Character[] = [...S.map(s => s.view.player.char), ...g.guards.map(x => x.char), ...civiliansShown(g).map(c => c.char)];
+  if (DRESS.fires) run('fires', () => fireDraws(g, dt));
+  const men: Character[] = [...S.map(s => s.view.player.char), ...g.guards.map(x => x.char), ...civiliansShown(g).map(c => c.char)];
+  const all = dt > 0 ? men : men.filter(c => c.bones.upperArmL);   // (the warm-up's step of no time: a man no tick has posed yet has no bones to be drawn by)
   // ---- stepFxAndDynBoxes: the picture's own boxes go to the side list
   const out: Box[] = [];
   let statured = false;

@@ -316,8 +316,7 @@ pub fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
     let c = g.gd[gd].ch;
     if crate::workthings::work_hand(g, c).is_some() { return true; }
-    let o = crate::roomfight::room_fight_op_of(g, gd);
-    g.gd[gd].reload_t > 0.0 || o.map_or(false, |o| g.tab.roomfight_op[o].reload_until > g.time)
+    crate::control::man::changing_magazine(g, gd)
 }
 
 /// the man of `men` who would throw it, with his throw: the nearest to the spot with a hand free and an arc that brings the thing to rest on it (squadthrow.ts squadThrower)
@@ -468,7 +467,7 @@ pub fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
         Some(a) => {
             if g.tab.orders_assignment[a].spare == Some(true) { return false; }
             let order = g.tab.orders_assignment[a].order.as_str();
-            resumed().iter().any(|r| r == order)
+            crate::orders::rows::id_is(order, crate::orders::Is::Resumed)
         }
         None => true,
     }

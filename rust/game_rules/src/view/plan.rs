@@ -43,11 +43,7 @@ fn ang_diff(a: f64, b: f64) -> f64 {
     if d < -core::f64::consts::PI { d += tau; }
     crate::m::abs(d)
 }
-fn cap_of(g: &Game, key: &Option<String>, now: bool, ready: bool) -> KeyCap {
-    if key.is_none() { return KeyCap::None; }
-    if !g.k.plan.key_lit { return if now { KeyCap::Plate } else { KeyCap::None }; }
-    if now && ready { KeyCap::Lit } else { KeyCap::Dark }
-}
+fn cap_of(now: bool, ready: bool) -> KeyCap { if now && ready { KeyCap::Lit } else { KeyCap::Dark } }
 /// a man's colour: his pair's wherever the team is in pairs
 fn tone_of(g: &Game, paired: bool, gd: GuardId) -> Option<Tone> {
     if !paired { return None; }
@@ -92,7 +88,6 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     let up = !g.pl[seat.player].down;
     let addr = crate::doortools::door_tools_word_men(g, seat);
     let f = key_cap(&g.k.doortools.blow_key);
-    let word_key = !big || g.k.doortools.word_on_key;
     let squad = crate::orders::squad_orders_squad(g, seat);
     let mut by: Vec<Wait> = Vec::new();
     for &o in t.ops.iter() {
@@ -111,7 +106,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         for &gd in squad.iter() {
             let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
-            if alive(g, gd) && a.order == "stack" && a.post.is_some() && a.there.starts_with("stacked") {
+            if alive(g, gd) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
             }
         }
@@ -158,7 +153,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             let (fx, fz) = (crate::m::sin(c.aim_yaw), crate::m::cos(c.aim_yaw));
             let (cx, cz) = (c.pos[0] + fx * g.k.plan.pair_bar_m, c.pos[2] + fz * g.k.plan.pair_bar_m);
             let key = Some(String::from("F"));
-            let cap = cap_of(g, &key, pair_first, j.set || j.watcher.is_some());
+            let cap = cap_of(pair_first, j.set || j.watcher.is_some());
             out.push(PlanDoor { door: None, a: [cx - fz * 0.3, 0.0, cz + fx * 0.3], b: [cx + fz * 0.3, 0.0, cz - fx * 0.3], tone: tone_of(g, paired, *gd), key, now: pair_first, cap, why: WaitWhy::Pair });
         }
     }
@@ -175,7 +170,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let wall_d = wall.map_or(f64::INFINITY, |c| flat(wall_foot(c), sam));
         let wall_first = wall.is_some() && !t_set.iter().any(|&c| door_d(c) < wall_d);
         let reaches = up && !pair_first && (!wall_first || t_set.is_empty());   // the press gets as far as the door tools
-        let any_word = word_key && by.iter().any(|e| e.word);
+        let any_word = by.iter().any(|e| e.word);
         let row_key = s.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(g.k.doortools.blow_key.as_str())));   // a menu up with a row on the key: the key IS that row
         let early = big && t.ops.iter().any(|&o| {
             let op = &g.tab.doortools_door_op[o];
@@ -194,21 +189,21 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             let (ja, jb) = jambs(g, e.door);
             let mut now = false;
             if reaches {
-                if (e.word && word_key) || (e.gate && last) || (e.drill && drill_now) { now = true; }
+                if e.word || (e.gate && last) || (e.drill && drill_now) { now = true; }
                 else if let Some(c) = e.set {
                     if free.contains(&c) { now = if big { !any_word && Some(c) == near_set } else { any_word || Some(c) == near_set }; }
                 }
             }
-            let key = if word_key || e.set.is_some() || e.drill || e.gate { Some(f.clone()) } else { None };
-            let ready = set(&e.men) && !(g.k.plan.thr_told && e.untold);
-            let cap = cap_of(g, &key, now, ready);
+            let key = Some(f.clone());
+            let ready = set(&e.men) && !e.untold;
+            let cap = cap_of(now, ready);
             out.push(PlanDoor { door: Some(g.dr[e.door].def.name.clone()), a: ja, b: jb, tone: tone_for(g, seat, paired, &e.men), key, now, cap, why: e.why });
         }
         for &c in &w_set {
             let sc = &g.tab.wallcharge_set_wall_charge[c];
             let key = Some(f.clone());
             let now = up && !pair_first && !row_key && wall_first && Some(c) == wall;
-            let cap = cap_of(g, &key, now, true);
+            let cap = cap_of(now, true);
             out.push(PlanDoor { door: None, a: crate::wallcharge::wall_pt(g, &sc.wall, -0.4, 0.03, None), b: crate::wallcharge::wall_pt(g, &sc.wall, 0.4, 0.03, None), tone: tone_for(g, seat, paired, &charge_men(&sc.by)), key, now, cap, why: WaitWhy::Wall });
         }
     }
@@ -236,15 +231,14 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     let s = seat.orders;
     let k = &g.k.plan;
     let mut out = SeatPlan { men: Vec::new(), who: Vec::new(), you: None, doors: Vec::new(), throws: Vec::new(), mode: true };
-    if !k.on || !crate::orders::squad_orders_active(g, seat) { return out; }
+    if !crate::orders::squad_orders_active(g, seat) { return out; }
     // outside the order mode: only what the order book was just told. The NEWEST thing that names a man is the one he is drawn by, and it alone
-    let mode = !k.menu_only || s.menu.is_some() || who.reading;
+    let mode = s.menu.is_some() || who.reading;
     out.mode = mode;
     let (mut given, mut slow): (Vec<(String, f64)>, Vec<(String, f64)>) = (Vec::new(), Vec::new());
     if !mode {
-        let auto = g.k.autopilot.on;
-        let far = if auto { crate::m::max(k.fresh_secs, g.k.autopilot.show_secs) } else { k.fresh_secs };
-        let shown = if auto { crate::m::max(0.2, g.k.autopilot.show_secs) } else { k.fresh_secs };
+        let far = crate::m::max(k.fresh_secs, g.k.autopilot.show_secs);
+        let shown = crate::m::max(0.2, g.k.autopilot.show_secs);
         let mut last: Vec<(String, f64, f64)> = Vec::new();
         let mut note = |c: &String, t: f64, secs: f64| match last.iter_mut().find(|e| &e.0 == c) {
             Some(e) => if t > e.1 { e.1 = t; e.2 = secs; },
@@ -255,11 +249,9 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
             let secs = if row.auto == Some(true) { crate::m::max(0.2, g.k.autopilot.show_secs) } else { k.fresh_secs };
             for c in &row.who { note(c, row.t, secs); }
         }
-        if auto {
-            for row in s.shows.iter().rev() {
-                if !(g.time - row.t < far && row.t <= g.time) { break; }
-                for c in &row.who { note(c, row.t, shown); }
-            }
+        for row in s.shows.iter().rev() {
+            if !(g.time - row.t < far && row.t <= g.time) { break; }
+            for c in &row.who { note(c, row.t, shown); }
         }
         for (c, t, secs) in last {
             if g.time - t < secs {
@@ -295,7 +287,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
         let fit_watch = a.fit.as_ref().and_then(|f| f.watch);
         let raw = a.watch.or(fit_watch);
         let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| flat(w, g.dr[d].frame_centre) < 1.5));
-        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == "cover" || a.order == "move" || a.order == "hold"));
+        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == crate::orders::rows::cover::ORDER.id || a.order == crate::orders::rows::movethere::ORDER.id || a.order == crate::orders::rows::hold::ORDER.id));
         let (mut aim, mut watch): (Option<f64>, Option<V3>) = (None, None);
         if there {
             aim = Some(c.aim_yaw);
@@ -309,28 +301,26 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
         if watch.is_some_and(|w| flat(mark, w) > k.sight_m) { watch = None; }
         out.men.push(PlanMan {
             man: c.id, tag: plan_tag(&m.callsign), tone: tone_of(g, paired, gd), age,
-            way: if walking && k.paths { Some(way_of(g, gd, a, mark)) } else { None },
+            way: if walking { Some(way_of(g, gd, a, mark)) } else { None },
             mark, there, held,
-            aim: if k.sectors { aim } else { None },
-            watch: if k.sectors { watch } else { None },
-            on_door: k.sectors && watch.is_some() && on_door,
+            aim,
+            watch,
+            on_door: watch.is_some() && on_door,
         });
     }
-    if k.word { waits_on_key(g, seat, paired, &mut out.doors); }
+    waits_on_key(g, seat, paired, &mut out.doors);
     if !who.own { for d in out.doors.iter_mut() { d.key = None; d.now = false; d.cap = KeyCap::None; } }   // (the press is its own player's)
-    if k.throws {
-        for t in throws_view(g, seat) {
-            if t.kind == ThrowKind::Shell || t.points.len() < 2 || (t.preview && !who.own) { continue; }
-            let Some(&gd) = squad.iter().find(|&&m| id_of(g, m) == t.man) else { continue };
-            if !alive(g, gd) { continue; }
-            let walk = match &t.walk { Some(w) if k.paths && w.len() > 1 => w.iter().map(|&q| floor(q)).collect(), _ => Vec::new() };
-            let end = t.points[t.points.len() - 1];
-            let mut arc = t.points.clone();
-            if flat(end, t.land) > 0.1 { arc.push(floor(t.land)); }
-            out.throws.push(PlanThrow { man: t.man, tag: plan_tag(&g.gd[gd].callsign), tone: tone_of(g, paired, gd), kind: t.kind, preview: t.preview, from: floor(t.from), walk, arc, land: floor(t.land), reach: if t.kind == ThrowKind::Frag { t.kill } else { 0.0 } });
-        }
+    for t in throws_view(g, seat) {
+        if t.kind == ThrowKind::Shell || t.points.len() < 2 || (t.preview && !who.own) { continue; }
+        let Some(&gd) = squad.iter().find(|&&m| id_of(g, m) == t.man) else { continue };
+        if !alive(g, gd) { continue; }
+        let walk = match &t.walk { Some(w) if w.len() > 1 => w.iter().map(|&q| floor(q)).collect(), _ => Vec::new() };
+        let end = t.points[t.points.len() - 1];
+        let mut arc = t.points.clone();
+        if flat(end, t.land) > 0.1 { arc.push(floor(t.land)); }
+        out.throws.push(PlanThrow { man: t.man, tag: plan_tag(&g.gd[gd].callsign), tone: tone_of(g, paired, gd), kind: t.kind, preview: t.preview, from: floor(t.from), walk, arc, land: floor(t.land), reach: if t.kind == ThrowKind::Frag { t.kill } else { 0.0 } });
     }
-    if who.own && k.who {
+    if who.own {
         if let Some(menu) = &s.menu {
             for &gd in menu.men.iter() { if alive(g, gd) { out.who.push(PlanWho { man: id_of(g, gd), at: floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
             if !g.pl[seat.player].down { out.you = Some(floor(g.ch[g.pl[seat.player].ch].pos)); }
@@ -345,8 +335,7 @@ fn same_wait(a: &PlanDoor, b: &PlanDoor) -> bool {
 }
 
 /// the plan on the floor, about the seat it is handed: its own whole, then each other player's (a wait both plans list is on the page once, as the seat's own)
-pub fn plan_view(g: &Game, seat: &SeatRef) -> Option<PlanView> {
-    if !g.k.plan.on { return None; }
+pub fn plan_view(g: &Game, seat: &SeatRef) -> PlanView {
     let own = seat_plan(g, seat, For { own: true, reading: false });
     let mut others = Vec::new();
     if g.seats.len() > 1 && g.k.plan.others > 0.0 {
@@ -358,5 +347,5 @@ pub fn plan_view(g: &Game, seat: &SeatRef) -> Option<PlanView> {
             others.push(p);
         }
     }
-    Some(PlanView { own, others })
+    PlanView { own, others }
 }

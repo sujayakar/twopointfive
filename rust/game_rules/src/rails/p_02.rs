@@ -158,7 +158,7 @@ pub fn rails_note_given(g: &mut crate::game::Game, o: &str) {
     let t = match step_at(&s.l, s.i) { Some(t) => t, None => return };
     let a = match &t.after { Some(a) => a, None => return };
     if g.rails.gave_step != s.i { g.rails.gave_step = s.i; g.rails.gave = 0.0; }
-    if o == "go" {
+    if o == crate::orders::rows::go::ORDER.id {
         if word_of(&a.word) { g.rails.gave = 2.0; g.rails.gave0 = g.time; g.rails.gave_t = g.time; }
         return;
     }
@@ -171,7 +171,7 @@ pub fn rails_note_given(g: &mut crate::game::Game, o: &str) {
 /// this man runs the leg he is on (rails.ts Rails.runs)
 pub fn rails_runs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if !g.rails.running || g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].state == crate::game::GuardState::Dead { return false; }
-    match order_of(g, seat, gd) { Some(o) => o != "fallIn" && o != "hold", None => false }
+    match order_of(g, seat, gd) { Some(o) => !crate::orders::rows::id_is(&o, crate::orders::Is::Follows) && !crate::orders::rows::id_is(&o, crate::orders::Is::Holds), None => false }
 }
 /// is a man of the squad under an order to the step's mark (rails.ts Rails.onWay)
 pub fn rails_on_way(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: Option<&LessonAt>) -> bool {
@@ -218,7 +218,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring"));
+    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
@@ -259,7 +259,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
                 if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
             }
         }
-        if !has(&a, "ring") && !i.pressed.has(kb()) { i.keys.delete(kb()); }
+        // (`ringPart`: only with Shift down. Else the key is seen let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note)
+        if !has(&a, "ring") && !(has(&a, "ringPart") && shift) && !i.pressed.has(kb()) { i.keys.delete(kb()); }
     }
     let clicked = js::to_i32(i.clicked);
     if clicked & !buttons != 0 { dropped += 1; }
@@ -271,7 +272,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));
-        if go { rails_note_given(g, "go"); }
+        if go { rails_note_given(g, crate::orders::rows::go::ORDER.id); }
     }
 }
 
@@ -360,7 +361,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     if (g.orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.orders.log.len() as f64; }
     while g.rails.orders_seen < g.orders.log.len() as f64 {
         let o = g.orders.log[g.rails.orders_seen as usize].order.clone();
-        if !(rails_sky_on(g) && o == "fallIn") {
+        if !(rails_sky_on(g) && crate::orders::rows::id_is(&o, crate::orders::Is::Follows)) {
             g.rails.moved = true;
             rails_note_given(g, &o);
             crate::director::director_signal(g, &alloc::format!("order:{}", o), None);
@@ -373,7 +374,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
         for gd in rails_squad(g) {
             if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
                 let r = &g.tab.orders_assignment[a];
-                if r.order != "hold" && r.order != "fallIn" && !r.arrived { walking = true; break; }
+                if !crate::orders::rows::id_is(&r.order, crate::orders::Is::Holds) && !crate::orders::rows::id_is(&r.order, crate::orders::Is::Follows) && !r.arrived { walking = true; break; }
             }
         }
         if walking { g.rails.gave_t = g.time; }
@@ -381,7 +382,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     // (the sky seat: there is nobody to fall in on. Such a man holds where he is)
     if rails_sky_on(g) {
         for gd in rails_squad(g) {
-            if order_of(g, &crate::seats::here(g), gd).as_deref() == Some("fallIn") {
+            if order_of(g, &crate::seats::here(g), gd).map_or(false, |o| crate::orders::rows::id_is(&o, crate::orders::Is::Follows)) {
                 let low = rd.sky.as_ref().unwrap().low.unwrap_or(false) && !g.rails.moved;
                 rails_hold_here(g, gd, Some(low));
             }
@@ -510,7 +511,7 @@ pub fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>
     let c = g.gd[gd].ch;
     let (p, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
     let a = crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(yaw),
         stance: Some(crate::character::Stance::LowReady),
@@ -538,7 +539,7 @@ pub fn rails_hold_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsLess
     if !rails_waiting(g, s) { return; }
     let low = s.l.rails.as_ref().unwrap().waits.as_ref().unwrap().low.unwrap_or(false);
     for gd in rails_squad(g) {
-        if order_of(g, &crate::seats::here(g), gd).as_deref() == Some("fallIn") { rails_hold_here(g, gd, Some(low)); }
+        if order_of(g, &crate::seats::here(g), gd).map_or(false, |o| crate::orders::rows::id_is(&o, crate::orders::Is::Follows)) { rails_hold_here(g, gd, Some(low)); }
     }
 }
 /// (rails.ts Rails.unpark)
@@ -661,7 +662,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     let (n, of_n) = (i as u32 + 1, of as u32);
     // (the step's deed is done and it settles before the next step's card: what its men are doing, or nothing. Never a line that asks for a key)
-    if up && g.k.rails.card_beat && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
+    if up && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
         let w = if cue { step_line() } else if gave_here { t.after.as_ref().and_then(said_now).map_or(String::new(), |l| lesson_line(g, &l)) } else { String::new() };
         return Some(crate::view::RailPrompt { line: if names_key(&w) { String::new() } else { w }, n, of: of_n, note: None, watch: true });
     }

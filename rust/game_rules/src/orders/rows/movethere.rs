@@ -1,12 +1,13 @@
 //! MOVE THERE: "move there". A place and a watch each that fit the room, or the line abreast.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LooksAbout, Is::Resumed, Is::KeepsLane, Is::WalksLow],
     can: Some(can),
     valid: Some(valid),
     tick: Some(crate::roomfit::fit_tick),
@@ -70,7 +71,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let fit = fits.as_ref().and_then(|f| f.iter().find(|x| v3::dist_xz(x.pos, p) < 1e-6).cloned());
         let walk = at.as_ref().and_then(|m| m.get(gd).copied());
         let on = SquadOrdersAssignA {
-            order: String::from("move"), post: Some(p), face: Some(face),
+            order: String::from(ORDER.id), post: Some(p), face: Some(face),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
             going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
             ..Default::default()

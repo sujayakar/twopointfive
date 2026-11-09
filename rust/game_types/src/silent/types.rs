@@ -147,9 +147,6 @@ pub struct SilentStats {
     pub tools: i32,
 }
 
-/// (src/game/silent.ts:107 LOUD_ROWS: a table nothing writes)
-pub fn loud_rows() -> Vec<String> { alloc::vec![String::from("bangClear"), String::from("bigClear"), String::from("charge"), String::from("thrBang"), String::from("fragClear"), String::from("wallCharge"), String::from("fragThere"), String::from("stunThere"), String::from("shellThere")] }
-
 /// (src/game/silent.ts:222 TARGETS: a table nothing writes)
 pub fn targets() -> Vec<crate::orders::TargetKind> { alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None] }
 

@@ -1,14 +1,12 @@
 // HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the
 // menus, etc., it should be a mystery!" What a player reads BEFORE a mission, held to that: the words of
 // every mission row, start-page pick and difficulty sentence. Reads tables only: no stand, nothing of the game runs.
-//   bun run tools/qa/mystery-check.ts [--list]      (also `probes.ts mystery`, in families ui and words)
+//   bun run tools/qa/mystery-check.ts [--list]
 //   total    no row's place, job or pick line says its own head count: a number beside "enemies", "defenders", "guards", "men" … that IS the row's
 //            `defenders`, any such number past five, "against eleven", "eleven hold". A smaller number is a part of the puzzle and stays ("two sentries
 //            who watch each other"). The training and tutorial rows are lessons: their numbers are the exercise, listed and not judged
-//   hard     the sentences that say what Hard is name no number of enemies
 //   asks     no screen reads a row's `defenders` or the tally's roster for itself: nothing under src/ui names `.defenders` or `.roster`
-// MYSTERY_BREAK=1 reads the old rows' and Hard's old sentences as theirs: 'total' and 'hard' must FAIL.
-// The page's own half (the cells not drawn, the large map left by a click beside it): tools/qa/mystery-page.cjs.
+// MYSTERY_BREAK=1 reads the old rows as theirs: 'total' must FAIL. What Hard says is the desk's (rust/game_run), and no check reads it for a number today.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -32,7 +30,6 @@ export async function mysteryCheck(): Promise<boolean> {
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { PICKS, pickEntry } = await import(`${ROOT}/src/scene/picks.ts`);
-  const { difficultyWords, squadsHeld } = await import(`${ROOT}/src/game/difficulty.ts`);
   {
     // ---- total
     const rows: { id: string; text: string; total: number; lesson: boolean }[] = (ALL_MISSIONS as { id: string; title: string; place?: string; blurb?: string; scene?: string; defenders?: number; group?: string }[]).map(e => (
@@ -44,11 +41,6 @@ export async function mysteryCheck(): Promise<boolean> {
     for (const r of rows) for (const [words, n, whole] of countsIn(r.text)) (r.lesson ? lessons : whole || n === r.total || n > 5 ? bad : part).push(`${r.id} "${words}"`);
     line(bad.length === 0, "total: no mission row or pick line says its own head count", bad.length ? bad.join(' · ') : `${rows.length} rows read · a part of the puzzle, kept: ${part.join(' · ') || 'none'}`);
     if (LIST) console.log(`    the lessons' own numbers (the exercise, not judged): ${lessons.join(' · ') || 'none'}`);
-    // ---- hard
-    const hard = [difficultyWords('hard', false), difficultyWords('standard', false), ...(ALL_MISSIONS as { level?: string; squads?: boolean; kind?: string }[]).filter(e => squadsHeld(e)).map(e => difficultyWords('hard', squadsHeld(e)))];
-    if (BREAK) hard.push('On a hostage rescue the captor calls your assault on the radio and his two guards act on it. On the night breach the three defenders are drilled.');
-    const told = [...new Set(hard.flatMap(w => countsIn(w).map(c => c[0])))];
-    line(told.length === 0, 'hard: the sentences that say what Hard is name no number of enemies', told.length ? told.join(' · ') : `${hard.length} sentences read`);
     // ---- asks
     const ui = readdirSync(`${ROOT}/src/ui`).filter(f => f.endsWith('.ts')), own: string[] = [];
     for (const f of ui) readFileSync(`${ROOT}/src/ui/${f}`, 'utf8').split('\n').forEach((l, i) => { const code = l.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '');

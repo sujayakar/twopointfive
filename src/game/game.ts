@@ -14,8 +14,8 @@ import { GltfCharacter } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { Character } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
-import { Input } from './input';
-import { FollowCamera } from './camera';
+import { Input } from '../host/input';
+import { FollowCamera } from '../host/camera';
 import { Seat, sampleCmd } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
 import type { PlayerCmd } from './cmd';
 import { RtLight } from '../render/lights';
@@ -27,12 +27,14 @@ import { statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxes } from './s
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { gunHoldStats } from './gunhold';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
 import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
+import { LEVEL_SCRIPTS } from './levelScripts';
 import { LOOK } from '../scene/look';   // (a leaf: no imports)
 import { leafRowOf, paintLeaves } from '../scene/leafPaint';
 import { SmokeSystemLike } from '../smoke/types';
@@ -56,7 +58,7 @@ import { doorBlast } from './doorblast';
 import { RAG } from './ragdoll';
 import { Throwables, ThrowSolution, Item } from './throwables';
 import { PropSystem, PropEvent, Prop } from './props';
-import { GameAudioLike, nullAudio } from './audio_iface';
+import { GameAudioLike, nullAudio } from '../audio/iface';
 import * as fx from './effects';
 import { Sparks } from './sparks';
 import { Tracers } from './tracers';
@@ -72,11 +74,11 @@ import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { rainSummary } from './rainFx';
 import './smokebreak';
 import { resetShowWhy } from './showwhy';
-import { updateFire } from './fire';
+import { updateFire, FIRE } from './fire';
 import { railLightDef, torchLightDef } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
-import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
+import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat, hostMan } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
@@ -179,8 +181,6 @@ import { carLampTargets } from './carlamps';   // a parked vehicle's lamps are l
 import { setBlackout, endBlackout, lightEvent, ocp, setGroup, repairLights, freshLights } from './lighting';
 import { gunWallFresh } from './gunwall';   // (called inside cleanSlate only)
 import { CLEANRESTART, CLEANRESTART_STATS } from './cleanrestart';   // a restart gives a clean level (a leaf: the switch and its tally)
-import { stepMat } from './floor';
-import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
 import type { DialoguePick } from './dialogue';
 import { Sup, suppressionSummary } from './suppression';
@@ -953,6 +953,10 @@ export class Game {
   /** the stand's one call (standGame). A tick is still SAMPLED from whatever camera and Input `update` is handed (a replay's player steps with the tape's
    *  own): these two are what the HOST shows through and types on, which is what a show pins and locks */
   hostHands(cam: FollowCamera, input: Input): void { this.hostCam = cam; this.hostInput = input; }
+  /** where the picture looks: the host's camera, or its man where it has none. For whoever draws, never a rule (rust/game_draw looks_at) */
+  get looksAt(): Vec3 { return this.hostCam?.focus ?? hostMan(this).char.pos; }
+  /** what the picture leaves out of a fire's embers and hot air: anything further from where it looks than it would ever show */
+  farForAFire(p: Vec3): boolean { const f = this.looksAt; return !(Math.hypot(p[0] - f[0], p[2] - f[2]) < FIRE.emberR); }
   /** the night breach playtest (nightbreach.ts; ?nightbreach / native --nightbreach / __nightbreach): Sam leading two AI operatives against three men barricaded in the
    *  break room. Off — the game exactly — until its start(); ticked right after the Director */
   nightBreach!: NightBreach;
@@ -1076,6 +1080,8 @@ export class Game {
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
     if (engine.settings && engine.settings.decals === false) this.decals.enabled = false;
     this.weather = new Weather(this);
+    dialogue.recentStands(this);
+    gunHoldStats(this);   // (the counters stand from the start, on every host: a HUD's asking must not be what makes them, or a page's record differs from a server's)
     first.player.light = engine.lights.add(railLightDef(PLAYER_ID, this.tune.playerLight));
     // light targets from analytic lights + switchables
     // contactor groups restrike one after another when the mains return: stagger by order of first appearance
@@ -1211,7 +1217,7 @@ export class Game {
     for (const s of this.seats) s.view.wallCharge = new WallCharge(s.view);     // (after the door tools: it spends their charges)
     for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
     standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
-    this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
+    this.director = new Director(this, LEVEL_SCRIPTS[levelNameOf(level) ?? ''] ?? null);   // the level's script (levelScripts.ts): its define pass run and linted against this level here (nothing of the world touched); programs start on demand
     this.glassBreak.stood();   // (which glass each pane is, settled as the level stands)
     { const over = stoodOver(this, this.col.mirror.tables); if (over) throw new Error(over); }   // (levelfit.ts: the game as it stands, against every table and pool that holds it — one over is not a game)
   }
@@ -1340,8 +1346,6 @@ export class Game {
   /** Camera follow position (player or spectated guard). */
   followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.view.lesson?.rails?.sky ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
   teleportPlayer(p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.teleportPlayer', this, [p]); if (__r !== RUST_PASS) return __r as any; } } return teleportPlayer(this, p); }
-  /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
-  get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
 
   repairLights() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.repairLights', this, []); if (__r !== RUST_PASS) return __r as any; } } return repairLights(this); }
   /** Everything still in the air / in the sound queue from what just happened: fused canisters, sparks, the last half second of noises, a wind-up.
@@ -1356,7 +1360,7 @@ export class Game {
     pl.hasRifle = withRifle;
   }
 
-  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built. So every lamp a fixture feeds has a row and one way of burning. */
   standLights(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.standLights', this, []); if (__r !== RUST_PASS) return __r as any; } } this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetLevelState', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);
@@ -1662,20 +1666,15 @@ export class Game {
   /** what the cursor is on, through a camera as it stands, and what a point is, as an order would be about them (src/view/read.ts): the host's, asked of the Rust game */
   cursorAsk: ((input: CursorAt, cam: CursorLens, canvas: { clientWidth: number; clientHeight: number }, seat?: number) => CursorView) | null = null;
   underAsk: ((p: Vec3, seat?: number) => Under | null) | null = null;
-  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
-  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 
 
 /** the men `drawMen` left out, each said once (game.ts drawMen): who, and the fault that kept him out of the picture */
-let NOT_DRAWN: WeakSet<object> | null = null;
 function manNotDrawn(g: Game, c: Character, e: unknown): void {
-  const said = (NOT_DRAWN ??= new WeakSet());
-  if (said.has(c)) return;
-  said.add(c);
   const gd = g.guards.find(x => x.char === c), who = gd ? gd.callsign : c === g.player.char ? 'the player' : `man ${c.id}`;
   const book = ((g as unknown as { menNotDrawn?: { who: string; id: number; why: string }[] }).menNotDrawn ??= []);
+  if (book.some(b => b.id === c.id)) return;
   const why = String((e as { message?: string })?.message ?? e).slice(0, 300);
   book.push({ who, id: c.id, why });
   console.error(`${who} (id ${c.id}) cannot be posed and is NOT DRAWN: ${why}`);

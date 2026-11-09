@@ -18,12 +18,12 @@
 // (tools/qa wind-identity). Knobs WIND below (Tab ▸ Weather ▸ wind rows, kept per machine with the master: localStorage twopointsix.wind).
 import { Vec3, v3 } from '../math/vec';
 import { hashStr } from '../math/dice';
-import { HostOwned } from '../math/side';
 import type { Game } from './game';
 import type { Door } from './doors';
 import type { VentDef } from '../scene/level';
 import { VENT_DEFAULTS } from '../scene/levelData';
-import type { WindGpuSource } from '../smoke/types';
+import { WIND_GPU_MAX, type WindGpuSource } from '../smoke/types';
+import { hyp2 } from '../math/hyp';
 import { INTERIOR, ANNEX } from './weather';
 import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
@@ -103,10 +103,9 @@ function ventDue(v: VentDef, t: number): boolean {
 }
 export interface WindSource extends WindGpuSource { why: WindWhy; base: number; on: number; gust: number; seed: number; vent?: VentDef; door?: Door; }
 /** counters for the probes / panel */
-export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
+export const WIND_STATS = { frames: 0, active: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
 
-export class PoolList extends HostOwned { readonly list: WindSource[] = []; }
 /** `at` and `stormShare`'s working vectors: written and read inside one call, so nothing of the game's — they were fields of the Wind, where whoever asked last
  *  (the particle pool's path, the panel's probe at the cursor) left his numbers in the game's state */
 const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 = [0, 0, 0];
@@ -114,11 +113,18 @@ const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 
 export class Wind {
   /** every source the level can have (vents, one storm, one per exterior door), built once; `active` = the ones blowing this frame (speed > 0), rebuilt in place each update */
   readonly all: WindSource[] = []; readonly active: WindSource[] = [];
-  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself. THE HOST'S, not the game's
-   *  (math/side.ts HostOwned): it is filled only where a particle pool is, by distance from where the view looks, and rebuilt every frame — so no snapshot or
-   *  state hash holds it, and a game with a pool and one without are one state */
-  private readonly toPool = new PoolList();
-  get forParticles(): WindSource[] { return this.toPool.list; }
+  /** what goes to the particles this frame (the jets nearest the view, then the storm; ≤ WIND_GPU_MAX). THE HOST'S, not the game's: it needs a particle pool and where the view looks,
+   *  so it is made of the standing game where it is asked (src/host/rustdress.ts, the wind's panel), and no game's record holds it. rust/game_draw/src/winds.rs `for_particles` is the
+   *  same rule, for the page that holds no game. tools/draw/weather-check.ts holds the two together. */
+  get forParticles(): WindSource[] { return this.gustsAround(this.g.looksAt); }
+  gustsAround(f: Vec3): WindSource[] {
+    const dist = (s: WindSource) => v3.dist(s.bound.c, f);
+    const jets = this.active.filter(s => s.kind === 'jet' && dist(s) < WIND.nearM + s.bound.r), storm = this.active.find(s => s.kind === 'storm');
+    const most = WIND_GPU_MAX - (storm ? 1 : 0);
+    if (jets.length > most) { jets.sort((a, b) => dist(a) - dist(b)); jets.length = most; }
+    if (storm) jets.push(storm);
+    return jets;
+  }
   private storm: WindSource;
   /** the level's own roofs as the weather last told them (reroof; null = the office's two) — what the storm record's `roofs` is while WX_OWN.wind is on */
   private lvRoofs: readonly (readonly number[])[] | null = null;
@@ -206,7 +212,7 @@ export class Wind {
   /** the storm's wind vector when it should be felt (weather on, night, the storm knob up, rain or storm actually running, a real speed) — null otherwise; glassbreak's gusts through shot-out panes ask the same question (one test) */
   stormWind(): Vec3 | null { if (RUST_SURFACE?.tapFiring('Wind.stormWind')) return RUST_SURFACE.tapAnswer() as any; return goneWithTick('Wind.stormWind') as any; }
 
-  /** Once a frame (game.ts, after the weather and the doors): every source's speed for this frame, the active list, and the hand-off to both GPU consumers. */
+  /** Once a frame (game.ts, after the weather and the doors): every source's speed for this frame, the active list, and the hand-off to the smoke. Which of them a particle pool is handed is the host's: `forParticles`. */
   update(dt: number): void { return crossToRust('Wind.update', this, [dt]) as any; }
 
   /** The air's velocity at p this frame (m/s): the sum over every active source — what the GPU consumers evaluate, on the CPU (the moths, the panel, the probes). */

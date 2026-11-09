@@ -1,15 +1,17 @@
 //! THE CHARGE ON A WALL: a charge on the wall that is the target; the charge already on it is blown.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Blows, Is::Loud],
     can: Some(can),
     valid: Some(valid),
     gone: Some(gone),
-    ..Row::new(crate::wallcharge::WALL_ORDER, label, issue)
+    notes: Some(crate::wallcharge::wall_charge_hud_notes),
+    ..Row::new("wallCharge", label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

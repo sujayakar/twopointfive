@@ -535,7 +535,7 @@ pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::D
     let callsign = man_callsign(g, gd);
     let p = man_pos(g, gd);
     if how == DownKind::Shot {
-        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(w)), ("blast", yes(true))]), Some(p)); }
+        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)); }
         let weapon = if l.starts_with("knife") {
             String::from("knife")
         } else {

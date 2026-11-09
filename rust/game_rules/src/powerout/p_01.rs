@@ -222,8 +222,8 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if roused(g, gd) {
         return Some("in a fight".into());
     }
-    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has(g, gd, crate::owner::by::STAND) {
-        return Some("the captor / lying in wait / last stand".into());
+    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) {
+        return Some("the captor / lying in wait".into());
     }
     if crate::digin::dig_in_phase(g, gd) != "idle" {
         return Some("dug in".into());

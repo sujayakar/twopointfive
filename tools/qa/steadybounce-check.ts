@@ -10,7 +10,7 @@
 //   bun run tools/qa/steadybounce-check.ts   (exit 0 = all pass; STEADYBOUNCE_BREAK=1 leaves the row at nothing and must fail)
 import { RING_MAX, ringPoints, ringSlot, ringMask } from '../../src/render/diceRing';
 import { LOOK_DEFAULTS } from '../../src/render/gbuffer';
-import { HOURS } from '../../src/game/hours';
+import { HOURS } from './sunrow';
 import { hourExposure } from '../../src/render/photometry';
 const BRK = process.env.STEADYBOUNCE_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };

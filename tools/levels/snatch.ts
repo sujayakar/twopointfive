@@ -139,10 +139,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- doors (closedDir 0: the leaf runs +x from the hinge along a z-wall; π/2: +z along an x-wall) ----
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [15.42, 18.0], closedDir: 0, width: 1.16, exterior: true },
-    { name: 'back', hinge: [16.42, 8.0], closedDir: 0, width: 1.16, exterior: true, swing: -1 },   // opens out into the back alley: the one outside door of the house no wedge inside holds, and the inner doors carry on from the back room (tools/qa/second-way-check.ts)
+    { name: 'back', hinge: [16.42, 8.0], closedDir: 0, width: 1.16, exterior: true, swing: -1 },   // opens out into the back alley: the one outside door of the house no wedge inside holds, and the inner doors carry on from the back room (rust/game_start levels second-way)
     { name: 'side', hinge: [26.0, 10.02], closedDir: HALF, width: 1.16, exterior: true },
     { name: 'back_room', hinge: [14.02, 13.0], closedDir: 0, width: 1.16 },
-    { name: 'kitchen', hinge: [20.0, 15.02], closedDir: HALF, width: 1.16, swing: 1 },   // opens into the main room, and the hut's door outward: each is its room's one door, and no wedge inside holds a door that opens away (tools/qa/second-way-check.ts)
+    { name: 'kitchen', hinge: [20.0, 15.02], closedDir: HALF, width: 1.16, swing: 1 },   // opens into the main room, and the hut's door outward: each is its room's one door, and no wedge inside holds a door that opens away (rust/game_start levels second-way)
     { name: 'his', hinge: [18.0, 10.02], closedDir: HALF, width: 1.16 },
     { name: 'hut', hinge: [29.82, 6.6], closedDir: 0, width: 1.16, exterior: true, swing: -1 },
   ];
@@ -260,7 +260,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'hut', mat: 'stone', x0: 29, z0: 6.6, x1: 31.76, z1: 10.4 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the team starts at the level's own south gate, whose two
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the team starts at the level's own south gate, whose two
   // blue leaves stand folded open. A picture anchored on that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the
   // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
   // the camera's way is worked out and sunk by the plan.

@@ -26,6 +26,12 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
             let s = g.sparks.pool[slot];
             if s.alive && s.gen_ == gen_ { Some((s.pos, [0.0, 1.0, 0.0])) } else { None }
         }
+        Track::Cigarette { by } => {
+            // (while he is seen: the source lives a second and the game files the next while he smokes)
+            if g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(by) { return None; }
+            let (v, up) = (g.ch[by].vel, g.k.smokebreak.thread.speed);
+            crate::smokebreak::tip_of(g, by).map(|p| (p, [v[0] * 0.5, up, v[2] * 0.5]))
+        }
     }
 }
 

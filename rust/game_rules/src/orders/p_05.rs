@@ -256,7 +256,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let p = g.ch[c].pos;
             let post = g.tab.orders_assignment[a].post.unwrap();
             // (cover.ts COVER.step: a plain holder is walked to where he sees through an open door; his MARK stays)
-            let plain = order_id == "hold" && g.tab.orders_assignment[a].watch.is_none() && !g.tab.orders_assignment[a].spare.unwrap_or(false) && g.tab.orders_assignment[a].via.is_empty();
+            let plain = crate::orders::rows::id_is(&order_id, crate::orders::Is::Holds) && g.tab.orders_assignment[a].watch.is_none() && !g.tab.orders_assignment[a].spare.unwrap_or(false) && g.tab.orders_assignment[a].via.is_empty();
             let st = if plain { crate::cover::cover_step_of(g, gd, a) } else { None };
             let mark = st.unwrap_or(post);
             if plain && flat(g.tab.orders_assignment[a].goal, mark) > 0.05 {
@@ -278,7 +278,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             };
             if pace.is_some() { crate::teampace::team_fight(g, gd, None); }
             else if g.tab.orders_assignment[a].thru.is_none() && g.tab.orders_assignment[a].via.is_empty() {
-                let is_stack = order_id == "stack" && g.tab.orders_assignment[a].door.is_some();
+                let is_stack = crate::orders::rows::id_is(&order_id, crate::orders::Is::Stacks) && g.tab.orders_assignment[a].door.is_some();
                 speed = crate::teampace::team_dash(g, gd, mark, d, Some(is_stack)).unwrap_or(speed);
             }
             if pace.is_none() && d > k_brisk_in { speed = crate::teampace::team_told(g, gd).unwrap_or(speed); }
@@ -341,10 +341,10 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 };
             }
             g.tab.orders_assignment[a].arrived = arrived;
-            let held_fire = d < 0.35 && order_id == "stack" && crate::holdfire::hold_fire_holds_target(g, gd);
+            let held_fire = d < 0.35 && crate::orders::rows::id_is(&order_id, crate::orders::Is::Stacks) && crate::holdfire::hold_fire_holds_target(g, gd);
             g.tab.orders_assignment[a].held_fire = Some(held_fire);
             if held_fire { g.tab.orders_assignment[a].arrived = true; }
-            let held_set = !g.tab.orders_assignment[a].arrived && d < 0.35 && order_id == "stack" && crate::silent::silent_holds_target(g, gd);
+            let held_set = !g.tab.orders_assignment[a].arrived && d < 0.35 && crate::orders::rows::id_is(&order_id, crate::orders::Is::Stacks) && crate::silent::silent_holds_target(g, gd);
             g.tab.orders_assignment[a].held_set = Some(held_set);
             if held_set { g.tab.orders_assignment[a].arrived = true; }
             if g.tab.orders_assignment[a].arrived && !was { g.tab.orders_assignment[a].arr_t = g.time; }
@@ -354,13 +354,13 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             Some(mv) if d > 0.6 => ((mv.stance, mv.upper), true),
             _ => ((g.tab.orders_assignment[a].stance, g.tab.orders_assignment[a].upper), false),
         };
-        // UNASKED COVER (cover.ts): a man following, or holding with nothing named to watch, has an opening dealt him; his feet stay the order's
+        // UNASKED COVER (cover.ts): a man with nothing named to watch has an opening dealt him, on the walk or on his mark; his feet stay the order's
         let mut watch = g.tab.orders_assignment[a].watch;
         let posted = g.tab.orders_assignment[a].post.is_some();
         let mut strafe = g.tab.orders_assignment[a].strafe.unwrap_or(false) && posted && face.is_some();
         let spare = g.tab.orders_assignment[a].spare.unwrap_or(false);
-        let cov = if (g.tab.orders_assignment[a].watch.is_none() && (!posted || order_id == "hold")) || spare {
-            let still = if spare { d < 0.6 } else { posted || face.is_some() || keep };
+        let cov = if crate::cover::cover_eyes_free(g, gd, a) || spare {
+            let still = if posted { d < 0.6 } else { face.is_some() || keep };
             crate::cover::cover_pose_for(g, gd, still, speed)
         } else { None };
         let aim_pose = { let k = crate::orders::aim(); (k.stance, k.upper) };
@@ -410,7 +410,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 along > 0.15 && along < len && m::abs(sx * fz - sz * fx) < lane
             };
             let mut low_now = squad_orders_sams(g, &crate::seats::here(g)) && in_line(g.ch[sam].pos);
-            if !low_now && g.tab.orders_assignment[a].arrived && crate::orders::lane_orders().contains(&order_id.as_str()) {
+            if !low_now && g.tab.orders_assignment[a].arrived && crate::orders::rows::id_is(&order_id, crate::orders::Is::KeepsLane) {
                 for &o in mates.iter() {   // (… a man of the OTHER pair, across a gun that is posted)
                     if o != gd && squad_orders_pair_of(g, o) != squad_orders_pair_of(g, gd) && in_line(g.ch[g.gd[o].ch].pos) { low_now = true; break; }
                 }

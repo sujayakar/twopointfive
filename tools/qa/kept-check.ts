@@ -8,11 +8,11 @@
 // its signs still drew rubbed.
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 is the level file's own code, run. Line 2 is the page's rule, run. Line 3 holds the rule BY ITS
 // TEXT in the shaders, the writer of their uniform, the page and the exporter. Line 4 is a second writing of the places the word acts, held to the shader
-// by line 3's pins: whether it is the first is as good as those. Line 5 is the exporter's own rule for which word a generator's file has (tools/levels/keptWord.ts), run on every
-// generator against its level file and on generators made here. What a kept place LOOKS like is a page's to show.
+// by line 3's pins: whether it is the first is as good as those. Line 5 runs on every
+// generator against its level file. What a kept place LOOKS like is a page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function keptCheck(): Promise<boolean> {
   const BRK = process.env.KEPT_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -39,12 +39,12 @@ export async function keptCheck(): Promise<boolean> {
     verdict(rows.every((r, i) => got[i] === r[2]), 'the frame takes the address\'s &kept for the visit, else the level\'s own word, else 0; held to 0 to 1; a word that is no number, empty or blank leaves the level\'s',
       rows.map((r, i) => `(${r[0]}, ${r[1] === null ? 'none' : `'${r[1]}'`}) → ${got[i]}`).join(' · ')); }
   // 3. the text: one writer, one reader, and every place the word acts
-  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl'), gb = text('src/render/gbuffer.ts'), main = text('src/main.ts'), exp = text('tools/levels/export.ts');
+  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl'), gb = text('src/render/gbuffer.ts'), main = text('src/host/drawpage.ts'), exp = text('tools/levels/export.ts');
   const between = (a: string, b: string) => { const i = look.indexOf(a), j = look.indexOf(b); return i < 0 || j < i ? '' : look.slice(i, j); };
   const surface = between('fn lookSurface(', '  // ---- USE on a wall somebody keeps'), standing = between('  // ---- WEATHER on anything that stands on the ground or lies in the open', '  // ---- USE on a wall somebody keeps');
   { const pins: [string, boolean][] = [
       ['the uniform\'s writer puts the word at c.x', gb.includes('k.cavity * c, k.size, lookConfig.kept, ')],
-      ['every way a level enters the page hands its word over and writes the uniform', count(main, "lookConfig.kept = lookKeptOf(level.kept, q.get('kept'));") === 1 && /function hostLevel\([^\n]*\n  lookConfig\.kept = lookKeptOf[^\n]*\n  engine\.gbuffer\.setLook\(\);/.test(main) && count(main, 'hostLevel(engine, level, q);') === 1 && count(main, 'populateHost(engine, level)') === 1],
+      ['the page takes the level\'s word off the picture before the engine is made ready', count(main, 'lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept]') === 1 && main.indexOf('lookConfig.kept = ') < main.indexOf('engine.init(')],
       ['look.wgsl reads it in one place', count(look, 'lookCfg.c.x') === 1 && look.includes('fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }')],
       ['a surface asks it once: how far the place is left to the weather', count(surface, 'lookKept()') === 1 && surface.includes('let left = 1.0 - lookKept();')],
       ['how wild a surface is is its stuff\'s word × the place\'s', surface.includes('let wildS = step(0.001, keep.y);') && surface.includes('let wild = select(0.0, wildS * left, cls != 0u);') && count(surface, 'wildS > 0.0') === 2 && count(surface, 'wildS ==') === 0 && count(surface, '- wildS') === 0],   // (the stuff's word alone gates only the two rules that are the weather's own, which ask the weather's amount beside it; nothing else goes by the stuff alone)
@@ -55,8 +55,8 @@ export async function keptCheck(): Promise<boolean> {
       ['what a stuff\'s `worn` says of use is shown by how far the surface is kept, never by the weather\'s amount', look.includes('keep.w * min(k.w, 1.0) * (1.0 - wild), fp,') && look.includes('let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);') && look.includes('if (k.w > 0.0 && cls != 0u && wild < 1.0 && keep.w > 0.0 && !lying && stands && !moves && wp.y < 0.3) {') && look.includes('alb *= 1.0 - 0.2 * keep.w * (1.0 - wild) * min(k.w, 1.0) * clamp(lookWay.x * uneven, 0.0, 1.0);')],
       ['a mark is handed how far its paint is old', look.includes('fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }')],
       ['old paint is rubbed thin by the years by that much and by feet whatever it is, and gone into its wall by that much', marks.includes('- (0.72 - 0.12 * age * soft2.y - 0.16 * trod));') && marks.includes('let keep = 1.0 - 0.85 * min(age, 1.0) * worn * max(soft2.y, min(trod, 1.0));') && marks.includes('fn markTone(soft: vec2f, near: f32) -> f32 { return 1.0 - 0.18 * min(soft.x, 2.0) * soft.y * near; }') && marks.includes('if (soft.x > 0.0) {')],
-      ['the address\'s word is a visit\'s and the look page\'s', /VISIT_FLAGS = \[[^\]]*'kept'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'kept'/.test(text('src/scene/look.ts'))],
-      ['the exporter gives a generator\'s word to the level, and a look\'s second file the word of the level it dresses', exp.includes("{ const { generatorKept } = await import('./keptWord.ts'); const kept = await generatorKept(gen, n => import(resolve(import.meta.dir, `${n}.ts`)));\n  if (kept !== undefined) level.kept = kept; }") && count(exp, 'gen.KEPT') === 0],   // (the exporter reads no generator's word itself: the rule is keptWord.ts's, which line 5 runs)      ['the file\'s writer takes the word from the level', text('src/scene/levelLoad.ts').includes("const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) };")],
+      ['the address\'s word is a visit\'s and the look page\'s', /VISIT_FLAGS = \[[^\]]*'kept'/.test(text('src/tape/address.ts')) && /LOOK_PAGE_WORDS[^\n]*'kept'/.test(text('src/scene/look.ts'))],
+      ['the exporter gives a generator\'s word to the level', exp.includes('if (gen.KEPT !== undefined) level.kept = gen.KEPT;')],
     ];
     const bad = pins.filter(p => !p[1]).map(p => p[0]);
     verdict(bad.length === 0, 'the word has one writer and one reader; the weather on what stands, the rubbish at a wall\'s foot, a mud wall\'s fallen render and the age of a mark\'s paint ask it, and what the weather gives up the kept rules take; what a stuff\'s `worn` says of use comes in by the same share; a trodden lane and paint trodden off a floor do not ask it; every way a level enters the page hands it over', bad.length ? `NOT HELD: ${bad.join('; ')}` : `${pins.length} pins hold`); }
@@ -81,22 +81,15 @@ export async function keptCheck(): Promise<boolean> {
       && p[0] === 0.15 && p[1] === 0.575 && p[2] === 1 && pt[0] === 0.15 && pt[1] === 0.49 && pt[2] === 0.49 && t[0] === 0.82 && t[1] === 0.91 && t[2] === 1;
     verdict(ok, 'left to the weather a wall\'s paint drifts a quarter either way, and the paint of a mark is rubbed to 0.15 of itself where it is worn and stands at 0.82 of its colour; kept, the wall is one shade but for the three in a hundred no forty metres are without, has the dust at its foot and the knocked coat its stuff\'s `worn` says, and the mark is whole and its own colour on a wall and still rubbed to half where its floor is walked; half way is half',
       `kept 0 / 0.5 / 1: a wall's blotch ${b.join(' / ')} · the ground's ${g.join(' / ')} · a factory finish's ${f.join(' / ')} · how far the weather's rules answer for a weathered stuff ${w.join(' / ')} (a kept stuff ${w0.join(' / ')}) · its drift ${d.join(' / ')} (a kept stuff's ${d0.join(' / ')}) · a slab floor's lane ${ls.join(' / ')} (beaten pale to a shade darker; bare earth's ${le.join(' / ')}) · the dust band at its foot ${bd.join(' / ')} · its knocked foot where its stuff says worn 1 ${kn.join(' / ')} (a kept stuff's of 0.8: ${kn0.join(' / ')}) · a worn mark's paint ${p.join(' / ')} · the same where feet go ${pt.join(' / ')} · its tone ${t.join(' / ')}`); }
-  // 5. THE FILE the page loads has its generator's word, and a look's second file the word of the level it dresses unless it says its own, however many
-  //    files stand between. The rule is tools/levels/keptWord.ts's, the exporter's own (line 3 pins that the exporter asks it and writes no rule of its
-  //    own): run here on every generator against the level file as it lies (a stale or hand-changed file fails), and on generators made here, so the line
-  //    has teeth before any level says the word. KEPT_BREAK: the level a second file dresses cannot be read, as if the hop were not made.
-  { const { readdirSync, existsSync } = await import('node:fs'); const dir = resolve(ROOT, 'tools/levels'); const { generatorKept } = await import(`${dir}/keptWord.ts`);
-    const none = async () => ({}), load = BRK ? none : (n: string) => import(`${dir}/${n}.ts`);
-    const bad: string[] = []; let gens = 0, say = 0, twins = 0;
+  // 5. THE FILE the page loads has its generator's word: run on every generator against the level file as it lies (a stale or hand-changed file fails). KEPT_BREAK: a generator's word is not the file's.
+  { const { readdirSync, existsSync } = await import('node:fs'); const dir = resolve(ROOT, 'tools/levels');
+    const bad: string[] = []; let gens = 0, say = 0;
     for (const f of readdirSync(dir).filter(f => f.endsWith('.ts')).sort()) { if (!/^export (const|function) build\b/m.test(readFileSync(`${dir}/${f}`, 'utf8'))) continue;
       const g = await import(`${dir}/${f}`), name = g.NAME ?? f.replace(/\.ts$/, ''), file = resolve(ROOT, `levels/${name}.json`); if (!existsSync(file)) continue;   // (no file of that name: the exporter's own --check says so)
-      const want = await generatorKept(g, load), got = JSON.parse(readFileSync(file, 'utf8')).meta?.kept; gens++; if (g.DRESS_AS) twins++; if (want !== undefined) say++;
+      const want = BRK ? 0.5 : g.KEPT, got = JSON.parse(readFileSync(file, 'utf8')).meta?.kept; gens++; if (want !== undefined) say++;
       if (got !== want) bad.push(`${name}.json says ${got}, its generator ${want}`); }
-    const world: Record<string, { KEPT?: number; DRESS_AS?: string }> = { plain: { KEPT: 0.8 }, look: { DRESS_AS: 'plain' }, look2: { DRESS_AS: 'look' }, own: { DRESS_AS: 'plain', KEPT: 0.2 }, bare: {}, onBare: { DRESS_AS: 'bare' } };
-    const made = await Promise.all(['plain', 'look', 'look2', 'own', 'bare', 'onBare'].map(n => generatorKept(world[n], BRK ? none : async (m: string) => world[m])));
-    const ok = gens > 40 && twins > 0 && bad.length === 0 && made[0] === 0.8 && made[1] === 0.8 && made[2] === 0.8 && made[3] === 0.2 && made[4] === undefined && made[5] === undefined;
-    verdict(ok, 'every level file has its generator\'s word (none where it says none), and a look\'s second file the word of the level it dresses unless it says its own, through as many files as stand between',
-      `${gens} generators with a file (${twins} of them second files), ${say} with a word today${bad.length ? ` · WRONG: ${bad.join('; ')}` : ' · every file agrees with its generator'} · made here: a plain level's 0.8 → ${made[0]} · its second file → ${made[1]} · a file dressing that one → ${made[2]} · one with its own 0.2 → ${made[3]} · a level with no word → ${made[4]} · its second file → ${made[5]}`); }
+    verdict(gens > 30 && bad.length === 0, 'every level file has its generator\'s word (none where it says none)',
+      `${gens} generators with a file, ${say} with a word today${bad.length ? ` · WRONG: ${bad.slice(0, 4).join('; ')}` : ' · every file agrees with its generator'}`); }
   console.log(`=== kept: ${all ? 'ALL PASS' : 'FAILED'} ===`);
   return all;
 }

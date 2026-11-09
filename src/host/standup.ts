@@ -7,7 +7,7 @@ import type { HostApi } from './api';
 import type { Level } from '../scene/level';
 import type { GltfCharacter } from '../anim/gltf';
 import type { SmokeSystemLike } from '../smoke/types';
-import type { GameAudioLike } from '../game/audio_iface';
+import type { GameAudioLike } from '../audio/iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
@@ -83,7 +83,7 @@ import { WORKSTOW } from '../game/workstow';
 import { SQUADNET } from '../game/squadnet';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
-import { GEAR } from '../game/gear';
+import { GEAR } from './gear';
 import { GUARD_EYE, LIGHTS } from '../game/guards';
 import { WORDS } from '../game/words';
 import { UNSEEN } from '../game/unseen';
@@ -157,7 +157,7 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { hostAfterPutBack } from './putback';
-import { kitSoloStand, kitSoloIf } from '../game/kit';
+import { kitLessonPage, kitSoloStand, kitSoloIf } from '../game/kit';
 import { startFromQuery } from '../game/scenarioRun';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
@@ -171,8 +171,8 @@ import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY, RUNARMS }
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { SHARDS } from '../game/shards';
 import { DEBRIS } from '../game/destructionSwitch';
-import { FollowCamera } from '../game/camera';
-import { Input } from '../game/input';
+import { FollowCamera } from './camera';
+import { Input } from './input';
 import { pinned } from './profile';
 import { difficultyAsked, difficultyLay } from '../game/difficulty';
 import { LESSON_MISSIONS } from '../scene/scenarioList';
@@ -229,12 +229,18 @@ export function addressBeforeGame(q: URLSearchParams): StoodWith {
   const hour = hourAsked(q);
   return { weather, locked: true, hour: hour.id, sun: hour.sun, sunGiven: hour.sunGiven, dry: hour.dry, soloStand: false };
 }
-/** …AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
+/** THE TRAINING ROW WHOSE LEVEL AN ADDRESS BOOTS (null: no Training level's). Its stagings wear what its lesson asks (kit.ts kitLessonPage), and no lever is read on it. */
+export function lessonOfAddress(q: URLSearchParams): (typeof LESSON_MISSIONS)[number] | null {
+  const row = LESSON_MISSIONS.find(e => e.level === q.get('levelFile'));
+  return row && lessonGroup(row.group) ? row : null;
+}
+/** …AND THE LESSON'S KIT AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
  *  doesn't. It is the address's alone: no host but a page keeps a level. The tables it writes are knob tables, the process's in the TypeScript (the Rust start writes its game's
  *  own: scenario_run::difficulty_of_address), so in the harness an address that names a level leaves the tables on it, as a tool's own setDifficulty does, and one that names
  *  none leaves them as they stand. What it writes names no game, so it runs here and not on a Rust game an older stand left alive (tools/blitz/surface.ts hostOf). */
 export function difficultyOfAddress(q: URLSearchParams): void {
-  const a = difficultyAsked(q, lessonGroup(LESSON_MISSIONS.find(e => e.level === q.get('levelFile'))?.group));
+  const lesson = lessonOfAddress(q), a = difficultyAsked(q, !!lesson);
+  kitLessonPage(lesson);
   if (a) difficultyLay(a);
 }
 /** THE TWO SWITCHES THE ADDRESS'S READER READS, pinned by a harness run's own words (`TPS_SNOW`, `TPS_ROWSET`: profile.ts pinned). standGame pins them as it
@@ -247,10 +253,7 @@ export function pinRowset(): void { if (pinned('TPS_ROWSET')) ROWSET.on = String
 export function startAtAddress(game: Game, q: URLSearchParams, between?: () => void): ReturnType<typeof startFromQuery> {
   if (q.has('noweather')) game.weather.setEnabled(false);   // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood: main.ts. The address's reader has told the hour so — hours.ts hourAsked, Game.stood.dry)
   const r = startFromQuery(game, q); between?.();
-  // (A TRAINING LEVEL, one that carries a lesson, is left as it stands on a host that calls this: the page says the lesson's page before its game is
-  //  made (main.ts kitLessonPage) and its stagings then wear what the lesson asks; no other host says it yet, and the card dealt without it is neither
-  //  the page's kit nor the fresh Player the older road left there. Goes when the address's reader says the lesson's page on every host)
-  if (!game.level.scenarios?.lesson?.steps?.length) soloOfAddress(game, q);
+  soloOfAddress(game, q);
   return r;
 }
 /** THE SOLO CARD'S QUESTION OF AN ADDRESS (kit.ts kitSoloIf): the plain night (`?solo`, or no mission up and no quiet one), or a quiet mission alone, wears the
@@ -311,8 +314,9 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
   if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was
   if (opts.populate !== false) populateHost(host, level);
+  host.settings.skyZenith = v3.copy(level.sky.zenith); host.settings.skyHorizon = v3.copy(level.sky.horizon);   // (the picture told the level's own night: every host, so that what it holds is one thing)
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
-  if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
+  if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/host/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
   if (opts.harness && pinned('TPS_AIRDUST')) AIRDUST.on = String((globalThis as any).process?.env?.TPS_AIRDUST ?? '') === '1';   // THE WEATHER'S DUST IN THE ROOMS (src/game/airDust.ts): off, so a sight line under a picked weather is cut by the leak under every roof, as when every frozen digest and tally was recorded; `TPS_AIRDUST=1` runs any tool with it (before the Game exists: its constructor seeds the field)
   if (opts.harness) pinSnow();   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
   if (opts.harness && pinned('TPS_SNOWLOOK')) SNOW_LOOK.on = String((globalThis as any).process?.env?.TPS_SNOWLOOK ?? '') === '1';   // the snow's look (weatherKinds.ts SNOW_LOOK; picture only): off, so a snow level is drawn as its painted boxes
@@ -641,7 +645,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned()) SILENT.on = false;                   // the squad's silent / loud order (src/game/silent.ts): off the menu and off the squad block, which is what every older menu probe and frozen digest was written against — `probes.ts silent` turns it on (the shipped default)
     const genv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
     if (glassFxForced() !== true && !/^(on|shipped)$/i.test(genv.GLASSPARTS ?? (pinned() ? '' : 'shipped'))) { game.tune.glassBreak = false; game.tune.glassShards = false; glassPenHarness(); }   // GLASS (src/game/glass.ts GLASSFX): the parts off — a pane a starred wall — as when every frozen digest and tally was recorded; their probes turn them on by name, and GLASSFX=on stands the whole of it as shipped (GLASSPEN=off / GLASSBREAK=off / GLASSSHARDS=off then take one part back out)
-    else {   // (GLASSPARTS=shipped: the parts left as the page ships them whatever the master switch says — with GLASSFX=off that is the page under ?glassfx=0, the stand-up the off-equals-the-base runs are made on)
+    else {   // (GLASSPARTS=shipped: the parts left as the page ships them whatever the master switch says — with GLASSFX=off, the stand-up the off-equals-the-base runs are made on)
       const env = genv; const off = (v?: string) => /^(0|off|false|no)$/i.test(v ?? '');
       if (off(env.GLASSBREAK)) game.tune.glassBreak = false;
       if (off(env.GLASSSHARDS)) game.tune.glassShards = false;   // (the falling-glass model alone out: the fracture model's stand-in boxes take its fragments)

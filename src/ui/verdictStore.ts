@@ -6,7 +6,7 @@
 //   try all the same, and restarting before anything was done is free. `s` = the tries started since the last win: the ticks on the end card.
 //   A WAY WON (doors · walls · dark · quiet) is kept for good: the fewest tries a win by it ever took, whether one of those wins lost nobody, its best time.
 //   Nothing here resets by itself; `clearVerdicts` is the only way back to nothing.
-import type { Approach } from '../game/verdict';
+import type { Approach } from '../view/runend';
 
 const KEY = 'twopointsix.verdicts';
 export const APPROACHES: readonly Approach[] = ['doors', 'walls', 'dark', 'quiet'];
@@ -66,5 +66,3 @@ export function runEnded(key: string, streak: number, run: { won: boolean; appro
   write(key, rec);
   return { streak, fresh: !had, gold: waysWon(rec) >= 2, rec };
 }
-/** forget one run key's record, or every record (no key) */
-export function clearVerdicts(key?: string) { const ls = store(); if (!ls) return; try { if (!key) { ls.removeItem(KEY); return; } const all = readAll(); delete all[key]; ls.setItem(KEY, JSON.stringify(all)); } catch { /* nowhere to keep one */ } }

@@ -15,7 +15,7 @@
 // show. Never seen on a GPU.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 type V3 = [number, number, number];
 export async function portalCheck(): Promise<boolean> {
   const BRK = process.env.PORTAL_BREAK === '1'; let all = true;   // (PORTALDEEP_BREAK=1, PORTALRIMS_BREAK=1 and PORTALBANDS_BREAK=1, read where the light's sum is mirrored below: the light is its whole rectangle, as it was, or has a rim at both ends whatever stands there, or is the mean of eight points, and the line on the hole's sides or on its rims must fail)
@@ -341,7 +341,7 @@ export async function portalCheck(): Promise<boolean> {
         && count(common, 'let see = portalSeen(li, d, hh);') === 2 && count(dc, 'let see = portalAbove(li, toC, portalSeen(li, toC, hh), hh, N); let part = see.z * see.w;') === 1 && count(common + dc + rc, 'portalSeen(') === 4
         && common.includes('    if (da >= 0.0) { mn = min(mn, a); mx = max(mx, a); }\n    if ((da >= 0.0) != (db >= 0.0)) { let p = mix(a, b, da / (da - db)); mn = min(mn, p); mx = max(mx, p); }') && common.includes('    let a = vec2f(select(lo.x, hi.x, i >= 2), select(lo.y, hi.y, i == 1 || i == 2)); let b = vec2f(select(lo.x, hi.x, j >= 2), select(lo.y, hi.y, j == 1 || j == 2));') && count(common, 'portalPiece(li, d, see, hh, i)') === 2 && count(dc, 'see.xy + portalAt(') === 2
         && count(common + dc, 'portalSoft(li, hh) * part') === 1
-        && text('src/render/lights.ts').includes('(l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined') && text('src/engine.ts').includes('l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;') && text('src/main.ts').includes("if (q.get('holedepth') === '0') engine.settings.portalHole = false;") && /VISIT_FLAGS = \[[^\]]*'holedepth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'holedepth'/.test(text('src/scene/look.ts')) && text('src/scene/openings.ts').includes('half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),') && text('src/scene/openings.ts').includes('const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;')],
+        && text('src/render/lights.ts').includes('(l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined') && text('src/engine.ts').includes('l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;') && text('src/host/engineflags.ts').includes(".get('holedepth') === '0') engine.settings.portalHole = false;") && /VISIT_FLAGS = \[[^\]]*'holedepth'/.test(text('src/tape/address.ts')) && /LOOK_PAGE_WORDS[^\n]*'holedepth'/.test(text('src/scene/look.ts')) && text('src/scene/openings.ts').includes('half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),') && text('src/scene/openings.ts').includes('const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;')],
       ['the table still knows where an opening looks', LOOK_OPENINGS.up > 0 && LOOK_OPENINGS.up < 1 && (BoxFlag.Glass | 0) !== 0] ];
     verdict(pins.every(p => p[1]), 'the light\'s record and the shaders say the same rule', pins.map(p => `${p[1] ? 'ok' : 'NOT'}: ${p[0]}`).join(' · ')); }
   // THREE PIECES, WHERE THERE WERE FIVE (common.wgsl portalPiece, PORTAL_PIECES). Until 11-05 the sky above the receiver's height was also cut in two halves

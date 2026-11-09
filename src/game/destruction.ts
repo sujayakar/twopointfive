@@ -79,7 +79,7 @@ export const CHAOS = {
   puff: { radius: 0.2, density: 3.5, ttl: 0.35, speed: 0.55, temp: 0.35, push: 6, expand: 8 },   // the smoke solver's dust puff (coarse lattice): optically THIN — a pale haze the beams light, not a sooty plume (density 11 self-shadowed black in the first captures)
   tile: { half: [0.29, 0.0075, 0.29] as Vec3, albedo: [0.66, 0.66, 0.63] as Vec3 },
   velLow: 1.0, velHighK: 2.5,   // knock-off speed scale at chaos ≤ 0.5, and the multiplier reached at chaos 1
-  // IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push; game/sheetModel.ts flies the reference the numbers were
+  // IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push; render/sheetModel.ts flies the reference the numbers were
   // picked on: a charge lifts the leaves within a metre well over a metre and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three
   // and a half and leaves the ones at four; a round hops the leaf beside it a few centimetres and scoots it a span; a thump twitches what lies within a stride)
   imp: {
@@ -508,7 +508,7 @@ export class Destruction {
     this.bangImpulse(at, eye, chaos, who);   // …and everything already lying within a few metres — the leaves of the LAST burst, the chips, the mug it knocked off before — goes up again
   }
 
-  // ---------------------------------------------------------------- impulses (render/particles.ts impulse + debris.ts impulse; game/sheetModel.ts is the reference)
+  // ---------------------------------------------------------------- impulses (render/particles.ts impulse + debris.ts impulse; render/sheetModel.ts is the reference)
   /** The blast's push on what already lies about: one record over the GPU particles (radius CHAOS.imp.bang.radius, gated per particle by an occlusion ray from `eye`)
    *  and the same over the debris pool (gated by the sight test the stacks use). */
   private bangImpulse(at: Vec3, eye: Vec3, chaos: number, who: number) {

@@ -2,18 +2,20 @@
 //! The order's own code and its state are the module `squad40`; this file is everything that makes it an order.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::{GiveOpts, OrderTarget};
 use crate::squad40;
 use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Loud],
     only: Some(only),
     valid: Some(valid),
     tick: Some(squad40::turn_tick),
     frame: Some(squad40::squad40_tick),
-    ..Row::new(squad40::SHELL_THERE, label, issue)
+    notes: Some(squad40::notes),
+    ..Row::new("shellThere", label, issue)
 };
 
 fn at_of(t: &OrderTarget) -> V3 { crate::orders::rows::at(t) }

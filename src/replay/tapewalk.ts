@@ -6,15 +6,15 @@
 //   for (const [kind, data] of walk.outside()) …the host applies a restart / flags / tune / table / kit / pose / posein row (the last two: game/runtape.ts tapePoses)…
 //   const dt = walk.step(view, input);  walk.layCamera(camera);   …the tape's camera for this step, its matrices as the page's step read them…
 //   game.update(dt, input, cam, view); walk.done();
-import type { RunTape, TapeVal } from './format';
-import { tapeNum } from './format';
+import type { RunTape, TapeVal } from '../tape/format';
+import { tapeNum } from '../tape/format';
 
 /** the view's four sizes a step reads (a canvas, or a stand-in for one) */
 export interface WalkView { clientWidth: number; clientHeight: number; width: number; height: number }
-/** the camera a step is handed (game/camera.ts FollowCamera is one) */
+/** the camera a step is handed (host/camera.ts FollowCamera is one) */
 export interface WalkCamera { target: [number, number, number]; yaw: number; pitch: number; distance: number; aspect: number; fov: number; aimLead: number; rebuild(): void;
   viewProj: { [i: number]: number }; invViewProj: { [i: number]: number }; pos: { [i: number]: number }; forward: { [i: number]: number } }
-/** the input a step reads (game/input.ts Input has these) */
+/** the input a step reads (host/input.ts Input has these) */
 export interface WalkInput { keys: Set<string>; pressed: Set<string>; clicked: number; buttons: number; mouseX: number; mouseY: number; wheel: number }
 
 export class TapeWalk {

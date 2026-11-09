@@ -31,5 +31,5 @@ export function paintLeaves(doors: readonly { def: { name: string; exterior?: bo
     d.box.albedo = [a[0] * k, a[1] * k, a[2] * k]; d.box.stuff = w !== 'plain' ? w : undefined; n++; }
   return n;
 }
-/** a level's row of paints, by the level's own name (its file's, where a level has two: `-gwot` is the look's) */
-export function leafRowOf(level: string | null) { return LOOK_DOORS[`${(level ?? '').replace(/-gwot$/, '')}.json`]; }
+/** a level's row of paints, by the level's own name */
+export function leafRowOf(level: string | null) { return LOOK_DOORS[`${level ?? ''}.json`]; }

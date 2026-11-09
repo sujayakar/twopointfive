@@ -11,6 +11,8 @@
 //!   face_stop_program(h) -> 1 | 0   a level on rails whose program runs: the program is stopped and the rails told to start it again on the next tick
 //!                                (savestate.ts:991, what the save controller does before it takes an authored checkpoint); 1 where it did. A host
 //!                                whose own save controller takes the checkpoint calls this first, so that what it keeps is the floor with no program
+//!   face_kit_plan(p, n, way) -> 1 | 0   a read for tools, of no game: `p`, `n` are a level file's text, `way` a way of its kit picture's block; 1: the plan as JSON at face_out
+//!                                (`game_start::kit_stage::plan_of_file`, tools/qa/kitview-plan.ts); 0: why not, in words, at face_out
 #[no_mangle]
 pub extern "C" fn face_follow(h: u32) {
     super::with(h, |x| game_run::follow(&mut x.g));
@@ -51,4 +53,16 @@ pub extern "C" fn face_stop_program(h: u32) -> u32 {
         game::rails::rails_resume(g);
         1
     })
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_kit_plan(p: *const u8, n: usize, way: u32) -> u32 {
+    super::hook();
+    let answer = core::str::from_utf8(super::bytes(p, n)).map_err(|e| format!("{}", e)).and_then(game_start::json::parse).map(|file| game_start::kit_stage::plan_of_file(&file, way as usize));
+    match answer {
+        Ok(j) if !j.is_null() => { super::out(game_start::json::to_line(&j).into_bytes()); 1 }
+        Ok(_) => { super::out(format!("way {}: no block, or no such way", way).into_bytes()); 0 }
+        Err(why) => { super::out(why.into_bytes()); 0 }
+    }
 }

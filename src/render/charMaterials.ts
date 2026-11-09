@@ -436,7 +436,6 @@ export function slotPick(side: CharSide, slot: CharSlot, id: number, standIn = f
 export function resetCharMats() { const s = JSON.parse(SHIPPED) as typeof CHAR_MATS; for (const k of Object.keys(s) as CharSide[]) CHAR_MATS[k] = s[k]; const l = JSON.parse(SHIPPED_LOOK) as typeof CHAR_MATS_LOOK; for (const k of Object.keys(l) as CharSide[]) CHAR_MATS_LOOK[k] = l[k]; Object.assign(SNEAK_SUIT, JSON.parse(SHIPPED_SUIT) as SideTable); matsVersion++; }
 /** bumped whenever a table is edited by a tool, so cached palettes are rebuilt (bumpCharMats) */
 let matsVersion = 1;
-export function bumpCharMats() { matsVersion++; }
 export function charMatsVersion() { return matsVersion * 2 + (lookDress() ? 1 : 0); }   // (the look switch is part of the version: a palette cached under one look is rebuilt under the other)
 
 /** a stable per-man die for slot `salt` (never Math.random: the same man wears the same shirt every boot, in the harness and in the page) */

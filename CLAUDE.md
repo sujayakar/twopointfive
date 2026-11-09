@@ -19,12 +19,11 @@ bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, re
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
-bun run tools/qa/probes.ts <name|family|all-quick|list>   # exit 0 pass · 1 a probe failed · 2 unknown name
-sh tools/qa/gate.sh <family …>                            # the families a change touched; red on any FAIL or silent probe
+(cd rust && cargo test -p game_start)                     # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
+bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
-bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
-bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; tools/qa/rust-check.ts is red on a stale one
-bun run tools/qa/dress-check.ts                           # after touching a picture-only step of the tick (src/game/dress.ts; docs/agents/rust.md)
+bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; `--check` is red on a stale one
 bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
@@ -43,11 +42,8 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by a tape's recipe (`journal.ts`) so that a recording from
   before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
   whose `<NAME>_BREAK=1` path must fail.
-- **No `Math.random` in `src/game`** — `simRandom()` (`src/math/dice.ts`); `bun run tools/qa/dice-check.ts` is red on one. No wall
-  clock inside the update either.
-- **Module state is registered** (`src/math/side.ts`; `docs/agents/replays.md`, the rollback snapshot). In the simulation's folders: `SideMap` /
-  `SideSet`, never `new WeakMap` / `WeakSet`; a module `let` or written container is `rollbackVar` / `rollbackRoot` or has its row in
-  `tools/qa/rollback-exempt.ts`; a die kept in state is a `Die` (`math/dice.ts`), never a closure. The static pass is red otherwise.
+- **The game is Rust** (`rust/`); what is left of `src/game` and `src/sim` only stands a game for the last tools that ask it to, and goes
+  as they do (`bun run tools/draw/held.ts`). Nothing new is written there. No wall clock and no die but the game's own in a rule.
 - **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
   `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
   The one exception is a leaf of the cycle, a file with type-only imports (`owner.ts`): it has always evaluated first.

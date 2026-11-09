@@ -22,15 +22,6 @@ fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
 }
 
-/// f === gd.foe. (guards.ts:2708, 2715)
-fn same_foe(a: crate::game::Foe, b: Option<crate::game::Foe>) -> bool {
-    match (a, b) {
-        (crate::game::Foe::Player, Some(crate::game::Foe::Player)) => true,
-        (crate::game::Foe::Guard(x), Some(crate::game::Foe::Guard(y))) => x == y,
-        _ => false,
-    }
-}
-
 // ------------------------------------------------------------ the guards' collision
 
 /// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place. (guards.ts:2570, 2585, 2594)
@@ -246,7 +237,7 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
             sight_gain_on(g, gd, o, vis.dist)
         }
     };
-    if same_foe(f, g.gd[gd].foe) && rate > 0.05 { *cur_visible = true; }
+    if g.gd[gd].foe == Some(f) && rate > 0.05 { *cur_visible = true; }
     if rate > *best_rate {
         *best_rate = rate;
         *best = Some(f);
@@ -273,13 +264,9 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
             mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
-            g.gd[gd].foe = None;
+            crate::mind::foe(g, gd, None, "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             lost_man = true;
-            if knee {
-                let w = g.gd[gd].weapon;
-                g.fa[w].burst = None;
-            }
         }
     }
     let (mut best, mut best_rate, mut cur_visible): (Option<Foe>, f64, bool) = (None, 0.05, false);
@@ -303,8 +290,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     let op = team == Team::Operative;
     if cur_visible { return; }
     if let Some(b) = best {
-        if !same_foe(b, g.gd[gd].foe) {
-            g.gd[gd].foe = Some(b);
+        if g.gd[gd].foe != Some(b) {
+            crate::mind::foe(g, gd, Some(b), "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None, None); }
             return;
@@ -312,10 +299,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     }
     if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !g.pl[g.player].down {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
-        g.gd[gd].foe = Some(Foe::Player);
+        crate::mind::foe(g, gd, Some(Foe::Player), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
-        let w = g.gd[gd].weapon;
-        g.fa[w].burst = None;
         if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
@@ -430,6 +415,11 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
 /// The magazine is empty: he stands there changing it, says so, and the clack plays at him. (guards.ts startReloadBeat)
 pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].second.is_some() && crate::gunslots::side_out_alert(g, gd) { return; }
+    begin_reload(g, gd);
+    crate::game::game_say(g, gd, "reloading!", None, None, None);
+}
+/// HIS MAGAZINE COMES OUT: the one way a man begins a change of magazine, whichever side he is on. His hands go on with it from here (`frame.rs hands`); he says his own word.
+pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let w = g.gd[gd].weapon;
     g.gd[gd].reload_t = crate::gunreload::feed_begin(g, w).dur;
@@ -442,7 +432,6 @@ pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
     }
-    crate::game::game_say(g, gd, "reloading!", None, None, None);
 }
 
 /// Counted down each frame he could otherwise fire; a staged row lets the empty go as the beat crosses `out`. (guards.ts tickReloadBeat)
@@ -483,6 +472,11 @@ pub fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 // ------------------------------------------------------------ rifles: the burst trigger
 
 /// The closure of burstTrigger: the burst ends, and the beat to the next runs from its last serviced frame. (guards.ts:2809 end)
+/// The burst he is firing, if he is firing one, is broken off: the next waits its moment.
+pub fn burst_broken(g: &mut Game, gd: GuardId) {
+    let w = g.gd[gd].weapon;
+    if g.fa[w].burst.is_some() { burst_end(g, gd, w, BURST_BROKEN_CD); }
+}
 fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
     let b = g.fa[w].burst;
     g.fa[w].burst = None;

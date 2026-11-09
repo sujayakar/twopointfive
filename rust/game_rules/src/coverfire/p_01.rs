@@ -643,10 +643,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     };
     set_chew(g, gd, |row| row.lay = lay);
     g.gd[gd].fire_cd -= dt;
-    if g.gd[gd].reload_t >= 0.0 {
-        crate::guards::tick_reload_beat(g, gd, dt);
-        return Some(to);
-    }
+    if crate::control::man::changing_magazine(g, gd) { return Some(to); }
     let ok = on && lay >= p.acquire_min - 1e-9;
     let fa = g.gd[gd].weapon;
     let def = g.fa[fa].def;
@@ -739,15 +736,14 @@ pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64
         || lay < p.acquire_min - 1e-9
         || g.time < cw.next
         || g.time < g.tab.roomfight_op[o].next
-        || g.time < g.tab.roomfight_op[o].reload_until
+        || crate::control::man::changing_magazine(g, gd)
         || crate::gunslots::side_locked(g, gd)
     {
         return true;
     }
     let fa = g.gd[gd].weapon;
     if !crate::weapons::firearm_fire(g, fa) {
-        let dur = crate::gunreload::feed_begin(g, fa).dur;
-        g.tab.roomfight_op[o].reload_until = g.time + dur;
+        crate::guards::begin_reload(g, gd);
         crate::game::game_say(g, gd, "reloading.", None, None, None);
         return true;
     }

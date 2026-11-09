@@ -29,7 +29,7 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.squadsmoke.states.has(key) {
         if !js::truthy(n) { return; }
-        g.m.squadsmoke.states.set(key, State { brought: 0.0, cans: 0.0, noted: false, last: JsMap::new() });
+        g.m.squadsmoke.states.set(key, State { brought: 0.0, cans: 0.0, last: JsMap::new() });
     }
     {
         let s = g.m.squadsmoke.states.get_mut(key).unwrap();
@@ -40,18 +40,13 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     g.stats.squadsmoke.staged += 1;
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
-    let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "hold");
+    let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let def = row(g);
     let before = match after {
         Some(a) => g.orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
         None => None,
     };
     crate::orders::squad_orders_register(g, def, before.as_deref());
-    let s = g.m.squadsmoke.states.get_mut(key).unwrap();
-    if !s.noted {
-        s.noted = true;
-        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadSmoke);
-    }
 }
 
 /// Where a can thrown from `from` on `sol` comes to rest on open floor: its landing and the run of its bounces. (squadsmoke.ts squadSmokeRest)

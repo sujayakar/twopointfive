@@ -1,4 +1,4 @@
-//! THE AIR AS THE PICTURE IS TOLD IT: the wind's sources that blow, each list as the tick left it (`winds` for the smoke's solver, `gusts` for the particles, `heat` for the
+//! THE AIR AS THE PICTURE IS TOLD IT: the wind's sources that blow, as the tick left them (`winds` for the smoke's solver, `gusts` for a particle pool, made here, and `heat` for the
 //! falling snow), the storm's own numbers and the roofs the weather is cut by. Whole every tick. What the air then does is the picture's own (its field, its smoke).
 use crate::Row;
 use alloc::vec::Vec;
@@ -62,6 +62,23 @@ section! {
     }
 }
 
+/// WHAT THE PARTICLE POOL IS HANDED: the jets near the view, nearest first, then the storm. It wants a pool and where the view looks, so it is made here of the standing game and
+/// no game's record holds it. The page that plays the puppet has the same rule (wind.ts `forParticles`); tools/draw/weather-check.ts holds the two together.
+fn for_particles(g: &Game) -> Vec<game::ids::WindWindSourceId> {
+    use game::wind::WindSourceKind as K;
+    let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);
+    let dist = |s: game::ids::WindWindSourceId| game::v3::dist(tab[s].bound.c, f);
+    let mut jets: Vec<_> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == K::Jet && dist(s) < near_m + tab[s].bound.r).collect();
+    let storm = g.wind.active.iter().copied().find(|&s| tab[s].kind == K::Storm);
+    let most = game::smoke_types::WIND_GPU_MAX as usize - storm.is_some() as usize;
+    if jets.len() > most {
+        jets.sort_by(|&a, &b| dist(a).total_cmp(&dist(b)));
+        jets.truncate(most);
+    }
+    jets.extend(storm);
+    jets
+}
+
 #[derive(Default)]
 pub struct Winds {
     pub active: Vec<Wind>,
@@ -82,11 +99,11 @@ impl Winds {
     pub fn take(&mut self, g: &Game, again: bool) {
         (self.active.clear(), self.gusts.clear(), self.air.clear(), self.wind_roofs.clear(), self.roofs.clear());
         for &id in &g.wind.active { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.active.push(w); }
-        for &id in &g.wind.to_pool.list { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.gusts.push(w); }
+        for id in for_particles(g) { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.gusts.push(w); }
         // (the heat of the fires is said by the tick that moved the clock: a tick that said none has none)
         if !again {
             self.heat.clear();
-            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { self.heat.push(gpu(s)); } break; } }
+            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { if !crate::far_for_a_fire(g, s.pos) { self.heat.push(gpu(s)); } } break; } }
         }
         for r in g.weather.roof_rects.iter() { self.roofs.push(Rect { r: r.map(|x| x as f32) }); }
         self.stands(g);

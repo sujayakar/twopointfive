@@ -14,7 +14,6 @@
 //
 // The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
 import type { Vec3, Quat } from '../math/vec';
-import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 /** one cutting plane in the box's LOCAL frame: the box KEEPS the side n · p ≤ d (n unit, d metres from the box centre along n; what lies beyond is gone) */
 export interface CutPlane { n: Vec3; d: number }
@@ -55,20 +54,9 @@ export function cutThrough(p: Vec3, n: Vec3): CutPlane {
   const u: Vec3 = [n[0] / L, n[1] / L, n[2] / L];
   return { n: u, d: u[0] * p[0] + u[1] * p[1] + u[2] * p[2] };
 }
-/** the plane through three local points, removing the side the triangle a→b→c turns counter-clockwise towards (its right-hand normal) */
-export function cutThrough3(a: Vec3, b: Vec3, c: Vec3): CutPlane {
-  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
-  return cutThrough(a, [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]);
-}
 /** the farthest the uncut box reaches along n: max over the box of n · p */
 export const cutSupport = (h: Vec3, n: Vec3) => Math.abs(n[0]) * h[0] + Math.abs(n[1]) * h[1] + Math.abs(n[2]) * h[2];
 
-/** is local point p inside the cut solid (eps metres of slack) */
-export function cutContains(h: Vec3, cut: readonly CutPlane[] | undefined, p: Vec3, eps = 0): boolean {
-  if (Math.abs(p[0]) > h[0] + eps || Math.abs(p[1]) > h[1] + eps || Math.abs(p[2]) > h[2] + eps) return false;
-  if (cut) for (const c of cut) if (c.n[0] * p[0] + c.n[1] * p[1] + c.n[2] * p[2] > c.d + eps) return false;
-  return true;
-}
 
 /** The corners of the cut solid (local frame): every triple of its bounding planes (the box's six + the cuts) that meets in a point inside all the others.
  *  A helper for builders, bounds and tests (≤ 120 triples) — not for a per-frame loop over many boxes. */
@@ -161,14 +149,6 @@ export function cutToWorld(v: Vec3, yaw: number, rot?: Quat): Vec3 {
   const cs = Math.cos(yaw), sn = Math.sin(yaw);
   return [cs * v[0] + sn * v[2], v[1], -sn * v[0] + cs * v[2]];
 }
-/** Fit a box to its cut IN PLACE (centre, half-extents and record replaced; orientation kept). Returns false — and leaves the box alone — if nothing is left of it. */
-export function fitCutBox(b: { c: Vec3; h: Vec3; yaw: number; rot?: Quat; cut?: CutPlane[] }): boolean {
-  if (!b.cut || !b.cut.length) return true;
-  const r = cutRecord(b.h, b.cut); if (r.empty) return false;
-  const f = cutFit(b.h, r.cut); const w = cutToWorld(f.off, b.yaw, b.rot);
-  b.c = [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]]; b.h = f.h; b.cut = f.cut;
-  return true;
-}
 
 /** A PRISM from a convex outline: the polygon `poly` (points (u, v) in the plane across `axis`, either winding) extruded ± halfT along `axis` (0 = x, 1 = y,
  *  2 = z; (u, v) = the next two axes in order: axis x → (y, z), y → (z, x), z → (x, y)). Returns the fitted box { off, h } in the frame the polygon was given in and
@@ -228,7 +208,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
  *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
-export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('cutClip', undefined, [cut, ox, oy, oz, dx, dy, dz, t0, t1]); if (__r !== RUST_PASS) return __r as any; } }
+export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
   let k = -1;
   for (let i = 0; i < cut.length && i < MAX_CUT_PLANES; i++) {
     const n = cut[i].n; if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;

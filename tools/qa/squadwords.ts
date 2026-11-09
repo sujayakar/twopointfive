@@ -1,9 +1,13 @@
 // WHAT A CHECK READS OF THE SQUAD'S WORDS: the game's own record (`game.view.squad`, rust/game_rules/src/orders/hud.rs), by a man's object, and the open menu's rows
 // as the order table has them. Nothing here works out a word. `doing` ends on what the man covers (' · on the rear'), so a line about his order asks how it starts.
 import { locked } from '../../src/view/seatview.ts';
+import { CMDRING } from '../../src/game/cmdring.ts';
 const keyName = (code: string): string => code.replace(/^Key|^Digit/, '');
-/** the listed menu's key is gone from the game: a check that wants a menu up on what the cursor is on has it put up by the menu's own call, and a second time down */
-export function menuKey(O: any): void { if (O.menu) { O.close(); return; } O.open(O.hover() ?? undefined); }
+/** the ring up on what the cursor is on, as a hand does it: the squad's key kept down past its hold and let up, so it stays. `R.step(n)` is the check's own frames */
+export function ringUp(input: any, R: { step(n?: number): void; O?: any; g?: any; game?: any }): void { const K = CMDRING.key; if ((R.O ?? R.g?.orders ?? R.game?.orders)?.cmdRing) { ringDown(input); R.step(); }   // (the key again on a ring that is up would give its lit wedge)
+  input.keys.add(K); input.pressed.add(K); R.step(Math.ceil(CMDRING.stayHoldSecs * 60) + 2); input.keys.delete(K); R.step(); }
+/** the ring put away with nothing given, on the check's next frame */
+export function ringDown(input: any): void { input.keys.delete(CMDRING.key); input.pressed.add('Escape'); }
 /** one man's line */
 export function mateOf(g: any, gd: any): any { return g.view.squad?.mates.find((m: any) => m.man === gd.char.id) ?? null; }
 /** what he is doing and what he covers, as the HUD is told it ('' = no squad answers) */

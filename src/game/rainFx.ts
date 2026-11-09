@@ -26,7 +26,7 @@
 //             and far lean alike; births are thinned into drifting SHEETS (a value noise carried downwind) so curtains of denser rain cross the lot.
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
-import type { FollowCamera } from './camera';
+import type { FollowCamera } from '../host/camera';
 import type { WeatherFrame } from '../render/frame';
 import type { Particles } from '../render/particles';
 import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../render/particles';

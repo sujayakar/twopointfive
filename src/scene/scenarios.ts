@@ -7,7 +7,8 @@
 // unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: roomclear.ts checkStructure,
 // rescue.ts checkRescue, rescueflow.ts RescueFlow.check — tools/qa/scenario-level-probes.ts runs all three on a level file.
 import type { Vec3 } from '../math/vec';
-import type { BoxData, DoorData, LightData } from './levelData';   // (types only, erased: a kit view SET is written in the level format's own records)
+import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
+import type { HourId, WeatherKind } from './words';
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 
@@ -347,8 +348,8 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
    *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
   loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
-/** THE KIT VIEW (src/host/kitView.ts — the start page's Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by a second
- *  instance of the page opened `?kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
+/** THE KIT VIEW (rust/game_rules/src/kitstage — the Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by the page that draws
+ *  a game it does not hold, opened `?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
  *  game reads this block, and a level without it shows an empty column there. */
@@ -393,7 +394,7 @@ export interface KitViewWay {
   /** authored places, [x, z, yaw in degrees (0 = +z, 90 = +x)]: [0] Sam, then the teammates from the door outward. A man with no slot takes the worked-out one —
    *  and ONE PLACE CAN BE WRITTEN ALONE: `null` holds a place that is left to the plan (`[null, null, [x, z, yaw]]` = the second stack man's only) */
   slots?: ([number, number, number] | null)[];
-  /** laid over src/host/kitView.ts KIT_VIEW_LIGHT, key by key */
+  /** laid over rust/game_rules/src/kitstage/light.rs KIT_VIEW_LIGHT, key by key */
   light?: KitViewLightOver;
   /** out of the picture, in this instance only: `hide` = box ids, or box groups whole; `hidePaint` = box groups of which only the paint on the ground goes
    *  (boxes under 1 cm half-height: a look file's floor decals and the level's painted marks, not what stands on it) */
@@ -404,13 +405,13 @@ export interface KitViewWay {
   hideMore?: string[];
   /** = light.roomLights */
   roomLights?: number;
-  /** THE ANCHOR WHERE THERE IS NO DOOR (src/host/kitViewPlan.ts): `span` = two floor points [x, z] — a stretch of blank wall to breach, or the two posts of an
-   *  open gate; the file then writes no `door`: no leaf to push, crack or charge — the rows that work a leaf play the gun's there (src/host/kitView.ts `Row.leaf`).
+  /** THE ANCHOR WHERE THERE IS NO DOOR (rust/game_start/src/kit_plan.rs): `span` = two floor points [x, z] — a stretch of blank wall to breach, or the two posts of an
+   *  open gate; the file then writes no `door`: no leaf to push, crack or charge — the rows that work a leaf play the gun's there (rust/game_rules/src/kitstage/acts.rs).
    *  `kind` says which ('door' with a `door`; a span: absent = measured — wall between its ends 'wall', open floor 'gap') */
   span?: [[number, number], [number, number]]; kind?: 'door' | 'wall' | 'gap';
   /** this way is staged on a BESPOKE SET, not in the level: a key of the block's `sets`. `door` / `span` / `slots` / `hide` are then the set's */
   set?: string;
-  /** WHAT kitViewPlan MEASURES, written down (each absent = measured; an authored one is taken as written and never corrected): a point on the team's
+  /** WHAT THE PLANNER MEASURES, written down (each absent = measured; an authored one is taken as written and never corrected): a point on the team's
    *  side of the anchor (absent: Sam's start for the way) · which side of the anchor the stack falls on screen · the spacing the authored stack `slots`
    *  were laid out at (absent: read off slots[1] → [2]; under the picture's 1.1 m they are spread to it) · the wall at the anchor: its face on the team's
    *  side from the anchor's line, its thickness, its top (m) · the card switch's lane, m out from the file · free floor in front of the face and behind
@@ -422,7 +423,7 @@ export interface KitViewWay {
   pane?: { box: string; stand?: [number, number, number] } | false;
   show?: string[]; indoors?: boolean; keepLights?: string[];
   /** THE WAY'S OWN LAMPS THAT BURN BY DAY. The way's own lamps — its set's `lights`, its `add.lamps` — are on the level's photocell as the porch lamp is
-   *  (src/host/kitViewPlan.ts kitPlanDayOut): at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day) a way under
+   *  (rust/game_start/src/kit_plan.rs day_out): at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day) a way under
    *  the open sky has them OUT, each with its fixture's glow, as the game's own photocell takes the level's `exterior` fixtures (a set's gate lamp burned at
    *  noon with its box glowing) — all but a lamp that stands UNDER A COVER (a ceiling or a roof over it: a room's lamp, lit at every hour as the game
    *  leaves rooms). Lamp ids or light groups written here burn at every hour. Absent: none. A way under a roof (the plan's `indoors`) is on
@@ -430,11 +431,11 @@ export interface KitViewWay {
    *  no own lamp of the way is a plan problem */
   dayLights?: string[];
   /** THE ROOM BEHIND THE ANCHOR STAYS LIT (absent: it goes out with every room light — the wedge the picture shows behind the wall is then dark unless a
-   *  yard lamp reaches it): the light groups with a lamp BEHIND the wall's far face that reaches the floor a metre in (src/host/kitViewPlan.ts
-   *  kitPlanLitInside) are left lit as well as `keepLights` (written or measured). A level's own way; a set keeps its lamps lit anyway */
+   *  yard lamp reaches it): the light groups with a lamp BEHIND the wall's far face that reaches the floor a metre in (rust/game_start/src/kit_plan.rs
+   *  lit_inside) are left lit as well as `keepLights` (written or measured). A level's own way; a set keeps its lamps lit anyway */
   litInside?: boolean;
   /** A LEVEL'S OWN WAY WITH A PIECE OR A LAMP MORE (a weak real door shows its place without a whole set): boxes and lamps in the level format's own
-   *  records and in LEVEL coordinates, present in the picture only — `?kitview` lays them in AFTER the level's own (src/host/kitViewSet.ts kitViewAddLevel:
+   *  records and in LEVEL coordinates, present in the picture only — the picture lays them in AFTER the level's own (rust/game_start/src/kit_set.rs add_level:
    *  box i of the level is still box i), the mission never loads them. The plan has the boxes on its floor like any box of the level and leaves the lamps' groups lit —
    *  and an added piece is SHOWN: never sunk for standing in the camera's line; where it hides a man or stands on the line of places the plan's problem
    *  names it (the way's `show` with its name: it stays; its `hide` with its name: it goes). A box's `material` may be look alternatives 'a|b', as a set's.
@@ -542,7 +543,7 @@ export interface ScenarioEntry {
    *  hour and one sky (a fuel halt at dusk in dust, a plan laid by day). They win over the link's `hour=` / `weather=`, and the mission sheet draws no Hour
    *  or Weather row for such a row. Absent (every row but those): the visitor's pick, else the level's own night and weather, as ever. A weather a level can
    *  be STARTED in: never 'snow' (a level built for snow keeps its own and names none). Types only: nothing here imports the game */
-  hour?: import('../game/hours').HourId; weather?: Exclude<import('../game/weatherKinds').WeatherKind, 'snow'>;
+  hour?: HourId; weather?: Exclude<WeatherKind, 'snow'>;
   /** the room clear's placement seed · a quiet mission's deal, pinned (absent: dealt from the page's die on every start) */
   seed?: number;
   /** the picker's one line under the title: what the scenario is for (scene/scenarioList.ts; absent = the title alone) */

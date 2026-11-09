@@ -1,42 +1,29 @@
-// THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's
-// top-down picture of the team as picked, stood at the mission's own way-in door. The Game behind the start page is not the picked mission's level — that
-// exists only after Deploy's page load — so the picture is a SECOND instance of the page in an iframe: the same origin, the very query Deploy would load plus
-// `&kitview&mute&noreplay` (src/host/kitView.ts: staged, lit, and from then on LIVE — the game runs and the open card's man uses what he carries at the door,
-// a beat at a time; `&stillkit` on it = drawn for a warm window, then held; read-only on this origin's storage). It is thrown away when the page closes or
-// Deploy fires, so its GPU device goes with it.
+// THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's top-down picture of the team as picked, stood at the mission's own way-in door. The game
+// behind the start page is not the picked mission's level, so the picture is a SECOND page in an iframe: this page again, on the very query Deploy would load plus `&kitview&mute&noreplay`. Its module is that mission
+// with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/kitstage; `&stillkit` on it = drawn for a warm window, then
+// held). The window is read-only on this origin's storage (host/kitguard.ts) and answers through host/kitpage.ts. It is thrown away when the page closes or Deploy fires, so its seat on the kept device goes with it.
 //
-// WHEN: the Team & kit step, a room clear whose level file
-// says where the team stands for the way in picked (`scenarios.kitView.ways` — ui/missions.ts kitViewWays, the plan's own fetch), and a window the figure's
+// WHEN: the Team & kit step, a mission whose level file says where the team stands for the way in picked (`scenarios.kitView.ways`: ui/missions.ts kitViewWays, the plan's own fetch), and a window the figure's
 // column is drawn in (over 720 px wide). Anything else is an empty column: this module then makes no element and puts no class on the page.
 //
-// WHAT GOES OVER: ONE iframe ELEMENT PER QUERY — when the mission's own query changes (its level, way in, hour, weather … — everything but the team's size) the
-// old element is dropped and a new one made (no entry in the tab's history, and a message is from THIS element's window or it is nobody's). A kit tile or the
-// team's size is a message, `{ kv: 'kit', members, squad }`, sent AT ONCE (the owner, 10-14: "after selecting something, it should start the demo animation
-// immediately" — the leading edge; further changes inside KIT_VIEW.kitMs of it are folded into one more message when it has run out). The child works out
-// for itself what moved: what the game can take is written on the live men, the rest is a restage under the child's own dissolve; whose card is open and
-// which tile the highlight is on, `{ kv: 'sel', who, field }`, on every move of either (the child's director plays that man, and that tile's thing NOW); off the step, `{ kv: 'pause', on }`
-// (the child neither steps nor draws until the step shows again); where the men should sit,
-// `{ kv: 'frame', cx, cy, h, w, man }`, from the figure column's rectangle (the child frames the way's FIVE places by it, whatever the team's size). The child says `boot` (its listener is up: it is told the frame and, if the tiles
-// moved since its query, the kit, the open card and the pause — again on every boot, so a child that loads itself again is told again), `ready` (the picture is fit to show), `held`,
-// or `none` (nothing to stage there). The iframe is NEVER faded out once shown (the owner, 10-14: "i don't like the fade to black animations"): a child of
-// an older build that still says `dip` / `undip` is heard and nothing is done. THE SWITCH for all of the acting is KIT_VIEW.acts (`?stillkit` = off: the
-// child is opened `&stillkit` — the still picture, a plain restage on every change, no `sel`).
+// WHAT GOES OVER: ONE iframe ELEMENT PER QUERY. When the mission's own query changes (its level, way in, hour, weather … everything but the team's size) the old element is dropped and a new one made (no entry in
+// the tab's history, and a message is from THIS element's window or it is nobody's). A kit tile or the team's size is a message, `{ kv: 'kit', members, squad }`, sent AT ONCE (the owner, 10-14: "after selecting
+// something, it should start the demo animation immediately": the leading edge; further changes inside KIT_VIEW.kitMs of it are folded into one more message when it has run out). The window works out for itself
+// what moved: what the game can take is written on the live men, the rest is a restage under its own dissolve. Whose card is open and which tile the highlight is on, `{ kv: 'sel', who, field }`, on every move of
+// either; off the step, `{ kv: 'pause', on }` (it neither steps nor draws until the step shows again); where the men should sit, `{ kv: 'frame', cx, cy, h, w, man, … }`, from the figure column's rectangle. The
+// window says `boot` (its listener is up: it is told the frame and, if the tiles moved since its query, the kit, the open card and the pause, again on every boot), `ready` (the picture is fit to show), or `none`
+// (nothing to stage there). The iframe is NEVER faded out once shown (the owner, 10-14: "i don't like the fade to black animations"). THE SWITCH for all of the acting is KIT_VIEW.acts (`?stillkit` = off: the
+// window is opened `&stillkit`, the still picture, a plain restage on every change, no `sel`).
 //
-// NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with
-// the figure?"): the standing man used to be drawn while the child booted past a short grace, and wherever there was no picture. He is gone: the column WAITS EMPTY until the child's first `ready` (`data-kv-wait` on
-// #missions), and is EMPTY for good (`data-kv-none`) — the element dropped, the query marked for this page's life — when the child says `none` (a refused
-// device, a failed fetch, a moment that threw: every fatal card in there says it, main.ts kitViewFatal) or its load errors. THE WAIT HAS NO CLOCK: a second
-// game that takes long to come up (a cold shader cache, a slow adapter) is waited for however long that is. It was given 10 s and then called none for the
-// page's life — the standing man's cue while he stood in; with nobody standing in it only left the column blank for good on a slow start. The second game lives
-// only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (the child's die would deal another door than
-// Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
+// NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20): the column WAITS EMPTY until the window's first `ready` (`data-kv-wait` on #missions), and is EMPTY for good (`data-kv-none`), the element dropped and the
+// query marked for this page's life, when the window says `none` (a refused device, a failed fetch, a moment that threw) or its load errors. THE WAIT HAS NO CLOCK: a second game that takes long to come up (a cold
+// shader cache, a slow adapter) is waited for however long that is. The second game lives only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (its die would deal
+// another door than Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
 //
-// LAYOUT: every rule is in the one block below; ONE root class, `kv-on`, is on #missions only while the picture is shown (the iframe's own rules stand
-// without it: it must be laid out, though unseen, for its page to draw at all). The iframe is the LAST child of `.mbody`, absolutely placed behind the sheet
-// and anchored left, KIT_VIEW_PLACE.wide columns wide; the figure's column is the clear window onto it — the men in its left two thirds, the door's line about six tenths across, the first metre of the room behind the door in the rest; past the
-// column it fades out under the tiles by the mask alone (the card's own ground shows: a third of its strength at the first tile's left edge, gone one
-// column's width on; no rule of a tile is touched) and runs on further right below them. It never takes a click or the keys. No
-// words, no colours of its own.
+// LAYOUT: every rule is in the one block below; ONE root class, `kv-on`, is on #missions only while the picture is shown (the iframe's own rules stand without it: it must be laid out, though unseen, for its page to
+// draw at all). The iframe is the LAST child of `.mbody`, absolutely placed behind the sheet and anchored left, KIT_VIEW_PLACE.wide columns wide; the figure's column is the clear window onto it: the men in its left
+// two thirds, the door's line about six tenths across, the first metre of the room behind the door in the rest; past the column it fades out under the tiles by the mask alone (the card's own ground shows: a third
+// of its strength at the first tile's left edge, gone one column's width on; no rule of a tile is touched) and runs on further right below them. It never takes a click or the keys. No words, no colours of its own.
 import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
 import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
@@ -49,7 +36,7 @@ try { const q = new URLSearchParams(location.search); if (q.has('stillkit')) KIT
  *  of the way across, the first metre of the room behind it clear to the column's right edge, where a can thrown through the door comes to rest — and the
  *  five places left of it with 16 px of margin) */
 const KIT_VIEW_PLACE = {
-  /** the iframe's width · the five places' middle from the column's left edge · the width they may take (feet, heads and reach): a child told no door */
+  /** the iframe's width · the five places' middle from the column's left edge · the width they may take (feet, heads and reach): a window told no door */
   wide: 2.75, cx: 0.62, w: 0.88,
   /** the DOOR's line (its middle, a metre up) from the column's left edge · the margin kept clear left and right of the five places' reach · the men no
    *  smaller for the door than this share of the size they had framed on their own middle (`cx`, `w`): past it the places keep their margin and the door sits further right */
@@ -59,8 +46,7 @@ const KIT_VIEW_PLACE = {
   /** from the column's right edge: the picture whole up to here (the edge itself: the room behind the door is in the column's last third) · three tenths
    *  of it here (the first tile's left edge — or at that edge itself if it is nearer: no tile has more of the picture under it than it had) · gone here (on the tile rows) */
   fade0: 0, fadeA: 0.07, fade1: 1,
-  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: host/kitView.ts
-   *  KIT_VIEW_QUIET): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
+  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: rust/game_rules/src/kitstage/quiet.rs): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
    *  this share of ITS OWN window's width on (the iframe's; or from the first tile's left edge where that is further right) — the clear column is as
    *  it is, the fade runs from its edge to there and nothing of the picture lies under the panel — and the pool of picture under the last row of
    *  tiles is not laid at all */
@@ -101,13 +87,13 @@ function keyOf(q: URLSearchParams): string { const k = new URLSearchParams(q); k
 
 /** `root` = #missions, `body` = its .mbody (the iframe's parent), `column` = the figure's column (.onefig); `again` = paint the figure again (an answer came) */
 export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLElement, again: () => void): KitViewFrame {
-  let frame: HTMLIFrameElement | null = null, key = '', live = false, shown = false, was = false, up = false, born = '';   // (up: the child's listener is — a message before its `boot` is lost; born: the kit its query stood for)
+  let frame: HTMLIFrameElement | null = null, key = '', live = false, shown = false, was = false, up = false, born = '';   // (up: the window's listener is — a message before its `boot` is lost; born: the kit its query stood for)
   let sent = '', want = '', due: ReturnType<typeof setTimeout> | 0 = 0, squadNow = 0;
-  let sel = '', selSent = '', paused = false, pauseSent = false;   // (the open card and tile as asked / as the child has them · off the step, as asked / as told)
+  let sel = '', selSent = '', paused = false, pauseSent = false;   // (the open card and tile as asked / as the window has them · off the step, as asked / as told)
   const ways = new Map<string, boolean[] | null>();   // per level file: the ways with a picture (null: asked, not yet answered)
   const failed = new Set<string>();                   // the queries whose instance had nothing to stage, or never came up: an empty column for this page's life
   const narrow = () => uiMatch('(max-width: 720px)');   // (the page's own pixels: ui/textsize.ts)
-  // a page opened from disk has no origin to name: a message goes anywhere and arrives as 'null' (host/kitView.ts kitViewOnDisk, the child's half)
+  // a page opened from disk has no origin to name: a message goes anywhere and arrives as 'null' (host/kitpage.ts, the window's half)
   const onDisk = () => location.protocol === 'file:' || location.origin === 'null', postTo = () => (onDisk() ? '*' : location.origin);
   const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
   const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
@@ -115,7 +101,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const kitNow = (squad: number) => JSON.stringify({ worn: wornNow, squad });   // (the cards as the team of that size wears them, which the picture's own table then wears as written: main.ts kitCards)
   /** the kit and the size, when they are not what the instance last had */
   const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: wornNow.map(t => (t ? JSON.parse(t) as unknown : null)), squad: squadNow }); };
-  /** whose card is open and the tile under the highlight · off the step or on it — each told when it is not what the child last had */
+  /** whose card is open and the tile under the highlight · off the step or on it — each told when it is not what the window last had */
   const says = () => { if (!frame || !up) return;
     if (KIT_VIEW.acts && sel && sel !== selSent) { selSent = sel; tell({ kv: 'sel', ...JSON.parse(sel) as object }); }
     if (paused !== pauseSent) { pauseSent = paused; tell({ kv: 'pause', on: paused }); } };
@@ -137,7 +123,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
     tell({ kv: 'frame', cx: nx(c.left + c.width * P.cx), cy: 1 - ((c.top + c.height * P.cy - f.top) / f.height) * 2, h: Math.min(0.9, c.height * P.h / f.height), w: Math.min(0.9, c.width * P.w / f.width), man: Math.min(0.9, c.height * P.man / f.height),
       door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep,
-      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
+      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — rust/game_rules/src/kitstage/quiet.rs)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)
@@ -149,8 +135,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const kv = (e.data as { kv?: unknown } | null)?.kv;
     if (kv === 'none') { fail(key); return; }
     if (kv === 'boot') { up = true; sent = born; selSent = ''; pauseSent = false; place(); if (kitNow(squadNow) !== sent) kit(); says(); return; }   // (its listener is up — on every load of its page: the frame, the kit where the tiles moved since its query, the open card, the pause)
-    if (kv === 'dip' || kv === 'undip') return;   // (an older child's: the picture is never faded out — its restage is its own dissolve now)
-    if (kv !== 'ready' && kv !== 'held') return;
+    if (kv !== 'ready') return;
     if (!live) { live = true; again(); }
   };
   window.addEventListener('message', onMsg);
@@ -163,12 +148,12 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       root.removeAttribute('data-kv-wait'); root.removeAttribute('data-kv-none');   // (set below while the column waits empty for a picture, and where it is empty for want of one: what a check — or a rule — can see of it)
       if (!ask) { hide(); paused = true; says(); return; }   // (off the step: the second game rests — it neither steps nor draws until the step shows again)
       was = narrow();
-      // (ANY KIND of mission whose level file has a block: the child stages the kind's own team at the way — or, on a bespoke set, a room clear of the set — and says
+      // (ANY KIND of mission whose level file has a block: the window stages the kind's own team at the way — or, on a bespoke set, a room clear of the set — and says
       //  'none' where that kind has no team at a way in, which is no picture and not tried again)
       if (was) { hide(); drop(); return; }
       styles();
       // (a mission with NO level file is on the bundled office: its block is its own file's, levels/office.json, through ui/missions.ts — and the
-      //  child is asked with the mission's own query, no `levelFile` in it: main.ts builds the office and stages from that same block)
+      //  window is asked with the mission's own query, no `levelFile` in it)
       const lv = ask.level ?? '', q = new URLSearchParams(ask.search.replace(/^[^?]*\?/, '')), k = keyOf(q), W = ways.get(lv);
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;
       if (W === undefined) { ways.set(lv, null); void kitViewWays(ask.level).then(w => w, () => [] as boolean[]).then(w => { ways.set(lv, w); again(); }); }
@@ -183,7 +168,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         const f = frame = document.createElement('iframe'); f.className = 'kv'; f.tabIndex = -1; f.setAttribute('aria-hidden', 'true');
         key = k; sent = born = kitNow(ask.squad);
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
-        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^(adapt|draw)(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off, and its pacer counts on the ladder — ui/quality.ts visit; `draw` would send it to a page that draws no kit)
+        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^adapt(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off — ui/quality.ts visit)
         f.addEventListener('error', () => { if (frame === f) fail(k); });
         f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();

@@ -1,5 +1,5 @@
 //! THE KIT PICTURE'S STAGE: the mission's own level, stood from a link that carries `kitview`, is held as the picture of the team at its way in. Every case stands on what `stage` wrote: with it doing nothing the
-//! men stand where the mission started them, nobody is parked and no pin is set.
+//! men stand where the mission started them, nobody is parked and no pin is set. The director is held off here (`still`): what the men do is `kit_acts`.
 use game::game::GuardState;
 use game::kitstage::{self, KitStage};
 use game::teams::Team;
@@ -28,7 +28,10 @@ const CASES: &[(&str, &str, usize)] = &[
 
 fn stood(level: &str, words: &str) -> Play {
     let link = format!("?levelFile={}&kitview{}{}", level, if words.is_empty() { "" } else { "&" }, words);
-    Play::mission(level, &link, &Opts { seed: 3, ..Default::default() })
+    let mut p = Play::mission(level, &link, &Opts { seed: 3, ..Default::default() });
+    // (the staging alone: the acts are `kit_acts`)
+    if let Some(s) = p.g.kit_stage.as_mut() { s.still = true; }
+    p
 }
 fn st(p: &Play) -> &KitStage { p.g.kit_stage.as_ref().expect("a link with `kitview` has a stage") }
 fn flat(a: [f64; 3], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[2] - b[1]).powi(2)).sqrt() }
@@ -39,9 +42,20 @@ fn on_their_places(p: &Play, what: &str, tol: f64) {
     let d = flat(p.g.ch[p.g.pl[pl].ch].pos, s.sam);
     assert!(d <= tol, "{}: Sam is {} m off his place", what, d);
     for (k, &x) in s.order.iter().enumerate() {
-        let want = match s.mate { Some((m, _)) if k == 0 && s.who == 0 => m, _ => s.spots[k] };
+        let want = match s.mate { Some(m) if k == 0 && s.who == 0 => m, _ => s.spots[k] };
         let d = flat(p.g.ch[p.g.gd[x].ch].pos, want);
         assert!(d <= tol, "{}: man {} of the file is {} m off his place", what, k, d);
+    }
+}
+/// every man is turned to the middle of the way in, within `deg`
+fn turned(p: &Play, what: &str, deg: f64) {
+    let s = st(p);
+    let pl = p.g.player;
+    for (k, c) in core::iter::once(p.g.pl[pl].ch).chain(s.order.iter().map(|&x| p.g.gd[x].ch)).enumerate() {
+        let ch = &p.g.ch[c];
+        let off = ch.body_yaw - (s.foot[0] - ch.pos[0]).atan2(s.foot[2] - ch.pos[2]);
+        let off = off.sin().atan2(off.cos()).to_degrees().abs();
+        assert!(off <= deg, "{}: man {} looks {:.0} degrees off the way in", what, k, off);
     }
 }
 fn parked(p: &Play, what: &str) -> usize {
@@ -72,6 +86,7 @@ fn every_kind_of_way_stands_stays_and_is_lit() {
         assert_eq!(st(&p).order.len(), mates, "{}: the men", what);
         assert!(!p.g.fog_of_war.on && !game::fogofwar::fog_of_war_active(&p.g), "{}: the fog of war is on", what);
         on_their_places(&p, &what, 0.05);
+        turned(&p, &what, 8.0);
         let plan = st(&p).plan.clone().unwrap();
         // the plan's places, but on the quiet picture's rest
         if !st(&p).quiet { for k in 0..mates { assert_eq!(st(&p).spots[k], [plan.slots[k + 1][0], plan.slots[k + 1][1]], "{}: man {}", what, k); } }
@@ -142,7 +157,8 @@ fn an_open_card_stands_its_man_first() {
     assert_eq!(st(&p).order[0], now[1], "the open card's man is first at the door");
     on_their_places(&p, "card 2", 0.05);
     kitstage::open(&mut p.g, 0, ""); p.frame();
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[0]);
+    assert_eq!(st(&p).who, 0);
+    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1], "a staging keeps the file's order");
 }
 
 #[test]
@@ -154,15 +170,17 @@ fn a_card_may_be_open_before_its_man_has_come() {
     kitstage::cards(&mut p.g, 4); p.frame();
     assert_eq!(st(&p).who, 4);
     assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[3], "he came, and his card is open");
-    // (a message and a card in the same moment are one restaging, and the lamps hung are the same rows)
+    // (a message and a card in the same moment are one restaging, from the same start)
     kitstage::cards(&mut p.g, 3); p.frame();
     let was = p.g.mission.serial;
     kitstage::cards(&mut p.g, 3); p.frame();
     let (once, at) = (p.g.mission.serial - was, p.g.mission.serial);
     let lamps = (st(&p).porch, st(&p).fill);
+    let rows = (p.g.gd.len(), p.g.ch.len(), p.g.tab.light.len(), p.g.tab.boxes.len());
     kitstage::cards(&mut p.g, 3);
     kitstage::open(&mut p.g, 1, "weapon"); p.frame();
     assert_eq!((st(&p).porch, st(&p).fill), lamps);
+    assert_eq!((p.g.gd.len(), p.g.ch.len(), p.g.tab.light.len(), p.g.tab.boxes.len()), rows, "a game staged again and again is no bigger");
     assert_eq!(p.g.mission.serial - at, once, "staged again once");
 }
 

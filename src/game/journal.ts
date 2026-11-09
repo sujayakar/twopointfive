@@ -49,8 +49,6 @@ export interface EnvSnap { emissiveScale: number; markings: boolean; particlesOn
   /** recorded under the game page's HUD (main.ts). The HUD used to null an expired speech bubble on its speaker after each update, and a replay of such a
    *  file did the same; it writes nothing of the game now (a line is over when its time is), and the field only says where the file was made */
   hud: boolean;
-  /** HostApi.glassFracture where the recording's engine said either way (the page: were its shaders compiled with the fracture's cracks; native: false): glass.ts files a pane's star decal — which the digest counts — only where the renderer does NOT draw the fracture's own cracks, so a replay must stand on the same answer. Absent = the engine did not say (the headless stub; every file from before the new glass) */
-  glassFracture?: boolean;
   /** scene/cut.ts cutConfig.on as the recording ran (absent = off): rayBox / lineBox answer a box's CUT solid only under it — the harness raises it before its BoxWorld exists */
   cutBoxes?: boolean;
   canister: { canisterDuration: number; canisterDensity: number; canisterRadius: number; canisterTemp: number; canisterSpeed: number } | null; stagger: Record<string, number>;
@@ -62,10 +60,10 @@ export interface KnobsSnap { tune: Record<string, unknown>; flags: { godMode: bo
 // ================================================================================================================================ env / knobs (both directions)
 export function envSnapshot(g: Game): EnvSnap {
   const S = g.engine.settings as unknown as Record<string, unknown>; const num = (k: string, d: number) => typeof S[k] === 'number' && Number.isFinite(S[k] as number) ? S[k] as number : d;
-  const E = g.engine as unknown as { particles?: unknown; glassFracture?: unknown; settings: { gpuParticles?: boolean } };
+  const E = g.engine as unknown as { particles?: unknown; settings: { gpuParticles?: boolean } };
   const P = (g.smoke as { params?: Record<string, number> }).params;
   const stagger: Record<string, number> = {}; for (const t of g.targets) stagger[t.name] = t.stagger;
-  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false, ...(typeof E.glassFracture === 'boolean' ? { glassFracture: E.glassFracture } : {}),
+  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false,
     canister: P ? { canisterDuration: P.canisterDuration, canisterDensity: P.canisterDensity, canisterRadius: P.canisterRadius, canisterTemp: P.canisterTemp, canisterSpeed: P.canisterSpeed } : null, stagger, ...(DESTRUCTION.on ? { destruction: { on: true } } : {}), ...(LIVED.on ? { lived: true } : {}), ...(cutConfig.on ? { cutBoxes: true } : {}) };
 }
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */
@@ -119,7 +117,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (F0?.reach === undefined) FIRE.reach = 1;
     if (F0?.look?.react === undefined) { FIRE.look.react = 0; FIRE.look.lean = FIRE_LEAN_WAS; }
     if (F0?.look?.steps === undefined) FIRE.look.steps = FIRE_STEPS; }   // (… and from before the flame's sample count was a number of the table: the count it was, the picture only)
-  if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.gas === undefined) FIRE.gas.on = false;   // (… one from before a fire's flame could be the solver's gas: the flame of noise)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.look === undefined) { FIRE.look.shimmer = 0; FIRE.look.plume = 0; FIRE.embers = 0; }   // (… one from before the flame's look had numbers: no shimmer over it, no smoke drawn off its tips, no particle embers — the picture only)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.size === undefined) FIRE.size = 0;   // (… and one from before its lamp was made as big as the flame: the size the level gave it — a meter's shadow ray stops that much short of the lamp)
   if (k.tables.DOZE) { const d = k.tables.DOZE as Partial<typeof DOZE>; if (d.screen !== undefined && d.idleSecs === undefined) DOZE.idleSecs = 1e9; }   // (a file from before a screen left lit blanked: it stayed lit)

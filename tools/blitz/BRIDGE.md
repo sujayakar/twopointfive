@@ -7,8 +7,6 @@ A whole game as bytes, the same from the TypeScript and from Rust, so the two ca
 - `schema.json`: every type the walk reaches, in the order of `types.rs`'s fields.
 - `export.ts`: `exportGame(g, knobRegistry())` gives a `Uint8Array`, and `report()` says what did not fit. It never writes to the game.
 - `expose.ts`: a preload that gives the walk a window on each module's private variables. Without it, only what side.ts registers is read. A tool's only, never in the page.
-- `paths.ts`: `decode(bytes)` gives (path, bits, module) with real names (`g.gd[3].last_known[0]`). `diff(a, b)` gives every path that differs, grouped by the module that declares the field. As a command: `bun run tools/blitz/paths.ts a.bin b.bin`.
-- `bridge-check.ts`: the bridge alone, on a live game.
 - `rust/game/src/io.rs`: `io::export(&Game) -> Vec<u8>`, `io::import(&[u8]) -> Game`, and `io::import_into(&mut Game, &[u8])`, which keeps what the walk does not carry as that game has it.
 
 ## Running it
@@ -16,11 +14,9 @@ A whole game as bytes, the same from the TypeScript and from Rust, so the two ca
 Copy the TypeScript files and `schema.json` to `tools/blitz/`, then:
 
 ```
-bun run --preload ./tools/blitz/expose.ts tools/blitz/bridge-check.ts --play room-clear-four:1:2400 --out x.bin
 BRIDGE_BLOB=x.bin cargo test --lib bridge_round_trip      # in the crate
 ```
 
-`--play scenario:seed:frame` stops a real play-through at that frame. `--query` and `--ticks` stand a level up and step it with no input. `--seats 2` is a co-op game.
 
 ## The bytes
 
@@ -47,8 +43,8 @@ A pose the TypeScript keeps outside the pool (a dead man's `rd.pose`, a kit figu
 Nothing inside the tick does these, and the next tick reads what they leave:
 
 - **Before a step:** `io::take_host_half` with the buffer `hostHalf` wrote: the seats' records, the host's cameras and Input.
-- **After a step:** `render_lights::light_set_update(g, dt, time)`: a flash's envelope and its retirement. `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game. On rails, `rails_host_view(g, cam)` with the host's camera (game.ts hostAfter: a tutorial staged again opens on its first view), and at an authored checkpoint `director_stop(false)` then `rails_resume`.
-- **The smoke solver's answers are input:** `budget`, `inSmokeDomain`, `round`, `drawing`. With no solver they are the host's null object's.
+- **After a step:** (a flash's envelope and its retirement are the tick's own last line: `game_tick_end`.) `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game. On rails, `rails_host_view(g, cam)` with the host's camera (game.ts hostAfter: a tutorial staged again opens on its first view), and at an authored checkpoint `director_stop(false)` then `rails_resume`.
+- **The smoke solver answers nothing:** the tick says what smoke it wants as out events, and the solver takes it or drops it. `budget` is the game's own count where it owns the smoke.
 - **The listing is the tick's:** `game_step_seats` opens by listing the box world and freeing the frame rows gone by (`scene_boxes::box_world_listed`), on every host at the same moment, so a host has nothing to call and a world box's number is the same on every host. A write between ticks (a charge blown by a driver, a page's command) is on the list the next tick's rays meet. A frame row's number still depends on the dress rows that make or keep frame boxes (`dress.fx`, the moths, a fixture's pieces), so a host with dressing off deals those rows at other moments. A box of the world is a row of `g.tab.boxes` (`BoxId`), never dealt again. A frame box is a row of `g.tab.frame_boxes` (`FrameBoxId`): a freed row is dealt again, so it names a box only while its holder holds it. A list that holds both (`g.dyn_boxes`, the engine's `dynamics` and `all`, what is noted beside a box) holds `AnyBoxId`.
 - **The host's camera asks after a step:** `followPos()` eases and stamps, so a host that shows a camera calls `game_follow_pos` for each seat after the tick, and a compare that leaves it out parts on the camera, not on a rule.
 - **A checkpoint put back between ticks is a new start.** The save controller replaces the whole game, and in that frame the host steps twice. Take it as a fresh import from the state and block as that tick returned; what the load itself does differently is then not compared.
@@ -63,7 +59,7 @@ Identity serials differ by design. `schema.serial` lists the fields that hold on
 
 ## What the host owns
 
-`g.engine` is carried as far as the tick reads it: the lights' list in its own order with `ir` and `fog_team`, the box world's lists and its ray grid (`statics`, `dynamics`, `all`, `rg_*`, the glass lists), every plain setting, the weather frame, `view_focus`, `sharp_on`, `glass_fracture`, `effective_scale`. `LightId` is seeded from the lights' list, so a light nothing else reaches, the moon, has its row.
+`g.engine` is carried as far as the tick reads it: the lights' list in its own order with `ir` and `fog_team`, the box world's lists and its ray grid (`statics`, `dynamics`, `all`, `rg_*`, the glass lists), every plain setting, the weather frame, `view_focus`, `sharp_on`, `effective_scale`. `LightId` is seeded from the lights' list, so a light nothing else reaches, the moon, has its row.
 
 Between two ticks the TypeScript's host writes the sampled records, its own camera and Input. `hostHalf(g, knobs, cmds)` (export.ts) writes them as their own small buffer and `io::take_host_half(&mut g, &buf)` takes them and answers the records for `game_step_seats`. Nothing else of the game moves. `cmd_seat.mark` is a serial the host deals: a compare should expect it to differ.
 
@@ -78,7 +74,7 @@ An order row's closures on a puppet: see `ask.ts`. They ask the Rust game by the
 
 The walk carries a closure set up once, where it can name the arm: `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, the blast listeners, the wall-change listeners, each rate cap's `n`. `io::deal_closures` runs at the end of an import and deals every order row its functions by `def.id`, from the list of `orders/rows` (`rows::by_id`); a row on no line of the list stops the import, by name.
 
-Closures made mid-flight stand at their blank after an import: a thrown can's `on_bounce`, a blow's `live`, a fall's `release`, `Threshold.out`, `Later.then`. `SquadOrders.notes` does too: it is the HUD's. So compare from the start of a mission and step both games; do not import into the middle of a fight and expect those to resume.
+Closures made mid-flight stand at their blank after an import: a thrown can's `on_bounce`, a blow's `live`, a fall's `release`, `Threshold.out`, `Later.then`. So compare from the start of a mission and step both games; do not import into the middle of a fight and expect those to resume.
 
 ## Serials
 

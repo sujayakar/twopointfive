@@ -3,12 +3,12 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::PRESS | by::BUDDY`).
+/// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::PRESS | by::WALK`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct By(pub u32);
 impl core::ops::BitOr for By { type Output = By; fn bitor(self, o: By) -> By { By(self.0 | o.0) } }
 impl By {
-    /// the strongest of them, 1 the weakest tasker and 15 the strongest; 0 nobody
+    /// the strongest of them, 1 the weakest tasker and 13 the strongest; 0 nobody
     pub const fn rank(self) -> u32 { 32 - self.0.leading_zeros() }
     pub const fn any(self, o: By) -> bool { self.0 & o.0 != 0 }
 }
@@ -36,7 +36,6 @@ taskers! {
     RUNNER: "broke and ran", ["has said he is done", "dropped it and ran"];
     MORALE: "shaken by a blast", ["a blast has him ducked or broken"];
     STARTLE: "startled", ["caught alone at first sight, running for cover"];
-    STAND: "the last stand", ["one of the last stand: in its room, on his way to it, or told to hold where he is"];
     SQUAD_LEG: "sent by his squad", ["his squad has sent him, or is about to"];
     SQUAD_WORD: "his squad's word", ["his squad has heard and not yet said what it does, or has him going round or looking"];
     LAST_MAN: "the last man", ["the last man up, at his act"];
@@ -44,7 +43,6 @@ taskers! {
     PRESS: "the press", ["the press has him, or he stays to keep the room it leaves"];
     WALK: "a silent mate", ["walking to the post of a mate who does not answer, nothing learned of the team by it"];
     BREAKER: "the lights", ["out for the lights, or waiting to be sent"];
-    BUDDY: "a colleague", ["a colleague is on his way to him, or the two have just paired up"];
     NEEDS: "a need of his own", ["off for a coffee, a smoke, some water or a stretch"];
     SQUAD: "his squad", ["at rest, his squad's call"];
 }

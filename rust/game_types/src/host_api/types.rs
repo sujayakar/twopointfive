@@ -14,9 +14,7 @@ pub struct HostApi {
     pub air_wind: Option<[f64; 2]>,
     pub air_on: Option<bool>,
     pub sharp_on: Option<bool>,
-    pub glass_fracture: Option<bool>,
     pub effective_scale: f64,
-    pub view_focus: Option<V3>,
     pub fires: Option<Vec<crate::render_passes::FireRecord>>,
     pub fire_look: Option<Vec<f64>>,
     pub host_books: Option<crate::host_api::HostBooks>,
@@ -38,9 +36,7 @@ impl HostApi {
             air_wind: None,
             air_on: None,
             sharp_on: None,
-            glass_fracture: None,
             effective_scale: 0.0,
-            view_focus: None,
             fires: None,
             fire_look: None,
             host_books: None,
@@ -75,7 +71,6 @@ impl Default for HostApiAir { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct HostBooks {
     pub fire: Option<crate::fire::FireShown>,
-    pub smoke_break: Option<crate::smokebreak::SmokeShown>,
     pub breath: Option<crate::snow_breath::BreathShown>,
     pub snow: Option<crate::snow_fx::SnowState>,
     pub snow_blast: Option<crate::snow_blast::SnowBlastShown>,
@@ -86,7 +81,6 @@ impl HostBooks {
     pub fn zeroed() -> Self {
         HostBooks {
             fire: None,
-            smoke_break: None,
             breath: None,
             snow: None,
             snow_blast: None,

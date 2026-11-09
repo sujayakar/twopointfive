@@ -7,6 +7,16 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// how far through an opening with no door in it the floor beyond it is asked of: the first that is a room's (a bed may stand at the hole)
+const BEYOND_M: [f64; 4] = [0.9, 1.5, 2.1, 2.7];
+/// a man's feet are in an opening's frame within this of its plane, and this past its half width
+const FRAME_DEEP: f64 = 0.45;
+const FRAME_WIDE: f64 = 0.15;
+/// this near his mark a man is on it
+const ON_MARK_M: f64 = 0.6;
+/// a gun within this of an opening, with a line to it, is on it
+const ON_IT: f64 = 25.0 * v3::DEG;
+
 /// Does his script hold this point of ours. By value: a point the cover made is p + sin(yaw) * r, no other writer holds its bits, and every move of it is written through to the script here (poseFor, turnOut). (cover.ts:630,640,675,700 `gd.script?.aimAt === J.aim`)
 fn script_aim_is(g: &Game, gd: GuardId, aim: V3) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.aim_at == Some(aim))
@@ -119,12 +129,19 @@ pub fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     false
 }
 
+/// His order has given him nothing to watch and no door to be at: his eyes are his own on the walk to his mark, and on it where the order says so.
+pub fn cover_eyes_free(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
+    let row = &g.tab.orders_assignment[a];
+    if row.watch.is_some() || row.door.is_some() { return false; }
+    let walking = row.post.map_or(false, |p| v3::dist_xz(g.ch[g.gd[gd].ch].pos, p) > ON_MARK_M);
+    walking || crate::orders::rows::is(g, a, crate::orders::Is::LooksAbout)
+}
+
 /// Is this man free to be dealt an opening: the order he is under if so. (cover.ts free)
 pub fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
-    let plain = g.tab.orders_assignment[a].order == "fallIn" || (g.tab.orders_assignment[a].order == "hold" && g.tab.orders_assignment[a].watch.is_none());
-    if !(plain || cover_spare(g, gd, a)) { return None; }
+    if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
     if crate::roomfight::room_fight_engaged(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
         for (h, mt) in g.tab.roomfight_op[op].meters.iter() {
@@ -259,6 +276,47 @@ pub fn cover_tick(g: &mut Game) {
     cover_deal(g);
 }
 
+/// Does it give onto floor nobody of the team has been on, with nothing shut in it.
+pub fn onto_unknown(g: &mut Game, o: CoverOpeningId) -> bool {
+    let row = &g.tab.cover_opening[o];
+    if row.kind == OpeningKind::Rear { return false; }
+    let (at, n, door) = (row.at, row.n, row.door);
+    if door.map_or(false, |d| m::abs(crate::doors::door_angle(g, d)) < 0.5) { return false; }
+    for s in [1.0, -1.0] {
+        let room = match door {
+            Some(d) => crate::cleared::cleared_rooms_room_by(g, d, s),
+            None => BEYOND_M.iter().map(|&d| crate::cleared::cleared_rooms_room_at(g, [at[0] + n[0] * s * d, 0.0, at[2] + n[1] * s * d])).find(|&r| js::truthy(r)).unwrap_or(0.0),
+        };
+        if !crate::cleared::cleared_rooms_is_known(g, room) { return true; }
+    }
+    false
+}
+
+/// WHAT THE SQUAD HAS A GUN ON (nothing of the game asks it; the checks do): the open ways onto floor nobody of the team has been on, within `reach` of a man who has a line to it,
+/// each with whether a gun of the team's, his player's among them, is within 25 degrees of it with a line.
+pub fn cover_watched(g: &mut Game, reach: f64) -> Vec<(CoverOpeningId, bool)> {
+    let mut eyes: Vec<(V3, f64)> = Vec::new();
+    for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        let c = g.gd[gd].ch;
+        eyes.push((g.ch[c].pos, g.ch[c].aim_yaw));
+    }
+    let mut guns = eyes.clone();
+    for pl in crate::seats::men_up(g) { let c = g.pl[pl].ch; guns.push((g.ch[c].pos, g.ch[c].aim_yaw)); }
+    let mut out = Vec::new();
+    for o in cover_ready(g) {
+        let at = g.tab.cover_opening[o].at;
+        if !eyes.iter().any(|&(p, _)| v3::dist_xz(p, at) <= reach) || !onto_unknown(g, o) { continue; }
+        let mut near = false;
+        for &(p, _) in &eyes { if !near && v3::dist_xz(p, at) <= reach { near = cover_line(g, cover_eye_of(g, p), o); } }
+        if !near { continue; }
+        let mut on = false;
+        for &(p, yaw) in &guns { if !on && m::abs(v3::wrap_angle(v3::yaw_to(p, at) - yaw)) < ON_IT { on = cover_line(g, cover_eye_of(g, p), o); } }
+        out.push((o, on));
+    }
+    out
+}
+
 /// What the deal's closures captured.
 struct Cx {
     squad: Vec<GuardId>,
@@ -271,6 +329,14 @@ struct Cx {
 }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
+
+/// Does somebody stood at `p` fill the opening: his feet in its frame, not beside it. A man walking past along the wall does not, however near he goes.
+fn in_frame(g: &Game, o: CoverOpeningId, p: V3) -> bool {
+    let row = &g.tab.cover_opening[o];
+    let (dx, dz) = (p[0] - row.at[0], p[2] - row.at[2]);
+    if row.kind == OpeningKind::Rear { return m::hyp2(dx, dz) < g.k.cover.in_m; }
+    m::abs(dx * row.n[0] + dz * row.n[1]) < FRAME_DEEP && m::abs(dx * row.n[1] - dz * row.n[0]) < row.half + FRAME_WIDE
+}
 
 fn near(bodies: &[(CharId, V3)], p: V3) -> f64 {
     let mut d = m::INF;
@@ -355,7 +421,7 @@ fn add(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, o: CoverOpeningId, ki
     let mut can: Vec<GuardId> = Vec::new();
     let mut edge: Vec<GuardId> = Vec::new();
     for &gd in &cx.men {
-        if v3::dist_xz(pos_of(g, gd), oat) <= k.in_m || runs(g, cx, gd, oat) { continue; }
+        if in_frame(g, o, pos_of(g, gd)) || runs(g, cx, gd, oat) { continue; }
         let a = *cx.asg_of.get(gd).unwrap();
         if cover_walk_only(g, gd, a) && !cover_walk_door(g, o, a) { continue; }
         let eye = cover_eye_of(g, pos_of(g, gd));
@@ -449,7 +515,7 @@ pub fn cover_deal(g: &mut Game) {
     for o in g.cover.openings.clone() {
         let (oat, n, door) = (g.tab.cover_opening[o].at, g.tab.cover_opening[o].n, g.tab.cover_opening[o].door);
         if near(&cx.bodies, oat) > k.reach { continue; }
-        if cx.bodies.iter().any(|&(_, b)| v3::dist_xz(b, oat) < k.in_m) { continue; }   // one of ours is standing in it
+        if cx.bodies.iter().any(|&(_, b)| in_frame(g, o, b)) { continue; }   // one of ours is standing in it
         let (mut pos, mut neg) = (false, false);
         for &(_, b) in &cx.bodies {
             if v3::dist_xz(b, oat) > 2.5 { continue; }
@@ -674,6 +740,18 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
         if got.has(gd) { continue; }
         if let Some(i) = live.iter().position(|x| x.by.is_none() && x.edge_by.is_none() && x.edge.contains(&gd)) { got.set(gd, i); live[i].edge_by = Some(gd); }
     }
+    // (and one still left with nothing beside an open way onto floor the team has not been on: his gun is on it as he goes by, whoever else has it)
+    for &gd in &cx.men {
+        if got.has(gd) { continue; }
+        let p = pos_of(g, gd);
+        let mut best: Option<(usize, f64)> = None;
+        for i in 0..live.len() {
+            let d = v3::dist_xz(p, g.tab.cover_opening[live[i].o].at);
+            if d > k.near_m || !live[i].can.contains(&gd) || best.map_or(false, |b| b.1 <= d) || !onto_unknown(g, live[i].o) { continue; }
+            best = Some((i, d));
+        }
+        if let Some((i, _)) = best { got.set(gd, i); }
+    }
     // ---- hand the jobs out
     for &gd in &cx.men {
         let li = got.get(gd).copied();
@@ -765,7 +843,7 @@ pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg
         let (post, goal, t0) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].goal, g.tab.orders_assignment[a].t0);
         let may_step = if post.is_none() { sam_stopped(g, gd) } else {
             let row = &g.tab.orders_assignment[a];
-            row.order == "hold" && row.watch.is_none() && !yes(row.spare) && row.via.is_empty()
+            crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.watch.is_none() && !yes(row.spare) && row.via.is_empty()
         };
         let placed = post.is_some() || !(k.step_place_m > 0.0) || v3::dist_xz(p, goal) <= k.step_place_m;
         if may_step && still && placed && Some(gd) != rear_man && t - m::max(*g.cover.stood.get(gd).unwrap(), t0) >= k.step_after && t >= g.cover.no_step.get(gd).copied().unwrap_or(0.0) { ready.push(gd); }
@@ -785,7 +863,7 @@ pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg
         if t < g.cover.door_try.get(o).copied().unwrap_or(0.0) { continue; }
         let theirs = g.cover.steps.values().any(|s| s.o == o && (!s.done || s.saw || t - s.t < 3.0));
         if theirs { continue; }   // (one man a door)
-        let idle: Vec<GuardId> = ready.iter().copied().filter(|&gd| in_reach(g, gd) && !seen.contains(&gd) && got_row(got, live, gd).map_or(true, |l| l.edge_by == Some(gd))).collect();
+        let idle: Vec<GuardId> = ready.iter().copied().filter(|&gd| in_reach(g, gd) && !seen.contains(&gd) && got_row(got, live, gd).map_or(true, |l| l.by != Some(gd))).collect();
         let busy: Vec<GuardId> = if !seen.is_empty() { Vec::new() } else {
             ready.iter().copied().filter(|&gd| in_reach(g, gd) && got_row(got, live, gd).map_or(false, |l| l.by == Some(gd) && 10.0 * (wo - l.w) > k.sticky + 0.3)).collect()
         };

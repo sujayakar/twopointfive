@@ -1,4 +1,4 @@
-// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
+// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/tape/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
 // writes them out as one such file. Until 2026-10-27 the page made that file itself, 'Hand over replays': those are read here as before):
 //   bun run tools/qa/replay-dump.ts <dump.ndjson[.gz] | replay.json[.gz] | folder> … [--out DIR] [--moments N] [--again] [--quiet]
 // Takes any mix of dumps and single replay files (F7's, the viewer's 'download with notes'), in any number, in any order, as often as they are sent:
@@ -22,13 +22,14 @@
 import { closeSync, createReadStream, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createGunzip, gzipSync, gunzipSync } from 'node:zlib';
 import { basename, join } from 'node:path';
-import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/replay/format.ts';
-import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/replay/format.ts';
+import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/tape/format.ts';
+import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/tape/format.ts';
 
 /** what the index adds to a tape's steps where this checkout cannot walk it (tools/qa/rerun.ts refuses another version's) */
 const otherVersion = (F: ReplayFile): string => F.rerun && 'v' in F.rerun && F.rerun.v !== TAPE_VERSION ? ' (another version: not walked here)' : '';
-import type { KeptLine, Visit } from '../../src/replay/kept.ts';
-import { assemble, visitsOf } from '../../src/replay/kept.ts';
+import type { KeptLine, Visit } from '../../src/tape/kept.ts';
+import { assemble, visitsOf } from '../../src/tape/kept.ts';
+import { handsOf } from '../../src/tape/keep.ts';
 
 // ---------------------------------------------------------------- the moments
 export interface Moment { r: number; kind: string; text: string; pos?: [number, number]; who?: string; weight: number; }
@@ -273,7 +274,7 @@ if (import.meta.main) {
   const ixPath = join(out, 'index.json');
   let IX: Index = { v: 1, entries: {} }; try { if (existsSync(ixPath)) IX = JSON.parse(readFileSync(ixPath, 'utf8')); } catch { /* a fresh index */ }
   const say = (s: string) => { if (!quiet) console.log(s); };
-  const report = { read: 0, bad: 0, visitsNew: 0, visitsGrown: 0, visitsSame: 0, windows: 0, loose: 0, looseDup: 0, unreadable: [] as string[] };
+  const report = { read: 0, bad: 0, visitsNew: 0, visitsGrown: 0, visitsSame: 0, windows: 0, loose: 0, looseDup: 0, hands: 0, unreadable: [] as string[] };
   const f7Of = new Map<string, { savedAt: string; n?: number; why?: string; notes: ReplayNote[] }[]>(), lateNotes = new Map<string, ReplayNote[]>(), loose: { F: ReplayFile; from: string }[] = [];
   const touched = new Set<string>();
 
@@ -309,7 +310,8 @@ if (import.meta.main) {
       }
       say(`${from}: a dump`);
       let cur: Visit | null = null, nBad = 0;
-      const flush = () => { if (cur) settle(cur, from); cur = null; };
+      const hands = new Map<string, KeptLine[]>();   // (a visit to the page that draws: its tape is a file of its own, walked by tools/draw/walk.ts)
+      const flush = () => { if (cur && hands.has(cur.sid) && !cur.pieces.size) { if (cur.notes.length) lateNotes.set(cur.sid, [...(lateNotes.get(cur.sid) ?? []), ...cur.notes]); } else if (cur) settle(cur, from); cur = null; };
       await eachLine(p, (line) => {
         let L: KeptLine; try { L = JSON.parse(line); } catch { nBad++; return; }
         if (!L || typeof L !== 'object' || typeof L.k !== 'string') { nBad++; return; }
@@ -319,10 +321,12 @@ if (import.meta.main) {
           if (!cur || cur.sid !== L.sid) { flush(); cur = { sid: L.sid, head: null, pieces: new Map(), notes: [] }; }
           visitsOf([L], new Map([[cur.sid, cur]]));
         }
+        else if (L.k === 'hands') hands.set(L.sid, [...(hands.get(L.sid) ?? []), L]);
         else if (L.k === 'f7') { if (L.session) f7Of.set(L.session, [...(f7Of.get(L.session) ?? []), { savedAt: L.savedAt, ...(typeof L.n === 'number' ? { n: L.n } : {}), why: L.why, notes: L.notes ?? [] }]); }
         else if (L.k === 'file') { const bad = checkReplay(L.file); if (bad) nBad++; else loose.push({ F: L.file, from }); }
       });
-      flush(); if (nBad) { say(`  ${nBad} line(s) could not be read (a write cut short)`); report.bad += nBad; }
+      flush(); for (const [sid, lines] of hands) { const tape = handsOf(lines); if (!tape) { nBad++; continue; } const file = join(out, `${sid}.tape`), notes = lateNotes.get(sid); report.hands++; if (!existsSync(file) || statSync(file).size < tape.length) writeFileSync(file, tape); if (notes?.length) writeFileSync(join(out, `${sid}.notes.json`), JSON.stringify(notes, null, 1)); say(`  visit ${sid}: a tape of hands, ${(tape.length / 1024).toFixed(0)} KB → ${sid}.tape (tools/draw/walk.ts)`); }
+      if (nBad) { say(`  ${nBad} line(s) could not be read (a write cut short)`); report.bad += nBad; }
     } catch (e) { console.log(`${from}: could not be read — ${(e as Error).message}`); report.unreadable.push(from); }
   }
 
@@ -400,8 +404,8 @@ if (import.meta.main) {
   writeFileSync(join(out, 'index.md'), ['# Replays unpacked here', '', '| file | when | mission | play | tape | switches | notes | F7 | moments | from |', '|---|---|---|---|---|---|---|---|---|---|',
     ...rows.map(e => `| ${e.name}.json.gz | ${e.startedAt.slice(0, 16).replace('T', ' ')} | ${e.scenario} | ${clock(e.seconds)} | ${e.tape} | ${e.flags || '–'} | ${e.notes} | ${e.f7.length} | ${e.moments} | ${e.from.join(', ')} |`), ''].join('\n'));
 
-  console.log(`\n=== ${report.read} file(s) read: ${report.visitsNew} new visit(s), ${report.visitsGrown} grown, ${report.visitsSame} already here · ${report.loose} single file(s) kept, ${report.looseDup} the same play as another, ${report.windows} a window of a kept visit${report.bad ? ` · ${report.bad} unreadable part(s)` : ''} ===`);
+  console.log(`\n=== ${report.read} file(s) read: ${report.visitsNew} new visit(s), ${report.visitsGrown} grown, ${report.visitsSame} already here${report.hands ? `, ${report.hands} tape(s) of hands` : ''} · ${report.loose} single file(s) kept, ${report.looseDup} the same play as another, ${report.windows} a window of a kept visit${report.bad ? ` · ${report.bad} unreadable part(s)` : ''} ===`);
   for (const id of touched) { const E = IX.entries[id]; console.log(`\n${E.name}.json.gz — ${E.scenario} · ${clock(E.seconds)}${E.flags ? ` · ${E.flags}` : ''} · tape ${E.tape} · ${E.notes} notes · ${E.moments} moments (${E.name}.moments.md)`); for (const r of E.runs) console.log(`  run ${r}`); for (const t of E.top) console.log(`    ${t}`); }
   console.log(`\nindex: ${join(out, 'index.md')}`);
-  process.exit(touched.size || report.visitsSame || report.looseDup || report.windows ? 0 : 1);
+  process.exit(touched.size || report.visitsSame || report.looseDup || report.windows || report.hands ? 0 : 1);
 }

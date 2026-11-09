@@ -1,12 +1,12 @@
 // THE ONE STARTING PAGE LOOK (ui/startpage.ts): the page on the REAL build in headless Chromium:
 // what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads.
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
-//   node tools/qa/startpage-look.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
+//   node tools/qa/startpage-look.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
-const outDir = process.argv[2] || 'startpage-look';
+const outDir = process.argv[2] || require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'startpage-look-'));
 const PORT = process.env.PORT || 5199;
 const [W, H] = (process.env.SIZE || '1440x900').split('x').map(Number);
 const QUALITY = process.env.QUALITY || 'verylow';
@@ -24,7 +24,7 @@ const report = { checks: [], errors: [] };
 const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 function watch(page) {
   page.on('pageerror', e => { if (!GPU && /WebGPU|adapter/i.test(String(e))) return; report.errors.push(String(e).slice(0, 300)); log('PAGE ERROR', String(e).slice(0, 300)); });
-  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch/.test(t) || (!GPU && /WebGPU|adapter/i.test(t))) return; /* (a fetch cut off by the next page load is not a fault) */ report.errors.push(t.slice(0, 300)); log('console error', t.slice(0, 300)); });
+  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch|Response body loading was aborted/.test(t) || (!GPU && /WebGPU|adapter/i.test(t))) return; /* (a fetch cut off by the next page load is not a fault) */ report.errors.push(t.slice(0, 300)); log('console error', t.slice(0, 300)); });
 }
 const shot = (page, name, ms = 30000) => page.screenshot({ path: path.join(outDir, name), timeout: ms }).then(() => true, e => { log('no still', name, String(e).split('\n')[0].slice(0, 120)); return false; });
 const query = u => [...new URLSearchParams(String(u).replace(/^[^?]*\?/, ''))].map(([k, v]) => v ? `${k}=${v}` : k);
@@ -199,8 +199,8 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   if (process.env.ALL) {
     const bad = [];
     for (const id of s0.rows) { await open(); await goRow(id); await page.waitForTimeout(300); const st = await stateOf(page);
-      await page.keyboard.press('Enter'); await page.waitForTimeout(500);
-      const ok = await Promise.all([deployed(), page.keyboard.press('Enter')]).then(() => true, () => false);
+      // (listened for before a key: a lesson, with no kit to pick, loads on the first Enter)
+      let gone = false; const load = deployed().then(() => gone = true, () => false); await page.keyboard.press('Enter'); await Promise.race([load, page.waitForTimeout(500)]); if (!gone) await page.keyboard.press('Enter'); const ok = await load;
       log(id, ok ? new URL(page.url()).search : 'NO LOAD'); if (!ok || !st.loadout || !st.loadout.deployInView) bad.push(id); }
     check(bad.length === 0, `every one of the ${s0.rows.length} missions: highlighted, its loadout on the page with Deploy in view, Enter Enter loads it`, bad.length ? `failed: ${bad.join(', ')}` : 'all loaded');
   }

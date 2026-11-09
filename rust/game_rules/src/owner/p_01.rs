@@ -67,10 +67,10 @@ mod tests {
     #[test]
     fn the_taskers_bits_are_their_places_in_the_list() {
         for (i, t) in TASKERS.iter().enumerate() {
-            assert_eq!((t.by.0, t.by.rank()), (1 << (14 - i), 15 - i as u32), "{}", t.name);
+            assert_eq!((t.by.0, t.by.rank()), (1 << (12 - i), 13 - i as u32), "{}", t.name);
             assert!(!t.why.is_empty() && TASKERS[..i].iter().all(|o| o.name != t.name), "{}", t.name);
         }
-        assert_eq!((By(0).rank(), By(3).rank(), By(32767).rank()), (0, 2, 15));
+        assert_eq!((By(0).rank(), By(3).rank(), By(8191).rank()), (0, 2, 13));
     }
 
     /// (owner, rank, reason, since) after each step, as the TypeScript's claimMan and releaseMan left them
@@ -89,28 +89,28 @@ mod tests {
         claim(g, m, by::SQUAD, 1.0, None);
         assert_eq!(row(g), (1, 1, 0, 1.0));
         claim(g, m, by::LANE, 2.0, None);
-        assert_eq!(row(g), (65, 7, 0, 2.0));
+        assert_eq!(row(g), (33, 6, 0, 2.0));
         claim(g, m, by::SQUAD, 3.0, None);
-        assert_eq!(row(g), (65, 7, 0, 2.0), "a lower rule it already has: nothing");
+        assert_eq!(row(g), (33, 6, 0, 2.0), "a lower rule it already has: nothing");
         claim(g, m, by::RUNNER, 4.0, Some(1.0));
-        assert_eq!(row(g), (8257, 14, 1, 4.0));
+        assert_eq!(row(g), (2081, 12, 1, 4.0));
         claim(g, m, by::RUNNER, 5.0, None);
-        assert_eq!(row(g), (8257, 14, 0, 4.0), "the top rule again: its reason, not its time");
+        assert_eq!(row(g), (2081, 12, 0, 4.0), "the top rule again: its reason, not its time");
         claim(g, m, by::RUNNER, 6.0, Some(1.0));
-        assert_eq!(row(g), (8257, 14, 1, 4.0));
+        assert_eq!(row(g), (2081, 12, 1, 4.0));
         claim(g, m, by::PRESS, 7.0, Some(0.0));
-        assert_eq!(row(g), (8289, 14, 1, 4.0), "a new rule below the top: the top's reason stands");
+        assert_eq!(row(g), (2097, 12, 1, 4.0), "a new rule below the top: the top's reason stands");
         release(g, m, by::RUNNER, 8.0);
-        assert_eq!(row(g), (97, 7, 0, 8.0), "the rule below has him from now, at its first reason");
+        assert_eq!(row(g), (49, 6, 0, 8.0), "the rule below has him from now, at its first reason");
         claim(g, m, by::PRESS | by::FRAG, 9.0, Some(0.0));
-        assert_eq!(row(g), (16481, 15, 0, 9.0));
+        assert_eq!(row(g), (4145, 13, 0, 9.0));
         release(g, m, by::FRAG, 10.0);
-        assert_eq!(row(g), (97, 7, 0, 10.0));
-        claim(g, m, by::STAND, 11.0, Some(0.0));
-        assert_eq!(row(g), (1121, 11, 0, 11.0));
+        assert_eq!(row(g), (49, 6, 0, 10.0));
+        claim(g, m, by::SQUAD_LEG, 11.0, Some(0.0));
+        assert_eq!(row(g), (305, 9, 0, 11.0));
         claim(g, m, by::WALK, 12.0, Some(1.0));
-        assert_eq!(row(g), (1137, 11, 0, 11.0), "a reason given below the top is not written");
-        release(g, m, by::STAND | by::LANE | by::PRESS | by::WALK, 13.0);
+        assert_eq!(row(g), (313, 9, 0, 11.0), "a reason given below the top is not written");
+        release(g, m, by::SQUAD_LEG | by::LANE | by::PRESS | by::WALK, 13.0);
         assert_eq!(row(g), (1, 1, 0, 13.0));
         assert!(has(g, m, by::SQUAD));
         assert!(!has(g, m, by::FRAG));

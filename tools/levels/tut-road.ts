@@ -41,8 +41,8 @@ import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../s
 import { WORLD } from '../../src/scene/world';
 import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
-import { findCarLamps } from '../../src/game/carlamps';
-import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from '../../levels/tut-road.script';
+import { carLampsIn } from '../../src/scene/carLamps';
+import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from './tutRoadMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-road';
@@ -265,7 +265,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // left it: two head lamps (on the rock), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens is
   // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (carlamps.ts finds the lenses here)
   const van0 = K.boxes.length, VS = G.van(VAN_AT.x, VAN_AT.z, VAN_AT.yaw);
-  { const lenses = findCarLamps(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
+  { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-road: the truck's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT.x, mid[1] - VAN_AT.z), nx = (mid[0] - VAN_AT.x) / l, nz = (mid[1] - VAN_AT.z) / l;
     heads.forEach((b, k) => {

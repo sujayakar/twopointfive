@@ -68,6 +68,8 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 <!-- was CLAUDE.md lines 507–619 -->
 ## Architecture map
 
+The page that draws names nothing of the game, not even as a type (`tools/draw/ban.ts`), so what it keeps stands outside the game's folders: the camera, the input and the gear in `src/host/`, the sheet and shard models in `src/render/`, the audio's face in `src/audio/iface.ts`, the replay file and the kept tapes in `src/tape/`.
+
 ```
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
 src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
@@ -160,7 +162,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      rigProps.ts (everything bolted to a mannequin: goggles, pistol parts, holster, torch, the guards' carbine,
                      Sam's FN2000 in hand / slung), input.ts
                      ALSO in src/game/ (each has its bullet below): teams.ts, interact.ts, devices.ts, attract.ts, savestate.ts, dialogue.ts, floor.ts, civilians.ts, tactics.ts, needs.ts, whistle.ts,
-                     qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio_iface.ts, consts.ts
+                     qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio/iface.ts, consts.ts
 src/ui/              menu.ts (start/pause card + the debrief / down card), debrief.ts, bindings.ts (the tweak panel = the debugger, on the backslash key — every knob), quality.ts (presets, auto calibration, the ladder + climb),
                      overlay.ts (HUD), panel.ts, boot.ts (boot card + timeline), bubbles.ts, capture.ts, perfrec.ts (F9 recorder)
 src/anim/            gltf.ts (loader; accepts embedded data-URI buffers), skeleton.ts, characters.ts (skinning, CharInst)
@@ -254,10 +256,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   colour times wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about
   0.1 ms each; the compound: 429 in 8 060). The list keeps its own shadow of the statics' shapes (12 doubles each: centre, yaw, half-sizes, the rotation) and
   rebuilds the grid when one differs or the count did; the pack's shadow is the pack's alone again (which static's rows and which half of the trace grid go up).
-  The same run to the bit (a grid built from the same footprints is the same grid). Check: `bun run tools/cpu-frame/raycast-diff.ts` ends by re-shaping four statics
-  in place (moved, resized, turned, rotated; the count unchanged, as `wallbreak.ts` holing a holed wall does), asks that `relist()` rebuilt the grid once, compares
-  rays aimed at the four with the brute force, then changes only their look and asks that nothing was rebuilt; `RAYGRID_BREAK=1` keeps the rebuild from happening and
-  must exit 1. NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
+  The same run to the bit (a grid built from the same footprints is the same grid). NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
   frame re-sends them (the pack's side; not measured in a browser).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the

@@ -1010,11 +1010,6 @@ pub struct Anim {
     pub act: Option<crate::character::AnimAct>,
     pub slump: f64,
     pub slump_w: f64,
-    pub wound: Option<crate::character::AnimWound>,
-    pub wd_t: f64,
-    pub wd_w: f64,
-    pub wd_clip: Option<ClipId>,
-    pub wd_pose: String,
     pub act_t: f64,
     pub act_w: f64,
     pub act_clip: Option<ClipId>,
@@ -1324,11 +1319,6 @@ impl Anim {
             act: None,
             slump: 0.0,
             slump_w: 0.0,
-            wound: None,
-            wd_t: 0.0,
-            wd_w: 0.0,
-            wd_clip: None,
-            wd_pose: String::from(""),
             act_t: 0.0,
             act_w: 0.0,
             act_clip: None,
@@ -1834,57 +1824,6 @@ impl AnimAct {
     }
 }
 impl Default for AnimAct { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/character.ts:1591 CharacterAnimator.wound, src/game/character.ts:1591)
-#[derive(Clone, Copy, Debug)]
-pub struct AnimWound {
-    pub pose: crate::character::AnimWoundPose,
-    pub at: crate::character::AnimWoundAt,
-    pub settled: Option<bool>,
-    pub clock: Option<f64>,
-}
-impl AnimWound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimWound {
-            pose: crate::character::AnimWoundPose::Knee,
-            at: crate::character::AnimWoundAt::Ribs,
-            settled: None,
-            clock: None,
-        }
-    }
-}
-impl Default for AnimWound { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundPose {
-    Knee,
-    Back,
-}
-impl AnimWoundPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundPose::Knee => "knee",
-            AnimWoundPose::Back => "back",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundAt {
-    Ribs,
-    Thigh,
-}
-impl AnimWoundAt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundAt::Ribs => "ribs",
-            AnimWoundAt::Thigh => "thigh",
-        }
-    }
-}
 
 /// (TypeScript: inline at src/game/character.ts:1605 CharacterAnimator.upperW, src/game/character.ts:1605)
 #[derive(Clone, Copy, Debug)]
@@ -6390,100 +6329,6 @@ impl AnimKickingLeg {
         match self {
             AnimKickingLeg::Left => "left",
             AnimKickingLeg::Right => "right",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/character.ts:2678 woundLimbs(wd), src/game/character.ts:2678)
-#[derive(Clone, Copy, Debug)]
-pub struct AnimWoundLimbsWd {
-    pub pose: crate::character::AnimWoundLimbsWdPose,
-    pub at: crate::character::AnimWoundLimbsWdAt,
-}
-impl AnimWoundLimbsWd {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimWoundLimbsWd {
-            pose: crate::character::AnimWoundLimbsWdPose::Knee,
-            at: crate::character::AnimWoundLimbsWdAt::Ribs,
-        }
-    }
-}
-impl Default for AnimWoundLimbsWd { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundLimbsWdPose {
-    Knee,
-    Back,
-}
-impl AnimWoundLimbsWdPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundLimbsWdPose::Knee => "knee",
-            AnimWoundLimbsWdPose::Back => "back",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundLimbsWdAt {
-    Ribs,
-    Thigh,
-}
-impl AnimWoundLimbsWdAt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundLimbsWdAt::Ribs => "ribs",
-            AnimWoundLimbsWdAt::Thigh => "thigh",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/character.ts:2683 woundLimbsAsk(wd), src/game/character.ts:2683)
-#[derive(Clone, Copy, Debug)]
-pub struct AnimWoundLimbsAskWd {
-    pub pose: crate::character::AnimWoundLimbsAskWdPose,
-    pub at: crate::character::AnimWoundLimbsAskWdAt,
-}
-impl AnimWoundLimbsAskWd {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimWoundLimbsAskWd {
-            pose: crate::character::AnimWoundLimbsAskWdPose::Knee,
-            at: crate::character::AnimWoundLimbsAskWdAt::Ribs,
-        }
-    }
-}
-impl Default for AnimWoundLimbsAskWd { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundLimbsAskWdPose {
-    Knee,
-    Back,
-}
-impl AnimWoundLimbsAskWdPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundLimbsAskWdPose::Knee => "knee",
-            AnimWoundLimbsAskWdPose::Back => "back",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundLimbsAskWdAt {
-    Ribs,
-    Thigh,
-}
-impl AnimWoundLimbsAskWdAt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundLimbsAskWdAt::Ribs => "ribs",
-            AnimWoundLimbsAskWdAt::Thigh => "thigh",
         }
     }
 }

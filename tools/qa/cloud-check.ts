@@ -6,10 +6,10 @@
 //              a browser that has made no choice sends nothing
 //   backend    settings, tapes and records through the wire: what is written reads back; a piece sent twice is kept once; another browser cannot write into a
 //              visit; bad arguments and the internal reads without a key are refused
-//   tapes      a run kept in pieces and sent up as it is played reads back out of the backend (pull.ts) as the SAME FILE the browser's own store makes, and a
-//              fresh game walks its run tape to the first run's digest; a second round sends nothing; a call that fails loses nothing; a piece past one
-//              document goes in parts; a browser that cannot pack sends lines that still read; lost notes ask the backend and send nothing twice
-//   identity   a game stepped with its tape going up digests, second by second, as the same game with no backend at all
+//   tapes      a run kept in pieces and sent up as it is played reads back out of the backend (pull.ts) as the SAME TAPE the browser's own store holds and the page wrote,
+//              byte for byte, and the tape's own reader walks it to its last tick; a second round sends nothing; a call that fails loses nothing; a piece past one
+//              document goes in parts; a browser that cannot pack sends lines that still read; lost notes ask the backend and send nothing twice. The run is made up:
+//              a tape of hands with plain numbers on it, kept as the page keeps one (src/tape/run.ts). No game is stood
 //   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
 //              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
@@ -29,19 +29,16 @@
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
-import { standUp, ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 if (!existsSync(`${ROOT}/cloud/node_modules/convex-test`)) { console.error('cloud-check: the backend\'s packages are not installed — run `npm ci` in cloud/ first'); process.exit(2); }
 const { standIn } = await import(`${ROOT}/cloud/test/standin.ts`);
-const { ReplayBuffer } = await import(`${ROOT}/src/game/replaybuf.ts`);
-const F = await import(`${ROOT}/src/replay/format.ts`);
-const KP = await import(`${ROOT}/src/replay/kept.ts`);
-const KS = await import(`${ROOT}/src/replay/keepstore.ts`);
-const { ReplayKeeper } = await import(`${ROOT}/src/replay/keeper.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
+const KP = await import(`${ROOT}/src/tape/kept.ts`);
+const KS = await import(`${ROOT}/src/tape/keepstore.ts`);
+const { ReplayKeeper } = await import(`${ROOT}/src/tape/keeper.ts`);
+const { HandTape, HandWalk, HANDTAPE, hashOf } = await import(`${ROOT}/src/tape/handtape.ts`);
+const { handSource, handsOf, keptHands } = await import(`${ROOT}/src/tape/keep.ts`);
+const { HAND } = await import(`${ROOT}/src/draw/hand.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
-const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { rerun } = await import('./rerun.ts');
 const { wire, WireError, toBase64, fromBase64 } = await import(`${ROOT}/src/cloud/wire.ts`);
 const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tapes.ts`);
 const { PrefSync, prefsNow, skipped } = await import(`${ROOT}/src/cloud/prefs.ts`);
@@ -64,31 +61,29 @@ function memStore(init: Record<string, string> = {}) {
   return { get length() { return m.size; }, key: (i: number) => [...m.keys()][i] ?? null, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); }, map: m };
 }
 
-function hands(W: any, f: number): void {
-  const I = W.input, s = f / 60;
-  I.keys.clear();
-  if (s > 0.5 && s < 6) I.keys.add('KeyW'); if (s > 3 && s < 5) I.keys.add('KeyD'); if (s > 9 && s < 12) I.keys.add('KeyS');
-  I.mouseX = 800 + 300 * Math.sin(s * 0.7); I.mouseY = 500 + 200 * Math.cos(s * 0.5);
-  if (f === 400) I.pressed.add('KeyE');
-  if (f === 470 || f === 500 || f === 530) { I.clicked |= 1; I.buttons |= 1; } else I.buttons = 0;
-  if (f === 700) I.pressed.add('KeyC'); if (f === 120 || f === 900) I.pressed.add('KeyB');
+/** one tick's hand, written over `N`: plain numbers that move as a page's do, a click now and then, and the keys' text (the codes held, a line feed, the codes that went down) */
+function handOf(N: Float64Array, f: number): string {
+  const s = f / 60, at = (t0: number, t1: number) => s > t0 && s < t1;
+  N[HAND.w] = N[HAND.pw] = 1600; N[HAND.h] = N[HAND.ph] = 900;
+  N[HAND.mx] = 800 + 300 * Math.sin(s * 0.7); N[HAND.my] = 500 + 200 * Math.cos(s * 0.5);
+  N[HAND.clicked] = f === 470 || f === 500 || f === 530 ? 1 : 0; N[HAND.buttons] = N[HAND.clicked];
+  for (let i = 0; i < 16; i++) { N[HAND.vp + i] = Math.sin(s * 0.3 + i); N[HAND.ivp + i] = Math.cos(s * 0.3 + i); }
+  for (let i = 0; i < 3; i++) N[HAND.pos + i] = 10 + i + Math.sin(s * 0.2 + i);
+  N[HAND.yaw] = s * 0.1; N[HAND.pitch] = 0.7 + 0.1 * Math.sin(s);
+  return `${at(0.5, 6) ? 'KeyW' : at(9, 12) ? 'KeyS' : ''}${at(3, 5) ? ' KeyD' : ''}\n${f === 400 ? 'KeyE' : f === 700 ? 'KeyC' : f === 120 || f === 900 ? 'KeyB' : ''}`;
 }
-interface Rig { W: any; buf: any; K: any; store: any; hashes: string[]; meta: () => any }
-/** a game with its tape being kept (a beat every 300 frames, the last one a flush), as tools/qa/replaykeep-probes.ts stands one up; `mid` is called after every frame */
+interface Rig { tape: any; hand: Float64Array; K: any; store: any }
+/** a run on the page that draws, made up: its tape of hands kept (a beat every 300 frames, the last one a flush) as src/host/drawpage.ts and src/tape/run.ts keep one; `mid` is called after every frame */
 async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?: (R: Rig, f: number) => void | Promise<void> } = {}): Promise<Rig> {
-  Math.random = mulberry32(0xbeef);
-  const W: any = await standUp({ seed: 7 });
-  { const r = startFromQuery(W.game, 'roomclear&squad4'); if (r.why) throw new Error(r.why); }
-  const buf = new ReplayBuffer(), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a';
-  const meta = () => ({ url: '?roomclear&squad4', commit: 'abc1234', userAgent: 'probe', fp: levelFingerprint(W.game), session: sid });
+  const tape = new HandTape(HAND.count), hand = new Float64Array(HAND.count), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a', level = new Uint8Array([1, 2, 3, 4]);
+  tape.start({ build: 'abc1234', levelName: 'made-up.json', level, words: '', parts: [{ name: 'level', length: level.length, hash: hashOf(level) }], seed: 7, seats: 1, flags: 0, commands: new Uint8Array(0) });
   let now = 0;
-  const K = new ReplayKeeper(buf, { sid, store, played: () => true, head: () => { const { session: _s, ...m } = meta(); return buf.head(W.game, m); },
+  const K = new ReplayKeeper(handSource(() => tape), { sid, store, played: () => tape.ticks > 0,
+    head: () => ({ game: 'twopointsix', hands: HANDTAPE.version, url: '?made-up', userAgent: 'probe', level: { file: 'made-up.json', scenario: 'Made up' }, seed: 7, commit: 'abc1234' }),
     now: () => new Date(Date.UTC(2026, 9, 26, 12, 0, now++)).toISOString(), ...(o.gz !== undefined ? { gz: o.gz } : {}) });
-  buf.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
-  const R: Rig = { W, buf, K, store, hashes: [], meta };
+  const R: Rig = { tape, hand, K, store };
   for (let f = 0; f < secs * 60; f++) {
-    hands(W, f); W.step(1 / 60);
-    if ((f + 1) % 60 === 0) R.hashes.push(hashDigest(digestGame(W.game, true)));
+    tape.step(1 / 60, hand, handOf(hand, f));
     if ((f + 1) % 300 === 0) { K.beat(); await K.idle(); }
     if (o.mid) await o.mid(R, f);
   }
@@ -97,6 +92,9 @@ async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?:
 }
 /** a hand-over file's bytes as records */
 const linesOf = (u: Uint8Array) => KP.parseLines(gunzipSync(Buffer.from(u)).toString('utf8'));
+/** one visit's lines of its tape, of a hand-over file's */
+const handLines = (lines: any[], sid: string): any[] => lines.filter(l => l.k === 'hands' && l.sid === sid);
+const sameBytes = (a: Uint8Array | null | undefined, b: Uint8Array | null | undefined): boolean => !!a && !!b && a.length === b.length && a.every((v, i) => v === b[i]);
 
 const S = standIn();
 const W = wire(S.url), ADMIN = wire(S.url, { key: S.key });
@@ -384,16 +382,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const R = await run(42, { sid: 'visit-a', mid: async (R, f) => { sync ??= new TapeSync(W, R.store, { pid: PID, notes }); if ((f + 1) % 600 === 0) { await sync.round(); midCalls = sync.stats.calls; } } });
   await sync.round();
   const calls = sync.stats.calls; await sync.round(); await sync.round();
-  check(midCalls > 0 && sync.stats.pieces === 9 && sync.stats.failed === 0 && sync.stats.calls === calls, `tapes: 42 s of play went up as it was played — ${sync.stats.pieces} pieces in ${calls} calls, ${(sync.stats.bytes / 1024).toFixed(0)} KB — and two more rounds sent nothing`);
+  const kept = R.K.stats.pieces;
+  check(midCalls > 0 && kept > 1 && sync.stats.pieces === kept && sync.stats.failed === 0 && sync.stats.calls === calls, `tapes: 42 s of play went up as it was played — ${sync.stats.pieces} pieces in ${calls} calls, ${(sync.stats.bytes / 1024).toFixed(0)} KB — and two more rounds sent nothing`);
   const D = await pullDump(ADMIN, { pid: PID, since: '2026-10-26T12:00:00.000Z' }), got = D ? linesOf(D.bytes) : { lines: [], bad: 1 };
-  const V = KP.visitsOf(got.lines).get('visit-a'), A = V ? KP.assemble(V) : null;
-  const local = await KS.readVisit(R.store, 'visit-a'), B = local ? KP.assemble(local) : null;
-  check(!!D && got.bad === 0 && got.lines[0]?.k === 'dump' && !!A && A.pieces === 9 && !A.missing.length, `tapes: read back out of the backend it is one hand-over file of ${got.lines.length} records, nine pieces, none missing (${D?.name})`);
-  check(!!A && !!B && same(A.file, B.file) && F.checkReplay(A.file) === '', 'tapes: the replay file put together from the backend is the one this browser\'s own store makes, and passes the replay\'s own check');
-  if (A) { const Rr = await rerun(A.file, { toN: 2400 });
-    check(A.tapeTicks === 42 * 60 && !Rr.refuse && !!Rr.report && !Rr.report.drift && !!Rr.W && hashDigest(digestGame(Rr.W.game, true)) === R.hashes[39], `tapes: a fresh game walks the tape from the backend to step 2400 and digests as the first run did there${Rr.refuse ? ` — REFUSED: ${Rr.refuse}` : ''}`); }
+  const mine = handLines(got.lines, 'visit-a'), seqs = mine.map(l => l.seq).sort((a, b) => a - b), head = KP.visitsOf(got.lines).get('visit-a')?.head as any, A = handsOf(mine), B = await keptHands(R.store, 'visit-a');
+  check(!!D && got.bad === 0 && got.lines[0]?.k === 'dump' && !!head && head.hands === HANDTAPE.version && same(seqs, Array.from({ length: kept }, (_, i) => i)), `tapes: read back out of the backend it is one hand-over file of ${got.lines.length} records, ${seqs.length} pieces, none missing, with the head that says it is a tape of hands (${D?.name})`);
+  { const walk = A ? new HandWalk(A, HAND.count) : null; let last = false; if (walk) { for (let r = walk.next(); r; r = walk.next()) { /* to its end */ } last = walk.ticks === R.tape.ticks && R.hand.every((v: number, i: number) => Object.is(v, walk.last[i])); }
+    check(sameBytes(A, B) && sameBytes(A, R.tape.whole()) && !!walk && walk.start.build === 'abc1234' && walk.start.levelName === 'made-up.json' && last, `tapes: the tape put together from the backend is the one this browser's own store holds and the page wrote, byte for byte (${A?.length} bytes), and its own reader walks it to its last hand (${walk?.ticks} ticks)`); }
   const rowB = (await ADMIN.query('tapes:list', { pid: PID })).find((r: any) => r.sid === 'visit-a'), rowL = (await R.store.rows())[0];
-  check(!!rowB && rowB.have === 9 && rowB.pieces === rowL.pieces && rowB.seconds === rowL.seconds && rowB.scenario === rowL.scenario && rowB.commit === 'abc1234', `tapes: the visit's row on the backend is the store's own (${rowB?.seconds} s, ${rowB?.scenario})`);
+  check(!!rowB && rowB.have === kept && rowB.pieces === rowL.pieces && rowB.seconds === rowL.seconds && rowB.scenario === rowL.scenario && rowB.commit === 'abc1234', `tapes: the visit's row on the backend is the store's own (${rowB?.seconds} s, ${rowB?.scenario})`);
   // the notes lost: the backend is asked, nothing goes twice
   const again = new TapeSync(W, R.store, { pid: PID, notes: memoryNotes() }); await again.round();
   check(again.stats.pieces === 0 && again.stats.failed === 0, `tapes: a browser that lost its notes asks the backend what it has and sends no piece twice (${again.stats.pieces} pieces)`);
@@ -401,19 +398,19 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   { let down = true; const flaky = wire(S.url, { fetch: ((u: any, i: any) => down ? Promise.reject(new Error('offline')) : fetch(u, i)) as any });
     const S2 = new TapeSync(flaky, R.store, { pid: PID2, notes: memoryNotes() }); await S2.round(); await S2.round(); const failed = S2.stats.failed; down = false; await S2.round();
     // (the same store under another browser's id is another browser's visit of the same name: the backend refuses it, which is the refusal path — sent as nothing, held up nothing)
-    check(failed >= 2 && S2.stats.pieces === 9, `tapes: with the backend unreachable a round fails and holds its place (${failed} failed); a call the backend refuses is not asked for ever (${S2.stats.lastError.slice(0, 60)})`); }
+    check(failed >= 2 && S2.stats.pieces === kept, `tapes: with the backend unreachable a round fails and holds its place (${failed} failed); a call the backend refuses is not asked for ever (${S2.stats.lastError.slice(0, 60)})`); }
   // …and one that fails mid-visit picks up where it stopped
   { const R2 = await run(12, { sid: 'visit-b' }); let n = 0;
     const flaky = wire(S.url, { fetch: ((u: any, i: any) => (/mutation/.test(String(u)) && ++n === 1) ? Promise.reject(new Error('dropped')) : fetch(u, i)) as any });
     const was = TAPESYNC.parts; TAPESYNC.parts = 2;
     const S3 = new TapeSync(flaky, R2.store, { pid: PID, notes: memoryNotes() }); await S3.round(); const first = S3.stats.pieces; await S3.round(); TAPESYNC.parts = was;
-    const D2 = await pullDump(ADMIN, { pid: PID }), V2 = D2 ? KP.visitsOf(linesOf(D2.bytes).lines).get('visit-b') : null, A2 = V2 ? KP.assemble(V2) : null, L2 = await KS.readVisit(R2.store, 'visit-b');
-    check(first === 0 && S3.stats.failed === 1 && !!A2 && !A2.missing.length && same(A2.file, KP.assemble(L2!)!.file), `tapes: a call dropped mid-visit is sent again next round and the tape is whole (${S3.stats.pieces} pieces after ${S3.stats.calls} calls)`); }
+    const D2 = await pullDump(ADMIN, { pid: PID }), A2 = D2 ? handsOf(handLines(linesOf(D2.bytes).lines, 'visit-b')) : null, L2 = await keptHands(R2.store, 'visit-b');
+    check(first === 0 && S3.stats.failed === 1 && sameBytes(A2, L2) && sameBytes(A2, R2.tape.whole()), `tapes: a call dropped mid-visit is sent again next round and the tape is whole (${S3.stats.pieces} pieces after ${S3.stats.calls} calls)`); }
   // a piece past one document goes in parts; a browser that cannot pack sends lines that still read
   { const R3 = await run(12, { sid: 'visit-c', gz: null }); const was = TAPESYNC.chunk; TAPESYNC.chunk = 3000;
     const S4 = new TapeSync(W, R3.store, { pid: PID, notes: memoryNotes(), gz: null }); await S4.round(); TAPESYNC.chunk = was;
-    const D3 = await pullDump(ADMIN, { pid: PID }), V3 = D3 ? KP.visitsOf(linesOf(D3.bytes).lines).get('visit-c') : null, A3 = V3 ? KP.assemble(V3) : null, L3 = await KS.readVisit(R3.store, 'visit-c');
-    check(S4.stats.parts > S4.stats.pieces * 2 && !!A3 && !A3.missing.length && same(A3.file, KP.assemble(L3!)!.file) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
+    const D3 = await pullDump(ADMIN, { pid: PID }), A3 = D3 ? handsOf(handLines(linesOf(D3.bytes).lines, 'visit-c')) : null, L3 = await keptHands(R3.store, 'visit-c');
+    check(S4.stats.parts > S4.stats.pieces * 2 && sameBytes(A3, L3) && sameBytes(A3, R3.tape.whole()) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
   // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed (ui/replaykey.ts onEndKept)
   { const M = KS.memoryStore(), rowOf = (pieces: number, lastAt: string) => ({ sid: 'ends', startedAt: '2026-10-26T13:00:00.000Z', lastAt, scenario: 'x', url: '?x', seconds: 5 * pieces, pieces, bytes: 10 * pieces });
     await M.put(rowOf(1, '2026-10-26T13:00:05.000Z'), 0, 'zero', 'head'); await M.put(rowOf(2, '2026-10-26T13:00:10.000Z'), 1, 'the end');
@@ -446,13 +443,6 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const S6 = new TapeSync(spy, R.store, { pid: PID, notes: memoryNotes(), may: () => false }); await S6.round(); const quiet = asked.length;
     const S7 = new TapeSync(spy, R.store, { pid: PID, notes: memoryNotes(), only: (sid: string) => sid === one }); await S7.round();
     check(unlisted === 0 && S5.stats.calls === 0 && S5.stats.rounds === 1 && quiet === 0 && S6.stats.rounds === 0 && asked.includes(one), `tapes: a visit that is not on the page's list is not asked about or sent (${unlisted} asked, ${S5.stats.calls} calls) where the same store with it listed is, and a browser that does not send does not read its store at all`); }
-}
-
-// ---- identity
-{ const plain = await run(20, { sid: 'visit-plain' });
-  let sync: any = null;
-  const sent = await run(20, { sid: 'visit-sent', mid: async (R, f) => { sync ??= new TapeSync(W, R.store, { pid: PID, notes: memoryNotes() }); if ((f + 1) % 300 === 0) await sync.round(); } });
-  check(sync.stats.pieces > 0 && same(plain.hashes, sent.hashes), `identity: 20 s with the tape going up every 5 s (${sync.stats.pieces} pieces) digest, second by second, as 20 s with no backend`);
 }
 
 // the switch turned off in the MIDDLE of a round: no further call of that round goes, and the rest goes once it is on again
@@ -504,26 +494,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
   // A SQUAD'S MISSION ENDS BY ITS OWN RULE, and the mission's stage word never moves: the page hands `frame` the verdict's end (`endStage`).
-  // On a real game: a room clear, every defender down. One run record, with the verdict in brief and the display's rate.
-  { const { VERDICT } = await import(`${ROOT}/src/game/verdict.ts`), { killGuard } = await import(`${ROOT}/src/game/combat.ts`), { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
-    const von = VERDICT.on; VERDICT.on = true;
-    const l = console.log, wn = console.warn; let G: any, word0 = '', wordEnd = '';
-    const Tr = new Telemetry(W, { pid: PID, sid: 'visit-squad', now: () => t++ });
-    try {
-      console.log = console.warn = () => { };
-      const R: any = await standUp({ seed: 7 }); G = R.game;
-      { const r = startFromQuery(G, 'roomclear&squad4'); if (r.why) throw new Error(r.why); }
-      const over = () => { const V = G.verdict.result; return V && { kind: V.kind, won: V.won, word: V.word, secs: V.secs, lost: V.lost, of: V.of, foesDown: V.foes.down, foesOf: V.foes.of }; };
-      const Fg = () => ({ ...facts, stage: G.mission.stage, stats: G.mission.stats, hz: 120, over: over() });
-      const tick = (n: number) => { for (let i = 0; i < n; i++) { R.step(1 / 60); Tr.frame(1 / 60, true, endStage(G.mission.stage, G.verdict.result), NaN, Fg); } };
-      tick(5); { const p = G.player.char.pos; G.teleportPlayer([p[0] + 3, 0, p[2]]); } tick(5); word0 = G.mission.stage;
-      for (const h of G.guards.filter((x: any) => x.team !== 'operative' && hostileTo(x, 'player') && x.state !== 'dead')) killGuard(G, h, [1, 0, 0], false, 'shot', 'player');
-      tick(240); wordEnd = G.mission.stage;
-    } finally { console.log = l; console.warn = wn; VERDICT.on = von; }
+  // A room clear, every defender down, as the page hands it over (src/host/drawcloud.ts): one run record, with the verdict in brief and the display's rate.
+  { const Tr = new Telemetry(W, { pid: PID, sid: 'visit-squad', now: () => t++ }), word = 'play'; let over: Record<string, unknown> | null = null, end: { won: boolean } | null = null;
+    const Fg = () => ({ ...facts, stage: word, hz: 120, over });
+    const tick = (n: number) => { for (let i = 0; i < n; i++) Tr.frame(1 / 60, true, endStage(word, end), NaN, Fg); };
+    tick(10); over = { kind: 'roomclear', won: true, word: 'CLEAR', secs: 12, lost: 0, of: 4, foesDown: 6, foesOf: 6 }; end = { won: true }; tick(240);
     await Tr.flush();
     const rr = await ADMIN.query('telemetry:list', { sid: 'visit-squad', kind: 'run' }), d = rr[0]?.data;
-    check(G.roomClear.end === 'taken' && wordEnd === word0 && wordEnd !== 'done' && rr.length === 1 && d.stage === 'done' && d.over.won === true && d.over.word === 'CLEAR' && d.over.kind === 'roomclear' && d.over.foesDown === d.over.foesOf && d.over.foesOf > 0 && d.hz === 120 && typeof d.stats.shots === 'number',
-      `telemetry: a house taken is one run record though the mission's stage word never moved (it stayed '${wordEnd}'): ${rr.length} record, ${d?.stage}, the verdict ${d?.over?.word} with ${d?.over?.foesDown} of ${d?.over?.foesOf} defenders down, the display at ${d?.hz} Hz`); }
+    check(rr.length === 1 && d.stage === 'done' && d.over.won === true && d.over.word === 'CLEAR' && d.over.kind === 'roomclear' && d.over.foesDown === d.over.foesOf && d.over.foesOf > 0 && d.hz === 120 && typeof d.stats.shots === 'number',
+      `telemetry: a house taken is one run record though the mission's stage word never moved (it stayed '${word}'): ${rr.length} record, ${d?.stage}, the verdict ${d?.over?.word} with ${d?.over?.foesDown} of ${d?.over?.foesOf} defenders down, the display at ${d?.hz} Hz`); }
   // A LOAD'S RECORD (src/cloud/loadtime.ts): the whole load and its stages from the boot's own tables and the browser's count of what came down
   { const LT = await import(`${ROOT}/src/cloud/loadtime.ts`), ER2 = await import(`${ROOT}/tools/cloud/errors.ts`);
     const sum = (gpuReady?: number) => ({ marks: { script: 310, gpu: 460, engine: 500, level: 590, gltf: 900, game: 1320, pipelines: 9000, hooks: 9010, interactive: 9020, firstSubmit: 9100, ...(gpuReady ? { gpuReady } : {}) }, spans: { beforeScript: 300, gpu: 150, level: 85, gltf: 400, gameCtor: 410, pipelines: 8500, pipelines_gather: 6100, firstFrameCpu: 40, firstFrameGpu: 330, toInteractive: 9020 },

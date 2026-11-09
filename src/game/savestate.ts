@@ -127,7 +127,7 @@ import { rescueCheckSnapshot, rescueCheckRestore, type RescueCheckSnap } from '.
 import { attentionSnapshot, attentionRestore, type AttentionSnap } from './attention';
 import { pictureSnapshot, pictureRestore, type PictureSnap } from './picture';
 import { RESPONSE, responseWordSnapshot, responseWordRestore, type ResponseWordSnap } from './qrf';
-import { gearText } from './gear';
+import { gearText } from '../host/gear';
 import type { NeedsSnap } from './needs';
 import { whistleSnapshot, whistleRestore } from './whistle';
 import { glassPenSnapshot, glassPenRestore, type GlassPenSnap } from './glasspen';

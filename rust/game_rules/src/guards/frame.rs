@@ -50,8 +50,10 @@ fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt
 
 /// ONE MAN'S FRAME, part by part. Each part is a function below, in this order.   (guards.ts updateGuard)
 ///   incapable   dead or held: nothing below runs
+///   sense       his ears and eyes (senses/), whoever has his body
+///   hands       a change of magazine goes on, whoever has the rest of him
 ///   lent        who has his body (control/): a rule of the list, or his own script; nothing below runs
-///   senses      his ears, his eyes (senses/), what they do to his awareness and his fix; a body found; a forced door
+///   notice      where his man went, a body found, the man he trails, a forced door
 ///   alertness   his state moves with his awareness; the clocks that floor his reaction
 ///   behave      his state's behaviour (behave/): where his legs go, what his gun does
 ///   pose        the looks laid over his aim, the muzzle and the wall, the animator, his light, his footfall
@@ -69,8 +71,14 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
     let staff = g.gd[gd].team == crate::teams::Team::Guard;
     if !staff { unit_light_meter(g, gd, dt); }
-    if lent(g, gd, dt) { return; }
-    let saw = crate::guards::senses::perceive(g, gd, dt, c, staff);
+    let sense = crate::guards::senses::sense(g, gd, dt, staff);
+    hands(g, gd, dt);
+    if lent(g, gd, dt) {
+        if let Some(s) = &sense { crate::guards::senses::fade(g, gd, dt, s); }
+        return;
+    }
+    let Some(sense) = sense else { unreachable!("a man whose senses are kept elsewhere is on his script, so he was lent") };
+    let saw = crate::guards::senses::notice(g, gd, dt, c, staff, &sense);
     let s = alertness(g, gd, dt, c, staff, &saw);
     let acts = crate::guards::behave::act(g, gd, dt, &s);
     pose(g, gd, dt, &s, acts);
@@ -115,6 +123,14 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         return true;
     }
     false
+}
+
+/// HIS HANDS: a change of magazine he has begun goes on, whoever has his legs and whatever he sees. It waits only while he has no hand for it: he is
+/// reeling, a hostage is in his arms, or his hands are between two guns or on a job. (Dead, or in somebody's arm, he never gets here.)
+fn hands(g: &mut Game, gd: GuardId, dt: f64) {
+    if !crate::control::man::changing_magazine(g, gd) { return; }
+    if crate::control::man::staggered(g, gd) || crate::control::man::in_a_standoff(g, gd) || crate::gunslots::side_locked(g, gd) { return; }
+    tick_reload_beat(g, gd, dt);
 }
 
 /// A rule of the body list has him, or his own script: his body follows it and nothing else of his frame runs.

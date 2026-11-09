@@ -271,9 +271,10 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 
 | what | where | to add one |
 |---|---|---|
-| what takes him whole, before he senses: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
+| his ears and eyes, every tick, whoever has his body | `guards/senses/{hearing,foe}.rs`, from `senses/mod.rs sense` | a kind of sound is a function of `hearing.rs` |
+| what takes him whole: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
 | his own script (an order, a drill, a mission's staging) | `squad/` (`run_guard_script`), `gd.script` | |
-| what he senses, a file a sense: his ears, his eyes on his man, where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{hearing,foe,lead,body,leader,lock}.rs`, in order in `senses/mod.rs` | a file and its line in `perceive`; a kind of sound is a function of `hearing.rs` |
+| what he does about what is around him where nothing has him: where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{lead,body,leader,lock}.rs`, in order in `senses/mod.rs notice` | a file and its line in `notice` |
 | where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
 | how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
 | what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
@@ -282,6 +283,7 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 | his pose, his light, his footfall | `guards/frame.rs pose` | |
 | whose man he is (fifteen taskers, strongest first) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!` |
 | what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
+| his hands: a change of magazine | `guards/frame.rs hands`; begun by `guards::begin_reload` only | |
 | why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
 
 The squad's side: an order is `orders/rows/<name>.rs` and a line of `rows!`; a throw is `squadthrow/plan.rs`; who is
@@ -301,8 +303,8 @@ him, rounds pass close). One file and one line.
    keeps of one man (`()` if nothing). Three more have defaults that do nothing: `transition(g, man, dt)` move
    its own state · `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
 2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it";`. Its place in the list is its
-   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked before he senses
-   and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
+   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked after his ears and
+   eyes, before anything he does of his own, and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
    script of his own (`TakeCover::down()`, or `TakeCover::to(spot, pace)`). ALERT IS NOT "HAS A MAN TO FIGHT":
    a bang alone makes a man Alert, so a rule that means "in a fight" asks `man::saw_his_man_within(g, man,
    secs)`. What a rule may ask of a man is `control/man.rs` (enemy, blind, staggered, held, in a standoff,
@@ -315,9 +317,9 @@ him, rounds pass close). One file and one line.
    Write a control beside it (the same scene where the thing does not happen, or happens to a calm man), and
    break the rule once (`propose` returns `None`) to see the test go red.
 
-Worked example, held back until the dice are keyed: `control/reload_in_cover.rs` (a defender who runs dry kneels or
-goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover";`, and the test
-`a_guard_who_runs_dry_in_the_open_kneels_to_change_magazine` in `tests/control.rs`.
+The worked example printed below, `control/reload_in_cover.rs` (a defender who runs dry kneels or goes to cover to
+change magazine), was written and is not in the game: in 208 runs of thirteen missions an enemy changed magazine three
+times, so nobody would see it. Count how often the thing happens before writing the rule.
 
 **An order**: a row of the squad's menu. One file and one line.
 
@@ -343,15 +345,14 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 - `bun run tools/sim/build.ts` after any change under `rust/`.
 - Reading a game back deals a row its functions by the list (`rows::by_id`), so an order needs no line in the
   wire, and a row with an id on no line stops the import, by name.
-- A dozen modules know orders BY ID and a new order is in none of their lists: `silent` (loud rows),
-  `holdfire` (lift and blow orders), `sneak` and `unseen` (posted), `orders::lane_orders`, `squadthrow`
-  (resumed), `rails` (a lesson's list of rows hides a row it does not name), `cmdring` (the ring's seats),
-  `cover` and `roomfight` (`order == "hold"`, `"cover"`, `"fallIn"`). Read each name once and decide; say in
-  the commit which the order joined.
+- What the rest of the game may ask of an order is in its row: `is: &[Is]` (loud, keeps his lane, resumed after a
+  throw, and so on; `orders/types.rs` says what each is read by). Read the list once and decide. Two places name
+  orders otherwise: `rails` (a lesson's list of rows hides a row it does not name) and `cmdring` (the ring's seats).
 - The menu's digit: `squad_orders_register` deals a row with no key the first free digit (from 5, or from 1
   for a row on a page), and none when all five are taken: the wheel still reaches it.
-- A switch or not: section 14 lands changes of play with tallies and no switch, the repo's standing rule says
-  a new rule is a switch. Until that is ruled, say in the commit which was done.
+- No switch: a change of play of this rework lands on by default and is fixed forward. Its commit is headed A CHANGE
+  OF PLAY with what a player would notice, its test is red without it, and it carries the missions before and after
+  on four seeds or more.
 - The build: a change to a rule or an order is a build of the game crate, about ten minutes on a small
   machine; a change to a test is fifteen seconds. Ask your questions of the game from the test first.
 - Searching for a field of a man: leave out `io.rs` and `puppet.rs`, whose lines are several thousand
@@ -361,7 +362,8 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 /tmp/held`; after it, `… -- check /tmp/held`. 72 native runs, every part of the game hashed every frame; it names
 the first frame and the parts that differ. A new reaction or order is meant to change play where it acts, so read
 it this way: every run in which it never acted must still be the same (each run's line says how long each rule
-had a man), and what it does where it acts is for the mission tallies to judge.
+had a man), and what it does where it acts is for the missions to judge: `cargo run --release --bin missions` before and
+after, then `missions diff` (208 runs of thirteen room clears, three minutes).
 
 **A behaviour of a man's own** (how he patrols, looks, fights and searches when nothing has taken him) is one file a
 state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
@@ -377,11 +379,11 @@ list. A reaction can take a man
 whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
 ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
 A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
-shows a line in the squad's HUD block registers an arm of `OrderNoteFn` on the seat's `SquadOrders.notes` and gives that arm a reader in `orders/hud.rs notes_of` (a function of the game shared and the seat: its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. The rest of this section is the detail of each of these.
+shows a line in the squad's HUD block says so in its file (`notes` of its `Row`, a function of the game shared and the seat; the block comes in the list's order and its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. The rest of this section is the detail of each of these.
 
 ### The pieces in detail
 
-The list of reactions as it stands (`rust/game_rules/src/control/`), with the held worked example's line last:
+The list of reactions as it stands (`rust/game_rules/src/control/`), with the example's line last:
 
 ```rust
 // control/mod.rs: THE LIST. The order of the lines is the rank.
@@ -391,7 +393,7 @@ rules! {
     morale: "shaken by a blast";
     startle: "startled";
     duck: "head down under fire";
-    reload_in_cover: "changing magazine in cover";   // held: lands after the keyed draws
+    reload_in_cover: "changing magazine in cover";   // the example: not in the game
 }
 
 // control/reload_in_cover.rs: the whole rule
@@ -409,7 +411,7 @@ impl Reaction for Rule {
 
 A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
 type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
-asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
+asked once his ears and eyes have run, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
 (`guards/behave/alert.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
 before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
 hands free to change magazine. The line makes the rule's module, its id, the table of its rows
@@ -417,9 +419,8 @@ hands free to change magazine. The line makes the rule's module, its id, the tab
 the pilot is its file and one line.
 
 Two things the list does not yet do for a rule:
-- **`TakeCover` cannot say "hands idle".** Any rule that asks for cover lets the reload run on. No rule has
-  needed it yet, so the word is not built: it is one field of `TakeCover` and one `if` at the reload's line of
-  `alert`, and it lands with the first rule that wants it and a fight that goes red without it.
+- **Nothing can say "hands idle".** A change of magazine goes on whoever has the man (`frame.rs hands`). A rule that
+  wants his hands would be the first.
 - **The list holds 32 rules** (the "said no" record is 32 bits). A 33rd stops the build with those words.
 
 What a rule asks of a man is `control/man.rs`, a line a question, each saying what it does NOT tell you:
@@ -537,8 +538,7 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
   re-deals every mission once, so it lands alone with the mission tallies before and after. Until it lands, a
   new rule that draws moves every later draw of the mission, and a tally cannot judge it. The pilot waits on it.
 - A rule's rows are cloned with the game (a kept game keeps them) but are not in a checkpoint written to a file.
-- Orders: one is moved, about thirty are not. The one long-hand left for an order that has a line in the
-  squad's HUD block: that line is an arm of `OrderNoteFn` with a reader in `orders/hud.rs notes_of`; the page is handed the lines as text (`TickView.squad.notes`). It ends when a `Row` has a `notes` function. An order's own state is still a field of the
+- Orders: every order is a file of `orders/rows/`, and what a rule that does not know it by name needs of it is its `Row`'s `is`. An order's own state is still a field of the
   game's `Mods` (`g.m.squad40`).
 - No-change proofs are native now (`rust/game_start`, `hold keep` / `hold check`: 24 levels by three scripted
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
@@ -609,7 +609,7 @@ over 3,006 ticks with 9 men; compound-four 1.22 ms over 7,576 ticks with 15 men)
 animation and light. So nothing in this design is bought with speed, and the design may spend freely on
 clarity: asking every rule every tick, granting by channel, writing the record. Speed is the bodies' matter
 (pose only men a camera can see; a cheaper light meter) and the page's (the hand-over to the picture costs more
-than the tick: `tools/blitz/PAGE.md`).
+than the tick).
 
 ## 11. Special cases today, and the general rule that replaces each
 
@@ -760,8 +760,7 @@ and hands it back (game.ts `fogLift`, `fogBack`). The Rust translation of that p
 deleted, with the five fields only it used. One fault found and NOT mended, for whoever owns what the page
 shows: the page never raises `viewer` on the Rust game, so the Rust tick keeps no list of the frame as it stood
 before the fog cut it, and a replay watched with the fog off cannot be showing what the fog cut. The cure is one
-write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`,
-`host/kitView.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
+write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
 
 **How it was done.** Three commits. The code cut with every field in place: `hold check`, 120 of 120 runs the
 same in every part. The Rust lift deleted, and then the ten fields moved by a program

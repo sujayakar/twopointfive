@@ -4,7 +4,7 @@
 import { LAYOUT, Section } from './sections';
 
 /** the module's calls this needs */
-export interface DrawFace { face_draw(h: number, want: number): number; face_frame(h: number, a: number, x: number, y: number, z: number): number; face_draw_layout(): number }
+export interface DrawFace { face_draw(h: number, want: number): number; face_draw_over(h: number, want: number): number; face_frame(h: number, a: number, x: number, y: number, z: number): number; face_draw_layout(): number }
 
 /** why this module's sections are not the ones this page's offsets were made from, or '' */
 export function drawRefused(X: DrawFace): string {
@@ -26,6 +26,8 @@ export class Drawn {
 
   /** A TICK HAS RUN: its sections are made, and lie here until the next */
   take(h: number): void { this.lay(this.X.face_draw(h, this.want) >>> 0); }
+  /** …one after the first of several a host steps before it draws a frame: what moves is blended over them all */
+  takeOver(h: number): void { this.lay(this.X.face_draw_over(h, this.want) >>> 0); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last, looking at `focus`: the rows that move stand there until the next call */
   frame(h: number, a: number, focus: ArrayLike<number>): void { this.lay(this.X.face_frame(h, a, focus[0], focus[1], focus[2]) >>> 0); }
   private lay(table: number): void {

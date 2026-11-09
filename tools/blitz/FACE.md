@@ -16,43 +16,7 @@ cargo build --target wasm32-unknown-unknown --profile small    # the same at opt
 ```
 
 The compiler and the target are `rust/rust-toolchain.toml`'s. On two cores: dev about 3 minutes from nothing, release 6, small 3.5. The module imports
-nothing (wasm-run.ts stops on one that does). The face crate links `std` (the panic hook, the allocator); `rust/game` and `rust/sim` stay `no_std`.
-
-## The mission loop through wasm
-
-```sh
-tools/blitz/wasm-run.sh room-clear-four:1                 # the TypeScript side once (mission.ts), the dev build, then every tick through wasm
-tools/blitz/wasm-run.sh <DIR> --release -- --two          # a folder run.sh already filled (--out): the mission is not played twice
-bun run tools/blitz/wasm-run.ts <DIR> [ticks] [--wasm FILE] [--two] [--one-call] [--reserve MB] [--max-mb N] [--quiet]
-bun run tools/blitz/wasm-run.ts --exports                 # the export list beside the shipped simulation's
-bun run tools/blitz/wasm-run.ts --ts-time <mission>:<seed>   # the TypeScript tick's own time for the same play
-```
-
-`wasm-run.ts` reads what `mission.ts` wrote (the start `c1.bin` + `s0.bin`, the host's half `h<k>.bin`, `host.txt`, `gives.txt`, `hostwrites.txt`, a
-tutorial's `lesson.json` and `meter.txt`), makes a game in the module, and for every tick hands over the host's half, steps, and holds the die's count and
-the hash of each of the block's 13 parts to `post.txt`'s line. It stops at the first tick a part other than `poses` parts and names the part (`poses` parts
-by design from the first death: README.md). The lines round a step are the native runner's own: both call `rust/game_run/src/lib.rs`.
-
-Exit: 0 in step · 1 the block or the die parted · 2 the Rust tick panicked (the panic's words and place are printed) · 3 a file is missing.
-
-What was run, with frame boxes on (the release build; every tick, the die's count and 12 parts by the module's hashes, every 100th tick also hashed in
-the host over the module's memory in place):
-
-| mission | ticks | through wasm | `poses` first parts | the native runner on the same folder |
-|---|---|---|---|---|
-| room-clear-four:1 | 3,006 | in step (dev, release, small) | tick 1794 | `run.sh --every 500` exit 0, tick 1794, 0 paths not known |
-| tut-solo:1 (a tutorial, its level script) | 8,052 | in step (dev, release) | tick 404 | `run.sh` exit 0, tick 404, 12 beats |
-| mousehole-four:1 | 7,087 | in step | tick 1764 | in step, tick 1764 |
-
-Before frame boxes, on the dev build: hostage-rescue:1 (3,119 ticks, `poses` at 740) and glasshouse-four:1 (4,276, at 690) in step through wasm and
-natively; not run again since.
-
-Also run on room-clear-four:1: `--two` (two games from the one start in slots 0 and 1, stepped one after the other every tick: both in step for 3,006
-ticks); `--one-call` (the lights' update and the host's view inside `face_step`: in step, and the `lights` part does not differ, the update
-writes none of the block). Before frame boxes, the red paths (the driver's orders left out: parts at tick 628 in `props`; one hash of `post.txt` altered:
-parts at that tick; exit 1 both).
-
-Not checked: the game's own state by path (`diff.ts` over `face_export`), a second seat, a start taken anywhere but a mission's first tick, any browser.
+nothing. The face crate links `std` (the panic hook, the allocator); `rust/game` and `rust/sim` stay `no_std`.
 
 ## The exports
 
@@ -64,7 +28,7 @@ All C ABI; a pointer and a length are `usize`, a handle a `u32`. The head of `ru
 | a panic | `face_panic_ptr()` `face_panic_len()` `face_panic_clear()`: the last panic's words with file and line. The module aborts on a panic, so the host catches a trap and reads the words; the game of that call is gone, the others stand |
 | a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_blank() -> h` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
 | the host's half | `face_host(h, p, n, first)` (one `h<k>.bin`) · `face_give(h, k, line)` · `face_hostwrite(h, k, line)` · `face_meter(h, v)` |
-| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 2 the lights' update, flag 4 the host's view of a level on rails. One call a tick for a host that plays · by name: `face_lights(h, dt)` `face_view(h)` `face_checkpoint(h, label, n)` |
+| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 4 the host's view of a level on rails (a flash's envelope is the tick's own last line). One call a tick for a host that plays · by name: `face_view(h)` `face_checkpoint(h, label, n)` |
 | reading back | `face_export(h)` (`io::export` at `face_out`) · `face_die_n(h)` · `face_time(h)` · `face_rows(h)` · `face_parts()` `face_part_name(i)` `face_part(name, n) -> i` `face_part_addr(slot, i)` `face_part_len(i)` `face_part_hashes(slot) -> p` |
 | `rust/sim`'s own | all 272 of the shipped module's exports, same names, kinds and parameter counts (`sim_abi` 34, `state_layout`, `state_len` 3,248,912, 4 slots, 13 parts all equal) |
 
@@ -90,7 +54,7 @@ round the call, two runs each (they agree to the second digit).
 
 | the tick, ms | mean | worst | how |
 |---|---|---|---|
-| wasm dev | 1.37 | 23 (tick 1) | `face_step` alone (the tick; the lights' update and the host's view are called by name outside the clock, as the native runner does) |
+| wasm dev | 1.37 | 23 (tick 1) | `face_step` alone (the tick; as measured then, the lights' update and the host's view were called by name outside the clock, as the native runner does) |
 | wasm release | 1.23 | 31 to 34 (tick 1) | the same |
 | wasm small | 1.25 | 21 to 22 (tick 1) | the same |
 | wasm release, one call a tick | 1.21 | 31 (tick 1) | `face_step` with the lights and the view inside |

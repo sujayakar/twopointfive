@@ -18,8 +18,6 @@ export function rollOn(this: Die): number { return roll(this); }
 export function hashStr(s: string): number { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
 /** a die standing in for Math.random on the simulation's behalf, remembering the one it displaced */
 export type SimDie = (() => number) & { sys?: () => number };
-/** the seeded simulation die for `seed`, to be assigned to Math.random; `displaced` (the Math.random of the moment) rides on .sys for sysRandom() and for putting back */
-export function simDie(seed: number, displaced: () => number): SimDie { const d = mulberry32(seed) as SimDie; d.sys = displaced; return d; }
 /** a draw for something that is not the simulation: the displaced system die under a recording, plain Math.random otherwise */
 export function sysRandom(): number { const r = Math.random as SimDie; return (r.sys ?? r)(); }
 

@@ -25,15 +25,15 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   GameAudioLikeRain: (g, e) => { g.audio?.rain?.(e.level); },
   HostApiRestartPicture: (g, e) => { g.engine?.restartPicture?.(e.why); },
   MothsClear: (g, e) => { g.moths?.clear?.(); },
-  ParticlesEmit: (g, e) => { const P = g.engine.particles; if (!P) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } },
+  ParticlesEmit: (g, e) => { const P = g.engine.particles; if (!P || (e.o.ember !== undefined && g.farForAFire(e.pos))) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } },
   ParticlesImpulse: (g, e) => { g.engine.particles?.impulse?.(e.pos, e.radius, e.strength, e.o); },
-  ParticlesSetHeat: (g, e) => { g.engine.particles?.setHeat?.(e.srcs); },
+  ParticlesSetHeat: (g, e) => { g.engine.particles?.setHeat?.(e.srcs.filter((s: any) => !g.farForAFire(s.pos))); },
   ReachKeepChanged: (g, e) => { g.engine.reach?.changed?.(e.rect ?? null, e.hold); },
   SmokeSystemLikeClearAll: (g, e) => { g.smoke?.clearAll?.(); },
   SmokeSystemLikeEmit: (g, e) => { if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); },
-  SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },
   SmokeSystemLikeObstaclesChanged: (g, e) => { g.smoke?.obstaclesChanged?.(e.c2, e.r); },
   SmokeSystemLikePush: (g, e) => { g.smoke?.push?.(e.p); },
+  SmokeSystemLikeRound: (g, e) => { g.smoke?.round?.(e.from, e.dir, e.len); },
   WallWearReset: (g, e) => { g.destr.walls.wear?.reset?.(); },
   WallWearRound: (g, e) => { g.destr.walls.wear?.round?.(g, e.box_, e.surf, e.key, e.counted, e.frac, e.hitP, e.dir); },
   MessBurst: (g, e) => { messBurst(g, e.at, e.size); },
@@ -51,6 +51,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   MessEvicted: (g, e) => { messEvicted(g, e.c, e.h, e.yaw, e.rot, e.mat, e.kind); },
   EndCard: (g, e) => { OUT_HOST.endCard?.(g); },
   SnowBlast: (g, e) => { snowBlastAt(g, e.at, e.radius); },
+  SmokeCansShut: (g, e) => { g.smoke?.shutCans?.(); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }

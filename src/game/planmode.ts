@@ -2,13 +2,15 @@
 // This file was plan mode's (the maintainer, 10-26: "let's remove plan mode"): the mode, its chains, its picks, its view and its picture are gone, and
 // what is left is the rule for who takes a goal and the key that asks for one. The file keeps its name for the modules that import it.
 //
-//   · A TAP of Shift + the key on a thing: `planGoal` — the men `goalMen` names take the key's own order there (a bare spot: they cover it).
-//   · KEPT DOWN, it is the order ring for those men alone (orders.ts ringUp / goalPart, `Menu.part`).
-//   · Every order is given through the order book (`quickFor`, `coverFor`): a refusal and its reason are a man's own. Nothing here moves a man.
+//   · A TAP of Shift + the key on a thing: `planGoal` — the men `goalMen` names take what the key alone gives there (autopilot `quick`: on a bare spot they
+//     move there). The maintainer, 11-08: "i think shift Q on a point should just move the squad there, should match what regular Q does. you should need
+//     to open the radial menu to get covering a point".
+//   · KEPT DOWN, it is the order ring for those men alone (orders.ts ringUp / goalPart, `Menu.part`): its first wedge is the tap's order, and covering a spot is a wedge.
+//   · Every order is given through the order book: a refusal and its reason are a man's own. Nothing here moves a man.
 //
 // STATE: none. PLAN_STATS is a tally for the checks.
 import type { Guard } from './game';
-import type { Input } from './input';
+import type { Input } from '../host/input';
 import type { OrderTarget, SquadOrders } from './orders';
 import { CMDRING } from './cmdring';
 import { crossToRust } from './crossing';

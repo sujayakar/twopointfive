@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1076505744;
+export const LAYOUT = 2503851926;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -113,34 +113,40 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
+  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
-  saves = 38,
+  saves = 39,
   /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
-  god = 39,
+  god = 40,
   /** u32 */
-  thinks = 40,
+  thinks = 41,
   /** u32 */
-  ammo = 41,
+  ammo = 42,
   /** u32 */
-  autosave = 42,
+  autosave = 43,
   /** u32 */
-  wallFeel = 43,
+  wallFeel = 44,
   /** u32 */
-  wallPress = 44,
+  wallPress = 45,
   /** u32 */
-  fallIn = 45,
+  fallIn = 46,
+  /** u32: what each man is thinking is said over him */
+  labels = 47,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 46,
+  ended = 48,
   /** u32: this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view) */
-  run = 47,
+  run = 49,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 48,
+  night = 50,
   /** f32 */
-  hit = 49,
+  hit = 51,
   /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
-  kit = 50,
+  kit = 52,
+  /** u32: the Team & kit picture asks for a copy of the last picture over what it is about to stage again: moves each time; answered by a command */
+  veil = 53,
   /** words a row */
-  row = 51,
+  row = 54,
 }
 
 /** the sky: one row */
@@ -159,46 +165,58 @@ export const enum Sky {
   hour = 9,
   /** f32 */
   hourSun = 10,
+  /** f32: the cover of the weather that is picked (under 0: none is), and the share of the hour's own sun that comes through */
+  cover = 11,
+  /** f32 */
+  sunShare = 12,
+  /** u32: the level's moon: 0 it has none, 1 it has, 2 it is up; its strength, its height and bearing in degrees */
+  moon = 13,
+  /** f32 */
+  moonK = 14,
+  /** f32 */
+  moonElev = 15,
+  /** f32 */
+  moonBearing = 16,
   /** u32: snow lies on this level */
-  snowLevel = 11,
+  snowLevel = 17,
   /** f32 × 3: the level's own sky, how kept the place is (under 0: it does not say) and its marks' texel (0: the usual) */
-  ownZenith = 12,
+  ownZenith = 18,
   /** f32 × 3 */
-  ownHorizon = 15,
+  ownHorizon = 21,
   /** f32 */
-  kept = 18,
+  kept = 24,
   /** f32 */
-  markTexel = 19,
+  markTexel = 25,
   /** u32: the weather in the open air (render/frame.ts WeatherFrame, in its order) */
-  weather = 20,
+  weather = 26,
   /** f32 */
-  rain = 21,
+  rain = 27,
   /** f32 */
-  snow = 22,
+  snow = 28,
   /** f32 × 2 */
-  shear = 23,
+  shear = 29,
   /** f32 */
-  wet = 25,
+  wet = 31,
   /** f32 × 3 */
-  flash = 26,
+  flash = 32,
   /** f32 */
-  rainTop = 29,
+  rainTop = 35,
   /** f32 × 4 */
-  interior = 30,
+  interior = 36,
   /** f32 × 4 */
-  annex = 34,
+  annex = 40,
   /** u32 */
-  roofC = 38,
+  roofC = 44,
   /** u32 */
-  roofD = 39,
+  roofD = 45,
   /** u32 */
-  fog = 40,
+  fog = 46,
   /** f32 × 4 */
-  nearFade = 41,
+  nearFade = 47,
   /** f32 × 4: the streaks' phase function; its last number 0 = none said */
-  phase = 45,
+  phase = 51,
   /** words a row */
-  row = 49,
+  row = 55,
 }
 
 /** what the page is told of the boxes' tables this frame: one row */
@@ -535,7 +553,7 @@ export const enum SmokeSource {
   push = 3,
   /** u32: what it rides, if anything (`anchors`; 0: it stays) */
   anchor = 4,
-  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity */
+  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those */
   says = 5,
   /** u32 */
   lattice = 6,
@@ -727,14 +745,12 @@ export const enum FireTable {
   lean = 20,
   /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
   smoke = 21,
-  /** f32 × 13: the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease */
-  gas = 33,
   /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
-  column = 46,
+  column = 33,
   /** f32 × 3 */
-  soot = 60,
+  soot = 47,
   /** words a row */
-  row = 63,
+  row = 50,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
@@ -841,7 +857,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints */
+  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints · 32 the cans venting stop, what they let out left in the air */
   what = 2,
   /** words a row */
   row = 3,

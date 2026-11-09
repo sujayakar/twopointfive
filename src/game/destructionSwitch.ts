@@ -2,7 +2,7 @@
 // OFF in this module, so everything headless (every older probe, frozen digest and level load) stands as it was; the PAGE turns it on at boot before the level loads
 // (src/main.ts: on unless the URL carries ?nodestruction), tools/qa/playthrough.ts turns it on under PT_DESTR=1 (off otherwise, so every tally and frozen digest made before the goal still measures what it measured), and the destruction probes raise it themselves.
 // No game import here: src/game is one import cycle.
-export const DESTRUCTION = { on: false };
+export { DESTRUCTION, DRESS_GROUP } from '../scene/dressing';
 /** FURNITURE UNDER A BLAST (game/furnblast.ts): its own knob for the A/B — charges throw and break the furniture round them. Inert while the switch above is off;
  *  the page drops it with ?nofurnblast, tools/qa/playthrough.ts with PT_FURN=0. */
 export const FURNBLAST = { on: true };
@@ -27,9 +27,6 @@ export const RUBBLE = { on: false, radius: 0.3, reach: 0.12, lead: 0.12, inside:
  *  ?debrisfall=0 (host/profile.ts pageSwitches), a headless run with TPS_DEBRISFALL=1. `minSpeed`: a piece that would meet the floor slower (m/s) makes no
  *  landing, as a chunk's own touch under it made no knock. */
 export const DEBRIS = { dress: false, minSpeed: 1.0 };
-/** the editor group of the boxes a level file carries only as things to wreck (tools/levels/dress.ts appends them LAST; scene/levelLoad.ts leaves them out with the switch off,
- *  so every other box keeps its index and the level is the one build's) */
-export const DRESS_GROUP = 'dressing';
 
 /** THE EVICTION POP'S FIX (game/breakTable.ts pick + dissolve; only under the cut pieces switch, scene/cut.ts): a spawn over the pool's cap takes the SMALLEST
  *  resting piece's slot, not the oldest, and that piece goes as chips by its size born along its own shape, with its row's dust once — not a fixed ball of chips at

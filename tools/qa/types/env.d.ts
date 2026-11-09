@@ -131,9 +131,10 @@ interface BunFile { text(): Promise<string>; json(): Promise<any>; arrayBuffer()
 interface BunSubprocess { resourceUsage(): { cpuTime: { user: bigint; system: bigint; total: bigint } } | undefined; pid: number; stdin: any; stdout: any; stderr: any; exited: Promise<number>; exitCode: number | null; signalCode: string | null; killed: boolean; kill(signal?: number | string): void; unref(): void }
 interface BunSyncSubprocess { exitCode: number; success: boolean; signalCode?: string; stdout: Buffer; stderr: Buffer; pid: number }
 declare const Bun: {
-  version: string; revision: string; main: string; argv: string[]; env: Record<string, string | undefined>;
+  version: string; revision: string; which(name: string): string | null; main: string; argv: string[]; env: Record<string, string | undefined>;
   write(dest: string | URL | BunFile | number, data: string | ArrayBufferView | ArrayBufferLike | Blob | Response | BunFile): Promise<number>;
   file(path: string | URL | number, opts?: { type?: string }): BunFile;
+  which(cmd: string): string | null;
   serve(opts: Record<string, any>): { port: number; hostname: string; url: URL; stop(force?: boolean): void };
   spawn(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSubprocess;
   spawnSync(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSyncSubprocess;

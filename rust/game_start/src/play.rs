@@ -66,6 +66,8 @@ pub struct Play {
     pub sounds: Vec<Sound>,
     /// when the game told its host to open the end card, on the game's clock
     pub end_cards: Vec<f64>,
+    /// every smoke event the game told its host of, in order: what it wants of the host's solver
+    pub smoke: Vec<game::out_events::OutEvent>,
     /// each man's last bubble heard: when it was said, and its words
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it)
@@ -84,7 +86,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), smoke: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -124,6 +126,7 @@ impl Play {
             match e {
                 E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
                 E::EndCard => self.end_cards.push(t),
+                E::SmokeSystemLikeEmit(_) | E::SmokeSystemLikePush(_) | E::SmokeSystemLikeRound(_) => self.smoke.push(e),
                 _ => {}
             }
         }
@@ -152,8 +155,6 @@ impl Play {
         }).collect();
         game::seats::show_seat(&mut self.g, seats[shown]);
         game::game::game_step_seats(&mut self.g, DT, &cmds);
-        let now = self.g.time;
-        game::render_lights::light_set_update(&mut self.g, DT, now);
         game::seats::show_seat(&mut self.g, seats[0]);
         self.g.out.clear();
         self.frames += 1;
@@ -225,6 +226,12 @@ impl Play {
     pub fn order(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None) { panic!("the order '{}' at ({}, {}) was refused: {}", id, at[0], at[1], why); }
+    }
+
+    /// the same, where the place may be one the order is not for (a man stood in a doorway): the game's reason if it refused
+    pub fn tries_order(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) -> Option<String> {
+        let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
+        game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None)
     }
 
     /// THE SAME ORDER FROM ANOTHER SEAT (0 = the first player): given as that player gives it, on his own menu and to his own men.
@@ -432,6 +439,35 @@ impl Play {
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
     /// Can he not see: a flash or a blast has his eyes for now.
     pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
+
+    /// are his hands changing magazine, and how much of it is left, in seconds
+    pub fn reloading(&self, gd: GuardId) -> Option<f64> { if game::control::man::changing_magazine(&self.g, gd) { Some(self.g.gd[gd].reload_t) } else { None } }
+    /// how many rounds have left the gun in his hands since it was made
+    pub fn rounds_fired(&self, gd: GuardId) -> f64 { self.g.fa[self.g.gd[gd].weapon].shots_fired }
+    /// Staging: his gun has this many rounds in it and no more, one of them in the chamber.
+    pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; self.g.fa[w].chamber = 1.0; self.g.fa[w].mag = Some(rounds - 1.0); }
+
+    /// Staging: he cannot see for that many seconds.
+    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    /// Staging: the gun in his hands is the only one he has.
+    pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
+    /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
+    pub fn no_hand_for_it(&self, gd: GuardId) -> bool { use game::control::man::*; staggered(&self.g, gd) || held(&self.g, gd) || in_a_standoff(&self.g, gd) || game::gunslots::side_locked(&self.g, gd) }
+
+    /// how many rounds he has heard fired, of those that mean anything to him
+    pub fn shots_heard(&self, gd: GuardId) -> f64 { self.g.gd[gd].witness.heard.shots }
+    /// has he had his man in his eyes within the last `secs` seconds
+    pub fn saw_within(&self, gd: GuardId, secs: f64) -> bool { game::control::man::saw_his_man_within(&self.g, gd, secs) }
+
+    /// where the open ways are, within `reach` of a man of the squad, onto floor nobody of it has been on, and whether a gun of it is on each
+    pub fn watched(&mut self, reach: f64) -> Vec<([f64; 2], bool)> { game::cover::cover_watched(&mut self.g, reach).into_iter().map(|(o, on)| { let a = self.g.tab.cover_opening[o].at; ([a[0], a[2]], on) }).collect() }
+
+    /// how far a man's gun is off a place, in degrees
+    pub fn gun_off(&self, gd: GuardId, at: [f64; 2]) -> f64 {
+        let (q, yaw) = (self.at(gd), self.g.ch[self.g.gd[gd].ch].aim_yaw);
+        let turn = yaw - (at[0] - q[0]).atan2(at[1] - q[1]);
+        ((turn + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI).abs().to_degrees()
+    }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
