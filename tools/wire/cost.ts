@@ -1,4 +1,4 @@
-// WHAT A TICK OF THE WIRE COSTS NOW: the page's list, on one mission, measured on the module that is built.   TPS_GAME_LIST=page tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address word] [ticks]
+// WHAT A TICK OF THE WIRE COSTS NOW: the page's list, on one mission, measured on the module that is built.   TPS_GAME_LIST=page TPS_GAME=rust bun run tools/wire/cost.ts [address word] [ticks]
 process.env.TPS_GAME_LIST ??= 'page';
 const { standUp } = await import('../qa/headless.ts');
 const q = process.argv[2], N = +(process.argv[3] ?? 600), W: any = await standUp(q ? { search: `?${q}` } as any : {}), H: any = W.game.rustHost;
