@@ -1,7 +1,7 @@
 //! THE RECORDS OF A LEVEL FILE THAT THE GAME KEEPS AS ITS OWN TYPES, each type with the member of the file each of its fields is (`read.rs` reads them). A type that gains a field does not compile
 //! until its line here names the member, and a member of the file no line names is found by the file's own tree (`json.rs unread`).
 #![allow(clippy::all)]
-use crate::read::{field, record, At, FromJson};
+use crate::read::{blank, field, At, FromJson};
 use crate::json::Json;
 use alloc::{format, string::String};
 use crate::{json_struct, json_words};
@@ -71,51 +71,51 @@ json_struct!(game::scene_level_data::SurfacesDataZonesItem { mat: "mat", x0: "x0
 json_struct!(game::scene_level_data::SurfacesData { building: "building", grass_edge: "grassEdge", inside: "inside", outside: "outside", verge: "verge", zones: "zones" });
 
 /// what a test says that is true or left out
-fn said(j: &Json, key: &str, at: &At) -> Option<bool> { field::<Option<bool>>(j, key, at).map(|b| b.unwrap_or(false)) }
+fn said(j: &Json, key: &str, at: &At) -> bool { field::<Option<bool>>(j, key, at).unwrap_or(false) }
 
 /// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is.
 impl FromJson for game::scene_scenarios::LessonTestKind {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
+    fn from_json(j: &Json, at: &At) -> Self {
         use game::scene_scenarios::LessonTestKind as K;
-        record(j, at)?;
-        let Some(is) = field::<String>(j, "is", at) else { j.skip_all(); return None };
-        Some(match is.as_str() {
-            "in" => K::In { area: field(j, "area", at)? },
-            "near" => { let (at_, r) = (field(j, "at", at), field(j, "r", at)); K::Near { at: at_?, r: r? } }
-            "flag" => { let (flag, value) = (field(j, "flag", at), field(j, "value", at)); K::Flag { flag: flag?, value: value? } }
-            "slot" => { let (slot, drawn) = (field(j, "slot", at), field(j, "drawn", at)); K::Slot { slot: slot?, drawn: drawn? } }
-            "pace" => { let (below, above) = (field(j, "below", at), field(j, "above", at)); K::Pace { below: below?, above: above? } }
-            "meter" => { let (which, below, above) = (field(j, "which", at), field(j, "below", at), field(j, "above", at)); K::Meter { which: which?, below: below?, above: above? } }
-            "stage" => K::Stage { stage: field(j, "stage", at)? },
-            "door" => { let (door, state) = (field(j, "door", at), field(j, "state", at)); K::Door { door: door?, state: state? } }
-            "target" => { let (name, on) = (field(j, "name", at), field(j, "on", at)); K::Target { name: name?, on: on? } }
-            "men" => K::Men { down: field(j, "down", at)? },
-            "did" => { let (what, on, n) = (field(j, "what", at), field(j, "on", at), field(j, "n", at)); K::Did { what: what?, on: on?, n: n? } }
-            "downed" => { let (how, n) = (field(j, "how", at), field(j, "n", at)); K::Downed { how: how?, n: n? } }
-            "body" => K::Body { area: field(j, "area", at)? },
-            "calm" => K::Calm { route: field(j, "route", at)? },
+        let at = &at.of_record(j);
+        let is: String = field(j, "is", at);
+        match is.as_str() {
+            "in" => K::In { area: field(j, "area", at) },
+            "near" => K::Near { at: field(j, "at", at), r: field(j, "r", at) },
+            "flag" => K::Flag { flag: field(j, "flag", at), value: field(j, "value", at) },
+            "slot" => K::Slot { slot: field(j, "slot", at), drawn: field(j, "drawn", at) },
+            "pace" => K::Pace { below: field(j, "below", at), above: field(j, "above", at) },
+            "meter" => K::Meter { which: field(j, "which", at), below: field(j, "below", at), above: field(j, "above", at) },
+            "stage" => K::Stage { stage: field(j, "stage", at) },
+            "door" => K::Door { door: field(j, "door", at), state: field(j, "state", at) },
+            "target" => K::Target { name: field(j, "name", at), on: field(j, "on", at) },
+            "men" => K::Men { down: field(j, "down", at) },
+            "did" => K::Did { what: field(j, "what", at), on: field(j, "on", at), n: field(j, "n", at) },
+            "downed" => K::Downed { how: field(j, "how", at), n: field(j, "n", at) },
+            "body" => K::Body { area: field(j, "area", at) },
+            "calm" => K::Calm { route: field(j, "route", at) },
             "loaded" => K::Loaded,
             "reload" => K::Reload,
-            "launcher" => { let (on, fired) = (field(j, "on", at), said(j, "fired", at)); K::Launcher { on: on?, fired: fired? } }
-            "burst" => K::Burst { n: field(j, "n", at)? },
-            "threw" => { let (kind, quick, area) = (field(j, "kind", at), said(j, "quick", at), field(j, "area", at)); K::Threw { kind: kind?, quick: quick?, area: area? } }
-            "orderTo" => K::OrderTo { who: field(j, "who", at)? },
-            "stackOn" => { let (door, who, set) = (field(j, "door", at), field(j, "who", at), said(j, "set", at)); K::StackOn { door: door?, who: who?, set: set? } }
-            "pairsOn" => K::PairsOn { doors: field(j, "doors", at)? },
-            "word" => K::Word { doors: field(j, "doors", at)? },
-            "taken" => K::Taken { room: field(j, "room", at)? },
+            "launcher" => K::Launcher { on: field(j, "on", at), fired: said(j, "fired", at) },
+            "burst" => K::Burst { n: field(j, "n", at) },
+            "threw" => K::Threw { kind: field(j, "kind", at), quick: said(j, "quick", at), area: field(j, "area", at) },
+            "orderTo" => K::OrderTo { who: field(j, "who", at) },
+            "stackOn" => K::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: said(j, "set", at) },
+            "pairsOn" => K::PairsOn { doors: field(j, "doors", at) },
+            "word" => K::Word { doors: field(j, "doors", at) },
+            "taken" => K::Taken { room: field(j, "room", at) },
             "following" => K::Following,
-            "mate" => { let (area, at_, r, by, away) = (field(j, "area", at), field(j, "at", at), field(j, "r", at), field(j, "by", at), field(j, "away", at)); K::Mate { area: area?, at: at_?, r: r?, by: by?, away: away? } }
-            "pair" => { let (what, n) = (field(j, "what", at), field(j, "n", at)); K::Pair { what: what?, n: n? } }
-            "cue" => K::Cue { name: field(j, "name", at)? },
-            "view" => { let (turned, zoomed) = (field(j, "turned", at), field(j, "zoomed", at)); K::View { turned: turned?, zoomed: zoomed? } }
-            "squad" => { let (area, n) = (field(j, "area", at), field(j, "n", at)); K::Squad { area: area?, n: n? } }
-            "stacks" => { let (doors, n, set) = (field(j, "doors", at), field(j, "n", at), said(j, "set", at)); K::Stacks { doors: doors?, n: n?, set: set? } }
-            "watching" => { let (at_, r, n) = (field(j, "at", at), field(j, "r", at), field(j, "n", at)); K::Watching { at: at_?, r: r?, n: n? } }
-            "all" => K::All { of: field(j, "of", at)? },
-            "any" => K::Any { of: field(j, "of", at)? },
-            w => { j.skip_all(); at.fault(format!("no lesson's test is called '{w}'")); return None; }
-        })
+            "mate" => K::Mate { area: field(j, "area", at), at: field(j, "at", at), r: field(j, "r", at), by: field(j, "by", at), away: field(j, "away", at) },
+            "pair" => K::Pair { what: field(j, "what", at), n: field(j, "n", at) },
+            "cue" => K::Cue { name: field(j, "name", at) },
+            "view" => K::View { turned: field(j, "turned", at), zoomed: field(j, "zoomed", at) },
+            "squad" => K::Squad { area: field(j, "area", at), n: field(j, "n", at) },
+            "stacks" => K::Stacks { doors: field(j, "doors", at), n: field(j, "n", at), set: said(j, "set", at) },
+            "watching" => K::Watching { at: field(j, "at", at), r: field(j, "r", at), n: field(j, "n", at) },
+            "all" => K::All { of: field(j, "of", at) },
+            "any" => K::Any { of: field(j, "of", at) },
+            w => { j.skip_all(); if j.get("is").str().is_some() { at.fault(&format!("no lesson's test is called '{w}'")); } K::Loaded }
+        }
     }
 }
 
@@ -145,26 +145,26 @@ json_words!(game::devices::LaserDef2Alarm { Alarm: "alarm", Suspicion: "suspicio
 json_struct!(game::devices::LaserDef2 { name: "id", from: "from", to: "to", group: "group", mains: "mains", alarm: "alarm" } drops { "floor": Option<String>, "notes": Option<String> });
 /// a civilian: named by its `name`, else its id
 impl FromJson for game::scene_level::CivilianDef {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
-        record(j, at)?;
-        let (floor, notes): (Option<Option<String>>, Option<Option<String>>) = (field(j, "floor", at), field(j, "notes", at));   // (left behind)
-        let (id, name): (Option<String>, Option<Option<String>>) = (field(j, "id", at), field(j, "name", at));
-        let (kind, tint, tint2, points) = (field(j, "kind", at), field(j, "tint", at), field(j, "tint2", at), field(j, "points", at));
-        let (wait, tasks, face) = (field(j, "wait", at), field(j, "tasks", at), field(j, "face", at));
-        (floor?, notes?);
-        Some(game::scene_level::CivilianDef { name: name?.unwrap_or(id?), kind: kind?, tint: tint?, tint2: tint2?, points: points?, wait: wait?, tasks: tasks?, face: face? })
+    fn from_json(j: &Json, at: &At) -> Self {
+        let at = &at.of_record(j);
+        let (id, name): (String, Option<String>) = (field(j, "id", at), field(j, "name", at));
+        for left in ["floor", "notes"] { field::<Option<String>>(j, left, at); }
+        game::scene_level::CivilianDef {
+            name: name.unwrap_or(id), kind: field(j, "kind", at), tint: field(j, "tint", at), tint2: field(j, "tint2", at), points: field(j, "points", at),
+            wait: field(j, "wait", at), tasks: field(j, "tasks", at), face: field(j, "face", at),
+        }
     }
 }
 /// a device is one of three records, by its `kind`
 impl FromJson for game::scene_level::DeviceDef {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
+    fn from_json(j: &Json, at: &At) -> Self {
         use game::scene_level::DeviceDef as D;
-        record(j, at)?;
+        let at = &at.of_record(j);
         match j.get("kind").str() {
-            Some("camera") => FromJson::from_json(j, at).map(D::Camera),
-            Some("keypad") => FromJson::from_json(j, at).map(D::Keypad),
-            Some("laser") => FromJson::from_json(j, at).map(D::Laser),
-            _ => { j.skip_all(); at.key("kind").wants("one of camera, keypad, laser", j.get("kind")) }
+            Some("camera") => D::Camera(FromJson::from_json(j, at)),
+            Some("keypad") => D::Keypad(FromJson::from_json(j, at)),
+            Some("laser") => D::Laser(FromJson::from_json(j, at)),
+            _ => { j.skip_all(); at.key("kind").wants_word(&["camera", "keypad", "laser"], j.get("kind")); D::Keypad(blank()) }
         }
     }
 }

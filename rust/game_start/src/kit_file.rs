@@ -39,7 +39,7 @@ json_struct!(KitViewWayWall { face: "face", thickness: "thickness", top: "top" }
 /// a pane a way looks through: its own record, or false
 pub enum KitViewWayPane { Bool(bool), Of(KitViewWayPaneOf) }
 impl FromJson for KitViewWayPane {
-    fn from_json(j: &Json, at: &At) -> Option<Self> { match j { Json::Bool(b) => Some(KitViewWayPane::Bool(*b)), _ => FromJson::from_json(j, at).map(KitViewWayPane::Of) } }
+    fn from_json(j: &Json, at: &At) -> Self { match j { Json::Bool(b) => KitViewWayPane::Bool(*b), _ => KitViewWayPane::Of(FromJson::from_json(j, at)) } }
 }
 pub struct KitViewWayPaneOf { pub box_: String, pub stand: Option<[f64; 3]> }
 json_struct!(KitViewWayPaneOf { box_: "box", stand: "stand" });

@@ -64,7 +64,7 @@ pub fn civilians_shown(g: &crate::game::Game) -> Vec<GuardId> {
 }
 
 /// The living ones a round can find and Sam cannot walk through.   (civilians.ts civilianBodies)
-pub fn civilian_bodies(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn civilian_bodies(g: &crate::game::Game) -> Vec<GuardId> {
     let men = crate::seats::men(g);
     let shown = civilians_shown(g);
     let mut out = Vec::new();

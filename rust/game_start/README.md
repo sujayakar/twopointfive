@@ -167,10 +167,10 @@ another level.
   keeps as its own type is read by that type (`records.rs`), so a type that gains a field does not compile until its line names the member. A value that is
   not what its place wants is said by its place and the reading goes on (`read.rs`), so a file is told everything at once.
 - **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read, whatever
-  nobody asked for is named by its place (such as `doors[0].auto`). A member the game leaves behind by rule (a floor, an author's notes) is read by its type too and
-  let go (a record's `drops`).
+  nobody asked for is named by its place (such as `doors[0].auto`). A member the game lets go (a floor, an author's notes) is read by its type first
+  (a record's `drops`).
 - **The rules beside the reading are `faults.rs`**: ids of one thing each, names that point at something, numbers in their range, lists that go together.
-  `levels file` asks them of every file, and the level tools ask them through the module (the desk's `faults`). A start does not.
+  `gate` asks them of every file (`level file`), a tool of the file it made (`levels judge`), a start not, and no page carries them.
 
 Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
 
@@ -179,6 +179,7 @@ Every row of the mission list is stood, twice over, by the gate's `start` rows (
 ```
 cd rust/game_start
 cargo run --release --bin levels -- file [level …]         # its file has no fault
+cargo run --release --bin levels -- judge < FILE           # every fault of a file that is nowhere yet
 cargo run --release --bin levels -- second-way [level …]   # every room the defenders can shut has another way in
 cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
 cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
@@ -269,7 +270,7 @@ gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row
 gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
 gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
-gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level`)
+gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level …`)
 gate list            # the rows
 gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
@@ -316,8 +317,8 @@ The rows, each with what it holds and then its breaks:
 - **long: `lesson <id>`:** the six tutorials, by a man at the keys (`src/lessons/`). Every step goes by on its deed, the run ends, and it owes what a run
   owes. Not pinned: a change of play moves its seconds and not what it holds. `gate long` plays them again with him reading each line. Break: `third`
   nothing he does reaches the game from the third step on.
-- **long: `level <question>`:** each question of `levels`. What every level owes whoever plays it, asked of all of them: 43 s of one core. Break:
-  `spoiled` the question's own red path.
+- **long: `level <question>`:** each question of `levels`. What every level owes whoever plays it, asked of all of them: 43 s of one core. `level file`, a
+  second of it, is of the quick kind. Break: `spoiled` the question's own red path.
 
 The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under
 `doors`, `mousehole-four` under `kit`, `glasshouse-four` and `killhouse-four` and a rescue under `push`, a quiet night (`bazaar-quiet`) under `fires`, the
@@ -329,9 +330,8 @@ counts and seconds, every red test by name with its panic line, what is ignored 
 badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
 
 **What the runs played to their ends do not hold.** The hands-off player is one player on one seed, and Sam cannot go down: a run holds the floor, not
-whether the mission can be survived, and his teammates die more often than a good player's would. `owes` holds what the game may never do and counts what
-smells; its counts are pinned and not judged, so a count that goes up is a pin moved, which a commit says why of. It holds one seat, and nothing of Sam's
-speed. Neither player says a mission is any good to play.
+whether the mission can be survived. `owes` holds what the game may never do and counts what smells; its counts are pinned and not judged, so a count that
+goes up is a pin moved. It holds one seat, and nothing of Sam's speed.
 
 **What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at
 a pin passes: `start` a game at rest, `play` and `again` what the runs' hands reach, `save` the three seconds after each moment, `seats` a fight nobody

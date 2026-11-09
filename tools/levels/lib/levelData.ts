@@ -1,5 +1,5 @@
 // LevelData: the level as DATA — the shape every level file (levels/*.json) is written in, its canonical serializer and digest. What is wrong with a file is the game's own reader's to say
-// (rust/game_start file.rs, faults.rs): `levelFaults` asks it.
+// (rust/game_start file.rs, faults.rs): `levelFaults` (judge.ts) asks it.
 //
 // What lives here vs elsewhere:
 //   level.ts      the RUNTIME shape the game consumes (Level: Box[] with bit flags and array indices, LightDef[], PropDef[], plans…)
@@ -29,13 +29,12 @@ import type { LevelScenarios } from './scenarios';
 import { BoxFlag, type Box } from '../../../src/scene/boxes';
 import type { MarkingDef } from '../../../src/scene/markings';
 import { formOf } from '../../../src/scene/shapes';
-import { toolDesk } from '../../desk.ts';
 export type { MarkingDef } from '../../../src/scene/markings';
 
 export const LEVEL_DATA_VERSION = 2 as const;
 
 const FLAG_BITS: Record<FlagName, number> = { NoPrimary: BoxFlag.NoPrimary, NoShadow: BoxFlag.NoShadow, Cutaway: BoxFlag.Cutaway, Gloss: BoxFlag.Gloss, Glass: BoxFlag.Glass };
-/** flag names → the Box.flags bit word (unknown names throw: validate first) */
+/** flag names → the Box.flags bit word (unknown names throw) */
 export function flagsToBits(names: readonly string[] | undefined): number {
   let bits = 0; for (const n of names ?? []) { const b = FLAG_BITS[n as FlagName]; if (b === undefined) throw new Error(`unknown box flag '${n}'`); bits |= b; } return bits;
 }
@@ -124,9 +123,8 @@ export interface SkyData { zenith: Vec3; horizon: Vec3; }
 export interface DaylightData { sun: LightData; sky: SkyData; groupsOn: string[]; groupsOff: string[]; /** LightData.id list */ lightsOff: string[]; haze: number; exposure: number; }
 
 /** The drill plans are the RUNTIME structs verbatim (level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
- *  DoorData.id. Deliberately typed BY REFERENCE and handled generically below (canonical order = known keys first, anything else after, alphabetically;
- *  validation = the RoomClearPlan fields rust/game_rules/src/squad indexes blind + 'every leaf finite'), so a lane that re-choreographs the breach and grows BreachPlan
- *  changes level.ts + the generator and re-exports — nothing here drops, reorders unstably or rejects its new fields. */
+ *  DoorData.id. Typed BY REFERENCE and written generically below (canonical order = known keys first, anything else after, alphabetically): a plan that grows
+ *  grows in level.ts, the generator and the game's reader (rust/game_start records.rs), and re-exports. */
 export type RoomClearPlanData = RoomClearPlan & { id: string };
 export type BreachPlanData = BreachPlan & { id: string };
 
@@ -196,30 +194,12 @@ export const KEYS = {
 /** the keys of a shape's piece (BoxData.shape.with) beside its form, in the order they are written (levelLoad.ts loadLevel and levelToData, canonShape below) */
 export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal', 'stuff', 'does'];
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------ the judge
-/** every number of a value that a file cannot say (a file would have null there) */
-function oddNumbers(v: unknown, at: string, out: string[]): void {
-  if (typeof v === 'number') { if (!Number.isFinite(v)) out.push(`${at}: ${v} is no number a file can say`); return; }
-  if (Array.isArray(v)) v.forEach((x, i) => oddNumbers(x, `${at}[${i}]`, out));
-  else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) oddNumbers(x, at ? `${at}.${k}` : k, out);
-}
-/** EVERY FAULT OF THE LEVEL, a line each by its place in the file (none: it is a level). The game's own reader is the judge, asked through its module: a value that is not what its place wants, a member
- *  nothing in the game reads, an id that points nowhere, a number out of its range. What is stood on the built floor is not asked: `levels`, tools/qa/level-lint.ts. */
-export function levelFaults(d: LevelData): string[] {
-  const odd: string[] = []; oddNumbers(d, '', odd);
-  return odd.length ? odd : toolDesk().faults(JSON.stringify(d)).split('\n').filter(l => l);
-}
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------ floor references
 /** every record that says it is on floor `floorId` (one that says none is on the first) */
 export const floorUsers = (d: LevelData, floorId: string): { id: string }[] => [d.boxes, d.props, d.doors, d.volumes, d.chokepoints, d.devices, d.civilians ?? [], d.vents ?? [], d.hums ?? []].flatMap(l => (l as { id: string; floor?: string }[]).filter(e => e.floor === floorId));
 
-/** JSON.parse, and refused with every fault */
-export function parseLevelData(text: string): LevelData {
-  const d = JSON.parse(text) as LevelData, faults = levelFaults(d);
-  if (faults.length) throw new Error(`level '${(d as any)?.name ?? '?'}': ${faults.length} fault(s)\n  ${faults.slice(0, 20).join('\n  ')}${faults.length > 20 ? `\n  … ${faults.length - 20} more` : ''}`);
-  return d;
-}
+/** a level file's text (its faults are the judge's to say: judge.ts) */
+export const parseLevelData = (text: string): LevelData => JSON.parse(text) as LevelData;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ canonical form
 // Every record rebuilt with its keys in schema order (KEYS) and undefined-valued keys dropped: what the serializer prints and the digest hashes, so two
@@ -289,7 +269,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
 function compact(v: unknown): string {
   if (Array.isArray(v)) { const parts: string[] = []; for (let i = 0; i < v.length; i++) { const x = v[i]; if (x === undefined || typeof x === 'function' || (typeof x === 'number' && !Number.isFinite(x))) throw new Error(`serializeLevelData: unwritable array element [${i}] (${String(x)}) — validate before saving`); parts.push(compact(x)); } return `[${parts.join(', ')}]`; }   // (by index: a hole reads as undefined and is refused too)
   if (v && typeof v === 'object') return `{ ${Object.entries(v).filter(([, x]) => x !== undefined).map(([k, x]) => `${JSON.stringify(k)}: ${compact(x)}`).join(', ')} }`;
-  if (typeof v === 'number' && !Number.isFinite(v)) throw new Error(`serializeLevelData: non-finite number ${v} — validate before saving`);
+  if (typeof v === 'number' && !Number.isFinite(v)) throw new Error(`serializeLevelData: non-finite number ${v}`);
   return JSON.stringify(v);
 }
 /** The level file's text: canonical key order, top-level keys one per line, every entity (box, prop, light, route, plan…) on ONE line — so `git grep`

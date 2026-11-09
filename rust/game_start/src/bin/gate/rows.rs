@@ -8,7 +8,7 @@ use game::scene_scenarios::ScenarioEntry;
 use game_start::figures::Track;
 use game_start::hand::{act, read_hand, Hand};
 use game_start::hands_off::{HandsOff, Plan};
-use game_start::moment::Moment;
+use game::savestate::control::Moment;
 use game_start::parts;
 use game_start::play::{Opts, Play};
 use game_start::{files, json, levels};
@@ -83,6 +83,8 @@ fn way_row_name() -> String { format!("start {}, way {}", WAY_ROW.0, WAY_ROW.1) 
 fn file_of(e: &ScenarioEntry) -> String { e.level.clone().unwrap_or_else(|| String::from("office.json")) }
 fn has_par(e: &ScenarioEntry) -> bool { let t = files::level_text(&file_of(e)); t.contains("\"par\"") && json::parse(&t).is_ok_and(|d| d.get("scenarios").has("par")) }
 
+fn level(question: &'static str) -> Row { Row { name: format!("level {}", question), job: Job::Level(question) } }
+
 /// every row, in the rows' order
 pub fn all() -> Vec<Row> {
     let list = all_missions();
@@ -92,6 +94,7 @@ pub fn all() -> Vec<Row> {
     for kind in ["play", "again", "save", "load", "draw"] { for k in 0..RUNS.len() { out.push(Row { name: format!("{} {}", kind, run_name(k)), job: Job::Run(k) }); } }
     for id in SEATS { out.push(Row { name: format!("seats {}", id), job: Job::Seats(id.to_string()) }); }
     for e in list.iter().filter(|e| has_par(e)) { out.push(Row { name: format!("par {}", e.id), job: Job::Par(e.id.clone()) }); }
+    out.push(level("file"));
     out
 }
 /// the rows of `gate long` beyond these: a merge has no time for them
@@ -100,7 +103,7 @@ pub fn long() -> Vec<Row> {
     for id in played::his_missions() { out.push(Row { name: format!("played {}", id), job: Job::Played(id) }); }
     for id in played::lessons() { out.push(Row { name: format!("lesson {}", id), job: Job::Lesson(id.to_string(), 0.0) }); }
     for id in played::lessons() { out.push(Row { name: format!("lesson {}, reading each line", id), job: Job::Lesson(id.to_string(), played::READS) }); }
-    for q in levels::QUESTIONS { out.push(Row { name: format!("level {}", q), job: Job::Level(q) }); }
+    out.extend(levels::QUESTIONS.into_iter().filter(|&q| q != "file").map(level));
     out
 }
 /// every row, of both kinds

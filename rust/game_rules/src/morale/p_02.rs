@@ -255,7 +255,7 @@ pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// QA: what the rule has of a man, None = never met (morale.ts moraleOf)
-pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
+pub fn morale_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
     let s = g.m.morale.state_of.get(gd)?;
     Some(MoraleOf {
         t: s.t, act: s.act,

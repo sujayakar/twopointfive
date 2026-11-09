@@ -1,12 +1,35 @@
 //! THE GAME'S OWN MATHS — sin, cos, tan, asin, acos, atan, atan2, exp, log, pow and hypot from + − × ÷ and √ alone.
 //!
-//! This is src/math/exact.ts (and the Kahan sums of src/math/hyp.ts), statement for statement: the same operations in the same order on the same doubles, so
-//! the same bits. The TypeScript file says why the game has maths of its own and where the algorithms come from (the Go standard library's portable math
-//! package, after Cephes and FreeBSD's msun; their notices are in that file and cover this one). tools/qa/rust-check.ts folds one stream of inputs through both
-//! and is red on a bit of difference.
+//! Those operations are exact by the standard on every machine; a library's own sine or power is not, and one unit in the last place of a facing angle is a different fight a minute
+//! later. These are within a unit or two in the last place of the true value and the same everywhere, which is all the game needs of them.
 //!
 //! Do not tidy the arithmetic: `(a - b) - c` is not `a - (b + c)`, a polynomial written by Horner's rule stays one, and a term that looks like it cancels
-//! (`n * n - 0.0`) is there because the other side has it.
+//! (`n * n - 0.0`) is there because its order is play.
+//!
+//! The algorithms and constants are those of the Go standard library's portable math package (pure Go: sin.go, tan.go, atan.go, asin.go, atan2.go, exp.go, log.go,
+//! log10.go, pow.go, tanh.go, frexp.go, ldexp.go, trig_reduce.go), rewritten here in Rust. Their notices:
+//!
+//!   Copyright 2009 The Go Authors.
+//!
+//!   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+//!      * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+//!      * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation
+//!        and/or other materials provided with the distribution.
+//!      * Neither the name of Google LLC nor the names of its contributors may be used to endorse or promote products derived from this software without
+//!        specific prior written permission.
+//!   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//!   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
+//!   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+//!   USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+//!   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//!
+//!   sin, cos, tan, atan, asin, tanh — from the Cephes Math Library Release 2.8: June, 2000. Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier.
+//!   The readme file at http://netlib.sandia.gov/cephes/ says: Some software in this archive may be from the book _Methods and Programs for Mathematical
+//!   Functions_ (Prentice-Hall or Simon & Schuster International, 1989) or from the Cephes Mathematical Library, a commercial product. In either event, it is
+//!   copyrighted by the author. What you see here may be used freely but it comes with no support or guarantee.
+//!
+//!   exp, log — from FreeBSD's /usr/src/lib/msun/src/e_exp.c and e_log.c: Copyright (C) 2004 by Sun Microsystems, Inc. All rights reserved. Developed at SunPro, a
+//!   Sun Microsystems, Inc. business. Permission to use, copy, modify, and distribute this software is freely granted, provided that this notice is preserved.
 
 use prim::{floor, sqrt, trunc};
 

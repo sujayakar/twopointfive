@@ -1,5 +1,4 @@
 // png.ts — a minimal PNG reader and writer for the QA tools (no npm): 8-bit RGB / RGBA / grey, non-interlaced, all five scanline filters; node:zlib inflate for the IDAT stream.
-// Enough for the shot sink's __png captures (tools/shot-server.ts) so a probe can diff two frames pixel by pixel instead of comparing file hashes.
 export interface Png { w: number; h: number; rgba: Uint8Array }
 export async function decodePng(bytes: Uint8Array): Promise<Png> {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

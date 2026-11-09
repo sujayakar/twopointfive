@@ -87,7 +87,7 @@ fn bone_or(g: &crate::game::Game, c: CharId, b: crate::character::Bone, y: f64) 
 fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { bone_or(g, c, crate::character::Bone::Chest, 1.1) }
 
 /// `men as players`
-fn players(g: &mut crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
+fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
 
 fn is_dead(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 
@@ -379,7 +379,7 @@ pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar:
 }
 
 /// The player a call is worded for: with two, the first one up. (FogOfWar.caller)
-pub fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
+pub fn fog_of_war_caller(g: &crate::game::Game) -> PlayerId {
     if g.seats.len() == 1 { return g.player; }
     match crate::seats::men_up(g).first() {
         Some(&p) => p,
@@ -388,7 +388,7 @@ pub fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
 }
 
 /// Where `p` lies for the player's man, by the way he looks. (FogOfWar.sideOf)
-pub fn fog_of_war_side_of(g: &mut crate::game::Game, p: V3) -> crate::close::CloseId {
+pub fn fog_of_war_side_of(g: &crate::game::Game, p: V3) -> crate::close::CloseId {
     let pl = fog_of_war_caller(g);
     let c = g.pl[pl].ch;
     let l = gaze_of(g, c);
@@ -404,7 +404,7 @@ pub fn fog_of_war_side_of(g: &mut crate::game::Game, p: V3) -> crate::close::Clo
 }
 
 /// The words of one call: in the player's own room the side of him, else the place by the level's room names, behind him said first. (FogOfWar.callWords)
-pub fn fog_of_war_call_words(g: &mut crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
+pub fn fog_of_war_call_words(g: &crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
     let side = fog_of_war_side_of(g, p);
     let there = crate::dialogue::place_name(g, p);
     let me = fog_of_war_caller(g);
@@ -451,9 +451,6 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
     if f.call_log.len() > 200 { f.call_log.drain(0..50); }
     crate::cues::cues_call(g, gd, &text);
 }
-
-/// `+x.toFixed(2)`, for the QA's log only.
-fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(x) }
 
 /// What the cone hides is called: a contact from a teammate's eyes, else a step in his ears. Under cones or own eyes only (hard). (FogOfWar.tellCalls)
 pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
@@ -791,11 +788,4 @@ mod tests {
         ] { assert_eq!(key_of_mkey(&g, k), want, "mkey {}", k); }
     }
 
-    /// `+x.toFixed(2)`: a tie goes up, as the language has it, not to even.
-    #[test]
-    fn to_fixed2_rounds_as_the_log_shows() {
-        assert_eq!(to_fixed2(12.3456), 12.35);
-        assert_eq!(to_fixed2(3.0), 3.0);
-        assert_eq!(to_fixed2(0.125), 0.13);
-    }
 }

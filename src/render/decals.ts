@@ -6,7 +6,7 @@
 // normal a little across a crater's bevel, and lowers the albedo target's alpha where soot should kill the polished floors' gloss. Because it is
 // the g-buffer albedo / normal that change, everything downstream — the traced direct light, the final gather's bounce AT the pixel, the gloss
 // term — responds without knowing decals exist. (What does NOT respond: the bounce OFF a marked surface onto its neighbours — secondary hits
-// shade with the box's own material — and the AI's light meter, which is irradiance, not albedo.)
+// shade with the box's own material.)
 //
 // Marks on a DYNAMIC box (a door leaf, a piece of loose furniture) are stored in that box's local frame and re-derived every frame from where
 // the box now stands (sync), restricted on the GPU to pixels of that very box; marks on statics are world-fixed and paint any surface that passes

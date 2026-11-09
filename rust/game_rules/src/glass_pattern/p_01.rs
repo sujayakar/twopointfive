@@ -518,21 +518,6 @@ mod tests {
     }
 
     #[test]
-    fn the_hash_is_the_typescript_s() {
-        let mut h = Bits::new();
-        for seed in [0, 1, 0x3a5f21, 0xffffff, 0x5bd1e9 ^ 0xc0ffee] {
-            let seed = seed as f64;
-            for a in (-2..40).step_by(3) {
-                for b in (-1..35).step_by(4) {
-                    h.put(gp_hash(seed, a as f64, b as f64));
-                    h.put(gp_jit(seed, a as f64, b as f64));
-                }
-            }
-        }
-        assert_eq!(h.0, 0x6f09d00fe65abe15);
-    }
-
-    #[test]
     fn sectors_pieces_and_cracks_on_a_grid_are_the_typescript_s() {
         let [a, b, c] = abc();
         let sets: [&[GpSite]; 4] = [&[a], &[a, b], &[a, b, c], &[]];

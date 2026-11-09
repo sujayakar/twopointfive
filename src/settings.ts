@@ -71,7 +71,7 @@ export interface RenderSettings {
   ladderClimb: boolean;
   /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
    *  only under 45 fps — the ladder byte for byte as it was before the aim); 60 / 90 / 120 = HOLD that rate (never more than the display has been seen to show): cut resolution, then the preset, the moment a
-   *  fight would drop under it, climb only on the headroom left under ITS budget; 999 = hold the display's own rate. Trades resolution for frame rate. DEFAULT 60 (the maintainer's pick, 10-10: '60fps can be our target'); ?aim=asnow = the old ladder for the visit. */
+   *  fight would drop under it, climb only on the headroom left under ITS budget; 999 = hold the display's own rate. Trades resolution for frame rate. DEFAULT 60 (the maintainer's pick, 10-10: '60fps can be our target'). */
   ladderAim: number;
   /** the as-now ladder's PACED CHECK (ui/quality.ts PACED; Tab ▸ Frame): a page something else holds to a low frame rate (the browser's energy saver, a power mode) is not cut
    *  for it, a cut (or a preset drop) that bought no frame rate is taken back, and a scale left low is given back as far as it provably costs nothing. false = the rule as it was (the union over 11 ms = the GPU is the limit). */
@@ -84,8 +84,7 @@ export interface RenderSettings {
    *  preset up, and sharp direct is drawing, sharp direct goes instead (its output-size kernels are the part of a frame fewer pixels do not shrink), stays off across auto's preset hops, and
    *  comes back when the union priced with it fits again. false = the ladder as it was. Auto only: a pinned preset keeps its rows. */
   ladderShed: boolean;
-  /** one light-cache grid at every preset (ui/quality.ts ONE CACHE GRID; ?onegrid=0): low and verylow run the 40 × 4 × 28 probe grid the other presets run, so the light meter the
-   *  guards and teammates see by (render/shaders/probe.wgsl reads the cache's dice) reads the same shadow whatever the graphics setting, and no ladder step swaps the cache under a
+  /** one light-cache grid at every preset (ui/quality.ts ONE CACHE GRID): low and verylow run the 40 × 4 × 28 probe grid the other presets run, so no ladder step swaps the cache under a
    *  mission. false = low and verylow on their coarser 32 × 3 × 22 grid, as it was. Read when a preset is applied. */
   oneCacheGrid: boolean;
   /** one smoke pressure solve at every preset (ui/quality.ts ONE SMOKE SOLVE; ?onesolve=0): every preset runs high's red/black pairs, so the smoke a sight line reads has the
@@ -161,7 +160,7 @@ export interface RenderSettings {
   volLightCap: number;         // volumetrics worst-case cap (Phase 0, volumetrics.wgsl VOL_KMAX): at most this many lights get shadow rays per smoke-march step (the first K by unshadowed bound on that stretch that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing 1.5 × volSteps by it), the rest dropped — and the smoke march walks per-domain stretches with a bounded shortlist (frame.volCfg.x, 1 or more, and 0 = no preset yet = 4; presets: high 4 · medium, low and verylow 2)
   volShadowEvery: number;      // with the cap on: a traced light's shadow ray + self-shadow march is refreshed every N smoke-march steps and reused between (frame.volCfg.y; 2 on every preset — 1 bought nothing visible and cost ultra a third of its march; 3 combs)
   volStepVoxels: number;       // smoke-march step in voxels of the domain walked (frame.volCfg.z in tenths; 1.5 on high, medium and low; 2 on verylow)
-  // ---- SMOKE AS AN OCCLUDER: what every SHADOW ray toward a light reads of the smoke it crosses (the direct pass, gather / reflection / card / probe-meter hits,
+  // ---- SMOKE AS AN OCCLUDER: what every SHADOW ray toward a light reads of the smoke it crosses (the direct pass, gather / reflection / card hits,
   // the haze's dimming beyond a plume) — never the plume you look AT (the volumetric march) nor the guards' sight-line probe, both always the field's own 24-tap / per-voxel walk
   smokeDiffuseStart: number;   // optical depth under which the smoke diffusion does nothing (0.35: a plume's thin edge keeps the art behind it crisp; was a fixed 0.15)
   smokeTaaReact: number;       // EXPERIMENT (smoke battery): the TAAU resolve treats a pixel as reactive by (1 − its smoke transmittance) × this (0 = off, as it was): a plume has no motion vectors, so
@@ -198,7 +197,7 @@ export interface RenderSettings {
   charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + rust/game_rules/src/char_look + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
                                // metal, rubber, lens, a marking — each with its own colour and highlight out of a table per side (operators / defenders / civilians), creases and ridges from the mesh's own
                                // curvature, the ground's dust up from the sole, and one colour per shadow proxy for bounce rays and reflections. Off (the default with the shipped mannequin, which carries
-                               // no slots: `?charmats` dresses it by joint as a stand-in) = his two tints, the frame as it was. host/drawpage.ts raises it when the loaded mesh has slot-named materials
+                               // no slots: it is dressed by joint as a stand-in) = his two tints, the frame as it was. host/drawpage.ts raises it when the loaded mesh has slot-named materials
   wetChars: boolean;           // wet characters (rust/game_rules/src/wet + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
   // ---- PARTICLE RAIN (src/picture/rain.ts + the 'rain' particle kind): a NEAR-FIELD layer of real GPU rain drops over the lattice rain
   // volumetrics.wgsl draws — recycled over the outdoor ground within a disc round the view, falling at terminal speed with the wind field's air, killed where they hit (roof, bonnet,
@@ -213,7 +212,7 @@ export interface RenderSettings {
   particleRainDrips: boolean;  // fat slow drops off roof / car / housing edges near the view (found once from the level's boxes), ∝ the rain rate
   particleRainLattice: number; // 0‥1 = the share of the lattice KEPT inside the disc by hand; −1 = auto: 1 − the particle layer's density share (0 while the layer matches the lattice, so nothing doubles up)
   particleRainReact: number;   // × a streak's luminance (display-referred) into the TAAU reactive mask (0 = the streaks write no reactivity: the resolve smears them — the A/B)
-  gpuParticles: boolean;       // GPU particles (the E4 experiment, render/particles.ts — ON by default in this branch): sparks, debris chips, dust puffs and spent casings born / stepped / collided / lit in one compute pass ('particles' in the HUD) and splatted into the HDR target after the composite. The Rust game's effect sites send their records whatever this says; off, the picture draws none of them. FrameFlags.Particles; ?noparticles at boot
+  gpuParticles: boolean;       // GPU particles (the E4 experiment, render/particles.ts — ON by default in this branch): sparks, debris chips, dust puffs and spent casings born / stepped / collided / lit in one compute pass ('particles' in the HUD) and splatted into the HDR target after the composite. The Rust game's effect sites send their records whatever this says; off, the picture draws none of them. FrameFlags.Particles
   airSim: boolean;             // THE AIR AS A SIMULATED FIELD (render/airField.ts, src/picture/air.ts): step it — live, so a perf sweep can price it mid-take (the game's own switch, AIR_SIM.on / ?air=0, is whether a field is built and fed at all); off = the field stands as it was last stepped
   airEvery: number;            // … and sixtieths of a second between its steps (1 = 60 Hz whatever the page draws at; 2 halves its cost and its turbulence's time resolution)
   // ---- MATERIALS + RAY-TRACED REFLECTIONS (renderer v3 phase 4; render/shaders/reflect.wgsl). One BRDF everywhere it is affordable: base colour (the box albedo),
@@ -252,7 +251,7 @@ export interface RenderSettings {
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
   // ---- SDF CHARACTER RIG (render/sdfrig.ts fits it, shaders/sdfrig.wgsl traces it): every mannequin's 15 shadow / reflection proxies ARE round cones with radii
   // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). ----
-  charSelfShadow: boolean;     // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, default ON at every tier; ?noselfshadow / Tab ▸ Renderer — SDF character rig): the direct estimators' shadow rays from a man's own pixels
+  charSelfShadow: boolean;     // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, default ON at every tier; Tab ▸ Renderer — SDF character rig): the direct estimators' shadow rays from a man's own pixels
                                // test HIS OWN body too (common.wgsl selfShadowT: his round cones, or his mesh under meshShadows, from an origin lifted off the surface — the plain owner skip made every
                                // up-facing sliver of him glow under a light his trunk stands in front of); false = the owner skip whole, the frame as it was
 }
@@ -294,12 +293,12 @@ export const defaultSettings = (): RenderSettings => ({
   meshShadows: false,          // mesh-traced character shadows: the ULTRA preset switches it on (every ray) and HIGH in its near-only form, every other preset off (quality.ts apply); ?meshShadows / the Tab row flip it by hand until the preset next changes; Tab ▸ Direct light, the pause menu's trade-offs, or ?meshShadows
   gbaa: false,                 // GBAA off (Tab ▸ Frame; the image-quality program's per-tier configs place it with taauPhases 0)
   motionIds: true,             // motion identity for keyed dynamic boxes (Tab ▸ Frame; off = the index rule as it was)
-  charMats: false,             // character materials: off = the two tints (host/drawpage.ts turns it on for a mesh that carries slot materials; ?charmats / ?nocharmats; Tab ▸ Materials ▸ Characters)
+  charMats: false,             // character materials: off = the two tints (host/drawpage.ts turns it on for a mesh that carries slot materials; Tab ▸ Materials ▸ Characters)
   wetChars: true,              // wet characters: on (Tab ▸ Weather ▸ wet characters; nothing shows unless somebody is actually wet — weather off = everybody dry = the untouched path)
-  gpuParticles: true,          // the experiment this branch is for: on unless ?noparticles / the Tab ▸ 'Renderer — particles (EXP)' row says otherwise; not part of any preset
+  gpuParticles: true,          // the experiment this branch is for: on unless the Tab ▸ 'Renderer — particles (EXP)' row says otherwise; not part of any preset
   airSim: true, airEvery: 1,   // the air field's step: on, at 60 Hz; not part of any preset
   particleRain: true, particleRainCount: 4000, particleRainRadius: 0, particleRainDensity: 1, particleRainBright: 1, particleRainDrips: true, particleRainLattice: -1, particleRainReact: 6,   // PARTICLE RAIN: ON (v2) — ?norain2 boots without it, Tab ▸ Weather & wind ▸ Rain — particles flips it live; the count is 'high's until a preset places its own (quality.ts Caps.rain)
-  glass: true, glassReflect: 1, glassTintDepth: 1, glassDust: 1,   // glass panes (E3): ON by default (?noglass boots without it; Tab ▸ Renderer — glass; the pause card's trade-offs row)
+  glass: true, glassReflect: 1, glassTintDepth: 1, glassDust: 1,   // glass panes (E3): ON by default (Tab ▸ Renderer — glass; the pause card's trade-offs row)
   glassRefract: true, glassIor: 1.5,   // refraction through the glass boxes: ON (?norefract boots without it; Tab ▸ Renderer — glass; __glass.refract / .ior)
   rtReflect: false, rtReflectDiv: 2, rtRays: 1, rtMaxRough: 0.45, rtAniso: 0.7, wetBreakup: 1, beamReflect: true, beamAir: true, wetMirror: true, beamAirK: 1, rtStrength: 1, rtGlints: 1, rtAtrous: 3, rtHistory: 32,   // RT reflections: OFF here — the presets switch it on with their own divisor / rays / cutoff (quality.ts); Tab ▸ Materials
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)

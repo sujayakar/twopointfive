@@ -9,13 +9,14 @@ pub mod kit_plan;
 pub mod kit_set;
 pub mod kit_stage;
 pub mod gltf;
-pub mod faults;
 pub mod file;
 pub mod level;
 pub mod passes;
 pub mod settings;
 pub mod stand;
 pub mod handed;
+#[cfg(feature = "std")]
+pub mod faults;
 #[cfg(feature = "std")]
 pub mod files;
 pub mod scene;
@@ -28,7 +29,6 @@ pub mod hand;
 pub mod block;
 pub mod hands_off;
 pub mod figures;
-pub mod moment;
 pub mod owes;
 pub mod parts;
 pub mod player;

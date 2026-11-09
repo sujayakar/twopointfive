@@ -19,7 +19,7 @@ is drawn is `render.md`.
 | `levels/*.json` | the files. `docs/level-format.md` is the reference, member by member |
 | `tools/levels/<name>.ts` | a generator a level; the office's is `tools/levels/lib/officeGen.ts` with `officeScenarios.ts` |
 | `tools/levels/export.ts`, `tools/level-export.ts` | write a file from its generator (the second for the office); `--check` is red on a stale file |
-| `rust/game_start/src/file.rs`, `records.rs`, `faults.rs` | the format as the game reads it, and the one judge of a file (`levelFaults` asks it) |
+| `rust/game_start/src/file.rs`, `records.rs`, `faults.rs` | the format as the game reads it, and the one judge of a file (`judge.ts` asks it) |
 | `tools/levels/lib/levelData.ts`, `levelLoad.ts` | the file's types, the order its `KEYS` are written in; the two conversions |
 | `levelKit.ts`, `gwotKit.ts`, `livedKit.ts`, `livedPieces.ts` | with `officeGen.ts`, the kits: every piece a generator lays |
 | `tools/levels/library.ts`, `docs/library.md`, `library-hall.ts`, `gwot-yard.ts` | the catalogue of every piece and paint, and its two showrooms |
@@ -135,7 +135,7 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
   `rust/game_types/src/scene_scenario_list/rows.rs` and the module made; `src/audio/setlist.ts`; its picture from `tools/menu-art.ts`;
   `scenarios.kitView` and `tools/qa/kitview-plan.ts`.
 - **A count moved:** find out why first. `--write` keeps a new one; a line starting `#` in a count file says what was given up.
-- **A new member of the file:** the field under `rust/game_types/src/`, its line in `records.rs` or `file.rs`, its rule in `faults.rs`, the module made;
+- **A new member of the file:** the field under `rust/game_types/src/`, its line in `records.rs` or `file.rs`, its rule in `faults.rs`;
   then its type and `KEYS` in `levelData.ts`, both directions in `levelLoad.ts`, a line in `docs/level-format.md`.
 - **A new piece:** the kit's file, through `pieces`; a line in a showroom; `bun run tools/levels/library.ts --write`.
 - **A new paint:** a row of the palette, its words in `PAINT_STUFF` and `PAINT_DOES`. `GWOT_MATERIALS` is written whole, so its new row makes every
@@ -160,6 +160,7 @@ mark reaches its door); `names`; `rain`; `file` (its faults).
 | native test | what it holds |
 |---|---|
 | `level_rules.rs` | a level's own charges and cards, floor behind furniture, its roofs, its ways, its leaves' paint; `level_caps` is what the game's lists have room for |
+| `level_faults.rs` | what the judge of a file refuses, by its place, and what it takes |
 | `does_and_stages.rs` | no rule reads a color; every file that names a mission stages it |
 | `room_marks.rs` | every room deals marks a man can stand on |
 | `kit_levels.rs` | every way of every `scenarios.kitView` stands |

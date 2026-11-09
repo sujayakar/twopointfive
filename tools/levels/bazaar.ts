@@ -30,7 +30,7 @@
 // the garage's man smokes outside the generator room's door, looking up the alley as far as the water tank; on 0 and 2 the tea house's man smokes at the
 // kitchen door at the alley's other end. On set 2 the office is the camera's alone.
 //
-// WHAT THE SEED DEALS (QUIET below, rebuild/play-style-levels/quiet-missions/contract.md): one of three starts (behind the north wall at its west end · outside the
+// WHAT THE SEED DEALS (QUIET below): one of three starts (behind the north wall at its west end · outside the
 // north gate · outside the south gate), one of three places for the thing (the money changer's safe · the phone shop's display case, under its lit window ·
 // the garage's steel cabinet, which roundE walks past every lap) and one of three sets of five men: the two rounds are on every set, the other three are dealt
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
@@ -406,7 +406,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     wayouts: [{ name: 'the open end of the street', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
-  // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts): what makes each shop, the alley, the passage and the
   //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
   //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------

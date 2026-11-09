@@ -311,7 +311,7 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");
     let waiting = game::sim_fallshome::fall_store_waiting(&p.g);
-    let kept = game_start::moment::Moment::of(&p.g);
+    let kept = game::savestate::control::Moment::of(&p.g);
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(game::sim_fallshome::fall_store_waiting(&p.g) != waiting, "the staging is wrong: nothing landed in two seconds");

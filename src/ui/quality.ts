@@ -145,11 +145,6 @@ export function ladderBands(aim: number, displayHz = 0): Bands {
   const u = Math.max(2, 1000 / target - HOLD.overheadMs);
   return { hold: true, target, cutFps: HOLD.cut * target, aimFps: HOLD.aim * target, restoreFps: Infinity, starvedFps: HOLD.cut * target, cruisingFps: HOLD.cruise * target, backoffFps: HOLD.cut * target, budget: u * (1000 / CLIMB.budgetFps) / PLAN_BUDGET_MS, planBudget: u, gpuFloor: 0 };
 }
-/** a menu's word → settings.ladderAim (null = not one of them; '0' is 'asnow' said as the setting's own number) */
-export function ladderAimOf(word: string | null | undefined): number | null {
-  const w = (word ?? '').trim().toLowerCase();
-  return w === 'asnow' || w === '0' ? 0 : w === '60' ? 60 : w === '90' ? 90 : w === '120' ? 120 : w === 'display' ? AIM_DISPLAY : null;   // (the five the card and the Tab row offer, no others: a row that cannot show the value it holds would lie)
-}
 /** the refresh rates displays come in (src/host/drawpage.ts snaps the fixed step onto the same list): a rate SEEN within 3 % of one is taken as it, anything else rounds DOWN */
 const DISPLAY_RATES = [50, 60, 72, 75, 90, 100, 120, 144, 165, 240];
 export const snapRate = (hz: number, tol = 0.03) => DISPLAY_RATES.find(r => Math.abs(hz - r) <= tol * r) ?? Math.floor(hz);
@@ -249,7 +244,7 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  (a defender's eye to the player, the room fight's pairs, a camera's) was the optical depth of the SOLVER's density along the
  *  line. The red/black pairs of the pressure solve decide how well the velocity field is projected each step, so how a plume rolls and spreads: with the pairs a preset row, the
  *  cloud that hides a man had a different shape at medium than at high, and the auto ladder changed it under a fight each time it stepped. A game rule that read the graphics
- *  setting, as the light meter's cache grid was (ONE CACHE GRID below). One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads
+ *  setting. One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads
  *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
  *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
 export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
@@ -274,12 +269,8 @@ export function fireSmokeFor(name: QualityName, shed: boolean, auto: boolean, no
   const i = AUTO_LADDER.indexOf(name);
   return !(auto && now === false && i >= 1 && !fireSmokeOf(PRESETS[AUTO_LADDER[i - 1]], shed));
 }
-/** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
- *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
- *  (1.25 m cells, three layers up the wall against 1 m and four) the same tight shadow read two to three times darker on low and verylow than on medium and up (a night yard's low
- *  wall: E 0.044 against 0.115, software adapter, 10-23): a game rule that read the graphics setting, and one the auto ladder moved under a mission each time it stepped between
- *  medium and low. One lattice for every preset takes the setting out of the reading, and the cache swap (a parked grid's stale field for some frames) out of that step. It does
- *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him.
+/** ONE CACHE GRID (settings.oneCacheGrid, default on; off = low and verylow on their `rcCoarse`, as it was). One lattice for every preset takes the cache swap (a parked grid's stale
+ *  field for some frames) out of the auto ladder's step between medium and low. The picture only: the game's light meter is Rust's (rust/sim/src/glow.rs) and reads no cache.
  *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
 export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
 /** ?nortreflect (host/engineflags.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
@@ -458,7 +449,7 @@ export class Quality {
   private bandsOf: { aim: number; hz: number; b: Bands } = { aim: 0, hz: 0, b: AS_NOW };
   /** what the aim sees, for the Tab panel / QA */
   get aimState() { const b = this.bands; return { aim: this.aim, hold: b.hold, target: +b.target.toFixed(1), displayHz: this.displayHzPin || this.displayHz, unionBudget: +b.planBudget.toFixed(2), cutFps: +b.cutFps.toFixed(1), hot: this.hot }; }
-  /** the display's rate, watched on a rAF of the page's own while an aim is set (host/drawpage.ts starts it at boot whenever an aim is set — the default's or ?aim='s —, the first `bands` read otherwise; it stops itself back under 'as now': nothing
+  /** the display's rate, watched on a rAF of the page's own while an aim is set (host/drawpage.ts starts it at boot whenever an aim is set, the first `bands` read otherwise; it stops itself back under 'as now': nothing
    *  new runs there): every 60 intervals, displayRateOf says what the page has just reached; RAISED here whenever the frames show more, LOWERED only by sample() on HOLD.pacedWindows of
    *  frames that are slow with the GPU inside its budget (a window moved to a slower display, a browser that throttles) */
   watchDisplay() {
@@ -573,7 +564,7 @@ export class Quality {
     // the worst-case caps (Caps above): the volumetric march / beams …
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
     S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (src/picture/rain.ts; nothing runs while settings.particleRain is off) …
-    const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
+    const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
     S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — rust/game_rules/src/fire reads it)

@@ -1,10 +1,17 @@
 //! `levels QUESTION [LEVEL…]`: what a level owes whoever plays it (src/levels.rs has the questions). Exit 0 every line passes, 1 a FAIL line, 2 a word or a level that is not known.
+//! `levels judge`, a level's file on its input: every fault of it, a line each. Exit 1 where there is one.
 use game_start::levels::{ask, asked_of, flags_of, Line, QUESTIONS};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args == ["judge"] {
+        let faults = game_start::faults::of_text(&std::io::read_to_string(std::io::stdin()).expect("a level's file on the input"));
+        for f in &faults { println!("{}", f.replace('\n', " ")); }
+        std::process::exit(i32::from(!faults.is_empty()));
+    }
     let usage = || -> ! {
         for q in QUESTIONS { eprintln!("levels {q} [{}…]{}", if q == "stacks" { "MISSION" } else { "LEVEL" }, flags_of(q).iter().map(|f| format!(" [{f}]")).collect::<String>()); }
+        eprintln!("levels judge < FILE");
         std::process::exit(2)
     };
     let Some(question) = args.first().filter(|q| QUESTIONS.contains(&q.as_str())) else { usage() };

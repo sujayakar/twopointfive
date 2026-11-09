@@ -132,7 +132,9 @@ impl Desk {
 fn issue_block(text: &str) -> Option<IssueData> {
     let j = parse(text).ok()?;
     if !matches!(j.get("members"), Json::Obj(..)) { return None; }
-    IssueData::from_json(&j, &At::top(&Faults::default()))
+    let faults = Faults::default();
+    let issue = IssueData::from_json(&j, &At::top(&faults));
+    (faults.count() == 0).then_some(issue)
 }
 
 /// what an ask is answered with: bytes to a page, and to who runs beside the desk the answer itself
@@ -222,6 +224,4 @@ asks! {
     21 Kind { search: &str } -> String = |_, search| start_list::kind_of_address(search);
     /// where an address that names a row of the short list and nothing to play goes instead (empty: it stays)
     22 Pick { search: &str } -> String = |_, search| game::scene_scenario_list::pick_goes(search).unwrap_or_default();
-    /// every fault of a level file's text, a line each (empty: it is a level)
-    23 Faults { text: &str } -> String = |_, text| game_start::faults::of_text(text).iter().map(|f| f.replace('\n', " ")).collect::<Vec<_>>().join("\n");
 }

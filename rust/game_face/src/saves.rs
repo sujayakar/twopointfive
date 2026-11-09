@@ -5,90 +5,46 @@
 //!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
 //!   face_saves_told(h) -> n            what the save controller tells the player, at face_out: its tag while it is up, then a line for each thing it has said since it was last asked (0: nothing of either)
 //!   face_recover(h, newest) -> h | 0   a game lost to a panic stands again from the best kept of it, or from its run's first step (`face_recover_what(h)`: from what)
-use game_start::moment::{whole, Moment};
-use std::cell::RefCell;
+use game::savestate::control::{self, Kept, START};
+use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
-use std::rc::Rc;
 
 type Game = game::game::Game;
-/// a game as it stands, with nothing of it left to be told
-fn told(g: &Game) -> Rc<Moment> { let mut m = Moment::of(g); m.game.out.clear(); Rc::new(m) }
-
-/// a game the save controller keeps: which came after which, its label, and whether the floor came down straight after it
-#[derive(Clone)]
-pub struct Shelved { kept: Rc<Moment>, at: f64, label: String, regret: bool }
 
 thread_local! {
-    /// the games the save controller keeps, by the game they are of and its key: here and not with the game, so a game lost to a panic leaves them
-    static SHELF: RefCell<BTreeMap<(u32, String), Shelved>> = const { RefCell::new(BTreeMap::new()) };
-}
-thread_local! {
+    /// which stand each game that keeps games is of: a game lost to a panic can't say
+    static STOOD_OF: RefCell<BTreeMap<u32, u32>> = const { RefCell::new(BTreeMap::new()) };
     /// the serials dealt in this module: what a lost game told its host of after the save it stands again from is not dealt twice
-    static DEALT: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    static DEALT: Cell<u32> = const { Cell::new(0) };
 }
 /// a step was taken
 pub fn dealt(g: &Game) { DEALT.with(|d| d.set(d.get().max(g.serial_next))); }
-/// the key of a run's first step
-const START: &str = "start";
 
-/// the game held is that one again
-fn back(x: &mut super::Held, k: &Moment) {
-    let mut g = k.laid(x.g.sim);
-    g.serial_next = g.serial_next.max(x.g.serial_next);   // (what was dealt after the save is still told of: a number means one thing)
-    hold(x, g);
-}
-/// this game is the one held now
-pub fn hold(x: &mut super::Held, mut g: Box<Game>) {
-    whole(&mut g);
-    x.g = g;
+/// this game is the one held now, as it stands in it (a moment of the game, which deals no serial twice either: it is the run again)
+pub fn hold(x: &mut super::Held, g: Box<Game>) {
+    control::stand(&mut x.g, g);
     x.cmds = None;
     x.drawn.cut();
 }
-/// the save controller's shelf of a game
-pub fn shelf_of(h: u32) -> Vec<(String, Shelved)> { SHELF.with(|s| s.borrow().iter().filter(|((g, _), _)| *g == h).map(|((_, key), e)| (key.clone(), e.clone())).collect()) }
-/// … and the shelf is that again
-pub fn shelf_put(h: u32, of: Vec<(String, Shelved)>) {
-    shelf_off(h, |_| true);
-    for (key, e) in of { shelve(h, key, e); }
-}
-fn shelve(h: u32, key: String, e: Shelved) { SHELF.with(|s| s.borrow_mut().insert((h, key), e)); }
-/// the games kept for game `h` that are let go
-pub fn shelf_off(h: u32, go: impl Fn(&str) -> bool) { SHELF.with(|s| s.borrow_mut().retain(|(g, key), _| *g != h || !go(key))); }
+/// game `h` is gone: what the control keeps of its stand stays, for a copy of it that stands again
+pub fn shelf_off(h: u32) { STOOD_OF.with(|s| s.borrow_mut().remove(&h)); }
 
-/// AFTER A STEP, for a host that keeps games: what the step asked of the save controller, and the controller's own turn. One put back is whole again here, and nothing is drawn through it.
+/// AFTER A STEP, for a host that keeps games: what the step asked of the save controller, and the controller's own turn (game::savestate::control). One put back is whole again there, and nothing is drawn through it.
 pub fn saves(h: u32, x: &mut super::Held, dt: f64) {
-    use game::out_events::OutEvent as E;
-    use game::savestate::control::{self, Do};
-    let asked: Vec<E> = x.g.out.iter().filter(|e| matches!(e, E::CheckpointsKeep(_) | E::CheckpointsRequest(_))).cloned().collect();
-    for e in asked { match e { E::CheckpointsKeep(e) => control::keep(&mut x.g, &e.label), E::CheckpointsRequest(e) => control::request(&mut x.g, &e.why, &e.label), _ => {} } }
-    if core::mem::replace(&mut x.g.restart_cut, false) { x.drawn.cut(); }
-    match control::tick(&mut x.g, dt) {
-        Some(Do::Keep { key, label }) => {
-            game_run::checkpoint(&mut x.g, &label);
-            let at = x.g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, f64::max);
-            shelve(h, key, Shelved { kept: told(&x.g), at, label, regret: false });
-        }
-        Some(Do::Back { key }) => {
-            let was = control::abandoned(&x.g);
-            let kept = SHELF.with(|s| s.borrow().get(&(h, key.clone())).map(|e| e.kept.clone()));
-            let told = if let Some(k) = kept { back(x, &k); control::put_back(&mut x.g, &key, was) } else { control::gone(&mut x.g, &key) };
-            x.said.push(told);
-        }
-        Some(Do::Say(words)) => x.said.push(words),
-        None => {}
-    }
-    // (a run's saves go with the run; its first step is kept, for a game that is lost before anything else is)
-    shelf_off(h, |key| key != START && !x.g.saves.shelf.m.has(String::from(key)));
-    let run = x.g.mission.serial as f64;
-    if SHELF.with(|s| s.borrow().get(&(h, String::from(START))).map(|e| e.at)) != Some(run) { shelve(h, String::from(START), Shelved { kept: told(&x.g), at: run, label: String::new(), regret: false }); }
-    SHELF.with(|s| for ((of, key), e) in s.borrow_mut().iter_mut() { if *of == h && !e.regret { if let Some(m) = x.g.saves.shelf.m.get(key.clone()) { e.regret = m.info.regret.is_some(); } } });
+    STOOD_OF.with(|s| s.borrow_mut().insert(h, control::stood(&mut x.g)));
+    let asked = control::asked(&x.g.out);
+    let told = control::after_step(&mut x.g, dt, asked);
+    if told.back { x.cmds = None; }
+    if told.cut { x.drawn.cut(); }
+    if let Some(words) = told.said { x.said.push(words); }
 }
-/// what is kept of game `h`, the best to go back to first: the newest save nothing came down after, the newest at all, and the run's first step last
-fn kept_of(h: u32) -> Vec<(String, Shelved)> {
-    let mut of = shelf_of(h);
-    of.sort_by(|a, b| (a.0 == START).cmp(&(b.0 == START)).then(a.1.regret.cmp(&b.1.regret)).then(b.1.at.total_cmp(&a.1.at)));
-    of
+/// …a step taken with the controller off (a tape walked): only the run's start and a restart the step asked for
+pub fn restart_turn(h: u32, x: &mut super::Held) {
+    STOOD_OF.with(|s| s.borrow_mut().insert(h, control::stood(&mut x.g)));
+    if control::restart_turn(&mut x.g) { x.cmds = None; x.drawn.cut(); }
 }
+/// what is kept of game `h`, the best to go back to first
+fn kept_of(h: u32) -> Vec<(String, Kept)> { STOOD_OF.with(|s| s.borrow().get(&h).copied()).map_or(Vec::new(), control::kept_of) }
 /// what a game lost to a panic would stand again from: 0 nothing, 1 its run's first step, 2 a save (its label at face_out)
 #[no_mangle]
 pub extern "C" fn face_recover_what(h: u32) -> u32 {
@@ -103,19 +59,19 @@ pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
     let Some((key, e)) = of.iter().find(|(key, _)| newest != 0 || key == START).cloned() else { return 0 };
     // (a game that still stands under the lost number would share the slot: it is let go, and what is kept of it is not)
     super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
-    let mut g = e.kept.laid(e.kept.game.sim);
+    let mut g = e.image.laid(e.image.game.sim);
     g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
     game::scene_collision::unstand(&mut g);   // (whatever rows its copy says it wrote were another moment's)
     let n = super::put(super::Held::new(g));
-    SHELF.with(|s| { let mut s = s.borrow_mut(); for (key, _) in &of { if let Some(e) = s.remove(&(h, key.clone())) { s.insert((n, key.clone()), e); } } });
+    STOOD_OF.with(|s| { let mut s = s.borrow_mut(); if let Some(of) = s.remove(&h) { s.insert(n, of); } });
     super::with(n, |x| {
         // (the saves made after the one that stands are still kept: the shelf names them all)
         for (key, e) in of.iter().filter(|(key, _)| key != START) {
-            let Some(mut m) = e.kept.game.saves.shelf.m.get(key.clone()).cloned() else { continue };
+            let Some(mut m) = e.image.game.saves.shelf.m.get(key.clone()).cloned() else { continue };
             if e.regret && m.info.regret.is_none() { m.info.regret = Some(String::from("the floor came down straight after")); }
             x.g.saves.shelf.m.set(key.clone(), m);
         }
-        if key != START { let was = game::savestate::control::abandoned(&x.g); let told = game::savestate::control::put_back(&mut x.g, &key, was); x.said.push(told); }
+        if key != START { let was = control::abandoned(&x.g); let told = control::put_back(&mut x.g, &key, was); x.said.push(told); }
         x.drawn.cut();
     });
     super::out(e.label.into_bytes());
@@ -140,10 +96,10 @@ pub extern "C" fn face_saves(h: u32) {
         let mut b = Vec::new();
         let text = |b: &mut Vec<u8>, s: &str| { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); };
         b.extend_from_slice(&g.mission.stats.elapsed.to_le_bytes());
-        b.extend_from_slice(&(game::savestate::control::hand_no(g).is_none() as u32).to_le_bytes());
+        b.extend_from_slice(&(control::hand_no(g).is_none() as u32).to_le_bytes());
         let offer = game::savestate::checkpoints_newest(g, Some(true), Some(g.mission.stats.elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
         text(&mut b, offer.as_ref().map_or("", |i| i.key.as_str()));
-        let rows = game::savestate::control::timeline(g);
+        let rows = control::timeline(g);
         b.extend_from_slice(&(rows.len() as u32).to_le_bytes());
         for r in rows {
             text(&mut b, &r.key);

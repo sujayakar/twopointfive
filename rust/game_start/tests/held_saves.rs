@@ -1,6 +1,5 @@
 //! THE AUTOSAVE: each thing that asks for one asks once, and nothing is written while he is compromised.
 mod kit_ask;
-use game::savestate::control::{self, Do};
 use game_start::play::{Opts, Play, DT};
 use kit_ask::KitAsk;
 
@@ -8,7 +7,7 @@ use kit_ask::KitAsk;
 fn run(p: &mut Play, secs: f64, saved: &mut Vec<String>) {
     for _ in 0..(secs * 60.0).round() as usize {
         p.frame();
-        if let Some(Do::Keep { key, .. }) = control::tick(&mut p.g, DT) { saved.push(key); }
+        saved.extend(p.told.drain(..).filter_map(|t| t.kept));
     }
 }
 

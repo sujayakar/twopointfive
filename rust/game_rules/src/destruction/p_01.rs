@@ -517,7 +517,7 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
 
 
 /// The men on their feet this frame, bar a seated civilian.   (destruction.ts Destruction.onFoot)
-pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
+pub fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
     for gd in g.guards.iter() {
         if g.gd[*gd].state != crate::game::GuardState::Dead {

@@ -6,14 +6,16 @@ use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, 
 use crate::json::Json;
 use crate::kit_file::*;
 use crate::level::{does_word, stuff_word, Said};
-use crate::passes::form_faults;
+use crate::passes::{planes_of, Form, ARC_PLANES};
 use crate::read::Faults;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::{format, string::String, vec::Vec};
 use game::m;
+use game::scene_cut::{cut_plane, cut_record, MAX_CUT_PLANES};
 use game::scene_level::{BreachPlanBounds, DeviceDef, RoomClearPlan};
 use game::scene_markings::{MarkFace, MarkRes, MarkingDef, MARKING_TEXEL, MAX_CELLS_H, MAX_CELLS_W};
 use game::scene_scenarios::*;
+use game::scene_shapes::ShapeFormArc;
 use game::V3;
 
 /// a box's marks, a mark's paints, and how the paints are said in its cells
@@ -53,6 +55,41 @@ fn is_rect(r: &Rect) -> bool { rect(r.x0, r.x1, r.z0, r.z1) }
 fn bounds(b: &Option<BreachPlanBounds>) -> bool { b.as_ref().is_some_and(|b| rect(b.x0, b.x1, b.z0, b.z1)) }
 fn inside(p: &V3, r: &Rect) -> bool { p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1 }
 fn named(i: usize, list: &str, id: &str) -> String { format!("{list}[{i}] '{id}'") }
+
+/// WHAT IS WRONG WITH A FORM said of a box of half size h (a box's shape, or a piece of trim's): nothing = none. A plane is judged against the box alone: whether it still bites beside an arc's own
+/// facets is not asked.
+fn form_faults(h: V3, round: Option<f64>, arc: Option<ShapeFormArc>, cut: Option<&[[f64; 4]]>, old: Option<bool>) -> Vec<String> {
+    let mut out = Vec::new();
+    let cuts = cut.map_or(0, <[_]>::len);
+    let mut formed = true;
+    if old == Some(false) { out.push(String::from("old is true, or left out")); }
+    if round.is_some() && arc.is_some() { out.push(String::from("says one of round and arc")); }
+    if cut.is_some_and(|c| c.is_empty() || c.iter().any(|p| m::sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]) <= 1e-9)) { out.push(String::from("cut: planes, each a way it faces and how far out")); formed = false; }
+    if let Some(axis) = round {
+        if axis != 1.0 && axis != 3.0 { out.push(String::from("round is the axis 1 (x) or 3 (z): a cylinder on its end is a round thing of the kit")); formed = false; }
+        else {
+            let a = if axis == 1.0 { h[2] } else { h[0] };
+            if m::abs(h[1] - a) > 0.15 * m::min(h[1], a) + 1e-9 { out.push(format!("round {axis}: the box is square across that axis, or within 15 hundredths of it ({} by {a})", h[1])); }
+        }
+        if cuts > 0 { out.push(String::from("round takes every plane of the record: no cut beside it")); }
+    } else if let Some(a) = arc {
+        if a.axis != 1.0 && a.axis != 3.0 || a.rise <= 0.0 { out.push(String::from("arc: the axis 1 or 3, and a rise over 0")); formed = false; }
+        else {
+            let w = if a.axis == 1.0 { h[2] } else { h[0] };
+            if a.rise > 2.0 * h[1] + 1e-6 { out.push(format!("arc: a rise of {} in a box {} high", a.rise, 2.0 * h[1])); }
+            if a.rise > w + 1e-6 { out.push(format!("arc: a rise of {} over a half width of {w} (a half circle is the most)", a.rise)); }
+        }
+        if cuts > ARC_PLANES { out.push(format!("an arc leaves room for {ARC_PLANES} planes ({cuts})")); }
+    } else if cuts as f64 > MAX_CUT_PLANES { out.push(format!("at most {MAX_CUT_PLANES} planes ({cuts})")); }
+    if !formed || !out.is_empty() { return out; }
+    for (i, q) in cut.into_iter().flatten().enumerate() {
+        let r = cut_record(h, &[cut_plane([q[0], q[1], q[2]], q[3])]);
+        if r.empty { out.push(format!("cut[{i}] leaves nothing of the box")); }
+        else if r.cut.map_or(true, |c| c.is_empty()) { out.push(format!("cut[{i}] cuts nothing of the box")); }
+    }
+    if out.is_empty() && (cuts > 0 || arc.is_some() || round.is_some()) && cut_record(h, &planes_of(h, &Form { round, arc, cut, old })).empty { out.push(String::from("the form leaves nothing of the box")); }
+    out
+}
 
 impl<'a> Rules<'a> {
     fn of(data: &'a Json, f: &'a LevelFile) -> Faults {
