@@ -101,7 +101,7 @@ impl<'a> Rules<'a> {
         if m.grid.is_some_and(|x| x <= 0.0) { self.say("meta.grid", "over 0"); }
         if m.mark_texel.is_some_and(|x| !(0.005..=0.2).contains(&x)) { self.say("meta.markTexel", "metres, 0.005 to 0.2"); }
         if m.kept.is_some_and(|x| !(0.0..=1.0).contains(&x)) { self.say("meta.kept", "a number from 0 to 1"); }
-        for list in ["floors", "boxes", "props", "lights", "switchables", "doors", "routes", "chokepoints", "civilians", "volumes", "marks", "devices", "vents", "beacons"] {
+        for list in ["floors", "boxes", "props", "lights", "switchables", "doors", "routes", "chokepoints", "civilians", "volumes", "marks", "devices", "vents", "hums", "beacons"] {
             self.own(list, data.get(list).items().iter().map(|o| o.peek("id").and_then(Json::str)));
         }
         for (list, of) in [("surfaces.zones", data.get("surfaces").get("zones")), ("mission.objectives", data.get("mission").get("objectives")), ("plans.roomClear", data.get("plans").get("roomClear"))] {
@@ -113,7 +113,7 @@ impl<'a> Rules<'a> {
             if s.ceiling <= 0.0 { self.say(format!("{w}.ceiling"), "over 0"); }
             self.word(&format!("{w}.name"), &s.name);
         }
-        for list in ["boxes", "props", "doors", "chokepoints", "civilians", "volumes", "devices", "vents"] { self.floors(list, data.get(list)); }
+        for list in ["boxes", "props", "doors", "chokepoints", "civilians", "volumes", "devices", "vents", "hums"] { self.floors(list, data.get(list)); }
         for (name, m) in f.materials.iter() {
             let w = format!("materials.{name}");
             if !light(&m.albedo) { self.say(format!("{w}.albedo"), "0 or more"); }
@@ -363,6 +363,12 @@ impl<'a> Rules<'a> {
             in_range("size", v.size.map_or(true, |x| x > 0.0 && x <= 3.0), "m, over 0 and at most 3");
             in_range("period", v.period.map_or(true, |x| x > 0.0), "seconds, over 0");
             in_range("duty", v.duty.map_or(true, |x| (0.0..=1.0).contains(&x)), "from 0 to 1");
+        }
+        most("hums", f.hums.as_ref().map_or(0, |h| h.len()), 16.0, "hums: the mixer holds a voice for each");
+        for (i, h) in f.hums.iter().flatten().enumerate() {
+            let w = named(i, "hums", &h.name);
+            if !(h.level > 0.0 && h.level <= 1.0) { self.say(format!("{w}.level"), "over 0 and at most 1"); }
+            if !(h.radius > 0.0 && h.radius <= 40.0) { self.say(format!("{w}.radius"), "m, over 0 and at most 40"); }
         }
     }
 

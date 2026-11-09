@@ -8,8 +8,8 @@
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
 import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
-import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, levelFaults, flagsToBits, bitsToFlags } from './levelData';
+import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, levelFaults, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
 
@@ -122,6 +122,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     doors,
     devices,
     ...(vents ? { vents } : {}),
+    ...(data.hums ? { hums: data.hums.map((h): HumDef => ({ name: h.id, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     breaker: { pos: V(data.breaker.pos), boxes: [bx(data.breaker.panel), bx(data.breaker.led)], ...(data.breaker.fumble !== undefined ? { fumble: data.breaker.fumble } : {}) },
     beacons: data.beacons.map(b => ({ pos: V(b.pos), box: bx(b.box) })),
     playerSpawn: V(data.mission.playerSpawn),
@@ -275,6 +276,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     volumes: level.volumes ? level.volumes.map((v): LevelData['volumes'][number] => ({ id: v.name, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) : clone(opts.volumes ?? []), devices: (level.devices ?? []).map(deviceData),   // (a Level that carried volumes writes them back; one without keeps the pass-through)
     ...(level.marks?.length ? { marks: level.marks.map((m): MarkData => ({ id: m.name, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),
     ...(level.vents ? { vents: level.vents.map((d): VentData => { const v: VentData = { id: d.name, pos: V(d.pos), dir: V(d.dir), speed: d.speed, spread: d.spread, reach: d.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (d[k] !== undefined) (v as any)[k] = d[k]; return v; }) } : {}),
+    ...(level.hums ? { hums: level.hums.map((h): HumData => ({ id: h.name, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     connectors: [],
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
       { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },

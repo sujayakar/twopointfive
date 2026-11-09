@@ -79,7 +79,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
+  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
  *  LIST in rust/Cargo.lock — every build here is `--locked`, so the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a

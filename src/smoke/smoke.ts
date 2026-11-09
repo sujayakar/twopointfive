@@ -51,7 +51,7 @@ const MAX_SEALERS = 32, SEAL_BYTES = 16 + MAX_SEALERS * 32, SEAL_MOVE = 0.03, SE
 const MAX_DIRTY = 8;
 const META_STRIDE = 42, A_HEADER = 32, M_HEADER = 16, STAT_WORDS = 64;
 /** the game's smoke, behind the pool's records (smoke.wgsl M_BENT): the head, a word a place of the plan, a row a brick */
-const BENT_HEAD = 16, BENT_PLAN = 512, BENT_ROW = 160, BENT_WORDS = BENT_HEAD + BENT_PLAN * (1 + BENT_ROW);
+const BENT_HEAD = 16, BENT_PLAN = 512, BENT_ROW = 161, BENT_WORDS = BENT_HEAD + BENT_PLAN * (1 + BENT_ROW);
 const LEGACY_PUSH = 25, LINE_MOST = 4 /* m: the longest stretch of a line one emitter carries (push) */, DT_MIN = 1 / 2000, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
 /** steps that take the game's smoke whole, one after another ahead of one frame (each leaves a share of the difference: it is shaded between bricks) */
 const WHOLE_STEPS = 6;
@@ -120,6 +120,7 @@ export class SmokeSystem implements SmokeSystemLike {
   private epoch = 0;           // bumped by anew: a read-back in flight across one is dropped
   private needsReset = true; private needsWipe = true;
   private bentAt = 0; private bentMade = -1; private bentPlan = 0; private bentRows = 0;   // the game's smoke as last handed over: which making of it (−1 = none since the last anew), the places of its plan, the bricks that stand
+  private bentDyed = false;    // …and is any of it colored
   private dirty: { lo: Vec3; hi: Vec3 }[] = []; private bakeAll = false;
   private sealed = new Map<Box, SealPose>();
 
@@ -250,9 +251,9 @@ export class SmokeSystem implements SmokeSystemLike {
   get queue(): GPUQueue { return this.engine.device.queue; }
   /** THE GAME'S SMOKE, as it lies where the game left it: `rows(buffer, plan, bricks)` sends the plan's words and the bricks' rows to these places (bytes) of the buffer. Asked for when `made`
    *  is another than the one held */
-  bent(made: number, wide: number, deep: number, bricks: number, rows: (buffer: GPUBuffer, plan: number, bricks: number) => void) {
+  bent(made: number, wide: number, deep: number, bricks: number, dyed: () => boolean, rows: (buffer: GPUBuffer, plan: number, bricks: number) => void) {
     if (made === this.bentMade) return;
-    this.bentMade = made; this.bentPlan = Math.min(wide * deep, BENT_PLAN); this.bentRows = bricks;
+    this.bentMade = made; this.bentPlan = Math.min(wide * deep, BENT_PLAN); this.bentRows = bricks; this.bentDyed = dyed();
     this.engine.device.queue.writeBuffer(this.M, this.bentAt * 4, new Uint32Array([wide, deep]));
     rows(this.M, (this.bentAt + BENT_HEAD) * 4, (this.bentAt + BENT_HEAD + BENT_PLAN) * 4);
   }
@@ -260,7 +261,7 @@ export class SmokeSystem implements SmokeSystemLike {
   shutCans() { for (const e of this.emitters) if (e.kind === 'vent' || e.kind === 'canister') e.ttl = Math.min(e.ttl, e.age); }
   /** WHAT IS DRAWN IS ANOTHER MOMENT'S than the game's (a load, a restart, a place sought on a tape, a game joined, the smoke cleared): all of it is let go of, and the game's smoke is taken
    *  whole in the next frame drawn */
-  anew() { this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
+  anew() { this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.bentDyed = false; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
   /** nothing is drawn yet and the game has smoke: the next frame takes it whole, whether or not time goes by in it */
   private whole(): boolean { return this.needsReset && this.bentRows > 0 && this.params.bend > 0 && !this.params.frozen; }
   private again = false; private skipWas = false;
@@ -304,7 +305,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const on = this.params.enabled && this.live() && (!this.needsReset || this.whole());
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
-    this.binding.dusty = DUST_DRAW.on && on && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
+    this.binding.dusty = DUST_DRAW.on && on && (this.bentDyed && this.params.bend > 0 || this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
