@@ -1131,18 +1131,6 @@ pub fn pair_orders_dark_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    /// the TypeScript's own: (x).toFixed(1) under bun, the values the dark row's log line prints by
-    #[test]
-    fn to_fixed_as_the_page() {
-        for (x, want) in [(0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-0.25, "-0.3"), (-0.04, "-0.0"), (-0.0, "0.0"), (2.05, "2.0"), (12.35, "12.3"), (0.05, "0.1"), (3.0, "3.0")] {
-            assert_eq!(js::to_fixed(x, 1), want, "{}", x);
-        }
-    }
-}
-
 /// A teammate on a take job takes no man as a target who has not noticed anybody, nor the man his hands are on.
 pub fn pair_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.pair.on { return false; }

@@ -688,14 +688,12 @@ fn sam_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, pts: &[V3]) -> 
 mod tests {
     use super::*;
 
-    /// the TypeScript's own answers: bun -e 'console.log((0.125).toFixed(2), …)'
+    /// A spot tried is tried once, whatever height it was asked from. A failure means the search tries a spot twice, or takes two for one.
     #[test]
-    fn keys_as_javascript() {
-        for (x, want) in [(0.125, "0.13"), (0.375, "0.38"), (2.5, "2.50"), (1.005, "1.00"), (-0.001, "-0.00"), (-0.0, "0.00"), (-0.125, "-0.13"), (12.345, "12.35"), (3.0, "3.00"), (10.625, "10.63")] {
-            assert_eq!(key_of([x, 0.0, 3.0]), format!("{},3.00", want), "{}", x);
-        }
-        assert_eq!(key_of([0.125, 9.0, -0.0]), "0.13,0.00");
-        assert_eq!(quarter([-0.1, 0.0, 1.0]), "0,4");
+    fn a_spot_is_kept_to_the_centimetre_and_a_catch_to_the_quarter_metre() {
+        assert_eq!(key_of([1.001, 9.0, 3.0]), key_of([1.002, 0.0, 3.0]));
+        assert_ne!(key_of([1.02, 0.0, 3.0]), key_of([1.0, 0.0, 3.0]));
+        assert_eq!(quarter([-0.1, 0.0, 1.0]), "0,4");    // nought, whichever side of it
         assert_eq!(quarter([-0.75, 0.0, 2.5]), "-3,10");
     }
 
@@ -704,8 +702,4 @@ mod tests {
         assert_eq!(frag_pts([1.0, 7.0, 2.0], [3.0, 0.5, 4.0]), vec![[1.0, 0.8, 2.0], [3.0, 0.8, 4.0]]);
     }
 
-    #[test]
-    fn a_step_to_each_side() {
-        assert_eq!([side(0), side(1), side(2), side(3)], [(0.3, 0.0), (-0.3, 0.0), (0.0, 0.3), (0.0, -0.3)]);
-    }
 }

@@ -581,9 +581,9 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
 mod tests {
     use super::*;
 
-    // the expected text is the TypeScript's own: `(0.25).toFixed(1)` is "0.3" (a tie goes up, where `{:.1}` goes to even), `(-0.04).toFixed(1)` is "-0.0"
+    /// The order log's words for a floor order: its place to a tenth of a metre, a tie going up.
     #[test]
-    fn a_floor_order_is_logged_in_the_languages_digits() {
+    fn a_floor_order_is_logged_with_its_place_to_a_tenth() {
         let mut g = Game::blank();
         let gd = g.gd.push(crate::game::Guard::blank());
         squad_log_row(&mut g, gd, "fragThere", [0.25, 0.0, -0.04]);
