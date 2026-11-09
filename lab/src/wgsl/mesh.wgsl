@@ -2,7 +2,7 @@
 //   object   n levels, bits, children's row, children · a ball round it · the width at which it is gone · then a level each: error, tree, first child, children
 //   child    three rows object → mesh (scaled) · mesh, tint, scale
 //   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, triangles, spread
-//   cluster  vertices' row, triangles, vertices, level      triangle  three vertices of its cluster, a byte each
+//   cluster  vertices' row, triangles, vertices | level << 16, how far it stands off      triangle  three vertices of its cluster, a byte each
 //   vertex   x y, z and spread, normal, color               node      both children: least corner, what it is · greatest corner
 // (what it is: a node's row, or 1 << 31 | first << 4 | how many triangles, or children of the object)
 // A hit's code is MESH_HIT | child << bits | cluster << 7 | triangle.
@@ -67,13 +67,15 @@ fn vnoise3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (
 fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let x = ro + rd * h.t; let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let head = mrowU((*p).planes); let code = h.code & 0x7fffffffu; let child = code >> head.y; let t = code & ((1u << head.y) - 1u);
   let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); let ol = toLocal(k, x) / (*p).quad.x; let l = vec3f(dot(c0.xyz, ol) + c0.w, dot(c1.xyz, ol) + c1.w, dot(c2.xyz, ol) + c2.w);
-  let a4 = mrow(c3.x); let b4 = mrow(c3.x + 1u); let vb = mrowU(bitcast<u32>(b4.w) + (t >> 7u)).x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
+  let a4 = mrow(c3.x); let b4 = mrow(c3.x + 1u); let rec = mrowU(bitcast<u32>(b4.w) + (t >> 7u)); let vb = rec.x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
   let A = meshVertex(i0, a4.xyz, b4.xyz); let e1 = meshVertex(i1, a4.xyz, b4.xyz) - A; let e2 = meshVertex(i2, a4.xyz, b4.xyz) - A; let s0 = l - A; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-30); var u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
   let v0 = mrowU(i0); let v1 = mrowU(i1); let v2 = mrowU(i2); let ln = normalize(octUnpack(v0.z) * w + octUnpack(v1.z) * u + octUnpack(v2.z) * v); let col = unpack4x8unorm(v0.w) * w + unpack4x8unorm(v1.w) * u + unpack4x8unorm(v2.w) * v; let spread = (f32(v0.y >> 16u) * w + f32(v1.y >> 16u) * u + f32(v2.y >> 16u) * v) / 65535.0;
   let cs = bitcast<f32>(c3.z); var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags & ~15u; s.kind = m.kind; s.through = vec3f(0.0); s.glow = vec3f(0.0); s.metal = m.metal; s.f0 = m.f0;
   s.ng = normalize(toWorld(k, c0.xyz * gn.x + c1.xyz * gn.y + c2.xyz * gn.z)); s.n = normalize(toWorld(k, c0.xyz * ln.x + c1.xyz * ln.y + c2.xyz * ln.z)); if (dot(s.ng, rd) > 0.0) { s.ng = -s.ng; s.n = -s.n; }
   // (which side a light is on is asked of the smooth surface, not of the facet: else facets near the sun's edge go dark one by one)
   s.ng = s.n;
+  // (and what goes on from here starts as far off as this level is wrong: its facets stand in each other's way as the stone does not)
+  s.x += s.n * (bitcast<f32>(rec.w) * bitcast<f32>(c3.z) * (*p).quad.x);
   let tp = unpackTint((*p).tint); let tc = unpackTint(c3.y); var base = m.base * tp * tp * tc * tc * col.rgb * col.rgb * (0.72 + 0.28 * col.a);
   // under what triangles hold: the stone's own grain, two sizes of it
   var rough2 = m.rough * m.rough + 2.0 * spread; let grain = 1.0 - smoothstep(0.00008, 0.0006, fp);
