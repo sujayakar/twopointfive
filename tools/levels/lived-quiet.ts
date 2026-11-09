@@ -3,7 +3,7 @@
 // loader with the switch off, so off is the level as it was. The contract: rebuild/play-style-levels/rooms/read-first.md.
 // Rules it keeps for its callers: paint only from the GWOT kit's palette (the simulation reads paint; these two levels have no second look file), NO light and
 // no emissive box (the hiding dark is the level), no Math.random (a piece is what its arguments say). What it cannot keep for them — off every door's line,
-// every authored point and every patrol leg — tools/qa/lived-check.ts holds.
+// every authored point and every patrol leg — levels stands holds.
 // SOLID vs DRAWN: `s()` is a real box (feet, rounds, eyes and the nav grid meet it once it stands over 0.25 m); `d()` is drawn only (BoxFlag.NoShadow: paint on
 // a floor, a thing hung on a wall, paper on a table). A floor piece is `mat()` / `line()`: drawn only, a hair over the level's own ground slabs and rugs.
 import type { Vec3 } from '../../src/math/vec';
@@ -27,7 +27,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
     if (!room) throw new Error(`lived-quiet: a box at (${x}, ${z}) before room() — it would land in a group that is not lived`);
     return K.add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: M[m].albedo, rough: M[m].rough, ...(M[m].metal ? { metal: true } : {}), ...(flags ? { flags } : {}), ...(isRound ? { round: true } : {}) });
   };
-  // The two bands only one of body and nav grid sees (tools/qa/lived-check.ts holds them on the built floor; here they are refused as the piece is written):
+  // The two bands only one of body and nav grid sees (levels stands holds them on the built floor; here they are refused as the piece is written):
   // R1 a top in [0.20, 0.25) m stops a body on floor the grid calls free; R2 an underside in [1.50, 1.70) m stops a standing player where every guard walks under.
   const solid = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, stood: boolean, isRound = false) => {
     const E = 1e-9, at = `the solid at (${x}, ${z}) y ${y0}‥${y1} of lived.${room}`;
@@ -37,7 +37,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   };
   /** a SOLID box: centre (x, z), from y0 up to y1, half extents hx × hz */
   const s = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0, isRound = false) => solid(x, z, y0, y1, hx, hz, m, yaw, false, isRound);
-  /** a SOLID box STOOD ON FURNITURE that already shuts the floor under it (ledgers on a shelf's top board): R2 is not asked here — lived-check still asks it of the built floor */
+  /** a SOLID box STOOD ON FURNITURE that already shuts the floor under it (ledgers on a shelf's top board): R2 is not asked here — levels stands still asks it of the built floor */
   const on = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => solid(x, z, y0, y1, hx, hz, m, yaw, true);
   /** a DRAWN-ONLY box (no shadow, no foot, no round) */
   const d = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => put(x, z, y0, y1, hx, hz, m, yaw, NS);

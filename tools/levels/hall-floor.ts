@@ -57,7 +57,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- walls: a blockwork shell 0.24 thick, blockwork along the hall too (0.12), painted partitions between the rooms ----
   grp('walls.exterior');
   // ANOTHER WAY IN (rust/game_start levels second-way): one WINDOW, in the bunks' outside wall round the corner from the porch — glass from a 0.15 m kerb (a walker is
-  // stopped by anything standing 0.2 m high) to just under door-head height (tools/qa/door-size.ts reads a taller hole with no sill as a doorway without a leaf),
+  // stopped by anything standing 0.2 m high) to just under door-head height (levels doors reads a taller hole with no sill as a doorway without a leaf),
   // so once it is shot out a man steps through it. 'front' is the wing's one outside door and the hall's men can wedge it; no wedge shuts a pane. The bunks'
   // own door opens into the bunks, so from inside that room it opens by hand, and the walk comes out into the hall beside the front door: still in the far guns' view.
   wallX(8, 8.88, 37.12, 0.24, C.concrete, [{ a: 11.0, b: 12.2, y0: 0.15, y1: 1.88, glass: 'whole' }]);   // north: the bunks' window

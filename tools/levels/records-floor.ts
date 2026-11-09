@@ -103,7 +103,7 @@ export const RECORDS_STRUCTURE: StructureData = {
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
  *  between that camera and the men. (tools/qa/kitview-plan.ts holds each id to what stands in the camera's way: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
-/** THE RECORDS OFFICE'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — `bun run tools/qa/response-check.ts` stands every mark
+/** THE RECORDS OFFICE'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
  *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
  *  a screen, and a telephone. Gunfire the desk hears, and a few seconds to dial, is a patrol car on its way; the desk taken first and quietly, from the dark
  *  lot, and nobody calls. Two men, never more: this is the pair's level. */
@@ -315,7 +315,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     for (const [x, z] of [[30.42, 17.5], [30.46, 18.1]]) P.loose('dustbin', 'bin', x, z, 0.1, 6, [P.part(0, 0, 0, 0.45, 0.75, 0.45, C.metal), P.part(0, 0.75, 0, 0.5, 0.05, 0.5, P.tone(C.metal, 0.7))]);
     // THE YARDS, DRESSED FROM THE LIBRARY (2026-11-03): every piece below is a kit piece laid by name. Round where a thing is round in life, low where a man
     // could use it, and never in the two metres of ground a tall wall hides from the camera to its north. Nothing stands on the look's chain, a sight line
-    // or a painted mark, beside a door, against an outer wall (a wall charge's setter and its stand-off want that ground: wallfurn-check reads as it did), or
+    // or a painted mark, beside a door, against an outer wall (a wall charge's setter and its stand-off want that ground: levels charges reads as it did), or
     // in the lane along the west wall that a man at the front office's corner holds the back door down.
     // the gang's truck is the car in the crook: a ladder and two ranging rods on its roof, 1.52 m up where levelKit's car has it (the car the team forms up
     // behind stays bare: the front door's kit picture takes that one out by its boxes), two spare tyres and two drums on the ground behind it

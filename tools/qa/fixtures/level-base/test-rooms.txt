@@ -1,3 +1,0 @@
-# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-c4ade9e0753d22ca24cd1bb6a9dd4596f5298212
