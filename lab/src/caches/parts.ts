@@ -37,7 +37,7 @@ const f = (x: number) => Number.isInteger(x) ? x.toFixed(1) : String(x), U = GPU
 /** what readers call: what is kept, and the direct light where that is not */
 const ends = (direct: boolean) => direct ? 'fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { return held(x, n, j); }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { return heldSmooth(x, n); }\n'
   : 'fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c = held(x, n, j); let d = askDirect(x, n, true); c.E += d.xyz; c.sun = d.w; c.n = max(c.n, 1.0); return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c = heldSmooth(x, n); let d = askDirect(x, n, false); c.E += d.xyz; c.n = max(c.n, 1.0); return c; }\n';
-const lampCode = (o: Numbers) => `const LAMPS = ${(o.lamp ?? 1) > 0};\n`;
+const lampCode = (o: Numbers) => `const LAMPS = ${(o.lamp ?? 0) > 0};\n`;
 let serial = 0;
 const lanes = (slots: number): [string, () => [number, number, number]] => { const rows = Math.max(1, Math.ceil(slots / 2097152)), per = Math.ceil(slots / rows / 64) * 64; return [`const LANES = ${per}u;\n`, () => [per / 64, rows, 1]]; };
 const fill = (lab: Lab, name: string, v: number) => { const b = lab.graph.buffers.get(name)!; lab.gpu.device.queue.writeBuffer(b, 0, new Uint32Array(b.size / 4).fill(v)); };
