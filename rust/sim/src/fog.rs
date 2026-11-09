@@ -5,7 +5,7 @@
 //! The eyes are written by the host as the pass opens (a row an eye: where it is, where it looks, and its field as the host worked it out) and are scratch
 //! of that pass: nothing here is kept from one update to the next.
 //!
-//! The lengths are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math` (math/exact.ts EXACT.on); under an
+//! The lengths are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math`; under an
 //! engine's maths the host asks the TypeScript, whose lengths are that engine's.
 
 use game_types::knobs::Knobs;
@@ -34,7 +34,7 @@ pub fn eyes_addr(w: usize) -> usize {
 
 pub use crate::world::ASK_HOST;
 
-/// fogofwar.ts inField: is the point inside the eye's field (in plan)
+/// Is the point inside the eye's field (in plan)
 #[inline]
 fn in_field(e: &[f64], px: f64, pz: f64) -> bool {
     if e[E_FULL] != 0.0 {

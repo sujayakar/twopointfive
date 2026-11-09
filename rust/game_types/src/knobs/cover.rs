@@ -12,7 +12,7 @@ pub struct CoverK {
     #[k(1.3)] pub rear_read_sticky: f64,
     #[k(6.0)] pub rear_look: f64,
     /// the rear man takes the rear only inside this many metres of his mark: further out on the walk to the stack he keeps up with the file, gun forward —
-    ///  or on a door standing open by his way (doorway.ts DOORMANNERS.watch: `walkOnly / walkDoor` below) — (a
+    ///  or on a door standing open by his way — (a
     ///  large number = the rear is his the whole walk: he came the whole way backwards, metres behind his mate, and the pair reached the door apart). 5, not
     ///  the 3 it first shipped at: over 72 seeded runs the last three metres alone left 98 teammates of 192 standing where 5 m leaves 119, 8 m 121 and the
     ///  whole walk 119 — the men who come at a stack come while it is still forming. At 8 the stack forms a second and three quarters later than at 3, and

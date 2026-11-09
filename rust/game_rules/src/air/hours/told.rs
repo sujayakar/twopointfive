@@ -1,5 +1,5 @@
 //! WHAT THE GAME TELLS A PICTURE of its sky, its air and how the scene is taken. Worked out from state whenever it is asked, and nothing of it is kept: no rule reads
-//! a picture's settings, and what a player turns on his own (Brightness, a panel's row) is his picture's and stays there (src/draw/sky.ts, the page's end).
+//! a picture's settings, and what a player turns on his own (Brightness, a panel's row) is his picture's and stays there.
 use crate::game::Game;
 use crate::v3::V3;
 

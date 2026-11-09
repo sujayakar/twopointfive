@@ -103,7 +103,6 @@ pub struct PairOrdersStalk {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairordersMod {
-    /// (src/game/pairorders.ts:113 PAIR_LOG)
     pub pair_log: Vec<crate::pairorders::PairordersModPAIRLOGItem>,
 }
 

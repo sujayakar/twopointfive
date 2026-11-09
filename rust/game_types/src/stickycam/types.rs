@@ -56,7 +56,6 @@ pub enum StickyRowsRowOverKind {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StickycamMod {
-    /// (src/game/stickycam.ts:76 VISIT)
     pub visit: Option<f64>,
 }
 
@@ -71,24 +70,17 @@ pub struct StickycamStats {
     pub taken: i32,
 }
 
-/// (src/game/stickycam.ts:71 EYE_ID)
 pub const EYE_ID: f64 = 200.0;
 
-/// (src/game/stickycam.ts:202 NONE: a table nothing writes)
 pub fn none() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
-/// (src/game/stickycam.ts:202 NONE_CAMS: a table nothing writes)
 pub fn none_cams() -> Vec<StickyCamId> { Vec::new() }
 
-/// (src/game/stickycam.ts:241 BODY: a table nothing writes)
 pub fn body() -> V3 { [0.05, 0.05, 0.055] }
 
-/// (src/game/stickycam.ts:241 LENS: a table nothing writes)
 pub fn lens() -> V3 { [0.012, 0.012, 0.014] }
 
-/// (src/game/stickycam.ts:241 LENS_LIVE: a table nothing writes)
 pub fn lens_live() -> V3 { [0.42, 0.05, 0.04] }
 
-/// (src/game/stickycam.ts:261 CAM_KEY)
 pub const CAM_KEY: f64 = 8388608.0;
 

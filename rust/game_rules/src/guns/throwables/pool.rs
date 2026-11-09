@@ -1,4 +1,3 @@
-//! src/game/throwables.ts lines 201 to 515
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,14 +6,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The pool of thrown things, over the game's block `st`.   (throwables.ts Throwables.constructor)
+/// The pool of thrown things, over the game's block `st`.
 pub fn throwables_new(g: &crate::game::Game, st: Option<crate::Opaque>) -> crate::throwables::Throwables {
     let mut t = Throwables::blank();
     t.store = crate::sim_itemshome::item_store_new(g, st.unwrap_or_default());
     t
 }
 
-/// Closest hit among statics + door leaves and props.   (throwables.ts Throwables.ray)
+/// Closest hit among statics + door leaves and props.
 fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
     let ph = crate::props::prop_system_raycast(g, ro, rd, match &st { Some(s) => s.t, None => tmax });
@@ -24,7 +23,7 @@ fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
     st.map(|s| ThrowablesRay { t: s.t })
 }
 
-/// The rows are the list: where `items` is not the list the rows were last laid in, what left it leaves with its numbers and the rows are laid anew.   (throwables.ts Throwables.sync)
+/// The rows are the list: where `items` is not the list the rows were last laid in, what left it leaves with its numbers and the rows are laid anew.
 fn throwables_sync(g: &mut crate::game::Game) {
     if g.items.items == g.items.rows {
         return;
@@ -47,7 +46,7 @@ fn throwables_sync(g: &mut crate::game::Game) {
     g.items.rows = list;
 }
 
-/// A new thing in the pool: the dice in the order they were always drawn and before anything is given up for it; `opts` over the rest.   (throwables.ts Throwables.spawn)
+/// A new thing in the pool: the dice in the order they were always drawn and before anything is given up for it; `opts` over the rest.
 pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::ItemKind, pos: V3, vel: V3, opts: Option<crate::throwables::ThrowablesSpawnOpts>) -> ItemId {
     let opts = opts.unwrap_or_default();
     let can = kind == ItemKind::Smoke || kind == ItemKind::Flash;
@@ -118,7 +117,7 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
     it
 }
 
-/// The first spent thing in the list: a magazine, a ring, a dud, a can that has gone off and finished.   (throwables.ts:252)
+/// The first spent thing in the list: a magazine, a ring, a dud, a can that has gone off and finished.
 fn first_spent(g: &mut Game) -> Option<usize> {
     for i in 0..g.items.items.len() {
         let x = g.items.items[i];
@@ -130,7 +129,7 @@ fn first_spent(g: &mut Game) -> Option<usize> {
     None
 }
 
-/// The first thing in the list that is no live can.   (throwables.ts:253)
+/// The first thing in the list that is no live can.
 fn first_not_live(g: &mut Game) -> Option<usize> {
     for i in 0..g.items.items.len() {
         let x = g.items.items[i];
@@ -141,7 +140,7 @@ fn first_not_live(g: &mut Game) -> Option<usize> {
     None
 }
 
-/// An item leaves by the pool's own rule: it takes its numbers, its row is given up, the rows behind it close up. (`sync` has run.)   (throwables.ts Throwables.removeAt)
+/// An item leaves by the pool's own rule: it takes its numbers, its row is given up, the rows behind it close up. (`sync` has run.)
 pub fn throwables_remove_at(g: &mut crate::game::Game, i: f64) {
     let i = i as usize;
     let it = g.items.items[i];
@@ -155,7 +154,7 @@ pub fn throwables_remove_at(g: &mut crate::game::Game, i: f64) {
     }
 }
 
-/// Launch velocity from `from` to land at `to` with a pleasant arc; also the sampled preview points until first impact.   (throwables.ts Throwables.solve)
+/// Launch velocity from `from` to land at `to` with a pleasant arc; also the sampled preview points until first impact.
 pub fn throwables_solve(g: &mut crate::game::Game, from: V3, to: V3, max_speed: Option<f64>) -> crate::throwables::ThrowSolution {
     let max_speed = max_speed.unwrap_or(11.0);
     let d = v3::sub(to, from);
@@ -196,7 +195,7 @@ pub fn throwables_solve(g: &mut crate::game::Game, from: V3, to: V3, max_speed: 
     ThrowSolution { v0, t, points, land }
 }
 
-/// One tick of the pool: the module walks it from the newest down, then what the steps listed is done in order.   (throwables.ts Throwables.update)
+/// One tick of the pool: the module walks it from the newest down, then what the steps listed is done in order.
 pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     throwables_sync(g);
     let mut r = g.items.items.len() as f64 - 1.0;
@@ -218,7 +217,7 @@ pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     throwables_say(g, &ev);
 }
 
-/// The box world's copy stood for the walk, with the game's own leaves and the furniture in it. In Rust the walk is always the module's: nothing to decide, nothing to hand back.   (throwables.ts Throwables.world)
+/// The box world's copy stood for the walk, with the game's own leaves and the furniture in it. In Rust the walk is always the module's: nothing to decide, nothing to hand back.
 fn throwables_world(g: &mut crate::game::Game) {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
@@ -243,7 +242,7 @@ fn ev_get(i: usize) -> f64 {
     unsafe { *(sim::items::addr(1) as *const f64).add(i) }
 }
 
-/// The module's walk from row `from` down: the hand-over written, the walk asked, the tallies kept, what it listed copied onto `ev`. → the row it hands back, or −1.   (throwables.ts Throwables.walkThere)
+/// The module's walk from row `from` down: the hand-over written, the walk asked, the tallies kept, what it listed copied onto `ev`. → the row it hands back, or −1.
 fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut Vec<f64>) -> f64 {
     let ask = crate::scene_collision::rules_panes(g);
     debug_assert!(ask >= 0.0, "the pane's rule is not the module's to ask");
@@ -295,7 +294,7 @@ fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut
     par_get(sim::items::P_ROW)
 }
 
-/// What the steps listed, done in the order it was listed: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.   (throwables.ts Throwables.say)
+/// What the steps listed, done in the order it was listed: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.
 fn throwables_say(g: &mut crate::game::Game, e: &[f64]) {
     if e.is_empty() {
         return;
@@ -333,13 +332,12 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
     match b {
         // doortools, tactics, squadthrow and the rest: the can's knock
         ItemBounce::Can => crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None),
-        // player.ts:815: the player's own throw, and the room hears it
+        // the player's own throw, and the room hears it
         ItemBounce::CanHeard => {
             crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None);
             let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(p), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
             g.events.push(e);
         }
-        // launcher.ts:169
         ItemBounce::RingSkitter => {
             if sp > 1.2 {
                 crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.5, sp / 12.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.7 }));
@@ -351,7 +349,6 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
                 crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.7, sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
             }
         }
-        // player.ts:363
         ItemBounce::Mag => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), None),
         // player.ts:382, guards.ts:2782
         ItemBounce::MagRate { belt } => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: if belt { 0.6 } else { 0.8 } })),
@@ -371,9 +368,8 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
                 }
             }
         }
-        // disarm.ts:97
         ItemBounce::GunDown => crate::disarm::gun_down(g, sp, p, it, n),
-        // savestate.ts:698: disturbed after a load, it clatters as any
+        // disturbed after a load, it clatters as any
         ItemBounce::Loaded { kind } => {
             if sp >= 0.7 {
                 let name = if kind == ItemKind::Smoke || kind == ItemKind::Flash { "canisterBounce" } else { "magDrop" };
@@ -383,10 +379,10 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
     }
 }
 
-/// `out[k].mkey = key` of a box made this frame: it has no row to write yet (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>).   (throwables.ts:507)
+/// Vec<BoxId> and no Tab<BoxId, Box>).
 fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
 
-/// Fill 4 to 7's magazines (gunreload.ts): half length, half width, half thickness, colour.   (throwables.ts:502)
+/// Fill 4 to 7's magazines: half length, half width, half thickness, colour.
 const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
     (0.11, 0.016, 0.012, [0.06, 0.06, 0.065]),
     (0.06, 0.045, 0.035, [0.16, 0.17, 0.1]),
@@ -394,7 +390,7 @@ const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
     (0.1, 0.011, 0.012, [0.03, 0.03, 0.033]),
 ];
 
-/// A thrown thing's parts as boxes into this frame's list, each keyed off its serial.   (throwables.ts Throwables.boxes)
+/// A thrown thing's parts as boxes into this frame's list, each keyed off its serial.
 pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let dy = flag.dynamic;
@@ -499,7 +495,7 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
 }
 
-/// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.   (throwables.ts liveCan)
+/// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.
 fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool {
     let k = item_kind(g, x);
     (k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && (!item_fired(g, x) || item_emit_t(g, x) > 0.0)

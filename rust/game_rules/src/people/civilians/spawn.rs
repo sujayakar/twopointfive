@@ -1,4 +1,3 @@
-//! src/game/civilians.ts lines 1 to 414
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,13 +6,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// The office's phones and ways off the floor: every level with no places of its own reads these.   (civilians.ts CIV_SPOTS)
+/// The office's phones and ways off the floor: every level with no places of its own reads these.
 fn office_spots() -> crate::civilians::CivSpots {
     let t = crate::civilians::civ_spots_table();
     crate::civilians::CivSpots { phones: t.phones, exits: t.exits }
 }
 
-/// The phones and the ways off this level's floor: the quiet mission's own, else the office's.   (civilians.ts civSpots)
+/// The phones and the ways off this level's floor: the quiet mission's own, else the office's.
 pub(super) fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
     let Some(sc) = g.level.scenarios.as_ref() else { return office_spots(); };
     if sc.quiet.is_none() {
@@ -27,7 +26,7 @@ pub(super) fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots
     o
 }
 
-/// The level's own places, as civSpots keeps them in ownSpots: the quiet mission's.   (civilians.ts:73,75)
+/// The level's own places, as civSpots keeps them in ownSpots: the quiet mission's.
 fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians::CivSpots {
     let Some(q) = sc.quiet.as_ref() else { return crate::civilians::CivSpots { phones: Vec::new(), exits: Vec::new() }; };
     let stands = |list: &Option<Vec<crate::scene_scenarios::QuietStand>>| -> Vec<crate::civilians::CivSpot> {
@@ -40,7 +39,7 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
 }
 
 
-/// One line of what happened to her, kept on the record, the last few only.   (civilians.ts log)
+/// One line of what happened to her, kept on the record, the last few only.
 pub(super) fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 1), what);
     let c = g.gd[gd].civ.unwrap();
@@ -50,7 +49,7 @@ pub(super) fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     }
 }
 
-/// A civilian comes into a game here and nowhere else; one more than a step of the doors can be handed is a level too big.   (civilians.ts join)
+/// A civilian comes into a game here and nowhere else; one more than a step of the doors can be handed is a level too big.
 fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     let most = crate::levelfit::civ_most(g);
     if g.civilians.len() as f64 >= most {
@@ -62,7 +61,7 @@ fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     gd
 }
 
-/// Fresh civilians on their first marks; nothing with the switch off or none authored.   (civilians.ts spawnCivilians)
+/// Fresh civilians on their first marks; nothing with the switch off or none authored.
 pub fn spawn_civilians(g: &mut crate::game::Game) {
     g.civilians = Vec::new();
     if !g.tune.civilians || g.night_breach.active || g.rescue.active {
@@ -76,7 +75,7 @@ pub fn spawn_civilians(g: &mut crate::game::Game) {
     }
 }
 
-/// Whoever a seat has hold of or is hauling let go of, then fresh civilians.   (civilians.ts resetCivilians)
+/// Whoever a seat has hold of or is hauling let go of, then fresh civilians.
 pub fn reset_civilians(g: &mut crate::game::Game) {
     for s in g.seats.clone() {
         let pl = crate::cmd::seat_man(g, s);
@@ -112,7 +111,7 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
     spawn_civilians(g);
 }
 
-/// A civilian of the usual make at her first mark, doing what she does there.   (civilians.ts makeCivilian)
+/// A civilian of the usual make at her first mark, doing what she does there.
 fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
     let id = CIV_ID0 + i;
     let route = crate::scene_level::PatrolRoute {
@@ -207,7 +206,7 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
     gd
 }
 
-/// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.   (civilians.ts spawnHostage)
+/// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.
 pub fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHostageDef) -> GuardId {
     let kind = match def.kind {
         SpawnHostageDefKind::Cleaner => crate::scene_level::CivilianDefKind::Cleaner,

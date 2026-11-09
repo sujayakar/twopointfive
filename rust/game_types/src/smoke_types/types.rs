@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what kind of source an emitter is, for the host's solver (smoke/types.ts:15 SmokeEmitter.kind)
+/// what kind of source an emitter is, for the host's solver
 #[derive(Clone, Copy, Debug, Default)]
 pub enum SmokeEmitterKind {
     #[default] Flash,
@@ -121,5 +121,4 @@ pub struct SmokeSystemLike {
     pub params: Option<crate::smoke_types::CanisterParams>,
 }
 
-/// (src/smoke/types.ts:56 WIND_GPU_MAX)
 pub const WIND_GPU_MAX: f64 = 8.0;

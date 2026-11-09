@@ -29,7 +29,6 @@ pub struct RenderFrameModLookConfig {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct RenderFrameMod {
-    /// (src/render/frame.ts:351 lookConfig)
     #[is(crate::render_frame::RenderFrameModLookConfig { fire_snow: 1.0 })] pub look_config: crate::render_frame::RenderFrameModLookConfig,
 }
 

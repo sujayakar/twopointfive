@@ -43,7 +43,7 @@ pub fn finish(b: &Box, look: &Look) -> f64 {
     let r = match coat { Some(c) if c < own => c, _ => own };
     m::min(1.0, m::max(0.0, r)) + if b.metal == Some(true) { 2.0 } else { 0.0 } + if b.aniso == Some(true) { 4.0 } else { 0.0 }
 }
-/// what it is made of, whether it moves, and a number of its own that shifts its map (render/gbuffer.ts lookWordOf)
+/// what it is made of, whether it moves, and a number of its own that shifts its map
 fn word(b: &Box, moves: bool, look: &Look) -> f64 {
     if !look.on { return 0.0; }
     let n = |v: f64, k: f64| m::round(v * k) as i64;

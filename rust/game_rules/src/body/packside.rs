@@ -17,7 +17,7 @@ fn trunk_name(n: &str) -> bool {
     // TRUNK = /^DEF-(hips|spine\.00[1-3]|thigh\.[LR])$/
     matches!(n, "DEF-hips" | "DEF-spine.001" | "DEF-spine.002" | "DEF-spine.003" | "DEF-thigh.L" | "DEF-thigh.R")
 }
-/// the memo's row made if it can be: false = no cast, or a mesh with no parts   (packside.ts memoOf)
+/// the memo's row made if it can be: false = no cast, or a mesh with no parts
 fn memo_made(g: &mut Game, ch: RigId) -> bool {
     let Some(cast) = g.tab.rig[ch].cast else { return false; };
     let mesh = g.tab.rig[ch].mesh;
@@ -75,7 +75,7 @@ fn memo_made(g: &mut Game, ch: RigId) -> bool {
     g.m.packside.memo.set(ch, memo);
     true
 }
-/// The pack a man drawn with this part mask wears on his back; None with the switch off, no cast, or none worn.   (packside.ts packOf)
+/// The pack a man drawn with this part mask wears on his back; None with the switch off, no cast, or none worn.
 pub fn pack_of(g: &mut Game, ch: RigId, mask: f64) -> Option<PackExt> {
     if !memo_made(g, ch) { return None; }
     let mm = g.m.packside.memo.get(ch).unwrap();
@@ -86,7 +86,7 @@ pub fn pack_of(g: &mut Game, ch: RigId, mask: f64) -> Option<PackExt> {
     }
     None
 }
-/// HALF 3: the mask a man is drawn with while he carries a real tool on his back.   (packside.ts packMask)
+/// HALF 3: the mask a man is drawn with while he carries a real tool on his back.
 pub fn pack_mask(g: &mut Game, ch: RigId, mask: f64, carries: bool) -> f64 {
     if !carries { return mask; }
     if !memo_made(g, ch) { return mask; }
@@ -95,7 +95,7 @@ pub fn pack_mask(g: &mut Game, ch: RigId, mask: f64, carries: bool) -> f64 {
     if ram == 0 || pack == 0 || mk & ram == 0 { return mask; }
     ((mk & !ram) | pack) as f64
 }
-/// A thing's place at a pack's side, in the mesh's bind space.   (packside.ts sideBind)
+/// A thing's place at a pack's side, in the mesh's bind space.
 pub fn side_bind(g: &Game, e: PackExt, what: SideBindWhat, dims: SideBindDims) -> SidePlace {
     let t = g.k.packside;
     if what == SideBindWhat::Hammer {
@@ -109,7 +109,7 @@ pub fn side_bind(g: &Game, e: PackExt, what: SideBindWhat, dims: SideBindDims) -
     let x = if left { e.x1 + t.gap + dims.thick } else { e.x0 - t.gap - dims.thick };
     SidePlace { o: [x, t.butt - dims.rear.unwrap_or(0.3), t.gun - dims.top.unwrap_or(0.02)], x: [1.0, 0.0, 0.0], y: [0.0, 0.0, 1.0], z: [0.0, -1.0, 0.0], pivot: Some([x, t.butt, t.gun]), len: Some(dims.len.unwrap_or(0.8)), r: Some(0.0) }
 }
-/// HIS BACK'S LINE under a lateral strip at bind x.   (packside.ts backLine)
+/// HIS BACK'S LINE under a lateral strip at bind x.
 // SKELETON-GAP: packside::back_line taking g (its stub is `back_line(ch, x)`: it reads the mesh and writes the memo)
 fn back_line_g(g: &mut Game, ch: RigId, x: f64) -> Vec<BackPt> {
     let xc = m::max(-REACH, m::min(REACH, x));
@@ -140,7 +140,7 @@ fn back_line_g(g: &mut Game, ch: RigId, x: f64) -> Vec<BackPt> {
     g.m.packside.memo.get_mut(ch).unwrap().back.set(key, line.clone());
     line
 }
-/// How far a thing at a pack's side turns about its top end to lie along his back as posed.   (packside.ts sidePitch)
+/// How far a thing at a pack's side turns about its top end to lie along his back as posed.
 pub fn side_pitch(g: &mut Game, p: SidePlace, c: CharId) -> f64 {
     let ch = g.ch[c].rig;
     let t = g.k.packside;
@@ -169,7 +169,7 @@ pub fn side_pitch(g: &mut Game, p: SidePlace, c: CharId) -> f64 {
     }
     m::max(t.pitch0, th)
 }
-/// A bind-space place turned `th` about its top end, in the pack's upright plane.   (packside.ts sidePitched)
+/// A bind-space place turned `th` about its top end, in the pack's upright plane.
 pub fn side_pitched(p: SidePlace, th: f64) -> SidePlace {
     let Some(v) = p.pivot else { return p; };
     if !js::truthy(th) { return p; }
@@ -178,7 +178,7 @@ pub fn side_pitched(p: SidePlace, th: f64) -> SidePlace {
     let rel = dir([p.o[0] - v[0], p.o[1] - v[1], p.o[2] - v[2]]);
     SidePlace { o: [v[0] + rel[0], v[1] + rel[1], v[2] + rel[2]], x: p.x, y: dir(p.y), z: dir(p.z), ..p }
 }
-/// A bind-space place carried by a joint's skin matrix.   (packside.ts sideSkinned)
+/// A bind-space place carried by a joint's skin matrix.
 pub fn side_skinned(p: SidePlace, jd: &[f32], at: f64) -> SidePlace {
     let at = at as usize;
     let d = |i: usize| jd[at + i] as f64;
@@ -190,12 +190,12 @@ pub fn side_skinned(p: SidePlace, jd: &[f32], at: f64) -> SidePlace {
     };
     SidePlace { o: pt(p.o), x: dir(p.x), y: dir(p.y), z: dir(p.z), pivot: None, len: None, r: None }
 }
-/// The chest joint's place in the skin's list (−1: a skeleton without one).   (packside.ts chestJoint)
+/// The chest joint's place in the skin's list (−1: a skeleton without one).
 pub fn chest_joint(g: &mut Game, ch: RigId) -> f64 {
     if !memo_made(g, ch) { return -1.0; }
     g.m.packside.memo.get(ch).unwrap().j3
 }
-/// A bind-space place in the chest joint's own space.   (packside.ts sideLocal)
+/// A bind-space place in the chest joint's own space.
 pub fn side_local(g: &mut Game, ch: RigId, p: SidePlace) -> Option<SidePlace> {
     let j = chest_joint(g, ch);
     if j < 0.0 { return None; }

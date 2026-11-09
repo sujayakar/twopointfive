@@ -19,6 +19,6 @@ pub struct SnowbogK {
     #[k(0.06)] pub top: f64,
     /// m: … snow whose top is within this of the landing is what it landed in
     #[k(0.15)] pub bank_m: f64,
-    /// the squad's forecast of a throw (squadsmoke.ts squadArcTo): the run-on past the landing is a floor's × (1 − bog) to this power
+    /// the squad's forecast of a throw: the run-on past the landing is a floor's × (1 − bog) to this power
     #[k(2.0)] pub run: f64,
 }

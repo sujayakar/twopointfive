@@ -41,7 +41,6 @@ pub struct SquadSmokeThrower {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadsmokeMod {
-    /// (src/game/squadsmoke.ts:57 states)
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,
 }
 
@@ -52,5 +51,4 @@ pub struct SquadsmokeStats {
     pub thrown: i32,
 }
 
-/// (src/game/squadsmoke.ts:39 SQUADSMOKE: a table nothing writes)
 pub fn squadsmoke() -> crate::squadsmoke::SQUADSMOKE { crate::squadsmoke::SQUADSMOKE { order_key: String::from("KeyH"), speed: 9.0, near_m: 1.0, floor_m: 0.035, clear_h: alloc::vec![0.07, 0.3], roll_k: 0.061, hand_ahead: 0.35, hand_up: 1.3, head_drop: 0.3, again_secs: 1.2 } }

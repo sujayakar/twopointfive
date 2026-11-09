@@ -39,14 +39,14 @@ pub const MAX_ITEMS: usize = 131072;
 pub const MAX_TILTED: usize = 256;
 /// cut records for the statics (a leaf has its own beside its row)
 pub const MAX_CUTS: usize = 1024;
-/// the most planes one box carries (src/scene/cut.ts MAX_CUT_PLANES)
+/// the most planes one box carries
 pub const CUT_PLANES: usize = 8;
 /// panes one line of fire can list
 pub const MAX_PANES: usize = 256;
 /// statics one gather can list (the host's own lists are shorter)
 pub const MAX_LIST: usize = 4096;
 /// PANES OF GLASS THAT ARE NO LONGER WHOLE (glass.rs): a row a pane with anything out of it, on its way out, coming down or gone — written by the side
-/// that still owns the breaking (game/glassbreak.ts, through boxMirror.ts), read by every line and ray here that meets the pane. A pane with no row is
+/// that still owns the breaking, read by every line and ray here that meets the pane. A pane with no row is
 /// shut everywhere. GD doubles and GW words a row (glass.rs names them).
 pub const MAX_GLASS: usize = 256;
 pub const GD: usize = 80;
@@ -82,7 +82,7 @@ pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
 pub const F_NO_SHADOW: u32 = 2;
 pub const F_GLASS: u32 = 1 << 17;
 
-/// the sheets of glass a level may have (src/scene/boxMirror.ts PANE_CAP, src/game/levelfit.ts)
+/// the sheets of glass a level may have
 pub const MAX_SHEETS: usize = 256;
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -387,5 +387,5 @@ pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
     let t = clamp((x - a) / (b - a), 0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
-/// Math.PI / 180 (src/math/vec.ts DEG)
+/// Math.PI / 180
 pub const DEG: f64 = 0.017453292519943295;

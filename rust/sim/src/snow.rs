@@ -5,7 +5,7 @@ use game_types::knobs::Knobs;
 use crate::items::{bog_of, Snow};
 use crate::weather::of;
 
-/// snowBog.ts snowBogAt: how boggy the ground of game `g`, world `w`, is where a thing touched down at (x, y, z), 0‥1
+/// How boggy the ground of game `g`, world `w`, is where a thing touched down at (x, y, z), 0‥1
 pub fn bog_at(g: usize, w: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> f64 {
     let wx = of(g);
     let s = Snow { top: tune.snowbog.top, bank: tune.snowbog.bank_m, packed: tune.snowbog.packed, old: tune.snowbog.old, dead: 0.0, grip: 0.0, stick: 0.0, roofs: wx.roofs_n as usize, roof: wx.roofs };

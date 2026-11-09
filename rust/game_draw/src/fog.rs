@@ -7,7 +7,7 @@ use game::ids::*;
 use game::{fogofwar, js, m, seats, sim_lightshome};
 
 const DEG: f64 = core::f64::consts::PI / 180.0;
-/// eyes the fog's programs take (render/fogofwar.ts FOG_EYES)
+/// eyes the fog's programs take
 pub const EYES: usize = 7;
 /// lamps the lit fog takes (FOG_LIGHTS)
 pub const LIGHTS: usize = 48;

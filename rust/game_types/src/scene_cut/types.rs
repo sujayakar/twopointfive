@@ -45,8 +45,6 @@ pub struct CutPrism {
     pub empty: bool,
 }
 
-/// (src/scene/cut.ts:21 MAX_CUT_PLANES)
 pub const MAX_CUT_PLANES: f64 = 8.0;
 
-/// (src/scene/cut.ts:25 CUT_STRIDE)
 pub const CUT_STRIDE: f64 = 9.0;

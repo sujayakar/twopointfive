@@ -5,19 +5,19 @@ pub use types::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// INVENTED: AREA_LIT_MARKS asks by the object (markings.ts:369), and in Rust a mark is a value that boxes and lists copy, so its content says which. Picture only
+/// INVENTED: AREA_LIT_MARKS asks by the object, and in Rust a mark is a value that boxes and lists copy, so its content says which. Picture only
 pub fn mark_key(m: &crate::scene_markings::MarkingDef) -> u32 { let mut k = 0x811c9dc5u32; let mut eat = |b: &[u8]| { for x in b { k = (k ^ *x as u32).wrapping_mul(0x01000193); } }; eat(m.face.as_str().as_bytes()); for v in m.at.iter().chain(m.size.iter()) { eat(&v.to_bits().to_le_bytes()); } for c in &m.cells { eat(c.as_bytes()); } k }
 
 // The public helpers of this module (texelOf, faceIndex, faceHalf, resolveAlbedo, faceAreas) are still the skeleton's empty stubs and panic, so the bodies below
-// use these private copies. MarkRes's Rust order is not MARK_RES's: its index is written out here (markings.ts:32).
+// use these private copies. MarkRes's Rust order is not MARK_RES's: its index is written out here.
 
-/// RES_K[m.res ?? 'base'] × base. (markings.ts texelOf)
+/// RES_K[m.res ?? 'base'] × base.
 fn texel_for(res: Option<MarkRes>, base: f64) -> f64 {
     let k = match res.unwrap_or(MarkRes::Base) { MarkRes::Fine => 0.5, MarkRes::Base => 1.0, MarkRes::Coarse => 2.0 };
     base * k
 }
 
-/// MARK_FACES.indexOf(f). (markings.ts faceIndex)
+/// MARK_FACES.indexOf(f).
 fn face_at(f: MarkFace) -> usize {
     match f { MarkFace::X => 0, MarkFace::X2 => 1, MarkFace::Y => 2, MarkFace::Y2 => 3, MarkFace::Z => 4, MarkFace::Z2 => 5 }
 }
@@ -30,18 +30,15 @@ fn cell_at(ch: Option<&u8>) -> i32 {
     }
 }
 
-/// (markings.ts faceHalf's pick)
 fn pick(a: V3, h: V3) -> f64 {
     m::abs(a[0]) * h[0] + m::abs(a[1]) * h[1] + m::abs(a[2]) * h[2]
 }
 
-/// (markings.ts faceHalf)
 fn half_of(h: V3, f: usize) -> FaceHalf {
     let ax = face_axes()[f];
     FaceHalf { hn: pick(ax.n, h) }
 }
 
-/// (markings.ts resolveAlbedo)
 fn albedo_of(p: Option<&MarkPal>, base: V3) -> V3 {
     let Some(p) = p else { return [base[0], base[1], base[2]] };
     if let Some(a) = p.albedo { return [a[0], a[1], a[2]]; }
@@ -49,7 +46,7 @@ fn albedo_of(p: Option<&MarkPal>, base: V3) -> V3 {
     [m::min(base[0] * k, 1.0), m::min(base[1] * k, 1.0), m::min(base[2] * k, 1.0)]
 }
 
-/// A marking's coverage fractions, resolved albedos, mean radiance and area. (markings.ts markStats)
+/// A marking's coverage fractions, resolved albedos, mean radiance and area.
 pub fn mark_stats(m: &crate::scene_markings::MarkingDef, base: V3, texel_base: Option<f64>) -> crate::scene_markings::MarkStats {
     let t = texel_for(m.res, texel_base.unwrap_or(MARKING_TEXEL));
     let (w, h) = (m.size[0], m.size[1]);
@@ -79,7 +76,7 @@ pub fn mark_stats(m: &crate::scene_markings::MarkingDef, base: V3, texel_base: O
     MarkStats { f, alb, mean_l, area: (w * t) * (h * t), d_albedo, emask: emask as f64 }
 }
 
-/// The world centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw): where the game stands its light. (markings.ts markWorldRect)
+/// The world centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw): where the game stands its light.
 pub fn mark_world_rect(m: &crate::scene_markings::MarkingDef, c_2: V3, h: V3, yaw: f64, texel_base: Option<f64>) -> crate::scene_markings::MarkWorldRect {
     let f = face_at(m.face);
     let ax = face_axes()[f];

@@ -2,8 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// the switch and its numbers: on (?nopowerout = the garrison stands in the dark, as it did)
-///  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it.
+/// UNTUNED by play: nobody has played against it.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct PoweroutK {
     /// m: a burning mains fixture in a man's plain view this near is one he saw die

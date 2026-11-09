@@ -46,7 +46,7 @@ const SQUAD: [&str; 4] = ["Red One", "Red Two", "Blue One", "Blue Two"];
 /// the cues the lesson sends, in the written order
 const CUES: [&str; 16] = ["gun", "bags", "gap", "blind", "shop", "room", "trucks", "loose", "call", "box", "dark", "bunk", "wall", "yard", "seen", "free"];
 
-/// a man told to aim somewhere turns his whole body to it   (tut-kit.script.ts:50 aim)
+/// a man told to aim somewhere turns his whole body to it
 fn aim(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, at: V3, hot: bool) -> Result<(), String> {
     let face = crate::director::util::yaw_to(crate::director::director_query_pos_unit(g, r, u)?, at);
     let o = crate::director::OrderPatch2 {
@@ -59,7 +59,7 @@ fn aim(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::directo
     crate::director::director_beat_order(g, r, b, u, &o)
 }
 
-/// the named men on the floor and alive, in the order named   (tut-kit.script.ts:51 men)
+/// the named men on the floor and alive, in the order named
 fn men<S: AsRef<str>>(g: &mut Game, r: DirectorRunId, names: &[S]) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for n in names {
@@ -70,7 +70,7 @@ fn men<S: AsRef<str>>(g: &mut Game, r: DirectorRunId, names: &[S]) -> Vec<crate:
     out
 }
 
-/// a line on the squad's net from the first of `names` on his feet   (tut-kit.script.ts:53 radio)
+/// a line on the squad's net from the first of `names` on his feet
 fn radio(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, names: &[&str], line: &str) -> Result<(), String> {
     let u = match men(g, r, names).into_iter().next() {
         Some(u) => Some(u),
@@ -80,7 +80,7 @@ fn radio(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, names: &[&str], 
     Ok(())
 }
 
-/// `!!q.flag(n)`, `!c.flag.n`: the run's flag as a condition   (director.ts:854)
+/// `!!q.flag(n)`, `!c.flag.n`: the run's flag as a condition
 fn flag_truthy(g: &Game, r: DirectorRunId, n: &str) -> bool {
     match g.tab.director_run[r].flags.get(String::from(n)) {
         Some(Some(crate::director::Json::Text(s))) => !s.is_empty(),
@@ -91,7 +91,7 @@ fn flag_truthy(g: &Game, r: DirectorRunId, n: &str) -> bool {
     }
 }
 
-/// `c.flag.gun as string | undefined`   (tut-kit.script.ts:85)
+/// `c.flag.gun as string | undefined`
 fn flag_text(g: &Game, r: DirectorRunId, n: &str) -> Option<String> {
     match g.tab.director_run[r].flags.get(String::from(n)) {
         Some(Some(crate::director::Json::Text(s))) => Some(s.clone()),
@@ -158,7 +158,7 @@ fn flag_then_frame(g: &mut Game, r: DirectorRunId, at: &mut u16, set: &mut dyn F
     Ok(None)
 }
 
-/// (levels/tut-kit.script.ts:42 `script(D)`) the define pass
+///  the define pass
 pub(super) fn tut_kit_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_kit::TutKitVars, String> {
     let back_door = crate::director::manifest_door(m, "store");
     let wash_door = crate::director::manifest_door(m, "wash");
@@ -199,7 +199,7 @@ pub(super) fn tut_kit_define(m: &mut crate::director::Manifest) -> Result<crate:
     })
 }
 
-/// every man on his mark, his gun on the way the team will come; the gun's man is put on his gun once   (tut-kit.script.ts:71 'hold')
+/// every man on his mark, his gun on the way the team will come; the gun's man is put on his gun once
 pub(super) fn tut_kit_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitHoldFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 && crate::director::director_beat_unit(g, r, GUNNER).is_none() {
         f.at = 1;
@@ -220,7 +220,7 @@ pub(super) fn tut_kit_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
     Ok(None)
 }
 
-/// `const u = c.unit(n); if (u && alive) c.order(u, { goal: null, aimAt: at, upper: 'aim', face: yawTo(pos(u), at) })`   (tut-kit.script.ts:74, :75)
+/// `const u = c.unit(n); if (u && alive) c.order(u, { goal: null, aimAt: at, upper: 'aim', face: yawTo(pos(u), at) })`
 fn hold_on_mark(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, n: &str, at: V3) -> Result<(), String> {
     let Some(u) = crate::director::director_beat_unit(g, r, n) else { return Ok(()) };
     if !crate::director::director_query_alive(g, r, &u) { return Ok(()); }
@@ -235,7 +235,7 @@ fn hold_on_mark(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, n: &str, 
     crate::director::director_beat_order(g, r, b, &u, &o)
 }
 
-/// THE GUN: what he shoots at is the lesson of the step that is up   (tut-kit.script.ts:81 'gun')
+/// THE GUN: what he shoots at is the lesson of the step that is up
 pub(super) fn tut_kit_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitGunFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -305,17 +305,14 @@ pub(super) fn tut_kit_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: D
     }
 }
 
-/// (tut-kit.script.ts:102 'bags')
 pub(super) fn tut_kit_bags_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitBagsFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     flag_then_frame(g, r, &mut f.at, &mut |g| set_flag_text(g, r, "gun", "bags"))
 }
 
-/// (tut-kit.script.ts:103 'gap')
 pub(super) fn tut_kit_gap_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitGapFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     flag_then_frame(g, r, &mut f.at, &mut |g| set_flag_text(g, r, "gun", "gap"))
 }
 
-/// (tut-kit.script.ts:104 'blind')
 pub(super) fn tut_kit_blind_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitBlindFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     flag_then_frame(g, r, &mut f.at, &mut |g| set_flag_text(g, r, "gun", "blind"))
 }
@@ -324,7 +321,7 @@ pub(super) fn tut_kit_blind_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 const SHOP_IN_LINE: u32 = 1;
 const SHOP_DOWN: u32 = 2;
 
-/// THE SHOP: the man behind the door, held until the player steps into his line and a second more   (tut-kit.script.ts:108 'shop')
+/// THE SHOP: the man behind the door, held until the player steps into his line and a second more
 pub(super) fn tut_kit_shop_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitShopFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         f.u = crate::director::director_beat_unit(g, r, "Tango 1");
@@ -342,7 +339,7 @@ pub(super) fn tut_kit_shop_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
     Ok(None)
 }
 
-/// (tut-kit.script.ts:108-114) the c.until tests of 'shop'
+///  the c.until tests of 'shop'
 pub(super) fn tut_kit_shop_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitShopFrame, id: u32) -> Result<bool, String> {
     match id {
         SHOP_IN_LINE => {
@@ -358,7 +355,7 @@ pub(super) fn tut_kit_shop_test(g: &mut crate::game::Game, r: DirectorRunId, b: 
 const ROOM_HIT: u32 = 1;
 const ROOM_INSIDE: u32 = 2;
 
-/// THE STORE: two men hold the room on its doorway; a stun grenade folds them   (tut-kit.script.ts:118 'room')
+/// THE STORE: two men hold the room on its doorway; a stun grenade folds them
 pub(super) fn tut_kit_room_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitRoomFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     let hit = || until(ROOM_HIT, "one of the pair is down");
     let in_store = || until(ROOM_INSIDE, "the player is in the store");
@@ -392,7 +389,7 @@ pub(super) fn tut_kit_room_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
     Ok(None)
 }
 
-/// (tut-kit.script.ts:118-126) the c.until tests of 'room'
+///  the c.until tests of 'room'
 pub(super) fn tut_kit_room_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitRoomFrame, id: u32) -> Result<bool, String> {
     match id {
         ROOM_HIT => Ok(f.pair.iter().any(|u| !crate::director::director_query_alive(g, r, u))),
@@ -404,12 +401,11 @@ pub(super) fn tut_kit_room_test(g: &mut crate::game::Game, r: DirectorRunId, b: 
     }
 }
 
-/// (tut-kit.script.ts:131 'loose')
 pub(super) fn tut_kit_loose_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitLooseFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     flag_then_frame(g, r, &mut f.at, &mut |g| set_flag_true(g, r, "loose"))
 }
 
-/// how many of the two are still up   (tut-kit.script.ts:138 up)
+/// how many of the two are still up
 fn trucks_up(g: &Game, r: DirectorRunId, two: &[crate::script_tut_kit::TutKitTrucksTwo]) -> f64 {
     let mut n = 0.0;
     for m in two { if crate::director::director_query_alive(g, r, m.u.as_ref().unwrap()) { n += 1.0; } }
@@ -421,7 +417,7 @@ const TRUCKS_IN_DOORWAY: u32 = 1;
 const TRUCKS_DOWN: u32 = 2;
 const TRUCKS_OVER: u32 = 3;
 
-/// THE LAUNCHER: two more through the building, stood in the shop's doorway, shooting the head of the arch's wall   (tut-kit.script.ts:132 'trucks')
+/// THE LAUNCHER: two more through the building, stood in the shop's doorway, shooting the head of the arch's wall
 pub(super) fn tut_kit_trucks_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitTrucksFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -505,7 +501,7 @@ pub(super) fn tut_kit_trucks_step(g: &mut crate::game::Game, r: DirectorRunId, b
     }
 }
 
-/// (tut-kit.script.ts:132-150) the c.until tests of 'trucks'
+///  the c.until tests of 'trucks'
 pub(super) fn tut_kit_trucks_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitTrucksFrame, id: u32) -> Result<bool, String> {
     match id {
         TRUCKS_IN_DOORWAY => {
@@ -521,27 +517,22 @@ pub(super) fn tut_kit_trucks_test(g: &crate::game::Game, r: DirectorRunId, b: Di
     }
 }
 
-/// (tut-kit.script.ts:153 'call')
 pub(super) fn tut_kit_call_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitCallFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     wait_then_radio(g, r, b, &mut f.at, 0.8, &["Red One"], "We heard all that from the road. Say the word.")
 }
 
-/// (tut-kit.script.ts:154 'box')
 pub(super) fn tut_kit_box_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitBoxFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     wait_then_radio(g, r, b, &mut f.at, 0.6, &["Red One"], "There's a breaker box on the court wall. We can kill the lights.")
 }
 
-/// (tut-kit.script.ts:156 'dark')
 pub(super) fn tut_kit_dark_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitDarkFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     wait_then_radio(g, r, b, &mut f.at, 0.5, &["Red Two"], "Lights are out. Goggles on.")
 }
 
-/// (tut-kit.script.ts:157 'bunk')
 pub(super) fn tut_kit_bunk_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitBunkFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     wait_then_radio(g, r, b, &mut f.at, 0.6, &["Blue One"], "There's a door off the shop we haven't opened.")
 }
 
-/// (tut-kit.script.ts:158 'wall')
 pub(super) fn tut_kit_wall_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitWallFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     wait_then_radio(g, r, b, &mut f.at, 0.6, &["Blue One"], "That door's locked. We can put a charge on the wall.")
 }
@@ -563,7 +554,6 @@ fn step_room(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, sub: &mut Op
     Ok(out)
 }
 
-/// (tut-kit.script.ts:160 'bunkroom')
 pub(super) fn tut_kit_bunkroom_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitBunkroomFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         f.at = 1;
@@ -573,7 +563,6 @@ pub(super) fn tut_kit_bunkroom_step(g: &mut crate::game::Game, r: DirectorRunId,
     step_room(g, r, b, &mut f.sub_room, got)
 }
 
-/// (tut-kit.script.ts:161 'fuelroom')
 pub(super) fn tut_kit_fuelroom_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitFuelroomFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         f.at = 1;
@@ -583,12 +572,11 @@ pub(super) fn tut_kit_fuelroom_step(g: &mut crate::game::Game, r: DirectorRunId,
     step_room(g, r, b, &mut f.sub_room, got)
 }
 
-/// (tut-kit.script.ts:166 'free')
 pub(super) fn tut_kit_free_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitFreeFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     flag_then_frame(g, r, &mut f.at, &mut |g| set_flag_true(g, r, "free"))
 }
 
-/// a teammate calls the two in the yard, and the line goes by a breath later   (tut-kit.script.ts:167 'seen')
+/// a teammate calls the two in the yard, and the line goes by a breath later
 pub(super) fn tut_kit_seen_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitSeenFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 && !men(g, r, &YARD).is_empty() {
         radio(g, r, b, &["Red Two", "Blue Two"], "Two more in the wash yard, down behind the sandbags. No shot from here.")?;
@@ -604,7 +592,7 @@ const YARD_BEHIND_BAGS: u32 = 1;
 const YARD_DOWN: u32 = 2;
 const YARD_TEAM_IN: u32 = 3;
 
-/// THE WASH YARD: two more by its back door, low, down behind the sandbags with their flashlights on   (tut-kit.script.ts:171 'yard')
+/// THE WASH YARD: two more by its back door, low, down behind the sandbags with their flashlights on
 pub(super) fn tut_kit_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitYardFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     let hit = || until(YARD_DOWN, "one of them is down");
     match f.at {
@@ -680,7 +668,7 @@ pub(super) fn tut_kit_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
     }
 }
 
-/// (tut-kit.script.ts:171-185) the c.until tests of 'yard'
+///  the c.until tests of 'yard'
 pub(super) fn tut_kit_yard_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitYardFrame, id: u32) -> Result<bool, String> {
     match id {
         YARD_BEHIND_BAGS => {
@@ -703,7 +691,7 @@ pub(super) fn tut_kit_yard_test(g: &mut crate::game::Game, r: DirectorRunId, b: 
 const HELPER_HIT: u32 = 1;
 const HELPER_IN_ROOM: u32 = 2;
 
-/// a held room is the AI's own once a stun grenade or a blast has gone off in it, one of its men is hit, or the player or a teammate is inside it   (tut-kit.script.ts:55 room)
+/// a held room is the AI's own once a stun grenade or a blast has gone off in it, one of its men is hit, or the player or a teammate is inside it
 fn tut_kit_room_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitRoomHelperFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     let hit = || until(HELPER_HIT, "one of them is down");
     let in_room = || until(HELPER_IN_ROOM, "the team is in the room");
@@ -735,7 +723,7 @@ fn tut_kit_room_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
     }
 }
 
-/// (tut-kit.script.ts:55-63) the c.until tests of the helper `room`, reached through `director::beat_test`'s arms for bunkroom and fuelroom
+///  the c.until tests of the helper `room`, reached through `director::beat_test`'s arms for bunkroom and fuelroom
 pub(super) fn tut_kit_room_helper_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitRoomHelperFrame, id: u32) -> Result<bool, String> {
     match id {
         HELPER_HIT => Ok(f.held.iter().any(|u| !crate::director::director_query_alive(g, r, u))),

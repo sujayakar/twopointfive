@@ -10,7 +10,7 @@ use game::m;
 /// bones a man has room for, and men the skinning has room for
 const JOINTS: usize = 64;
 const MOST: usize = 16;
-/// proxies a man (src/scene/boxes.ts CAPS_PER_CHAR)
+/// proxies a man
 const CAPS: usize = 15;
 const SNAP: f64 = 1.5;
 /// a waterline this high is the whole man

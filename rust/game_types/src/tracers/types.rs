@@ -60,5 +60,4 @@ pub struct TracersParams {
     pub max_lights: f64,
 }
 
-/// (src/game/tracers.ts:56 LAMP_TTL)
 pub const LAMP_TTL: f64 = 30.0;

@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Did a round flying these legs MEET a fixture (its point `pos`, its own boxes) under the real-hit rule? `stopped`: its flight ended in one of the fixture's boxes. (aimcost.ts lampStruck)
+/// Did a round flying these legs MEET a fixture (its point `pos`, its own boxes) under the real-hit rule? `stopped`: its flight ended in one of the fixture's boxes.
 pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], stopped: bool, legs: &[crate::aimcost::RoundLeg], bare: Option<f64>, slack: Option<f64>) -> bool {
     let bare = bare.unwrap_or(g.k.aimcost.bare);
     let slack = slack.unwrap_or(g.k.aimcost.slack);
@@ -37,7 +37,7 @@ pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], 
     false
 }
 
-/// `rayBox(ro, rd, grown, tmax) != null`, `grown` being a copy of `b` with half sizes `h` (aimcost.ts:91 to 96). `h` is the only field that differs, so the row itself takes it for the one
+/// `rayBox(ro, rd, grown, tmax) != null`, `grown` being a copy of `b` with half sizes `h`. `h` is the only field that differs, so the row itself takes it for the one
 /// call and has its own back before anything else can read it. `copy_box` is not used: its answer is a row of `g.col.boxes`, which never shrinks, and a shot must not add to the world.
 fn ray_grown(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, h: V3, tmax: f64) -> bool {
     let (_, own) = seam_box_c_h(g, b);
@@ -47,13 +47,13 @@ fn ray_grown(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, h: V3, tmax: f
     hit
 }
 
-/// `b.c`, `b.h` of a box's row. (aimcost.ts:88)
+/// `b.c`, `b.h` of a box's row.
 fn seam_box_c_h(g: &crate::game::Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
 
-/// `grown.h = h`, on the row itself for the one call. (aimcost.ts:91)
+/// `grown.h = h`, on the row itself for the one call.
 fn seam_box_set_h(g: &mut crate::game::Game, b: BoxId, h: V3) { g.tab.boxes[b].h = h; }
 
-/// How near a round's legs pass a point (m; the legs' own lengths, nothing past where it stopped): the cheap test ahead of `lamp_struck`. (aimcost.ts legsNear)
+/// How near a round's legs pass a point (m; the legs' own lengths, nothing past where it stopped): the cheap test ahead of `lamp_struck`.
 pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {
     let mut best = m::INF;
     for s in legs {
@@ -64,7 +64,7 @@ pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {
     best
 }
 
-/// The feet a man's hands still remember: the fastest he has gone, let go over `stop_tau` (and to nothing: `stop_bleed`). (aimcost.ts feetHold)
+/// The feet a man's hands still remember: the fastest he has gone, let go over `stop_tau` (and to nothing: `stop_bleed`).
 pub fn feet_hold(g: &mut crate::game::Game, prev: f64, speed: f64, dt: f64) -> f64 {
     let kept = prev * m::exp(-dt / m::max(g.k.aimcost.stop_tau, 1e-3)) - g.k.aimcost.stop_bleed * dt;
     let v = m::max(speed, kept);

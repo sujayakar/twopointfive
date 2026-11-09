@@ -17,7 +17,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     String::from(if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { "clear from outside · holding it" } else { "clear from outside" })
 }
 
-/// doortools.ts:865
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return Err(Some(String::from("already holding it."))); }
     match crate::doortools::door_tools_can_threshold(g, t, men) {

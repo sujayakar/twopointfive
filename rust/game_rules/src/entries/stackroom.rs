@@ -9,13 +9,12 @@ use alloc::{string::String, vec, vec::Vec};
 
 use crate::ask::Over;
 
-/// (stackroom.ts flat)
 #[inline]
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 
 // ---------------------------------------------------------------- the book
 
-/// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at   (stackroom.ts stackRoomBookKeep)
+/// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at
 pub fn stack_room_book_keep(g: &crate::game::Game) -> crate::stackroom::StackRoomBookKeep {
     let Some(k) = &g.m.stackroom.books else { return crate::stackroom::StackRoomBookKeep::Forget };
     let mut floors: JsMap<DoorId, [bool; 2]> = JsMap::new();
@@ -23,7 +22,7 @@ pub fn stack_room_book_keep(g: &crate::game::Game) -> crate::stackroom::StackRoo
     crate::stackroom::StackRoomBookKeep::Back { sig: k.sig, doors: k.doors, near: k.near.is_some(), floors }
 }
 
-/// puts back what the keep took: the closure stackRoomBookKeep answers   (stackroom.ts:93,95)
+/// puts back what the keep took: the closure stackRoomBookKeep answers
 pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroom::StackRoomBookKeep) {
     let (sig, doors, near, floors) = match keep {
         crate::stackroom::StackRoomBookKeep::Forget => { g.m.stackroom.books = None; return; }
@@ -44,7 +43,7 @@ pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroo
     k.floors = back;
 }
 
-/// this game's book of floors, new if the grid's cells or the doors changed   (stackroom.ts bookOf)
+/// this game's book of floors, new if the grid's cells or the doors changed
 fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stackroom::Book {
     let sig = g.engine.world.geom_serial;
     let doors = g.doors.list.len() as f64;
@@ -55,13 +54,13 @@ fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stackroom::Book {
     g.m.stackroom.books.as_mut().unwrap()
 }
 
-/// the middle of a nav cell   (stackroom.ts centre)
+/// the middle of a nav cell
 fn centre(g: &mut crate::game::Game, c_2: f64) -> V3 {
     let (w, cell) = (g.col.nav.w, g.col.nav.cell);
     [(js::rem(c_2, w) + 0.5) * cell, 0.0, (js::to_i32(c_2 / w) as f64 + 0.5) * cell]
 }
 
-/// some doorway's frame line lies between a and b inside its opening, or one of them is on it   (stackroom.ts doorBetween)
+/// some doorway's frame line lies between a and b inside its opening, or one of them is on it
 fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];
@@ -83,14 +82,14 @@ fn nav_idx(g: &Game, x: f64, z: f64) -> f64 { crate::scene_collision::nav_grid_i
 /// nav.isBlocked(x, z)
 #[inline]
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
-/// a cell on the grid and not blocked   (stackroom.ts floorOf's free)
+/// a cell on the grid and not blocked
 fn cell_free(g: &Game, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = nav_idx(g, x, z) as usize;
     g.col.nav.blocked[i] != 1
 }
 
-/// the cells a frame line can pass by, made once a book: the only steps asked about a doorway   (stackroom.ts floorOf)
+/// the cells a frame line can pass by, made once a book: the only steps asked about a doorway
 fn near_cells(g: &mut Game) -> Vec<u8> {
     if let Some(n) = &g.m.stackroom.books.as_ref().unwrap().near { return n.clone(); }
     let (nw, nh, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
@@ -114,14 +113,14 @@ fn near_cells(g: &mut Game) -> Vec<u8> {
     near
 }
 
-/// the floor before face `side` of `d`; None: that face has none   (stackroom.ts floorOf)
+/// the floor before face `side` of `d`; None: that face has none
 fn floor_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::stackroom::Floor> {
     floor_read(g, d, side);
     let at = if side > 0.0 { 0 } else { 1 };
     g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[at].as_ref().unwrap().clone()
 }
 
-/// floods that face if it has not been read, leaving the answer in the book's row   (stackroom.ts floorOf)
+/// floods that face if it has not been read, leaving the answer in the book's row
 fn floor_read(g: &mut Game, d: DoorId, side: f64) {
     let at = if side > 0.0 { 0 } else { 1 };
     {
@@ -181,7 +180,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
     g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = Some(Some(f));
 }
 
-/// steps of walking from the doorway to `p` on that floor (−1: not on it)   (stackroom.ts stepsTo)
+/// steps of walking from the doorway to `p` on that floor (−1: not on it)
 fn steps_to(g: &mut crate::game::Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> f64 {
     let (nw, nh, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (x, z) = (m::floor(p[0] / cell), m::floor(p[2] / cell));
@@ -208,7 +207,7 @@ fn steps_to(g: &mut crate::game::Game, over: &Over, f: &crate::stackroom::Floor,
     best
 }
 
-/// on the floor, and the walk there no way round a wall   (stackroom.ts onFloor)
+/// on the floor, and the walk there no way round a wall
 fn on_floor(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> bool { on_floor_over(g, &Over::OWN, f, p) }
 /// …of the world as the question takes it
 fn on_floor_over(g: &mut Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> bool {
@@ -218,7 +217,7 @@ fn on_floor_over(g: &mut Game, over: &Over, f: &crate::stackroom::Floor, p: V3) 
     s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * flat(mid, p)
 }
 
-/// is `p` on the floor of that face of `d`: true for a face with no floor at all   (stackroom.ts stackRoomHas)
+/// is `p` on the floor of that face of `d`: true for a face with no floor at all
 pub fn stack_room_has(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool { stack_room_has_over(g, &Over::OWN, d, side, p) }
 /// …of the world as the question takes it (the floor itself is the book's, read of the level as it stands)
 pub fn stack_room_has_over(g: &mut Game, over: &Over, d: DoorId, side: f64, p: V3) -> bool {
@@ -231,14 +230,14 @@ pub fn stack_room_has_over(g: &mut Game, over: &Over, d: DoorId, side: f64, p: V
     ok
 }
 
-/// … the same, counted: a tuck or a step back not taken for it   (stackroom.ts stackRoomKeeps)
+/// … the same, counted: a tuck or a step back not taken for it
 pub(super) fn stack_room_keeps(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
     let ok = stack_room_has(g, d, side, p);
     if !ok { g.stats.stackroom.kept += 1; }
     ok
 }
 
-/// is `q` the mark a man of the squad already stands on at this door   (stackroom.ts stoodAt)
+/// is `q` the mark a man of the squad already stands on at this door
 fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V3) -> bool {
     for man in crate::orders::squad_orders_squad(g, seat) {
         let a = crate::orders::squad_orders_of(g, seat, man);
@@ -251,25 +250,25 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
     false
 }
 
-/// a place a piece of furniture stands on, unless a man of the squad already stands on it at this door   (stackroom.ts furnished)
+/// a place a piece of furniture stands on, unless a man of the squad already stands on it at this door
 fn furnished(g: &mut crate::game::Game, d: DoorId, q: V3) -> bool {
     crate::orders::squad_orders_on_furniture(g, q) && !stood_at(g, &crate::seats::here(g), d, q)
 }
 
 // ---------------------------------------------------------------- THE RULE
 
-/// nothing solid between two places, at knee height   (stackroom.ts stackRoomFix's sees)
+/// nothing solid between two places, at knee height
 fn sees(g: &mut Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
-/// off the opening's own lane   (stackroom.ts stackRoomFix's offLane)
+/// off the opening's own lane
 fn off_lane(g: &Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
-/// the hand of the opening a place is on   (stackroom.ts handOf)
+/// the hand of the opening a place is on
 fn hand_of(g: &Game, d: DoorId, w: f64, q: V3) -> f64 { if crate::doortools::along_of(g, d, q) > w / 2.0 { 1.0 } else { -1.0 } }
-/// a place along the door's wall: faced down the wall at the doorway, and the shoulder the wall is on (face, stackSide)   (stackroom.ts onWall)
+/// a place along the door's wall: faced down the wall at the doorway, and the shoulder the wall is on (face, stackSide)
 fn on_wall(th: f64, side: f64, hand: f64) -> (f64, f64) {
     let (fx, fz, nx, nz) = (-m::cos(th) * hand, -m::sin(th) * hand, -m::sin(th) * side, m::cos(th) * side);
     (m::atan2(fx, fz), if nx * fz - nz * fx >= 0.0 { 1.0 } else { -1.0 })
 }
-/// a cell's middle not up against the furniture   (stackroom.ts stackRoomFix's clear)
+/// a cell's middle not up against the furniture
 fn clear_of_props(g: &Game, q: V3) -> bool {
     for n in 0..g.props.props.len() {
         let pr = g.props.props[n];
@@ -285,7 +284,7 @@ struct FixFit<'a> { d: DoorId, side: f64, f: &'a crate::stackroom::Floor, c: V3,
 /// Is this place another door's: before its leaf, or within the blast a charge on it throws back.
 fn anothers(g: &Game, d: DoorId, q: V3) -> bool { crate::doorway::before_another_door(g, q, d) || crate::doortools::in_anothers_blast(g, &crate::seats::here(g), d, q) }
 
-/// a place a mark may be dealt   (stackroom.ts stackRoomFix's fits)
+/// a place a mark may be dealt
 fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
     on_floor(g, x.f, q)
         && !anothers(g, x.d, q)
@@ -299,7 +298,7 @@ fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
 /// what a mark dealt again takes of its new place (Partial<StackPost>): no stackSide = its own stays; group always, none included
 struct Got { pos: V3, face: f64, stack_side: Option<f64>, group: Option<f64> }
 
-/// every post not on the floor of that face, or at another door, is dealt again, the rest stay; None: one has no room at all   (stackroom.ts stackRoomFix)
+/// every post not on the floor of that face, or at another door, is dealt again, the rest stay; None: one has no room at all
 pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], min_m: Option<f64>) -> Option<Vec<crate::orders::StackPost>> {
     let min_m = min_m.unwrap_or(0.0);
     let posts = posts?;
@@ -437,7 +436,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
 
 // ---------------------------------------------------------------- OUT OF THE ROOM'S VIEW
 
-/// is `p` (on face `side`) in view of the floor beyond the door through its opening   (stackroom.ts inView)
+/// is `p` (on face `side`) in view of the floor beyond the door through its opening
 fn in_view(g: &mut crate::game::Game, d: DoorId, far: &[V3], p: V3) -> bool {
     let (eye, need) = (g.k.stackroom.view_eye, g.k.stackroom.view_cells);
     let pp = [p[0], eye, p[2]];
@@ -451,7 +450,7 @@ fn in_view(g: &mut crate::game::Game, d: DoorId, far: &[V3], p: V3) -> bool {
     false
 }
 
-/// the nav cells within `viewFar` of the doorway on the face the men are NOT on   (stackroom.ts farCells)
+/// the nav cells within `viewFar` of the doorway on the face the men are NOT on
 fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
     let view_far = g.k.stackroom.view_far;
     let cell = g.col.nav.cell;
@@ -475,14 +474,14 @@ fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
     l
 }
 
-/// the leaf stands open: off its hinges, or unlatched and swung   (stackroom.ts stackViewOpen)
+/// the leaf stands open: off its hinges, or unlatched and swung
 pub fn stack_view_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     if crate::doors::door_latched(g, d) { return false; }
     m::abs(crate::doors::door_angle(g, d)) >= g.k.stackroom.view_ajar
 }
 
-/// how far from the frame's centre a plain stack's mark on this door can be   (stackroom.ts stackViewReach)
+/// how far from the frame's centre a plain stack's mark on this door can be
 pub(super) fn stack_view_reach(g: &crate::game::Game, d: DoorId) -> f64 {
     if stack_view_open(g, d) { m::max(2.6, g.dr[d].def.width / 2.0 + g.k.stackroom.view_past + 0.7) } else { 2.6 }
 }
@@ -498,7 +497,7 @@ struct ViewDeal<'a> {
 #[derive(Clone, Copy)]
 struct Dealt { q: V3, h: f64, over: bool }
 
-/// the places along hand `h` of the door's wall the floor beyond does not see, from the jamb out, made once a hand: (place, behind glass)   (stackroom.ts candsOf)
+/// the places along hand `h` of the door's wall the floor beyond does not see, from the jamb out, made once a hand: (place, behind glass)
 fn cands_of(g: &mut Game, r: &mut ViewDeal, h: f64) {
     let at = if h > 0.0 { 0 } else { 1 };
     if r.cands[at].is_some() { return; }
@@ -525,7 +524,7 @@ fn cands_of(g: &mut Game, r: &mut ViewDeal, h: f64) {
     r.cands[at] = Some(l);
 }
 
-/// the first such place on hand `h` a body clear of every place that stands, not behind glass while another will do   (stackroom.ts stackViewFix's place)
+/// the first such place on hand `h` a body clear of every place that stands, not behind glass while another will do
 fn view_place(g: &mut Game, r: &mut ViewDeal, i: usize, h: f64, fixed: &[V3]) -> Option<V3> {
     cands_of(g, r, h);
     let view_apart = g.k.stackroom.view_apart;
@@ -542,7 +541,7 @@ fn view_place(g: &mut Game, r: &mut ViewDeal, i: usize, h: f64, fixed: &[V3]) ->
     None
 }
 
-/// a place for post `i`: across the opening first if it is across, else its own hand if it is in view   (stackroom.ts stackViewFix's deal)
+/// a place for post `i`: across the opening first if it is across, else its own hand if it is in view
 fn view_deal(g: &mut Game, r: &mut ViewDeal, i: usize, fixed: &[V3]) -> Option<Dealt> {
     let h0 = hand_of(g, r.d, r.w, r.posts[i].pos);
     let mut h = -h0;
@@ -554,7 +553,7 @@ fn view_deal(g: &mut Game, r: &mut ViewDeal, i: usize, fixed: &[V3]) -> Option<D
     q.map(|q| Dealt { q, h, over: h != h0 })
 }
 
-/// a plain 'stack up' on a door standing open: the marks in view, and those across the opening from `men`, dealt again along the door's wall   (stackroom.ts stackViewFix)
+/// a plain 'stack up' on a door standing open: the marks in view, and those across the opening from `men`, dealt again along the door's wall
 pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], men: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
     let posts = posts?;
     let s = g.k.stackroom;
@@ -717,7 +716,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
 /// a way through to a held room next door
 struct Way { o: DoorId, far: f64, floor: crate::stackroom::Floor, cost: f64 }
 
-/// (5) a place by a doorway of a room next to the face's own, one the team holds, on that doorway's far face   (stackroom.ts nextRoom)
+/// (5) a place by a doorway of a room next to the face's own, one the team holds, on that doorway's far face
 fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackroom::Floor, used: &[V3], min_m: f64, shy: bool) -> Option<crate::stackroom::NextRoom> {
     let s = g.k.stackroom;
     let (jamb_out, jamb_past, file_gap) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past, g.orders.knobs.file_gap);
@@ -784,7 +783,7 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
     None
 }
 
-/// a place by that doorway a mark may be dealt   (stackroom.ts nextRoom's fits)
+/// a place by that doorway a mark may be dealt
 fn next_fits(g: &mut Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_c: V3, front: V3, used: &[V3], min_m: f64, shy: bool, q: V3) -> bool {
     let s = g.k.stackroom;
     on_floor(g, floor, q)
@@ -796,7 +795,7 @@ fn next_fits(g: &mut Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_
         && !(shy && furnished(g, d, q))
 }
 
-/// the floor of a face as the rule reads it (rearwatch.ts asks it, as do the QA tools)   (stackroom.ts stackRoomProbe)
+/// the floor of a face as the rule reads it (rearwatch.ts asks it, as do the QA tools)
 pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::stackroom::StackRoomProbe {
     let f = floor_of(g, d, side);
     let seed = match &f { Some(f) => Some(centre(g, f.seed)), None => None };

@@ -16,11 +16,11 @@ impl Bone {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, ToBytes)]
 pub enum Who { Guard(GuardId), Player(PlayerId) }
 
-/// THE BLOW'S HANDS FOLLOW HIS MEN (takedown.ts: `live: () => marks(by, vic, style)`): the only closure ever given to it
+/// THE BLOW'S HANDS FOLLOW HIS MEN: the only closure ever given to it
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlowLive { pub by: CharId, pub vic: CharId, pub style: BlowStyle }
 
-/// THE TRUNK'S PATH IN A GUIDED FALL (character.ts `led`): the pelvis led over [p0, p1], the turn over [n0, n1]
+/// THE TRUNK'S PATH IN A GUIDED FALL: the pelvis led over [p0, p1], the turn over [n0, n1]
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Led { pub pv: V3, pub p_t: V3, pub v_t: V3, pub p0: f64, pub p1: f64, pub n0: f64, pub n1: f64, pub v0n: V3 }
 /// `frame` of a guided fall, by the fall's kind (the closures of character.ts's guided fall, with what they captured)
@@ -69,7 +69,7 @@ impl Spring {
     /// `new Spring(x)`
     pub fn at(x: f64) -> Self { let mut s = Self::blank(); s.x = x; s }
 }
-/// the inverse of the chest twist, for a point (character.ts untwist): nothing to undo, or the conjugates and pivots worked out when it was asked
+/// the inverse of the chest twist, for a point: nothing to undo, or the conjugates and pivots worked out when it was asked
 #[derive(Clone, Debug)]
 pub enum Untwist {
     Same,
@@ -2526,259 +2526,174 @@ pub struct CharacterCapsules {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CharacterMod {
-    /// (src/game/character.ts:342 HOLD_SHOW)
     #[is(crate::character::CharacterModHOLDSHOW { kill: false, beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
-    /// (src/game/character.ts:478 AT0)
     pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
 }
 
-/// (src/game/character.ts:81 WORK: a table nothing writes)
 pub static WORK: crate::character::Work = crate::character::Work { key_lead: 0.2, tip_len: 0.215, hover: 0.022, key_off: 0.03, lever: 0.035 };
 
-/// (src/game/character.ts:87 SWAP: a table nothing writes)
 pub fn swap() -> crate::character::SWAP { crate::character::SWAP { draw: 0.6, stow: 0.8, away: 0.3, take: 0.5, lag: 0.2 } }
 
-/// (src/game/character.ts:328 WHIP_THRU)
 pub const WHIP_THRU: f64 = 0.14;
 
-/// (src/game/character.ts:331 SWAP_RATE)
 pub const SWAP_RATE: f64 = 14.0;
 
-/// (src/game/character.ts:336 HOLD_POLISH_UP: a table nothing writes)
 pub fn hold_polish_up() -> crate::character::HOLDPOLISHUP { crate::character::HOLDPOLISHUP { lay_ahead: 0.9, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7.0, tip: 8.0, arch: -5.0 } }
 
-/// (src/game/character.ts:357 BLEND: a table nothing writes)
 pub fn blend() -> crate::character::BLEND { crate::character::BLEND { walk_in0: 0.12, walk_in1: 0.55, walk_top: 1.6, jog_at: 2.7 } }
 
-/// (src/game/character.ts:359 BOB: a table nothing writes)
 pub static BOB: crate::character::Bob = crate::character::Bob { keep: 0.55 };
 
-/// (src/game/character.ts:363 RUN_WARP: a table nothing writes)
 pub fn run_warp() -> crate::character::RUNWARP { crate::character::RUNWARP { stride: 0.62 } }
 
-/// (src/game/character.ts:371 SPRINT_WARP: a table nothing writes)
 pub static SPRINT_WARP: crate::character::SprintWarp = crate::character::SprintWarp { stride: 0.57 };
 
-/// (src/game/character.ts:385 RUN_LINGER: a table nothing writes)
 pub static RUN_LINGER: crate::character::RunLinger = crate::character::RunLinger { depth: 0.42, on: [-0.085, -0.04], off: [0.065, 0.105], bleed: 0.09 };
 
-/// (src/game/character.ts:392 GAZE_EL: a table nothing writes)
 pub static GAZE_EL: crate::character::GazeEl = crate::character::GazeEl { stand: 4.0, crouch: 9.0, sprint: 12.0 };
 
-/// (src/game/character.ts:392 GAZE: a table nothing writes)
 pub static GAZE: crate::character::Gaze = crate::character::Gaze { keep: 0.8, yaw_damp: 0.7 };
 
-/// (src/game/character.ts:406 LIFE: a table nothing writes)
 pub static LIFE: crate::character::Life = crate::character::Life { on: 1.0, breath_rate: 0.25, breath_rate_run: 0.62, breath_amp: 1.0, breath_amp_run: 2.6, mass_gain: 0.011, mass_back: 0.035, mass_fwd: 0.03, mass_dip: 0.004, mass_dip_max: 0.025, tip_gain: 0.9, tip_back: 5.0, tip_fwd: 6.0, rest_after: 1.6, shift_min: 4.0, shift_span: 5.0, shift_travel: 0.028, shift_in: 3.2, shift_out: 9.0, hip_drop: 2.2, spine_counter: 1.4, neck_counter: 0.6 };
 
-/// (src/game/character.ts:417 TOE_FLOOR_Y)
 pub const TOE_FLOOR_Y: f64 = 0.0147;
 
-/// (src/game/character.ts:422 SOFT_KNEE: a table nothing writes)
 pub static SOFT_KNEE: crate::character::SoftKnee = crate::character::SoftKnee { on: 1.0, from: 0.95, to: 0.985 };
 
-/// (src/game/character.ts:427 WALK_PHASE)
 pub const WALK_PHASE: f64 = 0.22;
 
-/// (src/game/character.ts:428 FEET: a table nothing writes)
 pub static FEET: crate::character::Feet = crate::character::Feet { on: 1.0, swing: 0.22, lift: 0.045, dist: 0.11, turn_deg: 26.0, pivot: 2.2, lag_cap_deg: 55.0 };
 
-/// (src/game/character.ts:430 N: a table nothing writes)
 pub fn n() -> crate::character::N { crate::character::N { hips: String::from("DEF-hips"), spine1: String::from("DEF-spine.001"), spine2: String::from("DEF-spine.002"), spine3: String::from("DEF-spine.003"), neck: String::from("DEF-neck"), head: String::from("DEF-head"), upper_arm_l: String::from("DEF-upper_arm.L"), forearm_l: String::from("DEF-forearm.L"), hand_l: String::from("DEF-hand.L"), upper_arm_r: String::from("DEF-upper_arm.R"), forearm_r: String::from("DEF-forearm.R"), hand_r: String::from("DEF-hand.R"), thigh_l: String::from("DEF-thigh.L"), shin_l: String::from("DEF-shin.L"), foot_l: String::from("DEF-foot.L"), toe_l: String::from("DEF-toe.L"), thigh_r: String::from("DEF-thigh.R"), shin_r: String::from("DEF-shin.R"), foot_r: String::from("DEF-foot.R"), toe_r: String::from("DEF-toe.R"), shoulder_l: String::from("DEF-shoulder.L"), shoulder_r: String::from("DEF-shoulder.R"), middle1_r: String::from("DEF-f_middle.01.R"), middle1_l: String::from("DEF-f_middle.01.L") } }
 
-/// (src/game/character.ts:436 DEGR)
 pub const DEGR: f64 = 0.017453292519943295;
 
-/// (src/game/character.ts:439 AX: a table nothing writes)
 pub fn ax() -> V3 { [1.0, 0.0, 0.0] }
 
-/// (src/game/character.ts:439 AY: a table nothing writes)
 pub fn ay() -> V3 { [0.0, 1.0, 0.0] }
 
-/// (src/game/character.ts:439 AZ: a table nothing writes)
 pub fn az() -> V3 { [0.0, 0.0, 1.0] }
 
-/// (src/game/character.ts:449 STEALTH: a table nothing writes)
 pub static STEALTH: crate::character::Stealth = crate::character::Stealth { in_secs: 0.4, out_secs: 0.27, round: 10.0, idle: crate::character::StealthIdle { out: 0.05, below: 0.1, fwd: 0.11, lead: 0.05, floor: 0.2, pole: [0.8, -0.05, -0.6], fing: [-0.12, -0.9, 0.4], back: [0.45, 0.25, 0.85], curl: 0.2, thumb: 0.15, spread: 0.3 }, walk: crate::character::StealthWalk { stride: 0.6, rate: 12.0, fwd: [0.0, -0.02, 0.18], back: [0.05, -0.3, -0.26], flare_pole: 0.5, tuck: 0.55 }, rise: crate::character::StealthRise { down: 5.0 }, creep: crate::character::StealthCreep { at: [-0.04, -0.2, 0.27], floor: 0.22, rate: 9.0, swing: 0.25 }, cable: crate::character::StealthCable { sink: 0.05, round: 15.0, gap: [-0.07, 0.11], short: 0.1, knee: [0.07, -0.05, 0.1], out: 0.45, head_out: 0.18, undo: 28.0, ahead: 0.3, nod_max: 82.0 } };
 
-/// (src/game/character.ts:508 SWIV_REF_R: a table nothing writes)
 pub static SWIV_REF_R: V3 = [0.92, 0.276, -0.276];
 
-/// (src/game/character.ts:508 SWIV_REF_L: a table nothing writes)
 pub static SWIV_REF_L: V3 = [-0.92, 0.276, -0.276];
 
-/// (src/game/character.ts:531 WALL_GAIT_REST)
 pub const WALL_GAIT_REST: f64 = 0.55;
 
-/// (src/game/character.ts:534 LEAN_POSE: a table nothing writes)
 pub static LEAN_POSE: crate::character::LeanPose = crate::character::LeanPose { deg: 28.0, level: 0.5, rate: 9.0 };
 
-/// (src/game/character.ts:535 WALL_POSE: a table nothing writes)
 pub static WALL_POSE: crate::character::WallPose = crate::character::WallPose { back: [0.135, 0.125, 0.21], lean: [4.5, 7.0], drop: [0.03, 0.02], chest_turn: 8.0, gaze: 58.0, head_pitch: 3.0, feet: crate::character::WallPoseFeet { lead: [0.16, 0.21, 25.0], trail: [-0.14, 0.16, 8.0], lead_crouch: [0.19, 0.31, 30.0], trail_crouch: [-0.15, 0.27, 12.0], trail_heel: 0.5 }, slide: crate::character::WallPoseSlide { line: 0.36, narrow: 0.6 }, hands: crate::character::WallPoseHands { along: 0.25, along_crouch: 0.29, up: 0.02, up_crouch: 0.12, off: 0.06, out: 0.35, peek_in: 0.1 }, elbow: crate::character::WallPoseElbow { out: 0.9, room: 0.35, down: 0.3 }, peek: crate::character::WallPosePeek { lean: 19.0, shift: 0.09, turn: 26.0, gaze: 70.0, tilt: 7.0 }, mend: crate::character::WallPoseMend { along: [0.24, 0.235], up: [0.0, 0.0], elbow: crate::character::WallPoseMendElbow { out: 0.5, room: -0.3, down: 0.2 }, splay: 0.08, sway: 0.025, fan: -0.3, curl: [0.1, 0.12, 0.16, 0.22], thumb: 0.1, thumb_in: 40.0 }, gait: crate::character::WallPoseGait { share: [1.0, 1.0], step: [0.36, 0.34], duty: 0.6, ahead: [0.02, 0.05], apart: [0.21, 0.22], near: [0.17, 0.2], far: [0.3, 0.36], lift: [0.07, 0.06], heel: [22.0, 24.0], toe: [40.0, 30.0], knee_room: [0.2, 0.45], hips: [0.875, 0.5], bob: [0.02, 0.012] } };
 
-/// (src/game/character.ts:587 STANCES: a table nothing writes)
 pub fn stances() -> JsMap<String, crate::character::StanceShape> { { let mut t = JsMap::new(); t.set(String::from("highReady"), crate::character::StanceShape { fwd: 0.25, up: 0.15, side: -0.05, pitch: 8.0, lean: 7.0, head_pitch: 2.0, tuck: 0.85, blade: 0.0, head_yaw: 0.0, squat: 0.015 }); t.set(String::from("lowReady"), crate::character::StanceShape { fwd: 0.3, up: -0.215, side: -0.07, pitch: -42.0, lean: 3.0, head_pitch: 1.0, tuck: 0.3, blade: 0.0, head_yaw: 0.0, squat: 0.0 }); t.set(String::from("stack"), crate::character::StanceShape { fwd: 0.19, up: 0.13, side: -0.03, pitch: 22.0, lean: 9.0, head_pitch: 4.0, tuck: 1.0, blade: 22.0, head_yaw: 14.0, squat: 0.07 }); t.set(String::from("wall"), crate::character::StanceShape { fwd: 0.19, up: 0.13, side: -0.03, pitch: 22.0, lean: 4.5, head_pitch: 3.0, tuck: 1.0, blade: 0.0, head_yaw: 0.0, squat: 0.0 }); t } }
 
-/// (src/game/character.ts:597 WALL_ROOT_OFF)
 pub const WALL_ROOT_OFF: f64 = 0.45;
 
-/// (src/game/character.ts:623 LONG: a table nothing writes)
 pub fn long() -> JsMap<String, crate::character::LongShape> { { let mut t = JsMap::new(); t.set(String::from("patrolLong"), crate::character::LongShape { side: -0.245, up: -0.16, fwd: 0.13, anchor: 0.0, pitch: -42.0, aim_k: 0.0, yaw: 20.0, blade: -8.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.45, -1.0, -0.5], elbow_l: [0.35, -1.0, -0.3], pole_w: 0.65, sway: 1.0, steady: 0.5 }); t.set(String::from("lowLong"), crate::character::LongShape { side: -0.165, up: -0.085, fwd: 0.2, anchor: 0.05, pitch: -40.0, aim_k: 0.05, yaw: 24.0, blade: -10.0, lean: 2.0, head_yaw: 0.0, head_pitch: 2.0, head_roll: 0.0, elbow_r: [-0.55, -1.0, -0.35], elbow_l: [0.4, -1.0, -0.1], pole_w: 0.75, sway: 0.25, steady: 1.0 }); t.set(String::from("shoulder"), crate::character::LongShape { side: -0.15, up: -0.015, fwd: 0.255, anchor: 0.5, pitch: -2.0, aim_k: 1.0, yaw: 0.0, blade: -36.0, lean: 4.0, head_yaw: -10.0, head_pitch: 6.0, head_roll: 7.0, elbow_r: [-0.8, -1.0, -0.2], elbow_l: [0.6, -1.0, 0.35], pole_w: 0.6, sway: 0.1, steady: 1.0 }); t.set(String::from("portLong"), crate::character::LongShape { side: -0.115, up: -0.15, fwd: 0.19, anchor: 0.0, pitch: 50.0, aim_k: 0.0, yaw: 35.0, blade: 0.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.7, -0.8, -0.3], elbow_l: [0.9, -0.6, 0.1], pole_w: 0.75, sway: 0.5, steady: 0.7 }); t } }
 
-/// (src/game/character.ts:642 LONG_CROUCH: a table nothing writes)
 pub fn long_crouch() -> JsMap<String, crate::character::LongShape> { crate::character::long() }
 
-/// (src/game/character.ts:668 LONG_RELOAD: a table nothing writes)
 pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBox { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
 
-/// (src/game/character.ts:674 LC: a table nothing writes)
 pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, blade: 6.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, count: 21.0 } }
 
-/// (src/game/character.ts:681 WALL_TUCK: a table nothing writes)
 pub fn wall_tuck() -> crate::character::WALLTUCK { crate::character::WALLTUCK { long: crate::character::WALLTUCKLong { side: -0.165, up: -0.245, fwd: 0.185, pitch: -76.0, yaw: 15.0, aim_k: 0.0, elbow_r: [-0.75, -1.0, -0.45], elbow_l: [0.6, -1.0, -0.25] }, pistol: crate::character::WALLTUCKPistol { fwd: 0.2, up: -0.19, pitch: -70.0, tuck: 0.8 }, over: 0.12 } }
 
-/// (src/game/character.ts:724 LONG_KICK_BACK)
 pub const LONG_KICK_BACK: f64 = 0.03;
 
-/// (src/game/character.ts:802 HAND: a table nothing writes)
 pub static HAND: crate::character::Hand = crate::character::Hand { can: crate::character::HandCan { curl: [0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl: [0.3, 0.35, 0.41, 0.48], thumb: 0.38, thumb_in: 34.0, thumb_bend: 15.0, thumb_close: 10.0, thumb_own: 1.0, spread: -0.15, vary: 0.05, side_vary: 0.035, finger_vary: 0.025, far: 45.0, trig: [6.0, 10.0, 6.0], trig_spread: 6.0, trig_trained: 0.6, trig_hold: 0.7 };
 
-/// (src/game/character.ts:833 MV2: a table nothing writes)
 pub static MV2: crate::character::Mv2 = crate::character::Mv2 { reload: crate::character::Mv2Reload { box_: crate::character::Mv2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::Mv2ReloadBox { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::Mv2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::Mv2Bound { rate: 6.0, back: crate::character::Mv2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: [0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::Mv2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: [0.28, 0.32, 0.36, 0.4], knuckle: [16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::Mv2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::Mv2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::Mv2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::Mv2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 }, dip: crate::character::Mv2Dip { pitch: -36.0, down: 0.035, back: 0.02, rate_in: 13.0, rate_out: 9.0, lane: [0.25, 1.9, 0.34] } };
 
-/// (src/game/character.ts:958 TOSS_RELEASE)
 pub const TOSS_RELEASE: f64 = 0.14;
 
-/// (src/game/character.ts:958 TOSS_AFTER)
 pub const TOSS_AFTER: f64 = 0.66;
 
-/// (src/game/character.ts:960 TOSS_QUICK)
 pub const TOSS_QUICK: f64 = 0.08;
 
-/// (src/game/character.ts:962 MV_FLINCH_ENV: a table nothing writes)
 pub static MV_FLINCH_ENV: [[f64; 2]; 5] = [[0.0, 0.0], [0.14, 1.0], [0.34, 0.9], [0.7, 0.22], [1.0, 0.0]];
 
-/// (src/game/character.ts:963 MV_HIT_ENV: a table nothing writes)
 pub static MV_HIT_ENV: [[f64; 2]; 6] = [[0.0, 0.0], [0.07, 1.0], [0.16, 0.8], [0.32, 0.28], [0.45, -0.07], [0.6, 0.0]];
 
-/// (src/game/character.ts:969 MV_STARTLE: a table nothing writes)
 pub static MV_STARTLE: crate::character::MvStartle = crate::character::MvStartle { amp: [1.0, 0.5], dur: [0.65, 0.45], rear: 10.0, turn: 8.0, lean: 3.0, head: 9.0, head_turn: 32.0, back: 0.075, drop: 0.035, gun_amp: 0.7, gun_rear: 0.5, gun_back: 1.0, behind_turn: 1.8, behind_head: 0.8, behind_pitch: 0.5, shrug: 11.0, wide: [30.0, 19.0], raise: [56.0, 40.0], env: [[0.0, 0.0], [0.12, 1.0], [0.4, 0.86], [0.72, 0.18], [1.0, 0.0]] };
 
-/// (src/game/character.ts:974 LONG_PIVOT: a table nothing writes)
 pub static LONG_PIVOT: V3 = [0.0, 0.13, -0.06];
 
-/// (src/game/character.ts:976 LONG_PULL_MAX)
 pub const LONG_PULL_MAX: f64 = 0.06;
 
-/// (src/game/character.ts:979 LONG_ANCHOR_SIDE_MAX)
 pub const LONG_ANCHOR_SIDE_MAX: f64 = 0.215;
 
-/// (src/game/character.ts:981 SNEAK: a table nothing writes)
 pub static SNEAK: crate::character::Sneak = crate::character::Sneak { stride: 0.282, pace_stride: 0.1, linger: 0.16, surge: 0.7, drop: 0.04, pace_drop: 0.03, soft_drop: 0.01, lean: 5.0, pace_lean: 1.5, gun_in: [0.0, -0.07, -0.06], gun_in_stand: [0.0, -0.03, -0.03], hand_in: 0.1 };
 
-/// (src/game/character.ts:1009 KICK_DUR)
 pub const KICK_DUR: f64 = 1.0;
 
-/// (src/game/character.ts:1009 KICK_IMPACT)
 pub const KICK_IMPACT: f64 = 0.38;
 
-/// (src/game/character.ts:1011 KICK_PLANT)
 pub const KICK_PLANT: f64 = 0.72;
 
-/// (src/game/character.ts:1012 SIGNAL_DUR: a table nothing writes)
 pub fn signal_dur() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("hold"), 0.9); t.set(String::from("go"), 0.95); t.set(String::from("rally"), 1.3); t.set(String::from("squeeze"), 0.9); t.set(String::from("aside"), 1.15); t } }
 
-/// (src/game/character.ts:1016 TELL_DUR: a table nothing writes)
 pub fn tell_dur() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("watch"), 1.05); t.set(String::from("neck"), 1.35); t } }
 
-/// (src/game/character.ts:1039 READY: a table nothing writes)
 pub fn ready() -> JsMap<String, crate::character::ReadyShape> { { let mut t = JsMap::new(); t.set(String::from("grab"), crate::character::ReadyShape { lean: 5.0, blade: 0.0, clav: 8.0, l: crate::character::ReadyShapeL { pole: [0.8, -0.6, -0.1], fing: [-0.1, 0.15, 1.0], back: [0.9, 0.45, 0.0], curl: 0.16, thumb: 0.1, spread: 0.4, reach: Some(crate::character::ReadyShapeLReach { frac: 0.65, r: [0.36, 0.46], dy: [-0.06, 0.14], bias: 0.0, h0: 0.75, y0: 0.05 }), at: None }, knife: true }); t.set(String::from("grabGun"), crate::character::ReadyShape { lean: 0.0, blade: 0.0, clav: 6.0, l: crate::character::ReadyShapeL { pole: [0.8, -0.6, -0.1], fing: [-0.1, 0.1, 1.0], back: [0.9, 0.45, 0.0], curl: 0.16, thumb: 0.1, spread: 0.4, reach: Some(crate::character::ReadyShapeLReach { frac: 0.65, r: [0.36, 0.46], dy: [-0.16, 0.04], bias: -0.07, h0: 0.75, y0: 0.05 }), at: None }, knife: false }); t.set(String::from("strike"), crate::character::ReadyShape { lean: 3.0, blade: 13.0, clav: 0.0, l: crate::character::ReadyShapeL { pole: [0.6, -1.0, -0.2], fing: [-0.15, 0.55, 1.0], back: [0.8, 0.5, 0.0], curl: 0.4, thumb: 0.35, spread: 0.15, reach: None, at: Some([-0.1, -0.12, 0.3]) }, knife: true }); t.set(String::from("seat"), crate::character::ReadyShape { lean: 9.0, blade: 0.0, clav: 6.0, l: crate::character::ReadyShapeL { pole: [0.7, -0.5, -0.3], fing: [0.0, -0.35, 1.0], back: [0.5, 0.8, 0.0], curl: 0.22, thumb: 0.15, spread: 0.35, reach: Some(crate::character::ReadyShapeLReach { frac: 0.7, r: [0.3, 0.42], dy: [-0.36, -0.12], bias: -0.04, h0: 0.6, y0: -0.28 }), at: None }, knife: true }); t } }
 
-/// (src/game/character.ts:1054 REACH: a table nothing writes)
 pub static REACH: crate::character::Reach = crate::character::Reach { in_: 0.3, out: 0.32, pole: [-1.0, 0.0, -0.1], pole_up: [0.35, 0.5], curl: [0.62, 0.68, 0.72, 0.76], thumb: 0.6 };
 
-/// (src/game/character.ts:1064 KNIFE_BLOW: a table nothing writes)
 pub static KNIFE_BLOW: crate::character::KnifeBlow = crate::character::KnifeBlow { snap: 0.16, t_clear: 0.06, clear: [0.14, 0.05], az: 0.7, reach: 0.96, fade: 0.12, cross: crate::character::KnifeSlash { end: 0.6, keys: &[crate::character::BlowKey { t: 0.16, at: [0.27, 0.0, 0.3], blade: [0.1, 0.9, 0.5], fing: [0.7, 0.1, 0.6], pole: [-0.5, -0.8, 0.1] }, crate::character::BlowKey { t: 0.27, at: [-0.05, 0.03, 0.5], blade: [-0.1, 0.8, 0.6], fing: [0.2, 0.0, 1.0], pole: [-0.7, -0.7, 0.0] }, crate::character::BlowKey { t: 0.36, at: [-0.22, -0.06, 0.36], blade: [-0.4, 0.8, 0.45], fing: [-0.2, -0.1, 1.0], pole: [-0.8, -0.6, -0.1] }] }, jab: crate::character::KnifeSlash { end: 0.52, keys: &[crate::character::BlowKey { t: 0.15, at: [-0.02, -0.32, 0.08], blade: [0.0, 0.5, 1.0], fing: [0.05, -0.5, 0.8], pole: [-0.5, -0.3, -0.8] }, crate::character::BlowKey { t: 0.24, at: [0.12, -0.2, 0.56], blade: [0.0, 1.0, 0.8], fing: [0.2, 0.1, 1.0], pole: [-0.6, -0.8, -0.1] }, crate::character::BlowKey { t: 0.33, at: [0.0, -0.28, 0.2], blade: [0.0, 0.6, 1.0], fing: [0.05, -0.4, 0.9], pole: [-0.5, -0.5, -0.7] }] } };
 
-/// (src/game/character.ts:1077 KNIFE_SLASH: a table nothing writes)
 pub static KNIFE_SLASH: crate::character::KnifeSlash = crate::character::KnifeSlash { end: 0.52, keys: &[crate::character::BlowKey { t: 0.14, at: [0.3, -0.38, 0.12], blade: [-0.3, 0.6, 0.7], fing: [0.6, -0.3, 0.6], pole: [-0.3, -0.6, -0.6] }, crate::character::BlowKey { t: 0.24, at: [0.1, -0.08, 0.62], blade: [-0.6, 0.5, 0.6], fing: [0.1, 0.0, 1.0], pole: [-0.7, -0.6, 0.0] }, crate::character::BlowKey { t: 0.34, at: [-0.46, 0.3, 0.3], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }, crate::character::BlowKey { t: 0.42, at: [-0.46, 0.28, 0.28], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }] };
 
-/// (src/game/character.ts:1084 KNIFE_BACK: a table nothing writes)
 pub static KNIFE_BACK: crate::character::KnifeSlash = crate::character::KnifeSlash { end: 0.6, keys: &[crate::character::BlowKey { t: 0.15, at: [-0.02, -0.4, -0.04], blade: [0.0, 0.25, 1.0], fing: [0.0, -1.0, 0.25], pole: [-0.4, 0.0, -1.0] }, crate::character::BlowKey { t: 0.27, at: [0.08, -0.34, 0.33], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }, crate::character::BlowKey { t: 0.44, at: [0.08, -0.36, 0.31], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }] };
 
-/// (src/game/character.ts:1091 BLOW: a table nothing writes)
 pub static BLOW: crate::character::Blow = crate::character::Blow { rise: crate::character::PerBlow { chop: 0.85, palm: 0.6, mouth: 0.9, sweep: 0.8, slash: 0.7 }, clip: crate::character::PerBlow { chop: 0.25, palm: 0.35, mouth: 1.0, sweep: 1.0, slash: 1.0 }, reach: 0.98, fist: [0.92, 0.95, 0.95, 0.95], open: [0.08, 0.06, 0.08, 0.12], loose: [0.25, 0.3, 0.3, 0.35], cup: [0.35, 0.35, 0.4, 0.45], legs: crate::character::BlowLegs { gap: 0.2, lift: 0.05, straight: 0.985, up: 0.4, fwd: 0.6 }, tail: 1.0, sink: crate::character::PerBlow { chop: 0.8, palm: 0.6, mouth: 1.0, sweep: 0.75, slash: 0.75 }, walk: [0.4, 1.5] };
 
-/// (src/game/character.ts:1102 TAKEN: a table nothing writes)
 pub static TAKEN: crate::character::Taken = crate::character::Taken { sag: crate::character::PerFall { arch: 0.1, hunch: 0.65, snap: 0.15 }, secs: 1.0 };
 
-/// (src/game/character.ts:1105 KNIFE_KEYS_MAX)
 pub const KNIFE_KEYS_MAX: f64 = 4.0;
 
-/// (src/game/character.ts:1112 THROW_KEYS_MAX)
 pub const THROW_KEYS_MAX: f64 = 16.0;
 
-/// (src/game/character.ts:1131 THROW_NUMS: a table nothing writes)
 pub fn throw_nums() -> [String; 11] { [String::from("chestYaw"), String::from("pelvisYaw"), String::from("pitch"), String::from("roll"), String::from("pelX"), String::from("pelY"), String::from("pelZ"), String::from("clavUp"), String::from("clavFwd"), String::from("swivR"), String::from("swivL")] }
 
-/// (src/game/character.ts:1131 THROW_VECS: a table nothing writes)
 pub fn throw_vecs() -> [String; 6] { [String::from("handR"), String::from("fingR"), String::from("backR"), String::from("handL"), String::from("fingL"), String::from("backL")] }
 
-/// (src/game/character.ts:1146 CREEP: a table nothing writes)
 pub static CREEP: crate::character::Creep = crate::character::Creep { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CreepLow { rate: 8.0, up: 24.0 }, wide: crate::character::CreepWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CreepHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CreepHand { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CreepHand { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } };
 
-/// (src/game/character.ts:1167 READY_RATE)
 pub const READY_RATE: f64 = 12.0;
 
-/// (src/game/character.ts:1167 READY_REACH)
 pub const READY_REACH: f64 = 0.85;
 
-/// (src/game/character.ts:1167 READY_AZ: a table nothing writes)
 pub static READY_AZ: [f64; 2] = [0.5, 0.9];
 
-/// (src/game/character.ts:1175 READY_BARE: a table nothing writes)
 pub static READY_BARE: crate::character::ReadyBare = crate::character::ReadyBare { l: crate::character::ReadyBareL { pole: [0.32, -0.93, -0.2], fing: [-0.2, 0.3, 1.0], back: [0.8, 0.55, -0.1], curl: 0.1, thumb: 0.28, spread: 0.05, frac: 0.9, dy: 0.3, r: [0.4, 0.54], short: 0.32 }, r: crate::character::ReadyBareR { at: [0.1, -0.3, 0.2], pole: [-0.4, -0.9, -0.25], fing: [0.15, 0.2, 1.0], back: [-0.85, 0.5, 0.0], curl: 0.14, thumb: 0.3 }, way: crate::character::ReadyBareWay { by: 0.4, low: -0.2, near: 0.32, lift: [0.3, 1.0], right: [0.62, 0.97], rate: 12.0, drop: 14.0 }, out: [0.25, 0.8], out_r: 0.3 };
 
-/// (src/game/character.ts:1202 READY_UP: a table nothing writes)
 pub static READY_UP: crate::character::ReadyUp = crate::character::ReadyUp { over: [0.25, 0.45], rise: 38.0, look: 0.5, dy: 0.36, r: [0.32, 0.42], fing: 0.3, slow: 0.8, rate: 6.0 };
 
-/// (src/game/character.ts:1221 SMOKEARM: a table nothing writes)
 pub static SMOKEARM: crate::character::Smokearm = crate::character::Smokearm { at: [0.075, -0.15, 0.125], fingers: [-0.55, 0.8, -0.1], back: [0.35, 0.1, 0.9], pole: [0.7, -0.6, 0.35], shrug: 5.0, curl: [0.3, 0.34, 0.6, 0.66], thumb: 0.3, rate: 1.9, away: 3.0 };
 
-/// (src/game/character.ts:1277 RD: a table nothing writes)
 pub fn rd() -> crate::character::RD { crate::character::RD { up: 35.0 } }
 
-/// (src/game/character.ts:1283 THROW_DUR)
 pub const THROW_DUR: f64 = 0.75;
 
-/// (src/game/character.ts:1283 THROW_RELEASE)
 pub const THROW_RELEASE: f64 = 0.28;
 
-/// (src/game/character.ts:1288 THR: a table nothing writes)
 pub fn thr() -> crate::character::THR { crate::character::THR { chest_yaw: alloc::vec![[0.0, 0.0], [0.07, -9.0], [0.165, -26.0], [0.19, -25.0], [0.225, -14.0], [0.26, -3.0], [0.3, 6.0], [0.36, 10.0], [0.48, 7.0], [0.62, 2.0], [0.75, 0.0]], pelvis_yaw: alloc::vec![[0.0, 0.0], [0.07, -3.5], [0.145, -9.0], [0.17, -8.0], [0.21, 1.0], [0.25, 6.5], [0.31, 8.0], [0.44, 6.0], [0.6, 1.5], [0.75, 0.0]], pitch: alloc::vec![[0.0, 0.0], [0.165, -4.0], [0.28, 4.0], [0.38, 9.0], [0.48, 7.0], [0.62, 2.0], [0.75, 0.0]], roll: alloc::vec![[0.0, 0.0], [0.165, 3.0], [0.28, -7.0], [0.38, -8.0], [0.48, -4.0], [0.66, 0.0], [0.75, 0.0]], pel_x: alloc::vec![[0.0, 0.0], [0.165, -0.02], [0.3, 0.025], [0.48, 0.02], [0.7, 0.0], [0.75, 0.0]], pel_y: alloc::vec![[0.0, 0.0], [0.165, -0.015], [0.28, -0.01], [0.4, -0.02], [0.58, -0.008], [0.75, 0.0]], pel_z: alloc::vec![[0.0, 0.0], [0.165, -0.03], [0.28, 0.02], [0.39, 0.045], [0.54, 0.03], [0.75, 0.0]], clav_up: alloc::vec![[0.0, 0.0], [0.165, 9.0], [0.28, 7.0], [0.4, 3.0], [0.62, 0.0], [0.75, 0.0]], clav_fwd: alloc::vec![[0.0, 0.0], [0.165, -4.0], [0.28, 5.0], [0.39, 8.0], [0.54, 3.0], [0.7, 0.0], [0.75, 0.0]], hand_r: alloc::vec![(0.165, alloc::vec![-0.19, 0.21, -0.2]), (0.205, alloc::vec![-0.21, 0.27, -0.1]), (0.245, alloc::vec![-0.16, 0.27, 0.14]), (0.28, alloc::vec![-0.06, 0.16, 0.42]), (0.31, alloc::vec![0.06, -0.08, 0.47]), (0.37, alloc::vec![0.13, -0.27, 0.37]), (0.44, alloc::vec![0.16, -0.35, 0.28]), (0.5, alloc::vec![0.14, -0.38, 0.29])], swiv_r: alloc::vec![[0.0, -62.0], [0.06, -103.0], [0.125, -166.0], [0.165, -176.0], [0.205, -149.0], [0.245, -184.6], [0.28, -184.6], [0.31, -232.9], [0.37, -240.9], [0.44, -234.7], [0.5, -214.4], [0.62, -105.4], [0.75, -62.0]], fing_r: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.07, alloc::vec![-0.1, -0.75, -0.65]), (0.115, alloc::vec![0.0, 0.6, -0.8]), (0.165, alloc::vec![0.15, 1.0, -0.35]), (0.23, alloc::vec![0.1, 1.0, -0.5]), (0.28, alloc::vec![0.05, 0.75, 0.65]), (0.32, alloc::vec![0.1, -0.35, 0.95]), (0.38, alloc::vec![0.3, -0.75, 0.6]), (0.48, alloc::vec![0.25, -1.0, 0.25]), (0.62, alloc::vec![0.05, -1.0, 0.0]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_r: alloc::vec![(0.0, alloc::vec![-1.0, 0.0, 0.0]), (0.07, alloc::vec![-1.0, 0.1, -0.2]), (0.115, alloc::vec![-0.8, -0.1, -0.6]), (0.165, alloc::vec![-0.3, -0.3, -1.0]), (0.23, alloc::vec![-0.4, -0.4, -0.9]), (0.28, alloc::vec![-0.2, 0.5, -0.8]), (0.32, alloc::vec![-0.3, 0.9, 0.3]), (0.38, alloc::vec![-0.6, 0.5, 0.6]), (0.48, alloc::vec![-0.7, 0.1, 0.7]), (0.62, alloc::vec![-1.0, 0.0, 0.2]), (0.75, alloc::vec![-1.0, 0.0, 0.0])], hand_l: alloc::vec![(0.17, alloc::vec![0.1, -0.06, 0.44]), (0.24, alloc::vec![0.1, -0.12, 0.38]), (0.31, alloc::vec![0.06, -0.28, 0.22]), (0.4, alloc::vec![0.05, -0.33, 0.18]), (0.52, alloc::vec![0.07, -0.4, 0.13])], swiv_l: alloc::vec![[0.0, 83.0], [0.09, 136.5], [0.17, 149.2], [0.24, 156.6], [0.31, 142.0], [0.4, 134.9], [0.52, 123.3], [0.63, 106.8], [0.75, 83.0]], fing_l: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.09, alloc::vec![0.1, -0.4, 0.9]), (0.17, alloc::vec![0.05, 0.15, 1.0]), (0.25, alloc::vec![0.1, 0.35, 0.9]), (0.33, alloc::vec![0.15, 0.6, 0.8]), (0.52, alloc::vec![0.1, 0.3, 0.9]), (0.63, alloc::vec![0.1, -0.7, 0.6]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_l: alloc::vec![(0.0, alloc::vec![1.0, 0.0, 0.0]), (0.09, alloc::vec![0.5, 0.8, 0.3]), (0.17, alloc::vec![0.3, 1.0, -0.1]), (0.25, alloc::vec![0.7, 0.7, -0.2]), (0.33, alloc::vec![1.0, 0.1, -0.3]), (0.52, alloc::vec![1.0, 0.2, -0.2]), (0.63, alloc::vec![1.0, 0.2, 0.0]), (0.75, alloc::vec![1.0, 0.0, 0.0])] } }
 
-/// (src/game/character.ts:1341 TOSS_TOP)
 pub const TOSS_TOP: f64 = 0.1;
 
-/// (src/game/character.ts:1341 TOSS_LOW)
 pub const TOSS_LOW: f64 = 0.165;
 
-/// (src/game/character.ts:1343 TOSS_HANG: a table nothing writes)
 pub static TOSS_HANG: V3 = [0.1, -0.47, -0.02];
 
-/// (src/game/character.ts:1344 THR_LOW: a table nothing writes)
 pub fn thr_low() -> crate::character::THRLOW { crate::character::THRLOW { chest_yaw: alloc::vec![[0.0, 0.0], [0.05, -4.0], [0.1, -9.0], [0.17, -5.0], [0.25, 1.0], [0.36, 5.0], [0.55, 2.0], [0.75, 0.0]], pelvis_yaw: alloc::vec![[0.0, 0.0], [0.09, -4.0], [0.16, -1.0], [0.24, 2.0], [0.4, 3.0], [0.6, 0.5], [0.75, 0.0]], pitch: alloc::vec![[0.0, 0.0], [0.11, 9.0], [0.2, 7.0], [0.29, 1.0], [0.4, -2.0], [0.6, 0.0], [0.75, 0.0]], roll: alloc::vec![[0.0, 0.0], [0.1, 3.0], [0.22, 2.0], [0.45, 0.0], [0.75, 0.0]], pel_x: alloc::vec![[0.0, 0.0], [0.1, -0.012], [0.28, 0.012], [0.5, 0.006], [0.75, 0.0]], pel_y: alloc::vec![[0.0, 0.0], [0.12, -0.045], [0.2, -0.035], [0.31, 0.0], [0.42, 0.005], [0.6, 0.0], [0.75, 0.0]], pel_z: alloc::vec![[0.0, 0.0], [0.1, -0.015], [0.28, 0.03], [0.5, 0.015], [0.75, 0.0]], clav_up: alloc::vec![[0.0, 0.0], [0.1, -3.0], [0.3, 5.0], [0.6, 0.0], [0.75, 0.0]], clav_fwd: alloc::vec![[0.0, 0.0], [0.1, -5.0], [0.28, 6.0], [0.5, 2.0], [0.75, 0.0]], hand_r: alloc::vec![(0.1, alloc::vec![-0.13, -0.41, -0.32]), (0.165, alloc::vec![-0.1, -0.53, -0.02]), (0.225, alloc::vec![-0.07, -0.36, 0.37]), (0.28, alloc::vec![-0.05, -0.08, 0.5]), (0.34, alloc::vec![-0.04, -0.06, 0.52]), (0.46, alloc::vec![-0.04, -0.08, 0.49])], swiv_r: alloc::vec![[0.0, -62.0], [0.1, -78.8], [0.165, -82.2], [0.225, -107.2], [0.28, -121.9], [0.34, -122.7], [0.46, -121.7], [0.62, -84.0], [0.75, -62.0]], fing_r: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.06, alloc::vec![0.0, -0.95, -0.3]), (0.1, alloc::vec![-0.1, -0.8, -0.6]), (0.165, alloc::vec![0.0, -1.0, 0.0]), (0.225, alloc::vec![0.0, -0.7, 0.7]), (0.28, alloc::vec![0.0, -0.1, 1.0]), (0.34, alloc::vec![0.0, 0.2, 1.0]), (0.46, alloc::vec![0.0, 0.1, 1.0]), (0.62, alloc::vec![0.0, -0.8, 0.55]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_r: alloc::vec![(0.0, alloc::vec![-1.0, 0.0, 0.0]), (0.06, alloc::vec![-1.0, 0.0, -0.1]), (0.1, alloc::vec![-0.9, 0.1, -0.4]), (0.165, alloc::vec![-0.6, -0.1, -0.8]), (0.225, alloc::vec![-0.35, -0.7, -0.6]), (0.28, alloc::vec![-0.25, -0.95, -0.1]), (0.34, alloc::vec![-0.25, -0.95, 0.15]), (0.46, alloc::vec![-0.4, -0.9, 0.1]), (0.62, alloc::vec![-0.9, -0.3, 0.0]), (0.75, alloc::vec![-1.0, 0.0, 0.0])] } }
 
-/// (src/game/character.ts:1381 BIGMOVE: a table nothing writes)
 pub static BIGMOVE: crate::character::Bigmove = crate::character::Bigmove { grab: 0.5, take: [0.47, 0.82], join: [0.65, 0.96], put: 0.58, put_at: 0.45, unjoin: 0.28, snug: crate::character::BigmoveSnug { hide: 0.06, take: [0.44, 0.56], put_at: 0.8, show: 0.94 }, arc: [-0.16, 0.12, 0.04], wait: [-0.1, -0.34, 0.2], hammer: crate::character::BigmoveHammer { ready: crate::character::BigmoveHammerReady { g: [0.06, -0.1, 0.34], d: [-0.42, 0.9, -0.1] }, wound: crate::character::BigmoveHammerWound { g: [-0.12, 0.2, -0.05], d: [-0.45, 0.3, -0.84] }, over: crate::character::BigmoveHammerOver { g: [0.04, 0.14, 0.24], d: [-0.08, 0.93, 0.36] }, grab_at: 0.1, raise: 0.6, swing: 0.38, swing_min: 0.1, swing_max: 0.2, rebound: 0.25, settle: 0.5, butt: [0.18, 0.05, 0.18], far: [0.6, 1.1], wound_body: crate::character::BigmoveHammerWoundBody { yaw: -50.0, pel_yaw: -17.0, pitch: -7.0, back: 0.09, side: -0.03 }, blow_body: crate::character::BigmoveHammerBlowBody { yaw: 16.0, pel_yaw: 7.0, pitch: 15.0, pitch_far: 11.0, fwd: 0.07, fwd_far: 0.08, drop: 0.03 }, face: 1.0, drop: 0.035, stance: crate::character::BigmoveHammerStance { l: [0.06, 0.07], r: [-0.07, -0.1], lift: 0.025 } }, shotgun: crate::character::BigmoveShotgun { pocket: [0.035, -0.05, 0.06], yaw: -22.0, pel_yaw: -10.0, pitch: 6.0, kick: 0.08, climb: 12.0, kick_in: 0.04, kick_out: 0.13, kick_pitch: -6.0, shove: 0.035 }, fist: [0.74, 0.8, 0.84, 0.88], open: [0.26, 0.3, 0.34, 0.38] };
 
-/// (src/game/character.ts:1426 ANIM_POSES)
 pub const ANIM_POSES: f64 = 13.0;
 
-/// (src/game/character.ts:4262 RAG_LIMBS: a table nothing writes)
 pub fn rag_limbs() -> Vec<(String, f64, f64, f64)> { alloc::vec![(String::from("thighL"), -1.0, 10.0, 12.0), (String::from("shinL"), 0.0, 12.0, 14.0), (String::from("thighR"), -1.0, 11.0, 13.0), (String::from("shinR"), 2.0, 13.0, 15.0), (String::from("upperArmL"), -1.0, 4.0, 6.0), (String::from("forearmL"), 4.0, 6.0, 8.0), (String::from("upperArmR"), -1.0, 5.0, 7.0), (String::from("forearmR"), 6.0, 7.0, 9.0), (String::from("neck"), -1.0, 2.0, 3.0)] }
 
-/// (src/game/character.ts:4269 RAG_BONES: a table nothing writes)
 pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character::Bone::Hips, crate::character::Bone::Spine2, crate::character::Bone::Neck, crate::character::Bone::Head, crate::character::Bone::UpperArmL, crate::character::Bone::UpperArmR, crate::character::Bone::ForearmL, crate::character::Bone::ForearmR, crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::ThighL, crate::character::Bone::ThighR, crate::character::Bone::ShinL, crate::character::Bone::ShinR, crate::character::Bone::FootL, crate::character::Bone::FootR] }
 
 /// how a long gun is kept steady on the move

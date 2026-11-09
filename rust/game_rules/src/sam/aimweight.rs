@@ -5,18 +5,18 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// May his aim be weighed now. `AIMWEIGHT.on` is settled on.   (aimweight.ts can)
+/// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
     let pl = g.player;
     g.puppet.is_none() && !g.pl[pl].down
 }
 
-/// Does his aim have weight right now.   (aimweight.ts aimWeighs)
+/// Does his aim have weight right now.
 pub fn aim_weighs(g: &mut Game) -> bool {
     can(g)
 }
 
-/// The top rate his gun's heading turns at, rad/s, by what is in his hands.   (aimweight.ts aimTop)
+/// The top rate his gun's heading turns at, rad/s, by what is in his hands.
 pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
@@ -26,7 +26,7 @@ pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     m::max(0.5, g.k.aimweight.rate * scale)
 }
 
-/// The swing's arithmetic: what is still left to turn; `vel` carried on. `smooth` is `AIMWEIGHT.smooth`.   (aimweight.ts aimSwing, its working)
+/// The swing's arithmetic: what is still left to turn; `vel` carried on. `smooth` is `AIMWEIGHT.smooth`.
 fn swing(smooth: f64, vel: &mut f64, err: f64, top: f64, dt: f64) -> f64 {
     let mut err = err;
     let t = m::max(1e-3, smooth);
@@ -55,12 +55,12 @@ fn swing(smooth: f64, vel: &mut f64, err: f64, top: f64, dt: f64) -> f64 {
     err
 }
 
-/// THE SWING: a heading `err` off the cursor's bearing, turning at `w.vel`, stepped `dt` on: what is still left to turn.   (aimweight.ts aimSwing)
+/// THE SWING: a heading `err` off the cursor's bearing, turning at `w.vel`, stepped `dt` on: what is still left to turn.
 pub fn aim_swing(g: &Game, w: &mut AimSwingW, err: f64, top: f64, dt: f64) -> f64 {
     swing(g.k.aimweight.smooth, &mut w.vel, err, top, dt)
 }
 
-/// First thing in the player's update: this frame has not weighed his aim yet.   (aimweight.ts aimWeighBegin)
+/// First thing in the player's update: this frame has not weighed his aim yet.
 pub(super) fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
     let w = &mut g.pl[pl].aimw;
     w.was = w.live;
@@ -70,7 +70,7 @@ pub(super) fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
     w.err = 0.0;
 }
 
-/// The plain aim branch's step: turn `aim_yaw` toward the cursor's bearing. False = not weighing (the caller keeps its own ease).   (aimweight.ts aimWeighTurn)
+/// The plain aim branch's step: turn `aim_yaw` toward the cursor's bearing. False = not weighing (the caller keeps its own ease).
 pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     if !can(g) {
         return false;
@@ -117,7 +117,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     true
 }
 
-/// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.   (aimweight.ts aimWeighShot)
+/// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.
 pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
@@ -134,7 +134,7 @@ pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     [pos[0] + dx * cs - dz * sn, tgt[1], pos[2] + dz * cs + dx * sn]
 }
 
-/// The launcher's release: true = send it now; a load let go of mid-swing waits up to `launch_wait`.   (aimweight.ts aimWeighLaunch)
+/// The launcher's release: true = send it now; a load let go of mid-swing waits up to `launch_wait`.
 pub(super) fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
     let pl = g.player;
     let wait = g.k.aimweight.launch_wait;
@@ -155,7 +155,7 @@ pub(super) fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
     false
 }
 
-/// A load owed on a frame the gun is down: the wait's clock runs on. True = still owed.   (aimweight.ts aimWeighLaunchKeep)
+/// A load owed on a frame the gun is down: the wait's clock runs on. True = still owed.
 pub(super) fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
     let wait = g.k.aimweight.launch_wait;
     let w = &mut g.pl[pl].aimw;
@@ -170,7 +170,7 @@ pub(super) fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool
     true
 }
 
-/// Where the gun points: the circle's world point. None when nothing is weighing his aim (the circle is the cursor's). (aimweight.ts aimGunPoint)
+/// Where the gun points: the circle's world point. None when nothing is weighing his aim (the circle is the cursor's).
 pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     let pl = &g.pl[seat.player];
     let w = &pl.aimw;
@@ -179,7 +179,7 @@ pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     let c = &g.ch[pl.ch];
     Some([c.pos[0] + m::sin(c.aim_yaw) * w.r, w.y, c.pos[2] + m::cos(c.aim_yaw) * w.r])
 }
-/// Is the circle on the cursor (true when nothing is weighing his aim). (aimweight.ts aimGunOn)
+/// Is the circle on the cursor (true when nothing is weighing his aim).
 pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
     let w = &g.pl[pl].aimw;
     !w.live || w.on

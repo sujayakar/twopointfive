@@ -25,7 +25,6 @@ pub const fn ran_list(i: usize) -> u32 {
 }
 
 const PI: f64 = 3.141592653589793;
-/// character.ts DEGR
 const DEGR: f64 = PI / 180.0;
 
 #[inline(always)]
@@ -192,7 +191,7 @@ fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     set_ch(d, i, 1, y);
     set_ch(d, i, 2, z);
 }
-/// quat.axisAngle about the model's X, Y, Z (character.ts qPitch, qYaw, qRoll): the products with the axis's noughts are written out, since −0 is a number too
+/// quat.axisAngle about the model's X, Y, Z: the products with the axis's noughts are written out, since −0 is a number too
 #[inline(always)]
 fn q_pitch(a: f64) -> [f64; 4] {
     let s = sin(a / 2.0);
@@ -368,7 +367,7 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
     .unwrap_or(0)
 }
 
-/// character.ts mvOn: a row of MOVES, under its master switch
+/// A row of MOVES, under its master switch
 #[inline(always)]
 fn mv_on(row: f64, tune: &Knobs) -> bool {
     tune.moves.on > 0.5 && row > 0.5
@@ -701,7 +700,7 @@ pub fn soft_knees(g: usize, at: usize, w: f64) -> u32 {
     .unwrap_or(0)
 }
 
-/// A run carries its arms close (character.ts RUNARMS): each hand read in the shoulder line's own frame (to his left along the two shoulder joints,
+/// A run carries its arms close: each hand read in the shoulder line's own frame (to his left along the two shoulder joints,
 /// level; up; forward), its sideways travel drawn in by the run's share of the standing pose, its fore-aft travel lengthened and its front lifted by the
 /// sprint's, and the arm solved to it with the elbow behind him. The hand follows its forearm.
 pub fn run_arms(g: usize, at: usize, w: f64, ws: f64, tune: &Knobs) -> u32 {
@@ -738,7 +737,6 @@ pub fn run_arms(g: usize, at: usize, w: f64, ws: f64, tune: &Knobs) -> u32 {
     .unwrap_or(0)
 }
 
-/// character.ts bump
 #[inline(always)]
 fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
     smoothstep(a, b, t) * (1.0 - smoothstep(c, d, t))
@@ -1012,7 +1010,7 @@ pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, 
 }
 
 // the life layer's columns (after its own numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)
-/// character.ts curve: one hand-animated channel of a one-shot — Catmull-Rom through (time, value) keys, flat at the first and the last key, clamped outside
+/// One hand-animated channel of a one-shot — Catmull-Rom through (time, value) keys, flat at the first and the last key, clamped outside
 fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     let n = k.len();
     if t <= k[0][0] {
@@ -1034,7 +1032,7 @@ fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     let u3 = u2 * u;
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
-/// character.ts hermite: a cubic segment with its end slopes given
+/// A cubic segment with its end slopes given
 #[allow(clippy::too_many_arguments)]
 fn hermite(t: f64, t0: f64, p0: f64, m0: f64, t1: f64, p1: f64, m1: f64) -> f64 {
     let h = t1 - t0;
@@ -1854,7 +1852,7 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, fold_on: bool, 
     .unwrap_or(0)
 }
 
-/// character.ts turnStep: a turn's speed toward what is left of it (`err`), never faster than it can stop in and never carried past the point. Answers how
+/// A turn's speed toward what is left of it (`err`), never faster than it can stop in and never carried past the point. Answers how
 /// far it goes this step and the speed it has after.
 fn turn_step(w: f64, err: f64, w_max: f64, acc: f64, dt: f64) -> (f64, f64) {
     let a = abs(err);
@@ -1999,7 +1997,7 @@ pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, spr
 
 // ================================================================ THE ARMS
 // An arm is posed on a COPY of the pose (a second pose of the pool, the animator's pB) and laid back through a mask: the copy is made with `ask_blend` at
-// weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints (`ask_mask`: skeleton.ts buildMask) and
+// weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints and
 // the copy is blended in. The run-forward bones are then the COPY's, as the TypeScript leaves them.
 
 /// both arms from the collar bones down (CharacterAnimator.armsMask)
@@ -2173,7 +2171,7 @@ fn stored(v: f64) -> f64 {
     put(&mut s, 0, v);
     get(&s, 0)
 }
-/// character.ts qAng: the angle between a stored rotation and one of four doubles
+/// The angle between a stored rotation and one of four doubles
 #[inline(always)]
 fn q_ang(d: &[S], i: usize, b: &[f64], k: usize) -> f64 {
     let dot = abs(ch(d, i, 3) * b[k] + ch(d, i, 4) * b[k + 1] + ch(d, i, 5) * b[k + 2] + ch(d, i, 6) * b[k + 3]);
@@ -2522,7 +2520,7 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
     code
 }
 
-/// character.ts curve3: the scalar curve's spline for a keyed vector, one search for the segment and the same Hermite weights for each component
+/// The scalar curve's spline for a keyed vector, one search for the segment and the same Hermite weights for each component
 fn curve3(t: f64, k: &[(f64, [f64; 3])]) -> [f64; 3] {
     let n = k.len();
     if t <= k[0].0 {
@@ -2880,7 +2878,7 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
     RAN | RAN_ALL
 }
 
-/// the support arm from the upper arm down (the collar bone stays the clip's), or both arms (character.ts armMask)
+/// the support arm from the upper arm down (the collar bone stays the clip's), or both arms
 fn arm_mask(both: bool) {
     ask_mask(&[(role(UPPER_ARM_L), 1.0, true), (if both { role(UPPER_ARM_R) } else { usize::MAX }, 1.0, true)]);
 }
@@ -3293,7 +3291,7 @@ fn q_ang_of(a: &[f64], i: usize, b: &[f64], k: usize) -> f64 {
         2.0 * acos(dot)
     }
 }
-/// character.ts qTurnBy: node i's stored rotation turned on by the share f of a further local rotation, in place
+/// Node i's stored rotation turned on by the share f of a further local rotation, in place
 fn q_turn_by(d: &mut [S], i: usize, q: [f64; 4], f: f64) {
     let [mut x, mut y, mut z, mut w] = q;
     if w < 0.0 {
@@ -3314,7 +3312,7 @@ fn q_turn_by(d: &mut [S], i: usize, q: [f64; 4], f: f64) {
     let [qx, qy, qz, qw] = own_rot(d, i);
     set_own_rot(d, i, &[qw * x + qx * cw + qy * z - qz * y, qw * y - qx * z + qy * cw + qz * x, qw * z + qx * y - qy * x + qz * cw, qw * cw - qx * x - qy * y - qz * z]);
 }
-/// character.ts qTurnTo: node i's stored rotation turned the share f of the way to the local rotation at t[k‥k+3], in place
+/// Node i's stored rotation turned the share f of the way to the local rotation at t[k‥k+3], in place
 fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
     let (cx, cy, cz, cw) = (-ch(d, i, 3), -ch(d, i, 4), -ch(d, i, 5), ch(d, i, 6));
     // conj(q) · target
@@ -4063,7 +4061,7 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
     RAN | RAN_ALL
 }
 
-/// character.ts nodLift: a goggle nod shown as a lift of the head, as big less a little whichever way the nod went, and smooth through nothing
+/// A goggle nod shown as a lift of the head, as big less a little whichever way the nod went, and smooth through nothing
 #[inline(always)]
 fn nod_lift(n: f64) -> f64 {
     2.0 * DEGR - hypot2(n, 2.0 * DEGR)
@@ -4770,7 +4768,7 @@ fn untwist_dir(tw_y: f64, tw_p: f64, dv: [f64; 3]) -> [f64; 3] {
     }
     q_rotate(&q_mul(&conj(e1), &q_mul(&conj(e2), &conj(e3))), &dv)
 }
-/// rigProps.ts Frame: a place and three axes
+/// A place and three axes
 #[derive(Clone, Copy)]
 struct Frame {
     o: [f64; 3],
@@ -4780,7 +4778,6 @@ struct Frame {
 }
 /// an Adj as a layer is handed it: is there one, its offset along the parent's axes, its turn in degrees about the parent's x, then y, then z
 type Adj = (bool, [f64; 3], [f64; 3]);
-/// rigProps.ts frameFrom
 fn frame_from(o: [f64; 3], along: [f64; 3], up_hint: [f64; 3]) -> Frame {
     let z = normalize(along);
     let mut y = sub3(up_hint, scale3(z, dot3(&up_hint, &z)));
@@ -4790,7 +4787,7 @@ fn frame_from(o: [f64; 3], along: [f64; 3], up_hint: [f64; 3]) -> Frame {
     let y = normalize(y);
     Frame { o, x: cross3(&y, &z), y, z }
 }
-/// rigProps.ts applyAdj: the child frame = the parent's moved by the offset and turned about the parent's x, then y, then z
+/// The child frame = the parent's moved by the offset and turned about the parent's x, then y, then z
 fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
     if !adj.0 {
         return *f;
@@ -4821,7 +4818,7 @@ fn un_adj(g: &Frame, adj: &Adj) -> Frame {
     let (x, y, z, a) = (ax(0), ax(1), ax(2), adj.1);
     Frame { o: [g.o[0] - x[0] * a[0] - y[0] * a[1] - z[0] * a[2], g.o[1] - x[1] * a[0] - y[1] * a[1] - z[1] * a[2], g.o[2] - x[2] * a[0] - y[2] * a[1] - z[2] * a[2]], x, y, z }
 }
-/// rigProps.ts holsterFrameOf: the thigh holster's group frame off three joints and the body's forward, in whatever one space they are given in;
+/// The thigh holster's group frame off three joints and the body's forward, in whatever one space they are given in;
 /// `h` = how far down the thigh, out from the pelvis and forward
 fn holster_frame_of(th: [f64; 3], kn: [f64; 3], hp: [f64; 3], fwd: [f64; 3], h: [f64; 3], adj: &Adj) -> Frame {
     let down = normalize(sub3(kn, th));
@@ -5551,13 +5548,12 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
     hands_to(&hs, an);
     RAN | RAN_ALL
 }
-// (the pistol whip's beats, s, and the rates the kill's eased clock follows and falls back at. character.ts keeps WHIP_THRU too, for the whip's own clock: tools/qa/layer-ident.ts `caps` holds the two to each other)
 const WHIP_WIND: f64 = 0.36;
 const WHIP_STRIKE: f64 = 0.42;
 const WHIP_THRU: f64 = 0.14;
 const KILL_RATE: f64 = 40.0;
 const KILL_BACK: f64 = 9.0;
-/// character.ts stripIn: the disarm's clock on the way in, gentle off the mark and at speed as the hand lands at `take`
+/// The disarm's clock on the way in, gentle off the mark and at speed as the hand lands at `take`
 fn strip_in(t: f64, take: f64) -> f64 {
     if t >= take {
         return t;
@@ -5571,7 +5567,7 @@ fn kill_ease(c: &mut Spring, on: bool, t: f64, dt: f64, tune: &Knobs) -> f64 {
     spring_step(c, target, if on { KILL_RATE } else { KILL_BACK }, dt);
     clamp(c.x, 0.0, 1.0)
 }
-/// character.ts lowerEase: down with its clock, back up on a spring of its own
+/// Down with its clock, back up on a spring of its own
 fn lower_ease(c: &mut Spring, target: f64, up: f64, dt: f64) -> f64 {
     if target >= c.x {
         c.x = target;
@@ -5581,7 +5577,7 @@ fn lower_ease(c: &mut Spring, target: f64, up: f64, dt: f64) -> f64 {
     spring_step(c, target, up, dt);
     max(target, c.x)
 }
-/// character.ts haulEase: the choke's own curve while it runs, let down on a spring when it is let go of
+/// The choke's own curve while it runs, let down on a spring when it is let go of
 fn haul_ease(c: &mut Spring, on: bool, target: f64, down: f64, dt: f64) -> f64 {
     if on {
         c.x = target;
@@ -6357,7 +6353,7 @@ fn e3(u: f64) -> f64 {
     let u = clamp(u, 0.0, 1.0);
     u * u * (3.0 - 2.0 * u)
 }
-/// a unit direction turned k of the way to another (character.ts dirMix)
+/// a unit direction turned k of the way to another
 fn dir_mix(a: [f64; 3], b: [f64; 3], kk: f64) -> [f64; 3] {
     if kk <= 0.0 {
         a
@@ -6742,7 +6738,7 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
     RAN | RAN_ALL
 }
 
-/// character.ts swivelPole: an arm's IK pole from a swivel angle about the shoulder → hand line, in a basis off a reference the hand never points along
+/// An arm's IK pole from a swivel angle about the shoulder → hand line, in a basis off a reference the hand never points along
 fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
     let hn = normalize(h);
     let b1 = normalize(mad3(rf, hn, -dot3(&rf, &hn)));

@@ -11,7 +11,6 @@ pub const ORDER: Row = Row {
     ..Row::new("fragClear", label, issue)
 };
 
-/// doortools.ts:838
 fn label(g: &mut Game, t: &OrderTarget) -> String { format!("frag and clear · {} left", g.door_tools.frags) }
 
 /// doortools.ts:839-842 (FRAG.on is on on the page)

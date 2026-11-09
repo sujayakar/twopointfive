@@ -114,8 +114,6 @@ pub struct AnimGltfModNvgBitsValue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AnimGltfMod {
-    /// (src/anim/gltf.ts:33 nvgBits)
     pub nvg_bits: JsMap<AnimGltfCastInfoId, crate::anim_gltf::AnimGltfModNvgBitsValue>,
-    /// (src/anim/gltf.ts:44 suitBits)
     pub suit_bits: JsMap<AnimGltfCastInfoId, f64>,
 }

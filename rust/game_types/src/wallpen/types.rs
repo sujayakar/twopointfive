@@ -74,7 +74,6 @@ pub enum ThinLine2 {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallpenMod {
-    /// (src/game/wallpen.ts:87 LOG)
     pub log: Vec<String>,
 }
 
@@ -89,8 +88,6 @@ pub struct WallpenStats {
     pub harder: i32,
 }
 
-/// (src/game/wallpen.ts:169 EXIT_EPS)
 pub const EXIT_EPS: f64 = 0.001;
 
-/// (src/game/wallpen.ts:170 embedScratch: a table nothing writes)
 pub fn embed_scratch() -> Vec<i32> { alloc::vec![0; 64] }

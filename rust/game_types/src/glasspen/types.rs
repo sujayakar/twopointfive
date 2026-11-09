@@ -81,7 +81,6 @@ pub struct ArmThroughGlass {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlasspenMod {
-    /// (src/game/glasspen.ts:152 states)
     pub states: Option<crate::glasspen::PenState>,
 }
 
@@ -98,11 +97,8 @@ pub struct GlasspenStats {
     pub shell_joined: i32,
 }
 
-/// (src/game/glasspen.ts:186 PANE_TYPES: a table nothing writes)
 pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
 
-/// (src/game/glasspen.ts:191 CROSS)
 pub const CROSS: f64 = 25.0;
 
-/// (src/game/glasspen.ts:191 MAX_CROSS)
 pub const MAX_CROSS: f64 = 16.0;

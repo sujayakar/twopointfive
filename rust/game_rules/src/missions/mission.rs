@@ -7,13 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-/// Live: a run is on and it really is the player playing. (mission.ts missionLive)
+/// Live: a run is on and it really is the player playing.
 pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
     !g.aside && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
 
-/// One more of a counted thing on the run's card, if the run is live. (mission.ts tally)
+/// One more of a counted thing on the run's card, if the run is live.
 pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
     if mission_live(g) {
         let s = &mut g.mission.stats;
@@ -29,7 +29,7 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
     }
 }
 
-/// Planar distance from a floor point to the mission rack's face. (mission.ts rackDist)
+/// Planar distance from a floor point to the mission rack's face.
 pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     let front = g.level.mission.rack.front;
     let half_w = g.level.mission.rack.half_w;
@@ -43,12 +43,12 @@ pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     rack_dist_plain(front, half_w, p)
 }
 
-/// rackDist's arm for a rack on the plain night: anywhere across its width counts. (mission.ts:50)
+/// rackDist's arm for a rack on the plain night: anywhere across its width counts.
 fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
     m::hyp2(m::max(0.0, m::abs(p[0] - front[0]) - half_w), p[2] - front[2])
 }
 
-/// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
+/// Out through the mission's exit, or any exit of a quiet mission.
 fn out_now(g: &crate::game::Game, p: V3) -> bool {
     if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
@@ -57,7 +57,7 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool {
     out_plain(g.level.mission.exfil_x, g.level.mission.exfil_z, g.level.mission.exfil_out, p)
 }
 
-/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame. (mission.ts:56-58)
+/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame.
 fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> bool {
     if let Some(o) = exfil_out {
         return (p[0] - exfil_x) * o[0] + (p[2] - exfil_z) * o[1] > 0.0 && m::abs((p[0] - exfil_x) * o[1] - (p[2] - exfil_z) * o[0]) < 1.8;
@@ -65,7 +65,7 @@ fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> 
     p[0] > exfil_x && m::abs(p[2] - exfil_z) < 1.8
 }
 
-/// The mission's stage machine: infiltrate, drive, exfil, and the run's counts. (mission.ts updateMission)
+/// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
     if g.aside || g.puppet.is_some() {
@@ -190,7 +190,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     }
 }
 
-/// Hands off the drive before it is out: the pull starts over next time. (mission.ts cancelDrive)
+/// Hands off the drive before it is out: the pull starts over next time.
 pub fn cancel_drive(g: &mut crate::game::Game) {
     if g.mission.drive_t < 0.0 {
         return;
@@ -198,7 +198,7 @@ pub fn cancel_drive(g: &mut crate::game::Game) {
     g.mission.drive_t = -1.0;
 }
 
-/// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look. (mission.ts drivePulled)
+/// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look.
 pub fn drive_pulled(g: &mut crate::game::Game) {
     let rf = g.level.mission.rack.front;
     let n = js::num_str(g.level.mission.rack.index + 1.0);
@@ -243,7 +243,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Drive, Some(1.5));
 }
 
-/// The dead rack is noticed: the nearest calm patrol goes to look at it. (mission.ts sendRackCheck)
+/// The dead rack is noticed: the nearest calm patrol goes to look at it.
 pub fn send_rack_check(g: &mut crate::game::Game) {
     use crate::game::{GuardState, GuardTask, GuardTaskArm0, GuardTaskArm0Kind};
     let pl = g.player;
@@ -363,12 +363,12 @@ fn stage_words(g: &Game, seat: &crate::seats::SeatRef) -> String {
     }
 }
 
-/// `Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))`, the pull's percent on the HUD (mission.ts:166, 169).
+/// `Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))`, the pull's percent on the HUD.
 fn drive_percent(drive_t: f64) -> String {
     js::num_str(m::min(99.0, m::round(drive_t / crate::consts::DRIVE_SECS * 100.0)))
 }
 
-/// `g.doors.byName(name)?.frameCentre ?? null` (mission.ts:150).
+/// `g.doors.byName(name)?.frameCentre ?? null`.
 fn door_centre(g: &Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
 }

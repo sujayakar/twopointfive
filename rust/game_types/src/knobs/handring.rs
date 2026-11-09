@@ -16,18 +16,17 @@ use game_derive::Knobs;
 /// floor the ring is that one wedge. It is no row of the list, so it is never what a tap does (a noise is chosen, never fallen into) and nothing that
 /// reads the rows meets it. Where the rows fill every wedge, and while a verb runs, there is no whistle: a step away or the verb's end gives it back. The key the whistle had is taken off it by the page's board (host/keymap.ts: its row has no key until the player gives
 /// it one); the game still answers its old code, so a recording and every check that presses it are as they were.
-/// THE CORNER SHOWS ONE LINE (ui/overlay.ts deriveInteractions): what a tap would do now, and nothing where a tap does nothing. A running verb's own
+/// THE CORNER SHOWS ONE LINE: what a tap would do now, and nothing where a tap does nothing. A running verb's own
 /// row and the squad's block under it are as they were.
-/// THE KEY (host/keymap.ts KEYMAP.handWhen): while this rule is on the whistle's row has no key, and while the empty-hands slot (handslot.ts) is on as
+/// THE KEY: while this rule is on the whistle's row has no key, and while the empty-hands slot is on as
 /// well the E key gives the interaction's code and the Space key gives the game nothing; the game goes on asking for the code it always asked for
-/// (consts.ts INTERACT_KEY).
 /// On (`?handring=0`: the list on a held Space, the corner list, the
-/// whistle on its key, as it was). Registered in knobs.ts; a recording from before the key replays with it off (journal.ts applyKnobs).
+/// whistle on its key, as it was). Registered in knobs.ts; a recording from before the key replays with it off.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HandringK {
     /// the interaction key held is a ring that stays; the whistle is its last wedge; the corner shows the default action alone
     #[k(true)] pub on: bool,
-    /// the key down this long (s) puts the ring up; let go sooner it is the tap. The squad ring's own number for a ring that stays (cmdring.ts)
+    /// the key down this long (s) puts the ring up; let go sooner it is the tap. The squad ring's own number for a ring that stays
     #[k(0.3)] pub hold_secs: f64,
     /// s more than the hand's own time that a turn may add (a half turn at the plant's 10 rad/s is 0.31 s, the step in the rest)
     #[k(0.45)] pub turn_max: f64,

@@ -15,7 +15,7 @@ pub struct Men {
     pub scenario: Option<crate::scene_scenario_list::ScenarioSpec>,
 }
 
-/// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
+/// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size.
 #[derive(Clone, Copy, Debug)]
 pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: crate::host_hud::View }
 
@@ -23,16 +23,16 @@ pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: crate::host
 pub fn settle(g: &mut Game) {
     crate::math_dice::use_dice(g);
     crate::posehome::pose_home_tend(g);
-    // what the TypeScript's stores say of themselves in the block's head as they are made or moved in (state.ts keep, settle), and the Rust stores,
+    // what the TypeScript's stores say of themselves in the block's head as they are made or moved in, and the Rust stores,
     // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
     // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
     ::sim::state::state(g.sim).head.homes |= 2 | 4 | 32 | 128 | 256;
 }
 
-/// the canvas of a host that draws nothing (headless.ts standUp `canvas`)
+/// the canvas of a host that draws nothing
 pub fn canvas() -> crate::host_hud::View { crate::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 } }
 
-/// THE HOST'S OWN INPUT AND CAMERA for a game that stands (headless.ts standUp): a detached Input with the cursor where the harness always put it,
+/// THE HOST'S OWN INPUT AND CAMERA for a game that stands: a detached Input with the cursor where the harness always put it,
 /// a canvas of 1600 by 1000, a follow camera on the level's spawn, and the box world listed once.
 pub fn host_new(g: &mut Game) -> Host {
     let input = crate::input::input_detached(g);
@@ -55,7 +55,7 @@ pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
     crate::game::game_new(g, men.rig, Some(crate::game::GameNewOpts { seats: Some(men.seats) }));
     settle(g);
     // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
-    // harness's own flag (host/profile.ts shippedBoot raises it). A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
+    // harness's own flag. A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
     // put on at the stand, and the address's own question is asked once its mission is staged (`start_at_address`)
     if men.words.is_none() {
         g.stood.solo_stand = true;

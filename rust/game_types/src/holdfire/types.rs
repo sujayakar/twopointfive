@@ -31,7 +31,6 @@ pub struct HoldFireOrderO {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HoldfireMod {
-    /// (src/game/holdfire.ts:74 states)
     pub states: JsMap<PlayerId, crate::holdfire::State>,
 }
 

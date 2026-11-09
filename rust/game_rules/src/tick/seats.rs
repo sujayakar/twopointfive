@@ -13,7 +13,7 @@ use alloc::{string::String, vec, vec::Vec};
 /// the row a second cast of the squad's code keeps in a table kept per view
 pub const CAST_KEY: PlayerId = PlayerId(u32::MAX);
 
-/// is this call inside a seat's view (seats.ts `rawGame(g) !== g`), and not on the bare Game. with_seat raises Game.view_depth for the length of its call
+/// is this call inside a seat's view, and not on the bare Game. with_seat raises Game.view_depth for the length of its call
 fn in_view(g: &crate::game::Game) -> bool { g.view_depth > 0 }
 
 /// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat on Game, or CAST_KEY inside a second cast.
@@ -134,7 +134,7 @@ fn seam_in_first_seat_view(g: &Game) -> bool { crate::seats::in_view(g) }
 
 // ---------------------------------------------------------------- small helpers
 
-/// a later seat's record as it is stood: what Game's fields of those names hold now, with his seat (seats.ts:86-87)
+/// a later seat's record as it is stood: what Game's fields of those names hold now, with his seat
 fn set_of_game(g: &Game, s: SeatId) -> crate::seats::SeatSet {
     crate::seats::SeatSet {
         seat: s,
@@ -180,7 +180,7 @@ fn share_of(n: f64, lo: f64, mine: f64, all: f64) -> f64 {
 
 // ---------------------------------------------------------------- the seats
 
-/// the game's seats, made as its constructor begins (seats.ts seatsStand). More than one: the first seat's set is Game's own fields, a later seat's is in `Seat.own`
+/// the game's seats, made as its constructor begins. More than one: the first seat's set is Game's own fields, a later seat's is in `Seat.own`
 pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     let max = g.k.seats.max;
     if !(n >= 1.0 && n <= max) || n != m::floor(n) { panic!("a game is stood up with 1 to {} seats, not {}", max, n); }
@@ -206,17 +206,17 @@ pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
 
 // ---------------------------------------------------------------- the men
 
-/// the character id of seat `i`'s man (seats.ts seatManId)
+/// the character id of seat `i`'s man
 pub(super) fn seat_man_id(i: f64) -> f64 {
     if i == 0.0 { crate::consts::PLAYER_ID } else { crate::consts::NOBODY_ID + i }
 }
 
-/// is `id` a player's man's (seats.ts isManId)
+/// is `id` a player's man's
 pub fn is_man_id(g: &crate::game::Game, id_2: f64) -> bool {
     id_2 == crate::consts::PLAYER_ID || (id_2 > crate::consts::NOBODY_ID && id_2 < crate::consts::NOBODY_ID + g.k.seats.max)
 }
 
-/// every seat's man, in seat order (seats.ts men)
+/// every seat's man, in seat order
 pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
     if g.seats.len() == 1 { return vec![g.player]; }
     let mut out = Vec::new();
@@ -224,14 +224,14 @@ pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
     out
 }
 
-/// the men still up (seats.ts menUp)
+/// the men still up
 pub fn men_up(g: &crate::game::Game) -> Vec<PlayerId> {
     let mut all = men(g);
     all.retain(|p| !g.pl[*p].down);
     all
 }
 
-/// is every player down (seats.ts allDown)
+/// is every player down
 pub fn all_down(g: &crate::game::Game) -> bool {
     if g.seats.len() == 1 { return g.pl[g.player].down; }
     for i in 0..g.seats.len() {
@@ -268,25 +268,25 @@ pub fn on_seat<R>(g: &mut crate::game::Game, s: Option<SeatId>, f: &mut dyn FnMu
     }
 }
 
-/// can a mission of this kind be played by two (seats.ts seatsKind)
+/// can a mission of this kind be played by two
 pub fn seats_kind(kind: &str) -> bool { crate::seats::seat_kinds().iter().any(|k| k == kind) }
 
-/// why this game cannot start a mission of this kind (seats.ts seatsRefuse)
+/// why this game cannot start a mission of this kind
 pub fn seats_refuse(g: &crate::game::Game, kind: &str) -> Option<String> {
     if g.seats.len() > 1 && !seats_kind(kind) { Some(String::from("it takes one player today")) } else { None }
 }
 
-/// the man whose eyes and ears this host's picture and speakers are (seats.ts hostMan)
+/// the man whose eyes and ears this host's picture and speakers are
 pub fn host_man(g: &crate::game::Game) -> PlayerId {
     if g.seats.len() == 1 { return g.player; }
     let s = crate::game::game_host_seat(g);
     crate::cmd::seat_man(g, s)
 }
 
-/// the man a writer with no man of its own names (seats.ts manHere): the view's; bare, Game holds the first seat's set, so both arms are g.player
+/// the man a writer with no man of its own names: the view's; bare, Game holds the first seat's set, so both arms are g.player
 pub fn man_here(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
-/// `f` for every seat, over its view (seats.ts eachSeat)
+/// `f` for every seat, over its view
 pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) {
     if g.seats.len() == 1 { f(g); return; }
     for i in 0..g.seats.len() {
@@ -295,7 +295,7 @@ pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::
     }
 }
 
-/// the first answer any seat's view gives `f` (seats.ts firstOf)
+/// the first answer any seat's view gives `f`
 pub fn first_of<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> Option<T>) -> Option<T> {
     if g.seats.len() == 1 { return f(g); }
     for i in 0..g.seats.len() {
@@ -306,7 +306,7 @@ pub fn first_of<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f: &mut 
     None
 }
 
-/// the seat whose man this character is (seats.ts seatOfChar)
+/// the seat whose man this character is
 pub fn seat_of_char(g: &crate::game::Game, c_2: Option<CharId>) -> Option<SeatId> {
     let c = c_2?;
     for i in 0..g.seats.len() {
@@ -317,7 +317,7 @@ pub fn seat_of_char(g: &crate::game::Game, c_2: Option<CharId>) -> Option<SeatId
     None
 }
 
-/// … and the man himself (seats.ts manOf)
+/// … and the man himself
 pub fn man_of(g: &mut crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId> {
     if g.seats.len() == 1 {
         return match c_2 { Some(c) if g.pl[g.player].ch == c => Some(g.player), _ => None };
@@ -326,7 +326,7 @@ pub fn man_of(g: &mut crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId
     Some(crate::cmd::seat_man(g, s))
 }
 
-/// the seat whose man carries character id `id` (seats.ts seatOfId)
+/// the seat whose man carries character id `id`
 pub fn seat_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     if !is_man_id(g, id_2) { return None; }
     for i in 0..g.seats.len() {
@@ -337,7 +337,7 @@ pub fn seat_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     None
 }
 
-/// the man who carries character id `id` (seats.ts manById)
+/// the man who carries character id `id`
 pub fn man_by_id(g: &crate::game::Game, id_2: f64) -> Option<PlayerId> {
     if g.seats.len() == 1 {
         return if man_char_id(g, g.player) == id_2 { Some(g.player) } else { None };
@@ -346,7 +346,7 @@ pub fn man_by_id(g: &crate::game::Game, id_2: f64) -> Option<PlayerId> {
     Some(crate::cmd::seat_man(g, s))
 }
 
-/// the game as the player with this id sees it, None for no player's id (seats.ts viewOfId)
+/// the game as the player with this id sees it, None for no player's id
 pub fn view_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     if g.seats.len() == 1 {
         return if man_char_id(g, g.player) == id_2 { Some(g.seat) } else { None };
@@ -354,7 +354,7 @@ pub fn view_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     seat_of_id(g, id_2)
 }
 
-/// the seat of a man (seats.ts seatOfMan)
+/// the seat of a man
 pub fn seat_of_man(g: &crate::game::Game, pl: PlayerId) -> SeatId {
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -363,14 +363,14 @@ pub fn seat_of_man(g: &crate::game::Game, pl: PlayerId) -> SeatId {
     g.seats[0]
 }
 
-/// what a player is called (seats.ts playerName)
+/// what a player is called
 pub fn player_name(g: &crate::game::Game, pl: PlayerId) -> String {
     if g.seats.len() == 1 { return String::from("Player"); }
     let s = seat_of_man(g, pl);
     alloc::format!("Player {}", g.tab.cmd_seat[s].index + 1.0)
 }
 
-/// the living man nearest a place (seats.ts nearestMan)
+/// the living man nearest a place
 pub fn nearest_man(g: &crate::game::Game, at: &[f64]) -> Option<PlayerId> {
     let (mut best, mut bd) = (None, f64::INFINITY);
     for i in 0..g.seats.len() {
@@ -383,7 +383,7 @@ pub fn nearest_man(g: &crate::game::Game, at: &[f64]) -> Option<PlayerId> {
     best
 }
 
-/// a later seat's man and his light, made as the Game's constructor ends (seats.ts standMen)
+/// a later seat's man and his light, made as the Game's constructor ends
 pub(super) fn stand_men(g: &mut crate::game::Game) {
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -401,7 +401,7 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
     }
 }
 
-/// where seat `i`'s man stands when the first stands on `at` (seats.ts spotBeside)
+/// where seat `i`'s man stands when the first stands on `at`
 pub(super) fn spot_beside(g: &mut crate::game::Game, at: V3, i: f64) -> V3 {
     if !js::truthy(i) { return at; }
     let apart = g.k.seats.apart;
@@ -417,7 +417,7 @@ pub(super) fn spot_beside(g: &mut crate::game::Game, at: V3, i: f64) -> V3 {
     v3::copy(at)
 }
 
-/// a staging puts the players on its start (seats.ts stageMen)
+/// a staging puts the players on its start
 pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut dyn FnMut(&mut crate::game::Game, PlayerId)>) {
     let mut each = each;
     deal_seats(g);
@@ -457,7 +457,7 @@ pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut 
     }
 }
 
-/// a scenario's opening cut: every seat's lens snapped to its own man (seats.ts cutToMen)
+/// a scenario's opening cut: every seat's lens snapped to its own man
 pub fn cut_to_men(g: &mut crate::game::Game) {
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -466,13 +466,13 @@ pub fn cut_to_men(g: &mut crate::game::Game) {
         let c = &mut g.tab.camera[cam];
         c.target = v3::copy(at);
         c.desired = v3::copy(c.target);
-        c.desired_serial = c.desired_serial.wrapping_add(1);   // (a whole write of `desired`: Seat.takeCut, cmd.ts:191)
+        c.desired_serial = c.desired_serial.wrapping_add(1);
     }
 }
 
 // ---------------------------------------------------------------- who an enemy is up against
 
-/// the man an enemy has in mind (seats.ts facedSeat)
+/// the man an enemy has in mind
 fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     let cur = seat_at(g, g.gd[gd].faces);
     let cur_man = crate::cmd::seat_man(g, cur);
@@ -490,20 +490,20 @@ fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     best
 }
 
-/// the player an enemy has in mind as the tick stands (seats.ts facedMan)
+/// the player an enemy has in mind as the tick stands
 pub fn faced_man(g: &crate::game::Game, gd: GuardId) -> PlayerId {
     if g.seats.len() == 1 { return g.player; }
     let s = seat_at(g, g.gd[gd].faces);
     crate::cmd::seat_man(g, s)
 }
 
-/// the game as that player sees it (seats.ts facedView)
+/// the game as that player sees it
 pub fn faced_view(g: &crate::game::Game, gd: GuardId) -> SeatId {
     if g.seats.len() == 1 { return g.seat; }
     seat_at(g, g.gd[gd].faces)
 }
 
-/// the game as the man behind this body has it; never moves `faces` (seats.ts viewOfBody)
+/// the game as the man behind this body has it; never moves `faces`
 pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> SeatId {
     if g.seats.len() == 1 || g.seat != g.seats[0] || seam_in_first_seat_view(g) { return g.seat; }
     if let Some(seat) = view_of_id(g, c_2.id) { return seat; }
@@ -519,14 +519,14 @@ pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> Se
     }
 }
 
-/// the view a man of the floor is stepped over: his seat's for a teammate, the faced man's for anybody else (seats.ts viewFor)
+/// the view a man of the floor is stepped over: his seat's for a teammate, the faced man's for anybody else
 pub fn view_for(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     if on_team(g, gd) { seat_of(g, gd) } else { faced_seat(g, gd) }
 }
 
 // ---------------------------------------------------------------- whose teammate
 
-/// the deal: the team's roster is cut into as many runs as there are seats; returns whether it dealt (seats.ts dealSeats)
+/// the deal: the team's roster is cut into as many runs as there are seats; returns whether it dealt
 pub fn deal_seats(g: &mut crate::game::Game) -> bool {
     let n = g.seats.len();
     if n == 1 { return false; }
@@ -563,43 +563,43 @@ pub fn deal_seats(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// the seat a teammate takes his orders from (seats.ts seatOf)
+/// the seat a teammate takes his orders from
 pub fn seat_of(g: &crate::game::Game, gd: GuardId) -> SeatId {
     let at = g.gd[gd].unit.as_ref().and_then(|u| u.seat);
     seat_at(g, at)
 }
 
-/// is this teammate `s`'s to order (seats.ts inSeat)
+/// is this teammate `s`'s to order
 pub fn in_seat(g: &crate::game::Game, s: SeatId, gd: GuardId) -> bool {
     unit_seat(g, gd) == g.tab.cmd_seat[s].index
 }
 
-/// the game handed in has one squad's orders and they are `g.orders` (seats.ts oneBook)
+/// the game handed in has one squad's orders and they are `g.orders`
 pub fn one_book(g: &crate::game::Game) -> bool {
     g.seats.len() == 1 || g.in_cast
 }
 
-/// the game as a teammate's own player sees it (seats.ts viewOf)
+/// the game as a teammate's own player sees it
 pub fn view_of(g: &crate::game::Game, gd: GuardId) -> SeatId {
     if one_book(g) { return g.seat; }
     seat_of(g, gd)
 }
 
-/// the orders that move a teammate: his seat's book, named by the man it is on Game with (seats.ts ordersOf)
+/// the orders that move a teammate: his seat's book, named by the man it is on Game with
 pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
     if one_book(g) { return g.player; }
     let s = seat_of(g, gd);
     crate::cmd::seat_man(g, s)
 }
 
-/// the order he is under, in whichever seat's book (seats.ts orderOf)
+/// the order he is under, in whichever seat's book
 pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if one_book(g) { return crate::orders::squad_orders_of(g, &crate::seats::here(g), gd); }
     let s = seat_of(g, gd);
     crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd))
 }
 
-/// is there a squad to order at all, any seat's (seats.ts teamActive)
+/// is there a squad to order at all, any seat's
 pub fn team_active(g: &mut crate::game::Game) -> bool {
     if one_book(g) { return crate::orders::squad_orders_active(g, &crate::seats::here(g)); }
     for i in 0..g.seats.len() {
@@ -609,7 +609,7 @@ pub fn team_active(g: &mut crate::game::Game) -> bool {
     false
 }
 
-/// every seat's teammates, in the guard list's order (seats.ts teamSquad)
+/// every seat's teammates, in the guard list's order
 pub fn team_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     if one_book(g) { return crate::orders::squad_orders_squad(g, seat); }
     let mut out = Vec::new();
@@ -620,7 +620,7 @@ pub fn team_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Gu
     out
 }
 
-/// … and the living of them (seats.ts teamMen)
+/// … and the living of them
 pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     if one_book(g) { return crate::orders::squad_orders_men(g, seat, None, None); }
     let mut out = Vec::new();
@@ -631,7 +631,7 @@ pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Guar
     out
 }
 
-/// a seat's share of what the squad brings; `g` holds the seat's set (seats.ts seatShare)
+/// a seat's share of what the squad brings; `g` holds the seat's set
 pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
     if one_book(g) { return n; }
     let me = g.tab.cmd_seat[g.seat].index;

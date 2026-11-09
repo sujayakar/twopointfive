@@ -427,7 +427,7 @@ fn reaches(w: usize, set: i32, p: [f64; 3], c: [f64; 3], tune: &Knobs) -> bool {
     len < 1e-4 || clear(w, set, p, c, len, tune)
 }
 
-/// what a step is told: the model's numbers (sense.ts SENSE.smoke)
+/// what a step is told: the model's numbers
 pub struct K {
     pub decay: f64,
     pub spread: f64,
@@ -438,7 +438,7 @@ pub struct K {
     /// is reached: the step as it was). What share of it a square metre of the plan has is in `WIND`, written by the host before the step.
     pub wind_x: f64,
     pub wind_z: f64,
-    /// …and how it rises with height, as the storm's field does (game/wind.ts stormVel): `wind_low` of it at the ground, `wind_gain` more by
+    /// …and how it rises with height, as the storm's field does: `wind_low` of it at the ground, `wind_gain` more by
     /// `wind_full_at` metres up
     pub wind_low: f64,
     pub wind_gain: f64,

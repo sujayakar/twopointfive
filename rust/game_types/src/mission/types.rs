@@ -14,5 +14,4 @@ pub enum TallyK {
     Knockouts,
 }
 
-/// (src/game/mission.ts:62 DOWN_CARD_SECS)
 pub const DOWN_CARD_SECS: f64 = 2.6;

@@ -29,7 +29,7 @@ pub struct FragK {
     ///  power — strength at a pane d metres off = glassPower × (1 − d ∕ glassM), against the fracture model's own thresholds GLASSBREAK.blastRunK / blastDiceK /
     ///  blastSheetK: at the numbers shipped on 10-08, float glass runs out to 3.5 m, toughened glass dices to 2.8 m, a laminated sheet leaves its frame inside 2.0 m;
     ///  a stun charge, 2.6 m at 0.6, does 1.7 m / 0.65 m / never). glassPower 0 = the burst sends glass nothing of its own (the 'bang' every charge makes still stars
-    ///  it like a stun's). paneEnergy: what a fragment has for a pane on its line, in a round's units (glasspen.ts: 0.5 = a pistol round) — 0 = standing glass stops
+    ///  it like a stun's). paneEnergy: what a fragment has for a pane on its line, in a round's units — 0 = standing glass stops
     ///  it, which is the rule; holes pass whatever it is.
     #[k(4.0)] pub glass_m: f64,
     #[k(1.5)] pub glass_power: f64,

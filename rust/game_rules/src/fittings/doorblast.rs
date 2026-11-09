@@ -9,11 +9,11 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- what skeleton 5 still cannot do: one blocked step
 
-/// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
+/// A box's row (Box.* in the TypeScript).
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// the slabs' hand-over in rust/sim's memory (sim::slabs::addr(0), the same doubles the page's `slabMem()` reads); sim::slabs::par is private.
-/// Got afresh each side of the step, whose own par() makes a second &mut of the same static (doorblast.ts:375 `q = slabMem()`).
+/// Got afresh each side of the step, whose own par() makes a second &mut of the same static.
 fn slab_par() -> &'static mut [f64; sim::slabs::NPAR] {
     unsafe { &mut *(sim::slabs::addr(0) as *mut [f64; sim::slabs::NPAR]) }
 }
@@ -22,7 +22,7 @@ fn slab_par_read() -> &'static [f64; sim::slabs::NPAR] {
     unsafe { &*(sim::slabs::addr(0) as *const [f64; sim::slabs::NPAR]) }
 }
 
-/// Keeps a line of what the doors' blasts did. (doorblast.ts note)
+/// Keeps a line of what the doors' blasts did.
 fn note(g: &mut crate::game::Game, s: &str) {
     let line = format!("{}s {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.doorblast.doorblast_log;
@@ -32,12 +32,12 @@ fn note(g: &mut crate::game::Game, s: &str) {
     }
 }
 
-/// The slab's centre height with its foot (or its face) on the floor at this much tip. (doorblast.ts support)
+/// The slab's centre height with its foot (or its face) on the floor at this much tip.
 fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
     (g.dr[d].height / 2.0) * m::cos(tip) + (g.dr[d].thick / 2.0) * m::sin(tip) + LIFT
 }
 
-/// Does a floor rectangle cut into a static standing in the heights [y0, y1]? (doorblast.ts overlaps)
+/// Does a floor rectangle cut into a static standing in the heights [y0, y1]?
 fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
     let (ux, uz, su, sn) = (m::cos(a), m::sin(a), hu - 0.012, hn - 0.012);
     let ex = m::abs(ux) * hu + m::abs(uz) * hn;
@@ -68,7 +68,7 @@ fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64,
     false
 }
 
-/// The nearest spot within maxR where that rectangle stands clear, by rings of sixteen bearings. (doorblast.ts freeSpot)
+/// The nearest spot within maxR where that rectangle stands clear, by rings of sixteen bearings.
 fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
     let mut r = 0.03;
     while r <= max_r + 1e-9 {
@@ -85,12 +85,12 @@ fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64
     None
 }
 
-/// A step that has met nothing yet. (doorblast.ts nothingMet)
+/// A step that has met nothing yet.
 fn nothing_met() -> crate::doorblast::SlabMet {
     crate::doorblast::SlabMet { landed: false, lx: 0.0, lz: 0.0, rested: false, nudged: 0.0, nudge_max: 0.0, laid: 0.0 }
 }
 
-/// The doors' side of a blast: every leaf within `tear_m` that it reaches comes off. (doorblast.ts doorBlast)
+/// The doors' side of a blast: every leaf within `tear_m` that it reaches comes off.
 pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     let mut out = Vec::new();
     if !(tear_m > 0.0) {
@@ -105,7 +105,7 @@ pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f6
     out
 }
 
-/// The leaves a blast would take off, each with its strength there, asked without touching anything. (doorblast.ts doorBlastReach)
+/// The leaves a blast would take off, each with its strength there, asked without touching anything.
 pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<crate::doorblast::DoorBlastReachItem> {
     let mut out = Vec::new();
     if !(tear_m > 0.0) {
@@ -134,7 +134,7 @@ pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<c
     out
 }
 
-/// Has the blast a line to the leaf that no wall is in (the leaves themselves are not walls to it). (doorblast.ts reaches)
+/// Has the blast a line to the leaf that no wall is in (the leaves themselves are not walls to it).
 fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
     let [hx, hz] = g.dr[d].def.hinge;
     let w = g.dr[d].def.width;
@@ -157,7 +157,7 @@ fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
     open
 }
 
-/// Sam's hands come off a leaf that has left its frame. (doorblast.ts handsOff)
+/// Sam's hands come off a leaf that has left its frame.
 fn hands_off(g: &mut crate::game::Game, d: DoorId) {
     for pl in crate::seats::men(g) {
         if g.pl[pl].easing == Some(d) {
@@ -179,7 +179,7 @@ fn hands_off(g: &mut crate::game::Game, d: DoorId) {
     }
 }
 
-/// The frame lets go of a leaf: its lock is gone, and `who` is the last to have touched it. (doorblast.ts :242-243, :287-288)
+/// The frame lets go of a leaf: its lock is gone, and `who` is the last to have touched it.
 fn frame_lets_go(g: &mut Game, d: DoorId, who: f64) {
     if !crate::doors::door_lock_broken(g, d) {
         crate::doors::door_set_noticed(g, d, false);
@@ -192,7 +192,7 @@ fn frame_lets_go(g: &mut Game, d: DoorId, who: f64) {
     crate::doors::door_set_last_who(g, d, who);
 }
 
-/// A door's state once its leaf is off: wide open and quiet. (doorblast.ts :252, :317)
+/// A door's state once its leaf is off: wide open and quiet.
 fn leaf_is_off(g: &mut Game, d: DoorId, fly: f64) {
     crate::doors::door_set_off(g, d, true);
     crate::doors::door_set_angle(g, d, fly * OFF_ANGLE);
@@ -206,7 +206,7 @@ fn leaf_is_off(g: &mut Game, d: DoorId, fly: f64) {
     crate::doors::door_set_shot(g, d, 0.0);
 }
 
-/// The leaf comes off, thrown out of its frame away from `from`. False, and nothing done, for steel or one already off. (doorblast.ts tearOff)
+/// The leaf comes off, thrown out of its frame away from `from`. False, and nothing done, for steel or one already off.
 pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Option<f64>) -> bool {
     let k = k.unwrap_or(1.0);
     if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
@@ -284,14 +284,14 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     true
 }
 
-/// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's. (doorblast.ts leafTough)
+/// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's.
 fn leaf_tough(g: &crate::game::Game) -> f64 {
     let drywall = g.k.walls.tough.get(String::from("drywall")).copied().unwrap_or(6.0);
     let wood = g.k.walls.tough.get(String::from("wood")).copied().unwrap_or(9.0);
     m::min(drywall, wood) * m::max(0.1, g.k.doorshot.toll)
 }
 
-/// A round met a leaf (dynamic box `index − 1e6`), worth `w` of a wall cell's toll. (doorblast.ts leafRound)
+/// A round met a leaf (dynamic box `index − 1e6`), worth `w` of a wall cell's toll.
 pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, dir: V3, w: f64) {
     let i = index - 1e6;
     if !(i >= 0.0) || (i as usize) as f64 != i || i as usize >= g.col.dynamic_boxes.len() {
@@ -344,12 +344,12 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     }
 }
 
-/// `R(k)` of splinter: the hash of (seed + k). (doorblast.ts :292)
+/// `R(k)` of splinter: the hash of (seed + k).
 fn r_of(seed: f64, k: f64) -> f64 {
     crate::debris::hash01((seed + k) * 2654435761.0)
 }
 
-/// The cuts of a leaf's strips or lengths, uneven by `uneven`. (doorblast.ts :293)
+/// The cuts of a leaf's strips or lengths, uneven by `uneven`.
 fn cuts(seed: f64, n: f64, salt: f64, uneven: f64) -> Vec<f64> {
     let mut c = vec![-1.0];
     let mut j = 1.0;
@@ -361,7 +361,7 @@ fn cuts(seed: f64, n: f64, salt: f64, uneven: f64) -> Vec<f64> {
     c
 }
 
-/// The leaf goes in pieces the way a round travelling `dir` sends it; the lock rail stays as its box. (doorblast.ts splinter)
+/// The leaf goes in pieces the way a round travelling `dir` sends it; the lock rail stays as its box.
 pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Option<V3>) -> bool {
     if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
         return false;
@@ -603,7 +603,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
     true
 }
 
-/// Once a frame: every loose slab still moving is stepped and posed, in the order of their doors. (doorblast.ts doorSlabs)
+/// Once a frame: every loose slab still moving is stepped and posed, in the order of their doors.
 pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
     let n = crate::sim_slabshome::slab_store_fly(g);
     if n == 0.0 {
@@ -625,7 +625,7 @@ pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// One slab's step, and what it met said in one place: the tallies, the slam for the floor to hear, the log line. (doorblast.ts flySlab)
+/// One slab's step, and what it met said in one place: the tallies, the slam for the floor to hear, the log line.
 fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
@@ -660,7 +660,7 @@ fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     }
 }
 
-/// The row read out, stepped, written back. (doorblast.ts stepHere)
+/// The row read out, stepped, written back.
 fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
     let mut s = crate::sim_slabshome::slab_store_load(g, r);
     let mut met = nothing_met();
@@ -669,7 +669,7 @@ fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::do
     met
 }
 
-/// Can this slab's step run in the module: the world standing with the game's own leaves in it, which of them is the slab's own box (−1: none), and the pane's rule; None: a pane rule the module cannot judge by. (doorblast.ts slabThere)
+/// Can this slab's step run in the module: the world standing with the game's own leaves in it, which of them is the slab's own box (−1: none), and the pane's rule; None: a pane rule the module cannot judge by.
 fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
@@ -682,7 +682,7 @@ fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::
     Some(crate::doorblast::SlabThere { but, ask })
 }
 
-/// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. (doorblast.ts stepThere)
+/// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back.
 fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
     let q = slab_par();
     q[sim::slabs::P_DT] = dt;
@@ -731,7 +731,7 @@ fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::d
     }
 }
 
-/// TWIN of sim::slabs::step: `s` put in the door's row, stepped there and read back, what it met added to `t`. (doorblast.ts stepSlab)
+/// TWIN of sim::slabs::step: `s` put in the door's row, stepped there and read back, what it met added to `t`.
 fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
     if s.rest {
         return;
@@ -756,7 +756,7 @@ fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome:
     t.laid += met.laid;
 }
 
-/// The slab's box (and the two handles on it) where the slab is: tilted while it topples, then an ordinary yaw-only box lying flat. (doorblast.ts poseSlab)
+/// The slab's box (and the two handles on it) where the slab is: tilted while it topples, then an ordinary yaw-only box lying flat.
 fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);

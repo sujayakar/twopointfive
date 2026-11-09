@@ -9,7 +9,7 @@ pub struct PressureK {
     /// the three behaviours, each measurable alone (all need `on`)
     #[k(true)] pub press: bool,
     #[k(true)] pub flank: bool,
-    /// HARD ON A LEVEL THAT DECLARES SQUADS (enemysquads.ts): the press above stands down there — the squads own who moves — so harder defenders are the
+    /// HARD ON A LEVEL THAT DECLARES SQUADS: the press above stands down there — the squads own who moves — so harder defenders are the
     ///  squads themselves as a DRILLED GARRISON: enemysquads.ts SQUADS.drill* (each rule its own switch there), read only while `on` and this row are both
     ///  up and squads are staged. Off = hard on a squads level is standard run for run, as it was
     #[k(true)] pub squad_drill: bool,
@@ -30,7 +30,7 @@ pub struct PressureK {
     ///  Nobody comes, and nothing more is heard, for `standSecs`: they stand down, on the net, and the stock rules are back (a later report starts it again).
     ///  Off = a report is a fight at the nearest mate's post, as it was. A fight that starts as a fight (the first loud thing is a boot, a charge, a round in a
     ///  room) never comes through here: a team that kept surprise meets the defenders it met with this off. Off in the build, ON under the
-    ///  difficulty switch's hard (difficulty.ts HARD.warned)
+    ///  difficulty switch's hard
     #[k(false)] pub warned: bool,
     /// stood to, ALL HANDS GO THROUGH THE PRESS (needs warned): the stock rally's clock does not run while the report stands, so at the hit every man takes his
     ///  beat and joins the press (round by another door, stand and fight). Off = as the rule was first measured: the clocks armed at the report have run out by
@@ -133,7 +133,7 @@ pub struct PressureK {
     ///  and never oftener than every `sweepSecs`. Nobody goes to a room a man of theirs holds (he is looking at it), while a man is still out, a press or a
     ///  fall-back is live or a report stands; somebody always stays (`sweepMen` is never fewer than two nor all of them); and A LOOK THAT LOSES A MAN IS THE
     ///  LAST: nobody else walks out that fight. Never a squad's man (enemysquads.ts has its own form of this), a last stand's, a hostage rescue's, one on
-    ///  his way to cover or wedging a door (digin.ts; a man SET on his door may go), or one who knows a covered lane lies that way (lanes.ts). The dead say
+    ///  his way to cover or wedging a door (digin.ts; a man SET on his door may go), or one who knows a covered lane lies that way. The dead say
     ///  nothing: a man dropped without a sound is no word. No die is drawn.
     #[k(false)] pub sweep: bool,
     #[k(20.0)] pub sweep_secs: f64,

@@ -87,13 +87,9 @@ pub struct SHOWWHYLINES {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShowwhyMod {
-    /// (src/game/showwhy.ts:112 mem)
     pub mem: JsMap<GuardId, crate::showwhy::Mem>,
-    /// (src/game/showwhy.ts:113 opMem)
     pub op_mem: JsMap<DoorOpId, crate::showwhy::OpMem>,
-    /// (src/game/showwhy.ts:114 states)
     pub states: JsMap<PlayerId, crate::showwhy::State>,
 }
 
-/// (src/game/showwhy.ts:81 SHOWWHY_LINES: a table nothing writes)
 pub fn showwhy_lines() -> crate::showwhy::SHOWWHYLINES { crate::showwhy::SHOWWHYLINES { line: String::from("you're in my line."), door: String::from("after you."), hurt: String::from("I'm hit."), lag: String::from("I can't keep up."), keep: String::from("I've got this door.") } }

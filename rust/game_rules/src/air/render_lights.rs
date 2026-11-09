@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
 /// One light's GPU record (common.wgsl struct Light, 16 words), hung at `pos` with that radius. `inten` scales the colour; `kind_word` is the kind with
-/// whatever flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts packLight)
+/// whatever flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.
 pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u32, volumetric: f64, owner_word: u32) -> [u32; 16] {
     const DEG: f64 = core::f64::consts::PI / 180.0;
     let w = |v: f64| (v as f32).to_bits();
@@ -25,7 +25,7 @@ pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u3
 // ---- THE LIGHTS' LIST IS THE GAME'S (render/lights.ts LightSet: "this set is the game's and goes into every checkpoint"): its add / remove / flash and the fog's class
 // are translated, not no-ops. Round one made `remove` a boundary no-op: a light taken off the list went on lighting the estimate.
 
-/// WHAT A LIGHT IS BESIDE AN HOUR'S (sim/light.rs by_day), by what it is called and how it burns. (render/photometry.ts lightClass)
+/// WHAT A LIGHT IS BESIDE AN HOUR'S (sim/light.rs by_day), by what it is called and how it burns.
 pub fn light_by_day(l: &crate::render_lights::RtLight) -> u32 {
     use sim::light::{DAY_FACE, DAY_FIXTURE, DAY_FLASH, DAY_HAND, DAY_NONE, DAY_VEHICLE};
     if l.kind == 2.0 || l.transient == Some(true) || l.group == "devices" || l.group == "sky" || l.name.starts_with("kitview") { return DAY_NONE; }
@@ -37,13 +37,11 @@ pub fn light_by_day(l: &crate::render_lights::RtLight) -> u32 {
     if car { DAY_VEHICLE } else { DAY_FIXTURE }
 }
 
-/// (lights.ts LightSet.add)
 pub fn light_set_add(g: &mut crate::game::Game, l: LightId) -> LightId { g.engine.lights.lights.push(l); l }
-/// (lights.ts LightSet.remove)
 pub fn light_set_remove(g: &mut crate::game::Game, l: LightId) {
     if let Some(i) = g.engine.lights.lights.iter().position(|x| *x == l) { g.engine.lights.lights.remove(i); }
 }
-/// Spawn a short-lived point light (a muzzle flash).   (lights.ts LightSet.flash)
+/// Spawn a short-lived point light (a muzzle flash).
 pub fn light_set_flash(g: &mut crate::game::Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
     let mut l = RtLight::default();
     l.name = String::from("flash"); l.group = String::from("transient"); l.kind = 0.0; l.pos = pos; l.dir = [0.0, -1.0, 0.0]; l.color = color; l.intensity = intensity; l.range = range;
@@ -52,7 +50,7 @@ pub fn light_set_flash(g: &mut crate::game::Game, pos: V3, color: V3, intensity:
     let id = g.tab.light.push(l);
     light_set_add(g, id)
 }
-/// The class a light is uploaded with: what was said for it, else 1 for every light of a man not on the team and every flash not a teammate's own; never the sky's.   (lights.ts LightSet.fogClass)
+/// The class a light is uploaded with: what was said for it, else 1 for every light of a man not on the team and every flash not a teammate's own; never the sky's.
 pub fn light_set_fog_class(g: &crate::game::Game, l: LightId) -> f64 {
     let row = &g.tab.light[l];
     if let Some(f) = row.fog { if js::truthy(f) { return f; } }
@@ -64,7 +62,7 @@ pub fn light_set_fog_class(g: &crate::game::Game, l: LightId) -> f64 {
 
 /// A flash's envelope for the frame, and its retirement once a frame has shown it. The tick's last line (`game_tick_end`), and the next
 /// tick's light estimate reads what it left: room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
-/// `time` is not read (lights.ts:187 `void time`).   (render/lights.ts:174 LightSet.update)
+/// `time` is not read.
 pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
     let f = |x: f64| -m::pow(1.0 - x, 3.2) / 3.2;
     let mut i = g.engine.lights.lights.len();
@@ -82,7 +80,7 @@ pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
     }
 }
 
-/// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`). Fields the TypeScript's literal leaves out are absent.   (render/lights.ts:96 lightFromDef)
+/// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`). Fields the TypeScript's literal leaves out are absent.
 pub fn light_from_def(g: &mut crate::game::Game, d: &crate::scene_level::LightDef) -> LightId {
     use crate::scene_level::LightDefKind;
     let mut l = RtLight::default();

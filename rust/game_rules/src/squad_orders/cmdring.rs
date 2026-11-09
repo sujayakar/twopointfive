@@ -6,7 +6,7 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{string::String, vec, vec::Vec};
 
-/// A place held `m` in from both ends of `0 … max`; a view too small to hold it leaves it alone.   (cmdring.ts:217 and 223 `cl`)
+/// A place held `m` in from both ends of `0 … max`; a view too small to hold it leaves it alone.
 fn cl(v: f64, m_: f64, max: f64) -> f64 {
     if max > 2.0 * m_ { m::max(m_, m::min(max - m_, v)) } else { v }
 }
@@ -19,7 +19,7 @@ fn lists_none(listed: &Option<Vec<String>>, targets: &[String]) -> bool {
     listed.as_deref().unwrap_or(targets).iter().any(|t| t == "none")
 }
 
-/// How much larger than CMDRING's px a ring stands in a view this size. The tick's ringOpen reads it, so it is translated.   (cmdring.ts ringZoom)
+/// How much larger than CMDRING's px a ring stands in a view this size. The tick's ringOpen reads it, so it is translated.
 pub(super) fn ring_zoom(g: &crate::game::Game, w: f64, h: f64) -> f64 {
     zoom_of(&g.k.cmdring, w, h)
 }
@@ -51,7 +51,7 @@ fn ring_open_at(c: &crate::knobs::CmdringK, mouse_x: f64, mouse_y: f64, w: f64, 
         pt: None,
     }
 }
-/// A ring opened at the cursor, whole inside the view's edge; a cursor then out of its middle lights nothing until it has come back.   (cmdring.ts ringOpen)
+/// A ring opened at the cursor, whole inside the view's edge; a cursor then out of its middle lights nothing until it has come back.
 pub fn ring_open(g: &crate::game::Game, input: InputId, w: f64, h: f64, time: f64, lit: Option<f64>) -> crate::cmdring::RingState {
     let lit = lit.unwrap_or(1.0);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
@@ -63,7 +63,7 @@ fn ring_pin_on(c: &crate::knobs::CmdringK, r: &mut RingState, sx: f64, sy: f64, 
     r.ax = cl(sx + r.ox.unwrap_or(0.0), c.edge_x * r.z, w);
     r.ay = cl(sy + r.oy.unwrap_or(0.0), c.edge_y * r.z, h);
 }
-/// The ring put back over its place, whole inside the view's edge.   (cmdring.ts ringPin)
+/// The ring put back over its place, whole inside the view's edge.
 pub fn ring_pin(g: &crate::game::Game, r: &mut crate::cmdring::RingState, sx: f64, sy: f64, w: f64, h: f64) {
     ring_pin_on(&g.k.cmdring, r, sx, sy, w, h);
 }
@@ -113,7 +113,7 @@ fn ring_want_on(c: &crate::knobs::CmdringK, r: &mut RingState, mouse_x: f64, mou
     }
     if pill { lone } else { at }
 }
-/// The wedge this frame asks for (0: none): a digit's own, which disarms the cursor, else the one the cursor is out toward or on.   (cmdring.ts ringWant)
+/// The wedge this frame asks for (0: none): a digit's own, which disarms the cursor, else the one the cursor is out toward or on.
 pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input: InputId, digit: f64, time: f64, lone: Option<f64>, shapes: Option<f64>) -> f64 {
     let (lone, shapes) = (lone.unwrap_or(0.0), shapes.unwrap_or(0.0));
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
@@ -122,7 +122,7 @@ pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input
     ring_want_on(&g.k.cmdring, r, mouse_x, mouse_y, digit, time, lone, shapes, pill)
 }
 
-/// Which row is on which wedge (CMDRING.only, the page's way): the rows with digits keep them, the rest take the spare wedges, the last spare is 'more'.   (cmdring.ts ringSeats)
+/// Which row is on which wedge (CMDRING.only, the page's way): the rows with digits keep them, the rest take the spare wedges, the last spare is 'more'.
 pub(super) fn ring_seats(g: &crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
     ring_seats_of(g.k.cmdring.wedges, rows, place, word_key, first.unwrap_or(true))
 }
@@ -172,7 +172,7 @@ fn ring_seats_of(wedges: f64, rows: &[SeatRow], place: bool, word_key: &str, fir
     RingSeats { row, more: more as f64, over }
 }
 
-/// Which row is on which wedge of the flat tree: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.   (cmdring.ts flatSeats)
+/// Which row is on which wedge of the flat tree: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.
 pub(super) fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
     flat_seats_of(g.k.cmdring.wedges, rows, kind, word_key, lead)
 }
@@ -242,12 +242,12 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead
     FlatSeats { row, more, over }
 }
 
-/// How long the key is kept down before its ring goes up (CMDRING.stay, the page's way: a ring that stays).   (cmdring.ts ringHoldSecs)
+/// How long the key is kept down before its ring goes up (CMDRING.stay, the page's way: a ring that stays).
 pub(super) fn ring_hold_secs(g: &crate::game::Game) -> f64 {
     g.k.cmdring.stay_hold_secs
 }
 
-/// One frame of the latch of a ring that stays.   (cmdring.ts ringLatch)
+/// One frame of the latch of a ring that stays.
 pub(super) fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_hit: bool, pointed: bool) -> crate::cmdring::RingLatch {
     if r.free == Some(true) {
         return if key_hit { RingLatch::Give } else { RingLatch::Stay };
@@ -262,13 +262,13 @@ pub(super) fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_
     RingLatch::Stay
 }
 
-/// The wedge a direction points at: 1 at the top, clockwise, `n` of them.   (cmdring.ts wedgeAt)
+/// The wedge a direction points at: 1 at the top, clockwise, `n` of them.
 fn wedge_at(dx: f64, dy: f64, n: f64) -> f64 {
     let k = m::round(m::atan2(dx, -dy) / (2.0 * m::PI / n));
     js::rem(js::rem(k, n) + n, n) + 1.0
 }
 
-/// each kind of target's rows that hold a place at the top of the flat ring, by the place   (cmdring.ts:276 FLAT_TOP)
+/// each kind of target's rows that hold a place at the top of the flat ring, by the place
 fn flat_top() -> JsMap<String, JsMap<String, f64>> {
     let place = |rows: &[(&str, f64)]| { let mut t = JsMap::new(); for &(id, at) in rows { t.set(String::from(id), at); } t };
     let mut t = JsMap::new();
@@ -279,7 +279,7 @@ fn flat_top() -> JsMap<String, JsMap<String, f64>> {
     t
 }
 
-/// each kind of target's rows that go last   (cmdring.ts:279 FLAT_LEFT)
+/// each kind of target's rows that go last
 fn flat_left() -> JsMap<String, Vec<String>> {
     let mut t = JsMap::new();
     t.set(String::from("door"), alloc::vec![String::from(crate::orders::rows::fallin::ORDER.id), String::from(crate::orders::rows::hold::ORDER.id)]);

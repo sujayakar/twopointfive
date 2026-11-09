@@ -12,7 +12,6 @@ pub struct FlinchModStateOfValue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FlinchMod {
-    /// (src/game/flinch.ts:51 stateOf)
     pub state_of: JsMap<GuardId, crate::flinch::FlinchModStateOfValue>,
 }
 

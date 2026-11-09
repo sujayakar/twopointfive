@@ -1,4 +1,3 @@
-//! src/game/squad.ts lines 450 to 666
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -10,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// `this` of a Clearing method: the one at `g.clearing`; every caller has just tested it, and nothing a method calls clears it.
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
 
-/// g.blackout.active (game.ts blackout, lightshome.ts Mains.active)
+/// g.blackout.active
 fn blackout_active(g: &Game) -> bool {
     crate::sim_lightshome::mains_active(g)
 }
@@ -38,7 +37,7 @@ fn rank(r: Perceive) -> i32 {
 }
 
 
-/// What a man of the pair made of the frame: his ears and eyes are his own (guards/senses); somebody he has walked into and a colleague on the floor are here. (squad.ts perceive)
+/// What a man of the pair made of the frame: his ears and eyes are his own (guards/senses); somebody he has walked into and a colleague on the floor are here.
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<crate::squad::Perceive> {
     crate::seats::standing_for(g, gd, &mut |g| perceive_here(g, gd, before))
 }
@@ -65,7 +64,7 @@ fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<
     if aw >= 0.85 { Some(Perceive::Alert) } else if aw >= SUSPECT && aw > before { Some(Perceive::Suspicious) } else { None }
 }
 
-/// Is p inside the plan's bounds, grown by pad? (squad.ts inBounds)
+/// Is p inside the plan's bounds, grown by pad?
 pub fn in_bounds(p: V3, b: Option<crate::scene_level::BreachPlanBounds>, pad: Option<f64>) -> bool {
     let pad = pad.unwrap_or(0.0);
     match b {
@@ -74,7 +73,7 @@ pub fn in_bounds(p: V3, b: Option<crate::scene_level::BreachPlanBounds>, pad: Op
     }
 }
 
-/// Metres of nav path from a to b, Infinity if there is none. (squad.ts pathLen)
+/// Metres of nav path from a to b, Infinity if there is none.
 fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
     let mut l = 0.0;
@@ -83,7 +82,7 @@ fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     l
 }
 
-/// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there. (squad.ts Clearing.constructor)
+/// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there.
 pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
     let mut c = Clearing::blank();
     c.rooms = rooms.to_vec();
@@ -94,12 +93,12 @@ pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::Room
     c
 }
 
-/// Seconds the whole job may take before they are put back on the corridor. (squad.ts Clearing.cap)
+/// Seconds the whole job may take before they are put back on the corridor.
 fn clearing_cap(g: &mut crate::game::Game) -> f64 {
     42.0 * m::max(1.0, cl!(g).rooms.len() as f64) + 15.0
 }
 
-/// Hand whoever of ours is still scripted back to the AI calm. (squad.ts Clearing.cancel)
+/// Hand whoever of ours is still scripted back to the AI calm.
 pub fn clearing_cancel(g: &mut crate::game::Game) {
     for gd in clearing_men(g) {
         if g.gd[gd].script.is_some() && g.guards.contains(&gd) { end_guard_script(g, gd, Some(EndGuardScriptState::Patrol)); }
@@ -109,13 +108,13 @@ pub fn clearing_cancel(g: &mut crate::game::Game) {
     c.drill = None;
 }
 
-/// The pair, or the one. (squad.ts Clearing.men)
+/// The pair, or the one.
 fn clearing_men(g: &mut crate::game::Game) -> Vec<GuardId> {
     let c = cl!(g);
     match c.b { Some(b) => vec![c.a, b], None => vec![c.a] }
 }
 
-/// The point man's line, if he lives. (squad.ts Clearing.say)
+/// The point man's line, if he lives.
 fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
     let a = cl!(g).a;
     if g.gd[a].state != crate::game::GuardState::Dead {
@@ -123,7 +122,7 @@ fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
     }
 }
 
-/// Once a frame after the guards have moved. False when it is over: the caller drops it. (squad.ts Clearing.tick)
+/// Once a frame after the guards have moved. False when it is over: the caller drops it.
 pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let (a, b) = { let c = cl!(g); (c.a, c.b) };
     if cl!(g).stage == ClearStage::Done { return false; }
@@ -292,7 +291,7 @@ fn muster_busy(g: &Game, gd: Option<GuardId>) -> bool {
     match gd { Some(gd) => g.gd[gd].body_duty.is_some() || g.gd[gd].task.is_some(), None => false }
 }
 
-/// Nobody is scripted yet: wait for both to be calm and free, then the word and off. (squad.ts Clearing.muster)
+/// Nobody is scripted yet: wait for both to be calm and free, then the word and off.
 fn clearing_muster(g: &mut crate::game::Game) -> bool {
     let (a, b, t) = { let c = cl!(g); (c.a, c.b, c.t) };
     if t > 1.2 && muster_free(g, a) && b.map_or(true, |b| muster_free(g, b)) {
@@ -308,7 +307,7 @@ fn clearing_muster(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// Doors within reach of either man that give the intruder away: said once a door, and that door's room jumps the queue. True: the approach was re-planned. (squad.ts Clearing.readDoors)
+/// Doors within reach of either man that give the intruder away: said once a door, and that door's room jumps the queue. True: the approach was re-planned.
 fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
     let mut at = 0;
     while at < g.doors.list.len() {
@@ -387,7 +386,7 @@ fn nearest(g: &mut Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: f
 fn to_kick_from(p: &crate::scene_level::RoomClearPlan) -> V3 { p.kick_from }
 fn to_stack(p: &crate::scene_level::RoomClearPlan) -> V3 { p.stack[0] }
 
-/// The walk to a room's stack: the nearest variant, out through the room they stand in first, each to his own mark. (squad.ts Clearing.approach)
+/// The walk to a room's stack: the nearest variant, out through the room they stand in first, each to his own mark.
 fn clearing_approach(g: &mut crate::game::Game) {
     let a = cl!(g).a;
     let from = g.ch[g.gd[a].ch].pos;
@@ -474,7 +473,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
     cl!(g).eta = l / APPROACH_SPEED + 8.0;
 }
 
-/// Hand the pair to the drill. (squad.ts Clearing.startDrill)
+/// Hand the pair to the drill.
 fn clearing_start_drill(g: &mut crate::game::Game) {
     let (plan, a, b) = { let c = cl!(g); (c.cur.clone().unwrap(), c.a, c.b) };
     let d = room_clear_new(g, &plan, a, b, Some(RoomClearNewOpts { live: Some(true) }));
@@ -487,7 +486,7 @@ fn clearing_start_drill(g: &mut crate::game::Game) {
     c.t = 0.0;
 }
 
-/// On to the next room, or done: back to the paired patrol, calm. `cleared` goes in the lockdown's ledger. (squad.ts Clearing.nextRoom)
+/// On to the next room, or done: back to the paired patrol, calm. `cleared` goes in the lockdown's ledger.
 fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> bool {
     let cleared = cleared.unwrap_or(true);
     let now = g.time;

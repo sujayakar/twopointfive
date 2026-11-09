@@ -5,13 +5,12 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// COMPASS: a whole compass word or letter. (doornames.ts:29)
+/// COMPASS: a whole compass word or letter.
 static COMPASS: &[&str] = &["n", "s", "e", "w", "ne", "nw", "se", "sw", "north", "south", "east", "west"];
-/// JOIN: two letters and a word all the same. (doornames.ts:32)
+/// JOIN: two letters and a word all the same.
 static JOIN: &[&str] = &["to"];
-/// ODD: id words that name no door when said. (doornames.ts:34)
+/// ODD: id words that name no door when said.
 static ODD: &[&str] = &["off", "his"];
-/// What `BEARING` (the skeleton keeps it as the pattern's text) matches as a whole word.
 static BEARINGS: &[&str] = &["north", "south", "east", "west", "northern", "southern", "eastern", "western"];
 
 /// The language's `\s` and `trim()` set (Rust's White_Space is another set: it has U+0085 and lacks U+FEFF).
@@ -19,7 +18,7 @@ fn js_space(c: char) -> bool {
     matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
 }
 
-/// The test of one token of an id. (doornames.ts shorthand)
+/// The test of one token of an id.
 fn token_is_shorthand(t: &str) -> bool {
     COMPASS.contains(&t)
         || ODD.contains(&t)
@@ -39,12 +38,12 @@ fn has_bearing(s: &str) -> bool {
     s.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).any(|w| BEARINGS.contains(&w))
 }
 
-/// True = this door id is its author's shorthand, not words to say. (doornames.ts shorthandId)
+/// True = this door id is its author's shorthand, not words to say.
 pub fn shorthand_id(g: &crate::game::Game, id_2: &str) -> bool {
     id_is_shorthand(id_2)
 }
 
-/// A name without its leading article. (doornames.ts bare)
+/// A name without its leading article.
 fn bare(s: &str) -> String {
     let b = s.as_bytes();
     if b.len() >= 3 && b[..3].eq_ignore_ascii_case(b"the") {
@@ -127,7 +126,7 @@ fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&
     out
 }
 
-/// The said name of every shorthand door the level's structure lists, by door id. (doornames.ts doorNamesOf)
+/// The said name of every shorthand door the level's structure lists, by door id.
 fn door_names_of(g: &crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     names_of(&g.level, ids, written)
 }
@@ -144,12 +143,12 @@ fn authored_of(level: &crate::scene_level::Level, ids: &[String]) -> JsMap<Strin
     out
 }
 
-/// The names the level gives its own doors (scenarios.doorNames); a door's first usable row wins. (doornames.ts authoredDoorNames)
+/// The names the level gives its own doors (scenarios.doorNames); a door's first usable row wins.
 fn authored_door_names(g: &crate::game::Game, ids: &[String]) -> JsMap<String, String> {
     authored_of(&g.level, ids)
 }
 
-/// Game construction: hang each named door's names on its Door. (doornames.ts nameDoors)
+/// Game construction: hang each named door's names on its Door.
 pub fn name_doors(g: &mut crate::game::Game, office: bool, doors: &[DoorId]) {
     let ids: Vec<String> = doors.iter().map(|&d| g.dr[d].def.name.clone()).collect();
     let written = authored_door_names(g, &ids);
@@ -175,12 +174,12 @@ pub fn name_doors(g: &mut crate::game::Game, office: bool, doors: &[DoorId]) {
     }
 }
 
-/// The name its LEVEL wrote for this door. (doornames.ts doorWrittenName)
+/// The name its LEVEL wrote for this door.
 pub fn door_written_name(g: &crate::game::Game, d: DoorId) -> Option<String> {
     g.m.doornames.written.get(d).cloned()
 }
 
-/// The name nameDoors gave this door: its level's written one first. (doornames.ts doorSaidName)
+/// The name nameDoors gave this door: its level's written one first.
 pub fn door_said_name(g: &crate::game::Game, d: DoorId) -> Option<String> {
     match g.m.doornames.written.get(d) {
         Some(n) => Some(n.clone()),

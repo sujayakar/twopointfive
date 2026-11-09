@@ -2,7 +2,7 @@
 //! there then a line from the eye to his chest or to his head. The rule is the TypeScript's, statement for statement; what moves here is the whole question,
 //! so a pair of men is one call to the module where it was a cone's arithmetic and two lines.
 //!
-//! The lengths and angles are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math` (math/exact.ts EXACT.on).
+//! The lengths and angles are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math`.
 //! A line that stops at glass may have a pane to ask the host about: an eye's line always passes glass, and the host sends no other here.
 
 use game_types::knobs::Knobs;

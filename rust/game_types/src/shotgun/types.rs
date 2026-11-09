@@ -60,7 +60,6 @@ pub struct BreachSpot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShotgunMod {
-    /// (src/game/shotgun.ts:38 SHOTGUN_LAST)
     #[is(crate::shotgun::ShotgunModSHOTGUNLAST { ends: Vec::new(), glass: JsMap::new() })] pub shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST,
 }
 
@@ -75,5 +74,4 @@ pub struct ShotgunStats {
     pub locks: i32,
 }
 
-/// (src/game/shotgun.ts:126 LOCK_PROUD)
 pub const LOCK_PROUD: f64 = 0.06;

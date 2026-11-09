@@ -1,9 +1,8 @@
-//! THE DOORS' STEP (src/game/doors.ts Doors.update, and Door.place at its end) — every leaf of a level for one tick: what was written onto it since the last
+//! THE DOORS' STEP — every leaf of a level for one tick: what was written onto it since the last
 //! one, the men and the bodies in its swing (who turns it, whom it moves, whom it passes), its free swing, its stops, its closer, its latch and its lock's
 //! clocks; and then where its box stands.
 //!
 //! STATEMENT FOR STATEMENT, as lines.rs is: the same doors in the same order, the same three passes over the same contacts, every sum in the order the
-//! TypeScript writes it. tools/qa/door-ident.ts and the missions of tools/qa/rust-check.ts hold the two together, column for column.
 //!
 //! WHAT IS STATE, AND WHAT IS HANDED IN. A leaf's own numbers (its angle, its turn, its latch and lock, its clocks, who drove it) are the `doors` part of the
 //! game's block (state.rs): flat columns, a door an index. What the step needs of the rest of the game is an ARGUMENT, written by the host for the one call
@@ -12,7 +11,7 @@
 //! and what a leaf did to him, the noises the leaves made, in order (`ev`), and each leaf's two handles (`out`: the picture's).
 //!
 //! THE LEAF'S BOX IS WRITTEN HERE. A rule in this module that moves a box writes the box world's ROW (world.rs: list 0 of the leaves, a door's own index)
-//! and the host makes the Box object the picture draws follow it (src/scene/boxMirror.ts `follow`) before any TypeScript runs again. So a rule here that
+//! and the host makes the Box object the picture draws follow it before any TypeScript runs again. So a rule here that
 //! asks a line after it has turned a leaf asks the leaf where it now stands, with no crossing.
 //!
 //! The floor a moved man may stand on is the statics' (collide.rs, the same world), asked here as the host's two functions ask it (game.ts: the doors'
@@ -117,7 +116,7 @@ pub const O_H2X: usize = 3;
 pub const O_H2Z: usize = 4;
 pub const NOUT: usize = 5;
 
-// a contact (doors.ts DoorContact), a column each: in …
+// a contact, a column each: in …
 pub const K_X: usize = 0;
 pub const K_Y: usize = 1;
 pub const K_Z: usize = 2;
@@ -159,7 +158,7 @@ pub const KF_VEL: u32 = 64;
 pub const KF_RUN: u32 = 128;
 pub const KF_HAND: u32 = 256;
 
-// a noise (doors.ts DoorEvent): the door, the sound (the place of its name in DoorSound), who, how loud, whether the door's kept centre was made anew for
+// a noise: the door, the sound (the place of its name in DoorSound), who, how loud, whether the door's kept centre was made anew for
 // it, and that centre
 pub const NEV: usize = 6;
 pub const S_CREAK: f64 = 0.0;
@@ -183,7 +182,7 @@ pub const P_WMIN_X: usize = 10;
 pub const P_WMAX_X: usize = 11;
 pub const P_WMIN_Z: usize = 12;
 pub const P_WMAX_Z: usize = 13;
-/// the foot of a walker's span as the statics are asked it (collision.ts footBand(0.2))
+/// the foot of a walker's span as the statics are asked it
 pub const P_FOOT: usize = 14;
 /// the head of the settled man's span (player.ts settleSpot: crouched or not)
 pub const P_SETTLE_Y1: usize = 15;
@@ -271,7 +270,7 @@ const SHOVE_OPENS_BELOW: f64 = 1.2;
 const SHOVE_RATE: f64 = 7.2;
 const TURN_RATE: f64 = 15.0;
 const KICK_SUBSTEP: f64 = 0.16;
-// what Doors.man answers (doors.ts)
+// what Doors.man answers
 const MAN_SIDE: i32 = 3;
 const MAN_FOLDED: i32 = 4;
 const MAN_BRACED: i32 = 8;
@@ -286,7 +285,7 @@ const HAND: f64 = 3.0;
 const T_OPEN: f64 = 0.0;
 const T_SLAM: f64 = 1.0;
 const T_BOOT: f64 = 2.0;
-// player.ts: a standing man's radius against the statics, in a door frame, and how the one eases into the other
+// a standing man's radius against the statics, in a door frame, and how the one eases into the other
 const BODY_R: f64 = 0.42;
 const DOOR_R: f64 = 0.3;
 const DOOR_FIT_LAT: [f64; 2] = [0.12, 0.5];
@@ -335,7 +334,7 @@ impl Step {
     fn on(&self, k: usize, i: usize) -> bool {
         self.s.c[k][i] != 0.0
     }
-    /// `d.drive = null` (doors.ts Door's setter): the drive is over and leaves nothing — its flag down and every column of its record zero
+    /// `d.drive = null`: the drive is over and leaves nothing — its flag down and every column of its record zero
     #[inline]
     fn drive_off(&mut self, i: usize) {
         self.s.c[DRIVE][i] = 0.0;
@@ -461,7 +460,7 @@ impl Step {
     }
 
     // ---- the floor (the host's two functions, over the statics of this world)
-    /// collision.ts collideCircle: (x, z) pushed out of the statics over [0.2, y1]
+    /// (x, z) pushed out of the statics over [0.2, y1]
     fn collide(&self, x: &mut f64, z: &mut f64, r: f64, y1: f64, iterations: u32) -> bool {
         let hit = collide::circle(self.w, *x, *z, r, self.io.par[P_FOOT], y1, iterations) != 0;
         let pt = asking(self.w).pt;
@@ -469,7 +468,6 @@ impl Step {
         *z = pt[1];
         hit
     }
-    /// collision.ts clampToWorld
     fn clamp_to_world(&self, x: &mut f64, z: &mut f64, r: f64) -> bool {
         let p = &self.io.par;
         let nx = js_min(p[P_WMAX_X] - r, js_max(p[P_WMIN_X] + r, *x));
@@ -479,13 +477,13 @@ impl Step {
         *z = nz;
         moved
     }
-    /// game.ts: the doors' `standable` — is there floor for a body of radius r at (x, z)
+    /// The doors' `standable` — is there floor for a body of radius r at (x, z)
     fn standable(&self, x: f64, z: f64, r: f64) -> bool {
         let (mut qx, mut qz) = (x, z);
         self.collide(&mut qx, &mut qz, js_min(r, 0.3), 1.5, 1);
         hypot2(qx - x, qz - z) < 0.02 && !self.clamp_to_world(&mut qx, &mut qz, 0.3)
     }
-    /// player.ts bodyR: a standing man's radius at p (a door frame lets him through narrower)
+    /// A standing man's radius at p (a door frame lets him through narrower)
     fn body_r(&self, x: f64, z: f64) -> f64 {
         let mut k = 0.0;
         for i in 0..self.n {
@@ -502,7 +500,7 @@ impl Step {
         }
         BODY_R - (BODY_R - DOOR_R) * k
     }
-    /// player.ts settleSpot: where the statics let a man moved to (x, z) stand
+    /// Where the statics let a man moved to (x, z) stand
     fn settle(&self, x: &mut f64, z: &mut f64) {
         let y1 = self.io.par[P_SETTLE_Y1];
         for _ in 0..4 {
@@ -1364,7 +1362,7 @@ impl Step {
     }
 }
 
-/// doors.ts shove: the correction a leaf applies to a living contact this frame
+/// The correction a leaf applies to a living contact this frame
 #[inline]
 fn shove(pen: f64, dt: f64, exact: bool) -> f64 {
     if exact {

@@ -1,11 +1,11 @@
-//! THE POSES OF A GAME (src/anim/skeleton.ts Pose, PoseSet) — every local pose a character keeps from one tick to the next, in the game's block (state.rs), so
+//! THE POSES OF A GAME — every local pose a character keeps from one tick to the next, in the game's block (state.rs), so
 //! that a layer of the animator written here reads and writes them with no crossing and no copy, and a rollback puts them back with everything else.
 //!
 //! A POOL: a pose is ten columns of singles (skeleton.rs: tx ty tz | qx qy qz qw | sx sy sz, a node a row, the rows whole vectors of four: `singles`),
 //! handed out one after another as the host asks, and
 //! known by WHERE IT STARTS, a count of singles from the start of this part (so the host needs no number of this file's to find it). No ONE pose is handed back: a man keeps his for as long as he stands.
 //! Men who leave a game for good (a restart makes its guards anew) would fill the pool in time, so whenever a man whose poses are here is no longer on the
-//! game's lists the host takes every pose out, EMPTIES it (`clear_of`) and puts back the men who are there (game/posehome.ts): one rule for whoever left,
+//! game's lists the host takes every pose out, EMPTIES it (`clear_of`) and puts back the men who are there: one rule for whoever left,
 //! however he left. A pool FULL of men who are there is not emptied: the pose that did not fit stays the host's own array and is asked of the bench.
 //! A pose is stored as the TypeScript's Float32Array stores it (single.rs).
 use crate::single::S;

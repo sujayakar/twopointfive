@@ -9,7 +9,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the bench (rust/sim/src/skeleton.rs Bench: its tables are reached directly, no addresses)
 
-/// The module, if it answers a question about a pose of `n` nodes now. The module is linked and its maths are the game's, so only the size can refuse.   (skeleton.ts benchFor)
+/// The module, if it answers a question about a pose of `n` nodes now. The module is linked and its maths are the game's, so only the size can refuse.
 fn bench_for(n: f64, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
     let _owed = owed.unwrap_or(false);
     if n > BENCH_NODES {
@@ -18,7 +18,7 @@ fn bench_for(n: f64, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
     Some(crate::sim_sim::sim())
 }
 
-/// A size a layer of the module is handed at most: one past it is a mistake in the game's own tables, said by name.   (skeleton.ts layerFits)
+/// A size a layer of the module is handed at most: one past it is a mistake in the game's own tables, said by name.
 pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
     let min = min.unwrap_or(0.0);
     if !(n >= min && n <= max) {
@@ -29,7 +29,7 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
     }
 }
 
-/// A table of names of rust/sim/src/knobs.rs, one a line.   (skeleton.ts benchNames)
+/// A table of names of rust/sim/src/knobs.rs, one a line.
 fn bench_names(x: crate::sim_sim::SimExports, table: f64) -> Vec<String> {
     let table = table as u32;
     let (at, n) = (::sim::roles::addr(table), ::sim::roles::len(table));
@@ -52,7 +52,7 @@ fn cast_nums<'a>(cast: &'a LayerCast, name: &str) -> Option<&'a Vec<f64>> {
     cast.nums.iter().find(|(k, _)| *k == name).map(|(_, v)| v)
 }
 
-/// The slot to ask a layer of man `c` in: his game's block, all his poses standing there, and his rig on the bench with its roles, lists and tables.   (skeleton.ts layerSlot)
+/// The slot to ask a layer of man `c` in: his game's block, all his poses standing there, and his rig on the bench with its roles, lists and tables.
 pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     let (ch, set) = (g.ch[c].anim.rig, g.ch[c].anim.poses);
     let stray = g.tab.pose_set[set].stray;
@@ -132,7 +132,7 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     slot
 }
 
-/// What a layer's export answered: 0 is a mistake and loud; else the run-forward bones it ran are brought back from the bench into the man's `fk`, and no others.   (skeleton.ts layerRan)
+/// What a layer's export answered: 0 is a mistake and loud; else the run-forward bones it ran are brought back from the bench into the man's `fk`, and no others.
 pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     if code == 0.0 {
         panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold: char row {:?}, unit {}, guard {:?}", c, g.guards.iter().any(|x| g.gd[*x].ch == c && g.gd[*x].unit.is_some()), g.guards.iter().find(|x| g.gd[**x].ch == c).map(|x| g.gd[*x].callsign.clone()));
@@ -167,7 +167,7 @@ pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     }
 }
 
-/// The module with `ch`'s rig on the bench, written when another was there; None for a rig the bench cannot hold.   (skeleton.ts benchRig)
+/// The module with `ch`'s rig on the bench, written when another was there; None for a rig the bench cannot hold.
 fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
     let n = g.tab.rig[ch].nodes.len();
     let x = bench_for(n as f64, owed)?;
@@ -193,7 +193,7 @@ fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option
     Some(x)
 }
 
-/// A pose written to place `slot` of the bench.   (skeleton.ts benchPut)
+/// A pose written to place `slot` of the bench.
 fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
     let d = cols_of_read(g, p);
@@ -203,7 +203,7 @@ fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64
     }
 }
 
-/// A pose read back from place `slot`: each column's rows of the pose's own nodes, the rows past the last node staying its zeros.   (skeleton.ts benchGet)
+/// A pose read back from place `slot`: each column's rows of the pose's own nodes, the rows past the last node staying its zeros.
 fn bench_get(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
     let (n_, n) = (rows_of(p), p.nodes as usize);
@@ -216,7 +216,7 @@ fn bench_get(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64
     }
 }
 
-/// The run-forward bones onto the bench.   (skeleton.ts benchPutFK)
+/// The run-forward bones onto the bench.
 fn bench_put_fk(fk: &crate::anim_skeleton::PoseFK) {
     let b = ::sim::skeleton::bench();
     let (mut r, mut p) = (0usize, 0usize);
@@ -234,7 +234,7 @@ fn bench_put_fk(fk: &crate::anim_skeleton::PoseFK) {
     }
 }
 
-/// The run-forward bones back off the bench.   (skeleton.ts benchGetFK)
+/// The run-forward bones back off the bench.
 fn bench_get_fk(fk: &mut crate::anim_skeleton::PoseFK) {
     let b = ::sim::skeleton::bench_read();
     let (mut r, mut p) = (0usize, 0usize);
@@ -254,7 +254,7 @@ fn bench_get_fk(fk: &mut crate::anim_skeleton::PoseFK) {
 
 // ---------------------------------------------------------------- a pose
 
-/// Rows a column of a pose of `n` nodes holds: `n` rounded up to whole vectors of four.   (skeleton.ts poseRows)
+/// Rows a column of a pose of `n` nodes holds: `n` rounded up to whole vectors of four.
 pub(super) fn pose_rows(n: f64) -> f64 {
     (js::to_i32(n + 3.0) & !3) as f64
 }
@@ -324,7 +324,7 @@ fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
 
 /// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`, as the TypeScript's `new Pose` is an array of its own. Only a pose
 /// made through a character's set lives in the game's pool (pose_set_make): so the pool holds what the TypeScript's holds, and no more. No nodes
-/// makes a pose with no place and no floats.   (skeleton.ts Pose.constructor)
+/// makes a pose with no place and no floats.
 pub(super) fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
     if num_nodes == 0 { return Pose { at: u32::MAX, nodes: 0 }; }
     let row = g.loose_poses.len() as u32;
@@ -370,12 +370,12 @@ pub(super) fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skel
     *p = home;
 }
 
-/// The floats, wherever they are: the row itself, to write through and let go before the next call that takes g.   (skeleton.ts Pose.cols)
+/// The floats, wherever they are: the row itself, to write through and let go before the next call that takes g.
 pub(super) fn pose_cols<'g>(g: &'g mut crate::game::Game, this: crate::anim_skeleton::Pose) -> &'g mut [f32] {
     cols_of(g, this)
 }
 
-/// Between poses of one rig; another count of nodes is refused.   (skeleton.ts Pose.copy)
+/// Between poses of one rig; another count of nodes is refused.
 pub(super) fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, src: crate::anim_skeleton::Pose) {
     if rows_of(src) != rows_of(this) {
         panic!("Pose.copy: a pose of {} nodes into one of {}", src.nodes, this.nodes);
@@ -387,7 +387,7 @@ pub(super) fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::P
     cols_of(g, this).copy_from_slice(from);
 }
 
-/// Node i's rotation.   (skeleton.ts Pose.rot)
+/// Node i's rotation.
 pub(super) fn pose_rot(g: &crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> Quat {
     let n_ = rows_of(this);
     let o = ((3 * n_) as isize + i as isize) as usize;
@@ -395,7 +395,7 @@ pub(super) fn pose_rot(g: &crate::game::Game, this: crate::anim_skeleton::Pose, 
     [d[o] as f64, d[o + n_] as f64, d[o + 2 * n_] as f64, d[o + 3 * n_] as f64]
 }
 
-/// Node i's rotation written; no such node writes nothing.   (skeleton.ts Pose.setRot)
+/// Node i's rotation written; no such node writes nothing.
 pub(super) fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64, q: Quat) {
     if !(i >= 0.0 && i < this.nodes as f64) {
         return;
@@ -409,7 +409,7 @@ pub(super) fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton
     d[o + 3 * n_] = q[3] as f32;
 }
 
-/// Node i's origin.   (skeleton.ts Pose.pos)
+/// Node i's origin.
 pub(super) fn pose_pos(g: &crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> V3 {
     let n_ = rows_of(this);
     let i = i as isize;
@@ -419,12 +419,12 @@ pub(super) fn pose_pos(g: &crate::game::Game, this: crate::anim_skeleton::Pose, 
 
 // ---------------------------------------------------------------- the poses one character keeps
 
-/// A set that will make at most `most` poses.   (skeleton.ts PoseSet.constructor)
+/// A set that will make at most `most` poses.
 pub(super) fn pose_set_new(g: &mut crate::game::Game, most: f64) -> PoseSetId {
     g.tab.pose_set.push(PoseSet { most, ..PoseSet::blank() })
 }
 
-/// One more pose of the set; past `most` is a mistake said by name.   (skeleton.ts PoseSet.make)
+/// One more pose of the set; past `most` is a mistake said by name.
 pub(super) fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate::anim_skeleton::Pose {
     let most = g.tab.pose_set[id].most;
     if g.tab.pose_set[id].list.len() as f64 >= most {
@@ -439,12 +439,12 @@ pub(super) fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) ->
     p
 }
 
-/// Singles a game's pool holds.   (skeleton.ts posePoolRoom)
+/// Singles a game's pool holds.
 pub fn pose_pool_room() -> f64 {
     ::sim::poses::POOL as f64
 }
 
-/// Singles of the pool this set fills when it has made every pose it can (none made yet: none, it has no rig to count by).   (skeleton.ts poseSetMost)
+/// Singles of the pool this set fills when it has made every pose it can (none made yet: none, it has no rig to count by).
 pub fn pose_set_most(g: &crate::game::Game, s: PoseSetId) -> f64 {
     let set = &g.tab.pose_set[s];
     match set.list.first() {
@@ -453,15 +453,15 @@ pub fn pose_set_most(g: &crate::game::Game, s: PoseSetId) -> f64 {
     }
 }
 
-/// Is this pose's floats in the block. A handle gets its place as it is made and a copy of it could not take a later one, so a pose with none stays so: false.   (skeleton.ts poseIn)
+/// Is this pose's floats in the block. A handle gets its place as it is made and a copy of it could not take a later one, so a pose with none stays so: false.
 fn pose_in(g: &crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
     p.at < Pose::LOOSE
 }
 
-/// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.   (skeleton.ts poseOut)
+/// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.
 fn pose_out(g: &crate::game::Game, p: crate::anim_skeleton::Pose) {}
 
-/// Every pose of a set at home in the game's block; false = the pool had no room for one of them, see `stray`.   (skeleton.ts poseSetIn)
+/// Every pose of a set at home in the game's block; false = the pool had no room for one of them, see `stray`.
 pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     g.tab.pose_set[s].home = Some(crate::Opaque);
     let mut stray = 0.0;
@@ -479,7 +479,7 @@ pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     stray == 0.0
 }
 
-/// …and out again.   (skeleton.ts poseSetOut)
+/// …and out again.
 pub(super) fn pose_set_out(g: &mut crate::game::Game, s: PoseSetId) {
     g.tab.pose_set[s].home = None;
     g.tab.pose_set[s].stray = 0.0;
@@ -489,7 +489,7 @@ pub(super) fn pose_set_out(g: &mut crate::game::Game, s: PoseSetId) {
     }
 }
 
-/// Is the pose in a block (not −1, the bench). No g here, so only the sign says anything: the slot it is in is g.sim, which is what lend answers.   (skeleton.ts slotOf)
+/// Is the pose in a block (not −1, the bench). No g here, so only the sign says anything: the slot it is in is g.sim, which is what lend answers.
 fn slot_of(p: crate::anim_skeleton::Pose) -> f64 {
     if p.at >= Pose::LOOSE {
         -1.0
@@ -498,7 +498,7 @@ fn slot_of(p: crate::anim_skeleton::Pose) -> f64 {
     }
 }
 
-/// A pose made ready for a question: at home as it stands (its slot), or copied to place `place` of the bench (−1).   (skeleton.ts lend)
+/// A pose made ready for a question: at home as it stands (its slot), or copied to place `place` of the bench (−1).
 fn lend(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) -> f64 {
     if slot_of(p) < 0.0 {
         bench_put(g, p, place);
@@ -518,7 +518,7 @@ fn lent_at(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64)
     }
 }
 
-/// The module did not know the pose it was asked about: never the game's doing, so it is loud.   (skeleton.ts known)
+/// The module did not know the pose it was asked about: never the game's doing, so it is loud.
 fn known(ok: f64) {
     if !js::truthy(ok) {
         panic!("posing: the Rust module was asked about a pose it does not hold");
@@ -534,7 +534,7 @@ fn answer(ok: bool) -> f64 {
     }
 }
 
-/// `out` set to the rig's rest pose.   (skeleton.ts restPose)
+/// `out` set to the rig's rest pose.
 pub(super) fn rest_pose(g: &mut crate::game::Game, ch: RigId, out: crate::anim_skeleton::Pose) {
     let d = cols_of(g, out);
     let rig = &g.tab.rig[ch];
@@ -560,7 +560,7 @@ fn object_is(a: f32, b: f32) -> bool {
     (a.is_nan() && b.is_nan()) || a.to_bits() == b.to_bits()
 }
 
-/// What this file keeps beside a clip (its lines of times, its number in the module, the nodes it needs), worked out the first time.   (skeleton.ts sideOf)
+/// What this file keeps beside a clip (its lines of times, its number in the module, the nodes it needs), worked out the first time.
 fn side_of<'g>(g: &'g mut crate::game::Game, clip: ClipId) -> &'g mut crate::anim_skeleton::ClipSide {
     if !g.m.anim_skeleton.clip_side.has(clip) {
         let tr = &g.tab.clip[clip].tracks;
@@ -666,7 +666,7 @@ fn clip_write(clip: &crate::anim_gltf::Clip) -> Option<f64> {
     Some(::sim::clips::end() as f64)
 }
 
-/// The number a layer samples `clip` by; a clip the module does not hold, or one past the pose's nodes, is a mistake said by name.   (skeleton.ts clipNo)
+/// The number a layer samples `clip` by; a clip the module does not hold, or one past the pose's nodes, is a mistake said by name.
 pub(super) fn clip_no(g: &mut crate::game::Game, clip: ClipId, nodes: f64) -> f64 {
     let (at, need) = clip_place(g, clip);
     if at >= 0.0 && need <= nodes {
@@ -679,7 +679,7 @@ pub(super) fn clip_no(g: &mut crate::game::Game, clip: ClipId, nodes: f64) -> f6
     panic!("posing: a layer samples the clip \"{}\", which writes node {}, over a pose of {} nodes", name, need - 1.0, nodes);
 }
 
-/// A character file's clips against what the module holds, as an animator is made.   (skeleton.ts layerClipsFit)
+/// A character file's clips against what the module holds, as an animator is made.
 pub(super) fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes: f64) {
     if nodes > BENCH_NODES {
         panic!("posing: a rig of {} nodes is more than the Rust module's bench holds ({}: anim/skeleton.ts BENCH_NODES with rust/sim/src/skeleton.rs), and a layer is posed nowhere else", nodes, BENCH_NODES);
@@ -691,7 +691,7 @@ pub(super) fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes
 
 // ---------------------------------------------------------------- sampling and blending
 
-/// Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written): a question of the module, or this file's own arithmetic for what it refuses.   (skeleton.ts sampleClip)
+/// Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written): a question of the module, or this file's own arithmetic for what it refuses.
 pub(super) fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_: bool, out: crate::anim_skeleton::Pose, singles: bool) {
     let n = out.nodes as f64;
     if bench_for(n, None).is_some() {
@@ -813,7 +813,7 @@ fn sample_own(clip: &crate::anim_gltf::Clip, t: f64, loop_: bool, d: &mut [f32],
     }
 }
 
-/// out = lerp(a, b, w * mask[node]); no mask means uniform weight. `a` None means out is a.   (skeleton.ts blendPose)
+/// out = lerp(a, b, w * mask[node]); no mask means uniform weight. `a` None means out is a.
 pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skeleton::Pose>, b: crate::anim_skeleton::Pose, w: f64, mask: Option<&[f32]>, out: crate::anim_skeleton::Pose, singles: bool) {
     let a = a.unwrap_or(out);
     let n = a.nodes as usize;
@@ -987,7 +987,7 @@ fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, u
 
 // ---------------------------------------------------------------- a body's world of joints
 
-/// Every node's global matrix and rotation at rest values, and room for the skinning matrices.   (skeleton.ts SkeletonInstance.constructor)
+/// Every node's global matrix and rotation at rest values, and room for the skinning matrices.
 pub(super) fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skeleton::SkeletonInstance {
     let rig = &g.tab.rig[ch];
     SkeletonInstance {
@@ -998,7 +998,7 @@ pub(super) fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::
     }
 }
 
-/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.   (skeleton.ts SkeletonInstance.update)
+/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.
 pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let d = cols_of_read(g, pose);
     let rig = &g.tab.rig[this.rig];
@@ -1080,13 +1080,13 @@ pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::
     }
 }
 
-/// Model-space origin of a node.   (skeleton.ts SkeletonInstance.nodePos)
+/// Model-space origin of a node.
 pub(super) fn skeleton_instance_node_pos(this: &crate::anim_skeleton::SkeletonInstance, node: f64) -> V3 {
     let g = &this.globals[node as usize];
     [g[12] as f64, g[13] as f64, g[14] as f64]
 }
 
-/// Rewrite the rotations of `pose` so that plain FK reproduces the globals of the last update: parent⁻¹ · global per node.   (skeleton.ts SkeletonInstance.bakeLocalRotations)
+/// Rewrite the rotations of `pose` so that plain FK reproduces the globals of the last update: parent⁻¹ · global per node.
 pub(super) fn skeleton_instance_bake_local_rotations(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose) {
     let d = cols_of(g, pose);
     let rig = &g.tab.rig[this.rig];
@@ -1110,7 +1110,7 @@ fn set_sub(nodes: &[crate::anim_gltf::GltfNode], mask: &mut [f32], i: usize, w: 
     }
 }
 
-/// A per-node mask: a weight for listed node names and (optionally) all their descendants.   (skeleton.ts buildMask)
+/// A per-node mask: a weight for listed node names and (optionally) all their descendants.
 pub(super) fn build_mask(g: &crate::game::Game, ch: RigId, entries: &[crate::anim_skeleton::BuildMaskEntriesItem]) -> Vec<f32> {
     let rig = &g.tab.rig[ch];
     let mut mask = vec![0.0f32; rig.nodes.len()];
@@ -1129,7 +1129,7 @@ pub(super) fn build_mask(g: &crate::game::Game, ch: RigId, entries: &[crate::ani
 
 // ---------------------------------------------------------------- forward kinematics of a local pose
 
-/// Every node's rotation the identity and its origin nought.   (skeleton.ts PoseFK.constructor)
+/// Every node's rotation the identity and its origin nought.
 pub(super) fn pose_fk_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skeleton::PoseFK {
     let rig = &g.tab.rig[ch];
     PoseFK {
@@ -1140,7 +1140,7 @@ pub(super) fn pose_fk_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skele
     }
 }
 
-/// Model-space rotation and origin of every node from a local pose, written in place: a question of the module, or this file's own arithmetic for a rig the bench cannot hold.   (skeleton.ts PoseFK.run)
+/// Model-space rotation and origin of every node from a local pose, written in place: a question of the module, or this file's own arithmetic for a rig the bench cannot hold.
 pub(super) fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::PoseFK, pose: crate::anim_skeleton::Pose) {
     if bench_rig(g, this.rig, None).is_some() {
         bench_put_fk(this);

@@ -152,11 +152,8 @@ pub struct DigInRefuge {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
-    /// (src/game/digin.ts:189 DIGIN_LOG)
     pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,
-    /// (src/game/digin.ts:192 DIGIN_SHUT)
     #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
-    /// (src/game/digin.ts:220 states)
     pub states: Option<crate::digin::St>,
 }
 
@@ -205,11 +202,8 @@ pub struct DiginStats {
     pub wedged_away: i32,
 }
 
-/// (src/game/digin.ts:163 DIGIN_DEFAULTS: a table nothing writes)
 pub fn digin_defaults() -> crate::knobs::DiginK { crate::knobs::DiginK::page() }
 
-/// (src/game/digin.ts:639 HAUL_NEAR)
 pub const HAUL_NEAR: f64 = 0.9;
 
-/// (src/game/digin.ts:639 HOME_REACH)
 pub const HOME_REACH: f64 = 1.2;

@@ -34,7 +34,7 @@ struct Sound {
     kick: bool,
 }
 
-/// Every event of the frame, once. `ear`, `foot`: how well he hears; `eyes`: whether he would see a light go out. (guards.ts hearingCheck)
+/// Every event of the frame, once. `ear`, `foot`: how well he hears; `eyes`: whether he would see a light go out.
 pub fn hearing_check(g: &mut Game, gd: GuardId, ear: Option<f64>, eyes: Option<bool>, foot: Option<f64>) {
     let ear = ear.unwrap_or(1.0);
     let eyes = eyes.unwrap_or(true);
@@ -313,7 +313,7 @@ fn was_calm(g: &Game, gd: GuardId) -> bool {
     st == crate::game::GuardState::Patrol || st == crate::game::GuardState::Suspicious
 }
 
-/// hearingCheck's `small`: what reached him and counted goes in his memory, and attention.ts is told which small thing it was. (guards.ts hearingCheck)
+/// hearingCheck's `small`: what reached him and counted goes in his memory, and attention.ts is told which small thing it was.
 fn small(g: &mut Game, gd: GuardId, cur: &crate::game::GameEvent, where_: V3) {
     let now = g.time;
     let h = &mut g.gd[gd].witness.heard;

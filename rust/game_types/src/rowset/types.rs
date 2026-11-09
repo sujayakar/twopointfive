@@ -9,5 +9,4 @@ pub struct RowSettings {
     pub weather: Option<crate::weather_kinds::WeatherKind>,
 }
 
-/// (src/game/rowset.ts:29 BREAK)
 pub const BREAK: bool = false;

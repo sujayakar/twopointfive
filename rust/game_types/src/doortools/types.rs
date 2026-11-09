@@ -3,12 +3,12 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// the step onto the diagonals, kept until the first can's burst has run dry (doortools.ts toThreshold's `out`)
+/// the step onto the diagonals, kept until the first can's burst has run dry
 #[derive(Clone, Debug, ToBytes)]
 pub enum ThresholdOut {
     Step { lead: GuardId, f: Option<crate::doortools::DoorToolsThrFar>, sl: crate::doortools::DoorToolsDoneItemSliceValue, sf: Option<crate::doortools::DoorToolsDoneItemSliceValue>, light: bool, name: String },
 }
-/// walkLen for one deal's worth of questions, each pair of places measured once (doortools.ts walks); held in a local of the deal, never in a field
+/// walkLen for one deal's worth of questions, each pair of places measured once; held in a local of the deal, never in a field
 #[derive(Clone, Debug)]
 pub enum Walks {
     Memo { memo: JsMap<String, f64>, lim: f64 },
@@ -854,45 +854,31 @@ pub struct DoorToolsPocketOf {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoortoolsMod {
-    /// (src/game/doortools.ts:761 SKY)
     pub sky: JsMap<RoomfightRoomId, crate::doortools::DoortoolsModSKYValue>,
 }
 
-/// (src/game/doortools.ts:601 LEAF_EDGE)
 pub const LEAF_EDGE: f64 = 0.1;
 
-/// (src/game/doortools.ts:601 LEAF_FROM)
 pub const LEAF_FROM: f64 = 1.45;
 
-/// (src/game/doortools.ts:601 LEAF_STEP)
 pub const LEAF_STEP: f64 = 0.1;
 
-/// (src/game/doortools.ts:601 LEAF_COST)
 pub const LEAF_COST: f64 = 4.0;
 
-/// (src/game/doortools.ts:601 LEAF_POSTS: a table nothing writes)
 pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc::vec![0.5, 2.4]] }
 
-/// (src/game/doortools.ts:603 SAM_SHIFT)
 pub const SAM_SHIFT: f64 = 0.35;
 
-/// (src/game/doortools.ts:609 BIG_KEY)
 pub const BIG_KEY: &str = "KeyH";
 
-/// (src/game/doortools.ts:612 THR_PAGE)
 pub const THR_PAGE: &str = "thr";
 
-/// (src/game/doortools.ts:614 PIE_WAIT)
 pub const PIE_WAIT: f64 = 2.5;
 
-/// (src/game/doortools.ts:614 PIE_GUN: a table nothing writes)
 pub fn pie_gun() -> crate::doortools::PIEGUN { crate::doortools::PIEGUN { after: 0.2, step: 0.12, most: 3.0, every: 0.4 } }
 
-/// (src/game/doortools.ts:757 OPEN_RAD)
 pub const OPEN_RAD: f64 = 0.6;
 
-/// (src/game/doortools.ts:759 N4: a table nothing writes)
 pub fn n4() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] }
 
-/// (src/game/doortools.ts:3855 WORD_LEAD)
 pub const WORD_LEAD: f64 = 0.15;

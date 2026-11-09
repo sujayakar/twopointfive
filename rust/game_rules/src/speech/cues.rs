@@ -19,7 +19,7 @@ enum Pat {
     HeadWord(&'static str),
 }
 
-/// The ranking of the lines the defenders already had: a radio line's class by its words, first match; no row = 4.   (cues.ts CLASSES)
+/// The ranking of the lines the defenders already had: a radio line's class by its words, first match; no row = 4.
 static CLASSES: &[(&[Pat], f64)] = &[
     (&[Pat::In("fall back"), Pat::In("falling back"), Pat::In("fell back"), Pat::In("is lost"), Pat::In("out the back"), Pat::In("get back"), Pat::In("behind me"), Pat::In("i'm coming to you")], 5.0),
     (&[Pat::In("still out there")], 6.0),
@@ -36,7 +36,7 @@ struct Line {
     now: Option<&'static [&'static str]>,
     guide: Option<&'static [&'static str]>,
 }
-/// The new lines, in the written order.   (cues.ts LINES)
+/// The new lines, in the written order.
 static LINES: &[Line] = &[
     Line { kind: CueKind::Help, cls: 1.0, say: &["moving to the fight — {the}", "they're hit {at} — moving to them"], now: None, guide: None },
     Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
@@ -61,7 +61,7 @@ fn line_of(k: CueKind) -> &'static Line {
     LINES.iter().find(|l| l.kind == k).unwrap()
 }
 
-/// s before the same kind of cue is said again by anybody on the floor; absent = no wait.   (cues.ts KIND_GAP)
+/// s before the same kind of cue is said again by anybody on the floor; absent = no wait.
 fn gap_of(k: CueKind) -> f64 {
     match k {
         CueKind::Cover => 15.0,
@@ -93,7 +93,7 @@ fn pat_hits(p: &Pat, text: &[u8]) -> bool {
         Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(word_byte),
     }
 }
-/// `/^[A-Z][a-z]{1,11}: /`: a row under a squad's name, not a man's callsign.   (cues.ts SQUAD_WORD)
+/// `/^[A-Z][a-z]{1,11}: /`: a row under a squad's name, not a man's callsign.
 fn squad_word(text: &str) -> bool {
     let b = text.as_bytes();
     if b.is_empty() || !b[0].is_ascii_uppercase() { return false; }
@@ -235,7 +235,7 @@ fn file_kind(k: CueKind) -> CuesFileKind {
 
 // ---------------------------------------------------------------- the functions of the module
 
-/// A radio line's class by its words, first match; none = the net knowing something.   (cues.ts cueClass)
+/// A radio line's class by its words, first match; none = the net knowing something.
 pub fn cue_class(text: &str) -> f64 {
     let b = text.as_bytes();
     for (pats, c) in CLASSES {
@@ -244,18 +244,18 @@ pub fn cue_class(text: &str) -> f64 {
     4.0
 }
 
-/// A kind's lines as they are said now.   (cues.ts said)
+/// A kind's lines as they are said now.
 fn said(g: &mut crate::game::Game, k: crate::cues::CueKind) -> Vec<String> {
     let l = line_of(k);
     l.guide.or(l.now).unwrap_or(l.say).iter().map(|s| String::from(*s)).collect()
 }
 
-/// A line is shouted when its writer put an exclamation mark in it.   (cues.ts isShout)
+/// A line is shouted when its writer put an exclamation mark in it.
 fn is_shout(text: &str) -> bool {
     text.contains('!')
 }
 
-/// Every new line's words, for the QA probe.   (cues.ts cueLines)
+/// Every new line's words, for the QA probe.
 fn cue_lines(g: &mut crate::game::Game) -> Vec<crate::cues::CueLinesItem> {
     let mut out = Vec::new();
     for l in LINES {
@@ -264,7 +264,7 @@ fn cue_lines(g: &mut crate::game::Game) -> Vec<crate::cues::CueLinesItem> {
     out
 }
 
-/// The tallies as a new encounter has them.   (cues.ts newStats)
+/// The tallies as a new encounter has them.
 fn new_stats() -> crate::cues::CuesStats {
     CuesStats {
         heard: 0.0,
@@ -284,17 +284,17 @@ fn new_stats() -> crate::cues::CuesStats {
     }
 }
 
-/// The distance on the floor.   (cues.ts flat)
+/// The distance on the floor.
 fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A new Cues: the field initialisers, nothing more.   (cues.ts Cues.constructor)
+/// A new Cues: the field initialisers, nothing more.
 pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
     Cues::blank()
 }
 
-/// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).   (cues.ts Cues.reset)
+/// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).
 pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.heard_row = None;
     g.cues.heard_said.clear();
@@ -327,7 +327,7 @@ fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFi
     drawn
 }
 
-/// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.   (cues.ts Cues.file)
+/// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.
 fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
     let t = g.time;
     prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
@@ -397,7 +397,7 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     file_done(g, t, text, cls, who, kind, true, "")
 }
 
-/// A row in the first class with no man's name on it: control, the handler, the staff's net.   (cues.ts Cues.raw)
+/// A row in the first class with no man's name on it: control, the handler, the staff's net.
 pub fn cues_radio(g: &mut crate::game::Game, text: &str) {
     cues_file(g, text, 0.0, "", CuesFileKind::Raw);
 }
@@ -407,7 +407,7 @@ fn net_row(callsign: &str, text: &str) -> String {
     if squad_word(text) { String::from(text) } else { alloc::format!("{}: {}", callsign, text) }
 }
 
-/// A unit's line went out on his side's net: the strip gets it.   (cues.ts Cues.heard)
+/// A unit's line went out on his side's net: the strip gets it.
 pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     if g.gd[gd].team != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
     g.cues.stats.heard += 1.0;
@@ -415,7 +415,7 @@ pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     if cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
 }
 
-/// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).   (cues.ts Cues.net)
+/// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).
 pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
@@ -425,7 +425,7 @@ pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     if cues_file(g, &net_row(&callsign, text), cls, &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
 }
 
-/// A teammate calls what the fog hides: a bubble, and a row in the first class. Whether the strip drew it.   (cues.ts Cues.call)
+/// A teammate calls what the fog hides: a bubble, and a row in the first class. Whether the strip drew it.
 pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
@@ -433,7 +433,7 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     cues_file(g, &alloc::format!("{}: {}", callsign, text), 1.0, &callsign, CuesFileKind::Call)
 }
 
-/// Every ear of the team's a shout could reach.   (cues.ts Cues.ears)
+/// Every ear of the team's a shout could reach.
 fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
@@ -455,7 +455,7 @@ fn heard_done(g: &Game, t: f64, text: &str, why: &str) -> bool {
     why.is_empty()
 }
 
-/// A hidden defender's shout that an ear of the team's really gets: a row of its own, his words alone. Whether the strip drew it.   (cues.ts Cues.overheard)
+/// A hidden defender's shout that an ear of the team's really gets: a row of its own, his words alone. Whether the strip drew it.
 pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     let t = g.time;
     if !is_shout(text) || g.gd[gd].state == crate::game::GuardState::Dead { return false; }
@@ -492,7 +492,7 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
     heard_done(g, t, text, "")
 }
 
-/// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).   (cues.ts Cues.netWait)
+/// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).
 pub fn cues_net_wait(g: &crate::game::Game, cls: f64) -> f64 {
     let c = cls as usize;
     let t = g.time;
@@ -509,7 +509,7 @@ pub(super) fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) {
 }
 
 /// What a man is saying: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running. A cue that has had its time is passed over and
-/// left where it is: the next one takes its place.   (cues.ts Cues.bubbleOf)
+/// left where it is: the next one takes its place.
 pub(super) fn cues_bubble_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
     let b = g.gd[gd].bubble.as_ref().map(|b| Bubble { text: b.text.clone(), t: b.t, dur: b.dur, radio: b.radio });
     let Some(c) = g.cues.bubbles.get(gd).cloned() else { return b; };
@@ -572,7 +572,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
 
 // ---------------------------------------------------------------- the words
 
-/// A place as a line says it.   (cues.ts Cues.at)
+/// A place as a line says it.
 fn cues_at(g: &crate::game::Game, p: V3) -> crate::cues::CuesAt {
     let n = crate::dialogue::place_name(g, p);
     let at = if n.starts_with("outside ") { n.clone() } else { alloc::format!("in {}", n) };
@@ -586,7 +586,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
     v
 }
 
-/// His row of `men`, made the first time he is asked after: the row itself.   (cues.ts Cues.man)
+/// His row of `men`, made the first time he is asked after: the row itself.
 fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
         let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
@@ -595,7 +595,7 @@ fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cue
     g.cues.men.get_mut(gd).unwrap()
 }
 
-/// One cue from this man, if he can speak and has not just spoken: a bubble, and (a net line) a row for the strip.   (cues.ts Cues.cue)
+/// One cue from this man, if he can speak and has not just spoken: a bubble, and (a net line) a row for the strip.
 fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, vars: Option<&JsMap<String, String>>) -> bool {
     let t = g.time;
     let said_t = cues_man(g, gd).said_t;
@@ -622,7 +622,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     true
 }
 
-/// Has the floor just heard this kind from somebody?   (cues.ts Cues.kindBusy)
+/// Has the floor just heard this kind from somebody?
 fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool {
     let t = g.time;
     match *kind_t_of(&mut g.cues.kind_t, kind) {
@@ -631,13 +631,13 @@ fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool
     }
 }
 
-/// Can he speak for his squad?   (cues.ts Cues.fit)
+/// Can he speak for his squad?
 fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     let t = g.time;
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
 }
 
-/// Who says a squad's word: the man the note names, else one holding, else the first fit.   (cues.ts Cues.squadVoice)
+/// Who says a squad's word: the man the note names, else one holding, else the first fit.
 fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
     let mut men = Vec::new();
     for m in crate::enemysquads::squad_men(g, name) {
@@ -651,7 +651,7 @@ fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<Guard
 
 // ---------------------------------------------------------------- once a frame, after everybody has moved
 
-/// Read the fight's notes and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.   (cues.ts Cues.tick)
+/// Read the fight's notes and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
 pub fn cues_tick(g: &mut crate::game::Game) {
     let t = g.time;
     if !g.fight.live { return; }
@@ -747,7 +747,7 @@ fn squad_vars(sq: &str, ally: Option<&str>) -> JsMap<String, String> {
     v
 }
 
-/// One note of the fight's log, in the words of the man it is about.   (cues.ts Cues.note)
+/// One note of the fight's log, in the words of the man it is about.
 fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
     let d = if who == "-" { None } else {
         g.fight.defs.iter().copied().find(|&d| { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].callsign == who && g.gd[gd].state != crate::game::GuardState::Dead })
@@ -824,7 +824,7 @@ fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
     }
 }
 
-/// The panel's line.   (cues.ts Cues.summary)
+/// The panel's line.
 fn cues_summary(g: &crate::game::Game) -> String {
     let S = &g.cues.stats;
     let (drawn, of) = (S.heard_drawn + S.cue_drawn, S.heard + S.cue_net);

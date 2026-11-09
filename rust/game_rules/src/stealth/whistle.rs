@@ -7,17 +7,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// What a new man's memory holds (the literal in whistle.ts mem).
+/// What a new man's memory holds.
 fn fresh_mem() -> WhistleMem {
     WhistleMem { responded_at: NEVER, responses: 0.0, searches: 0.0, cues: 0.0, glances: 0.0, glance_until: -1.0, glance_at: None, soft: false, soft_at: NEVER, last_look: -1.0, last_twice: -1.0 }
 }
 
-/// A man's whistle memory, made on first asking.   (whistle.ts mem)
+/// A man's whistle memory, made on first asking.
 fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::whistle::WhistleMem {
     g.m.whistle.mem_of.get_or_insert_with(gd, fresh_mem)
 }
 
-/// Crane a calm man's head toward a point for `secs`.   (whistle.ts glanceToward)
+/// Crane a calm man's head toward a point for `secs`.
 pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>) {
     let secs = secs.unwrap_or(g.k.whistle.glance_secs);
     let until = g.time + secs;
@@ -26,23 +26,23 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
     row.glance_at = Some(v3::copy(at));
 }
 
-/// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).   (whistle.ts whistleMem)
+/// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).
 pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
     g.m.whistle.mem_of.get(gd).copied()
 }
 
-/// What a new player's breath holds (the literal in whistle.ts blower).
+/// What a new player's breath holds.
 fn fresh_blower() -> Blower {
     Blower { ready_at: -1.0, blown: 0.0, last_at: -100.0 }
 }
 
-/// The seat's player's breath, made on first asking.   (whistle.ts blower)
+/// The seat's player's breath, made on first asking.
 fn blower<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::whistle::Blower {
     let key = g.player;
     g.m.whistle.blower_of.get_or_insert_with(key, fresh_blower)
 }
 
-/// Seconds until V will sound again (0 = ready).   (whistle.ts whistleReadyIn)
+/// Seconds until V will sound again (0 = ready).
 pub fn whistle_ready_in(g: &mut crate::game::Game) -> f64 {
     m::max(0.0, blower(g).ready_at - g.time)
 }
@@ -52,12 +52,12 @@ pub fn whistle_ready_in_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
     g.m.whistle.blower_of.get(seat.player).map_or(0.0, |b| m::max(0.0, b.ready_at - g.time))
 }
 
-/// V pressed this frame.   (whistle.ts whistleKey)
+/// V pressed this frame.
 pub fn whistle_key(g: &mut crate::game::Game, input: InputId) {
     if crate::input::input_hit(g, input, "KeyV") { try_whistle(g); }
 }
 
-/// Blow it if the breath is back: the event at his feet, the meter's tick, the voice at his head. False = nothing happened.   (whistle.ts tryWhistle)
+/// Blow it if the breath is back: the event at his feet, the meter's tick, the voice at his head. False = nothing happened.
 pub fn try_whistle(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     if g.pl[pl].down { return false; }
@@ -91,14 +91,14 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// Mouth height off the event's floor position (a crouched man whistles from lower).   (whistle.ts mouthOf)
+/// Mouth height off the event's floor position (a crouched man whistles from lower).
 fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
     let man = crate::seats::man_by_id(g, e.who.unwrap_or(crate::consts::PLAYER_ID));
     let crouched = man.map_or(false, |p| g.pl[p].crouch);
     [e.pos[0], if crouched { 1.0 } else { 1.55 }, e.pos[2]]
 }
 
-/// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.   (whistle.ts canAnswer)
+/// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.
 fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
@@ -111,7 +111,7 @@ fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     }
 }
 
-/// Who a whistle reached and which calm man is to answer it, worked out ONCE per event (its serial is the TypeScript's object identity).   (whistle.ts resolve)
+/// Who a whistle reached and which calm man is to answer it, worked out ONCE per event (its serial is the TypeScript's object identity).
 fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f64) -> &'g mut crate::whistle::Resolution {
     let key = e.serial;
     if g.m.whistle.res_of.has(key) { return g.m.whistle.res_of.get_mut(key).unwrap(); }
@@ -149,7 +149,7 @@ fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f6
     g.m.whistle.res_of.get_mut(key).unwrap()
 }
 
-/// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.   (whistle.ts hearWhistle)
+/// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.
 pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
     use crate::game::GuardState;
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
@@ -241,14 +241,14 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     }
 }
 
-/// The place picked from a pool: the die's `r`, and no saying the last one twice running.   (the arithmetic of whistle.ts pick)
+/// The place picked from a pool: the die's `r`, and no saying the last one twice running.
 fn pick_i(r: f64, len: f64, last: f64) -> f64 {
     let mut i = js::rem(m::floor(r * len), len);
     if len > 1.0 && i == last { i = js::rem(i + 1.0, len); }
     i
 }
 
-/// A line from the pool, and the place it had written in the man's row.   (whistle.ts pick)
+/// A line from the pool, and the place it had written in the man's row.
 fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whistle::PickKey) -> String {
     let r = crate::dice::draw_of(g, "whistle::pick#1", gd);
     let row = mem(g, gd);
@@ -258,7 +258,7 @@ fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whi
     pool[i as usize].clone()
 }
 
-/// Is this man's suspicion (still) only a whistle's?   (whistle.ts whistleSoft)
+/// Is this man's suspicion (still) only a whistle's?
 pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(row) = g.m.whistle.mem_of.get(gd) else { return false };
     row.soft
@@ -267,7 +267,7 @@ pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
         && g.gd[gd].witness.alert_t < row.soft_at
 }
 
-/// The patrol branch, once a frame: soft off, and a head still turned toward a whistle is craned that way.   (whistle.ts whistlePatrolTick)
+/// The patrol branch, once a frame: soft off, and a head still turned toward a whistle is craned that way.
 pub fn whistle_patrol_tick(g: &mut crate::game::Game, gd: GuardId) {
     let Some(row) = g.m.whistle.mem_of.get_mut(gd) else { return };
     row.soft = false;

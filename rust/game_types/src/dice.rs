@@ -15,7 +15,7 @@ impl Die {
     pub const fn new(seed: u32) -> Die {
         Die { n: 0.0, s: seed }
     }
-    /// one draw, uniform in [0, 1)   (dice.ts simRandom / rollOn)
+    /// one draw, uniform in [0, 1)
     pub fn roll(&mut self) -> f64 {
         let mut d = Dice { n: self.n, s: self.s, spare: 0 };
         let r = maths::dice::roll(&mut d);

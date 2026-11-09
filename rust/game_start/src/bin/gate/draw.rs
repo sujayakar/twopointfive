@@ -12,8 +12,8 @@
 //!   src/draw/marks.ts           the decal words when `moved` (mirrored)
 //!   src/draw/smoke.ts           the plan and the bricks where `made` is another (mirrored)
 //!   src/draw/sky.ts             the weather's rows where the row says `weather` (mirrored: a game that has told a weather goes on telling one)
-//! Once, as the level opens, and so held to nothing here: traffic (levellook.ts) and the doorways (reach.ts).
-//! What it reads every frame or by a value it compares itself, so that no mark can leave it behind, and is not mirrored: visible, info (world.ts) · dust (levellook.ts) · fog.ts · lights.ts ·
+//! Once, as the level opens, and so held to nothing here: traffic and the doorways.
+//! What it reads every frame or by a value it compares itself, so that no mark can leave it behind, and is not mirrored: visible, info · dust · fog.ts · lights.ts ·
 //! men.ts (materials by the row's own words) · rims.ts · winds.ts · sky.ts's sky, haze, gloss, exposure · src/picture/air.ts, rain.ts's roofs, fire.ts (a key of the rows they read).
 //! What is told by an id, once, and is no table: events.ts and src/picture/snow's feet, things and blasts. Snow's words (`sayOf`) are read as they lie.
 //!
