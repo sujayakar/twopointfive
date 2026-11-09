@@ -54,11 +54,12 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
 - `mission` record: the plain night's one thread, which every file carries. A quiet mission lays its own dealt spot over it (`quiet.rs`).
   - `playerSpawn` V3. Where Sam starts on the plain night.
   - `objectives` list holding exactly one of each `kind`:
-    - reach: `area` Rect, the room's floor, and `door`, the door the marker points at. Read by `mission.rs`, `doorswing.rs`, `dialogue/`.
-    - drive: `rackIndex` whole number, which also names the switchables `rack<N>_leds` and `rack<N>_glow` that go dark; `front` V3, the marker on the holder's
-      face; `halfW` number at least 0, half its width along the face.
-    - exfil: `door`; `x`, `z` numbers; `out` unit pair dx, dz. With `out`, you are out past the point going that way and within 1.8 m of it sideways;
-      without it, past x (`mission.rs`).
+    - reach: `name` text (optional, as the next three are), what the room is called; `area` Rect, the room's floor, and `door`, the door the marker
+      points at. Read by `mission.rs`, `doorswing.rs`, `dialogue/`.
+    - drive: `name`, `holder` texts, what the thing is called and what it is in; `rackIndex` whole number, which also names the switchables
+      `rack<N>_leds` and `rack<N>_glow` that go dark; `front` V3, the marker on the holder's face; `halfW` number at least 0, half its width along the face.
+    - exfil: `name` text; `door`; `x`, `z` numbers; `out` unit pair dx, dz. You are out up to 12 m past the point going that way (default east) and within
+      1.8 m of it sideways (`out_through`).
 
 A file also says a few things no rule of the game reads, which `levelToData` writes and the reader asks for: `floors` (at least one, with `id`, `y` and `ceiling`;
 `tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list), an `id` on each objective, beacon and plan, an
@@ -378,7 +379,7 @@ The quiet mission, `quiet.rs`. The run's seed deals one start, one spot and one 
 - `spots` list of at least one:
   - `place` text, as the objective says it. `area` Rect; stepping in is reached. `door` the marker's door. `holder` text, what it is taken from.
   - `rackIndex` whole number; names the switchables that go dark. `front` V3, `halfW` number at least 0: the marker and half the face's width.
-  - `wired` true or false; default false. True: emptying it brings a man to look (`takecheck.rs`).
+  - `wired` true or false; default false. True: emptying it brings a man to look (`mission.rs`).
 - `exits` list of at least one: `name` text, `door`, `x`, `z`, `out` unit pair, `halfW` over 0 (default `EXIT_HALF_W`).
 - `patrols` list of lists of route names; default every route. At most six to a set, and a level with more routes must give sets.
 - `needs` record of `coffee`, `smoke`, `water`, `stretch`, each a stand; a kind left out is not dealt (`need_spot`). `stretch` needs `loop`, its lap.

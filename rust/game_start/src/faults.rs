@@ -419,6 +419,7 @@ impl<'a> Rules<'a> {
         self.door("mission.objectives[reach].door", &m.reach.door);
         if !whole(m.drive.rack_index) || m.drive.rack_index < 0.0 { self.say("mission.objectives[drive].rackIndex", "a whole number, 0 or more"); }
         if m.drive.half_w < 0.0 { self.say("mission.objectives[drive].halfW", "0 or more"); }
+        for (w, name) in [("reach].name", &m.reach.name), ("drive].name", &m.drive.name), ("drive].holder", &m.drive.holder), ("exfil].name", &m.exfil.name)] { self.word(&format!("mission.objectives[{w}"), name); }
         self.door("mission.objectives[exfil].door", &m.exfil.door);
         if m.exfil.out.is_some_and(|o| !unit2(o)) { self.say("mission.objectives[exfil].out", "a unit vector, dx dz"); }
         self.a_box("breaker.panel", &f.breaker.panel);

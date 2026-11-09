@@ -80,7 +80,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     if pool.is_empty() { return false; }
     let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
-    let rack = js::num_str(g.level.mission.rack.index + 1.0);
+    let rack = js::num_str(g.level.errand.index + 1.0);
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
     let h = if own { l.h_own.as_deref().unwrap_or(h_now) } else { h_now };

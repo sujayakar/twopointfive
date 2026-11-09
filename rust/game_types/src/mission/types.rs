@@ -17,6 +17,31 @@ pub enum TallyK {
 /// (src/game/mission.ts:62 DOWN_CARD_SECS)
 pub const DOWN_CARD_SECS: f64 = 2.6;
 
+/// THE ERRAND OF A STEALTH NIGHT: where to go, what to take and from what, and the ways out. The level's own, or as a quiet mission dealt it.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Errand {
+    /// the room it is in, as it is called, its floor and the door the marker points at
+    pub place: String,
+    pub area: crate::scene_scenarios::Rect,
+    pub door: String,
+    /// what it is in, what it is, and the face it is taken from
+    pub holder: String,
+    pub thing: String,
+    pub index: f64,
+    pub front: V3,
+    pub half_w: f64,
+    /// somebody is told when it is gone
+    pub told: bool,
+    pub exits: Vec<crate::scene_scenarios::QuietExit>,
+}
+impl Errand {
+    /// the ways out, as they are said
+    pub fn outs(&self) -> String {
+        let names: Vec<&str> = self.exits.iter().map(|x| x.name.as_str()).collect();
+        match names.split_last() { None => String::new(), Some((last, [])) => String::from(*last), Some((last, head)) => alloc::format!("{} or {}", head.join(", "), last) }
+    }
+}
+
 /// WHAT A MISSION BRINGS, said by whoever starts one. Nothing said is the level's own night.
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Facts {

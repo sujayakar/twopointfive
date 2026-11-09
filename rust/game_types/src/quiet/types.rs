@@ -31,33 +31,7 @@ pub struct QuietMission {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthored {
     pub spawn: V3,
-    pub mission: crate::quiet::QuietMissionAuthoredMission,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMission {
-    pub server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom,
-    pub entry_door: String,
-    pub rack: crate::quiet::QuietMissionAuthoredMissionRack,
-    pub exfil_door: String,
-    pub exfil_x: f64,
-    pub exfil_z: f64,
-    pub exfil_out: Option<[f64; 2]>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMissionServerRoom {
-    pub x0: f64,
-    pub x1: f64,
-    pub z0: f64,
-    pub z1: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMissionRack {
-    pub index: f64,
-    pub front: V3,
-    pub half_w: f64,
+    pub errand: crate::mission::Errand,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -83,15 +57,6 @@ pub struct HolderStand {
     pub pos: Option<V3>,
     pub clear: bool,
     pub inside: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct QuietWords {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
 }
 
 /// the state this module keeps at its top level
