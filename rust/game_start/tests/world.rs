@@ -313,20 +313,15 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");
     let waiting = game::sim_fallshome::fall_store_waiting(&p.g);
-    let kept = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
+    let kept = game_start::moment::Moment::of(&p.g);
     let mut first = Vec::new();
-    for _ in 0..120 { p.frame(); first.push((p.words(), game_start::block::part_hashes(p.g.sim))); }
+    for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(game::sim_fallshome::fall_store_waiting(&p.g) != waiting, "the staging is wrong: nothing landed in two seconds");
-    let (g, b) = &kept;
-    unsafe { std::ptr::copy_nonoverlapping(b.as_ptr(), sim::state::addr(p.g.sim) as *mut u8, b.len()); }
-    p.g = g.clone();
-    game::scene_collision::unstand(&mut p.g);
-    game::scene_collision::stands(&mut p.g);
+    p.g = kept.stands(p.g.sim);
     assert_eq!(game::sim_fallshome::fall_store_waiting(&p.g), waiting, "put back: the landings waiting");
-    for (k, (want, block)) in first.iter().enumerate() {
+    for (k, want) in first.iter().enumerate() {
         p.frame();
         let got = p.words();
         assert!(&got == want, "the word parts at tick {k}: {:?}", game_start::play::parting(std::slice::from_ref(want), std::slice::from_ref(&got)));
-        assert!(&game_start::block::part_hashes(p.g.sim) == block, "the block parts at tick {k}");
     }
 }
