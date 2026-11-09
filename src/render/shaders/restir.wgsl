@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
 // Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
 // total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:

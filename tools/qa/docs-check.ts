@@ -49,6 +49,11 @@ function gone(code: string): string[] {
   }
   return [...new Set(out)]; }
 
+/** whose work it is, said on its page and at the code: a rewrite of either keeps the line as it stands */
+const CREDIT = { line: 'Credit: Stephen Jayakar, from his pull request 1.', at: ['docs/agents/render.md',
+  ...['composite', 'fgather', 'gather_common', 'particles', 'reflect', 'restir', 'sdfrig', 'sharp_direct', 'volumetrics'].map(k => `src/render/shaders/${k}.wgsl`)] };
+const uncredited = (text: (f: string) => string) => CREDIT.at.filter(f => !text(f).includes(CREDIT.line));
+
 /** every fault of a page */
 function faults(text: string, most: number): string[] {
   const out: string[] = [], bytes = Buffer.byteLength(text); if (bytes > most) out.push(`${bytes} bytes, ${most} at most`);
@@ -66,7 +71,7 @@ if (BREAK) {
   const planted = '# A page\n\nThe boot is `doors_kick_nobody`, in `rust/game_rules/src/nowhere/` and `gone_test.rs`; see [it](docs/not-here.md). Since 2026-10-13.\n\n```sh\nbun run tools/qa/none-check.ts\n(cd rust/game_start && cargo run --bin nobin)\n```\n'
     + `\`?nosuchword=1\` and \`DoorNobody\` and \`k.nosuchtable.x\`.\n${'x'.repeat(PAGE)}\n`, found = faults(planted, PAGE);
   const want = ['doors_kick_nobody', 'rust/game_rules/src/nowhere/', 'gone_test.rs', 'docs/not-here.md', '2026-10', 'none-check.ts', '--bin nobin', '?nosuchword=1', 'DoorNobody', 'k.nosuchtable', `${PAGE} at most`, 'letters wide'];
-  const missed = want.filter(w => !found.some(f => f.includes(w))); for (const f of found) console.log(`- FAIL — planted: ${f.slice(0, 160)}`);
+  const missed = want.filter(w => !found.some(f => f.includes(w))); if (uncredited(f => read(f).replace(CREDIT.line, '')).length !== CREDIT.at.length) missed.push(CREDIT.line); for (const f of found) console.log(`- FAIL — planted: ${f.slice(0, 160)}`);
   console.log(missed.length ? `docs: MISSED ${missed.join(' · ')}` : `docs: every planted fault found (${want.length})`); process.exit(missed.length ? 3 : 1);
 }
 let bad = 0;
@@ -77,6 +82,8 @@ if (!asked.length) {
   const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``)), lost = OLD.filter(f => !areas.includes(f));
   line(!unnamed.length, `the index names every page (${areas.length})${unnamed.length ? `: not ${unnamed.join(' ')}` : ''}`);
   line(!lost.length, `the list of pages still to be written over names pages that are there${lost.length ? `: not ${lost.join(' ')}` : ` (${OLD.length})`}`);
+  const un = uncredited(f => files.includes(f) ? read(f) : '');
+  line(!un.length, `"${CREDIT.line}" stands at all ${CREDIT.at.length} of its places${un.length ? `: not ${un.join(' ')}` : ''}`);
 }
 for (const f of areas.filter(a => asked.length ? asked.some(w => a.endsWith(`/${w.replace(/\.md$/, '')}.md`) || a === w) : !OLD.includes(a))) {
   const found = faults(read(f), PAGE); line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes, every name in it is there`}`); for (const x of found) console.log(`    ${x}`); }

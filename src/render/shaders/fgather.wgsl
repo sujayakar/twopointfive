@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // THE FINAL GATHER'S HELPERS, CONSTANTS AND BINDINGS. No entry point is here: the gather is two programs, `trace` and `light`, in shaders/gather_split.wgsl, which is
 // appended to this text (render/gatherSplit.ts). What the gather is:
 // Half-resolution (a third with the lossy gatherThird option: frame.lossyCfg.x is the divisor) stochastic final gather. Per pixel: K cosine-distributed rays traced for real through the box grid
