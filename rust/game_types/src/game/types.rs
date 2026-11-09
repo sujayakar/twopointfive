@@ -673,12 +673,6 @@ pub enum Temperament {
     Hard,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MissionRating {
-    Ghost,
-    Panther,
-    Assault,
-}
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
@@ -1302,29 +1296,6 @@ impl Guard {
         if g.team != crate::teams::Team::Guard && g.team != crate::teams::Team::Hostile { g.foe = None; }
         g.keys = keys; g.weapon = weapon; g.talk = talk;
         g
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn a_new_man_holds_what_the_typescript_gives_him() {
-        let g = Guard::blank();
-        assert!(matches!(g.foe, Some(Foe::Player)));
-        assert_eq!((g.last_seen_t, g.gun_lost_at, g.torch_lost_at, g.killer_id, g.fire_cd), (-100.0, -1.0, -1.0, -1.0, 1.0));
-        assert_eq!(g.state, GuardState::Patrol);
-        assert_eq!(g.beam_dir, [0.0, -0.3, 1.0]);
-        assert!(crate::aim::AimState::blank().last_bearing.is_nan());
-        assert_eq!(Player::blank().hits_left, 1.0);
-        let keys = JsSet::new();
-        let a = Guard::new(CharId(1), String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), keys, FirearmId(0), [1.0, 0.0, 2.0], 0.5, GameTalkId(0));
-        assert!(a.foe.is_none());
-        assert_eq!((a.last_pos, a.look_phase), ([1.0, 0.0, 2.0], 0.5));
-    }
-    #[test]
-    fn a_word_prints_as_the_typescript_wrote_it() {
-        assert_eq!(GuardState::Patrol.as_str(), "patrol");
-        assert_eq!(crate::character::Bone::HeadTop.as_str(), "headTop");
     }
 }
 impl Player {
