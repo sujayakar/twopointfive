@@ -8,7 +8,7 @@ use game_derive::Knobs;
 pub struct NightbreachK {
     /// the defenders' weapon lights
     #[k(false)] pub def_lights: bool,
-    /// where Sam stands when it is staged, and the way he faces: the LEVEL's (scene/scenarios.ts TeamStart — start() writes the team start of the level it stages
+    /// where Sam stands when it is staged, and the way he faces: the LEVEL's (tools/levels/lib/scenarios.ts TeamStart — start() writes the team start of the level it stages
     ///  on here; these are the office's until it has: beside the pair on the approach marks, in the cubicles' south aisle, facing east down it)
     #[k([9.6, 0.0, 20.3])] pub sam_at: V3,
     #[k(1.5707963267948966)] pub sam_yaw: f64,

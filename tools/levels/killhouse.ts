@@ -35,7 +35,7 @@
 // No letters, no lane lines, no bays, no tiles, no bands at a door. No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, ParData, Rect, StructureData, TeamStart } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, ParData, Rect, StructureData, TeamStart } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';

@@ -16,7 +16,7 @@
 // editor groups; `bun run tools/levels/export.ts <name>` writes levels/<name>.json; `levels stands <name>` says whether it holds.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';

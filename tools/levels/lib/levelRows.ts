@@ -1,7 +1,7 @@
 // THE LEVEL FORMAT'S PLAIN RECORDS: a box, a door, a light, as a level file and a kit view's set write them (the file's whole shape: tools/levels/lib/levelData.ts, which takes them from here).
-import type { Quat, Vec3 } from '../math/vec';
-import type { MarkingDef } from './markings';
-import type { ShapeForm } from './shapes';
+import type { Quat, Vec3 } from '../../../src/math/vec';
+import type { MarkingDef } from '../../../src/scene/markings';
+import type { ShapeForm } from '../../../src/scene/shapes';
 
 /** Box flags by NAME as they appear in a level file. Only the authored subset: Dynamic / Emissive / AreaLit / Rot are set by the runtime (props, upload,
  *  rust/game_rules/src/game area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */

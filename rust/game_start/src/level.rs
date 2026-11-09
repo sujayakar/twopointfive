@@ -284,7 +284,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     };
     level.mark_texel = data.get("meta").get("markTexel").num();
     level.kept = data.get("meta").get("kept").num();
-    // the scenarios' block and the footsteps' map: the runtime structs verbatim (scene/scenarios.ts), each record as the game's own type (records.rs)
+    // the scenarios' block and the footsteps' map: the runtime structs verbatim (tools/levels/lib/scenarios.ts), each record as the game's own type (records.rs)
     level.scenarios = records.scenarios; level.surfaces = records.surfaces;
     level.script = game::director::level_script_of(&name);   // (a level that carries a script: scene/levelScripts.ts, by the file's name)
     g.level = level;
