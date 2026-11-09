@@ -1,7 +1,7 @@
 // Rays through every cell of the block, from all six sides, see what stands in it: how much they meet, what color it is, how tightly it can be boxed, how much of it is leaves.
 import type { Lab } from '../lab';
 import { buffer, readBuffer } from '../gpu';
-import { cellRow } from './blocks';
+import { cellRow, FINEST } from './blocks';
 import { secondCore } from './core';
 
 const code = (grid: number) => `
@@ -40,7 +40,13 @@ export async function measureBlocks(lab: Lab, grid = 8): Promise<string> {
   const module = d.createShaderModule({ label: 'cells', code: secondCore(lab.graph.prelude()) + code(grid) }), bad = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error'); if (bad.length) throw new Error(bad.map(m => `cells:${m.lineNum}:${m.linePos} ${m.message}`).slice(0, 5).join('\n'));
   const pipe = await d.createComputePipelineAsync({ label: 'cells', layout: d.createPipelineLayout({ bindGroupLayouts: [scene.layout, l1] }), compute: { module, entryPoint: 'main' } }), bg = d.createBindGroup({ layout: l1, entries: [{ binding: 0, resource: { buffer: places } }, { binding: 1, resource: { buffer: made } }, { binding: 2, resource: { buffer: most } }] });
   const e = d.createCommandEncoder(), p = e.beginComputePass(); p.setPipeline(pipe); p.setBindGroup(0, scene.group()); p.setBindGroup(1, bg); p.dispatchWorkgroups(Math.min(32768, B.many), Math.ceil(B.many / 32768)); p.end(); d.queue.submit([e.finish()]);
-  const r = new Uint32Array(await readBuffer(gpu, made)); scene.writeExtra(cellRow(B, scene.blockRow), new Uint8Array(r.buffer)); for (const b of [places, made, most]) b.destroy();
+  const r = new Uint32Array(await readBuffer(gpu, made)); for (const b of [places, made, most]) b.destroy();
+  // who keeps light: each that has something in it, from 0.32 m up (a finer one reads the one it is in); and the empty are forgotten
+  const at: number[] = [], slot = new Uint32Array(B.many); let lit = 0;
+  for (let i = 0; i < B.many; i++) { const level = B.cells[i * 4 + 3]!; if (!(r[i * 8]! & 0xffffff)) { B.bricks[B.said[i]!] = 0; continue; } if (!level) continue; slot[i] = ++lit; const h = FINEST * 2 ** level, y = r[i * 8 + 1]!, lo = [y & 15, (y >> 4) & 15, (y >> 8) & 15], hi = [(y >> 12) & 15, (y >> 16) & 15, (y >> 20) & 15]; for (let k = 0; k < 3; k++) at.push(B.cells[i * 4 + k]! + h * (lo[k]! + hi[k]! + 1) / 32); at.push(h); for (let k = 0; k < 3; k++) at.push(h * (hi[k]! + 1 - lo[k]!) / 16); at.push(i + 1); }
+  for (let i = 0; i < B.many; i++) if (B.cells[i * 4 + 3] === 0) { const w = B.said[i]!, b = Math.floor(w / 588) * 588, s = w - b, up = B.bricks[b + 512 + ((s & 7) >> 1) + 4 * ((((s >> 3) & 7) >> 1) + 4 * (s >> 7))]!; slot[i] = up ? slot[up - 1]! : 0; }
+  for (let i = 0; i < B.many; i++) r[i * 8 + 6] = slot[i]!;
+  scene.writeExtra(scene.blockRow + B.page.length / 4, new Uint8Array(B.bricks.buffer)); scene.writeExtra(cellRow(B, scene.blockRow), new Uint8Array(r.buffer)); const places2 = new Float32Array(at), pu = new Uint32Array(places2.buffer); for (let i = 0; i < lit; i++) pu[i * 8 + 7] = at[i * 8 + 7]!; lab.litCells = { many: lit, at: places2 };
   let full = 0, leafy = 0; const by = [0, 0, 0, 0]; for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff) { full++; by[B.cells[i * 4 + 3]!]!++; if (r[i * 8]! >>> 24 > 127) leafy++; }
   return `${full} of ${B.many} cells have something in them (${by.join(', ')} by level), ${leafy} mostly leaves; ${B.bricks.length / 588} bricks; ${((B.page.length + B.bricks.length + B.many * 8) * 4 / 1e6).toFixed(2)} MB; ${(performance.now() - t0).toFixed(0)} ms`;
 }

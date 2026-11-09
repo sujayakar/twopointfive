@@ -50,4 +50,5 @@ fn folLight(x: vec3f, n: vec3f, open: f32) -> vec4f {
   if (ws <= 0.0) { return vec4f(0.0); } return vec4f(E / ws * open + G / ws * (1.0 - open), 1.0);
 }
 fn folHas(x: vec3f) -> bool { if (FOL_MANY < 2u) { return false; } let g = (x - FOL_LO) / FOL_C - 0.5; let b = vec3i(floor(g)); for (var k = 0; k < 8; k++) { let c = b + vec3i(k & 1, (k >> 1) & 1, k >> 2); if (any(c < vec3i(0)) || any(c >= FOL_N)) { continue; } let r = folCell(c); if ((r.z & 0x80000000u) == 0u) { return true; } } return false; }
+// ==== the foliage ends
 `;

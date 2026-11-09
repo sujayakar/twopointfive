@@ -22,7 +22,7 @@ export function ruled(s: number, o: { cells?: boolean; only?: string } = {}) {
 function swap(code: string, a: string, b: string) { if (!code.includes(a)) throw new Error('the reference has no ' + a); return code.replace(a, () => b); }
 export const rulePath = (name: string, edit: (c: string) => string, second: boolean): Method => {
   const m = pathTracer({ bounces: 40, name, edit }); if (!second) return m; const was = m.stages; m.core2 = true;
-  m.stages = function (lab: Lab) { return was.call(this, lab).map(s => s.name === 'reference' ? { ...s, core: secondCore } : s); }; return m;
+  m.stages = function (lab: Lab) { return was.call(this, lab).map(s => s.name === 'reference' ? { ...s, core: p => secondCore(p) } : s); }; return m;
 };
 export const ruleMethods: Record<string, () => Method> = {
   exactref: () => rulePath('exactref', exact, false), straightref: () => rulePath('straightref', c => swap(c, 'leafMode = select(1u, 0u, depth < 2u);', 'leafMode = 0u;'), false),
