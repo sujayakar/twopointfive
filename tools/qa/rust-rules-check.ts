@@ -56,7 +56,6 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them',
   'sim/src/light.rs SUM': 'SCRATCH · the six faces of one question about the light while its lamps come in parts: begun by the first part, summed on by each later one, read by the host after the last, before any other question about the light is begun',
   'sim/src/light.rs AT': 'SCRATCH · how many of the level\'s rows one question about the light has read so far, while its own lamps come in parts: begun by the first part, gone on from by each later one, like SUM',
-  'sim/src/lights.rs IDS': 'SCRATCH · the fixtures of one wall switch\'s circuit, written by the host before it asks',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of its own of one question about the light on a point (the level\'s are read from their rows), written by the host before it asks',
   'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',
   'sim/src/nav.rs G': 'SCRATCH · one search\'s scores, left blank after it', 'sim/src/nav.rs F': 'SCRATCH · one search\'s scores, left blank after it',

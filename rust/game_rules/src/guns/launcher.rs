@@ -123,7 +123,7 @@ pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from:
         let vel = g.ch[c].vel;
         return v3::mad(head, [vel[0], 0.0, vel[2]], tof);
     }
-    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.fixture[t].pos); }
     let ap = seat.aim_point;
     [ap[0], ap[1] + 0.03, ap[2]]
 }

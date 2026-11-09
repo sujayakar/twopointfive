@@ -77,9 +77,8 @@ fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     let at = [11.2, 1.2, 15.2];
     let lit = round(&mut p, at);
     assert!(lit > 0.01, "a lit room's corner has light off its walls ({lit})");
-    let bulb = p.g.targets.clone().into_iter().find(|&t| game::sim_lightshome::fixture_on(&mut p.g, t)).expect("the bulb");
-    let on = game::sim_lightshome::light_in().on;
-    game::sim_lightshome::light_home_in(&mut p.g, on, Some(bulb), Some(0.0), None, None, None);
+    let bulb = p.g.targets.clone().into_iter().find(|&t| p.g.tab.fixture[t].on).expect("the bulb");
+    p.g.tab.fixture[bulb].on = false;
     let mut most = 0;
     for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept()[0]); }
     let left = round(&mut p, at);

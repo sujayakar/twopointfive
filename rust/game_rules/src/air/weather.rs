@@ -174,7 +174,7 @@ fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_
 /// The weather a new game is born in. Runs on `g.weather` (every method's path) and returns what the caller stores there.
 pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
     g.weather = Weather::blank();
-    // g.sim.keep(WX_BIT, 'weather'): the slot's block stands already, so only the bit and its one check are left (as p_sim_lightshome_01's LightHome)
+    // g.sim.keep(WX_BIT, 'weather'): the slot's block stands already, so only the bit and its one check are left (as p_fixtures_01's LightHome)
     let bit = crate::sim_weatherhome::WX_BIT as u32;
     let head = &mut ::sim::state::state(g.sim).head;
     if head.homes & bit != 0 { panic!("two stores of the weather over one game's block: a part of a block is one store's"); }

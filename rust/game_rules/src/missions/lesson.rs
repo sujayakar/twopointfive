@@ -227,9 +227,8 @@ fn ok_door(g: &Game, door: &str, state: LessonDoorState) -> bool {
 }
 
 fn ok_target(g: &Game, name: &str, on: bool) -> bool {
-    use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on};
-    let Some(x) = g.targets.iter().copied().find(|&y| g.tab.sim_lightshome_fixture[y].name == name) else { return false };
-    (fixture_on(g, x) && !fixture_broken(g, x) && fixture_factor(g, x) > 0.05) == on
+    let Some(x) = g.targets.iter().copied().find(|&y| g.tab.fixture[y].name == name) else { return false };
+    (g.tab.fixture[x].on && !g.tab.fixture[x].broken && g.tab.fixture[x].factor > 0.05) == on
 }
 
 fn ok_men(g: &Game, down: Option<f64>) -> bool {
@@ -473,7 +472,7 @@ pub mod flags {
     pub fn setup_shut(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !crate::slotsetup::slot_setup_open(g, seat) }
     pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging.is_some() }
     /// the mains are off
-    pub fn dark(g: &mut crate::game::Game) -> bool { crate::sim_lightshome::mains_active(g) }
+    pub fn dark(g: &mut crate::game::Game) -> bool { g.light_home.mains.active }
     /// a wall charge is on a wall, waiting on the trigger
     pub fn charge_set(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
     /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach

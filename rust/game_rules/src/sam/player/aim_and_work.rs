@@ -643,7 +643,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if d >= best_px {
                 continue;
             }
-            let on = d < reach || hit_index.map_or(false, |x| g.tab.sim_lightshome_fixture[target].boxes.contains(&x));
+            let on = d < reach || hit_index.map_or(false, |x| g.tab.fixture[target].boxes.contains(&x));
             if !on && Some(target) != kept {
                 continue;
             }

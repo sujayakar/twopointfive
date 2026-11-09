@@ -42,7 +42,7 @@ fn test_faults(p: &Play, t: &LessonTest, out: &mut Vec<String>) {
     use LessonTest as K;
     let g = &p.g;
     match t {
-        K::Target { name, .. } => if !g.targets.iter().any(|&f| g.tab.sim_lightshome_fixture[f].name == *name) { out.push(format!("no light or device named '{}'", name)); },
+        K::Target { name, .. } => if !g.targets.iter().any(|&f| g.tab.fixture[f].name == *name) { out.push(format!("no light or device named '{}'", name)); },
         K::Did { what, .. } => if let Some(foe) = what.split_once("@foe:").map(|x| x.1) { if !g.guards.iter().any(|&x| g.gd[x].callsign == foe) { out.push(format!("no man called '{}' on this floor", foe)); } },
         K::All { of } | K::Any { of } => for x in of { test_faults(p, x, out); },
         _ => {}

@@ -330,7 +330,7 @@ pub struct Game {
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
-    pub light_home: crate::sim_lightshome::LightHome,
+    pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::sim_fallshome::FallStore,
     #[is(true)] pub ai_enabled: bool,
@@ -1355,7 +1355,7 @@ pub struct Tabs {
     pub debris_chunk: Tab<DebrisChunkId, crate::debris::Chunk>,
     pub cmd_seat: Tab<SeatId, crate::cmd::Seat>,
     pub light: Tab<LightId, crate::render_lights::RtLight>,
-    pub sim_lightshome_fixture: Tab<FixtureId, crate::sim_lightshome::Fixture>,
+    pub fixture: Tab<FixtureId, crate::fixtures::Fixture>,
     pub devices_camera_rt: Tab<CameraRtId, crate::devices::CameraRt>,
     pub devices_laser_rt: Tab<LaserRtId, crate::devices::LaserRt>,
     pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,

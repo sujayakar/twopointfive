@@ -276,7 +276,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let key = if let Some(t) = tg {
         alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
-        alloc::format!("l{}", g.tab.sim_lightshome_fixture[l].name)
+        alloc::format!("l{}", g.tab.fixture[l].name)
     } else {
         String::from("free")
     };
@@ -312,7 +312,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
             None => v3::add(g.ch[tc].pos, [0.0, 1.2, 0.0]),
         }
     } else if let Some(l) = lt {
-        g.tab.sim_lightshome_fixture[l].pos
+        g.tab.fixture[l].pos
     } else {
         g.aim_point
     };

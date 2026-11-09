@@ -318,7 +318,7 @@ fn quiet_mission_rack(g: &mut crate::game::Game) {
     let n = js::num_str(g.level.errand.index);
     let leds = format!("rack{}_leds", n);
     let glow = format!("rack{}_glow", n);
-    g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.sim_lightshome_fixture[t].name; *name == leds || *name == glow }).collect();
+    g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.fixture[t].name; *name == leds || *name == glow }).collect();
 }
 
 /// the staging, for whoever can take its failure

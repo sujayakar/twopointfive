@@ -1403,7 +1403,7 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
         else if how != "cut" && info.team { st.a.rest_until = now + K.rest_quiet; }
     }
     // THE LAMP SHOT OUT has no undo under the eye: the dark held to the row's end, then the room staged again
-    if b.row == Act::QuietGun && st.pool.map_or(false, |p| crate::sim_lightshome::fixture_broken(g, p)) {
+    if b.row == Act::QuietGun && st.pool.map_or(false, |p| g.tab.fixture[p].broken) {
         st.a.dirty = true;
         st.a.rest_until = now;
         st.a.rest_next = if how == "cut" { f64::NAN } else { QK.gun_rest };

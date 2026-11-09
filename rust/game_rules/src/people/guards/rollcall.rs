@@ -125,7 +125,7 @@ pub fn reset_guards(g: &mut crate::game::Game) {
         crate::character::character_update(g, c, 0.0);
     }
     crate::opening::opening_start(g);
-    crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().fix, None, Some(0.0), None, None, None);
+    g.light_home.mains.fix_t = 0.0;
     crate::seats::each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
     g.escalation = 0.0;
     g.escalation_t = -1.0;

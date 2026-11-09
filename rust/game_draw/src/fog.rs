@@ -4,7 +4,7 @@ use crate::Row;
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
-use game::{fogofwar, js, m, seats, sim_lightshome};
+use game::{fogofwar, js, m, seats};
 
 const DEG: f64 = core::f64::consts::PI / 180.0;
 /// eyes the fog's programs take
@@ -120,13 +120,13 @@ fn lamps(g: &Game, f: &mut Fog) {
         let row = &g.tab.light[l];
         if row.kind == 2.0 && row.ttl < 0.0 && row.transient != Some(true) && row.enabled { take(l, row.intensity, true); }
     }
-    let down = sim_lightshome::mains_active(g);
+    let down = g.light_home.mains.active;
     for &t in &g.targets {
-        let row = &g.tab.sim_lightshome_fixture[t];
+        let row = &g.tab.fixture[t];
         // (no record = the team has not met it yet: as it stands)
         let known = match g.fog_of_war.lamp_recs.get(t) { Some(lit) => *lit, None => fogofwar::fog_of_war_lamp_lit(g, t) };
         if !known || (row.mains && down) { continue; }
-        if let Some(l) = row.light { take(l, match g.tab.light[l].steady { Some(ref s) => s.intensity, None => sim_lightshome::fixture_base_intensity(g, t) }, false); }
+        if let Some(l) = row.light { take(l, match g.tab.light[l].steady { Some(ref s) => s.intensity, None => g.tab.fixture[t].base_intensity }, false); }
         for al in row.area_lights.iter().flatten() { take(al.light, al.base, false); }
     }
     if pick.len() > LIGHTS {

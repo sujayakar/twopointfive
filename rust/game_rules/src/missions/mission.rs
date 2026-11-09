@@ -68,9 +68,8 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let mut i = 0;
         while i < g.rack_targets.len() {
             let t = g.rack_targets[i];
-            if crate::sim_lightshome::fixture_on(g, t) {
-                let on = crate::sim_lightshome::light_in().on;
-                crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
+            if g.tab.fixture[t].on {
+                g.tab.fixture[t].on = false;
             }
             i += 1;
         }
@@ -185,8 +184,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.rack_targets.len() {
         let t = g.rack_targets[i];
-        let on = crate::sim_lightshome::light_in().on;
-        crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
+        g.tab.fixture[t].on = false;
         i += 1;
     }
     crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));

@@ -444,7 +444,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 if !due {
                     target = 0.0;
                 }
-                if mains && crate::sim_lightshome::mains_active(g) {
+                if mains && g.light_home.mains.active {
                     target = 0.0;
                 }
                 let s = &mut g.tab.wind_wind_source[id];

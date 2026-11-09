@@ -107,11 +107,11 @@ fn every_action_runs_and_does_what_it_says() {
         act(&mut p.g, "repair", 0.0, "");
         p.run(0.2);
         // the mains go and come back by the same row
-        let up = game::sim_lightshome::mains_active(&p.g);
+        let up = p.g.light_home.mains.active;
         act(&mut p.g, "mains", 0.0, "");
-        assert_ne!(game::sim_lightshome::mains_active(&p.g), up, "seed {seed}: the mains row trips them");
+        assert_ne!(p.g.light_home.mains.active, up, "seed {seed}: the mains row trips them");
         act(&mut p.g, "mains", 0.0, "");
-        assert_eq!(game::sim_lightshome::mains_active(&p.g), up, "seed {seed}: and restores them");
+        assert_eq!(p.g.light_home.mains.active, up, "seed {seed}: and restores them");
         // the player goes to the cursor
         p.g.aim_point = [15.0, 0.0, 14.0];
         act(&mut p.g, "teleport", 0.0, "");

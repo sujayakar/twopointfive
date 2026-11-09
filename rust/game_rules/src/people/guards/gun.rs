@@ -151,9 +151,8 @@ fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn
 }
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
-fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let st = crate::sim_lightshome::light_home_block(g);
-    let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
+fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -189,13 +188,13 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
-    crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
+    crate::guards::SteadyLamps::LampRows(rows_of(true, 0.0))
 }
 
 /// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
 fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
     let shade = crate::sense::smoky(g);
-    let rows = rows_of(g, steady_only, leave);
+    let rows = rows_of(steady_only, leave);
     crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
     write_lamps(g, Some(p), skip_owner, steady_only);
     crate::scene_collision::lamps_on(g, acc);
