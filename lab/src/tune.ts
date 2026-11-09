@@ -8,8 +8,9 @@ export const KNOBS = {
   glow: K(12, 'Glow', 0, 0.3, 0.028), glowWide: K(13, 'Glow width', 0, 1, 0.5), key: K(14, 'Exposure, stops', -6, 2, -2.1), detail: K(15, 'Fine contrast', 0.4, 2, 1.12),
   high: K(16, 'How much the lights keep', 0.1, 1.2, 0.55), low: K(17, 'How much the shadows keep', 0.1, 1.2, 0.78), contrast: K(18, 'Curve contrast', 0.8, 2.4, 1.45), toe: K(19, 'Toe', 1, 2.6, 1.6),
   color: K(20, 'Color', -0.6, 1.4, 0.38), hue: K(21, 'Hue held', 0, 1, 0.65), vignette: K(22, 'Vignette', 0, 1, 0.3), mirror: K(23, 'Mirror strength (1 is true)', 0, 3, 1),
+  dark: K(24, 'How dark the night may look', 0, 1, 0.5),
 } satisfies Record<string, Knob>;
 export const tuneOf = (k: Knob, base = 'frame.tune') => `${base}[${k.i >> 2}u].${'xyzw'[k.i & 3]}`;
-export const defaults = () => { const f = new Float32Array(24); for (const k of Object.values(KNOBS)) f[k.i] = k.def; return f; };
+export const defaults = () => { const f = new Float32Array(28); for (const k of Object.values(KNOBS)) f[k.i] = k.def; return f; };
 /** `@name` in a shader's text is that number */
 export const tuned = (code: string, base = 'frame.tune') => code.replace(/@tune\.(\w+)/g, (_, n: string) => { const k = (KNOBS as Record<string, Knob>)[n]; if (!k) throw new Error('no knob ' + n); return tuneOf(k, base); });

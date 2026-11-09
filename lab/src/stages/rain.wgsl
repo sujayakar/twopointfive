@@ -11,7 +11,7 @@ fn phase(mu: f32) -> f32 { let g = 0.62; return 0.35 + 0.65 * (1.0 - g * g) / po
   let T = 2.35; let t = frame.misc.x / T + h.z; let k = floor(t); let age = (t - k) * T; let key2 = pcg(key + u32(i32(k)) * 747u); let g = vec4f(f32(key2 & 255u), f32((key2 >> 8u) & 255u), f32((key2 >> 16u) & 255u), f32(key2 >> 24u)) / 255.0;
   let x0 = vec3f((cell.x + g.x) * s, top, (cell.y + g.y) * s); let d = normalize(vel); let sp = length(vel); let away = length(x0.xz - rainAt.xy) / (f32(n) * 0.5 * s); fineLeaves = false; rngKey(key2, 5u);
   // curtains: it falls harder in bands that the wind carries
-  let band = fbm((x0.xz - wind * frame.misc.x * 1.2) * 0.11 + 3.0); let want = frame.weather.y * mix(0.35, 1.25, smoothstep(0.34, 0.66, band)); if (g.z > want || away > 1.0) { drops[i] = o; return; }
+  let band = fbm((x0.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * (frame.pool2.z * 1.4)) * 0.11 + 3.0); let want = frame.weather.y * mix(0.35, 1.25, smoothstep(0.34, 0.66, band)); if (g.z > want || away > 1.0) { drops[i] = o; return; }
   let hit = nearest(x0, d, 1e-3, 80.0, 0u, 1e9); let pane = hit.gpiece != NOTHING && hit.gt < hit.t; let far = select(hit.t, hit.gt, pane); let ly = x0.y + d.y * far; let run = age * sp; var at = x0 + d * run; var splash = 0.0; let size = 0.6 + 0.9 * g.w * g.w;
   // what the section hides takes its rain with it
   var hidden = false; if (ly > frame.misc.y && hit.piece != NOTHING) { if (pane) { hidden = (pieces[hit.gpiece].flags & CUT) != 0u; } else if ((hit.piece & LEAF_HIT) != 0u) { hidden = true; } else { hidden = (pieces[hit.piece].flags & (CUT | OPEN)) != 0u; } }

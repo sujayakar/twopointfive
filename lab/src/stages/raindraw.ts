@@ -1,4 +1,5 @@
 // The drops, drawn over the finished picture at its own size (nothing is kept of them from frame to frame): light added, and how much is covered.
+import { BREEZE } from '../scene/air';
 import type { Lab } from '../lab';
 import type { Graph, Stage } from '../graph';
 import code from './rain.wgsl' with { type: 'text' };
@@ -39,5 +40,5 @@ export function rainStages(lab: Lab, g: Graph): Stage[] {
 /** which columns there is rain in: round what is looked at, as finely as the view asks */
 export function rainKnobs(lab: Lab) {
   const c = lab.camera, want = Math.max(5, Math.min(46, c.dist * 0.62)) * 2 / RAIN_SIDE, s = 0.1 * 2 ** (Math.round(Math.log2(want / 0.1) * 2) / 2);
-  lab.uniform('rainK', new Float32Array([0, Math.max(0.06, s), RAIN_SIDE, 1.6 + 2.2 * lab.rainNow])); lab.uniform('rainAt', new Float32Array([c.look[0], c.look[2], 0, 0]));
+  lab.uniform('rainK', new Float32Array([0, Math.max(0.06, s), RAIN_SIDE, lab.air.strength * BREEZE * 1.4])); lab.uniform('rainAt', new Float32Array([c.look[0], c.look[2], 0, 0]));
 }

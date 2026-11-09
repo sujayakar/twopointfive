@@ -57,3 +57,15 @@ export function refitBvh(b: Bvh, bound: (item: number) => Bounds) {
     f[o] = x0; f[o + 1] = y0; f[o + 2] = z0; f[o + 4] = x1; f[o + 5] = y1; f[o + 6] = z1;
   }
 }
+
+/** the same from a flat list (mn, mx a box); returns the sum of its nodes' areas: how good it still is */
+export function refitFlat(b: Bvh, box: Float32Array): number {
+  const f = new Float32Array(b.nodes), u = new Uint32Array(b.nodes), ord = b.order; let sum = 0;
+  for (let i = b.perOctant - 1; i >= 0; i--) {
+    const o = i * 8, leaf = u[o + 7]!, n = leaf & 15; let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+    if (n) for (let k = 0; k < n; k++) { const q = ord[(leaf >>> 4) + k]! * 6, a = box[q]!, c = box[q + 1]!, e = box[q + 2]!, g = box[q + 3]!, h = box[q + 4]!, m = box[q + 5]!; if (a < x0) x0 = a; if (c < y0) y0 = c; if (e < z0) z0 = e; if (g > x1) x1 = g; if (h > y1) y1 = h; if (m > z1) z1 = m; }
+    else for (let s = 0; s < 2; s++) { const q = s ? u[(i + 1) * 8 + 3]! * 8 : (i + 1) * 8, a = f[q]!, c = f[q + 1]!, e = f[q + 2]!, g = f[q + 4]!, h = f[q + 5]!, m = f[q + 6]!; if (a < x0) x0 = a; if (c < y0) y0 = c; if (e < z0) z0 = e; if (g > x1) x1 = g; if (h > y1) y1 = h; if (m > z1) z1 = m; }
+    f[o] = x0; f[o + 1] = y0; f[o + 2] = z0; f[o + 4] = x1; f[o + 5] = y1; f[o + 6] = z1; const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0; sum += dx * dy + dy * dz + dz * dx;
+  }
+  return sum;
+}

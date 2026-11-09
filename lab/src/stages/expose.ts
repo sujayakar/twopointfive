@@ -17,7 +17,7 @@ fn shown(c0: vec3f) -> vec3f {
   let y = max(strong(c), 1e-6); var h = c * (film(vec3f(y)).x / y); let hm = max(h.r, max(h.g, h.b)); if (hm > 1.0) { h = 0.5 * h / hm + 0.5 * min(h, vec3f(1.0)); } return mix(film(c), h, @tune.hue);
 }
 /** stops to add: l = this point's stops, base = the base's here (a, b of the guided filter, about the measure A) */
-fn stops(l: f32, A: f32, ab: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let out = @tune.key + A * 0.1 + select(-log(1.0 - 0.05 * min(d, 0.0)) * (@tune.low / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (@tune.high / 0.10), d > 0.0) + (l - A - d) * @tune.detail; return out - l; }
+fn stops(l: f32, A: f32, ab: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let out = @tune.key + A * 0.1 - @tune.dark * max(0.0, -6.0 - A) + select(-log(1.0 - 0.05 * min(d, 0.0)) * (@tune.low / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (@tune.high / 0.10), d > 0.0) + (l - A - d) * @tune.detail; return out - l; }
 `;
 const R = 14, BASE: Size = [160, 90];
 export function exposeStages(lab: Lab, g: Graph, picture: string, small: string, pre: string): Stage[] {

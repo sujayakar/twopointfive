@@ -15,9 +15,9 @@ struct Frame {
   piece0: vec4u,       // where each one's pieces start (the fourth's are instances)
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
-  weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
+  weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
   misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
-  tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
+  tune: array<vec4f, 7>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -45,7 +45,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(15) var smokeTex: texture_3d<f32>;       // the pool's bricks, each with a cell of its neighbours round it: light scattered per unit, and how much smoke per metre
 @group(0) @binding(16) var smokePage: texture_3d<u32>;      // which of them stands where (+ 1)
 
-const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u;
+const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const BEND = 0x20000000u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run
@@ -103,6 +103,11 @@ fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
     let pl = extra[(*p).planes + i]; let den = dot(pl.xyz, d); let num = pl.w - dot(pl.xyz, o);
     if (abs(den) < 1e-12) { if (num < 0.0) { return false; } continue; }
     let t = num / den; if (den < 0.0) { if (t > tn) { tn = t; code = 7u + i; } } else { tf = min(tf, t); }
+  }
+  if ((flags & WATER) != 0u) {                                       // water: somewhere in its box, where the ray meets the waves
+    let a = max(tn, tmin); if (a >= tf) { return false; } let n = 5; let st = (tf - a) / f32(n); var t0 = a; var f0 = o.y + d.y * a - waveHeight(ro.xz + rd.xz * a, frame.misc.x); let above = f0 > 0.0; var found = false;
+    for (var i = 1; i <= n; i++) { let t1 = a + st * f32(i); let f1 = o.y + d.y * t1 - waveHeight(ro.xz + rd.xz * t1, frame.misc.x); if ((f1 > 0.0) != above) { var l = t0; var fl = f0; var r = t1; var fr = f1; for (var j = 0; j < 3; j++) { let m = l + (r - l) * clamp(fl / (fl - fr), 0.02, 0.98); let fm = o.y + d.y * m - waveHeight(ro.xz + rd.xz * m, frame.misc.x); if ((fm > 0.0) == above) { l = m; fl = fm; } else { r = m; fr = fm; } } tn = l + (r - l) * clamp(fl / (fl - fr), 0.0, 1.0); found = true; break; } t0 = t1; f0 = f1; }
+    if (!found) { return false; } code = select(2u, 3u, above);
   }
   if (cut < 1e8 && (flags & CUT) != 0u) {                            // the section: whatever stands over it is not there to this ray
     if (abs(rd.y) > 1e-9) { let t = (cut - ro.y) / rd.y; if (rd.y < 0.0) { if (t > tn) { tn = t; code = CODE_CUT; } } else { tf = min(tf, t); } } else if (ro.y > cut) { return false; }

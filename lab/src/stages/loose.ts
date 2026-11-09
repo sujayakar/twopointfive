@@ -8,10 +8,6 @@ struct P { at: vec4f, vel: vec4f, q: vec4f, info: vec4u };       // place and si
 fn qmul(a: vec4f, b: vec4f) -> vec4f { return vec4f(a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz), a.w * b.w - dot(a.xyz, b.xyz)); }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 fn qfrom(a: vec3f, b: vec3f) -> vec4f { let d = dot(a, b); if (d < -0.999) { return vec4f(1.0, 0.0, 0.0, 0.0); } return normalize(vec4f(cross(a, b), 1.0 + d)); }
-fn airAtLeaf(x: vec3f, t: f32) -> vec3f {
-  let wd = vec2f(cos(frame.weather.w), sin(frame.weather.w)); let g = max(0.0, 0.55 + 0.45 * sin(t * 0.7 - dot(x.xz, wd) * 0.35) + 0.4 * (vnoise(x.xz * 0.4 - wd * t * 0.9) - 0.5)); let out = select(0.06, 1.0, openAir(x));
-  let e = vec3f(vnoise(x.xz * 0.8 + t * 0.6) - 0.5, vnoise(x.xy * 0.9 - t * 0.5 + 7.0) - 0.42, vnoise(x.zy * 0.8 + t * 0.55 + 3.0) - 0.5); return (vec3f(wd.x, 0.0, wd.y) * (3.1 * g) + e * (2.4 * (0.3 + g))) * (frame.misc2.w * out);
-}
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x; if (i >= ${LOOSE}u) { return; } var p = pool[i]; let was = p; let n = u32(looseK.x); fineLeaves = false;
   for (var step = 0u; step < n; step++) {
@@ -20,10 +16,10 @@ fn airAtLeaf(x: vec3f, t: f32) -> vec3f {
       // a gust tears one off: a spray drawn at random, and a leaf of it
       if (rnd() > looseK.z) { continue; } let k = min(u32(rnd() * looseK.w), u32(looseK.w) - 1u); let I = insts[k]; if ((I.tint & 0x1000000u) == 0u || (I.tint & 0x2000000u) != 0u) { continue; }
       let lf = I.leaf + u32(rnd() * 120.0); let a = extra[lf * 2u]; let b = bitcast<vec4u>(extra[lf * 2u + 1u]); if ((b.w & 255u) != 0u) { continue; } let s2 = dot(I.r0.xyz, I.r0.xyz); let d = a.xyz - vec3f(I.r0.w, I.r1.w, I.r2.w); let x = (I.r0.xyz * d.x + I.r1.xyz * d.y + I.r2.xyz * d.z) / s2;
-      let air = airAtLeaf(x, t); if (length(air) < 1.6 + 1.4 * rnd() && tick > 4u) { continue; } p.at = vec4f(x, a.w / sqrt(s2)); p.vel = vec4f(air * 0.2, 0.0); let nn = normalize(I.r0.xyz * octUnpack(b.x).x + I.r1.xyz * octUnpack(b.x).y + I.r2.xyz * octUnpack(b.x).z); p.q = qmul(qfrom(vec3f(0.0, 1.0, 0.0), nn), vec4f(0.0, sin(rnd() * 3.0), 0.0, cos(rnd() * 3.0))); p.q = normalize(p.q); p.info = vec4u(1u, I.tint, pcg(rngState), 1500u + u32(rnd() * 3000.0)); continue;
+      /* (an autumn leaf comes off easily) */ if ((I.tint & 255u) < ((I.tint >> 8u) & 255u) && rnd() > 0.35) { continue; } let air = windAt(x); if (length(air) < 3.0 + 2.5 * rnd() && tick > 4u) { continue; } p.at = vec4f(x, a.w / sqrt(s2)); p.vel = vec4f(air * 0.2, 0.0); let nn = normalize(I.r0.xyz * octUnpack(b.x).x + I.r1.xyz * octUnpack(b.x).y + I.r2.xyz * octUnpack(b.x).z); p.q = qmul(qfrom(vec3f(0.0, 1.0, 0.0), nn), vec4f(0.0, sin(rnd() * 3.0), 0.0, cos(rnd() * 3.0))); p.q = normalize(p.q); p.info = vec4u(1u, I.tint, pcg(rngState), 3000u + u32(rnd() * 6000.0)); continue;
     }
-    let air = airAtLeaf(p.at.xyz, t); let h = f32(p.info.z & 1023u) / 1023.0;
-    if (p.info.x == 2u) { if (p.info.w == 0u) { p.info.x = 0u; continue; } p.info.w -= 1u; if (length(air.xz) > 2.6 + 1.6 * h && rnd() < 0.02) { p.info.x = 1u; p.vel = vec4f(air.x * 0.4, 0.8 + 0.8 * rnd(), air.z * 0.4, 0.0); } else { continue; } }
+    let air = windAt(p.at.xyz); let h = f32(p.info.z & 1023u) / 1023.0;
+    if (p.info.x == 2u) { if (p.info.w == 0u) { p.info.x = 0u; continue; } p.info.w -= 1u; if (length(air.xz) > 3.4 + 2.6 * h && rnd() < 0.003) { p.info.x = 1u; p.vel = vec4f(air.x * 0.4, 0.8 + 0.8 * rnd(), air.z * 0.4, 0.0); } else { continue; } }
     // a thin plate: it falls slowly flat, quickly on edge, and swings from side to side
     let up = qrot(p.q, vec3f(0.0, 1.0, 0.0)); let rel = air - p.vel.xyz; let face = abs(dot(up, normalize(rel + vec3f(0.0, 1e-4, 0.0)))); let drag = mix(1.6, 5.5, face); p.vel = vec4f(p.vel.xyz + (rel * drag + vec3f(0.0, -5.2, 0.0)) * dt, p.vel.w + dt); let lift = cross(up, cross(up, rel)); p.vel = vec4f(p.vel.xyz - lift * (0.9 * dt), p.vel.w);
     let sp = 2.0 + 2.2 * length(rel); let w = vec3f(sin(p.vel.w * 3.1 + h * 40.0), 0.7 * cos(p.vel.w * 1.9 + h * 23.0), cos(p.vel.w * 2.7 + h * 11.0)) * sp * (0.6 + 0.8 * h); p.q = normalize(p.q + qmul(vec4f(w, 0.0), p.q) * (0.5 * dt));
@@ -47,7 +43,7 @@ export function looseStages(lab: Lab, g: Graph): Stage[] {
   const s = lab.scene; lab.buffer('loosePool', LOOSE * 64); lab.buffer('looseRows', LOOSE * 64); lab.buffer('loosePast', LOOSE * 48); lab.uniform('looseK', new Float32Array(4)); lab.uniform('looseAt', new Float32Array([s.looseLeaf, 0, 0, 0])); let last = -1;
   return [
     { name: 'loose leaves', over: { groups: () => [LOOSE / 64, 1, 1] }, buffers: { pool: ['loosePool', 'array<P>', 'read_write'], rows: ['looseRows', 'array<vec4u>', 'read_write'], past: ['loosePast', 'array<vec4f>', 'read_write'], looseK: ['looseK', 'vec4f', 'uniform'], looseAt: ['looseAt', 'vec4f', 'uniform'] }, code,
-      when: () => { const n = last < 0 ? 1 : Math.max(0, Math.min(4, lab.tick - last)); last = lab.tick; lab.uniform('looseK', new Float32Array([n, lab.tick, lab.tick < 5 ? 0.5 : 0.012, s.counts.instances])); return true; } },
+      when: () => { const n = last < 0 ? 1 : Math.max(0, Math.min(4, lab.tick - last)); last = lab.tick; lab.uniform('looseK', new Float32Array([n, lab.tick, lab.tick < 5 ? 0.02 : 0.00025, s.counts.instances])); return true; } },
     { name: 'loose hand', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { enc.copyBufferToBuffer(g.buffers.get('looseRows')!, 0, s.insts, s.counts.instances * 64, LOOSE * 64); enc.copyBufferToBuffer(g.buffers.get('loosePast')!, 0, g.buffers.get('pastLeaves')!, s.counts.instances * 48, LOOSE * 48); }; } },
   ];
 }

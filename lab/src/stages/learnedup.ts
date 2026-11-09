@@ -5,7 +5,7 @@ import type { Lab } from '../lab';
 import type { UpscalePart } from './realtime';
 import hand from './taau.wgsl' with { type: 'text' };
 /** the upscaler as it was when the network learned: before the four tuned numbers went in */
-const taau = hand.replace('* mix(1.9, 1.2, go));', '* 1.9);').replace(') * 1.1;', ');').replace('(n * mix(1.0, 0.55, go) + 1.0)', '(n + 1.0)').replace('let ext = (sd', 'let ext = (sd');
+const taau = hand.replace('max(sat(mv * 0.5), thick)) * taauK.z)', 'sat(mv * 0.5)) * taauK.z)').replace('* mix(1.9, 1.2, go));', '* 1.9);').replace(') * 1.1;', ');').replace('(n * mix(1.0, 0.55, go) + 1.0)', '(n + 1.0)').replace('let ext = (sd', 'let ext = (sd');
 import feats from './upnet.wgsl' with { type: 'text' };
 export type Weights = Record<string, number[]>;
 /** a 3 x 3 layer as 4 x 4 blocks, tap by tap, input block by input block: columns are inputs */
@@ -20,5 +20,5 @@ export const learnedUp = (lab: Lab, w: Weights): UpscalePart => ({ name: 'learne
   const code = taau.replace('let w = exp(-dot(d, d) * 1.9);', 'let w = exp(-dot(d, d) * 1.9 * exp(ctl.x));').replace('var acc = vec3f(0.0); var wa', 'let ctl = textureSampleLevel(upCtl, linSamp, (vec2f(id.xy) + 0.5) / od, 0.0); var acc = vec3f(0.0); var wa').replace('sat(mv * 0.5)) * taauK.z)', 'sat(mv * 0.5)) * taauK.z * exp(ctl.w))').replace('vec3f(0.02, 0.01, 0.01) * mean.x);', 'vec3f(0.02, 0.01, 0.01) * mean.x) * exp(ctl.y);').replace('/ (n + 1.0); o = mix', '/ (n * exp(ctl.z) + 1.0); o = mix');
   if ((code.match(/ctl\./g) ?? []).length !== 4) throw new Error('the upscaler has changed under the learned hand'); 
   return { result: 'picture', stages: [{ name: 'up feats', over: size, reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { f0: 'upF0', f1: 'upF1', f2: 'upF2' }, buffers: t, code: feats }, { name: 'up net', over: size, reads: in3('F'), writes: out3('A'), buffers: K, code: layer(3, 0, 'max(s, vec4f(0.0))') }, { name: 'up net', over: size, reads: in3('A'), writes: out3('B'), buffers: K, code: layer(3, 327, 'max(s, vec4f(0.0))') }, { name: 'up net', over: size, reads: in3('B'), writes: { o0: 'upCtl' }, buffers: K, code: layer(1, 654, 'tanh(s) * 1.5') },
-    { name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', upCtl: 'upCtl' }, writes: { outT: 'picture' }, buffers: t, code }] };
+    { name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', upCtl: 'upCtl', airD: 'airD' }, writes: { outT: 'picture' }, buffers: t, code }] };
 } });

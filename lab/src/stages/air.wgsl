@@ -6,7 +6,7 @@ fn vn3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (3.0 
 /** 1 where the section leaves the air to be seen, 0 over the rooms it hides, softly */
 fn cutShows(x: vec3f) -> f32 { if (frame.misc.y > 1e8) { return 1.0; } return select(1.0, smoothstep(0.0, 0.35, frame.misc.y - x.y), overCut(x, frame.misc.y)); }
 /** scattering per metre of everything but steam */
-fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * @tune.haze * exp(-max(x.y + 12.0, 0.0) * 0.045) + @tune.dust * roomAir(x)) + frame.weather.y * 0.0011 * (0.4 + 1.2 * smoothstep(0.35, 0.65, fbm((x.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 4.0) * 0.11 + 3.0))) * (1.0 - roomAir(x)); }
+fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * @tune.haze * exp(-max(x.y + 12.0, 0.0) * 0.045) + @tune.dust * roomAir(x)) + frame.weather.y * 0.0011 * (0.4 + 1.2 * smoothstep(0.35, 0.65, fbm((x.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * (frame.pool2.z * 1.4)) * 0.11 + 3.0))) * (1.0 - roomAir(x)); }
 fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
@@ -20,7 +20,7 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
     let x = st[i].xyz; var V = vec3f(0.0); let room = roomAir(x);
     if (max3(frame.sunE.xyz) > 0.0) { V = frame.sunE.xyz * lum(visible(x, coneDir(frame.sunDir.xyz, frame.sunDir.w, vec2f(j.y, 0.5)), 1e-3, 120.0)) * hg(mu, 0.5); }
     let c = cacheRead(vec3f(x.x, floor(x.y / 3.4) * 3.4 + select(0.02, 0.0, room < 0.5), x.z), vec3f(0.0, 1.0, 0.0), vec2f(0.5)); let near = select(amb * 0.25, c.E * (1.0 / (4.0 * PI)) * 0.5, room > 0.5 && c.n > 0.0);
-    let e = exp(-st[i].w); let part = exp(-tau) * (1.0 - e); seen += vec2f(dot(x - ro, rd), 1.0) * part; L += part * (V + near); tau += st[i].w;
+    let e = exp(-st[i].w); let part = exp(-tau) * (1.0 - e); seen += vec2f(tc + (t1 - tc) / 3.0 * (f32(i) + 0.5), 1.0) * part; /* (how far off it is seen must not be thrown by the dice) */ L += part * (V + near); tau += st[i].w;
   }
   // the smoke: small steps where there is any, over empty bricks in one. What the section hides takes its smoke with it
   if (frame.misc2.x > 0.5) { let s = smokeSpan(ro, rd, t1); var t = s.x + 0.1 * j.x; var T = 1.0; var G = vec3f(0.0);

@@ -56,6 +56,9 @@ fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code == CODE_QUAD) { let q = pieces[k].quad; return normalize(vec3f(q.x * lp.x, q.y * lp.y + 0.5 * q.w, q.z * lp.z)); }
   return extra[pieces[k].planes + code - 7u].xyz;
 }
+/** the normal of a plate of cloth, between its corners' */
+fn bent(k: u32, lp: vec3f, front: bool) -> vec3f { let b = bitcast<vec4u>(pieces[k].quad); let t = clamp(lp.xy / pieces[k].half.xy * 0.5 + 0.5, vec2f(0.0), vec2f(1.0)); let x = mix(mix(lean(b.x), lean(b.y), t.x), mix(lean(b.z), lean(b.w), t.x), t.y); return normalize(toWorld(k, vec3f(x, 1.0))) * select(-1.0, 1.0, front); }
+fn lean(v: u32) -> vec2f { return ((vec2f(f32(v & 0xffffu), f32(v >> 16u)) - 200.0) / 30000.0 - 0.5) * 3.0; }
 fn toWorld(k: u32, v: vec3f) -> vec3f { return pieces[k].r0.xyz * v.x + pieces[k].r1.xyz * v.y + pieces[k].r2.xyz * v.z; }
 fn toLocal(k: u32, x: vec3f) -> vec3f { let p = &pieces[k]; return vec3f(dot((*p).r0.xyz, x) + (*p).r0.w, dot((*p).r1.xyz, x) + (*p).r1.w, dot((*p).r2.xyz, x) + (*p).r2.w); }
 
@@ -65,14 +68,14 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let lp = toLocal(k, x);
   var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags; s.kind = m.kind; s.through = vec3f(0.0);
   if (h.code == CODE_CUT) { s.ng = vec3f(0.0, 1.0, 0.0); s.n = s.ng; s.albedo = vec3f(0.012, 0.013, 0.016); s.rough = 0.6; s.f0 = 0.04; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 63u; return s; }
-  let ln = localNormal(k, h.code, lp); s.ng = normalize(toWorld(k, ln)); s.n = s.ng;
+  let ln = localNormal(k, h.code, lp); s.ng = normalize(toWorld(k, ln)); s.n = s.ng; if ((s.flags & BEND) != 0u && h.code > 3u && h.code < 6u) { s.n = bent(k, lp, h.code == 5u); if (dot(s.n, -rd) < 0.02) { s.n = normalize(s.n - rd * (0.03 - dot(s.n, -rd))); } }
   let tint = unpackTint((*p).tint); let tint2 = tint * tint;
   var base = m.base * tint2; s.rough = m.rough; s.metal = m.metal; s.f0 = m.f0;
-  let on = select(1.0, lamps[(*p).lamp & 63u].on, ((*p).lamp & 255u) != 255u);
+  let on = select(frame.weather.z, lamps[(*p).lamp & 63u].on, ((*p).lamp & 255u) != 255u);
   s.glow = vec3f(0.0); if (m.glow > 0.0) { s.glow = m.base * tint2 * (f32((*p).lamp >> 8u) * 0.1 * on); }   // (a glowing piece's seed is its brightness, in tenths)
   if (fp > 0.25) { s.albedo = base; if (m.kind == 7u) { s.albedo = mix(m.base, m.b2, 0.4); if (abs(s.ng.y) < 0.5) { s.glow = vec3f(0.96, 0.80, 0.57) * (frame.knobs.w * 0.063); } } return s; }     // (a tower's lit windows, all together: a fifth of them, on half of the wall)
   // where on the face, in metres: laid by the world, or in the piece's own frame if it moves
-  let moves = (s.flags & MOVES) != 0u; let an = abs(select(s.ng, ln, moves)); let q = select(x, lp, moves);
+  let moves = (s.flags & MOVES) != 0u; let an = abs(select(s.ng, ln, moves)); var q = select(x, lp, moves); if ((s.flags & BEND) != 0u) { q += vec3f(f32((*p).planes & 0xffffu) * 0.001 - 32.0, f32((*p).planes >> 16u) * 0.001 - 32.0, 0.0); }
   var T = vec3f(1.0, 0.0, 0.0); var Bt = vec3f(0.0, 0.0, 1.0); var uv = q.xz;
   if (an.x > an.y && an.x > an.z) { T = vec3f(0.0, 0.0, 1.0); Bt = vec3f(0.0, 1.0, 0.0); uv = q.zy; } else if (an.z > an.y) { T = vec3f(1.0, 0.0, 0.0); Bt = vec3f(0.0, 1.0, 0.0); uv = q.xy; }
   let fade = 1.0 - smoothstep(0.01, 0.06, fp); let seed = f32((*p).lamp >> 8u);
@@ -107,10 +110,10 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   if (fade > 0.0 && h.code != CODE_QUAD) {
     let e = max(0.0016, fp * 0.6); var hh = vec3f(0.0); for (var i = 0u; i < 3u; i++) { hh[i] = relief(m.kind, uv + vec2f(select(0.0, e, i == 1u), select(0.0, e, i == 2u)), m.scale, fp); }
     var tw = T; var bw = Bt; if (moves) { tw = toWorld(k, T); bw = toWorld(k, Bt); }
-    let g = clamp(vec2f(hh.y - hh.x, hh.z - hh.x) / e, vec2f(-0.9), vec2f(0.9)) * fade; s.n = normalize(s.ng - tw * g.x - bw * g.y);
+    let g = clamp(vec2f(hh.y - hh.x, hh.z - hh.x) / e, vec2f(-0.9), vec2f(0.9)) * fade; s.n = normalize(s.n - tw * g.x - bw * g.y);
   }
   // BEVELS: near an edge that stands free the normal bends to the next face's, over a hand's-breadth of pixels at most. Which edges stand free was found once
-  if (h.code < 6u) {
+  if (h.code < 6u && (s.flags & BEND) == 0u) {
     let a = h.code >> 1u; let hf = (*p).half; let sg = select(vec3u(0u), vec3u(1u), lp > vec3f(0.0)); var bend = vec3f(0.0);
     for (var k2 = 1u; k2 < 3u; k2++) {
       let b = (a + k2) % 3u; let c = 3u - a - b; let i1 = sg[(c + 1u) % 3u]; let i2 = sg[(c + 2u) % 3u]; if ((((*p).flags >> (16u + c * 4u + i1 + 2u * i2)) & 1u) == 0u) { continue; }
@@ -126,7 +129,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     var f = lp.xz; if (h.code < 2u) { f = lp.zy; if (h.code == 1u) { f.x = -f.x; } } else if (h.code > 3u) { f = lp.xy; if (h.code == 4u) { f.x = -f.x; } }
     let r = (f - a.xy) / a.zw; if (abs(r.x) > 0.5 || abs(r.y) > 0.5) { continue; }
     let t = vec2f(r.x + 0.5, select(0.5 - r.y, r.y + 0.5, h.code == 2u || h.code == 3u));
-    let px = b.zw * 4096.0; let lod = log2(max(1.0, fp * px.x / a.z));
+    let px = b.zw * vec2f(4096.0, 6144.0); let lod = log2(max(1.0, fp * max(px.x / a.z, px.y / a.w)));
     let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
     let wear = select(1.0 - 0.25 * smoothstep(0.5, 0.72, nB), 1.0, m.glow > 0.0 || m.kind == 25u);
     let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); if (m.glow > 0.0) { let g = art.rgb * art.rgb; s.glow *= mix(vec3f(1.0), c.rgb * c.rgb * g, al); } s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }

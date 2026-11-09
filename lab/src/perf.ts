@@ -3,6 +3,7 @@
 export interface Frame { n: number; at: number; gap: number; cpu: number; from: number; sim: number; send: number; encode: number; ticks: number; gpu: number; done: number; w: number; h: number; what: string[] }
 const NAMES: [keyof Frame, string][] = [['gap', 'between frames'], ['cpu', 'CPU in the frame'], ['sim', '  the world\'s ticks'], ['send', '  sending it'], ['encode', '  encoding'], ['done', 'asked to GPU done'], ['gpu', 'GPU, first pass to last']];
 export class Perf {
+  /** where the camera is and what the weather does, so that the same view can be stood elsewhere */ where = () => '';
   ring: Frame[] = []; private el = document.createElement('div'); private cv = document.createElement('canvas'); shown = false; private now: Frame | null = null; private events: string[] = []; private last = 0; private n = 0; private skipped = 0; hold = false; vsync = 16.7; private gaps: number[] = [];
   constructor(private gpuName: string, private pace: { mode: string; label(): string; next(): void }) { this.el.id = 'perf'; this.el.hidden = true; document.body.append(this.el); }
   /** something that may cost a frame */
@@ -32,7 +33,7 @@ export class Perf {
   }
   report() {
     const r = this.recent(20), n = (x: number) => x.toFixed(2), count = new Map<string, number>(); for (const f of r) for (const w of f.what) count.set(w, (count.get(w) ?? 0) + 1);
-    return [`Rooftop Light Lab frame report`, this.gpuName, navigator.userAgent, `display ${(1000 / this.vsync).toFixed(1)} Hz, devicePixelRatio ${devicePixelRatio}, window ${innerWidth}x${innerHeight}, pace ${this.pace.label()}, refreshes passed over ${this.skipped}`, `${r.length} frames, ${(this.even() * 100).toFixed(0)} % even, drawn ${r[r.length - 1]?.w}x${r[r.length - 1]?.h}`,
+    return [`Rooftop Light Lab frame report`, this.where(), this.gpuName, navigator.userAgent, `display ${(1000 / this.vsync).toFixed(1)} Hz, devicePixelRatio ${devicePixelRatio}, window ${innerWidth}x${innerHeight}, pace ${this.pace.label()}, refreshes passed over ${this.skipped}`, `${r.length} frames, ${(this.even() * 100).toFixed(0)} % even, drawn ${r[r.length - 1]?.w}x${r[r.length - 1]?.h}`,
       `ms: usual, 95th, 99th, worst`, ...NAMES.map(([k, name]) => `${name.trim()}: ${[0.5, 0.95, 0.99, 1].map(p => n(this.q(k, p, r))).join(', ')}`), `happened: ${[...count].map(([k, v]) => `${k} x${v}`).join(', ') || 'nothing'}`, `gaps: ${r.slice(-240).map(f => Math.round(f.gap * 10) / 10).join(' ')}`,
       `worst: ${[...r].sort((a, b) => b.gap - a.gap).slice(0, 12).map(f => `[${n(f.gap)} cpu ${n(f.cpu)} sim ${n(f.sim)} send ${n(f.send)} enc ${n(f.encode)} done ${n(f.done)} gpu ${n(f.gpu)} ticks ${f.ticks} ${f.what.join('+')}]`).join(' ')}`].join('\n');
   }

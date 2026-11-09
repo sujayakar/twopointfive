@@ -10,6 +10,7 @@ import type { Piece } from './scene/world';
 import { makeStreet } from './scene/street';
 import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
+import { Air, airCode, airRows, BREEZE } from './scene/air';
 import { type V3, clamp, norm } from './math';
 import math from './wgsl/math.wgsl' with { type: 'text' };
 import sceneCode from './wgsl/scene.wgsl' with { type: 'text' };
@@ -30,11 +31,11 @@ export class Lab {
   gpu!: Gpu; graph!: Graph; scene!: SceneGpu; sky!: Sky; water!: Water; camera = new Camera(); building!: Building;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
-  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
+  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; /** how much of the moon there is, and is there power */ moon = 1; mains = true; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
-    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
-    this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
-    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
+    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
+    this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex, airRows(this.air.cells));
+    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.scene.openFloor = this.building.place.openFloor; this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   /** in the page: what moves is drawn between its last two ticks (alpha), and the camera goes by the clock, so that motion is even at any frame rate. A run leaves this off */
@@ -43,9 +44,11 @@ export class Lab {
   private savePose(to: Float64Array) { let o = 0; for (const p of this.building.world.moving) { to.set(p.at, o); to.set(p.rot[0], o + 3); to.set(p.rot[1], o + 6); to.set(p.rot[2], o + 9); o += 12; } for (const p of this.building.people) { const l = p.torch >= 0 ? this.building.world.lamps[p.torch] : null; if (l) { to.set(l.at, o); to.set(l.v, o + 3); } o += 6; } }
   private setPose(f: (i: number) => number) { const g = (o: number): V3 => [f(o), f(o + 1), f(o + 2)]; let o = 0; for (const p of this.building.world.moving) { p.at = g(o); const x = norm(g(o + 3)), y0 = g(o + 6), k = x[0] * y0[0] + x[1] * y0[1] + x[2] * y0[2], y = norm([y0[0] - x[0] * k, y0[1] - x[1] * k, y0[2] - x[2] * k]); p.rot = [x, y, [x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]]]; o += 12; } for (const p of this.building.people) { const l = p.torch >= 0 ? this.building.world.lamps[p.torch] : null; if (l) { l.at = g(o); l.v = norm(g(o + 3)); } o += 6; } }
   private between() { const a = this.wasPose, b = this.nowPose; if (!this.smooth || this.alpha >= 1 || a.length === 0 || a.length !== b.length) return; let far = 0; for (let i = 0; i < a.length; i += 12) far = Math.max(far, Math.abs(a[i]! - b[i]!)); if (far > 1.5) return; const k = this.alpha; this.setPose(i => a[i]! + (b[i]! - a[i]!) * k); }
+  /** how far the mean wind has gone, as drawn */
+  get gone() { return this.air.gone - (this.smooth ? 1 - this.alpha : 0) * TICK * this.air.strength * BREEZE; }
   /** seconds, as drawn */
   get time() { return (this.tick - (this.smooth ? 1 - this.alpha : 0)) * TICK; }
-  private near!: Near; private leaves: Piece[] = []; private mapped = false;
+  air!: Air; private near!: Near; private leaves: Piece[] = []; private mapped = false;
   /** where the eye that the picture is exposed for looks: a point of the world, or a person (by number); null = the middle of the picture */
   eye: V3 | number | null = null;
   eyeAt(): V3 | null { return typeof this.eye === 'number' ? ((p: V3): V3 => [p[0], p[1] + 1.4, p[2]])(this.building.people[this.eye]!.pos) : this.eye; }
@@ -66,13 +69,20 @@ export class Lab {
     for (const p of b.people) p.step(TICK); this.swing(this.tick); if (!this.smooth) this.camera.step(TICK); this.pose(); if (this.smooth) this.keepPose();
   }
   /** the world at a tick, from the start (only what has a memory is stepped) */
-  private swing(tick: number) { for (const h of this.building.hung) h.step(TICK, tick * TICK, this.wind, this.building.place.still ?? 1); }
+  airMs = 0;
+  private swing(tick: number) { const t0 = performance.now(); this.stir(); this.air.blow(this.wind, TICK); this.airMs = this.airMs * 0.95 + 0.05 * (performance.now() - t0); for (const h of this.building.hung) h.step(TICK, tick * TICK, this.air); }
   seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) p.step(TICK); this.swing(this.walked); } this.tick = tick; }
+  /** what moves the air itself: bodies, leaves of doors, vents, fires */
+  private stir() {
+    const P = this.air.pushes; P.length = 0; for (const p of this.building.people) if (Math.hypot(p.vel[0], p.vel[2]) > 0.2) P.push({ at: [p.pos[0], p.pos[1] + 0.9, p.pos[2]], r: 0.5, v: [p.vel[0], 0, p.vel[2]], grip: 8 });
+    for (const d of this.building.doors) { const l = d.leaf[0]!, w = this.prevAt.get(l); if (!w) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / TICK) as V3; if (Math.hypot(...v) > 0.1 && Math.hypot(...v) < 6) P.push({ at: l.at, r: 0.7, v, grip: 8 }); }
+    if (this.steam > 0) for (const p of this.building.world.plumes) P.push({ at: [p.at[0], p.at[1] + 0.3, p.at[2]], r: p.r, v: [0, 1.8, 0], grip: 6 }); for (const f of this.smoke.fires) P.push({ at: [f.at[0], f.at[1] + 0.9, f.at[2]], r: 0.6 * f.size, v: [0, 3.0, 0], grip: 8 });
+  }
   private walked = 0;
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
-    const h = hourOf(this.hour, 0.85, this.rainNow), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot' && l.name !== 'fire') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
+    const h = hourOf(this.hour, 0.85, this.rainNow, this.moon, this.mains), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
+    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot' && l.name !== 'fire') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.mains || l.name === 'exit' ? 1 : 0) * (l.name === 'exit' ? 1 : this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
     for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; const chest: V3 = [p.pos[0], p.pos[1] + 1.25, p.pos[2]], to: V3 = [p.torchAt[0] - chest[0], p.torchAt[1] - chest[1], p.torchAt[2] - chest[2]], len = Math.hypot(...to) || 1, dir: V3 = [to[0] / len, to[1] / len, to[2] / len], r = this.near.reach(chest, dir, len + 0.06, this.leaves) - 0.06; l.at = r < len ? [chest[0] + dir[0] * r, chest[1] + dir[1] * r, chest[2] + dir[2] * r] : p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 && !this.lampOff.has(p.torch) ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
@@ -80,9 +90,9 @@ export class Lab {
     const [rw, rh] = this.graph.render, [ow, oh] = this.graph.output, c = this.camera.frame(ow / oh), p = this.prev ?? c, b = this.building, h = this.hourNow; this.sky.update(h);
     const f = new Float32Array(128), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
-    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2], o); o += 4;
-    this.slots = this.scene.moved(this.time, this.wind); this.scene.cull(c, this.cut); this.scene.sendLamps();
-    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, 0, 0], o); o += 4; f.set([this.wet, this.rainNow, this.steam, Math.atan2(this.wind[2], this.wind[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, Math.hypot(...this.wind)], o); o += 4; f.set(this.tune, o);
+    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2 * (this.mains ? 1 : 0)], o); o += 4;
+    this.slots = (this.scene.sendAir(this.air), this.scene.moved(this.time, this.air)); this.scene.cull(c, this.cut); this.scene.sendLamps();
+    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; f.set(this.tune, o);
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
   sendMs = 0;

@@ -5,7 +5,7 @@ import type { V3 } from '../math';
 import head from './smoke.wgsl' with { type: 'text' };
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
 export const SMOKE = { slots: 3072, pages: [75, 24, 60] as const, pairs: 6, atlas: [160, 160, 120] as const };
-const CELLS = SMOKE.slots * 512, PG = 108000, WORDS = PG + 33 * 3072 + 16;
+const CELLS = SMOKE.slots * 512, PG = 108000, WORDS = PG + 36 * 3072 + 16;
 const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, brickRows, 1] };
 /** rows of 64 bricks to ask for: in a run all of them; in the page as many as were lately live, with room to grow (an idle group is not free) */
 let brickRows = SMOKE.slots / 64;
@@ -49,7 +49,7 @@ const linkCode = `
 const facesCode = perBrick(`
   let born = live && M[M_BORN + s] != 0u; if (born && li < 64u) { G[s * 64u + li] = vec2u(0u); } let x0 = mid(b, vec3i(0)) - 0.5 * H; fineLeaves = false;
   for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var f = 0u; if (live) { f = W[i] & 63u; }
-    if (born) { f = 0u; let x = mid(b, c); for (var a = 0u; a < 6u; a++) { if (a > 2u && c[a - 3u] != 0) { continue; } var d = vec3f(0.0); d[a % 3u] = select(1.0, -1.0, a > 2u); let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != 0xffffffffu && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } Va[i] = vec2u(0u); Vb[i] = vec2u(0u); Q[i] = 0.0; Q[i + HALF] = 0.0; }
+    if (born) { f = 0u; let x = mid(b, c); for (var a = 0u; a < 6u; a++) { if (a > 2u && c[a - 3u] != 0) { continue; } var d = vec3f(0.0); d[a % 3u] = select(1.0, -1.0, a > 2u); let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != 0xffffffffu && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } let w0 = windAt(x); let wv = vec2u(pack2x16float(w0.xy), pack2x16float(vec2f(w0.z, 0.0))); Va[i] = wv; Vb[i] = wv; Q[i] = 0.0; Q[i + HALF] = 0.0; }
     sh[k] = f; }
   workgroupBarrier();
   for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; if (!live) { continue; } var f = sh[k]; if (born) { for (var a = 0u; a < 3u; a++) { if (c[a] > 0) { var q = c; q[a] -= 1; if ((sh[local(q)] & (1u << a)) != 0u) { f |= 8u << a; } } } } var g = f; let x = mid(b, c);
@@ -64,8 +64,8 @@ const moveCode = FETCH + SHUT + perBrick(`
     // back along the way it came, a cell at a time, and not through what is shut
     var d = clamp(-v * (dt / H), vec3f(-3.5), vec3f(3.5)); let n = max(1.0, ceil(max3(abs(d)))); let st = d / n; var c = c0; var f = vec3f(0.0); var i = i0;
     for (var q = 0.0; q < n; q += 1.0) { f += st; for (var a = 0u; a < 3u; a++) { let g = select(-1, 1, f[a] > 0.0); if (abs(f[a]) > 0.5) { var t = c; t[a] += g; let j = cell(s, t); if (shut(i, a, g) || j == NONE) { f[a] = f32(g) * 0.5; } else { c = t; i = j; f[a] -= f32(g); } } } }
-    var acc = vec4f(0.0); var ht = 0.0; let sg = vec3i(select(vec3f(-1.0), vec3f(1.0), f > vec3f(0.0))); let w = abs(f); var lo = 1e9; var hi = -1e9;
-    for (var q = 0u; q < 8u; q++) { var t = c; var j = i; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((q >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && j != NONE) { if (!shut(j, a, sg[a])) { t[a] += sg[a]; j = cell(s, t); } } } if (j == NONE) { lo = min(lo, 0.0); continue; } let e = unpackV(Va[j]); lo = min(lo, e.w); hi = max(hi, e.w); acc += e * wt; ht += Q[j + FROM] * wt; }
+    var acc = vec4f(0.0); var far = false; var beyond = vec3f(0.0); var ht = 0.0; let sg = vec3i(select(vec3f(-1.0), vec3f(1.0), f > vec3f(0.0))); let w = abs(f); var lo = 1e9; var hi = -1e9;
+    for (var q = 0u; q < 8u; q++) { var t = c; var j = i; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((q >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && j != NONE) { if (!shut(j, a, sg[a])) { t[a] += sg[a]; j = cell(s, t); } } } if (j == NONE) { lo = min(lo, 0.0); if (!far) { far = true; beyond = windAt(mid(b, c0)); } acc += vec4f(beyond, 0.0) * wt; continue; } let e = unpackV(Va[j]); lo = min(lo, e.w); hi = max(hi, e.w); acc += e * wt; ht += Q[j + FROM] * wt; }
     Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt * (0.4 + 0.42 * max(ht - 2.0, 0.0))); R[i0] = pack2x16float(vec2f(min(lo, 60.0), clamp(hi, 0.0, 60.0))); }
 `, 256, `const HALF = SLOTS_S * 512u;`);
 /** MacCormack: what the trip there and back again lost is given back by half, within what was found there. Keeps edges that one step would blur */
@@ -79,23 +79,24 @@ const pushCode = FETCH + SHUT + perBrick(`
   if (!live) { return; } let dt = smokeK.x;
   for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var e = unpackV(Vb[i]); e.w = bitcast<f32>(R[i]); var heat = Q[i + TO]; let x = mid(b, c); var v = e.xyz;
     if (e.w > 0.01) { let w = curl(s, c); let g = vec3f(length(curl(s, c + vec3i(1, 0, 0))) - length(curl(s, c - vec3i(1, 0, 0))), length(curl(s, c + vec3i(0, 1, 0))) - length(curl(s, c - vec3i(0, 1, 0))), length(curl(s, c + vec3i(0, 0, 1))) - length(curl(s, c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 4.0 * H); } }
-    v.y += dt * (heat * 1.6 - e.w * 0.03); let out = select(0.0, 1.0, openAir(x)); let wd = vec2f(cos(frame.weather.w), sin(frame.weather.w)); let gust = max(0.15, 0.55 + 0.45 * sin(frame.misc.x * 0.7 - dot(x.xz, wd) * 0.35) + 0.5 * (vnoise(x.xz * 0.45 - wd * frame.misc.x * 0.8) - 0.5)); let wind = vec3f(wd.x, 0.0, wd.y) * (1.5 * gust * frame.misc2.w); v = mix(v, wind, out * (1.0 - exp(-dt * 1.1)));
+    v.y += dt * (heat * 1.6 - e.w * 0.03); let out = select(0.0, 1.0, openAir(x)); /* the brick as a whole is drawn to the coarse air; what rises by heat, rises */ if (M[M_BORN + s] == 0u) { let mean = vec3f(bitcast<f32>(M[M_MEAN + s * 3u]), bitcast<f32>(M[M_MEAN + s * 3u + 1u]), bitcast<f32>(M[M_MEAN + s * 3u + 2u])); v += (windAt(x) - mean) * vec3f(1.0, 1.0 - sat(heat * 2.0), 1.0) * (1.0 - exp(-dt * 2.0)); }
     // swirls finer than confinement finds, where there is smoke to show them
     if (e.w > 0.02) { let q = x * 2.6 + vec3f(0.0, -frame.misc.x * 0.5, frame.misc.x * 0.2); let g = fract(q); let w3 = g * g * (3.0 - 2.0 * g); var n3 = vec3f(0.0); for (var m = 0u; m < 8u; m++) { let o = vec3f(f32(m & 1u), f32((m >> 1u) & 1u), f32(m >> 2u)); let wt = select(1.0 - w3, w3, o > vec3f(0.5)); n3 += (hash33(floor(q) + o) - 0.5) * (wt.x * wt.y * wt.z); } v += vec3f(n3.z - n3.y, n3.x - n3.z, n3.y - n3.x) * (dt * 2.2 * min(1.0, e.w)); }
     // bodies and leaves of doors take the air with them
     for (var n = 0u; n < u32(smokeK2.x); n++) { let a = pushes[n * 2u]; let f = pushes[n * 2u + 1u]; let d = length((x - a.xyz) * vec3f(1.0, f.w, 1.0)) / a.w; if (d < 1.0) { v = mix(v, f.xyz, (1.0 - d * d) * (1.0 - exp(-dt * 22.0))); } }
     let rim = min(min(x.x - AT.x, AT.x + f32(PN.x) * 8.0 * H - x.x), min(x.z - AT.z, AT.z + f32(PN.z) * 8.0 * H - x.z)); e.w *= exp(-dt * 4.0 * (1.0 - smoothstep(0.3, 3.0, rim)));
     e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
-    for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); let flame = f.x < 0.0; if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + abs(f.x) * q * dt, 11.0); let lick = select(1.0, smoothstep(0.30, 0.62, vnoise(x.xz * 7.0 + frame.misc.x * 2.3) * 0.6 + vnoise(x.zx * 13.0 - frame.misc.x * 3.1) * 0.4), flame); heat = min(heat + f.y * q * lick * dt, select(2.5, 11.0, flame)); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
+    for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); let flame = f.x < 0.0; if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + abs(f.x) * q * dt, 11.0); let lick = select(1.0, smoothstep(0.30, 0.62, vnoise(x.xz * 7.0 + frame.misc.x * 2.3) * 0.6 + vnoise(x.zx * 13.0 - frame.misc.x * 3.1) * 0.4), flame); heat = select(max(heat, min(heat + f.y * q * dt, 1.0)), min(heat + f.y * q * lick * dt, 11.0), flame); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
     v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); e.w += dt * 1.6 * clamp(heat - 1.0, 0.0, 2.2) * step(1.0, heat); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
 `, 256, `const HALF = SLOTS_S * 512u;
 fn vel(s: u32, c: vec3i) -> vec3f { let i = cell(s, c); if (i == NONE) { return vec3f(0.0); } return unpackV(Vb[i]).xyz; }
 fn curl(s: u32, c: vec3i) -> vec3f { let x = vel(s, c + vec3i(1, 0, 0)) - vel(s, c - vec3i(1, 0, 0)); let y = vel(s, c + vec3i(0, 1, 0)) - vel(s, c - vec3i(0, 1, 0)); let z = vel(s, c + vec3i(0, 0, 1)) - vel(s, c - vec3i(0, 0, 1)); return vec3f(y.z - z.y, z.x - x.z, x.y - y.x) / (2.0 * H); }`);
 const FACE = FETCH + SHUT + `
 /** the velocity through a cell's face along a, its far side (g = 1) or near (−1) */
-fn face(s: u32, c: vec3i, i: u32, a: u32, g: i32) -> f32 { if (shut(i, a, g)) { return 0.0; } var q = c; q[a] += g; let j = cell(s, q); let me = unpackV(Va[i])[a]; if (j == NONE) { return me; } return 0.5 * (me + unpackV(Va[j])[a]); }`;
+var<private> here: vec3f;
+fn face(s: u32, c: vec3i, i: u32, a: u32, g: i32) -> f32 { if (shut(i, a, g)) { return 0.0; } var q = c; q[a] += g; let j = cell(s, q); let me = unpackV(Va[i])[a]; if (j == NONE) { return 0.5 * (me + windAt(here)[a]); } return 0.5 * (me + unpackV(Va[j])[a]); }`;
 const divCode = FACE + perBrick(`
-  if (!live) { return; } for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var d = 0.0; for (var a = 0u; a < 3u; a++) { d += face(s, c, i, a, 1) - face(s, c, i, a, -1); }
+  if (!live) { return; } for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var d = 0.0; here = mid(b, c); for (var a = 0u; a < 3u; a++) { d += face(s, c, i, a, 1) - face(s, c, i, a, -1); }
     let x = mid(b, c); for (var n = 0u; n < u32(smokeK.w); n++) { let e = sources[n * 2u]; let l = distance(x, e.xyz); if (l < e.w) { d -= sources[n * 2u + 1u].w * H * (1.0 - l / e.w); } }
     P[i + HALF] = d; if (M[M_BORN + s] != 0u) { P[i] = 0.0; } }
 `, 256, `const HALF = SLOTS_S * 512u;`);
@@ -104,12 +105,12 @@ const solveCode = FETCH + SHUT + perBrick(`
   for (var a = 0u; a < 3u; a++) { for (var g = -1; g < 2; g += 2) { if (shut(i, a, g)) { continue; } n += 1.0; var q = c; q[a] += g; let j = cell(s, q); if (j != NONE) { t += P[j]; } } } if (n > 0.0) { P[i] = mix(P[i], (t - P[i + HALF]) / n, 1.6); }
 `, 256, `const HALF = SLOTS_S * 512u;`);
 const freedCode = FACE + perBrick(`
-  if (!live) { return; } var dense = 0.0; for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; let was = unpackV(Va[i]); var v = was.xyz; let p = P[i];
+  if (!live) { return; } var dense = 0.0; var mv = vec3f(0.0); for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; let was = unpackV(Va[i]); var v = was.xyz; let p = P[i];
     for (var a = 0u; a < 3u; a++) { var up = 0.0; var dn = 0.0; let su = shut(i, a, 1); let sd = shut(i, a, -1); var q = c; q[a] += 1; if (!su) { let j = cell(s, q); up = select(0.0, P[j], j != NONE) - p; } q[a] -= 2; if (!sd) { let j = cell(s, q); dn = p - select(0.0, P[j], j != NONE); } if (su && sd) { v[a] = 0.0; } else if (su) { v[a] = min(v[a] - dn, 0.0); } else if (sd) { v[a] = max(v[a] - up, 0.0); } else { v[a] -= 0.5 * (up + dn); } }
-    dense = max(dense, was.w); Vb[i] = packV(vec4f(v, was.w)); }
-  sh[li] = dense; workgroupBarrier(); if (li == 0u) { var m = 0.0; for (var k = 0u; k < 256u; k++) { m = max(m, sh[k]); } D[s] = m; }
-`.replace('if (!live) { return; } var dense', 'var dense').replace('for (var k = li; k < 512u', 'for (var k = select(512u, li, live); k < 512u').replace('if (li == 0u) {', 'if (li == 0u && live) {'), 256, `const HALF = SLOTS_S * 512u; var<workgroup> sh: array<f32, 256>;`);
-const doneCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; if (s >= SLOTS_S || M[M_BRICK + s] == 0u) { return; } M[M_DENSE + s] = bitcast<u32>(D[s]); M[M_BORN + s] = 0u; }`;
+    dense = max(dense, was.w); mv += v; Vb[i] = packV(vec4f(v, was.w)); }
+  sh[li] = dense; sv[li] = mv; workgroupBarrier(); if (li < 3u && live) { var t = 0.0; for (var k = 0u; k < 256u; k++) { t += sv[k][li]; } D[SLOTS_S + s * 3u + li] = t / 512.0; } if (li == 0u) { var m = 0.0; for (var k = 0u; k < 256u; k++) { m = max(m, sh[k]); } D[s] = m; }
+`.replace('if (!live) { return; } var dense', 'var dense').replace('for (var k = li; k < 512u', 'for (var k = select(512u, li, live); k < 512u').replace('if (li == 0u) {', 'if (li == 0u && live) {'), 256, `const HALF = SLOTS_S * 512u; var<workgroup> sh: array<f32, 256>; var<workgroup> sv: array<vec3f, 256>;`);
+const doneCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; if (s >= SLOTS_S || M[M_BRICK + s] == 0u) { return; } M[M_DENSE + s] = bitcast<u32>(D[s]); M[M_BORN + s] = 0u; for (var k = 0u; k < 3u; k++) { M[M_MEAN + s * 3u + k] = bitcast<u32>(D[SLOTS_S + s * 3u + k]); } }`;
 /** light: a point for every eight cells. The sun, one lamp and one way to look; what it finds is kept and mixed */
 const lightCode = FETCH + perBrick(`
   if (!live) { return; } let g = vec3i(i32(li & 3u), i32((li >> 2u) & 3u), i32(li >> 4u)); let gi = s * 64u + li; var d0 = 0.0; for (var k = 0u; k < 8u; k++) { d0 += unpackV(Vb[s * 512u + local(g * 2 + vec3i(i32(k & 1u), i32((k >> 1u) & 1u), i32(k >> 2u)))]).w; } d0 *= 0.125; let was = unpackV(G[gi]); if (d0 < 0.003) { G[gi] = vec2u(0u); G[gi + SLOTS_S * 64u] = vec2u(0u); return; }
@@ -154,12 +155,12 @@ export class Smoke {
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
     for (const q of this.fires) { if (n >= 13) break; s.set([q.at[0], q.at[1] + 0.10, q.at[2], 0.36 * q.size, -0.5, 95, 1.6, 3.0], n++ * 8); }
-    for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 7 * p.k * k, 5.0, 0.35, 3 * k], n++ * 8); } lab.uniform('smokeSources', s);
+    for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 24 * p.k * k, 5.0, 0.35, 5 * k], n++ * 8); } lab.uniform('smokeSources', s);
     const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0])); lab.uniform('smokeK3', new Float32Array([0, 0, this.flip === 0 ? 1 : 0, 0]));
     lab.uniform('smokeK', new Float32Array([this.dt, this.steps, boxes.length, n]));
   }
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
-    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeR', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 16); B('smokeD', SMOKE.slots * 4);
+    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeR', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 16); B('smokeD', SMOKE.slots * 16);
     lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('smokePushes', new Float32Array(128)); lab.uniform('smokeK2', new Float32Array(4)); lab.uniform('smokeK3', new Float32Array(4)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
     const go = () => this.on && this.dt > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
     const MA = { M: rw('smokeM', 'array<atomic<u32>>') }, MR = { M: ro('smokeM', 'array<u32>') }, MW = { M: rw('smokeM', 'array<u32>') }, V2 = 'array<vec2u>', F = 'array<f32>', U = 'array<u32>';

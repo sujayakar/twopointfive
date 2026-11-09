@@ -1,0 +1,99 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "t-front",
+  "dist": 15,
+  "hour": 21,
+  "look": [
+   0,
+   1.8,
+   -0.6
+  ],
+  "yaw": 0.15,
+  "pitch": 0.35,
+  "samples": 200,
+  "tick": 300,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "t-menu",
+  "dist": 5.5,
+  "hour": 20.5,
+  "look": [
+   -1.7,
+   0.8,
+   0.2
+  ],
+  "yaw": 0.25,
+  "pitch": 0.35,
+  "samples": 160,
+  "tick": 300,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "t-duckshop",
+  "dist": 13,
+  "hour": 17.5,
+  "look": [
+   10.6,
+   2.6,
+   -2.6
+  ],
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "samples": 160,
+  "tick": 300,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "t-cars",
+  "dist": 11,
+  "hour": 17.5,
+  "look": [
+   0.5,
+   0.8,
+   7.0
+  ],
+  "yaw": 0.5,
+  "pitch": 0.4,
+  "samples": 160,
+  "tick": 300,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "t-street-dark",
+  "dist": 24,
+  "hour": 23.4,
+  "look": [
+   0,
+   0.8,
+   -2
+  ],
+  "cut": 2.5,
+  "yaw": 0.3,
+  "samples": 200,
+  "tick": 300,
+  "run": true,
+  "moon": 0,
+  "mains": false
+ }
+]

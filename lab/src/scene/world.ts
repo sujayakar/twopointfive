@@ -3,14 +3,16 @@ import { type V3, type Rot, ID, add, mul, apply, norm, cross, sub } from '../mat
 import { buildBvh, type Bounds, type Bvh } from '../bvh';
 
 /** what a piece is to a ray */
-export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28 } as const;
+export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29 } as const;
 
 /** ONE PIECE: a frame and half extents, cut by up to 8 planes and at most one quadric (A x² + B y² + C z² + D y ≤ 1) */
 export interface Piece {
   at: V3; rot: Rot; half: V3; mat: number; flags: number;
   quad?: [number, number, number, number]; planes?: [V3, number][];
   tint?: V3; lamp?: number; marks?: Mark[]; seed?: number;
+  /** what it is a part of */ thing?: { name: string };
   /** what moves it, by name */ rig?: string;
+  /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
 }
 /** a sign painted on one face: rect in metres about the face's middle, a cell of the atlas, a color */
 export interface Mark { face: number; at: [number, number]; size: [number, number]; art: string; color: V3; turn?: number }
@@ -24,8 +26,10 @@ export interface Instance { cluster: number; at: V3; rot: Rot; scale: number; ba
 
 export class World {
   pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = []; plumes: { at: V3; r: number; h: number; k: number }[] = [];
+  /** what is made inside is one thing, by this name: two things may not be in the same place */
+  as<T>(name: string, make: () => T): T { const was = this.thing; this.thing = { name }; try { return make(); } finally { this.thing = was; } } private thing: { name: string } | undefined;
   add(p: Partial<Piece> & { at: V3; half: V3; mat: number }): Piece {
-    const full: Piece = { rot: ID, flags: 0, ...p }; if (full.quad) full.flags |= F.QUAD;
+    const full: Piece = { rot: ID, flags: 0, ...(this.thing ? { thing: this.thing } : {}), ...p }; if (full.quad) full.flags |= F.QUAD;
     (full.flags & F.MOVES ? this.moving : this.pieces).push(full); return full;
   }
   /** a box by its corners */
@@ -48,15 +52,17 @@ export function boundsOf(p: Piece): Bounds {
   return { mn, mx };
 }
 export const PIECE_FLOATS = 24;
+/** how a plate of cloth's normal leans at its corners (never a pattern that is no number) */
+export function packBend(b: number[], u: Uint32Array, o: number) { for (let i = 0; i < 4; i++) u[o + 16 + i] = ((Math.round((b[i * 2]! / 3 + 0.5) * 30000) + 200) | ((Math.round((b[i * 2 + 1]! / 3 + 0.5) * 30000) + 200) << 16)) >>> 0; }
 /** a piece as the shaders read it: three rows world → local, half + flags, quadric, (material | marks, tint, planes, lamp | seed) */
 export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, planeAt: number, markAt: number) {
   for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f[o + k * 4] = r[0]; f[o + k * 4 + 1] = r[1]; f[o + k * 4 + 2] = r[2]; f[o + k * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]); }
   f.set(p.half, o + 12); u[o + 15] = (p.flags | (p.planes?.length ?? 0)) >>> 0;
-  f.set(p.quad ?? [0, 0, 0, 0], o + 16);
+  if (p.bend) packBend(p.bend, u, o); else f.set(p.quad ?? [0, 0, 0, 0], o + 16);
   const t = p.tint ?? [1, 1, 1], q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
   u[o + 20] = (p.mat | ((p.marks?.length ?? 0) << 8) | (markAt << 12)) >>> 0;
   u[o + 21] = (q(t[0]) | (q(t[1]) << 8) | (q(t[2]) << 16)) >>> 0;
-  u[o + 22] = planeAt >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
+  u[o + 22] = p.cell ? (Math.round((p.cell[0] + 32) * 1000) | (Math.round((p.cell[1] + 32) * 1000) << 16)) >>> 0 : planeAt >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
 }
 /** HOW OPEN each side of each leaf is, next to the fog its cluster is to a bounce: what its own neighbours keep from it, which no fog can tell. Found once */
 export function ownShade(c: Cluster): [number, number][] {

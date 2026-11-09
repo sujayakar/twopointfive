@@ -28,12 +28,12 @@ fn cl(p: vec3f) -> f32 { return 0.5 * vn(p) + 0.25 * vn(p * 2.1 + 3.0) + 0.13 * 
   var L = air(dd, sd, vec3f(1.0, 0.97, 0.92) * knob.x);
   // a night that is not black: moonlight on the air, the city's glow at the horizon, stars
   let night = sat(-sd.y * 6.0 + 0.35) * knob.y;
-  L += night * (vec3f(0.010, 0.016, 0.034) * (0.6 + 0.4 * dd.y) + vec3f(0.055, 0.032, 0.016) * exp(-dd.y * 7.0));
+  let city = floor(knobSun.w * 0.5) * 0.01; let moon = knobSun.w - 2.0 * floor(knobSun.w * 0.5); L += night * (vec3f(0.010, 0.016, 0.034) * (0.6 + 0.4 * dd.y) * moon + vec3f(0.055, 0.032, 0.016) * exp(-dd.y * 7.0) * city);
   let st = hash33(floor(dd * 210.0)); L += night * step(0.9986, st.x) * vec3f(0.5, 0.55, 0.7) * st.y * smoothstep(0.1, 0.4, dd.y);
   if (dd.y > 0.02) {
     let q = vec3f(dd.x, 0.0, dd.z) / (dd.y + 0.12); let c = cl(vec3f(q.x * 0.9 + 3.0, 1.7, q.z * 1.7 + 1.0) + cl(q * 0.8) * 1.2); let cov = max(knob.w - 0.9, 0.0); let m = min(smoothstep(0.50 - 0.5 * cov, 0.72 - 0.5 * cov, c) * smoothstep(0.03 - 0.1 * cov, 0.2 - 0.15 * cov, dd.y) * knob.w, 1.3);
     let toSun = max(dot(dd, sd), 0.0); let lit = air(normalize(vec3f(dd.x, 0.25, dd.z)), sd, vec3f(1.0) * knob.x) * 1.1 + ext(dens(0.0) * (6.0 / max(sd.y + 0.12, 0.06))) * (knob.x * sat(sd.y * 4.0 + 0.25) * (0.05 + 0.25 * pow(toSun, 12.0) + 0.06 * pow(toSun, 2.0)));
-    let grey = vec3f(0.92, 0.97, 1.0) * (knob.x * sat(sd.y * 2.2 + 0.12) * 0.045 * (0.6 + 0.8 * c)) + night * vec3f(0.016, 0.017, 0.021) * (0.5 + c); L = mix(L, mix(lit + night * vec3f(0.012, 0.014, 0.02), grey, min(cov, 1.0)), min(m * mix(0.75, 1.0, min(cov, 1.0)), 1.0));
+    let grey = vec3f(0.92, 0.97, 1.0) * (knob.x * sat(sd.y * 2.2 + 0.12) * 0.045 * (0.6 + 0.8 * c)) + night * vec3f(0.016, 0.017, 0.021) * (0.5 + c) * mix(moon, city, 0.5); L = mix(L, mix(lit + night * vec3f(0.012, 0.014, 0.02) * mix(moon, city, 0.5), grey, min(cov, 1.0)), min(m * mix(0.75, 1.0, min(cov, 1.0)), 1.0));
   }
   if (below) { let gnd = vec3f(0.20, 0.205, 0.21) * (air(vec3f(0.0, 1.0, 0.0), sd, vec3f(knob.x)) * 2.2 + vec3f(knob.x * 0.12 * sat(sd.y))); L = mix(L, gnd, smoothstep(0.0, 0.25, -d.y)); }
   textureStore(skyOut, id.xy, vec4f(min(L, vec3f(60.0)), 1.0));

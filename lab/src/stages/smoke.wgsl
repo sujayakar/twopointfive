@@ -7,7 +7,7 @@
 const H = 0.08; const AT = vec3f(-24.0, -0.16, -19.2); const PN = vec3i(75, 24, 60); const PAGES = 108000u; const SLOTS_S = 3072u; const NONE = 0xffffffffu;
 const M_PAGE = 0u; const M_BRICK = 108000u; const M_STAMP = 111072u; const M_DENSE = 114144u; const M_NBR = 117216u; const M_FREE = 200160u; const M_LIVE = 203232u; const M_N = 206304u;   // (there: how many live, how many new)
 // (M_FREE now lists the bricks asked for this step)
-const M_BORN = 206320u;
+const M_BORN = 206320u; const M_MEAN = 209392u;                  // (there: each live brick's own mean speed)
 fn brickIx(b: vec3i) -> u32 { return u32(b.x + PN.x * (b.y + PN.y * b.z)); }
 fn brickOf(i: u32) -> vec3i { let x = i32(i) % PN.x; let y = (i32(i) / PN.x) % PN.y; return vec3i(x, y, i32(i) / (PN.x * PN.y)); }
 fn inPage(b: vec3i) -> bool { return all(b >= vec3i(0)) && all(b < PN); }
