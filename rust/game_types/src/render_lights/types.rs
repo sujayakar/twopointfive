@@ -7,9 +7,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub struct LightSet {
     pub lights: Vec<LightId>,
-    pub buf: crate::Opaque,
-    pub reach_buf: crate::Opaque,
-    pub reach_data: Vec<u32>,
     pub ir: Vec<LightId>,
     pub device: crate::Opaque,
     pub fog_team: crate::render_lights::LightSetFogTeam,
@@ -19,9 +16,6 @@ impl LightSet {
     pub fn blank() -> Self {
         LightSet {
             lights: Vec::new(),
-            buf: crate::Opaque,
-            reach_buf: crate::Opaque,
-            reach_data: Vec::new(),
             ir: Vec::new(),
             device: crate::Opaque,
             fog_team: crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() },

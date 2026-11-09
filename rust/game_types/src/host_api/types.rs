@@ -11,18 +11,12 @@ pub struct HostApi {
     pub settings: crate::root_settings::RenderSettings,
     pub weather: Option<crate::render_frame::WeatherFrame>,
     pub air: Option<crate::host_api::HostApiAir>,
-    pub air_wind: Option<[f64; 2]>,
-    pub air_on: Option<bool>,
     pub sharp_on: Option<bool>,
     pub effective_scale: f64,
     pub fires: Option<Vec<crate::render_passes::FireRecord>>,
-    pub fire_look: Option<Vec<f64>>,
     pub host_books: Option<crate::host_api::HostBooks>,
     pub skin: Option<crate::render_gbuffer::SkinnedDrawable>,
-    pub gbuffer: Option<crate::host_api::HostApiGbuffer>,
     pub device: crate::Opaque,
-    pub scene_layout: crate::Opaque,
-    pub mesh_shadows_available: Option<bool>,
 }
 impl HostApi {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -33,18 +27,12 @@ impl HostApi {
             settings: crate::root_settings::RenderSettings::zeroed(),
             weather: None,
             air: None,
-            air_wind: None,
-            air_on: None,
             sharp_on: None,
             effective_scale: 0.0,
             fires: None,
-            fire_look: None,
             host_books: None,
             skin: None,
-            gbuffer: None,
             device: crate::Opaque,
-            scene_layout: crate::Opaque,
-            mesh_shadows_available: None,
         }
     }
 }
