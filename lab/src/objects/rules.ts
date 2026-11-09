@@ -3,7 +3,7 @@ import { type V3, add, sub } from '../math';
 import { World, F, PIECE_FLOATS, boundsOf, type Piece } from '../scene/world';
 import { M } from '../scene/materials';
 import { gap } from '../scene/stand';
-import { faceFights } from '../scene/faces';
+import { faceFights, settle } from '../scene/faces';
 import { Solid } from '../scene/solid';
 import { Body, Bodies } from '../scene/rigid';
 import { Put, type Live, type Made } from './object';
@@ -36,6 +36,7 @@ export function rules(m: Made): { found: Found[]; counts: Count[] } {
     const ends = here.map(extent); if (m.on === 'floor') say('rule.foot', 'how far its foot is from the floor, beyond its error', Math.max(0, Math.abs(Math.min(...ends.map(e => e.mn[1]))) - l.error) * 1000, 'mm', k);
     const f = afloat(b); say('rule.floats', 'pieces that hang on nothing', f.length, '', k, f[0] ? `the first at ${at(f[0])}` : undefined);
     const fights = faceFights(here).filter(f => fightSeen(here, f.a, f.b)); say('rule.faces', 'pairs of faces in one plane', fights.length, '', k, fights[0] ? `the first at ${fights[0].a.at.map(v => v.toFixed(2)).join(' ')}` : undefined);
+    { const c = b.w.pieces.map(p => ({ ...p })); settle(c); say('rule.parted', 'a level parts faces in one plane, seen or not: how far it moves one', 1000 * Math.max(0, ...c.map((p, i) => Math.max(...[0, 1, 2].map(a => 2 * Math.abs(p.half[a]! - b.w.pieces[i]!.half[a]!))))), 'mm', k); }
     say('rule.thing', 'pieces that are no thing\'s', b.pieces.filter(p => !p.thing).length, '', k);
     say('rule.same', 'made twice, it is the same (0)', print(b) === print(build(m, k)) ? 0 : 1, '', k);
     if (k === 0) { const { lo, hi } = bounds(b), is = [0, 1, 2].map(a => hi[a]! - lo[a]!), off = Math.max(...is.map((v, a) => Math.abs(v - m.size[a]!) / Math.max(m.size[a]!, 0.15 * Math.max(...m.size)))); say('rule.size', 'how far it is from the size it says', off * 100, '%', 0, `it is ${is.map(v => v.toFixed(2)).join(' × ')}`); }
