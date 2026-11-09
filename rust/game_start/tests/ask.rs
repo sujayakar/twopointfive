@@ -18,7 +18,7 @@ fn two_rooms(seed: u32) -> Play {
 }
 /// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
 fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::io::W::new(), Vec::new());
+    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
     game::state_words::state_words(&mut p.g, &mut w, &mut words);
     words.extend(game_start::block::part_hashes(0));
     words
@@ -108,7 +108,7 @@ fn asking_of_a_world_that_is_not_changes_nothing() {
         }
         p.g.stats.glasspen = shots;   // (a tally of a round's lines asked through panes: no part of the world)
         let after = words(&mut p);
-        let parts: Vec<&str> = (0..game::state_words::STATE_NAMES.len()).filter(|&i| after[i] != before[i]).map(|i| game::state_words::STATE_NAMES[i]).collect();
+        let parts: Vec<String> = game::state_words::state_names().into_iter().enumerate().filter(|(i, _)| after[*i] != before[*i]).map(|(_, n)| n).collect();
         assert!(parts.is_empty() && after == before, "seed {}: asking moved {:?}", seed, parts);
     }
 }

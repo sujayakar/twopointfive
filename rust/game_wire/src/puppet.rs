@@ -10,7 +10,6 @@ pub fn ps_combat_FireOpts(s: &crate::combat::FireOpts, o: &mut W) { s.weapon.w(o
 pub fn ps_devices_DevicesSnap(s: &crate::devices::DevicesSnap, o: &mut W) { s.log.w(o); }
 pub fn ps_difficulty_Levers(s: &crate::difficulty::Levers, o: &mut W) { s.fog.w(o); s.ai.w(o); s.kit.w(o); s.told.w(o); }
 pub fn ps_doors_DoorContact(s: &crate::doors::DoorContact, o: &mut W) { s.pos.w(o); s.radius.w(o); s.bash.w(o); s.who.w(o); s.quiet.w(o); s.weak.w(o); s.key.w(o); s.keys.w(o); s.blocked_by.w(o); s.hand.w(o); s.round.w(o); s.run.w(o); s.bashed.w(o); s.ripped.w(o); s.bashed_at.w(o); s.struck.w(o); s.moved.w(o); s.man.w(o); s.solid.w(o); s.vel.w(o); }
-pub fn ps_interact_EmptyThing(s: &crate::interact::EmptyThing, o: &mut W) { ps_game_Interactable(&s.it, o); }
 pub fn ps_kit_KitPastePeek(s: &crate::kit::KitPastePeek, o: &mut W) { ps_kit_MemberKit(&s.card, o); }
 pub fn ps_orders_SquadOrdersAssignA(s: &crate::orders::SquadOrdersAssignA, o: &mut W) { s.move_.w(o); s.fit.w(o); s.tries.w(o); }
 pub fn ps_player_Legs(s: &crate::player::Legs, o: &mut W) { s.haul.w(o); }
@@ -104,8 +103,6 @@ pub fn ps_game_GameEvent(s: &crate::game::GameEvent, o: &mut W) { s.announced.w(
 pub fn ps_weather_WeatherSnap(s: &crate::weather::WeatherSnap, o: &mut W) { s.storm.w(o); s.rain_rate.w(o); s.wet.w(o); s.next_flash_at.w(o); s.thunders.w(o); s.last_bark_t.w(o); }
 pub fn ps_civilians_CivSnap(s: &crate::civilians::CivSnap, o: &mut W) { s.list.w(o); }
 pub fn ps_throwables_ThrowSolution(s: &crate::throwables::ThrowSolution, o: &mut W) { s.v0.w(o); s.t.w(o); s.points.w(o); s.land.w(o); }
-pub fn ps_squadthrow_StateKeptValue(s: &crate::squadthrow::StateKeptValue, o: &mut W) { s.key.w(o); s.t.w(o); s.th.w(o); s.line.w(o); }
-pub fn ps_squadthrow_StateCaught(s: &crate::squadthrow::StateCaught, o: &mut W) { s.who.w(o); }
 pub fn ps_squadthrow_Scratch(s: &crate::squadthrow::Scratch, o: &mut W) { s.n.w(o); s.gen_.w(o); s.seen.w(o); s.leaf.w(o); s.dep.w(o); s.who.w(o); s.q.w(o); }
 pub fn ps_squadthrow_SquadThrowKeptDuck(s: &crate::squadthrow::SquadThrowKeptDuck, o: &mut W) { s.gd.w(o); s.t.w(o); s.x.w(o); s.y.w(o); s.z.w(o); s.m.w(o); }
 pub fn ps_director_EventView(s: &crate::director::EventView, o: &mut W) { s.kind.w(o); s.pos.w(o); s.level.w(o); s.loud.w(o); s.who.w(o); s.name.w(o); s.data.w(o); }
@@ -1065,7 +1062,6 @@ pub fn pa_combat_FireOpts(s: &crate::combat::FireOpts, o: &mut W) { s.weapon.w(o
 pub fn pa_devices_DevicesSnap(s: &crate::devices::DevicesSnap, o: &mut W) { s.log.w(o); }
 pub fn pa_difficulty_Levers(s: &crate::difficulty::Levers, o: &mut W) { s.fog.w(o); s.ai.w(o); s.kit.w(o); s.told.w(o); }
 pub fn pa_doors_DoorContact(s: &crate::doors::DoorContact, o: &mut W) { s.pos.w(o); s.radius.w(o); s.bash.w(o); s.who.w(o); s.quiet.w(o); s.weak.w(o); s.key.w(o); s.keys.w(o); s.blocked_by.w(o); s.hand.w(o); s.round.w(o); s.run.w(o); s.bashed.w(o); s.ripped.w(o); s.bashed_at.w(o); s.struck.w(o); s.moved.w(o); s.man.w(o); s.solid.w(o); s.vel.w(o); }
-pub fn pa_interact_EmptyThing(s: &crate::interact::EmptyThing, o: &mut W) { pa_game_Interactable(&s.it, o); }
 pub fn pa_kit_KitPastePeek(s: &crate::kit::KitPastePeek, o: &mut W) { pa_kit_MemberKit(&s.card, o); }
 pub fn pa_orders_SquadOrdersAssignA(s: &crate::orders::SquadOrdersAssignA, o: &mut W) { s.move_.w(o); s.fit.w(o); s.tries.w(o); }
 pub fn pa_player_Legs(s: &crate::player::Legs, o: &mut W) { s.haul.w(o); }
@@ -1166,8 +1162,6 @@ pub fn pa_game_GameEvent(s: &crate::game::GameEvent, o: &mut W) { s.announced.w(
 pub fn pa_weather_WeatherSnap(s: &crate::weather::WeatherSnap, o: &mut W) { s.kind.w(o); s.thunder_until.w(o); s.storm.w(o); s.rain_rate.w(o); s.wind.w(o); s.wet_gloss.w(o); s.wet.w(o); s.next_flash_at.w(o); s.thunders.w(o); s.last_bark_t.w(o); s.rng.w(o); s.stats.w(o); }
 pub fn pa_civilians_CivSnap(s: &crate::civilians::CivSnap, o: &mut W) { s.list.w(o); }
 pub fn pa_throwables_ThrowSolution(s: &crate::throwables::ThrowSolution, o: &mut W) { s.v0.w(o); s.t.w(o); s.points.w(o); s.land.w(o); }
-pub fn pa_squadthrow_StateKeptValue(s: &crate::squadthrow::StateKeptValue, o: &mut W) { s.key.w(o); s.t.w(o); s.th.w(o); s.line.w(o); }
-pub fn pa_squadthrow_StateCaught(s: &crate::squadthrow::StateCaught, o: &mut W) { s.who.w(o); }
 pub fn pa_squadthrow_Scratch(s: &crate::squadthrow::Scratch, o: &mut W) { s.n.w(o); s.gen_.w(o); s.seen.w(o); s.leaf.w(o); s.dep.w(o); s.who.w(o); s.q.w(o); }
 pub fn pa_squadthrow_SquadThrowKeptDuck(s: &crate::squadthrow::SquadThrowKeptDuck, o: &mut W) { s.gd.w(o); s.t.w(o); s.x.w(o); s.y.w(o); s.z.w(o); s.m.w(o); }
 pub fn pa_director_EventView(s: &crate::director::EventView, o: &mut W) { s.kind.w(o); s.pos.w(o); s.level.w(o); s.loud.w(o); s.who.w(o); s.name.w(o); s.data.w(o); }
@@ -2226,7 +2220,6 @@ pub fn pm_combat_FireOpts(s: &crate::combat::FireOpts, o: &mut W, c: &mut Vec<u3
 pub fn pm_devices_DevicesSnap(s: &crate::devices::DevicesSnap, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.log.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_difficulty_Levers(s: &crate::difficulty::Levers, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.fog.w(o); } c.push(o.b.len() as u32); if o.wide { s.ai.w(o); } c.push(o.b.len() as u32); if o.wide { s.kit.w(o); } c.push(o.b.len() as u32); if o.wide { s.told.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_doors_DoorContact(s: &crate::doors::DoorContact, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.pos.w(o); } c.push(o.b.len() as u32); if o.wide { s.radius.w(o); } c.push(o.b.len() as u32); if o.wide { s.bash.w(o); } c.push(o.b.len() as u32); if o.wide { s.who.w(o); } c.push(o.b.len() as u32); if o.wide { s.quiet.w(o); } c.push(o.b.len() as u32); if o.wide { s.weak.w(o); } c.push(o.b.len() as u32); if o.wide { s.key.w(o); } c.push(o.b.len() as u32); if o.wide { s.keys.w(o); } c.push(o.b.len() as u32); if o.wide { s.blocked_by.w(o); } c.push(o.b.len() as u32); if o.wide { s.hand.w(o); } c.push(o.b.len() as u32); if o.wide { s.round.w(o); } c.push(o.b.len() as u32); if o.wide { s.run.w(o); } c.push(o.b.len() as u32); if o.wide { s.bashed.w(o); } c.push(o.b.len() as u32); if o.wide { s.ripped.w(o); } c.push(o.b.len() as u32); if o.wide { s.bashed_at.w(o); } c.push(o.b.len() as u32); if o.wide { s.struck.w(o); } c.push(o.b.len() as u32); if o.wide { s.moved.w(o); } c.push(o.b.len() as u32); if o.wide { s.man.w(o); } c.push(o.b.len() as u32); if o.wide { s.solid.w(o); } c.push(o.b.len() as u32); if o.wide { s.vel.w(o); } c.push(o.b.len() as u32); }
-pub fn pm_interact_EmptyThing(s: &crate::interact::EmptyThing, o: &mut W, c: &mut Vec<u32>) { pm_game_Interactable(&s.it, o, c); }
 pub fn pm_kit_KitPastePeek(s: &crate::kit::KitPastePeek, o: &mut W, c: &mut Vec<u32>) { pm_kit_MemberKit(&s.card, o, c); }
 pub fn pm_orders_SquadOrdersAssignA(s: &crate::orders::SquadOrdersAssignA, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.move_.w(o); } c.push(o.b.len() as u32); s.fit.w(o); c.push(o.b.len() as u32); s.tries.w(o); c.push(o.b.len() as u32); }
 pub fn pm_player_Legs(s: &crate::player::Legs, o: &mut W, c: &mut Vec<u32>) { s.haul.w(o); c.push(o.b.len() as u32); }
@@ -2319,8 +2312,6 @@ pub fn pm_game_GameEvent(s: &crate::game::GameEvent, o: &mut W, c: &mut Vec<u32>
 pub fn pm_weather_WeatherSnap(s: &crate::weather::WeatherSnap, o: &mut W, c: &mut Vec<u32>) { s.storm.w(o); c.push(o.b.len() as u32); s.rain_rate.w(o); c.push(o.b.len() as u32); s.wet.w(o); c.push(o.b.len() as u32); s.next_flash_at.w(o); c.push(o.b.len() as u32); s.thunders.w(o); c.push(o.b.len() as u32); s.last_bark_t.w(o); c.push(o.b.len() as u32); }
 pub fn pm_civilians_CivSnap(s: &crate::civilians::CivSnap, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.list.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_throwables_ThrowSolution(s: &crate::throwables::ThrowSolution, o: &mut W, c: &mut Vec<u32>) { s.v0.w(o); c.push(o.b.len() as u32); if o.wide { s.t.w(o); } c.push(o.b.len() as u32); s.points.w(o); c.push(o.b.len() as u32); s.land.w(o); c.push(o.b.len() as u32); }
-pub fn pm_squadthrow_StateKeptValue(s: &crate::squadthrow::StateKeptValue, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.key.w(o); } c.push(o.b.len() as u32); if o.wide { s.t.w(o); } c.push(o.b.len() as u32); s.th.w(o); c.push(o.b.len() as u32); if o.wide { s.line.w(o); } c.push(o.b.len() as u32); }
-pub fn pm_squadthrow_StateCaught(s: &crate::squadthrow::StateCaught, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.who.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_squadthrow_Scratch(s: &crate::squadthrow::Scratch, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.n.w(o); } c.push(o.b.len() as u32); if o.wide { s.gen_.w(o); } c.push(o.b.len() as u32); if o.wide { s.seen.w(o); } c.push(o.b.len() as u32); if o.wide { s.leaf.w(o); } c.push(o.b.len() as u32); if o.wide { s.dep.w(o); } c.push(o.b.len() as u32); if o.wide { s.who.w(o); } c.push(o.b.len() as u32); if o.wide { s.q.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_squadthrow_SquadThrowKeptDuck(s: &crate::squadthrow::SquadThrowKeptDuck, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.gd.w(o); } c.push(o.b.len() as u32); if o.wide { s.t.w(o); } c.push(o.b.len() as u32); if o.wide { s.x.w(o); } c.push(o.b.len() as u32); if o.wide { s.y.w(o); } c.push(o.b.len() as u32); if o.wide { s.z.w(o); } c.push(o.b.len() as u32); if o.wide { s.m.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_director_EventView(s: &crate::director::EventView, o: &mut W, c: &mut Vec<u32>) { s.kind.w(o); c.push(o.b.len() as u32); s.pos.w(o); c.push(o.b.len() as u32); s.level.w(o); c.push(o.b.len() as u32); s.loud.w(o); c.push(o.b.len() as u32); s.who.w(o); c.push(o.b.len() as u32); s.name.w(o); c.push(o.b.len() as u32); s.data.w(o); c.push(o.b.len() as u32); }

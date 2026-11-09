@@ -295,6 +295,7 @@ pub mod squadthrow;
 pub mod stackline;
 pub mod stackroom;
 pub mod stalk;
+pub mod state_words;
 pub mod startfile;
 pub mod startle;
 pub mod stature;

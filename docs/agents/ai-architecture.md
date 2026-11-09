@@ -740,8 +740,8 @@ read it, it is a part of the state, and every machine of one game holds it the s
 (`fogofwar::FogPicture`) is THE PICTURE'S BLOCK: the renderer's rows (`frame`), the lit fog's list of lamps and
 its counts (`lamp_pick`, `lamp_n`, `lit_stats`), a lamp's glow as last seen (`face_recs`), the count of lights by
 class (`full_stats`), and what a viewer's draw with the fog off is made from (`viewer`, `raw_list`, `raw_at`;
-`look_frames`, which nothing reads). It is one machine's: the wire tool lists it among the host's own
-(`HOSTS_OWN`, `tools/wire/wire.ts`), so it has no word of the state. Two machines that show different seats
+`look_frames`, which nothing reads). It is one machine's
+(`Game.fog_picture` is `#[bytes(skip)]`), so it has no word of the state. Two machines that show different seats
 need not agree on it: the lit fog's lamps are cut by distance from the seat a machine shows.
 
 **The code follows the data.** `fogofwar/picture.rs` is the only file that names `g.fog_picture` (and the stand,
