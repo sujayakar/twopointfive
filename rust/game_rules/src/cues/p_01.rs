@@ -629,7 +629,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 /// His row of `men`, made the first time he is asked after: the row itself.   (cues.ts Cues.man)
 pub fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
-        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
+        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), covered: false };
         g.cues.men.set(gd, row);
     }
     g.cues.men.get_mut(gd).unwrap()
@@ -749,28 +749,8 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let at = cues_at(g, p);
             if cues_cue(g, gd, CueKind::Still, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
         }
-        // a loud thing outside his room, and he has not gone: the dice said stay (rallyAt drawn again), or nobody of his side is posted where it came from
-        let (noise_at, noise_out, noise_t, d_rally) = { let row = &g.tab.roomfight_def[d]; (row.noise_at, row.noise_out, row.noise_t, row.rally_at) };
-        if noise_at.is_some() && noise_out && noise_t > cues_man(g, gd).noise_t && cues_man(g, gd).ep < 0.0 && hold { cues_man(g, gd).ep = noise_t; }
-        if cues_man(g, gd).ep >= 0.0 {
-            let m_rally = cues_man(g, gd).rally_at;
-            let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
-            if !hold || t - noise_t > 6.0 {
-                cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
-                && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
-            {
-                let at = cues_at(g, noise_at.unwrap());
-                if cues_cue(g, gd, if drawn_again { CueKind::StayOurs } else { CueKind::Stay }, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
-                cues_man(g, gd).ep = -1.0;
-            }
-        }
-        // (read again: pressKeepsHome above can have written the def's rallyAt to NaN)
-        let (now, rally_now) = (g.gd[gd].state, g.tab.roomfight_def[d].rally_at);
-        let M = cues_man(g, gd);
-        M.noise_t = noise_t;
-        M.rally_at = rally_now;
-        M.state = now;
+        let now = g.gd[gd].state;
+        cues_man(g, gd).state = now;
     }
     if g.cues.squelch_due {
         g.cues.squelch_due = false;
