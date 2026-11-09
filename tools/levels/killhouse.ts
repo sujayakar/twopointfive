@@ -1,6 +1,6 @@
 // KILLHOUSE — 'The kill house': a small shoot house on a range, run AGAINST A CLOCK. Five small rooms off one short corridor that a ply partition and a
 // door cut in two; a front door on the corridor's west end and a back door into the mess; six defenders dealt afresh every
-// visit (rust/game_rules/src/roomclear ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/par) times the run from the first thing anybody does
+// visit (rust/game_rules/src/missions/roomclear.rs ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/missions/par.rs) times the run from the first thing anybody does
 // to 'structure taken', adds seconds for every teammate lost, and names a medal.
 //
 //        x 12        17.5        23         28
@@ -48,7 +48,7 @@ import { lookMarks } from './lookMarks';
 
 const PLAIN_NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
 
-/** THE PAR (rust/game_rules/src/par): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
+/** THE PAR (rust/game_rules/src/missions/par.rs): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
  *  (the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
  *  run with nobody lost, silver a clean run at the careful median, bronze a clean slow one or a quick one that lost a man; a man lost costs the gold-to-silver gap (25 s),
  *  so one man lost is one medal */
@@ -261,7 +261,7 @@ export const NAME = 'killhouse';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES} — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the floor's.`;
 /** the range's marking paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it;
- *  the outside doors' paint is this, darker: rust/game_rules/src/doors/paint.rs */
+ *  the outside doors' paint is this, darker: rust/game_rules/src/fittings/doors/paint.rs */
 const VIOLET: Vec3 = [0.42, 0.2, 0.66];
 /** the three ply targets' lanes (tools/levels/killhouse.ts, group 'range': targets at x 33.4) and where the firing line lies, between the east wall's foot and them */
 const TARGET_Z = [10.4, 13.5, 16.6], FIRE_X = 29.5;

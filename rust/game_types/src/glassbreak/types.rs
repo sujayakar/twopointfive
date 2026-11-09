@@ -1,27 +1,15 @@
 //! The types of `glassbreak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassBreak {
     pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
 }
-impl GlassBreak {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        GlassBreak {
-            sheet_list: None,
-            view_of: None,
-            gust_dirty: false,
-            gusts: JsMap::new(),
-        }
-    }
-}
-impl Default for GlassBreak { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBreakViewOf {
@@ -188,17 +176,10 @@ pub struct GlassBreakPaneInfo {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassbreakMod {
     /// (src/game/glassbreak.ts:193 GB_HOST)
-    pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
-}
-impl GlassbreakMod {
-    pub fn blank() -> Self {
-        GlassbreakMod {
-            gb_host: crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 },
-        }
-    }
+    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
 }
 
 /// (src/game/glassbreak.ts:195 TALLY_AT: a table nothing writes)

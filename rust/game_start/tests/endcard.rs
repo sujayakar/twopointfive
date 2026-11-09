@@ -82,21 +82,3 @@ fn out_through_the_exit_the_card_comes_once() {
     }
 }
 
-/// A FAILURE MEANS: a show's mission ends in front of an audience on a card nobody asked for.
-#[test]
-fn no_card_while_the_tour_runs() {
-    for seed in SEEDS {
-        let mut p = yard(seed, 1);
-        p.seat_goes_down(0);
-        p.frame();
-        p.g.mission_in_tour = true;   // (after the fall: a fall in a show arms no beat at all, so this is the card's own rule)
-        p.run(DOWN_CARD_SECS + 1.0);
-        assert!(p.end_cards.is_empty() && p.g.mission.stage == MissionStage::Failed, "seed {}: down in a show: no card", seed);
-        drop(p);
-        let mut q = out_past_the_exit(seed);
-        q.g.mission_in_tour = true;
-        game::game::game_teleport_player(&mut q.g, PAST_THE_EXIT);
-        q.run(0.3);
-        assert!(q.end_cards.is_empty() && q.g.mission.stage == MissionStage::Done, "seed {}: out in a show: no card", seed);
-    }
-}

@@ -26,7 +26,7 @@ pub struct AimKGuard {
     #[k(3.0)] pub lose_rate: f64,
     /// eyes off Sam up to this long and the track holds (a mullion, a blink of smoke); longer and it is gone — he acquires again from nothing
     #[k(0.6)] pub mem_secs: f64,
-    /// Sam's bearing jumping more than this in one frame (a teleport, the tour's cuts) is a new target: track 0, and the rate below is not fed the jump
+    /// Sam's bearing jumping more than this in one frame (a teleport) is a new target: track 0, and the rate below is not fed the jump
     #[k(25.0)] pub jump_deg: f64,
     /// rad of cone per rad/s of Sam's own angular speed across him (his velocity square to the line, over the range), capped: a man crossing at a sprint 7 m off
     ///  is ~0.65 rad/s → +0.24, i.e. the gun wanders a sixth of a second either side of him (the cone is ± half: K = twice the lag) — a third of those rounds still

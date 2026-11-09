@@ -6,7 +6,7 @@
 // north-west) of the walls, the lorry and whatever stands in the open, deeper in the corners; caps lie on the tops of the yard wall, the gate posts, the
 // lorry, the wood, the crates; trodden paths run from the gate to the doors, the ground is cleared to earth at the gate, the tea room's door and the
 // generator, and two ruts run in from the road to the lorry's back wheels. Nothing white lies under a roof: a little grey slush is tracked in at each
-// outside door. What FALLS is the weather's (rust/game_rules/src/weather_kinds, keyed on this level's name) and no part of this file.
+// outside door. What FALLS is the weather's (rust/game_rules/src/air/weather_kinds.rs, keyed on this level's name) and no part of this file.
 // THE LIGHT is a cold moon on the snow and warm things that burn: the lamp over the gate, a brazier in front of the tea room, bulbs in the tea room, the kitchen and the
 // store (the mains: the generator in the lean-to), a stove's glow in the tea room and the bunk room, the bread oven's in the kitchen, lanterns. The tea
 // room's two windows, the kitchen's and the bunk room's throw their light out onto the snow.
@@ -33,13 +33,13 @@
 //
 // Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
 // colours, boxes only; no second look file.
-// WHAT A SNOW PIECE IS TO A MAN (rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m):
+// WHAT A SNOW PIECE IS TO A MAN (rust/game_rules/src/world/scene_collision.rs: a static blocks feet and the nav grid only where it stands over 0.2 m):
 //   · ground, road, cleared earth  = thin solid slabs at the floor (feet, rounds and light land on them);
 //   · paths, ruts, tracked-in slush = decals (NoShadow: drawn and lit, no ray and no collision query sees them);
 //   · a DRIFT                       = solid boxes whose top is under 0.2 m (the check holds 0.19; the tallest is 0.18): men wade through it, a round knocks snow out of it;
 //   · a BANK                        = a drift with tiers over 0.2 m: it stops feet. Only against a wall or the lorry, never within 1.4 m of a door;
 //   · a CAP                         = a decal on the top of a thing: a round goes through it to the thing; where the thing is cover that breaks (the
-//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/wallbreak `ghosts`).
+//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/breakage/wallbreak `ghosts`).
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
@@ -74,7 +74,7 @@ const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], PASS_
 const STORE_W: Vec3 = [27.9, 1.1, 8.25], STORE_E: Vec3 = [28.1, 1.1, 8.25], INNER_N: Vec3 = [32.25, 1.1, 10.9], INNER_S: Vec3 = [32.25, 1.1, 11.2], BUNK_IN: Vec3 = [28.2, 1.1, 13.75];
 
 /** THE ROOM CLEAR (lib/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
- *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+ *  THE HAND PLACEMENT (rust/game_rules/src/missions/roomclear.rs place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: the yard between the lorry and the doors is white, lit and watched through glass from two sides.
  *  · THE GATE is the one hole in the wall and it is lit, but THE LORRY stands 2.6 m inside it, between it and the tea room's two windows: a team comes in
  *    behind the lorry. Only bunk 1, at the dark bunk room's window, has the gateway, from the side (a low wall of sandbags stands on that side of it).
@@ -262,7 +262,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.ground(28, 11, 34, 18, 'mudFloor', 0.006);                                                // the bunk room
   G.ground(5.9, 13.4, 12.1, 20.6, 'dirt', 0.006);                                             // the bay: dry earth under its roof, to the eaves
   G.ground(5.9, 4.9, 9.6, 9.1, 'slab', 0.006);                                                // the lean-to
-  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — rust/game_rules/src/weather roofs_of — and snow falls everywhere
+  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — rust/game_rules/src/air/weather.rs roofs_of — and snow falls everywhere
   // else): the range, the bunk room, the bay, the lean-to
   grp('ceiling');
   slab(11.9, H, 4.9, 34.1, H + 0.2, 11.1, P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
@@ -581,7 +581,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
     mission: { serverRoom: { ...STORE }, entryDoor: 'store', rack: { index: 0, front: [32.4, 1.0, 5.6], halfW: 0.3 }, exfilDoor: 'tea', exfilX: 17.25, exfilZ: 11.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (rust/game_rules/src/floor; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
+  // ---- what is underfoot (rust/game_rules/src/world/floor.rs; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
   // dry earth under the bay's roof are 'asphalt' (the nearest the six have to hard ground); the rooms' beaten earth and slab are 'stone', the rugs 'carpet'.
   // First match wins: rugs, rooms, then the yard's hard patches (pushed as they were laid above)
   const surfaces: SurfacesData = {

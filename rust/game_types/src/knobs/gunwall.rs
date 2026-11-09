@@ -21,8 +21,7 @@ use game_derive::Knobs;
 ///     hand is drawn further back still (WALL_TUCK.over) for a torso twisted toward the wall.
 ///  Sam: the same test, the same low ready (player.ts), and no round while it is down — but for the BREACHING SHOTGUN LAID ON A LOCK (`breachAim`: the raised
 ///  gun's own line meets a locked, latched leaf where a shell takes its keep): that gun stays up however close he stands, pressed to the leaf included, and the
-///  shell goes — as a teammate's on the same lock always did. A breach shot at a lock always fires. Pinned men are left alone (they cannot step for a line), and so is
-///  everybody while a showcase has the floor (its choreography was written against guns that stay up).
+///  shell goes — as a teammate's on the same lock always did. A breach shot at a lock always fires. Pinned men are left alone (they cannot step for a line).
 ///  Off (the table's own value, so a host that never says otherwise is unchanged): nothing asked, muzzleDown and gunWall never touched — the game as it was.
 ///  The page turns it on (src/host/profile.ts pageSwitches; ?nogunwall = off) and so does the harness's shipped stand; its frozen stand holds it off
 ///  (src/host/standup.ts; TPS_GUNWALL=1 turns it on there).

@@ -2,10 +2,10 @@
 // like we should just unify everything in the starting page'): what to play, how it is set and what the team carries are ONE page, and one button starts it.
 // Nothing here is a new screen: it is the mission list (ui/missions.ts — the rows, the sheet, Defenders / Hour / Weather) with the loadout screen
 // (ui/loadout.ts — the team's size, the squad kit row, the five slots, the picked member's kit card, Deploy) mounted INSIDE its sheet for the highlighted
-// mission. THE ROWS ARE IN THE LIST'S GROUPS (rust/game_rules/src/start_list GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
+// mission. THE ROWS ARE IN THE LIST'S GROUPS (rust/game_rules/src/missions/start_list GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
 // groups?'), every mission under exactly one heading and listed once: all the headings are always drawn, each with how many it holds, and only the one the
 // cursor is in shows its rows (ui/missions.ts `fold`) — W S walk every row, crossing a heading opens it, a click on a heading is its first row. Inside a
-// group the short list's missions (rust/game_rules/src/scene_scenario_list PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
+// group the short list's missions (rust/game_rules/src/missions/scene_scenario_list PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
 // first. No way in skips another: there is
 // no straight-in row, no separate Missions button and no separate Start.
 //
@@ -99,7 +99,7 @@ const CSS = `
 #missions.one .mblurb { max-width: 62ch; margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--m-text); }
 #missions.one .mtip { display: none; }
 #missions.one .mstore { display: none; }
-/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while rust/game_rules/src/told's is on) */
+/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while rust/game_rules/src/speech/told.rs's is on) */
 #missions.one .mrail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; padding: 4px 0 14px; }
 #missions.one .mrl { margin: 0 0 8px; font: 600 11px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); }
 #missions.one .mval { flex: 0 0 auto; display: flex; align-items: center; gap: 0; box-sizing: border-box; width: 100%; min-height: 34px; margin: 0; padding: 4px 4px 3px 10px; text-align: left; color: var(--m-text); font: inherit; background: none; border: 0; border-radius: 0; cursor: pointer; }
@@ -200,7 +200,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-pips { flex: 0 0 auto; order: 9; }
 #missions.one #loadout .lo-kit .kc-pips i { border-radius: 0; }
 #missions.one #loadout .lo-kit .kc-pips i.on { background: var(--m-text); }
-/* what the card weighs (rust/game_rules/src/kitload): its two bars on two lines of their own under the pouches, one track under the other, in the head's own column */
+/* what the card weighs (rust/game_rules/src/outfit/kitload.rs): its two bars on two lines of their own under the pouches, one track under the other, in the head's own column */
 #missions.one #loadout .lo-kit .kc-pouch:has(.kc-load:not(.off)) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
 #missions.one #loadout .lo-kit .kc-load { flex: 0 0 100%; gap: 3px; margin: 0; }
 #missions.one #loadout .lo-kit .kc-bar { justify-content: flex-end; gap: 8px; line-height: 9px; }
@@ -210,7 +210,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }
 #missions.one #loadout .lo-kit .kc-row { position: static; grid-column: auto; grid-row: auto; grid-template-columns: 48px minmax(0, 1fr); margin: 0; padding: 8px 8px 8px 10px; background: rgba(var(--m-edge),0.06); border: 0; border-left: 3px solid transparent; border-radius: 0; }
-#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/kit BIGSLOT: the card's last tile, as wide as the card, under the pouches' tiles) */
+#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/outfit/kit BIGSLOT: the card's last tile, as wide as the card, under the pouches' tiles) */
 #missions.one #loadout .lo-kit .kc-row[data-field="big"] .kc-ico { height: 44px; }
 #missions.one #loadout .lo-kit .kc-row:hover { background: rgba(var(--m-edge),0.12); }
 #missions.one.pane-loadout #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-accent-rgb),0.1); border-left-color: var(--m-accent); }

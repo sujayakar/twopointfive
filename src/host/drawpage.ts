@@ -24,7 +24,7 @@ import { FIXEDSTEP, planTicks } from './fixedstep';
 import { CameraPair, Lag } from './between';
 import { FINDTUNED, bindFindMe, ctrlTurn, findMeStarts } from './findme';
 import { fetchFace } from './face';
-import { machineAfter, machineBefore } from './machine';
+import { machineAfter, machineKept, machineStood } from './machine';
 import { EVENPACE, pacer, pageRoom, rateMeter } from './pace';
 import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame, GameLost } from './drawgame';
@@ -41,7 +41,6 @@ import { DrawPlay } from './drawplay';
 import { DrawNet, netAsked } from './drawnet';
 import { COOP } from '../net/lobby';
 import { HOSTED, coopFromUrl, coopInvite, coopRows } from '../ui/coop';
-import { commandText } from '../net/start';
 import { netKeyed, netLeave } from '../net/door';
 import { NETPLAY, NET_JOIN } from '../net/address';
 import { keptBeside, keptName, tapeAddress, tapeAsked } from './tapepage';
@@ -88,7 +87,6 @@ import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import type { BriefView } from '../view/read';
-import { Commands } from '../draw/commands';
 import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
 import { heldPage, ownPage, runPage } from './runpage';
@@ -138,7 +136,7 @@ async function main(): Promise<void> {
   const coop = tape || kitPicture ? null : await netAsked(q); if (coop === 'moved') return;
   TITLE.coop = () => COOP.on ? coopRows : null;
   // (a game hosted from here stands on this machine's settings; both players play the kit as issued)
-  HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { commands: commandText(C.take()) }; };
+  HOSTED.setup = () => ({ kept: machineKept(true) });
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
@@ -149,8 +147,8 @@ async function main(): Promise<void> {
   // ---- the game's module
   const faceP = fetchFace(say).then(face => { MODULE.name = face.name ?? '';
     // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
-    const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
-    C.words(location.search); machineBefore(q, name, C); desk().do(C); return face; });
+    setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
+    desk().machine(machineKept(), location.search); return face; });
   faceP.catch(() => { /* told where it is awaited, below */ });
   // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked
   //  for to its first scene's, the pricing run to its first level's. A page of a pricing run under way takes its part here, before the picture boots)
@@ -188,8 +186,8 @@ async function main(): Promise<void> {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
     if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
     if (game.tape) built = await buildName();
-    machineBefore(q, name, game.commands, game);
-    game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
+    game.start({ level, words: location.search, kept: machineKept(), mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
+    machineStood(game);
     machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
   }
   game.tell();   // (the title and Options read what is kept before the first step)
@@ -254,6 +252,7 @@ async function main(): Promise<void> {
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
   const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
+  audio.outdoors = weather.roofs.outdoors;
 
   // ---- the player
   const input = new Input(canvas); if (hud) hud.overlay.cardClosed = () => input.focusGame(); input.saveKey = () => !title && !play && !brief?.up;   // (F5 is the game's while a run is on: a save by hand)

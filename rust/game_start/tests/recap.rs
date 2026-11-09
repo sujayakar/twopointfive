@@ -1,4 +1,4 @@
-//! EVERY DEATH EXPLAINS ITSELF, AND THE GAME KEEPS IT (rust/game_rules/src/deathrecap): who of ours fell, to whom, from where, with what, and the floor's last seconds,
+//! EVERY DEATH EXPLAINS ITSELF, AND THE GAME KEEPS IT (rust/game_rules/src/speech/deathrecap.rs): who of ours fell, to whom, from where, with what, and the floor's last seconds,
 //! read off the game's own record. Each test holds one rule over three seeds beside a control that differs in the one thing the rule is about. Before the tick kept the
 //! recap the page's TypeScript did, on its copy of the game, with a word of its own over a teammate's head: nothing here could have been asked of the game at all.
 use game::deathrecap::{RecapCause, RecapDeath};

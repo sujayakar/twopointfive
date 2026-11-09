@@ -1,4 +1,4 @@
-//! WHAT A SEAT IS TOLD OF ITS MEN'S THROWS (`view.throws`; rust/game_rules/src/view/throws.rs): the page draws this and works out nothing of a throw.
+//! WHAT A SEAT IS TOLD OF ITS MEN'S THROWS (`view.throws`; rust/game_rules/src/tick/view/throws.rs): the page draws this and works out nothing of a throw.
 use game::orders::Who;
 use game::view::{ThrowKind, ThrowLine, Tone as ThrowTone};
 use game_start::play::{dist, nudge, Opts, Play};

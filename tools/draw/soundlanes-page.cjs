@@ -331,7 +331,7 @@ const TOYS = ['rifleSuppressed', 'magOut', 'doorBang', 'doorLatch', 'doorRattle'
   // the bar's keys are still the bar's: M opens its big map and Esc shuts THAT, a stretch being heard goes on under it
   await page.evaluate(() => { window.__sndlanes.relisten(); }); await page.keyboard.press('KeyM'); const m1 = await escAt(); await page.evaluate(() => window.__sndlanes.paint()); await page.keyboard.press('Escape'); const m2 = await escAt();
   line(m1.map && !m2.map && m1.on && m2.on, 'with the bar\'s map up, Esc shuts the map and the stretch plays on', `map ${m1.map} → ${m2.map}, heard ${m2.on}`);
-  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (rust/game_rules/src/input, aria-label
+  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (rust/game_rules/src/tick/input.rs, aria-label
   // 'game input') is no field: focus leaving it must not cost the lanes their Esc. Staged with a textarea of each kind and an Esc let go at once, then put back
   const sink = await page.evaluate(async of => { const L = window.__sndlanes, wait = ms => new Promise(r => setTimeout(r, ms)), was = L.relistening().on;
     if (!document.querySelector('#sndcard')) L.show(of);
@@ -392,7 +392,7 @@ const TOYS = ['rifleSuppressed', 'magOut', 'doorBang', 'doorLatch', 'doorRattle'
 
   // 4. the replay still plays step for step, with the lanes holding every sound the tape lists
   const c = await walk(row.steps + 10);
-  const names = new Set(c.rows.map(r => r.name)), missing = Object.keys(row.sounds).filter(n => !names.has(n) && !(n === 'smokePop' && names.has('smokeHiss')));
+  const names = new Set(c.rows.map(r => r.name)), missing = Object.keys(row.sounds).filter(n => !names.has(n));
   line(c.state.ended && !c.state.drift, 'the replay plays to its end step for step', `step ${c.state.f}, drift ${c.state.drift ?? 'none'}`);
   line(!missing.length, 'every sound of the replay has a lane', missing.length ? `missing ${missing.join(' ')}` : `${names.size} lanes`);
   const reset = await page.evaluate(toy => { const L = window.__sndlanes; L.pick(toy, { take: L.takesOf(toy).game, flag: false, note: '' }); return { trim: L.takesOf(toy).trim, text: L.copyText() }; }, toy);

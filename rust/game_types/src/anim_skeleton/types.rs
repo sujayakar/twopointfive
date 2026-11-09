@@ -1,6 +1,6 @@
 //! The types of `anim_skeleton`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A POSE IS A HANDLE: its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
@@ -27,25 +27,13 @@ impl LayerCast {
 pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
 impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PoseSet {
     pub list: Vec<crate::anim_skeleton::Pose>,
     pub most: f64,
     pub home: Option<crate::Opaque>,
     pub stray: f64,
 }
-impl PoseSet {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PoseSet {
-            list: Vec::new(),
-            most: 0.0,
-            home: None,
-            stray: 0.0,
-        }
-    }
-}
-impl Default for PoseSet { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ClipSide {
@@ -68,23 +56,12 @@ pub struct NodeOverride {
     pub pos: Option<V3>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PoseFK {
     pub rot: Vec<Quat>,
     pub pos: Vec<V3>,
-    pub rig: RigId,
+    #[is(RigId(0))] pub rig: RigId,
 }
-impl PoseFK {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PoseFK {
-            rot: Vec::new(),
-            pos: Vec::new(),
-            rig: RigId(0),
-        }
-    }
-}
-impl Default for PoseFK { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSkeletonModPOSEBENCH {
@@ -116,27 +93,18 @@ pub struct BuildMaskEntriesItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AnimSkeletonMod {
     /// (src/anim/skeleton.ts:21 POSE_BENCH)
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
-    pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
+    #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
     /// (src/anim/skeleton.ts:33 LAYERS)
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
-    pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
+    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     /// (src/anim/skeleton.ts:238 CLIP_SIDE)
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
-}
-impl AnimSkeletonMod {
-    pub fn blank() -> Self {
-        AnimSkeletonMod {
-            pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 },
-            layers: crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() },
-            clip_side: JsMap::new(),
-        }
-    }
 }
 
 /// (src/anim/skeleton.ts:17 BENCH_NODES)
@@ -165,3 +133,5 @@ pub fn ident() -> Quat { [0.0, 0.0, 0.0, 1.0] }
 
 /// (src/anim/skeleton.ts:237 LINES)
 pub const LINES: f64 = 8.0;
+impl Default for SkeletonInstance { fn default() -> Self { Self::blank() } }
+impl Default for LayerCast { fn default() -> Self { Self::blank() } }

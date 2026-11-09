@@ -1,6 +1,6 @@
 //! The types of `gunhold`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -91,22 +91,12 @@ pub struct PickCover {
     pub edge: Option<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum GunHoldPoolKind {
     Shot,
     Round,
     Gone,
     Gun,
-}
-impl GunHoldPoolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunHoldPoolKind::Shot => "shot",
-            GunHoldPoolKind::Round => "round",
-            GunHoldPoolKind::Gone => "gone",
-            GunHoldPoolKind::Gun => "gun",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -133,27 +123,16 @@ pub struct GunHoldFeet {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GunholdMod {
     /// (src/game/gunhold.ts:88 knowns)
     pub knowns: JsMap<u32, crate::gunhold::Known>,
     /// (src/game/gunhold.ts:88 states)
     pub states: JsMap<GuardsStandoffId, crate::gunhold::St>,
     /// (src/game/gunhold.ts:88 statsOf)
-    pub stats_of: Option<crate::gunhold::GunHoldStats>,
+    #[is(Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
     /// (src/game/gunhold.ts:88 planned)
     pub planned: Option<f64>,
-}
-impl GunholdMod {
-    pub fn blank() -> Self {
-        GunholdMod {
-            knowns: JsMap::new(),
-            states: JsMap::new(),
-            // (there from the start, with `free_t` at −1, on every host: asking for it, a HUD's asking included, must not be what makes it)
-            stats_of: Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }),
-            planned: None,
-        }
-    }
 }
 
 /// (src/game/gunhold.ts:111 HEAR_M)

@@ -1,6 +1,6 @@
 //! The types of `opening`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -31,7 +31,7 @@ pub struct FindSpot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct OpeningMod {
     /// (src/game/opening.ts:30 urlRead)
     pub url_read: bool,
@@ -41,16 +41,6 @@ pub struct OpeningMod {
     pub born: JsMap<GuardId, f64>,
     /// (src/game/opening.ts:42 spots)
     pub spots: JsMap<RouteId, crate::opening::OpeningModSpotsValue>,
-}
-impl OpeningMod {
-    pub fn blank() -> Self {
-        OpeningMod {
-            url_read: false,
-            seen: JsSet::new(),
-            born: JsMap::new(),
-            spots: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/opening.ts:40 FRESH_SECS)

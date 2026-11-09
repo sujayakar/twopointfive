@@ -24,17 +24,17 @@
 // blast, a wall coming down) has hidden its trim, and whatever puts the box back has put the trim back, with nothing hidden, filed or restored for the
 // piece itself: a piece's own flags never change.
 // TO EVERY ENGINE THAT SWEEPS THE LEVEL'S THINGS A PIECE IS NOT THERE: not an item of the destruction lane, not a rider or a load in a blast's furniture
-// (rust/game_rules/src/furnblast: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/wallbreak ghosts). An engine that walks the statics as things
+// (rust/game_rules/src/breakage/furnblast.rs: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/breakage/wallbreak ghosts). An engine that walks the statics as things
 // skips `piece`.
 // A whole cylinder standing on its end is not said here: that is a ROUND THING (scene/round.ts), the one way to say it.
 //
 // ONE MODEL: the record is built by scene/cut.ts cutRecord, so a shaped box is a cut box to everybody — the picture draws the solid, every GPU ray and every
 // CPU ray and segment meet it (sight, a round, a lamp's shadow, sound, a throw's arc; the game's own module too, whose copy of the boxes carries each record:
-// rust/game_rules/src/scene_box_mirror).
+// rust/game_rules/src/world/scene_box_mirror.rs).
 // WHAT WALKS MEETS THE PLAIN LEVEL, by construction and not by a rule its author must keep: a shaped box is pushed against as its UNCUT box (cut.ts's own
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
 // bars: src/host/drawpage.ts) read the plain boxes too: shapes are given after them.
-// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/winbars breaks it into lengths) is left plain by shapeLevel, a round thing is
+// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/breakage/winbars.rs breaks it into lengths) is left plain by shapeLevel, a round thing is
 // refused a shape by the lint (scene/round.ts).
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.
@@ -48,7 +48,7 @@
 // switch up each box that says a shape is given its record (Box.shaped) and its pieces are added AFTER every box the level has (Box.piece), so no box changes
 // its number; plainLevel takes the records and the pieces away. A level built by a generator in the page (the office) is shaped the same way as
 // one read from a file: the shape rides on the Box.
-// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/savestate) takes in a number of the shapes that STAND (shapeStamp: their
+// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/tick/savestate) takes in a number of the shapes that STAND (shapeStamp: their
 // geometry to the millimetre, 0 = none), so a checkpoint or a recording made on them is refused by the plain level, and the other way about, and by the level
 // once its shapes have changed — by the one refusal a checkpoint and every tape player already have. With no shape standing the fingerprint is the one the
 // level always had.

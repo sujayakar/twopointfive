@@ -74,7 +74,7 @@ export const RECORDS_START: Vec3 = [13.0, 0, 26.9];
  *  into BOTH (as the office's server ↔ manager door is). The team's marks carry four men: the pair's two first, two more for the four. */
 export const RECORDS_STRUCTURE: StructureData = {
   name: 'records office',
-  wayOut: true,   // (hard only — rust/game_rules/src/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
+  wayOut: true,   // (hard only — rust/game_rules/src/defenders/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
   team: { sam: RECORDS_START, samYaw: Math.PI, ops: [[12.0, 0, 27.0], [14.0, 0, 27.0], [11.0, 0, 27.0], [15.0, 0, 27.0]], opsYaw: Math.PI },
   // the second way in (ROOMCLEAR.way): the dark west side, on the records room's own outside door instead of the front office's
   starts: [{ sam: [6.4, 0, 8.6], samYaw: Math.PI / 2, ops: [[5.2, 0, 7.6], [5.2, 0, 9.6], [4.0, 0, 7.6], [4.0, 0, 9.6]], opsYaw: Math.PI / 2 }],
@@ -116,7 +116,7 @@ export const RECORDS_STRUCTURE: StructureData = {
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
  *  between that camera and the men. (tools/qa/kitview-plan.ts holds each id to what stands in the camera's way: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
-/** THE RECORDS OFFICE'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
+/** THE RECORDS OFFICE'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/pursuit/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
  *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
  *  a screen, and a telephone. Gunfire the desk hears, and a few seconds to dial, is a patrol car on its way; the desk taken first and quietly, from the dark
  *  lot, and nobody calls. Two men, never more: this is the pair's level. */
@@ -137,9 +137,9 @@ export const RESPONSE: ResponseData = {
 export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE, response: RESPONSE,
   // the floor nobody holds, by name (lib/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
   places: { areas: [{ name: RECORDS_ROOMS.hall.name, bounds: { ...RECORDS_ROOMS.hall.bounds } }] },
-  // the start page's picture of the team at the way-in door (lib/scenarios.ts KitViewData, rust/game_rules/src/kitstage; picture only), per way in as the starts are:
+  // the start page's picture of the team at the way-in door (lib/scenarios.ts KitViewData, rust/game_rules/src/outfit/kitstage; picture only), per way in as the starts are:
   // the south lot's front door with the worked-out camera and lamp and its slots written down; the dark west side's the same way (no pin: one worked-out camera rule for both)
-  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/kitstage KIT_VIEW_STAGE)
+  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/outfit/kitstage KIT_VIEW_STAGE)
   // (what the plan — rust/game_start/src/kit_plan.rs — would otherwise MEASURE and get a different picture from, written down as this level's own: the stack was laid out
   //  0.9 m apart (`slotGap`: spread to the picture's spacing), the yard's lived things stay in the front picture (`show`), and the front fill stands at its full 6.5 m
   //  though the lot's far kerb is nearer than that)

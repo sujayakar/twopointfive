@@ -12,7 +12,7 @@
 // the pill's place is that row's; the wedge's own fifth is still its too. Nothing else is added: a cursor out any other way lights nothing, so a
 // row is still chosen, never fallen into.
 //
-// THE GAME READS A PLACE, NOT THE WORDS (rust/game_rules/src/ringlone `pill_box`): the place a pill may lie in is as long as the longest pill (`max` letters), whatever this
+// THE GAME READS A PLACE, NOT THE WORDS (rust/game_rules/src/squad_orders/ringlone.rs `pill_box`): the place a pill may lie in is as long as the longest pill (`max` letters), whatever this
 // row says, so which row a recorded cursor lit never turns on how a label is worded (a recording keeps the cursor's px, and labels are reworded).
 // The pill drawn is as long as its own words and always inside that place: its width is counted from the words, never measured, and the page sets
 // its words to that width (a line longer than `max` is drawn tighter, never longer — the next paragraph has what a long label does first).

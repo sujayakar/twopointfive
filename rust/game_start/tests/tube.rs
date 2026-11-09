@@ -1,4 +1,4 @@
-//! WHAT A GOGGLED MAN IS SHOWN (rust/game_rules/src/nvg, irlight): by the place's own light through the tube, or by the team's infrared floods where that shows too little.
+//! WHAT A GOGGLED MAN IS SHOWN (rust/game_rules/src/teammates/nvg.rs, irlight): by the place's own light through the tube, or by the team's infrared floods where that shows too little.
 use game_start::play::{Opts, Play};
 
 /// THE RULE: however much light a dark place has, a man in it is plain to a goggled teammate who looks at him: the tube shows him by the place's light, or the flood is on.

@@ -1,11 +1,10 @@
-// THE DESK, as a page has it (rust/game_run/src/desk.rs): what the cards before a game show and press. The page holds no rule of a card and no card: it keeps
+// THE DESK, as a page has it (rust/game_start/src/host/desk.rs): what the cards before a game show and press. The page holds no rule of a card and no card: it keeps
 // the text a press says is kept, and asks again.
 import { Asks } from '../draw/asks';
-import type { Commands } from '../draw/commands';
 import type { Pressed } from './read';
 
 /** the module's calls the desk is asked by */
-export interface DeskFace { face_alloc(n: number): number; face_free(p: number, n: number): void; face_out_ptr(): number; face_out_len(): number; face_desk_do(p: number, n: number): number; face_desk_ask(p: number, n: number): number }
+export interface DeskFace { face_alloc(n: number): number; face_free(p: number, n: number): void; face_out_ptr(): number; face_out_len(): number; face_desk_machine(p: number, n: number): number; face_desk_ask(p: number, n: number): number }
 export const KIT_KEPT = 'twopointsix.kit';
 
 export class Desk extends Asks {
@@ -19,8 +18,8 @@ export class Desk extends Asks {
   }
   private out(): Uint8Array { return new Uint8Array(this.memory.buffer, this.X.face_out_ptr() >>> 0, this.X.face_out_len() >>> 0).slice(); }
   private words(): string { return new TextDecoder().decode(this.out()); }
-  /** what this machine keeps and what the address says, done as a start is done it */
-  do(c: Commands): void { if (c.length && !this.handed(c.take(), this.X.face_desk_do)) throw new Error(`the desk: ${this.words()}`); }
+  /** what this machine keeps and what the address says, laid as a start lays them */
+  machine(kept: string, address: string): void { this.text(kept); this.text(address); if (!this.handed(this.take(), this.X.face_desk_machine)) throw new Error(`the desk: ${this.words()}`); }
   protected override told(p: Pressed): Pressed { if (p.ok) for (const k of p.kept) this.keeps(k.key, k.text); return p; }
 }
 

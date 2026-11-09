@@ -30,13 +30,13 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `src/tape/module.ts` | which module this page plays, and `otherModule` |
 | `src/ui/replays.ts`, `src/cloud/tapes.ts` | the list on the title; a hosted build sends what the store holds to its backend |
 | `src/host/fixedstep.ts` | whole ticks a frame: `planTicks` |
-| `rust/sim/src/dice.rs`, `rust/game_rules/src/dice.rs` | the game's die, and its keyed draws |
+| `rust/sim/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the game's die, and its keyed draws |
 | `rust/sim/src/maths.rs`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
 | `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
 | `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value and its block; `restart` |
-| `rust/game_rules/src/standing.rs` | the men as a stand stands them, and again on a restart |
-| `rust/game_rules/src/state_words.rs` | the hash of the whole game, a word a part |
+| `rust/game_rules/src/tick/standing.rs` | the men as a stand stands them, and again on a restart |
+| `rust/game_rules/src/tick/state_words.rs` | the hash of the whole game, a word a part |
 
 The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`.
 
@@ -55,7 +55,7 @@ function of the seed, the site's name, the man it is about, the tick and the cou
 again. Each still steps the die, and its count (`face_die_n`) witnesses how many draws a run made.
 
 **The tape** is the bytes of what the module was handed, in order. `TapeStart` holds the level file itself, the address's words, the seed, the seats,
-the commands given before the start, and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
+what the machine kept (`Kept`'s text), and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
 (commands), hands (a hands-off player's plan), a mark, figures, a try, an end. A step writes only the numbers that moved, four bytes where four hold
 them. Nothing of the picture is on it.
 
@@ -118,7 +118,7 @@ hand numbers, or another character file (`other` in `handtape.ts`).
 
 ## To change it
 
-- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_run/src/command.rs`), which is on the tape by
+- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_start/src/host/command.rs`), which is on the tape by
   itself. A call that changes the game any other way makes every walk part.
 - **State:** a field reachable from `Game`, so that a clone and `state_words` have it, or a column of the block. A field left out of the hash says so
   with `#[bytes(skip)]`. A new `static mut` in `rust/sim` or `rust/prim` needs its row in `rust-rules-check.ts`.

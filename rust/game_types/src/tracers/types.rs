@@ -1,29 +1,16 @@
 //! The types of `tracers`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Tracers {
     pub pool: Vec<crate::tracers::Tracer>,
     pub live: f64,
     pub lit: f64,
     pub spawned: f64,
-    pub params: crate::tracers::TracersParams,
+    #[is(crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 })] pub params: crate::tracers::TracersParams,
 }
-impl Tracers {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Tracers {
-            pool: Vec::new(),
-            live: 0.0,
-            lit: 0.0,
-            spawned: 0.0,
-            params: crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 },
-        }
-    }
-}
-impl Default for Tracers { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Tracer {

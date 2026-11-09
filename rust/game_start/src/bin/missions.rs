@@ -1,4 +1,4 @@
-//! MISSIONS: what a change of play does to the room clears, read the same way before and after. Natively, with no page and no TypeScript (README.md, "Missions").
+//! MISSIONS: what a change of play does to the room clears and to the missions whose defenders are in no squad, read the same way before and after. Natively, with no page and no TypeScript (README.md, "Missions").
 //!
 //!   missions [--seeds 1-8] [--secs 75] [--std | --hard] [LEVEL…]      play, and print a row a mission and difficulty, tab between columns (keep it in a file)
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums
@@ -10,9 +10,9 @@
 //! WHAT A ROW SAYS, summed over the seeds: the squad's men up at the end of those staged · enemies left of those staged · floors cleared · when the first of the squad
 //! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · how long open ways onto floor nobody has been on were within 4 m of
 //! a man of the squad, and how much of that a gun of theirs was on them (a second a way) · the enemy man-seconds each
-//! rule of the list had a man. Eight seeds of the room clears of the mission list at both difficulties (thirteen: 208 runs) are three minutes on four cores.
+//! rule of the list had a man. Eight seeds of the seventeen at both difficulties (272 runs) are four minutes on four cores.
 //!
-//! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
+//! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of the hostage in a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
 use game::game::GuardState;
 use game::ids::GuardId;
@@ -20,6 +20,13 @@ use game::orders::Who;
 use game::teams::Team;
 use game_start::play::{dist, room_clear_files, Opts, Play};
 use std::collections::BTreeMap;
+
+/// every room clear of the mission list by its level, and by their ids the missions whose defenders are in no squad
+fn every_mission() -> Vec<String> {
+    use game::scene_scenarios::ScenarioEntryKind::{Nightbreach, Rescue};
+    let clears = room_clear_files().into_iter().map(|f| f.trim_end_matches(".json").to_string());
+    clears.chain(game::scene_scenario_list::scenarios().into_iter().filter(|e| matches!(e.kind, Nightbreach | Rescue)).map(|e| e.id)).collect()
+}
 
 /// an order every so many frames, the first half a second in
 const ORDER_EVERY: usize = 300;
@@ -49,8 +56,11 @@ fn order(p: &mut Play, clear: bool) -> bool {
 }
 
 fn play(level: &str, hard: bool, seed: u32, secs: f64) -> Run {
-    let link = format!("?levelFile={level}.json&roomclear&squad4{}", if hard { "&hard" } else { "" });
-    let mut p = Play::mission(&file_of(level), &link, &Opts { seed, ..Default::default() });
+    let (file, link) = match game::scene_scenario_list::all_missions().iter().find(|e| e.id == level) {
+        Some(e) => (e.level.clone().unwrap_or_else(|| file_of("office")), game::scene_scenario_list::pick_search(e, "")),
+        None => (file_of(level), format!("?levelFile={level}.json&roomclear&squad4")),
+    };
+    let mut p = Play::mission(&file, &format!("{link}{}", if hard { "&hard" } else { "" }), &Opts { seed, ..Default::default() });
     p.sam_unhurt();
     let mut r = Run { squad: p.mates().len(), enemies: enemies(&p).len(), ..Default::default() };
     let mut was: BTreeMap<u32, (bool, f64)> = BTreeMap::new();
@@ -150,7 +160,7 @@ fn main() {
         }
         i += 1;
     }
-    let every: Vec<String> = room_clear_files().iter().map(|f| f.trim_end_matches(".json").to_string()).collect();
+    let every = every_mission();
     if levels.is_empty() { levels = every.clone(); }
     for l in &levels { if !every.contains(l) { fail(&format!("no mission '{l}' ({})", every.join(" "))); } }
     if one {

@@ -1,26 +1,15 @@
 //! The types of `gunroles`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum GunRole {
     Pistol,
     Rifle,
     Room,
     Reach,
     Belt,
-}
-impl GunRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunRole::Pistol => "pistol",
-            GunRole::Rifle => "rifle",
-            GunRole::Room => "room",
-            GunRole::Reach => "reach",
-            GunRole::Belt => "belt",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

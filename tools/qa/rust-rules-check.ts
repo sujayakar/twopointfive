@@ -14,7 +14,7 @@ let red = 0; const line = (bad: string[], what: string, good: string): void => {
 /** WHICH SIDE OF THE LINE EACH CRATE UNDER rust/ IS ON. 'gameplay': it decides the game, runs on the server, and is bound to one arithmetic. 'dressing': it only makes the picture, and may round as the machine
  *  likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row here is red: nothing joins without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module a host loads)
+const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_start: the game's own start, a level file's text in and a Game out, and what a host does round a step · game_face: the module a host loads)
 /** what a line of rust/sim may not say */
 const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
@@ -25,7 +25,7 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
 /** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS (rust/sim/src/state.rs): STATE = the games' blocks, the one place a game keeps anything from one
- *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/sim_state) · SCRATCH = written and read inside one call · COPY = the host's own
+ *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/tick/sim_state.rs) · SCRATCH = written and read inside one call · COPY = the host's own
  *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
@@ -54,7 +54,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/pattern.rs CACHE': 'SCRATCH · a pane\'s pieces, derived from its row and held against the numbers they were made from: compared on every ask, so no write has to say, and no state', 'sim/src/pattern.rs CLOCK': 'SCRATCH · which of those were asked for last',
   'sim/src/pattern.rs NBS': 'SCRATCH · one support pass\'s neighbours across the cracks', 'sim/src/pattern.rs NB_HEAD': 'SCRATCH · where each piece\'s list of them starts', 'sim/src/pattern.rs NB_TAIL': 'SCRATCH · and ends',
   'sim/src/pattern.rs ORDER': 'SCRATCH · the order a toughened pane\'s clumps let go in, derived from its dice and held against the numbers they were made from',
-  'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them', 'sim/src/lib.rs PEN_HEAD': 'SCRATCH · what a round\'s flight came to, read back after the call',
+  'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them',
   'sim/src/light.rs SUM': 'SCRATCH · the six faces of one question about the light while its lamps come in parts: begun by the first part, summed on by each later one, read by the host after the last, before any other question about the light is begun',
   'sim/src/light.rs AT': 'SCRATCH · how many of the level\'s rows one question about the light has read so far, while its own lamps come in parts: begun by the first part, gone on from by each later one, like SUM',
   'sim/src/lights.rs IDS': 'SCRATCH · the fixtures of one wall switch\'s circuit, written by the host before it asks',
@@ -79,7 +79,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
+  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
  *  LIST in rust/Cargo.lock — every build here is `--locked`, so the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a

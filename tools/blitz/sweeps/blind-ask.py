@@ -41,7 +41,7 @@ def main():
     n = files = 0; left = []
     for path in sorted(glob.glob(os.path.join(ROOT, '**', '*.rs'), recursive=True)):
         rel = os.path.relpath(path, ROOT)
-        if rel.endswith('types.rs') or rel == os.path.join('control', 'man.rs'): continue
+        if rel.endswith('types.rs') or rel == os.path.join('people', 'control', 'man.rs'): continue
         t = open(path, encoding='utf-8').read()
         u, k = LT.subn(turn, t)
         for i, line in enumerate(u.split('\n')):

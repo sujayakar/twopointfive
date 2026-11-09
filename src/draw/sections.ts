@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2503851926;
+export const LAYOUT = 1812122302;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, lasting = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -91,7 +91,7 @@ export const enum View {
   cuts = 19,
   /** f32 × 3 */
   cut = 20,
-  /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
+  /** u32: the kit picture holds the view here: where it looks, and from how far and which way (0: nobody does) */
   pinned = 23,
   /** f32 × 3 */
   pin = 24,
@@ -113,7 +113,7 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
-  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  /** u32: the back key is the game's now: it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) */
   backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
   saves = 39,
@@ -621,24 +621,20 @@ export const enum Sound {
   name = 2,
   /** u32: it has a place; 0 = it is in the ears */
   placed = 3,
-  /** u32: the roll it follows, one more than the roll's voice (0: none) */
-  follows = 4,
   /** f32 × 3 */
-  pos = 5,
+  pos = 4,
   /** f32: NaN: not said */
-  gain = 8,
+  gain = 7,
   /** f32 */
-  rate = 9,
+  rate = 8,
   /** f32 */
-  duration = 10,
+  lowpass = 9,
   /** f32 */
-  lowpass = 11,
+  pan = 10,
   /** f32 */
-  pan = 12,
-  /** f32 */
-  wet = 13,
+  wet = 11,
   /** words a row */
-  row = 14,
+  row = 12,
 }
 
 /** a footfall */
@@ -649,7 +645,7 @@ export const enum Footfall {
   serial = 1,
   /** u32 */
   own = 2,
-  /** u32: what it landed on, one more than its number in FLOORS (0: not said) */
+  /** u32: what it landed on, by its number in FLOORS */
   floor = 3,
   /** f32 × 3 */
   pos = 4,
@@ -659,16 +655,26 @@ export const enum Footfall {
   row = 8,
 }
 
-/** a thing that rolls, and how hard */
-export const enum Roll {
+/** a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room */
+export const enum Lasting {
+  /** u32: the sound's name's number (`face_draw_name`), and which of that name it is */
+  name = 0,
   /** u32 */
-  voice = 0,
-  /** f32 × 2 */
-  at = 1,
+  id = 1,
+  /** f32 × 3 */
+  at = 2,
   /** f32 */
-  hard = 3,
+  gain = 5,
+  /** f32: how hard it goes, 0 to 1: its level and pitch ride it (a fire at full heat two thirds) */
+  hard = 6,
+  /** f32: how long it has gone on, and how much longer it will (NaN: nobody knows) */
+  age = 7,
+  /** f32 */
+  left = 8,
+  /** f32: how far off there is nothing of it (0: as far as it carries) */
+  reach = 9,
   /** words a row */
-  row = 4,
+  row = 10,
 }
 
 /** what is heard all the while: one row */
@@ -985,8 +991,10 @@ export const enum SmokeBrick {
   rho = 0,
   /** u32 × 32: a byte a cell: 1 = open toward +x · 2 = up · 4 = toward +z · 8 = asked */
   open = 128,
+  /** u32: what is missing from its color: a byte of nothing, then 1 − tint as r, g, b (smoke.wgsl WHAT IS IN A CELL) */
+  dye = 160,
   /** words a row */
-  row = 160,
+  row = 161,
 }
 
 /** what a box may say it is made of, by its number in Rust */

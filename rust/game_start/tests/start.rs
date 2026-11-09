@@ -53,7 +53,7 @@ fn a_mission_starts_from_its_link_as_the_page_starts_it() {
 
 /// Three of the game's levels that between them hold every kind of record beyond a plain floor: they stand, and what the file says is on the floor.
 /// A FAILURE MEANS: the start stopped making something a level file says (a round thing, a box's shape and its trim, a
-/// civilian, a camera, a laser, a keypad, the vents, the daylight), or stopped standing such a level at all. (That what it makes stays what it made is the gate's `start` rows' to hold:
+/// civilian, a camera, a laser, a keypad, the vents), or stopped standing such a level at all. (That what it makes stays what it made is the gate's `start` rows' to hold:
 /// this only holds that it is made.)
 #[test]
 fn what_a_level_file_says_is_on_the_floor() {
@@ -70,9 +70,9 @@ fn what_a_level_file_says_is_on_the_floor() {
     let f = p.floor();
     assert!(f.round > 0 && f.boxes == 435, "the long hall's round things (and no box added or lost for them): {:?}", f);
     drop(p);
-    // the office: two civilians, three cameras, two lasers and a keypad, six vents, a daylight
+    // the office: two civilians, three cameras, two lasers and a keypad, six vents
     let mut p = Play::level("office.json", false, &plain);
-    assert_eq!(p.floor(), Floor { boxes: p.floor().boxes, round: p.floor().round, shaped: 22, trim: 28, civilians: 2, cameras: 3, lasers: 2, keypads: 1, vents: 6, daylight: true });
+    assert_eq!(p.floor(), Floor { boxes: p.floor().boxes, round: p.floor().round, shaped: 22, trim: 28, civilians: 2, cameras: 3, lasers: 2, keypads: 1, vents: 6 });
     p.run(1.0);
 }
 

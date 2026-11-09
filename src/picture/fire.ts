@@ -1,6 +1,6 @@
 // AN OPEN FIRE, AS THE PICTURE HAS IT. The lamp, its flicker, the coals and the embers are the rules' and reach the page as lights, boxes and events; each fire's flame is a record
 // the composite draws (the `fires` section, closed forms of the game's clock). What is the picture's alone is here: which fires are near enough to draw, and how far each one's
-// painted soot has handed over to its plume. The plume over a fire is the tick's to say (rust/game_rules/src/fire): smoke.ts takes it or sheds it. `soot` eases by this book, which a
+// painted soot has handed over to its plume. The plume over a fire is the tick's to say (rust/game_rules/src/air/fire.rs): smoke.ts takes it or sheds it. `soot` eases by this book, which a
 // load or a restart starts over.
 import { lookConfig } from '../render/frame';
 import type { FireRecord } from '../render/passes';

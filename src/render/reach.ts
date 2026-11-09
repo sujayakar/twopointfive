@@ -45,7 +45,7 @@ const SUBS: [number, number][] = [[8, 8], [1, 1], [14, 1], [1, 14], [14, 14]];  
 /** All-threes row: the mask of a light that may reach anywhere, at full weight (dynamic lights, the moon). */
 export const REACH_ALL = (() => { const a = new Uint32Array(REACH_ROW_WORDS); a.fill(0xffffffff); return a; })();
 
-/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/doors has it). */
+/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/fittings/doors has it). */
 export interface ReachDoor { hinge: [number, number]; closedDir: number; width: number }
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
@@ -53,7 +53,7 @@ export interface ReachDoor { hinge: [number, number]; closedDir: number; width: 
 export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/doors / level.ts convention)
+    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/fittings/doors / level.ts convention)
     for (let s = 0.03; s < d.width; s += FINE / 2) for (let across = -0.16; across <= 0.16; across += FINE / 2) {   // ± the wall's thickness across the gap
       const x = Math.floor((d.hinge[0] + ux * s - uz * across - WORLD.min[0]) / FINE), z = Math.floor((d.hinge[1] + uz * s + ux * across - WORLD.min[2]) / FINE);
       if (x >= 0 && z >= 0 && x < FW && z < FH) solid[z * FW + x] = 2;

@@ -26,6 +26,23 @@ const PAGE = require('../qa/page.cjs').page({ name: 'rows-page', detail: 'json' 
   check(A.n >= 20 && A.kinds.length === 5, 'the module lists the actions, of every kind', { n: A.n, kinds: A.kinds, sections: A.sections });
   check(A.nerve1 === 'brittle' && A.nerve0 !== 'brittle', 'a pick goes as a command and its row reads it back', { was: A.nerve0, now: A.nerve1 });
   check(A.smoke && A.teleport && A.lightsOff && A.strike && A.soak && A.lightsOn, 'the panel has the buttons, and they press', A);
+  // WHAT THIS MACHINE KEEPS, ON A RESTART AND A LOAD (host/machine.ts): a row and a pick in the stores, a new page, and they stand on its game, go over a restart and a load, and are what a play record says.
+  // CONTROL: the same row with the address's own word for its number: the word stands over a restart too, and the record does not say the kept number.
+  const ROW = 'wet.prints', KEPT = 17, stand = async words => {
+    await page.evaluate(([row, v]) => { localStorage.setItem('twopointsix.rows', JSON.stringify({ [row]: v })); sessionStorage.setItem('twopointsix.picks', JSON.stringify({ nerve: 'brittle' })); }, [ROW, KEPT]);
+    await go(`paused&quality=verylow&mute&seed=5&levelFile=compound.json&roomclear${words}`, { timeout: 300000 }); await ready(); };
+  const seen = () => page.evaluate(row => { const G = window.__draw.game; return { row: G.shownNow()[G.shown().findIndex(x => x.name === row)], nerve: G.actions().find(a => a.name === 'nerve').now, said: G.turnedNow, time: G.time }; }, ROW);
+  const go2 = (how, n = 30) => page.evaluate(([how, n]) => { const d = window.__draw, C = d.game.commands; if (how === 'restart') C.restart(''); else if (how === 'save') C.save(); else if (how === 'load') C.load('manual.0'); d.game.tell(); d.run(n, [], 'last'); }, [how, n]);
+  await stand('');
+  const kept0 = await seen(); await go2('restart'); const kept1 = await seen(); await go2('save', 60); await go2('load'); const kept2 = await seen(), saved = await page.evaluate(() => window.__draw.game.saves().rows.length);
+  check(kept0.row === KEPT && kept0.nerve === 'brittle', 'a kept row and a kept pick stand on the game a new page stands', kept0);
+  check(kept0.said[ROW] === KEPT / 1 && kept0.said.nerve === 'brittle', 'a play record says what is kept', kept0.said);
+  check(kept1.row === KEPT && kept1.nerve === 'brittle', 'they go over a restart', kept1);
+  check(saved > 0 && kept2.row === KEPT && kept2.nerve === 'brittle', 'they go over a load', { saved, ...kept2 });
+  await stand(`&knob.${ROW}=3`);
+  const word0 = await seen(); await go2('restart'); const word1 = await seen();
+  check(word0.row === 3 && word1.row === 3 && !(ROW in word0.said) && !(ROW in word1.said), 'the address\'s word is over the kept row, over a restart too, and no record says the kept number', { word0, word1 });
+  await page.evaluate(() => { localStorage.removeItem('twopointsix.rows'); sessionStorage.removeItem('twopointsix.picks'); });
   check(errors.length === 0, 'nothing threw and no GPU error was said', errors.slice(0, 4));
   await PAGE.end(PAGE.fails ? `=== rows-page: ${PAGE.fails} FAILED ===` : '=== rows-page: all pass ===');
 })().catch(e => { console.error(e); process.exit(2); });

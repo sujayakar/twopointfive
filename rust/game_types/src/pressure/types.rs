@@ -1,6 +1,6 @@
 //! The types of `pressure`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -30,18 +30,10 @@ pub struct Man {
     pub ear_t: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ManRole {
     #[default] Press,
     Flank,
-}
-impl ManRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManRole::Press => "press",
-            ManRole::Flank => "flank",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -278,20 +270,12 @@ pub struct Aim {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PressureMod {
     /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,
     /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
-}
-impl PressureMod {
-    pub fn blank() -> Self {
-        PressureMod {
-            states: None,
-            kitted: JsSet::new(),
-        }
-    }
 }
 
 /// (src/game/pressure.ts:306 ROOM_CELLS)

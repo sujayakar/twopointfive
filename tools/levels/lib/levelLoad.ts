@@ -8,8 +8,8 @@
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
 import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
-import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, flagsToBits, bitsToFlags } from './levelData';
+import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
 
@@ -112,26 +112,26 @@ export function loadLevel(data: LevelData): Level {
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
     boxes, props, lights, switchables,
-    ...(data.daylight ? { daylight: { sun: lightOf(data.daylight.sun), sky: { zenith: V(data.daylight.sky.zenith), horizon: V(data.daylight.sky.horizon) }, groupsOn: [...data.daylight.groupsOn], groupsOff: [...data.daylight.groupsOff], lightsOff: [...data.daylight.lightsOff], haze: data.daylight.haze, exposure: data.daylight.exposure } satisfies DaylightDef } : {}),
     ...(data.plans.breach ? { breach: planOf(data.plans.breach) as BreachPlan } : {}),
     doors,
     devices,
     ...(vents ? { vents } : {}),
+    ...(data.hums ? { hums: data.hums.map((h): HumDef => ({ name: h.id, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     breaker: { pos: V(data.breaker.pos), boxes: [bx(data.breaker.panel), bx(data.breaker.led)], ...(data.breaker.fumble !== undefined ? { fumble: data.breaker.fumble } : {}) },
     beacons: data.beacons.map(b => ({ pos: V(b.pos), box: bx(b.box) })),
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
-    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/director onEnter) — written iff authored, so a level with none loads key for key as before
-    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/director) — written iff the file names any, so a level with none loads key for key as before
+    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/missions/director onEnter) — written iff authored, so a level with none loads key for key as before
+    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/missions/director) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
     mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
     ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
   };
-  // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
-  // (a file with none: rust/game_rules/src/floor's own office map).
+  // data.surfaces → Level.surfaces, what rust/game_rules/src/world/floor.rs reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
+  // (a file with none: rust/game_rules/src/world/floor.rs's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   return level;
 }
@@ -213,7 +213,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (used.has(id)) { let k = 2; while (used.has(`${id}_${k}`)) k++; id = `${id}_${k}`; }
     used.add(id); ids[i] = id;
   }
-  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
+  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/tick/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
   const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {
@@ -270,6 +270,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     volumes: level.volumes ? level.volumes.map((v): LevelData['volumes'][number] => ({ id: v.name, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) : clone(opts.volumes ?? []), devices: (level.devices ?? []).map(deviceData),   // (a Level that carried volumes writes them back; one without keeps the pass-through)
     ...(level.marks?.length ? { marks: level.marks.map((m): MarkData => ({ id: m.name, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),
     ...(level.vents ? { vents: level.vents.map((d): VentData => { const v: VentData = { id: d.name, pos: V(d.pos), dir: V(d.dir), speed: d.speed, spread: d.spread, reach: d.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (d[k] !== undefined) (v as any)[k] = d[k]; return v; }) } : {}),
+    ...(level.hums ? { hums: level.hums.map((h): HumData => ({ id: h.name, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     connectors: [],
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
       { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
@@ -279,7 +280,6 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
-    ...(level.daylight ? { daylight: { sun: lightData(level.daylight.sun), sky: { zenith: V(level.daylight.sky.zenith), horizon: V(level.daylight.sky.horizon) }, groupsOn: [...level.daylight.groupsOn], groupsOff: [...level.daylight.groupsOff], lightsOff: [...level.daylight.lightsOff], haze: level.daylight.haze, exposure: level.daylight.exposure } } : {}),
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
     ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: lib/scenarios.ts)
   };

@@ -1,6 +1,6 @@
 //! The types of `character`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// THE NAMES OF A BODY'S JOINTS, in the order a real game's `bones` has them (read off a running game: `for k in b` walks this order)
@@ -76,22 +76,12 @@ pub enum Untwist {
     Back { i_e1: Quat, i_e2: Quat, i_e3: Quat, p1: V3, p2t: V3, p3t: V3 },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum KitItem {
     Pistol,
     Rifle,
     Can,
     Knife,
-}
-impl KitItem {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitItem::Pistol => "pistol",
-            KitItem::Rifle => "rifle",
-            KitItem::Can => "can",
-            KitItem::Knife => "knife",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -128,7 +118,7 @@ pub enum UpperMode {
     Relaxed,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Stance {
     #[default] None,
     Wall,
@@ -136,37 +126,16 @@ pub enum Stance {
     HighReady,
     LowReady,
 }
-impl Stance {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Stance::None => "none",
-            Stance::Wall => "wall",
-            Stance::Stack => "stack",
-            Stance::HighReady => "highReady",
-            Stance::LowReady => "lowReady",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum LongStance {
     PatrolLong,
     LowLong,
     Shoulder,
     PortLong,
 }
-impl LongStance {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongStance::PatrolLong => "patrolLong",
-            LongStance::LowLong => "lowLong",
-            LongStance::Shoulder => "shoulder",
-            LongStance::PortLong => "portLong",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum SignalKind {
     Hold,
     Go,
@@ -174,30 +143,11 @@ pub enum SignalKind {
     Aside,
     Squeeze,
 }
-impl SignalKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SignalKind::Hold => "hold",
-            SignalKind::Go => "go",
-            SignalKind::Rally => "rally",
-            SignalKind::Aside => "aside",
-            SignalKind::Squeeze => "squeeze",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum TellKind {
     Watch,
     Neck,
-}
-impl TellKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TellKind::Watch => "watch",
-            TellKind::Neck => "neck",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -206,24 +156,13 @@ pub enum StrikeKind {
     Jab,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BlowStyle {
     #[default] Mouth,
     Sweep,
     Slash,
     Chop,
     Palm,
-}
-impl BlowStyle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BlowStyle::Mouth => "mouth",
-            BlowStyle::Sweep => "sweep",
-            BlowStyle::Slash => "slash",
-            BlowStyle::Chop => "chop",
-            BlowStyle::Palm => "palm",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -235,58 +174,28 @@ pub enum FallStyle {
     Slump,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TakenStyle {
     #[default] Arch,
     Hunch,
     Snap,
 }
-impl TakenStyle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TakenStyle::Arch => "arch",
-            TakenStyle::Hunch => "hunch",
-            TakenStyle::Snap => "snap",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ReadyKind {
     #[default] Grab,
     Seat,
     Strike,
     GrabGun,
 }
-impl ReadyKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ReadyKind::Grab => "grab",
-            ReadyKind::Seat => "seat",
-            ReadyKind::Strike => "strike",
-            ReadyKind::GrabGun => "grabGun",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum HoldPhase {
     #[default] Held,
     Grab,
     Choke,
     Whip,
     Kill,
-}
-impl HoldPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HoldPhase::Held => "held",
-            HoldPhase::Grab => "grab",
-            HoldPhase::Choke => "choke",
-            HoldPhase::Whip => "whip",
-            HoldPhase::Kill => "kill",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -343,26 +252,15 @@ pub struct DoorPush {
     pub n: V3,
     pub w: f64,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub reach: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WorkKind {
     #[default] Keys,
     Charge,
     Take,
     Lever,
-}
-impl WorkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WorkKind::Keys => "keys",
-            WorkKind::Charge => "charge",
-            WorkKind::Take => "take",
-            WorkKind::Lever => "lever",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -402,21 +300,11 @@ pub struct AnimParams {
     pub sprint_speed: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct Spring {
     pub v: f64,
     pub x: f64,
 }
-impl Spring {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Spring {
-            v: 0.0,
-            x: 0.0,
-        }
-    }
-}
-impl Default for Spring { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StanceShape {
@@ -534,7 +422,7 @@ pub struct BlowOpts {
     pub tail: Option<bool>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Anim {
     pub pose: crate::anim_skeleton::Pose,
     pub p_a: crate::anim_skeleton::Pose,
@@ -544,40 +432,40 @@ pub struct Anim {
     pub rest: crate::anim_skeleton::Pose,
     pub p_aim: crate::anim_skeleton::Pose,
     pub twists: Vec<crate::anim_skeleton::TwistSpec>,
-    pub params: crate::character::AnimParams,
+    #[is(crate::character::AnimParams { walk_speed: 1.06, jog_speed: 3.3, crouch_speed: 0.72, sprint_speed: 4.7 })] pub params: crate::character::AnimParams,
     pub speed: f64,
     pub reverse: bool,
     pub crouch_target: f64,
-    pub upper: crate::character::UpperMode,
+    #[is(crate::character::UpperMode::None)] pub upper: crate::character::UpperMode,
     pub aim_yaw_offset: f64,
     pub aim_pitch: f64,
     pub look_yaw_extra: f64,
     pub turn_lead: f64,
-    pub stance: crate::character::Stance,
-    pub stack_side: f64,
+    #[is(crate::character::Stance::None)] pub stance: crate::character::Stance,
+    #[is(1.0)] pub stack_side: f64,
     pub wall_yaw: f64,
     pub wall_peek: f64,
     pub lean: f64,
     pub lean_sm: f64,
-    pub wall_take: f64,
+    #[is(-1.0)] pub wall_take: f64,
     pub wall_hit: f64,
     pub stance_out: f64,
     pub stack_press: f64,
     pub stance_in: f64,
     pub stack_press_sm: f64,
-    pub wall_gait: f64,
+    #[is(0.55)] pub wall_gait: f64,
     pub wtk_hold: bool,
     pub wall_take_feet: Option<crate::character::AnimWallTakeFeet>,
     pub wtk: Option<crate::character::AnimWtk>,
     pub lockpick: bool,
-    pub lockpick_at: V3,
+    #[is([0.02, 0.96, 0.45])] pub lockpick_at: V3,
     pub deliberate: f64,
     pub watch_at: Option<V3>,
     pub watch_k: f64,
     pub slip_at: Option<V3>,
     pub slip_k: f64,
-    pub slip_lean: f64,
-    pub watch_shown: crate::character::AnimWatchShown,
+    #[is(1.0)] pub slip_lean: f64,
+    #[is(crate::character::AnimWatchShown { w: 0.0, yaw: 0.0, slip: 0.0, lean: 1.0 })] pub watch_shown: crate::character::AnimWatchShown,
     pub dash: f64,
     pub hold_pose: Option<crate::character::HoldPose>,
     pub held_pose: Option<crate::character::HeldPose>,
@@ -590,7 +478,7 @@ pub struct Anim {
     pub long_stance: Option<crate::character::LongStance>,
     pub gun_wall: f64,
     pub run_ready: bool,
-    pub long_grip: crate::character::AnimLongGrip,
+    #[is(crate::character::AnimLongGrip { wrist: [0.1, 0.02, 0.24], fingers: [-0.6, 0.45, 0.65], back: [0.45, -0.85, -0.25] })] pub long_grip: crate::character::AnimLongGrip,
     pub long_steady: f64,
     pub long_shown: Option<crate::character::LongStance>,
     pub hide_held_item: bool,
@@ -608,42 +496,42 @@ pub struct Anim {
     pub act_t: f64,
     pub act_w: f64,
     pub act_clip: Option<ClipId>,
-    pub act_name: String,
-    pub act_out: f64,
+    #[is(String::from(""))] pub act_name: String,
+    #[is(0.35)] pub act_out: f64,
     pub phase: f64,
     pub crouch: f64,
-    pub upper_w: crate::character::AnimUpperW,
+    #[is(crate::character::AnimUpperW { relaxed: 0.0, aim: 0.0, torch: 0.0 })] pub upper_w: crate::character::AnimUpperW,
     pub tu_k: f64,
-    pub shoot_t: f64,
-    pub hit_t: f64,
-    pub reload_t: f64,
-    pub throw_t: f64,
-    pub strike_t: f64,
+    #[is(-1.0)] pub shoot_t: f64,
+    #[is(-1.0)] pub hit_t: f64,
+    #[is(-1.0)] pub reload_t: f64,
+    #[is(-1.0)] pub throw_t: f64,
+    #[is(-1.0)] pub strike_t: f64,
     pub steady_mean: Option<[f64; 2]>,
     pub cr_walk: f64,
     pub steady_up: f64,
     pub snap_shot: bool,
-    pub trained: f64,
+    #[is(0.5)] pub trained: f64,
     pub dazzle: Option<crate::character::AnimDazzle>,
-    pub mvs: crate::character::AnimMvs,
+    #[is(crate::character::AnimMvs { back: 0.0, climb: 0.0, yaw: 0.0, rock: 0.0, sho: 0.0, head: 0.0, n: 0.0, fl_t: -1.0, fl_k: 1.0, fl_k_to: 1.0, fl_soft: false, fl_d: [0.0, 0.0, 1.0], st_t: -1.0, st_d: [0.0, 0.0, 1.0], ht_t: -1.0, ht_d: [0.0, 0.0, -1.0], ht_side: 1.0, ts_t: -1.0, ts_rel: 0.14, arm_l: 0.0, dz: crate::character::Spring::blank(), dz_d: [0.0, 0.0, 1.0], dz_t: 0.0, dz_sd: 0.0, glide: crate::character::Spring::blank(), hip_y: f64::NAN, cf: crate::character::Spring::blank(), cf_t: 0.0, hu: crate::character::Spring::blank(), hu_t: 0.0, sk: crate::character::Spring::blank() })] pub mvs: crate::character::AnimMvs,
     pub reload_back: bool,
     pub bound: f64,
     pub clutch: f64,
     pub dip: f64,
     pub hurt: f64,
-    pub hurt_side: f64,
+    #[is(-1.0)] pub hurt_side: f64,
     pub shaken: f64,
     pub fold_too: bool,
-    pub reload_mag: bool,
-    pub reload_at: f64,
+    #[is(true)] pub reload_mag: bool,
+    #[is(-1.0)] pub reload_at: f64,
     pub reload_row: Option<crate::character::ReloadBeat>,
     pub feed: Option<crate::weapons::GunModelId>,
     pub feed_n: f64,
     pub feed_port: bool,
-    pub rl_t: f64,
-    pub rl_b: crate::character::AnimRlB,
-    pub rlc: crate::character::AnimRlc,
-    pub rl_shown: crate::character::AnimRlShown,
+    #[is(-1.0)] pub rl_t: f64,
+    #[is(crate::character::AnimRlB { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1.0, hand: false, fresh: 0.7 })] pub rl_b: crate::character::AnimRlB,
+    #[is(crate::character::AnimRlc { k: 0.0, h: 0.0, ch: None, at: -1.0, still: 0.0 })] pub rlc: crate::character::AnimRlc,
+    #[is(crate::character::AnimRlShown { carry: 0.0, head: 0.0 })] pub rl_shown: crate::character::AnimRlShown,
     pub kit: Option<crate::character::AnimKit>,
     pub kit_front: bool,
     pub kit_rest: f64,
@@ -652,40 +540,40 @@ pub struct Anim {
     pub kit_roll: f64,
     pub kit_lie: Option<Quat>,
     pub kit_gun_free: f64,
-    pub close_k: f64,
+    #[is(-1.0)] pub close_k: f64,
     pub cl_k: f64,
     pub cl_t: f64,
     pub cl_l: f64,
-    pub mv2: crate::character::AnimMv2,
-    pub mv2_shown: crate::character::AnimMv2Shown,
+    #[is(crate::character::AnimMv2 { bd: crate::character::Spring::blank(), bd_k: 1.0, cl: crate::character::Spring::blank(), dip: crate::character::Spring::blank(), rw: crate::character::Spring::blank(), rl_at: 0.0 })] pub mv2: crate::character::AnimMv2,
+    #[is(crate::character::AnimMv2Shown { reload: 0.0, bound: 0.0, clutch: 0.0, dip: 0.0 })] pub mv2_shown: crate::character::AnimMv2Shown,
     pub arms_pre: Option<crate::anim_skeleton::Pose>,
     pub arms_buf: Option<crate::anim_skeleton::Pose>,
     pub sights_lift: f64,
-    pub kick_t: f64,
+    #[is(-1.0)] pub kick_t: f64,
     pub kick_hit: bool,
-    pub sig_t: f64,
-    pub sig_kind: crate::character::SignalKind,
-    pub sig_side: f64,
-    pub tell_t: f64,
-    pub tell_k: crate::character::TellKind,
+    #[is(-1.0)] pub sig_t: f64,
+    #[is(crate::character::SignalKind::Hold)] pub sig_kind: crate::character::SignalKind,
+    #[is(1.0)] pub sig_side: f64,
+    #[is(-1.0)] pub tell_t: f64,
+    #[is(crate::character::TellKind::Watch)] pub tell_k: crate::character::TellKind,
     pub tell_shown: f64,
-    pub strike_k: crate::character::StrikeKind,
+    #[is(crate::character::StrikeKind::Cross)] pub strike_k: crate::character::StrikeKind,
     pub ready: Option<crate::character::ReadyKind>,
     pub ready_at: Option<V3>,
     pub ready_shown: f64,
     pub ready_up: f64,
-    pub ready_amt: f64,
+    #[is(1.0)] pub ready_amt: f64,
     pub rise: f64,
     pub low: f64,
     pub low_s: f64,
-    pub low_shape: [f64; 3],
+    #[is([0.0, 0.0, 0.0])] pub low_shape: [f64; 3],
     pub wide: f64,
-    pub wide_shape: [f64; 4],
+    #[is([0.0, 0.0, 0.0, 0.0])] pub wide_shape: [f64; 4],
     pub wide_pole: Option<V3>,
     pub wide_s: f64,
     pub heft: f64,
-    pub heft_shape: [f64; 6],
-    pub hf: crate::character::AnimHf,
+    #[is([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])] pub heft_shape: [f64; 6],
+    #[is(crate::character::AnimHf { s: 0.0, sv: 0.0, a: 0.0, av: 0.0, w: 0.0, wv: 0.0, v: 0.0, vv: 0.0, t: 0.0 })] pub hf: crate::character::AnimHf,
     pub hands_down: f64,
     pub spring: f64,
     pub coil: f64,
@@ -710,8 +598,8 @@ pub struct Anim {
     pub kb_r0: f64,
     pub kb_t: f64,
     pub rc_inv: Option<Quat>,
-    pub rd_out_r: f64,
-    pub rd_a: f64,
+    #[is(1.0)] pub rd_out_r: f64,
+    #[is(1.0)] pub rd_a: f64,
     pub hd_from: Option<V3>,
     pub hd_caught: bool,
     pub he_span: f64,
@@ -720,22 +608,22 @@ pub struct Anim {
     pub hd_sw: f64,
     pub he_sw: f64,
     pub ready_w: f64,
-    pub ready_k: crate::character::ReadyKind,
+    #[is(crate::character::ReadyKind::Grab)] pub ready_k: crate::character::ReadyKind,
     pub rd_at: Option<V3>,
     pub rd_live: bool,
-    pub rd: Vec<f64>,
+    #[is(alloc::vec![0.0; 36])] pub rd: Vec<f64>,
     pub idle_t: f64,
-    pub st: crate::character::AnimSt,
-    pub wst: crate::character::AnimWst,
-    pub stance_seen: crate::character::Stance,
+    #[is(crate::character::AnimSt { w: crate::character::Spring::blank(), fwd: crate::character::Spring::at(0.25), up: crate::character::Spring::at(0.15), side: crate::character::Spring::at(-0.05), pitch: crate::character::Spring::at(8.0), lean: crate::character::Spring::at(7.0), head_pitch: crate::character::Spring::at(0.0), tuck: crate::character::Spring::at(0.85), blade: crate::character::Spring::at(0.0), head_yaw: crate::character::Spring::at(0.0), squat: crate::character::Spring::at(0.0) })] pub st: crate::character::AnimSt,
+    #[is(crate::character::AnimWst { wl: crate::character::Spring::blank(), side: crate::character::Spring::at(1.0), peek: crate::character::Spring::blank(), park: crate::character::Spring::at(1.0) })] pub wst: crate::character::AnimWst,
+    #[is(crate::character::Stance::HighReady)] pub stance_seen: crate::character::Stance,
     pub lp_w: crate::character::Spring,
     pub lp_t: f64,
     pub hl_w: crate::character::Spring,
     pub hl_last: Option<crate::character::HaulPose>,
-    pub lg: crate::character::AnimLg,
+    #[is(crate::character::AnimLg { w: crate::character::Spring::blank(), seen: None, ch: alloc::vec![crate::character::Spring::blank(); 21], pull: [0.0, 0.0, 0.0], lat: [f64::NAN, f64::NAN], run: 0.0, sprint: 0.0 })] pub lg: crate::character::AnimLg,
     pub lg_armed_was: bool,
     pub hd_w: crate::character::Spring,
-    pub hd_last: crate::character::HoldPose,
+    #[is(crate::character::HoldPose { yank: None, step: None, man: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, variant: None, gun_out: None, gun_pitch: None, low: None, kill: None, beats: None, haul: None, strip: None })] pub hd_last: crate::character::HoldPose,
     pub hd_kn: crate::character::Spring,
     pub hd_gv: crate::character::Spring,
     pub hd_on: bool,
@@ -745,7 +633,7 @@ pub struct Anim {
     pub hd_hu: crate::character::Spring,
     pub he_hu: crate::character::Spring,
     pub he_w: crate::character::Spring,
-    pub he_last: crate::character::HeldPose,
+    #[is(crate::character::HeldPose { yank: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, agitation: 0.0, variant: None, bare: None, shot: None, armed: None, low: None, kill: None, beats: None, haul: None, strip: None })] pub he_last: crate::character::HeldPose,
     pub he_ck: crate::character::Spring,
     pub he_gv: crate::character::Spring,
     pub he_on: bool,
@@ -754,46 +642,46 @@ pub struct Anim {
     pub he_kc: crate::character::Spring,
     pub he_bo: crate::character::Spring,
     pub he_bc: crate::character::Spring,
-    pub he_hr: [Option<Quat>; 2],
-    pub dp: crate::character::AnimDp,
-    pub wk: crate::character::AnimWk,
-    pub sw: crate::character::AnimSw,
+    #[is([None, None])] pub he_hr: [Option<Quat>; 2],
+    #[is(crate::character::AnimDp { w_l: crate::character::Spring::blank(), w_r: crate::character::Spring::blank(), last: None, right: false, reach_ok: false, tw: crate::character::Spring::blank() })] pub dp: crate::character::AnimDp,
+    #[is(crate::character::AnimWk { last: None, fed: false, after: 0.0, w_l: crate::character::Spring::blank(), w_r: crate::character::Spring::blank(), ok_l: false, ok_r: false, tw: crate::character::Spring::blank(), main: 1.0, two: false, shown: 0.0 })] pub wk: crate::character::AnimWk,
+    #[is(crate::character::AnimSw { cur: None, from: None, to: None, t: -1.0, dur: 1.0, shown: false, wait: -1.0, belt: 0.0 })] pub sw: crate::character::AnimSw,
     pub hand_pre: Option<crate::anim_skeleton::Pose>,
     pub sw_buf: Option<crate::anim_skeleton::Pose>,
     pub hand_buf: Option<crate::anim_skeleton::Pose>,
     pub under_buf: Option<crate::anim_skeleton::Pose>,
-    pub rx: crate::character::AnimRx,
+    #[is(crate::character::AnimRx { left: 0.0, w: crate::character::Spring::blank() })] pub rx: crate::character::AnimRx,
     pub stealth: Option<crate::stealthpose::StealthFeed>,
     pub sp: Option<crate::character::AnimSp>,
     pub dlb: crate::character::Spring,
-    pub gait: crate::character::AnimGait,
+    #[is(crate::character::AnimGait { mid: -0.15, linger: 0.08 })] pub gait: crate::character::AnimGait,
     pub dash_w: f64,
-    pub wt: crate::character::AnimWt,
-    pub jog_hips_y: Vec<f32>,
-    pub jog_hips_mean: f64,
-    pub jog_mid: f64,
-    pub run_k: f64,
-    pub sprint_mid: f64,
-    pub sprint_floor_y: f64,
+    #[is(crate::character::AnimWt { w: 0.0, yaw: 0.0, pitch: 0.0, sw: 0.0, sx: 0.0, sz: 1.0, side: 0.0, sl: 1.0 })] pub wt: crate::character::AnimWt,
+    #[is(alloc::vec![0.0; 64])] pub jog_hips_y: Vec<f32>,
+    #[is(0.9)] pub jog_hips_mean: f64,
+    #[is(-0.1)] pub jog_mid: f64,
+    #[is(1.0)] pub run_k: f64,
+    #[is(-0.1)] pub sprint_mid: f64,
+    #[is(0.09)] pub sprint_floor_y: f64,
     pub jog_seam: Vec<crate::character::AnimJogSeamItem>,
-    pub run_gait: crate::character::AnimRunGait,
-    pub plant_l: crate::character::AnimPlantL,
-    pub plant_r: crate::character::AnimPlantR,
+    #[is(crate::character::AnimRunGait { jog: crate::character::AnimRunGaitJog { c: 0.117, c_l: 0.117, c_r: 0.617 }, sprint: crate::character::AnimRunGaitSprint { c: 0.153, c_l: 0.133, c_r: 0.672 } })] pub run_gait: crate::character::AnimRunGait,
+    #[is(crate::character::AnimPlantL { dev: 0.0, pz: f64::NAN })] pub plant_l: crate::character::AnimPlantL,
+    #[is(crate::character::AnimPlantR { dev: 0.0, pz: f64::NAN })] pub plant_r: crate::character::AnimPlantR,
     pub plant_w: f64,
-    pub gz: crate::character::AnimGz,
-    pub life: crate::character::AnimLife,
-    pub feet: crate::character::AnimFeet,
+    #[is(crate::character::AnimGz { pitch: 0.0, yaw_ref: 0.0, yaw_init: false, w: 0.0 })] pub gz: crate::character::AnimGz,
+    #[is(crate::character::AnimLife { breath: 0.0, exert: 0.0, prev_s: 0.0, accel: 0.0, mass: crate::character::Spring::blank(), mass_v: crate::character::Spring::blank(), still_t: 0.0, shift_t: 4.0, shift_side: 1.0, shift: crate::character::Spring::blank(), yaw_prev: f64::NAN, yaw_rate: 0.0, prev_pos: [f64::NAN, 0.0, 0.0], root_v: 0.0, gate: 0.0, shift_n: 0.0 })] pub life: crate::character::AnimLife,
+    #[is(crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFeetL { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, r: crate::character::AnimFeetR { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, next: 0.0 })] pub feet: crate::character::AnimFeet,
     pub body_yaw_in: f64,
     pub thr_last: Option<crate::character::AnimThrLast>,
     pub thr_carry: Option<crate::character::AnimThrCarry>,
-    pub thr_low: f64,
-    pub thr_far: f64,
-    pub thr_hang: f64,
+    #[is(-1.0)] pub thr_low: f64,
+    #[is(1.0)] pub thr_far: f64,
+    #[is(-1.0)] pub thr_hang: f64,
     pub thr_hit0: f64,
     pub thr_off: bool,
     pub idle_feet: crate::character::AnimIdleFeet,
     pub kick_from: Option<crate::character::AnimKickFrom>,
-    pub kick_leg: crate::character::AnimKickLeg,
+    #[is(crate::character::AnimKickLeg::Right)] pub kick_leg: crate::character::AnimKickLeg,
     pub clips: JsMap<&'static str, ClipId>,
     pub upper_mask: Vec<f32>,
     pub arm_r_mask: Vec<f32>,
@@ -805,351 +693,41 @@ pub struct Anim {
     pub hand_fix: Vec<Quat>,
     pub grip_up: V3,
     pub gaze_local: V3,
-    pub chest_rest_inv: Quat,
-    pub head_rest_inv: Quat,
+    #[is([0.0; 4])] pub chest_rest_inv: Quat,
+    #[is([0.0; 4])] pub head_rest_inv: Quat,
     pub fingers: Vec<Vec<Vec<usize>>>,
     pub thumbs: Vec<Vec<usize>>,
-    pub grip: [bool; 2],
+    #[is([false, false])] pub grip: [bool; 2],
     pub grip_can: bool,
-    pub hn: crate::character::AnimHn,
+    #[is(crate::character::AnimHn { nodes: Vec::new(), fist: Vec::new(), own: Vec::new(), open: Vec::new(), trig: alloc::vec![0.0; 12], thumb: alloc::vec![alloc::vec![0.0; 12], alloc::vec![0.0; 12]], base: alloc::vec![alloc::vec![0.0; 60], alloc::vec![0.0; 60]], note: alloc::vec![alloc::vec![0.0; 5], alloc::vec![0.0; 5]], seed: 0.0, built: f64::NAN, quiet: false, grip: alloc::vec![0.0, 0.0], off: 1.0, fired: 9.0, gun: 0.0 })] pub hn: crate::character::AnimHn,
     pub nodes: crate::character::AnimNodes,
-    pub poses: PoseSetId,
-    pub rig: RigId,
+    #[is(PoseSetId(0))] pub poses: PoseSetId,
+    #[is(RigId(0))] pub rig: RigId,
     pub nv: Option<crate::character::AnimNv>,
     pub nv_arm: f64,
     pub nv_nod: f64,
     pub nv_a: f64,
-    pub nv_tw: [f64; 4],
+    #[is([0.0, 0.0, 0.0, 0.0])] pub nv_tw: [f64; 4],
     pub nv_shown: Option<f64>,
     pub smoke: Option<f64>,
     pub smoke_arm: f64,
-    pub reload_dur: f64,
-    pub act_loop: bool,
-    pub mv_out: crate::character::MvGait,
-    pub mv_po: crate::character::AnimMvPo,
+    #[is(1.6)] pub reload_dur: f64,
+    #[is(true)] pub act_loop: bool,
+    #[is(crate::character::MvGait { live: false, g: 0.0, u: 0.0, st: 0.0 })] pub mv_out: crate::character::MvGait,
+    #[is(crate::character::AnimMvPo { stw: 0.0, stn: 1.0, dzw: 0.0, gun: false, gun_p: [0.0, 0.0, 0.0], gun_r: [0.0, 0.0, 0.0, 1.0] })] pub mv_po: crate::character::AnimMvPo,
     pub fk_legs: Vec<i32>,
     pub fk_arms: Vec<i32>,
     pub fk_head: Vec<i32>,
     pub cast: crate::anim_skeleton::LayerCast,
     pub hn_flat: Option<Vec<f64>>,
-    pub hn_flat_of: f64,
-    pub hd_idle: crate::character::AnimHdIdle,
+    #[is(f64::NAN)] pub hn_flat_of: f64,
+    #[is(crate::character::AnimHdIdle { upper: crate::character::UpperMode::None, long: false, crouch: 0.0, carry: None })] pub hd_idle: crate::character::AnimHdIdle,
     pub hd_busy: bool,
     pub big_buf: Option<crate::anim_skeleton::Pose>,
     pub big_under: bool,
     /// INVENTED by a review: see the proposals
     pub pos_in: V3,
 }
-impl Anim {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Anim {
-            pose: crate::anim_skeleton::Pose::blank(),
-            p_a: crate::anim_skeleton::Pose::blank(),
-            p_b: crate::anim_skeleton::Pose::blank(),
-            p_c: crate::anim_skeleton::Pose::blank(),
-            p_upper: crate::anim_skeleton::Pose::blank(),
-            rest: crate::anim_skeleton::Pose::blank(),
-            p_aim: crate::anim_skeleton::Pose::blank(),
-            twists: Vec::new(),
-            params: crate::character::AnimParams { walk_speed: 1.06, jog_speed: 3.3, crouch_speed: 0.72, sprint_speed: 4.7 },
-            speed: 0.0,
-            reverse: false,
-            crouch_target: 0.0,
-            upper: crate::character::UpperMode::None,
-            aim_yaw_offset: 0.0,
-            aim_pitch: 0.0,
-            look_yaw_extra: 0.0,
-            turn_lead: 0.0,
-            stance: crate::character::Stance::None,
-            stack_side: 1.0,
-            wall_yaw: 0.0,
-            wall_peek: 0.0,
-            lean: 0.0,
-            lean_sm: 0.0,
-            wall_take: -1.0,
-            wall_hit: 0.0,
-            stance_out: 0.0,
-            stack_press: 0.0,
-            stance_in: 0.0,
-            stack_press_sm: 0.0,
-            wall_gait: 0.55,
-            wtk_hold: false,
-            wall_take_feet: None,
-            wtk: None,
-            lockpick: false,
-            lockpick_at: [0.02, 0.96, 0.45],
-            deliberate: 0.0,
-            watch_at: None,
-            watch_k: 0.0,
-            slip_at: None,
-            slip_k: 0.0,
-            slip_lean: 1.0,
-            watch_shown: crate::character::AnimWatchShown { w: 0.0, yaw: 0.0, slip: 0.0, lean: 1.0 },
-            dash: 0.0,
-            hold_pose: None,
-            held_pose: None,
-            door_push: None,
-            work: None,
-            carry: None,
-            swap_lag: 0.0,
-            haul: None,
-            long_gun: false,
-            long_stance: None,
-            gun_wall: 0.0,
-            run_ready: false,
-            long_grip: crate::character::AnimLongGrip { wrist: [0.1, 0.02, 0.24], fingers: [-0.6, 0.45, 0.65], back: [0.45, -0.85, -0.25] },
-            long_steady: 0.0,
-            long_shown: None,
-            hide_held_item: false,
-            stowed: false,
-            big_tool: None,
-            big_k: 0.0,
-            big_clear: 0.0,
-            big_side: None,
-            big_at_back: 0.0,
-            big_grab: 0.0,
-            hold_gun_side: false,
-            act: None,
-            slump: 0.0,
-            slump_w: 0.0,
-            act_t: 0.0,
-            act_w: 0.0,
-            act_clip: None,
-            act_name: String::from(""),
-            act_out: 0.35,
-            phase: 0.0,
-            crouch: 0.0,
-            upper_w: crate::character::AnimUpperW { relaxed: 0.0, aim: 0.0, torch: 0.0 },
-            tu_k: 0.0,
-            shoot_t: -1.0,
-            hit_t: -1.0,
-            reload_t: -1.0,
-            throw_t: -1.0,
-            strike_t: -1.0,
-            steady_mean: None,
-            cr_walk: 0.0,
-            steady_up: 0.0,
-            snap_shot: false,
-            trained: 0.5,
-            dazzle: None,
-            mvs: crate::character::AnimMvs { back: 0.0, climb: 0.0, yaw: 0.0, rock: 0.0, sho: 0.0, head: 0.0, n: 0.0, fl_t: -1.0, fl_k: 1.0, fl_k_to: 1.0, fl_soft: false, fl_d: [0.0, 0.0, 1.0], st_t: -1.0, st_d: [0.0, 0.0, 1.0], ht_t: -1.0, ht_d: [0.0, 0.0, -1.0], ht_side: 1.0, ts_t: -1.0, ts_rel: 0.14, arm_l: 0.0, dz: crate::character::Spring::blank(), dz_d: [0.0, 0.0, 1.0], dz_t: 0.0, dz_sd: 0.0, glide: crate::character::Spring::blank(), hip_y: f64::NAN, cf: crate::character::Spring::blank(), cf_t: 0.0, hu: crate::character::Spring::blank(), hu_t: 0.0, sk: crate::character::Spring::blank() },
-            reload_back: false,
-            bound: 0.0,
-            clutch: 0.0,
-            dip: 0.0,
-            hurt: 0.0,
-            hurt_side: -1.0,
-            shaken: 0.0,
-            fold_too: false,
-            reload_mag: true,
-            reload_at: -1.0,
-            reload_row: None,
-            feed: None,
-            feed_n: 0.0,
-            feed_port: false,
-            rl_t: -1.0,
-            rl_b: crate::character::AnimRlB { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1.0, hand: false, fresh: 0.7 },
-            rlc: crate::character::AnimRlc { k: 0.0, h: 0.0, ch: None, at: -1.0, still: 0.0 },
-            rl_shown: crate::character::AnimRlShown { carry: 0.0, head: 0.0 },
-            kit: None,
-            kit_front: false,
-            kit_rest: 0.0,
-            kit_hold: None,
-            kit_stow: 0.0,
-            kit_roll: 0.0,
-            kit_lie: None,
-            kit_gun_free: 0.0,
-            close_k: -1.0,
-            cl_k: 0.0,
-            cl_t: 0.0,
-            cl_l: 0.0,
-            mv2: crate::character::AnimMv2 { bd: crate::character::Spring::blank(), bd_k: 1.0, cl: crate::character::Spring::blank(), dip: crate::character::Spring::blank(), rw: crate::character::Spring::blank(), rl_at: 0.0 },
-            mv2_shown: crate::character::AnimMv2Shown { reload: 0.0, bound: 0.0, clutch: 0.0, dip: 0.0 },
-            arms_pre: None,
-            arms_buf: None,
-            sights_lift: 0.0,
-            kick_t: -1.0,
-            kick_hit: false,
-            sig_t: -1.0,
-            sig_kind: crate::character::SignalKind::Hold,
-            sig_side: 1.0,
-            tell_t: -1.0,
-            tell_k: crate::character::TellKind::Watch,
-            tell_shown: 0.0,
-            strike_k: crate::character::StrikeKind::Cross,
-            ready: None,
-            ready_at: None,
-            ready_shown: 0.0,
-            ready_up: 0.0,
-            ready_amt: 1.0,
-            rise: 0.0,
-            low: 0.0,
-            low_s: 0.0,
-            low_shape: [0.0, 0.0, 0.0],
-            wide: 0.0,
-            wide_shape: [0.0, 0.0, 0.0, 0.0],
-            wide_pole: None,
-            wide_s: 0.0,
-            heft: 0.0,
-            heft_shape: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            hf: crate::character::AnimHf { s: 0.0, sv: 0.0, a: 0.0, av: 0.0, w: 0.0, wv: 0.0, v: 0.0, vv: 0.0, t: 0.0 },
-            hands_down: 0.0,
-            spring: 0.0,
-            coil: 0.0,
-            creep: false,
-            creep_at: None,
-            creep_shown: 0.0,
-            knife_shown: false,
-            reach_shown: 0.0,
-            no_knife: false,
-            cr_t: 0.0,
-            cr_v: 0.0,
-            cr_pace: 0.0,
-            cr_w: 0.0,
-            cr_ph: None,
-            bw: None,
-            tk: None,
-            kb_slash: false,
-            kb_back: false,
-            bw_rise: 0.0,
-            rc_t: 0.0,
-            strike_leth: false,
-            kb_r0: 0.0,
-            kb_t: 0.0,
-            rc_inv: None,
-            rd_out_r: 1.0,
-            rd_a: 1.0,
-            hd_from: None,
-            hd_caught: false,
-            he_span: 0.0,
-            rd_hand_l: None,
-            hd_fix: None,
-            hd_sw: 0.0,
-            he_sw: 0.0,
-            ready_w: 0.0,
-            ready_k: crate::character::ReadyKind::Grab,
-            rd_at: None,
-            rd_live: false,
-            rd: alloc::vec![0.0; 36],
-            idle_t: 0.0,
-            st: crate::character::AnimSt { w: crate::character::Spring::blank(), fwd: crate::character::Spring::at(0.25), up: crate::character::Spring::at(0.15), side: crate::character::Spring::at(-0.05), pitch: crate::character::Spring::at(8.0), lean: crate::character::Spring::at(7.0), head_pitch: crate::character::Spring::at(0.0), tuck: crate::character::Spring::at(0.85), blade: crate::character::Spring::at(0.0), head_yaw: crate::character::Spring::at(0.0), squat: crate::character::Spring::at(0.0) },
-            wst: crate::character::AnimWst { wl: crate::character::Spring::blank(), side: crate::character::Spring::at(1.0), peek: crate::character::Spring::blank(), park: crate::character::Spring::at(1.0) },
-            stance_seen: crate::character::Stance::HighReady,
-            lp_w: crate::character::Spring::blank(),
-            lp_t: 0.0,
-            hl_w: crate::character::Spring::blank(),
-            hl_last: None,
-            lg: crate::character::AnimLg { w: crate::character::Spring::blank(), seen: None, ch: alloc::vec![crate::character::Spring::blank(); 21], pull: [0.0, 0.0, 0.0], lat: [f64::NAN, f64::NAN], run: 0.0, sprint: 0.0 },
-            lg_armed_was: false,
-            hd_w: crate::character::Spring::blank(),
-            hd_last: crate::character::HoldPose { yank: None, step: None, man: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, variant: None, gun_out: None, gun_pitch: None, low: None, kill: None, beats: None, haul: None, strip: None },
-            hd_kn: crate::character::Spring::blank(),
-            hd_gv: crate::character::Spring::blank(),
-            hd_on: false,
-            hd_ck: crate::character::Spring::blank(),
-            hd_lo: crate::character::Spring::blank(),
-            hd_kc: crate::character::Spring::blank(),
-            hd_hu: crate::character::Spring::blank(),
-            he_hu: crate::character::Spring::blank(),
-            he_w: crate::character::Spring::blank(),
-            he_last: crate::character::HeldPose { yank: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, agitation: 0.0, variant: None, bare: None, shot: None, armed: None, low: None, kill: None, beats: None, haul: None, strip: None },
-            he_ck: crate::character::Spring::blank(),
-            he_gv: crate::character::Spring::blank(),
-            he_on: false,
-            he_lo: crate::character::Spring::blank(),
-            he_lk: crate::character::Spring::blank(),
-            he_kc: crate::character::Spring::blank(),
-            he_bo: crate::character::Spring::blank(),
-            he_bc: crate::character::Spring::blank(),
-            he_hr: [None, None],
-            dp: crate::character::AnimDp { w_l: crate::character::Spring::blank(), w_r: crate::character::Spring::blank(), last: None, right: false, reach_ok: false, tw: crate::character::Spring::blank() },
-            wk: crate::character::AnimWk { last: None, fed: false, after: 0.0, w_l: crate::character::Spring::blank(), w_r: crate::character::Spring::blank(), ok_l: false, ok_r: false, tw: crate::character::Spring::blank(), main: 1.0, two: false, shown: 0.0 },
-            sw: crate::character::AnimSw { cur: None, from: None, to: None, t: -1.0, dur: 1.0, shown: false, wait: -1.0, belt: 0.0 },
-            hand_pre: None,
-            sw_buf: None,
-            hand_buf: None,
-            under_buf: None,
-            rx: crate::character::AnimRx { left: 0.0, w: crate::character::Spring::blank() },
-            stealth: None,
-            sp: None,
-            dlb: crate::character::Spring::blank(),
-            gait: crate::character::AnimGait { mid: -0.15, linger: 0.08 },
-            dash_w: 0.0,
-            wt: crate::character::AnimWt { w: 0.0, yaw: 0.0, pitch: 0.0, sw: 0.0, sx: 0.0, sz: 1.0, side: 0.0, sl: 1.0 },
-            jog_hips_y: alloc::vec![0.0; 64],
-            jog_hips_mean: 0.9,
-            jog_mid: -0.1,
-            run_k: 1.0,
-            sprint_mid: -0.1,
-            sprint_floor_y: 0.09,
-            jog_seam: Vec::new(),
-            run_gait: crate::character::AnimRunGait { jog: crate::character::AnimRunGaitJog { c: 0.117, c_l: 0.117, c_r: 0.617 }, sprint: crate::character::AnimRunGaitSprint { c: 0.153, c_l: 0.133, c_r: 0.672 } },
-            plant_l: crate::character::AnimPlantL { dev: 0.0, pz: f64::NAN },
-            plant_r: crate::character::AnimPlantR { dev: 0.0, pz: f64::NAN },
-            plant_w: 0.0,
-            gz: crate::character::AnimGz { pitch: 0.0, yaw_ref: 0.0, yaw_init: false, w: 0.0 },
-            life: crate::character::AnimLife { breath: 0.0, exert: 0.0, prev_s: 0.0, accel: 0.0, mass: crate::character::Spring::blank(), mass_v: crate::character::Spring::blank(), still_t: 0.0, shift_t: 4.0, shift_side: 1.0, shift: crate::character::Spring::blank(), yaw_prev: f64::NAN, yaw_rate: 0.0, prev_pos: [f64::NAN, 0.0, 0.0], root_v: 0.0, gate: 0.0, shift_n: 0.0 },
-            feet: crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFeetL { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, r: crate::character::AnimFeetR { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, next: 0.0 },
-            body_yaw_in: 0.0,
-            thr_last: None,
-            thr_carry: None,
-            thr_low: -1.0,
-            thr_far: 1.0,
-            thr_hang: -1.0,
-            thr_hit0: 0.0,
-            thr_off: false,
-            idle_feet: crate::character::AnimIdleFeet::default(),
-            kick_from: None,
-            kick_leg: crate::character::AnimKickLeg::Right,
-            clips: JsMap::new(),
-            upper_mask: Vec::new(),
-            arm_r_mask: Vec::new(),
-            head_mask: Vec::new(),
-            arms_mask: Vec::new(),
-            arm_r_only: Vec::new(),
-            torso_mask: Vec::new(),
-            fk: crate::anim_skeleton::PoseFK::blank(),
-            hand_fix: Vec::new(),
-            grip_up: [0.0; 3],
-            gaze_local: [0.0; 3],
-            chest_rest_inv: [0.0; 4],
-            head_rest_inv: [0.0; 4],
-            fingers: Vec::new(),
-            thumbs: Vec::new(),
-            grip: [false, false],
-            grip_can: false,
-            hn: crate::character::AnimHn { nodes: Vec::new(), fist: Vec::new(), own: Vec::new(), open: Vec::new(), trig: alloc::vec![0.0; 12], thumb: alloc::vec![alloc::vec![0.0; 12], alloc::vec![0.0; 12]], base: alloc::vec![alloc::vec![0.0; 60], alloc::vec![0.0; 60]], note: alloc::vec![alloc::vec![0.0; 5], alloc::vec![0.0; 5]], seed: 0.0, built: f64::NAN, quiet: false, grip: alloc::vec![0.0, 0.0], off: 1.0, fired: 9.0, gun: 0.0 },
-            nodes: crate::character::AnimNodes::default(),
-            poses: PoseSetId(0),
-            rig: RigId(0),
-            nv: None,
-            nv_arm: 0.0,
-            nv_nod: 0.0,
-            nv_a: 0.0,
-            nv_tw: [0.0, 0.0, 0.0, 0.0],
-            nv_shown: None,
-            smoke: None,
-            smoke_arm: 0.0,
-            reload_dur: 1.6,
-            act_loop: true,
-            mv_out: crate::character::MvGait { live: false, g: 0.0, u: 0.0, st: 0.0 },
-            mv_po: crate::character::AnimMvPo { stw: 0.0, stn: 1.0, dzw: 0.0, gun: false, gun_p: [0.0, 0.0, 0.0], gun_r: [0.0, 0.0, 0.0, 1.0] },
-            fk_legs: Vec::new(),
-            fk_arms: Vec::new(),
-            fk_head: Vec::new(),
-            cast: crate::anim_skeleton::LayerCast::blank(),
-            hn_flat: None,
-            hn_flat_of: f64::NAN,
-            hd_idle: crate::character::AnimHdIdle { upper: crate::character::UpperMode::None, long: false, crouch: 0.0, carry: None },
-            hd_busy: false,
-            big_buf: None,
-            big_under: false,
-            pos_in: [0.0, 0.0, 0.0],
-        }
-    }
-}
-impl Default for Anim { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimWallTakeFeet {
@@ -1763,7 +1341,7 @@ pub struct CharacterDesc {
     pub men: Option<crate::Opaque>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Character {
     pub id: f64,
     pub tint: V3,
@@ -1776,29 +1354,29 @@ pub struct Character {
     pub aim_pitch: f64,
     pub anim: crate::character::Anim,
     pub skel: crate::anim_skeleton::SkeletonInstance,
-    pub world: crate::v3::m4::Mat4,
-    pub radius: f64,
-    pub alive: bool,
+    #[is(crate::M4_IDENTITY)] pub world: crate::v3::m4::Mat4,
+    #[is(0.3)] pub radius: f64,
+    #[is(true)] pub alive: bool,
     /// NOT dressing: sight lines and shots read chest and head
     pub bones: JsMap<crate::character::Bone, V3>,
-    pub bones_at: [f64; 2],
-    pub gun_dir: V3,
+    #[is([0.0, 0.0])] pub bones_at: [f64; 2],
+    #[is([0.0, 0.0, 1.0])] pub gun_dir: V3,
     pub muzzle: V3,
-    pub chest_dir: V3,
-    pub muzzle_ahead: f64,
+    #[is([0.0, 0.0, 1.0])] pub chest_dir: V3,
+    #[is(0.26)] pub muzzle_ahead: f64,
     pub wet: f64,
     pub beads: f64,
     pub wet_rain: f64,
-    pub wet_line: f64,
+    #[is(f64::INFINITY)] pub wet_line: f64,
     pub parts: f64,
-    pub rest_chest_inv: Quat,
-    pub rest_head_inv: Quat,
+    #[is([0.0; 4])] pub rest_chest_inv: Quat,
+    #[is([0.0; 4])] pub rest_head_inv: Quat,
     pub hand_r_back: V3,
     pub hand_r_thumb: V3,
     pub hand_l_back: V3,
     pub hand_l_thumb: V3,
-    pub hand_r_bore: V3,
-    pub hand_r_top: V3,
+    #[is([0.0, 1.0, 0.0])] pub hand_r_bore: V3,
+    #[is([0.0, 0.0, 1.0])] pub hand_r_top: V3,
     pub in_hand: Option<crate::inhand::InHandWord>,
     pub gun_look: Option<crate::gunlook::GunLook>,
     pub in_hand_cur: Option<crate::inhand::InHandWord>,
@@ -1819,82 +1397,16 @@ pub struct Character {
     pub breathe: Option<crate::character::CharacterBreathe>,
     pub guide: Option<crate::character::FallGuide>,
     pub br: Option<crate::character::Breath>,
-    pub turn: crate::character::CharacterTurn,
+    #[is(crate::character::CharacterTurn { on: false, h: 1.0, k: 0.0 })] pub turn: crate::character::CharacterTurn,
     pub tn: Option<crate::character::CharacterTn>,
-    pub rig: RigId,
+    #[is(RigId(0))] pub rig: RigId,
     /// whose body this is
-    pub who: crate::character::Who,
+    #[is(crate::character::Who::Guard(GuardId(0)))] pub who: crate::character::Who,
     /// INVENTED: his row of the block's men (ManCols.r). None (0xffffffff) once he has left, or for a man of no game
-    pub man_row: u32,
+    #[is(0xffffffff)] pub man_row: u32,
     /// INVENTED: owner, rank, reason, since of a man with no row: the numbers he took with him (manLeaves)
     pub man_kept: Option<[f64; 4]>,
 }
-impl Character {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Character {
-            id: 0.0,
-            tint: [0.0; 3],
-            tint2: [0.0; 3],
-            pos: [0.0; 3],
-            vel: [0.0, 0.0, 0.0],
-            body_yaw: 0.0,
-            aim_yaw: 0.0,
-            aim_pitch: 0.0,
-            anim: crate::character::Anim::blank(),
-            skel: crate::anim_skeleton::SkeletonInstance::blank(),
-            world: crate::M4_IDENTITY,
-            radius: 0.3,
-            alive: true,
-            bones: JsMap::new(),
-            bones_at: [0.0, 0.0],
-            gun_dir: [0.0, 0.0, 1.0],
-            muzzle: [0.0, 0.0, 0.0],
-            chest_dir: [0.0, 0.0, 1.0],
-            muzzle_ahead: 0.26,
-            wet: 0.0,
-            beads: 0.0,
-            wet_rain: 0.0,
-            wet_line: f64::INFINITY,
-            parts: 0.0,
-            rest_chest_inv: [0.0; 4],
-            rest_head_inv: [0.0; 4],
-            hand_r_back: [0.0; 3],
-            hand_r_thumb: [0.0; 3],
-            hand_l_back: [0.0; 3],
-            hand_l_thumb: [0.0; 3],
-            hand_r_bore: [0.0, 1.0, 0.0],
-            hand_r_top: [0.0, 0.0, 1.0],
-            in_hand: None,
-            gun_look: None,
-            in_hand_cur: None,
-            in_hand_k: 0.0,
-            sim_hand_r: None,
-            in_hand_ov: None,
-            prev_bones: JsMap::new(),
-            prev_dt: 0.0,
-            sim_bones: None,
-            prev_sim: None,
-            gun_hand: None,
-            ragdoll: None,
-            rd: None,
-            fall_as: None,
-            fall_from: None,
-            fall_tight: false,
-            fall_ahead: 0.0,
-            breathe: None,
-            guide: None,
-            br: None,
-            turn: crate::character::CharacterTurn { on: false, h: 1.0, k: 0.0 },
-            tn: None,
-            rig: RigId(0),
-            who: crate::character::Who::Guard(GuardId(0)),
-            man_row: 0xffffffff,
-            man_kept: None,
-        }
-    }
-}
-impl Default for Character { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CharacterBreathe {
@@ -3057,23 +2569,14 @@ pub struct CharacterCapsules {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CharacterMod {
     /// (src/game/character.ts:342 HOLD_SHOW)
-    pub hold_show: crate::character::CharacterModHOLDSHOW,
+    #[is(crate::character::CharacterModHOLDSHOW { kill: false, beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
     /// (src/game/character.ts:478 AT0)
     pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
     /// (src/game/character.ts:719 LONG_STEADY)
-    pub long_steady: crate::character::CharacterModLONGSTEADY,
-}
-impl CharacterMod {
-    pub fn blank() -> Self {
-        CharacterMod {
-            hold_show: crate::character::CharacterModHOLDSHOW { kill: false, beats: false },
-            at0: JsMap::new(),
-            long_steady: crate::character::CharacterModLONGSTEADY { tau: 0.5, run_yaw: 0.85 },
-        }
-    }
+    #[is(crate::character::CharacterModLONGSTEADY { tau: 0.5, run_yaw: 0.85 })] pub long_steady: crate::character::CharacterModLONGSTEADY,
 }
 
 /// (src/game/character.ts:81 WORK: a table nothing writes)

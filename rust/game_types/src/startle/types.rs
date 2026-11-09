@@ -1,6 +1,6 @@
 //! The types of `startle`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -24,17 +24,10 @@ pub struct St {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StartleMod {
     /// (src/game/startle.ts:64 stateOf)
     pub state_of: JsMap<GuardId, crate::startle::St>,
-}
-impl StartleMod {
-    pub fn blank() -> Self {
-        StartleMod {
-            state_of: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
