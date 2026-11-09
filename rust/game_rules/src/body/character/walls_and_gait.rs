@@ -553,7 +553,7 @@ fn anim_signal_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64)
 
 /// a smoke's arm, its clock   (character.ts smokeLayer)
 pub(super) fn anim_smoke_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
-    let k = crate::character::smokearm();
+    let k = crate::character::SMOKEARM;
     let a = &mut g.ch[c].anim;
     let want = match a.smoke { Some(s) if free => v3::clamp(s, 0.0, 1.0), _ => 0.0 };
     let step = (if free { k.rate } else { k.away }) * dt;

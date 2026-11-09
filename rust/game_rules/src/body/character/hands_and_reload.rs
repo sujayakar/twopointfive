@@ -285,7 +285,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
             && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
-            let rate = mv2().reload.rate;
+            let rate = MV2.reload.rate;
             let rw = &mut g.ch[c].anim.mv2.rw;
             spring_step(rw, want, rate, dt);
             if want == 0.0 && rw.x < 0.01 { rw.x = 0.0; rw.v = 0.0; }
@@ -304,10 +304,10 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let an = &g.ch[c].anim;
         let (hurt, aim, clutch_in, off_hand) = (an.hurt, an.upper_w.aim, an.clutch, an.throw_t < 0.0 && an.strike_t < 0.0 && an.big_tool.is_none());
         let reload_shown = an.mv2_shown.reload;
-        let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * mv2().hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
+        let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * MV2.hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
         let want = if mv_on(g, MvOnK::Clutch) && reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.cl.x != 0.0 {
-            let rate = mv2().clutch.rate;
+            let rate = MV2.clutch.rate;
             let cl = &mut g.ch[c].anim.mv2.cl;
             spring_step(cl, want, rate, dt);
             if want == 0.0 && cl.x < 0.01 { cl.x = 0.0; cl.v = 0.0; }
@@ -330,7 +330,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let want = if on && (an.mv2.bd.x < 0.02 || an.mv2.bd_k == bound) { 1.0 } else { 0.0 };
         if on && an.mv2.bd.x < 0.02 { an.mv2.bd_k = bound; }
         if want > 0.0 || an.mv2.bd.x != 0.0 {
-            let rate = mv2().bound.rate;
+            let rate = MV2.bound.rate;
             let bd = &mut g.ch[c].anim.mv2.bd;
             spring_step(bd, want, rate, dt);
             if want == 0.0 && !on && bd.x < 0.01 { bd.x = 0.0; bd.v = 0.0; }
@@ -394,7 +394,7 @@ fn anim_reload_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, w
     let an = &g.ch[c].anim;
     let (trained, reload_back, long_gun) = (an.trained, an.reload_back, an.long_gun);
     // K: [mag, strip, handle, pull, hf, hb]
-    let r = mv2().reload;
+    let r = MV2.reload;
     let bx = [r.box_.mag, r.box_.strip, r.box_.handle, r.box_.pull, r.box_.hf, r.box_.hb];
     let k = match own {
         Some(AnimReloadArmAskOwn::Arm1(p)) => match p.marks {
@@ -651,7 +651,7 @@ fn hand_hash(seed: f64, k: f64) -> f64 {
 /// This man's relaxed hands, as the turn from the library's fist on each digit joint, and the index laid straight for the trigger hand. (character.ts handsBuild)
 fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     use v3::quat;
-    let hd = hand();
+    let hd = &HAND;
     let (seed, nodes, rest) = (g.ch[c].anim.hn.seed, g.ch[c].anim.p_a.nodes, g.ch[c].anim.rest);
     let p = crate::anim_skeleton::pose_new(g, nodes as usize);   // (its own scratch, once a man)
     crate::anim_skeleton::pose_copy(g, p, rest);

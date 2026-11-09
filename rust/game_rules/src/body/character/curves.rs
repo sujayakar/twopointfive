@@ -8,7 +8,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// When key k (0..3) of a code is pressed, on a verb `dur` long.   (character.ts workKeyBeat)
 pub fn work_key_beat(k: f64, dur: f64) -> f64 {
-    let work = work();
+    let work = WORK;
     work.key_lead + (k + 0.5) * (dur - work.key_lead) / 4.0
 }
 

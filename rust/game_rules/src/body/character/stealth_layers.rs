@@ -48,7 +48,7 @@ pub(super) fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> 
         let p = pl[if a.crouch_target > 0.5 { 1 } else { 0 }];
         a.phase = js::rem(p + m::round((a.phase - p) * 2.0) / 2.0 + 2.0, 1.0);
     }
-    let (gait_in, gait_out) = { let k = crate::character::creep(); (k.gait_in, k.gait_out) };
+    let (gait_in, gait_out) = { let k = &crate::character::CREEP; (k.gait_in, k.gait_out) };
     let rate = if g.ch[c].anim.creep { dt / gait_in } else { -dt / gait_out };
     g.ch[c].anim.cr_t = v3::clamp(g.ch[c].anim.cr_t + rate, 0.0, 1.0);
     let pp = g.ch[c].anim.life.prev_pos;
@@ -311,7 +311,7 @@ fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f6
 /// The look under a door with the wand, on a copy of the finished pose that is then made the pose. (character.ts CharacterAnimator.stealthPicture)
 pub(super) fn anim_stealth_picture(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let cable_in = g.k.stealthpose.cable_in;
-    let (cable_out, cable_head_out) = { let k = crate::character::stealth().cable; (k.out, k.head_out) };
+    let (cable_out, cable_head_out) = { let k = crate::character::STEALTH.cable; (k.out, k.head_out) };
     let an = &mut g.ch[c].anim;
     let want = an.stealth.as_ref().map_or(false, |f| f.cable) && an.lockpick;
     let nv_nod = an.nv_nod;
@@ -541,7 +541,7 @@ fn anim_ready_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, 
         let an = &g.ch[c].anim;
         let (f0, f1) = (an.hand_fix[0], an.hand_fix[1]);
         let bare = an.no_knife && kind == ReadyKind::Grab && !an.grip[1];
-        let table = crate::character::ready_bare();
+        let table = crate::character::READY_BARE;
         let (b_pole, b_fing, b_back, b_curl, b_thumb, b_spread) = if bare {
             let b = &table.l; (b.pole, b.fing, b.back, b.curl, b.thumb, b.spread)
         } else {
@@ -611,11 +611,11 @@ pub(super) fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f
                     if let Some(a2) = a2 { b.at2 = Some(a2); }
                 }
             }
-            let table = crate::character::blow();
-            let rise = if b.rise { *table.rise.get(String::from(b.style.as_str())).unwrap() * bump(b.t, 0.0, 0.6 * b.hit, b.hit + 0.1, b.end) } else { 0.0 };
+            let table = &crate::character::BLOW;
+            let rise = if b.rise { table.rise.of(b.style) * bump(b.t, 0.0, 0.6 * b.hit, b.hit + 0.1, b.end) } else { 0.0 };
             g.ch[c].anim.bw_rise = rise;
             cp *= 1.0 - rise;
-            if b.tail > 0.0 { cp = m::max(cp, *table.sink.get(String::from(b.style.as_str())).unwrap() * anim_blow_tail(g, c, &b)); }
+            if b.tail > 0.0 { cp = m::max(cp, table.sink.of(b.style) * anim_blow_tail(g, c, &b)); }
             g.ch[c].anim.bw = Some(b);
         }
     }
@@ -624,12 +624,12 @@ pub(super) fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f
         let u = tk.t - tk.delay;
         if tk.off >= 0.0 { tk.off += dt; }
         g.ch[c].anim.tk = Some(tk);
-        let table = crate::character::taken();
+        let table = &crate::character::TAKEN;
         let secs = table.secs;
         if u >= secs || tk.off >= 0.2 {
             g.ch[c].anim.tk = None;
         } else if u > 0.0 {
-            cp = m::max(cp, *table.sag.get(String::from(tk.style.as_str())).unwrap() * v3::smoothstep(0.0, 0.3, u) * (1.0 - v3::smoothstep(0.6, secs, u)) * (if tk.off < 0.0 { 1.0 } else { 1.0 - tk.off / 0.2 }));
+            cp = m::max(cp, table.sag.of(tk.style) * v3::smoothstep(0.0, 0.3, u) * (1.0 - v3::smoothstep(0.6, secs, u)) * (if tk.off < 0.0 { 1.0 } else { 1.0 - tk.off / 0.2 }));
         }
     }
     cp
@@ -638,7 +638,7 @@ pub(super) fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f
 /// How far into the move's tail he is, 0 to 1; let go of as he walks off. (character.ts CharacterAnimator.blowTail)
 fn anim_blow_tail(g: &crate::game::Game, c: CharId, b: &crate::character::BlowRun) -> f64 {
     let x = b.end + b.tail;
-    let w = crate::character::blow().walk;
+    let w = crate::character::BLOW.walk;
     bump(b.t, b.hit + 0.08, b.end + 0.1, x - 0.45, x) * (1.0 - v3::smoothstep(w[0], w[1], m::abs(g.ch[c].anim.speed)))
 }
 
@@ -720,8 +720,8 @@ fn anim_taken_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: crate
 
 /// The knife's blow: the right arm over the punch clip's pose, its clock and its pose. (character.ts CharacterAnimator.knifeBlow)
 pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate::character::StrikeKind, dt: f64, total: f64, tw_y: f64, tw_p: f64) {
-    let kb = crate::character::knife_blow();
-    let k = if g.ch[c].anim.kb_slash { crate::character::knife_slash() } else if g.ch[c].anim.kb_back { crate::character::knife_back() } else { match kind { StrikeKind::Cross => kb.cross, StrikeKind::Jab => kb.jab } };
+    let kb = &crate::character::KNIFE_BLOW;
+    let k = if g.ch[c].anim.kb_slash { &crate::character::KNIFE_SLASH } else if g.ch[c].anim.kb_back { &crate::character::KNIFE_BACK } else { match kind { StrikeKind::Cross => &kb.cross, StrikeKind::Jab => &kb.jab } };
     let t0 = kb.snap * (1.0 - g.ch[c].anim.kb_r0);
     let fit = m::min(1.0, m::max(0.2, total - kb.fade - t0 - 0.035) / k.end);
     let t = (g.ch[c].anim.kb_t - t0) / fit;
@@ -731,13 +731,13 @@ pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate:
 }
 
 /// The blow's pose, its clock being knifeBlow's: `t` the key time, `t0` the seconds to the hilt. (character.ts CharacterAnimator.knifePose)
-fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
+fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_knife_pose_ask(g, c, slot, k, t, t0, total, tw_y, tw_p);
 }
 
 /// (character.ts CharacterAnimator.knifePoseAsk)
-fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
+fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let at_p = match g.ch[c].anim.rd_at { Some(p) => Some(anim_to_model_p(g, c, p)), None => None };
     let rc = anim_sheath_rest_inv(g, c);
     {
@@ -886,13 +886,8 @@ mod tests {
 
     #[test]
     fn every_word_has_its_row() {
-        let (b, t, r) = (crate::character::blow(), crate::character::taken(), crate::character::ready());
-        for s in [BlowStyle::Chop, BlowStyle::Palm, BlowStyle::Mouth, BlowStyle::Slash, BlowStyle::Sweep] {
-            let w = String::from(s.as_str());
-            assert!(b.rise.get(w.clone()).is_some() && b.sink.get(w.clone()).is_some());
-            let _ = blow_no_of(s);
-        }
-        for s in [TakenStyle::Arch, TakenStyle::Hunch, TakenStyle::Snap] { assert!(t.sag.get(String::from(s.as_str())).is_some()); }
+        let r = crate::character::ready();
+        for s in [BlowStyle::Chop, BlowStyle::Palm, BlowStyle::Mouth, BlowStyle::Slash, BlowStyle::Sweep] { let _ = blow_no_of(s); }
         for k in [ReadyKind::Grab, ReadyKind::Seat, ReadyKind::Strike, ReadyKind::GrabGun] { assert!(r.get(String::from(k.as_str())).is_some()); }
     }
 
