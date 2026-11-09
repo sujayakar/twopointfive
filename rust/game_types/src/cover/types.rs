@@ -194,9 +194,7 @@ pub struct CoverPoseFor {
     pub strafe: bool,
 }
 
-/// (src/game/cover.ts:189 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/cover.ts:189 CHEST)
 pub const CHEST: f64 = 1.1;
 

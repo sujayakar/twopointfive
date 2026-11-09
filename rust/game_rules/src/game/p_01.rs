@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 1 to 300
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A man easing past furniture: a player crouched and not dashing; anyone else low.   (game.ts quietMan)
+/// A man easing past furniture: a player crouched and not dashing; anyone else low.
 pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
     match pl {
         Some(p) => g.pl[p].crouch && !g.pl[p].dash,
@@ -15,7 +14,7 @@ pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool
     }
 }
 
-/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.   (game.ts missionRating)
+/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.
 pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
     if s.spotted > 0.0 {
         crate::game::MissionRating::Assault
@@ -26,7 +25,7 @@ pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRati
     }
 }
 
-/// `m:ss` of a count of seconds.   (game.ts fmtClock)
+/// `m:ss` of a count of seconds.
 pub fn fmt_clock(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
     let tail = js::num_str(js::rem(s, 60.0));
@@ -34,7 +33,7 @@ pub fn fmt_clock(sec: f64) -> String {
     alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
 }
 
-/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.   (game.ts newMission)
+/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.
 pub fn new_mission(t0: f64) -> crate::game::Mission {
     crate::game::Mission {
         stage: crate::game::MissionStage::Infiltrate,

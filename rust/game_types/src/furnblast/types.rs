@@ -96,7 +96,7 @@ pub struct BlastFirst {
     pub group: f64,
     pub at: V3,
     pub shatter_m: f64,
-    /// INVENTED: g.serial() where firstToGo makes the answer (furnblast.ts:243): rowTake's memo asks by identity whether this is the same ask (furnblast.ts:259)
+    /// INVENTED: g.serial() where firstToGo makes the answer: rowTake's memo asks by identity whether this is the same ask
     pub serial: u32,
 }
 
@@ -211,7 +211,6 @@ pub enum FurnitureNoteResetCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct FurnblastMod {
-    /// (src/game/furnblast.ts:117 FURN_LOG)
     pub furn_log: Vec<String>,
 }
 impl FurnblastMod {
@@ -243,18 +242,13 @@ pub struct FurnblastStats {
     pub mouth_left: i32,
 }
 
-/// (src/game/furnblast.ts:104 FURN_BREAK: a table nothing writes)
 pub fn furn_break() -> Vec<(crate::scene_materials::BreakClass, crate::furnblast::BreakRow)> { alloc::vec![(crate::scene_materials::BreakClass::Wood, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.9, max: 2.0, strips: 3.0 }, apart: crate::furnblast::BreakRowApart { len: 1.2, max: 2.0, strips: 2.0 }, uneven: 0.6, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.25, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.15, gain: 0.5 }] } }), (crate::scene_materials::BreakClass::Board, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.45, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.4, fly: 1.1, spin: 1.2, land: crate::furnblast::BreakRowLand { level: 0.15, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.5, gain: 0.3 }] } }), (crate::scene_materials::BreakClass::Metal, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.7, max: 2.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.5, fly: 0.8, spin: 0.7, land: crate::furnblast::BreakRowLand { level: 0.45, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 0.7, gain: 0.9 }, crate::furnblast::BreakRowLandSfxItem { name: String::from("magDrop"), rate: 0.5, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Hard, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.4, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 0.8, max: 2.0, strips: 1.0 }, uneven: 0.5, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.2, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.3, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Soft, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 9.0, max: 1.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.0, fly: 1.2, spin: 1.3, land: crate::furnblast::BreakRowLand { level: 0.1, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 0.9, gain: 0.3 }] } })] }
 
-/// (src/game/furnblast.ts:119 HIDE)
 pub const HIDE: f64 = 3.0;
 
-/// (src/game/furnblast.ts:121 STEEL_CARCASS_M)
 pub const STEEL_CARCASS_M: f64 = 0.25;
 
-/// (src/game/furnblast.ts:124 STEEL_SHEETS_ROOM)
 pub const STEEL_SHEETS_ROOM: f64 = 16.0;
 
-/// (src/game/furnblast.ts:128 STEEL_CARCASS_MOST)
 pub const STEEL_CARCASS_MOST: f64 = 2.2;
 

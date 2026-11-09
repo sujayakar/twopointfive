@@ -1,4 +1,3 @@
-//! src/game/cleared.ts lines 1 to 116
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,7 +21,7 @@ fn grid(g: &Game) -> &[u16] {
     g.cleared.room_of_cell.as_deref().unwrap()
 }
 
-/// May a flood stand on this cell: on the grid, not shut, not a doorway.   (cleared.ts:47 free)
+/// May a flood stand on this cell: on the grid, not shut, not a doorway.
 fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
@@ -30,7 +29,7 @@ fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num(i + 0.0))
 }
 
-/// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.   (cleared.ts ClearedRooms.build)
+/// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.
 pub fn cleared_rooms_build(g: &mut crate::game::Game) {
     if g.cleared.room_of_cell.is_some() { return; }
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
@@ -101,7 +100,7 @@ pub fn cleared_rooms_build(g: &mut crate::game::Game) {
     g.cleared.room_of_cell = Some(grid_new);
 }
 
-/// What `dearFor`'s price list answers for a cell. The room map and what is known are read live, as the closure's shared arrays were.   (cleared.ts:102)
+/// What `dearFor`'s price list answers for a cell. The room map and what is known are read live, as the closure's shared arrays were.
 pub fn dear_price(g: &crate::game::Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 {
     let crate::cleared::DearPrice::Rooms { dear, from_room, mark_rooms, also } = price;
     let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
@@ -111,12 +110,12 @@ pub fn dear_price(g: &crate::game::Game, price: &crate::cleared::DearPrice, ix: 
     }
 }
 
-/// A new one: the field initialisers, nothing more.   (cleared.ts ClearedRooms.constructor)
+/// A new one: the field initialisers, nothing more.
 pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms {
     crate::cleared::ClearedRooms::blank()
 }
 
-/// Nothing known (a restart: Game.resetGuards).   (cleared.ts ClearedRooms.reset)
+/// Nothing known (a restart: Game.resetGuards).
 pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     crate::seenwalk::seen_reset(g);
     g.cleared.known_room.fill(0);
@@ -125,7 +124,7 @@ pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     g.cleared.stats = crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 };
 }
 
-/// The room `p` stands in (0: none, a doorway, open floor).   (cleared.ts ClearedRooms.roomAt)
+/// The room `p` stands in (0: none, a doorway, open floor).
 pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 {
     cleared_rooms_build(g);
     let cell = g.col.nav.cell;
@@ -136,13 +135,13 @@ pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 {
     cell_at(grid(g), i).unwrap_or(0.0)
 }
 
-/// Has the team been in the room `p` stands in (open floor and doorways: yes).   (cleared.ts ClearedRooms.knownAt)
+/// Has the team been in the room `p` stands in (open floor and doorways: yes).
 pub fn cleared_rooms_known_at(g: &mut crate::game::Game, p: V3) -> bool {
     let r = cleared_rooms_room_at(g, p);
     !js::truthy(r) || known_flag(g, r)
 }
 
-/// The room on a door's `side` face, by the cell its floor was flooded from (0: open floor, or no floor there).   (cleared.ts ClearedRooms.roomBy)
+/// The room on a door's `side` face, by the cell its floor was flooded from (0: open floor, or no floor there).
 pub fn cleared_rooms_room_by(g: &mut crate::game::Game, d: DoorId, side: f64) -> f64 {
     cleared_rooms_build(g);
     let s = g.cleared.seeds.get(d).map_or(-1.0, |p| p[if side > 0.0 { 0 } else { 1 }]);
@@ -150,13 +149,13 @@ pub fn cleared_rooms_room_by(g: &mut crate::game::Game, d: DoorId, side: f64) ->
     cell_at(grid(g), s).unwrap_or(0.0)
 }
 
-/// Is there floor at all on that face of the door.   (cleared.ts ClearedRooms.hasFloor)
+/// Is there floor at all on that face of the door.
 pub fn cleared_rooms_has_floor(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
     cleared_rooms_build(g);
     g.cleared.seeds.get(d).map_or(-1.0, |p| p[if side > 0.0 { 0 } else { 1 }]) >= 0.0
 }
 
-/// The room a mark is in; a mark on a cell that is no room's is in every room a cell away.   (cleared.ts ClearedRooms.roomsOf)
+/// The room a mark is in; a mark on a cell that is no room's is in every room a cell away.
 pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) { return vec![r]; }
@@ -179,12 +178,12 @@ pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
     out
 }
 
-/// Has the team been in this room (no room: yes).   (cleared.ts ClearedRooms.isKnown)
+/// Has the team been in this room (no room: yes).
 pub fn cleared_rooms_is_known(g: &crate::game::Game, room: f64) -> bool {
     !js::truthy(room) || known_flag(g, room)
 }
 
-/// Where somebody might stand in the rooms nobody of the team has been in: one point of their floor every `step` nav cells each way.   (cleared.ts ClearedRooms.unknownEyes)
+/// Where somebody might stand in the rooms nobody of the team has been in: one point of their floor every `step` nav cells each way.
 pub fn cleared_rooms_unknown_eyes(g: &mut crate::game::Game, step: f64) -> Vec<crate::cleared::ClearedRoomsUnknownEyesItem> {
     cleared_rooms_build(g);
     let (w, h, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
@@ -207,7 +206,7 @@ pub fn cleared_rooms_unknown_eyes(g: &mut crate::game::Game, step: f64) -> Vec<c
     out
 }
 
-/// One of ours stands at `p`.   (cleared.ts ClearedRooms.mark)
+/// One of ours stands at `p`.
 pub fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) && !known_flag(g, r) {
@@ -216,7 +215,7 @@ pub fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
     }
 }
 
-/// Four times a second: where the team stands is known ground.   (cleared.ts ClearedRooms.tick)
+/// Four times a second: where the team stands is known ground.
 pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
     if !crate::seats::team_active(g) { return; }
     if g.cleared.last >= 0.0 && m::abs(g.time - g.cleared.last) < 0.25 { return; }
@@ -235,7 +234,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// A walk's price list for nav.findPath: every cell of a room nobody of the team has been in is `dear`, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them. None: nothing on this floor is dear for this walk.   (cleared.ts ClearedRooms.dearFor)
+/// A walk's price list for nav.findPath: every cell of a room nobody of the team has been in is `dear`, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them. None: nothing on this floor is dear for this walk.
 pub fn cleared_rooms_dear_for(g: &mut crate::game::Game, from: V3, to: V3, dear: f64, also: Option<&[f64]>) -> Option<crate::cleared::DearPrice> {
     let also = also.unwrap_or(&[]);
     cleared_rooms_build(g);
@@ -255,7 +254,7 @@ pub fn cleared_rooms_dear_for(g: &mut crate::game::Game, from: V3, to: V3, dear:
     Some(crate::cleared::DearPrice::Rooms { dear, from_room: a, mark_rooms: b, also: also.to_vec() })
 }
 
-/// Metres of a path (from `from`, by its corners) that lie on cells `pen` prices dear.   (cleared.ts ClearedRooms.dearAlong)
+/// Metres of a path (from `from`, by its corners) that lie on cells `pen` prices dear.
 pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3], pen: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> f64 {
     let cell = g.col.nav.cell;
     let mut metres = 0.0;
@@ -279,7 +278,7 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
 mod tests {
     use super::*;
 
-    /// The metres against the TypeScript's own bits (cleared.ts dearAlong under EXACT, a cell dear where its x is even).
+    /// The metres against the TypeScript's own bits.
     #[test]
     fn dear_along_keeps_the_typescripts_bits() {
         let mut g = Game::blank();

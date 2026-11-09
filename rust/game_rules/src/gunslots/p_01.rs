@@ -1,4 +1,3 @@
-//! src/game/gunslots.ts lines 1 to 118
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,17 +11,17 @@ fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponD
     g.m.weapons.weapons.get(w).unwrap()
 }
 
-/// The check's break path is tooling: BREAK is false in the game. (gunslots.ts gunsBroken)
+/// The check's break path is tooling: BREAK is false in the game.
 pub fn guns_broken() -> bool {
     BREAK
 }
 
-/// The pick of that id, or None. (gunslots.ts gunPick)
+/// The pick of that id, or None.
 pub fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)
 }
 
-/// What a slot's row steps through, in order; a primary may be left at home. (gunslots.ts gunPicks)
+/// What a slot's row steps through, in order; a primary may be left at home.
 pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     for p in picks() {
@@ -34,14 +33,14 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
     ids
 }
 
-/// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true. (gunslots.ts pickRow)
+/// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true.
 pub fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
     order.into_iter().flatten().find(|&w| weapon_row(g, w).enabled)
 }
 
-/// The pick's name on its tile: its row's short name. (gunslots.ts pickWord)
+/// The pick's name on its tile: its row's short name.
 pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) -> String {
     let suppressed = suppressed.unwrap_or(true);
     if id_2 == NO_PRIMARY { return String::from("none"); }
@@ -51,7 +50,7 @@ pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) ->
     }
 }
 
-/// Which of the card's gun drawings stands for a pick, by its row's class; None: none carried. (gunslots.ts pickIcon)
+/// Which of the card's gun drawings stands for a pick, by its row's class; None: none carried.
 pub fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWeapon> {
     let w = match pick_row(g, id_2, true) {
         Some(w) => w,
@@ -64,7 +63,7 @@ pub fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWea
     })
 }
 
-/// kit.ts kitStage: he is handed the gun that is not in his hands (None: the pistol alone is his whole kit). GUNSLOTS.on is settled true. (gunslots.ts sideStage)
+/// kit.ts kitStage: he is handed the gun that is not in his hands (None: the pistol alone is his whole kit). GUNSLOTS.on is settled true.
 pub fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
     g.gd[gd].second = None;
     let Some(row) = row else { return };
@@ -77,7 +76,7 @@ pub fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::wea
     g.stats.gunslots.staged += 1;
 }
 
-/// The gun in his hands and the one that is not change places; the row is dealt off his route every frame, so the route is written. (gunslots.ts swap)
+/// The gun in his hands and the one that is not change places; the row is dealt off his route every frame, so the route is written.
 pub fn swap(g: &mut crate::game::Game, gd: GuardId) {
     let s = g.gd[gd].second.unwrap();
     let was = g.gd[gd].weapon;
@@ -95,7 +94,7 @@ pub fn swap(g: &mut crate::game::Game, gd: GuardId) {
     s.ahead = ahead;
 }
 
-/// … on the fight AI's path: his man is where he last had him, while he is on him. (gunslots.ts sideOutAlert)
+/// … on the fight AI's path: his man is where he last had him, while he is on him.
 pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let k = g.gd[gd].last_known;
     if g.gd[gd].second.is_none() || g.gd[gd].state != crate::game::GuardState::Alert { return false; }
@@ -105,7 +104,7 @@ pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
     side_out(g, gd, m::hyp2(k[0] - p[0], k[2] - p[2]))
 }
 
-/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds. GUNSLOTS.on and .dry are settled true. (gunslots.ts sideOut)
+/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds. GUNSLOTS.on and .dry are settled true.
 pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     let Some(s) = g.gd[gd].second else { return false };
     if s.out || !js::truthy(crate::weapons::firearm_rounds_ready(g, s.gun)) { return false; }
@@ -127,7 +126,7 @@ pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     true
 }
 
-/// He has a man in front of him this frame: the sidearm stays out. (gunslots.ts sideSeen)
+/// He has a man in front of him this frame: the sidearm stays out.
 pub fn side_seen(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
     if let Some(s) = g.gd[gd].second.as_mut() {
@@ -135,12 +134,12 @@ pub fn side_seen(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// His hands are between guns, or off his gun for a two-handed job: no round. (gunslots.ts sideLocked)
+/// His hands are between guns, or off his gun for a two-handed job: no round.
 pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].second.map_or(false, |s| g.time < s.lock) || g.gd[gd].work_stow.is_some()
 }
 
-/// The long gun he let go of hangs down his front: its rig, while the sidearm is out. (gunslots.ts sideHung)
+/// The long gun he let go of hangs down his front: its rig, while the sidearm is out.
 pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
     let s = g.gd[gd].second?;
     if !s.out || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
@@ -152,7 +151,7 @@ pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::
     }
 }
 
-/// Every frame, each man: nobody in front of him for `lull` seconds and the sidearm goes back, the primary up reloaded, his hands busy for its reload and `back` more. (gunslots.ts sideTick)
+/// Every frame, each man: nobody in front of him for `lull` seconds and the sidearm goes back, the primary up reloaded, his hands busy for its reload and `back` more.
 pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let dt = dt.unwrap_or(0.0);
     let Some(s) = g.gd[gd].second else { return };

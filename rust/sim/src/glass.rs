@@ -5,7 +5,7 @@
 //! tools/qa/glass-ident.ts holds the two together over panes broken by a game.
 //!
 //! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes_g`. A pane with no row is whole: shut
-//! everywhere. (A world with no game behind it, a tool's, has a copy here, written by src/scene/boxMirror.ts.)
+//! everywhere.
 //!
 //! A ROW. Doubles (GD): nine a site, eight sites (u, v, the bearing of radial 0, the four base radii, the ring zone's radius, the share of merged
 //! sectors), then the dice of a toughened pane coming down (the blow's u and v, the pane's half sides, the key of the last clump out and which clump
@@ -13,7 +13,7 @@
 //! static's index, the flags and the site count, the dice's columns, rows and seed, each site's radials and seed, a bit a piece that is out, a bit a
 //! piece that is queued to leave, and a bit a site whose crater is.
 //!
-//! A BURST'S VIEW. A blast judges its own lines by glass as it is to a burst (game/frag.ts throughGlass): what the blast has just taken is no glass to its
+//! A BURST'S VIEW. A blast judges its own lines by glass as it is to a burst: what the blast has just taken is no glass to its
 //! fragments (VIEW_BLOWN, answered here from the pieces queued to leave), and a man reckoning a burst that has not happened counts out the panes it
 //! would break (VIEW_GIVES: panes.rs `gives`, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
 //! judgment and is none at every other time.
@@ -88,7 +88,7 @@ pub fn jit(seed: u32, a: u32, b: u32) -> f64 {
     hash(seed, a, b) as f64 / 16777216.0
 }
 
-/// one site of a row (glassPattern.ts GpSite, the fields a piece is found by)
+/// one site of a row
 pub struct Site<'a> {
     pub d: &'a [f64],
     pub n: i32,
@@ -222,7 +222,7 @@ fn bit(w: &[u32], at: usize, k: u32) -> bool {
 
 // ---- toughened glass coming down
 /// is the clump (u, v) belongs to out: that clump's place in the order clumps let go against the last one out, by their keys and by their numbers where two keys
-/// are one (pattern.rs Dice: gpDiceClump, gpDiceKey; glassbreak.ts startDice's sort). So this one number says "earlier in that order than the last one out", at any moment of a release.
+/// are one. So this one number says "earlier in that order than the last one out", at any moment of a release.
 pub fn dice_out(d: &[f64], w: &[u32], u: f64, v: f64) -> bool {
     let dc = crate::pattern::Dice { u: d[D_U], v: d[D_V], cols: w[GW_COLS], rows: w[GW_ROWS], seed: w[GW_DSEED], hu: d[D_HU], hv: d[D_HV] };
     if u != u || v != v {

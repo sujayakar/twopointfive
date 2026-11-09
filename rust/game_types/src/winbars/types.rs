@@ -34,9 +34,7 @@ impl BreakBarCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WinbarsMod {
-    /// (src/game/winbars.ts:57 LOG)
     pub log: Vec<String>,
-    /// (src/game/winbars.ts:64 STATE)
     pub state: Option<crate::winbars::BarState>,
 }
 impl WinbarsMod {
@@ -59,5 +57,4 @@ pub struct WinbarsStats {
     pub spared: i32,
 }
 
-/// (src/game/winbars.ts:60 HIDE)
 pub const HIDE: f64 = 3.0;

@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a lesson step's done-test, a variant for each `is` of LESSON_TESTS (scenarios.ts LessonTest, lesson.ts). Unknown: an `is` no row has, or a record that would throw; it never passes (lesson.ts passes)
+/// a lesson step's done-test, a variant for each `is` of LESSON_TESTS. Unknown: an `is` no row has, or a record that would throw; it never passes
 #[derive(Clone, Debug, ToBytes)]
 pub enum LessonTestKind {
     Unknown { is: String },

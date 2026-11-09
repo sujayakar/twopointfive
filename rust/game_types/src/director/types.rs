@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured (director.ts EventFilter)
+/// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured
 #[derive(Clone, Debug, ToBytes)]
 pub enum EventFilter {
     InBox { x0: f64, x1: f64, z0: f64, z1: f64 },
@@ -779,18 +779,13 @@ pub struct SignalViewS {
     pub name: String,
 }
 
-/// (src/game/director.ts:335 TEAMS: a table nothing writes)
 pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile")] }
 
-/// (src/game/director.ts:394 MAX_RESUMES)
 pub const MAX_RESUMES: f64 = 64.0;
 
-/// (src/game/director.ts:396 LOG_CAP)
 pub const LOG_CAP: f64 = 2500.0;
 
-/// (src/game/director.ts:396 MAX_WHEN)
 pub const MAX_WHEN: f64 = 32.0;
 
-/// (src/game/director.ts:396 MAX_PASSES)
 pub const MAX_PASSES: f64 = 8.0;
 

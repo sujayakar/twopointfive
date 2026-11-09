@@ -54,13 +54,9 @@ pub enum PickKey {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WhistleMod {
-    /// (src/game/whistle.ts:88 memOf)
     pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,
-    /// (src/game/whistle.ts:101 blowerOf)
     pub blower_of: JsMap<PlayerId, crate::whistle::Blower>,
-    /// (src/game/whistle.ts:130 resOf)
     pub res_of: JsMap<u32, crate::whistle::Resolution>,
-    /// (src/game/whistle.ts:132 WHISTLE_LOG)
     pub whistle_log: Vec<crate::whistle::WhistleModWHISTLELOGItem>,
 }
 impl WhistleMod {
@@ -87,18 +83,13 @@ pub struct WhistleStats {
     pub unanswered: i32,
 }
 
-/// (src/game/whistle.ts:63 LOOK_LINES: a table nothing writes)
 pub fn look_lines() -> Vec<String> { alloc::vec![String::from("hello?"), String::from("someone there?"), String::from("…what was that?"), String::from("who's that whistling?"), String::from("somebody down there?")] }
 
-/// (src/game/whistle.ts:66 TWICE_NOW: a table nothing writes)
 pub fn twice_now() -> Vec<String> { alloc::vec![String::from("all right — who's messing around?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
 
-/// (src/game/whistle.ts:68 LOOK_FOE: a table nothing writes)
 pub fn look_foe() -> Vec<String> { alloc::vec![String::from("…quiet. listen."), String::from("you hear that?"), String::from("something's there.")] }
 
-/// (src/game/whistle.ts:69 TWICE_FOE: a table nothing writes)
 pub fn twice_foe() -> Vec<String> { alloc::vec![String::from("that's no bird. going to look."), String::from("someone's close. eyes up.")] }
 
-/// (src/game/whistle.ts:75 NEVER)
 pub const NEVER: f64 = -1000000000.0;
 

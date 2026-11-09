@@ -11,7 +11,7 @@ pub enum DarkdoorKWho {
 
 /// the switch and its numbers: on (?nodarkdoor = every man walks into the dark as he did) and by
 ///  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is
-///  green: 'rest' (morale.ts trainingOf: the knob, the squad's key, the difficulty's mix) · 'all' · 'none'. Metres, seconds and shares as the
+///  green: 'rest' · 'all' · 'none'. Metres, seconds and shares as the
 ///  head of the file names them; `openRad` = how far a leaf must stand off its frame to be an open door, `armSecs` how long a shut door he
 ///  reached in the light stays his to balk at once it opens; `keepAw` = the awareness a waiting man's suspicion is
 ///  held at (it must not drain away under him at the frame); `keepSecs` = how long a balk outlasts his walk not asking (a reaction beat, a clear shot), and

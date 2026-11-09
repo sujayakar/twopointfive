@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // cast.ts WHOLE but castWear (the viewer's). Triaged dress, but dress.ts says "what each WEARS is still dealt: his kit is placed off it": Character.parts feeds
 // packside's boxes, which are in the frame's list. No die is drawn.
 
-/// Of a cast's defenders, the ones dressed for a building.   (cast.ts officeDress; the memo by the parts array's identity is not kept: a pure function of `parts`)
+/// Of a cast's defenders, the ones dressed for a building.
 pub fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) -> Vec<AnimGltfCastVariantId> {
     let field = field_parts();
     let mut bits: u32 = 0;
@@ -19,7 +19,7 @@ pub fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) 
     let keep: Vec<AnimGltfCastVariantId> = list.iter().copied().filter(|v| js::to_u32(g.tab.anim_gltf_cast_variant[*v].mask) & bits == 0).collect();
     if !keep.is_empty() { keep } else { list.to_vec() }
 }
-/// The teammate at a place of the roster.   (cast.ts operatorAt)
+/// The teammate at a place of the roster.
 pub fn operator_at(g: &Game, cast: AnimGltfCastInfoId, place: f64) -> Option<AnimGltfCastVariantId> {
     let ops = crate::anim_gltf::cast_side(g, cast, crate::anim_gltf::CastSide::Operator);
     if ops.is_empty() { return None; }
@@ -34,7 +34,7 @@ fn defenders(g: &Game, cast: AnimGltfCastInfoId) -> Vec<AnimGltfCastVariantId> {
     let d = crate::anim_gltf::cast_side(g, cast, crate::anim_gltf::CastSide::Defender);
     if crate::scene_look::look_office(g) { let parts = g.tab.anim_gltf_cast_info[cast].parts.clone(); office_dress(g, &parts, &d) } else { d }
 }
-/// The variant this man wears (None with no cast loaded).   (cast.ts castVariantOf)
+/// The variant this man wears (None with no cast loaded).
 pub fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantId> {
     use crate::anim_gltf::CastSide;
     use crate::teams::Team;
@@ -63,7 +63,7 @@ pub fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantI
     if !has_unit || trained || team != Team::Guard { if let Some(v) = v { g.m.cast.worn.set(c_2, v); } }
     v
 }
-/// Who is drawn in the sneaking suit this frame.   (cast.ts sneakSuit)
+/// Who is drawn in the sneaking suit this frame.
 pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
     if !g.k.look.on { return false; }
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
@@ -75,7 +75,7 @@ pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return true; }
     k == Some(true) && crate::scenario_run::team_of(g).iter().any(|gd| g.gd[*gd].ch == c_2)
 }
-/// The part mask to draw this man with this frame (0 with no cast loaded).   (cast.ts castParts)
+/// The part mask to draw this man with this frame (0 with no cast loaded).
 pub fn cast_parts(g: &mut Game, c_2: CharId) -> f64 {
     let Some(v) = cast_variant_of(g, c_2) else { return 0.0; };
     let rig = g.ch[c_2].rig;

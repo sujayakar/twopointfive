@@ -1,4 +1,3 @@
-//! src/game/player.ts lines 393 to 835
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -54,10 +53,10 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 
 // ---- the part's functions ----
 
-/// how a player steps to the launcher's next load (slotsetup.ts loadKeys)
+/// how a player steps to the launcher's next load
 const LOAD_KEYS: &str = "press 2, then 2";
 
-/// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.   (player.ts legsOwn)
+/// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
@@ -66,7 +65,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
 }
 
-/// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.   (player.ts freePace)
+/// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.
 pub fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
     let mut max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.tune.player_sprint }
@@ -77,7 +76,7 @@ pub fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::
     crate::kitload::sam_load_pace(g, seat, max_speed, Some(m.sprinting))
 }
 
-/// His move keys as a way across the floor, in the view's basis, not yet of unit length.   (player.ts keysWay)
+/// His move keys as a way across the floor, in the view's basis, not yet of unit length.
 pub fn keys_way(fwd: V3, right: V3, w: bool, s: bool, d: bool, a: bool) -> [f64; 2] {
     let (mut mx, mut mz) = (0.0, 0.0);
     if w { mx += fwd[0]; mz += fwd[2]; }
@@ -87,7 +86,7 @@ pub fn keys_way(fwd: V3, right: V3, w: bool, s: bool, d: bool, a: bool) -> [f64;
     [mx, mz]
 }
 
-/// C: down, or up where there is the headroom; false: no room to stand.   (player.ts crouchKey)
+/// C: down, or up where there is the headroom; false: no room to stand.
 pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> bool {
     if !m.crouch { m.crouch = true; }
     else if can_stand_at(g, m.char.pos) { m.crouch = false; }
@@ -95,7 +94,7 @@ pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> boo
     true
 }
 
-/// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.   (player.ts sprintStance)
+/// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.
 pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
     let dashes = g.puppet.is_none() && !g.touring;
     if want_sprint && m.crouch && can_stand_at(g, m.char.pos) && !dashes { m.crouch = false; }
@@ -105,7 +104,7 @@ pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, wan
     m.dash = dashes && want_sprint && m.crouch && !dragging && !stalk;
 }
 
-/// One stride: his pace taken up or let go, his place moved by it, the walls and then the men given their say.   (player.ts strideStep)
+/// One stride: his pace taken up or let go, his place moved by it, the walls and then the men given their say.
 pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f64, mz: f64, ml: f64, stalk: Option<crate::player::StrideStepStalk>, dt: f64, now: Option<f64>) {
     let now = now.unwrap_or(g.time);
     let mut max_speed = free_pace(g, &crate::seats::here(g), *m, ml);
@@ -124,7 +123,7 @@ pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f
     keep_off_guards(g, dt, headroom, Some(m));
 }
 
-/// Is his gun up to aim: the pistol just fired or with its light on, the rifle braced.   (player.ts gunRaised)
+/// Is his gun up to aim: the pistol just fired or with its light on, the rifle braced.
 pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Option<crate::player::GunRaisedM>) -> bool {
     let now = now.unwrap_or(g.time);
     let sprinting = match m { Some(m) => m.sprinting, None => g.pl[pl].sprinting };
@@ -133,13 +132,13 @@ pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Opti
         || crate::game::player_braced_at(g, pl, sprinting)
 }
 
-/// The way a leaf he is pushing open turns him: square into its face, unless the gun is up or it merely rests on him.   (player.ts leafFacing)
+/// The way a leaf he is pushing open turns him: square into its face, unless the gun is up or it merely rests on him.
 pub fn leaf_facing(dp: Option<&crate::player::LeafFacingDp>, aiming: bool) -> Option<f64> {
     let dp = dp?;
     if dp.w >= 1.0 && !aiming && !dp.hold_only.unwrap_or(false) { Some(m::atan2(-dp.n[0], -dp.n[2])) } else { None }
 }
 
-/// A sprint's facing: gun down, the body follows the run and the aim is the body's. Returns the shoulder's turn into a door just run open.   (player.ts sprintFacing)
+/// A sprint's facing: gun down, the body follows the run and the aim is the body's. Returns the shoulder's turn into a door just run open.
 pub fn sprint_facing(g: &crate::game::Game, m: &mut crate::player::Legs, dt: f64, now: Option<f64>) -> Option<f64> {
     let now = now.unwrap_or(g.time);
     let lean = crate::sprintdoor::sprint_door_lean(g, door_stamps(m), Some(now));
@@ -149,7 +148,7 @@ pub fn sprint_facing(g: &crate::game::Game, m: &mut crate::player::Legs, dt: f64
     lean
 }
 
-/// The hips of a walk of his own, his aim already turned; a leaf he is walking open or working by hand turns them instead.   (player.ts hipsTurn)
+/// The hips of a walk of his own, his aim already turned; a leaf he is walking open or working by hand turns them instead.
 pub fn hips_turn(m: &mut crate::player::Legs, speed: f64, aiming: bool, orbit: bool, into_door: Option<f64>, by_hand: bool, dt: f64) {
     if speed > 0.2 {
         let move_yaw = v3::yaw_of(m.char.vel);
@@ -175,7 +174,7 @@ pub fn hips_turn(m: &mut crate::player::Legs, speed: f64, aiming: bool, orbit: b
 
 // ---- pieces of updatePlayer: its closures, and what it says twice ----
 
-/// updatePlayer's `draw`: an item chosen, in the hand or waiting for the step off a wall.   (player.ts:530)
+/// updatePlayer's `draw`: an item chosen, in the hand or waiting for the step off a wall.
 fn draw(g: &mut Game, pl: PlayerId, name: &str) {
     let on_plaster = match g.pl[pl].wall {
         Some(w) => !(g.pl[pl].slot == crate::game::SlotKind::Rifle && wall_stacks(g, w)),
@@ -191,7 +190,7 @@ fn draw(g: &mut Game, pl: PlayerId, name: &str) {
     play(g, "equip", None, 0.5);
 }
 
-/// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.   (player.ts:620)
+/// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.
 fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
     let mut target_y = ap[1] + 0.03;
     if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
@@ -203,7 +202,7 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
     v3::clamp(m::atan2(target_y - gun_y, m::max(aim_dist, 0.5)), -60.0 * v3::DEG, 70.0 * v3::DEG)
 }
 
-/// What a round goes at: the puppet's man, a fixture under the reticle, a man under the cursor, else level along the heading.   (player.ts:717, 742)
+/// What a round goes at: the puppet's man, a fixture under the reticle, a man under the cursor, else level along the heading.
 fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let pt = g.puppet.as_ref().and_then(|p| p.target);
     if let Some(t) = pt {
@@ -216,7 +215,7 @@ fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     free_aim(g, seat, None)
 }
 
-/// updateWorkPlant moves `W.at`, in the TypeScript the job's own array (handwork.ts samWork hands it on): the spot goes back to the job it came from.
+/// updateWorkPlant moves `W.at`, in the TypeScript the job's own array: the spot goes back to the job it came from.
 fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     use crate::handwork::SamWorkKind;
     let Some(at) = w.at else { return };
@@ -227,7 +226,7 @@ fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     }
 }
 
-/// One tick of the player: his keys, his legs, his aim, his guns and throws, his footfalls.   (player.ts updatePlayer)
+/// One tick of the player: his keys, his legs, his aim, his guns and throws, his footfalls.
 pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) {
     use crate::game::{game_msg, SlotKind, ThrowKind};
     use crate::input::{input_lmb, input_lmb_hit, input_rmb, input_rmb_hit};
@@ -890,7 +889,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
 }
 
-/// What is said when 2 flips the launcher's load.   (player.ts:544)
+/// What is said when 2 flips the launcher's load.
 fn load_flip_line(g: &Game, rifle: FirearmId, a: Option<crate::weapons::RifleAttachment>) -> String {
     use crate::weapons::RifleAttachment;
     match a {
@@ -912,7 +911,7 @@ fn load_flip_line(g: &Game, rifle: FirearmId, a: Option<crate::weapons::RifleAtt
     }
 }
 
-/// The launcher's dry click, and why: nothing left of this load, or the tube still closing.   (player.ts:763)
+/// The launcher's dry click, and why: nothing left of this load, or the tube still closing.
 fn launcher_dry_line(g: &Game, rifle: FirearmId, load: crate::weapons::RifleAttachment) -> String {
     use crate::weapons::RifleAttachment;
     match load {

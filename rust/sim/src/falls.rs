@@ -1,4 +1,4 @@
-//! WHAT FALLS, AND WHAT IT LEAVES (src/sim/fallshome.ts; the rules that call it are src/game/shards.ts and src/game/debris.ts) — the landings the
+//! WHAT FALLS, AND WHAT IT LEAVES — the landings the
 //! simulation has scheduled for things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves there), and the
 //! LITTER map: square metres of broken glass lying in each half-metre cell of the floor, which makes a footfall louder and is ground down by it.
 //!
@@ -7,7 +7,7 @@
 //!
 //! This is the GAMEPLAY half of what breaks. The plates, the chunks and the spray a player sees are dressing: they read none of this and write none of it.
 //!
-//! STATEMENT FOR STATEMENT with the TypeScript in fallshome.ts (tools/qa/falls-ident.ts holds the two together, column for column). No length and no
+//! STATEMENT FOR STATEMENT with the TypeScript in fallshome.ts. No length and no
 //! angle is worked out here, so the row answers under either maths.
 use crate::state::state;
 use crate::world::js_min;
@@ -28,7 +28,7 @@ pub const MAXP: usize = 96;
 pub const L_GLASS: usize = 0;
 pub const NLIST: usize = 2;
 
-// a landing's columns (fallshome.ts FP names them by the same numbers)
+// a landing's columns
 pub const P_T: usize = 0;
 pub const P_X: usize = 1;
 pub const P_Y: usize = 2;

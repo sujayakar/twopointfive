@@ -1,4 +1,3 @@
-//! src/game/autopilot.ts lines 1 to 153
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The team has that man in sight: the fog of war's answer where it runs, the room fight's otherwise.   (autopilot.ts inSight)
+/// The team has that man in sight: the fog of war's answer where it runs, the room fight's otherwise.
 pub fn in_sight(g: &crate::game::Game, o: GuardId) -> bool {
     if crate::fogofwar::fog_of_war_active(g) { crate::fogofwar::fog_of_war_seen(g, o) } else { crate::roomfight::room_fight_team_sees(g, o) }
 }
 
-/// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.   (autopilot.ts autoEntries)
+/// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.
 pub fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g, seat) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
     crate::autopilot::AutoEntries { ids: vec![String::from(crate::orders::rows::openclear::ORDER.id)], why, kept: None }
@@ -29,13 +28,13 @@ fn def_of(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> Option<OrdersOrde
     None
 }
 
-/// The target's first row: floor, nothing, a door nobody waits on.   (autopilot.ts autoPick `first`)
+/// The target's first row: floor, nothing, a door nobody waits on.
 fn first(g: &Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget) -> crate::autopilot::AutoPick {
     let id = crate::orders::squad_orders_default_for(g, seat, t).map(|d| g.tab.orders_order_def[d].id.clone());
     crate::autopilot::AutoPick { id, men: None, word: false, why: crate::autopilot::AutoPickWhy::First, t: t.clone(), kept: None }
 }
 
-/// What the quick key does on `t` for the men it would go to: one answer, whoever asks (the call surface still hands the page's `_check`).   (autopilot.ts autoPick)
+/// What the quick key does on `t` for the men it would go to: one answer, whoever asks (the call surface still hands the page's `_check`).
 pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, _check: Option<bool>, men: Option<&[GuardId]>) -> crate::autopilot::AutoPick {
     use crate::autopilot::{AutoPick, AutoPickWhy};
     let crate::orders::OrderTarget::Door(td) = t else { return first(g, seat, t) };
@@ -81,7 +80,7 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     AutoPick { id: Some(e.ids[0].clone()), men: Some(w.men), word: false, why, t: tm, kept: e.kept }
 }
 
-/// The quick key tapped on `t`: everyone it goes to.   (autopilot.ts autoQuick)
+/// The quick key tapped on `t`: everyone it goes to.
 pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> bool { quick(g, t, None) }
 
 /// WHAT THE QUICK KEY MEANS ON `t`, GIVEN: to everyone it goes to, or with Shift to `men` alone. One answer (`auto_pick`), so a part of the squad is given
@@ -141,7 +140,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
     g.orders.group != group
 }
 
-/// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.   (autopilot.ts autoHint)
+/// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.
 pub fn auto_hint(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: Option<&crate::autopilot::AutoPick>) -> Option<String> {
     let own;
     let p = match p {

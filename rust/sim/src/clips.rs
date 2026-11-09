@@ -1,9 +1,9 @@
-//! THE CLIPS A POSE IS SAMPLED FROM (src/anim/gltf.ts Clip, Track; src/anim/skeleton.ts sampleClip) — a character file's animations, copied in ONCE as the
+//! THE CLIPS A POSE IS SAMPLED FROM — a character file's animations, copied in ONCE as the
 //! host first samples one, so that a sample is one question whose answer is written straight into a pose (the bench's, or one at home in a game's pool:
 //! skeleton.rs `ask_sample`), and so that a layer of the animator written here samples with no crossing.
 //!
 //! AUTHORED DATA, NOT STATE: nothing writes a track after its file is loaded, a clip is the same for every game, and no snapshot carries it. So this is
-//! outside the games' blocks (state.rs) and has no part: a COPY (tools/qa/rust-rules-check.ts STATICS). A clip is known by the number `end` gave it; the host keeps which clip that is.
+//! outside the games' blocks (state.rs) and has no part: a COPY. A clip is known by the number `end` gave it; the host keeps which clip that is.
 //!
 //! A CLIP WRITTEN TWICE IS ONE CLIP. The host knows a clip by its object and a character file may be loaded more than once in a process (a game stood up
 //! again), so `end` looks for a clip already held with the same length, the same tracks and the same singles (found by a word folded from them, then compared

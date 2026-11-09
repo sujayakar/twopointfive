@@ -124,7 +124,6 @@ pub struct NightBreachObjective {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NightbreachMod {
-    /// (src/game/nightbreach.ts:140 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 impl NightbreachMod {
@@ -136,14 +135,10 @@ impl NightbreachMod {
     }
 }
 
-/// (src/game/nightbreach.ts:88 SQUAD4: a table nothing writes)
 pub fn squad4() -> Vec<crate::nightbreach::SQUAD4Item> { alloc::vec![crate::nightbreach::SQUAD4Item { name: String::from("Red One"), pair: crate::game::PairId::Red, tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Red Two"), pair: crate::game::PairId::Red, tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue One"), pair: crate::game::PairId::Blue, tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue Two"), pair: crate::game::PairId::Blue, tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }] }
 
-/// (src/game/nightbreach.ts:96 SQUAD4_BUDGET)
 pub const SQUAD4_BUDGET: f64 = 10.0;
 
-/// (src/game/nightbreach.ts:99 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
 
-/// (src/game/nightbreach.ts:104 BLIND: a table nothing writes)
 pub fn blind() -> crate::nightbreach::BLIND { crate::nightbreach::BLIND { after: 0.3, stagger: 0.07, rounds: 12.0, every: 0.1, spread: 0.3, low_gun: 0.21 } }

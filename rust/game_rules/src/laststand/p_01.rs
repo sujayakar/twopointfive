@@ -1,4 +1,3 @@
-//! src/game/laststand.ts lines 1 to 410
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// THE LINES, each to their own side on their net: (kind, cls, say, now, guide). {n} = how many answered, {the} = 'the office', {at} = 'in the office'.
-/// `now` / `guide` are the same lines, place for place, as the dialogue pass and the writing guide have them. (laststand.ts LINES)
+/// `now` / `guide` are the same lines, place for place, as the dialogue pass and the writing guide have them.
 static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
     (LineKind::Check1, 4.0, &["radio check — who's still up? sound off!", "all posts, radio check — who's left? sound off!"], None, None),
     (LineKind::CheckN, 4.0, &["radio check — sound off, who's still up?", "count off — who's still with us?"], None, None),
@@ -117,7 +116,7 @@ fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
 
 // ---------------------------------------------------------------- the skeleton's functions
 
-/// a new tally of the endgame (laststand.ts newStats)
+/// a new tally of the endgame
 pub fn new_stats() -> crate::laststand::StateStats {
     StateStats {
         t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
@@ -126,21 +125,21 @@ pub fn new_stats() -> crate::laststand::StateStats {
     }
 }
 
-/// distance on the floor (laststand.ts flat)
+/// distance on the floor
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// up, and not broken and run: off the net from his shout on (laststand.ts alive)
+/// up, and not broken and run: off the net from his shout on
 pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
-/// a beat between two numbers, off the state's own die (laststand.ts pick)
+/// a beat between two numbers, off the state's own die
 pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
 }
 
-/// a row of the room fight's log (laststand.ts note)
+/// a row of the room fight's log
 pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     let who = match gd { Some(gd) => g.gd[gd].callsign.clone(), None => String::from("-") };
     let t = g.time;
@@ -148,25 +147,24 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
 }
 
-/// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
+/// fit to speak or be spoken to: up, not held, his wits about him
 pub fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
-/// (laststand.ts fit)
 pub fn fit(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit_gd(g, gd)
 }
 
-/// fit, and nobody of the team in his sight these `quiet` seconds (laststand.ts calm)
+/// fit, and nobody of the team in his sight these `quiet` seconds
 pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit(g, d) && g.time - g.gd[gd].last_seen_t > g.k.laststand.quiet
 }
 
-/// where a point is, by the structure's own rooms (laststand.ts where)
+/// where a point is, by the structure's own rooms
 pub fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
     let rooms = match crate::roomclear::room_clear_scenario_structure(g) { Some(s) => s.rooms, None => Vec::new() };
     let mut best: Option<usize> = None;
@@ -185,7 +183,7 @@ pub fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
     Where { id: None, the: out.clone(), at: out }
 }
 
-/// where a man says he is: the level's own name for the floor he stands on, only on ground it has no word for 'outside' the nearest room (laststand.ts spoken)
+/// where a man says he is: the level's own name for the floor he stands on, only on ground it has no word for 'outside' the nearest room
 pub fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
     let w = where_(g, p);
     if id_truthy(&w.id) { return Spoken { id: w.id, the: w.the, at: w.at, spot: None }; }
@@ -205,7 +203,7 @@ pub fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
     Spoken { id, the: r.name, at, spot }
 }
 
-/// a line on their net: the log row, the strip's row, the list the checks read (laststand.ts voice)
+/// a line on their net: the log row, the strip's row, the list the checks read
 pub fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, text: &str, cls: f64) {
     let callsign = g.gd[gd].callsign.clone();
     crate::game::game_msg(g, &alloc::format!("{} (radio): {}", callsign, text));
@@ -217,7 +215,7 @@ pub fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::Lin
     note(g, Some(gd), &alloc::format!("net: {}", text));
 }
 
-/// a line's words with its {names} filled, an unknown name by nothing (laststand.ts fill)
+/// a line's words with its {names} filled, an unknown name by nothing
 pub fn fill(tpl: &str, vars: &JsMap<String, String>) -> String {
     let mut out = String::new();
     let mut rest = tpl;
@@ -237,7 +235,7 @@ pub fn fill(tpl: &str, vars: &JsMap<String, String>) -> String {
     out
 }
 
-/// a line on the net, now or when the strip has room for its class; `then` happens when it is said (laststand.ts net)
+/// a line on the net, now or when the strip has room for its class; `then` happens when it is said
 pub fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, vars: Option<&JsMap<String, String>>, then: Option<&crate::laststand::LaterThen>, redo: Option<&crate::laststand::LaterRedo>) {
     let (tpl, text, cls, at) = line_slot(g, kind, vars);
     let t0 = g.time;
@@ -249,14 +247,14 @@ pub fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineK
     }
 }
 
-/// a line that says where its man stands: the place is asked again as the line is said (laststand.ts netAt)
+/// a line that says where its man stands: the place is asked again as the line is said
 pub fn net_at(g: &mut crate::game::Game, d: RoomfightDefId, kind: crate::laststand::LineKind, f: &crate::laststand::LaterRedo) {
     let gd = g.tab.roomfight_def[d].gd;
     let a = redo_words(g, f);
     net(g, gd, kind, Some(&a.vars), a.then.as_ref(), Some(f));
 }
 
-/// the lines waiting their turn on the strip: said by the same man if he is still fit to say it (laststand.ts tickLater)
+/// the lines waiting their turn on the strip: said by the same man if he is still fit to say it
 pub fn tick_later(g: &mut crate::game::Game) {
     if st_of(g).later.is_empty() { return; }
     let list = core::mem::take(&mut st_of(g).later);
@@ -273,7 +271,7 @@ pub fn tick_later(g: &mut crate::game::Game) {
     st_of(g).later = kept;
 }
 
-/// this man's word on the net: a room, or none; what he said before is forgotten (laststand.ts name)
+/// this man's word on the net: a room, or none; what he said before is forgotten
 pub fn name(g: &mut crate::game::Game, d: RoomfightDefId, id_2: Option<&str>) {
     let st = st_of(g);
     match id_2 {
@@ -284,7 +282,7 @@ pub fn name(g: &mut crate::game::Game, d: RoomfightDefId, id_2: Option<&str>) {
     st.at.delete(d);
 }
 
-/// named by what he said, the room or the place; kept, to be said again when it stops being true (laststand.ts nameAt)
+/// named by what he said, the room or the place; kept, to be said again when it stops being true
 pub fn name_at(g: &mut crate::game::Game, d: RoomfightDefId, w: Option<&crate::laststand::Spoken>) {
     name(g, d, w.and_then(|w| w.id.as_deref()));
     let w = match w { Some(w) if id_truthy(&w.id) || w.spot.is_some() => w, _ => return };
@@ -295,7 +293,7 @@ pub fn name_at(g: &mut crate::game::Game, d: RoomfightDefId, w: Option<&crate::l
     st.at.set(d, Said { key, the: w.the.clone(), off_t: f64::NAN, still_at: v3::copy(p), still_t: time, said_t: time });
 }
 
-/// a man who is no longer where he said says where he is now, or that he has gone after the team (laststand.ts tickMoved)
+/// a man who is no longer where he said says where he is now, or that he has gone after the team
 pub fn tick_moved(g: &mut crate::game::Game) {
     let (moved_secs, still_secs, moved_gap) = (g.k.laststand.moved_secs, g.k.laststand.still_secs, g.k.laststand.moved_gap);
     for d in st_of(g).at.keys() {
@@ -327,7 +325,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
     }
 }
 
-/// one of the fit asks the net who is still up; every other man up gets his beat to answer (laststand.ts startCheck)
+/// one of the fit asks the net who is still up; every other man up gets his beat to answer
 pub fn start_check(g: &mut crate::game::Game) {
     let men = up_defs(g);
     let can: Vec<RoomfightDefId> = men.iter().copied().filter(|&d| calm(g, d)).collect();
@@ -358,7 +356,7 @@ pub fn start_check(g: &mut crate::game::Game) {
     note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 
-/// the answers on their beats; at its close what the survivors know of each other (laststand.ts tickCheck). C is st.check, read by its path
+/// the answers on their beats; at its close what the survivors know of each other. C is st.check, read by its path
 pub fn tick_check(g: &mut crate::game::Game) {
     let caller = check_of(g).caller;
     let caller_gd = g.tab.roomfight_def[caller].gd;
@@ -415,7 +413,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
     tell_only(g, caller);
 }
 
-/// nobody answers him: true the first time (laststand.ts lone)
+/// nobody answers him: true the first time
 pub fn lone(st: &mut crate::laststand::State) -> bool {
     if st.lone_said { return false; }
     st.lone_said = true;
@@ -423,7 +421,7 @@ pub fn lone(st: &mut crate::laststand::State) -> bool {
     true
 }
 
-/// call out only: the one who asked says what the count is, and where he is (laststand.ts tellOnly)
+/// call out only: the one who asked says what the count is, and where he is
 pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     let free = g.tab.roomfight_def[c_2].mode == crate::roomfight::DefMode::Free;
     let st = st_of(g);

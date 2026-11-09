@@ -1,4 +1,3 @@
-//! src/game/cmd.ts lines 1 to 194
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.   (cmd.ts sampleCmd)
+/// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.
 pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
     let aim = g.puppet.as_ref().and_then(|p| p.aim);
     if let Some(aim) = aim {
@@ -78,7 +77,7 @@ fn text_strs(out: &mut String, a: &[String]) {
     out.push(']');
 }
 
-/// A record as text, to the bit, its fields in the order a sampled record has them.   (cmd.ts cmdText)
+/// A record as text, to the bit, its fields in the order a sampled record has them.
 pub fn cmd_text(c_2: &crate::cmd::PlayerCmd) -> String {
     let c = c_2;
     let mut o = String::new();
@@ -256,7 +255,7 @@ fn read_v3(j: &Json, at: &mut V3) {
     for (x, y) in at.iter_mut().zip(read_nums(j)) { *x = y; }
 }
 
-/// A record from its text. A field the text lacks reads as `absent_record` holds it, which the check answers as it answers `undefined`.   (cmd.ts cmdFromText)
+/// A record from its text. A field the text lacks reads as `absent_record` holds it, which the check answers as it answers `undefined`.
 pub fn cmd_from_text(t: &str) -> crate::cmd::PlayerCmd {
     let mut r = JsonReader { t: t.as_bytes(), at: 0 };
     let top = r.value();
@@ -303,13 +302,13 @@ pub fn cmd_from_text(t: &str) -> crate::cmd::PlayerCmd {
     c
 }
 
-/// The word for a number JSON cannot carry; None = the number goes as it is.   (cmd.ts numWord)
+/// The word for a number JSON cannot carry; None = the number goes as it is.
 pub fn num_word(_k: &str, x: f64) -> Option<&'static str> {
     if x.is_finite() && x.to_bits() != (-0.0f64).to_bits() { return None; }
     Some(if x != x { "nan" } else if x == 0.0 { "-0" } else if x > 0.0 { "inf" } else { "-inf" })
 }
 
-/// The number a word stands for; None = the string is no such word.   (cmd.ts wordNum)
+/// The number a word stands for; None = the string is no such word.
 pub fn word_num(_k: &str, x: &str) -> Option<f64> {
     match x {
         "-0" => Some(-0.0),
@@ -325,7 +324,7 @@ fn same(a: f64, b: f64) -> bool {
     (a != a && b != b) || a.to_bits() == b.to_bits()
 }
 
-/// The check's `num`: a number held in bounds, `dflt` where it is none; a change is written back and counted.   (cmd.ts checkCmdIn)
+/// The check's `num`: a number held in bounds, `dflt` where it is none; a change is written back and counted.
 fn num(x: &mut f64, lo: f64, hi: f64, dflt: f64, fixed: &mut f64) -> f64 {
     let v = *x;
     let y = if v == v { if v < lo { lo } else if v > hi { hi } else { v } } else { dflt };
@@ -336,7 +335,7 @@ fn num(x: &mut f64, lo: f64, hi: f64, dflt: f64, fixed: &mut f64) -> f64 {
     y
 }
 
-/// The check's `codes`: keeps what looks like a key code, no more than a tick can hold.   (cmd.ts checkCmdIn, KEY_CODE)
+/// The check's `codes`: keeps what looks like a key code, no more than a tick can hold.
 fn codes(a: &mut Vec<String>, keys: f64, key_len: f64, fixed: &mut f64) {
     let mut w = 0usize;
     let n = m::min(a.len() as f64, keys * 4.0);
@@ -356,7 +355,7 @@ fn codes(a: &mut Vec<String>, keys: f64, key_len: f64, fixed: &mut f64) {
     }
 }
 
-/// The check's `bits`: a word of mouse buttons, the five there are.   (cmd.ts checkCmdIn)
+/// The check's `bits`: a word of mouse buttons, the five there are.
 fn bits(x: &mut f64, fixed: &mut f64) {
     let v = *x;
     let y = if v == v { (js::to_i32(v) & 31) as f64 } else { 0.0 };
@@ -366,7 +365,7 @@ fn bits(x: &mut f64, fixed: &mut f64) {
     }
 }
 
-/// The check's `mats`: a matrix of sixteen, all NaN where it is not one (its numbers are not bounded).   (cmd.ts checkCmdIn)
+/// The check's `mats`: a matrix of sixteen, all NaN where it is not one (its numbers are not bounded).
 fn mats(a: &mut Vec<f64>, fixed: &mut f64) {
     if a.len() != 16 {
         *a = vec![f64::NAN; 16];
@@ -386,7 +385,7 @@ fn absent_record() -> PlayerCmd {
     }
 }
 
-/// The check up to the view's working: returns the record, what was put right, and whether both matrices are numbers.   (cmd.ts checkCmdIn)
+/// The check up to the view's working: returns the record, what was put right, and whether both matrices are numbers.
 fn check_fields(l: &crate::knobs::CmdcheckK, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64, bool) {
     // None = no object: counted as the walk counts each shape it finds missing there (the object; keys, pressed; the view; its three vectors)
     let (mut c, mut fixed) = match raw {
@@ -442,7 +441,7 @@ fn check_fields(l: &crate::knobs::CmdcheckK, raw: Option<PlayerCmd>, near: Optio
     (c, fixed, whole)
 }
 
-/// The pose a view is worked out from, put on the check's lens; the pitch is held off straight down.   (cmd.ts checkCmdIn)
+/// The pose a view is worked out from, put on the check's lens; the pitch is held off straight down.
 fn pose_onto_lens(steep: f64, v: &mut PlayerCmdView, s: &mut crate::camera::FollowCamera, fixed: &mut f64) {
     let pitch = v.pitch;
     let p = if pitch > steep { steep } else if pitch < -steep { -steep } else { pitch };
@@ -458,7 +457,7 @@ fn pose_onto_lens(steep: f64, v: &mut PlayerCmdView, s: &mut crate::camera::Foll
     s.aspect = v.aspect;
 }
 
-/// The check's `put`: a vector written over with what the lens worked out, counted once if anything moved.   (cmd.ts checkCmdIn)
+/// The check's `put`: a vector written over with what the lens worked out, counted once if anything moved.
 fn put(a: &mut [f64], b: impl Iterator<Item = f64>, fixed: &mut f64) {
     let mut off = false;
     for (x, y) in a.iter_mut().zip(b) {
@@ -470,7 +469,7 @@ fn put(a: &mut [f64], b: impl Iterator<Item = f64>, fixed: &mut f64) {
     if off { *fixed += 1.0; }
 }
 
-/// What the record says of the eye and the matrices, replaced by the lens's working.   (cmd.ts checkCmdIn)
+/// What the record says of the eye and the matrices, replaced by the lens's working.
 fn view_from_lens(v: &mut PlayerCmdView, s: &crate::camera::FollowCamera, fixed: &mut f64) {
     put(&mut v.pos, s.pos.iter().copied(), fixed);
     put(&mut v.forward, s.forward.iter().copied(), fixed);
@@ -478,7 +477,7 @@ fn view_from_lens(v: &mut PlayerCmdView, s: &crate::camera::FollowCamera, fixed:
     put(&mut v.ivp, s.inv_view_proj.iter().map(|x| *x as f64), fixed);
 }
 
-/// The whole check on a record already typed; `None` = no object.   (cmd.ts checkCmdIn)
+/// The whole check on a record already typed; `None` = no object.
 fn check_record(g: &mut Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64) {
     let l = g.k.cmdcheck;
     let (mut c, mut fixed, whole) = check_fields(&l, raw, near);
@@ -499,19 +498,19 @@ fn check_record(g: &mut Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (Play
     (c, fixed)
 }
 
-/// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.   (cmd.ts checkCmd)
+/// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.
 pub fn check_cmd(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
     let r = check_cmd_in(g, raw, near);
     CheckCmd { cmd: r.cmd, fixed: r.fixed }
 }
 
-/// The check itself, on a copy: `raw` is only lent here, so a caller always takes `cmd` from the answer.   (cmd.ts checkCmdIn)
+/// The check itself, on a copy: `raw` is only lent here, so a caller always takes `cmd` from the answer.
 pub fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
     let (cmd, fixed) = check_record(g, raw.cloned(), near);
     CheckCmdIn { cmd, fixed }
 }
 
-/// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.   (cmd.ts stillCmd)
+/// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.
 pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let c = c_2;
     PlayerCmd {
@@ -520,12 +519,12 @@ pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     }
 }
 
-/// A record as a tick would take it, for code that must leave it as it came: the check on a copy.   (cmd.ts honestCopy)
+/// A record as a tick would take it, for code that must leave it as it came: the check on a copy.
 pub fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
     check_cmd(g, Some(c_2), near).cmd
 }
 
-/// The body of loadLens: a record's view put on a camera, its matrices rounded to the camera's singles as `Float32Array.set` does.   (cmd.ts loadLens)
+/// The body of loadLens: a record's view put on a camera, its matrices rounded to the camera's singles as `Float32Array.set` does.
 fn lens_from(cam: &mut crate::camera::FollowCamera, v: &PlayerCmdView) {
     for (x, y) in cam.view_proj.iter_mut().zip(v.vp.iter()) { *x = *y as f32; }
     for (x, y) in cam.inv_view_proj.iter_mut().zip(v.ivp.iter()) { *x = *y as f32; }
@@ -540,12 +539,12 @@ fn lens_from(cam: &mut crate::camera::FollowCamera, v: &PlayerCmdView) {
     cam.aim_lead = v.aim_lead;
 }
 
-/// A record's view put on a camera of the game's own.   (cmd.ts loadLens)
+/// A record's view put on a camera of the game's own.
 pub fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd::PlayerCmdView) {
     lens_from(&mut g.tab.camera[cam], v);
 }
 
-/// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.   (cmd.ts Seat.constructor)
+/// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.
 pub fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     let input = crate::input::input_detached(g);
     let cam = g.tab.camera.push(crate::camera::FollowCamera::blank());
@@ -557,7 +556,7 @@ pub fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     g.tab.cmd_seat.push(s)
 }
 
-/// His man: the seat's set is on Game while the pass is about him (always, in a game of one), else on his own row.   (cmd.ts Seat.man)
+/// His man: the seat's set is on Game while the pass is about him (always, in a game of one), else on his own row.
 pub fn seat_man(g: &crate::game::Game, id: SeatId) -> PlayerId {
     if g.seat == id { return g.player; }
     match &g.tab.cmd_seat[id].own {
@@ -566,7 +565,7 @@ pub fn seat_man(g: &crate::game::Game, id: SeatId) -> PlayerId {
     }
 }
 
-/// The record of the tick loaded into the seat's Input, camera and view size.   (cmd.ts Seat.load)
+/// The record of the tick loaded into the seat's Input, camera and view size.
 fn load_row(s: &mut Seat, i: &mut crate::input::Input, cam: &mut crate::camera::FollowCamera, c: &PlayerCmd) {
     s.cmd = Some(c.clone());
     i.keys.clear();
@@ -588,13 +587,12 @@ fn load_row(s: &mut Seat, i: &mut crate::input::Input, cam: &mut crate::camera::
     lens_from(cam, &c.view);
 }
 
-/// (cmd.ts Seat.load)
 pub fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
     let (input, cam) = (g.tab.cmd_seat[id].input, g.tab.cmd_seat[id].cam);
     load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], &mut g.tab.camera[cam], c_2);
 }
 
-/// What was handed, once; else a still record of the view it last had (`like`'s before it has had one).   (cmd.ts Seat.handed)
+/// What was handed, once; else a still record of the view it last had (`like`'s before it has had one).
 pub fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let s = &mut g.tab.cmd_seat[id];
     match s.waiting.take() {
@@ -603,20 +601,20 @@ pub fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::Pla
     }
 }
 
-/// The swallow on a seat's row.   (cmd.ts Seat.swallow)
+/// The swallow on a seat's row.
 fn swallow_row(s: &mut Seat, i: &mut crate::input::Input, bits: f64) {
     let b = js::to_i32(bits);
     s.mask = (js::to_i32(s.mask) | b) as f64;
     i.buttons = (js::to_i32(i.buttons) & !b) as f64;
 }
 
-/// Held buttons the game took for something of its own: they read as up until the player lets go.   (cmd.ts Seat.swallow)
+/// Held buttons the game took for something of its own: they read as up until the player lets go.
 pub fn seat_swallow(g: &mut crate::game::Game, id: SeatId, bits: f64) {
     let input = g.tab.cmd_seat[id].input;
     swallow_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], bits);
 }
 
-/// OUTPUT: the look-at a tick cut the seat's camera to, once; None = no cut since the last call (a cut with the same numbers is still a cut).   (cmd.ts Seat.takeCut)
+/// OUTPUT: the look-at a tick cut the seat's camera to, once; None = no cut since the last call (a cut with the same numbers is still a cut).
 pub fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3> {
     let cam = g.tab.cmd_seat[id].cam;
     cut_row(&mut g.tab.cmd_seat[id], &g.tab.camera[cam])
@@ -625,7 +623,7 @@ pub fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3> {
 /// did this key go down in the step the first seat's record was of
 pub fn seat_pressed(g: &crate::game::Game, key: &str) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key)) }
 
-/// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.   (cmd.ts Seat.takeCut)
+/// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.
 fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
     if cam.desired_serial == s.mark { return None; }
     s.mark = cam.desired_serial;

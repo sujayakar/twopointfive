@@ -1,4 +1,3 @@
-//! src/game/chronicle.ts lines 1 to 459
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -193,7 +192,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
 // ------------------------------------------------------------ rooms
 
-/// The room a floor point is in, by name; outside the building the side of it.   (chronicle.ts roomOf)
+/// The room a floor point is in, by name; outside the building the side of it.
 pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     if !crate::dialogue::is_office(g) {
         return match crate::dialogue::own_place(g, p) {
@@ -215,7 +214,7 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     String::from("west side")
 }
 
-/// Inside the building's footprint.   (chronicle.ts indoors)
+/// Inside the building's footprint.
 pub fn indoors(p: V3) -> bool {
     let b = crate::floor::building();
     p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
@@ -223,55 +222,52 @@ pub fn indoors(p: V3) -> bool {
 
 // ------------------------------------------------------------ the record
 
-/// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
+/// The row a hearing event made, as its place in `events`.
 pub fn chronicle_heard_row<'g>(g: &'g mut crate::game::Game, e: u32) -> Option<&'g mut usize> {
     g.chronicle.heard_of.get_mut(e)
 }
 
-/// (chronicle.ts Chronicle.bindHeard)
 pub fn chronicle_bind_heard(g: &mut crate::game::Game, e: u32, row: usize) {
     g.chronicle.heard_of.set(e, row);
 }
 
-/// (chronicle.ts Chronicle.heardCounted)
 pub fn chronicle_heard_counted(g: &crate::game::Game, e: u32) -> bool {
     g.chronicle.heard_no_row.has(e)
 }
 
-/// (chronicle.ts Chronicle.markHeardCounted)
 pub fn chronicle_mark_heard_counted(g: &mut crate::game::Game, e: u32) {
     g.chronicle.heard_no_row.add(e);
 }
 
-/// One path sample at mission time t; thins itself when full.   (chronicle.ts Chronicle.sample)
+/// One path sample at mission time t; thins itself when full.
 pub fn chronicle_sample(g: &mut crate::game::Game, x: f64, z: f64, t: f64) {
     sample_on(&mut g.chronicle, x, z, t);
 }
 
 // ------------------------------------------------------------ writing
 
-/// The mission clock.   (chronicle.ts nowOf)
+/// The mission clock.
 pub fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
-/// The first player's feet.   (chronicle.ts posOf)
+/// The first player's feet.
 pub fn pos_of(g: &mut crate::game::Game) -> V3 {
     let man = crate::seats::man_here(g, &crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }
 
-/// The generic entry: `kind` at `pos` (his feet by default) with `data`.   (chronicle.ts chronicle)
+/// The generic entry: `kind` at `pos` (his feet by default) with `data`.
 pub fn chronicle(g: &mut crate::game::Game, kind: crate::chronicle::ChronKind, data: Option<&JsMap<String, Option<crate::chronicle::ChronicleDataValue>>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     let data = match data { Some(d) => data_from_generic(d), None => JsMap::new() };
     live_row(g, kind, data, pos)
 }
 
-/// The generic entry and one counter by name: the counter moves whenever the run is live, row kept or not.   (chronicle.ts chronicleN)
+/// The generic entry and one counter by name: the counter moves whenever the run is live, row kept or not.
 pub fn chronicle_n(g: &mut crate::game::Game, kind: crate::chronicle::ChronKind, count: crate::chronicle::ChronCountKey, data: Option<&JsMap<String, Option<crate::chronicle::ChronicleNDataValue>>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     let data = match data { Some(d) => data_from_n(d), None => JsMap::new() };
     live_row_n(g, kind, count, data, pos)
 }
 
-/// Once a frame from updateMission: the path sample when it is due.   (chronicle.ts tickChronicle)
+/// Once a frame from updateMission: the path sample when it is due.
 pub fn tick_chronicle(g: &mut crate::game::Game) {
     let t = now_of(g);
     if t >= g.chronicle.path_next {
@@ -280,12 +276,12 @@ pub fn tick_chronicle(g: &mut crate::game::Game) {
     }
 }
 
-/// The stage machine moved; `text` is the row.   (chronicle.ts chronObjective)
+/// The stage machine moved; `text` is the row.
 pub fn chron_objective(g: &mut crate::game::Game, text: &str, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     live_row(g, ChronKind::Objective, row_data(vec![("text", tx(text))]), pos)
 }
 
-/// An alert man has eyes on him afresh; seen again once they know counts as seenUp.   (chronicle.ts chronSpotted)
+/// An alert man has eyes on him afresh; seen again once they know counts as seenUp.
 pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<crate::chronicle::ChronEvent> {
     let lvl = g.escalation;
     let who = match by { Some(b) => man_callsign(g, b), None => String::from("a guard") };
@@ -293,7 +289,7 @@ pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<c
     if lvl >= 1.0 { live_row_n(g, ChronKind::Spotted, ChronCountKey::SeenUp, data, None) } else { live_row(g, ChronKind::Spotted, data, None) }
 }
 
-/// A man went to 'alert': who, and what did it.   (chronicle.ts chronContact)
+/// A man went to 'alert': who, and what did it.
 pub fn chron_contact(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let cause = match g.gd[gd].witness.alerted_by { Some(c) => c.as_str(), None => "radio" };
     let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("cause", tx(cause))]);
@@ -301,7 +297,7 @@ pub fn chron_contact(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::ch
     live_row_n(g, ChronKind::Contact, ChronCountKey::Contacts, data, Some(p))
 }
 
-/// A noise of his making raised a man: one row per noise however many hear it, a run of one kind merged.   (chronicle.ts chronHeard)
+/// A noise of his making raised a man: one row per noise however many hear it, a run of one kind merged.
 pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::GameEvent, where_: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     if let Some(who) = ev.who {
@@ -351,7 +347,7 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
     if rank_of(react) > rank_of(&data_string(&row.data, "react")) { data_set(&mut row.data, "react", tx(react)); }
     Some(row.clone())
 }
-/// What a hearing-model event of his is, in the timeline's words.   (chronicle.ts heardWhat)
+/// What a hearing-model event of his is, in the timeline's words.
 pub fn heard_what(e: crate::game::GameEvent) -> String {
     use crate::director::EventKind;
     let level = e.level.unwrap_or(0.0);
@@ -369,21 +365,21 @@ pub fn heard_what(e: crate::game::GameEvent) -> String {
     })
 }
 
-/// The alert chase is over without him.   (chronicle.ts chronLost)
+/// The alert chase is over without him.
 pub fn chron_lost(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::Lost, data, Some(p))
 }
 
-/// He gives the search up.   (chronicle.ts chronCalm)
+/// He gives the search up.
 pub fn chron_calm(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::Calm, data, Some(p))
 }
 
-/// The floor's alarm level moved to `stage`; pinned at the alarm's fix when there is one.   (chronicle.ts chronAlarm)
+/// The floor's alarm level moved to `stage`; pinned at the alarm's fix when there is one.
 pub fn chron_alarm(g: &mut crate::game::Game, stage: f64, up: bool, cause: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     let cause = cause.unwrap_or("");
     let pos = if g.alarm.placed { g.alarm.pos } else { pos_of(g) };
@@ -407,7 +403,7 @@ fn clip_line(text: &str) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
     if units.len() > 96 { format!("{}…", String::from_utf16_lossy(&units[..94])) } else { String::from(text) }
 }
-/// A line over the guards' net, the routine radio check excepted.   (chronicle.ts chronRadio)
+/// A line over the guards' net, the routine radio check excepted.
 pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option<crate::chronicle::ChronEvent> {
     if is_radio_check(text) { return None; }
     let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("text", ChronEventDataValue::Text(clip_line(text)))]);
@@ -415,7 +411,7 @@ pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option
     live_row_n(g, ChronKind::Radio, ChronCountKey::Radio, data, Some(p))
 }
 
-/// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.   (chronicle.ts chronShot)
+/// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.
 pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<GuardId>, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let t = now_of(g);
@@ -450,7 +446,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<Gua
     Some(g.chronicle.events[at].clone())
 }
 
-/// A fixture shot out.   (chronicle.ts chronLightShot)
+/// A fixture shot out.
 pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crate::chronicle::ChronEvent> {
     let row = &g.tab.sim_lightshome_fixture[tg];
     let name = fixture_name(&FixtureNameTg { name: row.name.clone(), group: row.group.clone() });
@@ -458,12 +454,12 @@ pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crat
     live_row_n(g, ChronKind::LightShot, ChronCountKey::LightsShot, row_data(vec![("name", tx(&name))]), Some(pos))
 }
 
-/// The OCP put something out.   (chronicle.ts chronOcp)
+/// The OCP put something out.
 pub fn chron_ocp(g: &mut crate::game::Game, what: &str, pos: V3) -> Option<crate::chronicle::ChronEvent> {
     live_row_n(g, ChronKind::Ocp, ChronCountKey::Ocps, row_data(vec![("what", tx(what))]), Some(pos))
 }
 
-/// The mains went.   (chronicle.ts chronBlackout)
+/// The mains went.
 pub fn chron_blackout(g: &mut crate::game::Game, cause: &str) -> Option<crate::chronicle::ChronEvent> {
     if crate::mission::mission_live(g) && cause == "ocp" { g.chronicle.counts.ocps += 1.0; }
     let pos = g.level.breaker.pos;
@@ -476,7 +472,7 @@ fn without_trailing_number(s: &str) -> &str {
     if t.len() == s.len() { return s; }
     t.strip_suffix('_').unwrap_or(t)
 }
-/// A fixture's name in words.   (chronicle.ts fixtureName)
+/// A fixture's name in words.
 pub fn fixture_name(tg: &crate::chronicle::FixtureNameTg) -> String {
     let n = tg.name.as_str();
     if n.starts_with("panel_") { return format!("a {} ceiling panel", tg.group); }
@@ -487,19 +483,19 @@ pub fn fixture_name(tg: &crate::chronicle::FixtureNameTg) -> String {
     format!("the {}", underscores_to_spaces(without_trailing_number(n)))
 }
 
-/// A canister is away.   (chronicle.ts chronThrown)
+/// A canister is away.
 pub fn chron_thrown(g: &mut crate::game::Game, kind: &str) -> Option<crate::chronicle::ChronEvent> {
     live_row_n(g, ChronKind::Thrown, ChronCountKey::Thrown, row_data(vec![("kind", tx(kind))]), None)
 }
 
-/// A man taken into the arm.   (chronicle.ts chronGrab)
+/// A man taken into the arm.
 pub fn chron_grab(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row_n(g, ChronKind::Grab, ChronCountKey::Grabs, data, Some(p))
 }
 
-/// One exchange: who, the stage, the useful thing's kind if he gave one.   (chronicle.ts chronInterrogated)
+/// One exchange: who, the stage, the useful thing's kind if he gave one.
 pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&str>, stage: f64) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let callsign = man_callsign(g, gd);
@@ -516,14 +512,14 @@ pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&
     live_row(g, ChronKind::Interrogated, row_data(pairs), Some(p))
 }
 
-/// A fresh key off a questioned man's belt.   (chronicle.ts chronKey)
+/// A fresh key off a questioned man's belt.
 pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::KeyTaken, data, Some(p))
 }
 
-/// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').   (chronicle.ts chronDown)
+/// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').
 pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     chron_down_by(g, gd, how, line, None)
 }
@@ -563,7 +559,7 @@ pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::D
     live_row(g, ChronKind::Ko, row_data(vec![("who", tx(&callsign)), ("method", tx(method))]), Some(p))
 }
 
-/// A body discovered: whose, by whom, found breathing or not.   (chronicle.ts chronBodyFound)
+/// A body discovered: whose, by whom, found breathing or not.
 pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let c = g.gd[body].ch;
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
@@ -572,7 +568,7 @@ pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))
 }
 
-/// A round found him: 'down' the once, 'hit' while the vest still has something left.   (chronicle.ts chronHit)
+/// A round found him: 'down' the once, 'hit' while the vest still has something left.
 pub fn chron_hit(g: &mut crate::game::Game, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     if g.chronicle.counts.down || !crate::mission::mission_live(g) { return None; }
     let by = by.unwrap_or("");
@@ -586,7 +582,7 @@ pub fn chron_hit(g: &mut crate::game::Game, by: Option<&str>) -> Option<crate::c
     live_row_n(g, ChronKind::Hit, ChronCountKey::Hits, row_data(vec![("by", tx(by)), ("left", num(left))]), None)
 }
 
-/// A door kicked in or a lock picked.   (chronicle.ts chronDoor)
+/// A door kicked in or a lock picked.
 pub fn chron_door(g: &mut crate::game::Game, kind: crate::chronicle::ChronDoorKind, d: DoorId) -> Option<crate::chronicle::ChronEvent> {
     let (row, count) = match kind {
         ChronDoorKind::DoorKicked => (ChronKind::DoorKicked, ChronCountKey::Kicked),
@@ -597,7 +593,7 @@ pub fn chron_door(g: &mut crate::game::Game, kind: crate::chronicle::ChronDoorKi
     live_row_n(g, row, count, row_data(vec![("door", ChronEventDataValue::Text(name))]), Some(pos))
 }
 
-/// A checkpoint written or restored; a save is chatter to the caps, a load stays.   (chronicle.ts chronCheckpoint)
+/// A checkpoint written or restored; a save is chatter to the caps, a load stays.
 pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::ChronCheckpointWhat, label: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     let count = if what == ChronCheckpointWhat::Load { ChronCountKey::Loads } else { ChronCountKey::Saves };
     live_row_n(g, ChronKind::Checkpoint, count, row_data(vec![("what", tx(what.as_str())), ("label", tx(label.unwrap_or("")))]), None)
@@ -605,7 +601,7 @@ pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::Chron
 
 // ------------------------------------------------------------ reading
 
-/// Everything the card and the score read, in one flat record.   (chronicle.ts runCounts)
+/// Everything the card and the score read, in one flat record.
 pub fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::RunCounts {
     use crate::game::MissionStage;
     let st = g.mission.stage;
@@ -626,7 +622,7 @@ pub fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
     }
 }
 
-/// A blank record: what the probes' synthetic runs start from.   (chronicle.ts blankCounts)
+/// A blank record: what the probes' synthetic runs start from.
 pub fn blank_counts() -> crate::chronicle::RunCounts {
     RunCounts {
         elapsed: 0.0, stage: String::from("infiltrate"), done: false, failed: false, sandbox: false, blackout: false, seen: 0.0, seen_up: 0.0, alarms: 0.0, esc1: 0.0, esc2: 0.0, bodies: 0.0,
@@ -666,17 +662,16 @@ fn score_of(s: &crate::knobs::ScoreK, c: &RunCounts) -> StealthScore {
     js::sort_by(&mut lines, |a, b| b.pts - a.pts);
     StealthScore { score: v3::clamp(m::round(100.0 - off), 0.0, 100.0), lines }
 }
-/// 0..100 and the itemised deductions that made it, largest first.   (chronicle.ts stealthScore)
+/// 0..100 and the itemised deductions that made it, largest first.
 pub fn stealth_score(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> crate::chronicle::StealthScore {
     score_of(&g.k.score, c_2)
 }
 
-/// (chronicle.ts times)
 pub fn times(n: f64) -> String {
     if n == 1.0 { String::from("once") } else if n == 2.0 { String::from("twice") } else { format!("{} times", js::num_str(n)) }
 }
 
-/// The rating word for a score.   (chronicle.ts ratingOf)
+/// The rating word for a score.
 pub fn rating_of(score: f64) -> crate::chronicle::RatingOf {
     let table = bands();
     for b in table.iter() {
@@ -702,18 +697,18 @@ fn badges_for(b: &crate::knobs::BadgeK, c: &RunCounts) -> Vec<Badge> {
         badge("speedrun", "speedrun", c.done && c.elapsed < b.speedrun_secs, format!("out inside {}", fmt_mmss(b.speedrun_secs))),
     ]
 }
-/// The run's badges, each a plain yes / no off the counts.   (chronicle.ts badgesOf)
+/// The run's badges, each a plain yes / no off the counts.
 pub fn badges_of(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> Vec<crate::chronicle::Badge> {
     badges_for(&g.k.badge, c_2)
 }
 
-/// mm:ss off seconds.   (chronicle.ts fmtMMSS)
+/// mm:ss off seconds.
 pub fn fmt_mmss(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
     format!("{}:{}", pad2(m::floor(s / 60.0)), pad2(js::rem(s, 60.0)))
 }
 
-/// The whole debrief in one record. mission.ts reads its `grade` for the end line.   (chronicle.ts debriefOf)
+/// The whole debrief in one record. mission.ts reads its `grade` for the end line.
 pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::Debrief {
     let counts = run_counts(g, seat);
     let StealthScore { score, lines } = stealth_score(g, &counts);
@@ -732,7 +727,7 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
     Debrief { counts, score, lines, rating: r.word, blurb: r.blurb, badges, summary, state, scored, grade }
 }
 
-/// The one line the 'copy summary' button puts on the clipboard.   (chronicle.ts summaryLine)
+/// The one line the 'copy summary' button puts on the clipboard.
 pub fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::SummaryLineState, scored: Option<bool>) -> String {
     let c = c_2;
     let scored = scored.unwrap_or(true);
@@ -764,7 +759,7 @@ pub fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, b
     format!("twopointsix — {}", parts.join(" · "))
 }
 
-/// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.   (chronicle.ts doorWritten)
+/// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.
 pub fn door_written(g: &crate::game::Game, door: &str) -> Option<String> {
     let d = match crate::doors::doors_by_name(g, door) {
         Some(d) => Some(d),

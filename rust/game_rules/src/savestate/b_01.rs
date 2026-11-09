@@ -8,13 +8,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:860 SaveStore.remove)
+/// BOUNDARY NO-OP (the picture's / the host's):
 pub fn save_store_remove(g: &crate::game::Game, key: &str) {}
 
-/// BOUNDARY: the host writes the machine's storage (localStorage) here. No store on this side: false, the interface's "nothing was stored". (src/game/savestate.ts:860 SaveStore.set)
+/// BOUNDARY: the host writes the machine's storage (localStorage) here. No store on this side: false, the interface's "nothing was stored".
 pub fn save_store_set(g: &crate::game::Game, key: &str, val: &str) -> bool { false }
 
-/// Load asked for inside a step: a save in memory waits for the end of this update, anything else is a file's load. (src/game/savestate.ts:1089 Checkpoints.loadInStep)
+/// Load asked for inside a step: a save in memory waits for the end of this update, anything else is a file's load.
 pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<String> {
     let run = match g.saves.shelf.m.get(String::from(key)) {
         Some(e) => e.info.run_id.clone(),
@@ -25,20 +25,20 @@ pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<
     None
 }
 
-/// Why a save in memory will not go back. `e.snap.game !== g` has no row: MemSave holds no snapshot and the shelf lives on this game. (src/game/savestate.ts:1090 Checkpoints.memNo)
+/// Why a save in memory will not go back. `e.snap.game !== g` has no row: MemSave holds no snapshot and the shelf lives on this game.
 pub(super) fn mem_no(g: &Game, run: &str) -> Option<String> {
     if run != g.saves.run_id { return Some(String::from("made in another run")); }
     if g.touring || g.puppet.is_some() { return Some(String::from("a show is running \u{2014} stop it first")); }
     None
 }
 
-/// Checkpoints.load of a key not on the shelf (src/game/savestate.ts:1171). A file's save is the host's: its store is not on
+/// Checkpoints.load of a key not on the shelf. A file's save is the host's: its store is not on
 /// this side, and a key with nothing behind it is "gone". The host that keeps saves hands them over on the shelf.
 fn load_off_shelf(g: &Game, key: &str) -> Option<String> {
     Some(String::from("that checkpoint is gone"))
 }
 
-/// Every stored checkpoint, newest first (src/game/savestate.ts:1063 Checkpoints.slots). This game is the one "stepped elsewhere, which keeps its own
+/// Every stored checkpoint, newest first. This game is the one "stepped elsewhere, which keeps its own
 /// saves" (SNAPS.own): the store's index is another page's and is not read; the rows are the shelf's.
 fn slots_now(g: &Game) -> Vec<crate::savestate::SlotInfo> {
     let mut all: Vec<crate::savestate::SlotInfo> = g.saves.shelf.m.values().map(|e| e.info.clone()).collect();
@@ -46,7 +46,7 @@ fn slots_now(g: &Game) -> Vec<crate::savestate::SlotInfo> {
     all
 }
 
-/// The newest stored checkpoint: this run's at or before `before_t`, else this run's newest, a regretted one last, else any run's. (src/game/savestate.ts:1140 Checkpoints.newest)
+/// The newest stored checkpoint: this run's at or before `before_t`, else this run's newest, a regretted one last, else any run's.
 pub fn checkpoints_newest(g: &crate::game::Game, prefer_run: Option<bool>, before_t: Option<f64>) -> Option<crate::savestate::SlotInfo> {
     let prefer_run = prefer_run.unwrap_or(true);
     let before_t = before_t.unwrap_or(f64::INFINITY);
@@ -58,7 +58,7 @@ pub fn checkpoints_newest(g: &crate::game::Game, prefer_run: Option<bool>, befor
     sound.iter().find(before).or(sound.first()).or(mine.iter().find(before)).or(mine.first()).map(|x| (**x).clone()).or_else(|| all.first().cloned())
 }
 
-/// Is this slot one of this run's. (src/game/savestate.ts:1154 Checkpoints.isThisRun)
+/// Is this slot one of this run's.
 pub fn checkpoints_is_this_run(g: &crate::game::Game, info: &crate::savestate::SlotInfo) -> bool {
     info.run_id == g.saves.run_id
 }

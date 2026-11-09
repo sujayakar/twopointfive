@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 1358 to 1733
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,13 +6,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// How long a landed blow or shell is followed through before the tool may start back, s. (character.ts bigRebound)
+/// How long a landed blow or shell is followed through before the tool may start back, s.
 pub fn big_rebound(kind: crate::character::BigReboundKind) -> f64 {
     let t = crate::character::bigmove();
     if kind == crate::character::BigReboundKind::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
 }
 
-/// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow. (character.ts bigOff)
+/// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow.
 pub fn big_off(b: crate::character::BigOffB) -> bool {
     if !(b.t >= 0.0) { return false; }
     let s = crate::character::bigmove().snug;
@@ -21,7 +20,7 @@ pub fn big_off(b: crate::character::BigOffB) -> bool {
     b.t >= s.hide * b.equip
 }
 
-/// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax. (character.ts columnEntry)
+/// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax.
 pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
     let ox = ro[0] - cx;
     let oz = ro[2] - cz;
@@ -54,18 +53,18 @@ pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f6
     t_in
 }
 
-/// The action layer's weight this frame. (character.ts CharacterAnimator.actShown)
+/// The action layer's weight this frame.
 pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.act_w
 }
 
-/// A MOVES reaction has the trunk and head this frame. (character.ts CharacterAnimator.mvBusy)
+/// A MOVES reaction has the trunk and head this frame.
 pub fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }
 
-/// A MOVES reaction that also has his arms: all of them but a soft duck. (character.ts CharacterAnimator.mvHands)
+/// A MOVES reaction that also has his arms: all of them but a soft duck.
 pub fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     (m.fl_t >= 0.0 && !m.fl_soft) || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0

@@ -34,7 +34,7 @@ pub struct SquadsK {
     ///  `drillNet`    THEY LET THE TEAM COMMIT: × `netK` (2) the thinking beat (`think`) and the net's lag (`netLag`) of a squad that could send men out
     ///                (`mayGo`: allowed to leave, nobody of its own still out, two to spare), and × `reinforceK` the beat of a hit squad's men in its
     ///                other rooms before they come (`reinforce`). A drilled garrison does not run at the first noise: a squad that hears of a fight and could go says so
-    ///                ('<Squad>: hold — let them come in. Wait for my word!', cues.ts) and takes twice the beat before it chooses and goes, stood to or not,
+    /// and takes twice the beat before it chooses and goes, stood to or not,
     ///                so the pair that goes round is set at the other door while the team is going in, instead of being met on its way. A squad that
     ///                stays in its rooms whatever is called answers as at standard. THE ONE RULE SHIPPED ON. (netK under 1, the first cut — quicker on
     ///                the net — measured in the TEAM's favour: sent sooner, the pair walks onto guns that are still up.)
@@ -62,7 +62,7 @@ pub struct SquadsK {
     ///  once on their net: '<Squad>: they've left it — back on our doors!'. With `drillFollow` on as well, this one has them
     #[k(false)] pub drill_back: bool,
     #[k(3.0)] pub back_beat: f64,
-    /// GO AND LOOK (on; read only with pressure.ts `PRESSURE.sweep` up as well — hard's row HARD.sweep, the one switch of the rule on every kind of level): the
+    /// GO AND LOOK: the
     ///  garrison has had word of the team — a call on the net, one of them properly in a man's sight, a loud thing in a man's ears — and then nothing for
     ///  `sweepSecs`. Standard's squads sit on their doors from there for as long as the team cares to take. A drilled garrison sends a pair to look: of the
     ///  squads that have nobody out and can spare two (a man left in every room that had one; `sweepMen` is never fewer than two), the one nearest the place

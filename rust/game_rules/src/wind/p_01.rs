@@ -1,4 +1,3 @@
-//! src/game/wind.ts lines 1 to 310
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,14 +14,14 @@ fn put(out: Option<&mut V3>, v: V3) -> V3 {
     v
 }
 
-// WIND_FIELD by place (wind.ts:37): the numbers this file reads, each `shape(g, …)`
+// WIND_FIELD by place: the numbers this file reads, each `shape(g, …)`
 const STORM_LOW: f64 = 5.0;
 const STORM_GAIN: f64 = 6.0;
 const STORM_FULL_AT: f64 = 7.0;
 const CUT_K: f64 = 8.0;
 const CORE_K: f64 = 9.0;
 
-/// A number of the field's shape, read off the module once. (wind.ts shape)
+/// A number of the field's shape, read off the module once.
 pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
     if g.m.wind.shape.is_none() {
         g.m.wind.shape = Some(::sim::wind::SHAPE.to_vec());
@@ -30,27 +29,26 @@ pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
     g.m.wind.shape.as_ref().unwrap()[i as usize]
 }
 
-/// The master as the systems read it, clamped 0‥1. (wind.ts windOf)
+/// The master as the systems read it, clamped 0‥1.
 pub fn wind_of(g: &crate::game::Game) -> f64 {
     m::max(0.0, m::min(1.0, g.tune.wind))
 }
 
-/// A diffuser's air at p, m/s: rust/sim's. (wind.ts jetVel)
+/// A diffuser's air at p, m/s: rust/sim's.
 pub fn jet_vel(pos: V3, dir: V3, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: V3, out: Option<&mut V3>) -> V3 {
     put(out, ::sim::wind::jet_vel(pos, dir, speed, reach, tan_spread, r0, d_max, floor_y, p))
 }
 
-/// (wind.ts inRect)
 pub fn in_rect(x: f64, z: f64, r: &[f64]) -> bool {
     x > r[0] && z > r[1] && x < r[2] && z < r[3]
 }
 
-/// The storm's air at p: rust/sim's. (wind.ts stormVel)
+/// The storm's air at p: rust/sim's.
 pub fn storm_vel(wind: V3, interior: &[f64], annex: &[f64], p: V3, out: Option<&mut V3>) -> V3 {
     put(out, ::sim::wind::storm_vel(wind, interior, annex, p))
 }
 
-/// The storm's air roof by roof, the first four of `roofs`: rust/sim's. (wind.ts stormVelRoofs)
+/// The storm's air roof by roof, the first four of `roofs`: rust/sim's.
 pub fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>) -> V3 {
     let n = core::cmp::min(roofs.len(), 4);
     let mut flat = [0.0; 16];
@@ -65,12 +63,12 @@ pub fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>
     put(out, ::sim::wind::storm_vel_roofs(wind, &flat, n, p))
 }
 
-/// Smooth value noise in [−1, 1] at x, per seed: rust/sim's. The seed crosses as a u32, as it does into the module. (wind.ts vnoise)
+/// Smooth value noise in [−1, 1] at x, per seed: rust/sim's. The seed crosses as a u32, as it does into the module.
 pub fn vnoise(seed: f64, x: f64) -> f64 {
     ::sim::wind::vnoise(js::to_u32(seed), x)
 }
 
-/// Whether a vent's own cycle has it blowing at game time `t`. (wind.ts ventDue)
+/// Whether a vent's own cycle has it blowing at game time `t`.
 pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     let period = match v.period {
         Some(p) if p > 0.0 => p,
@@ -84,7 +82,7 @@ pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     !(ph > duty)
 }
 
-/// Every source the level can have, built once. `reroof` is reached with this Wind stood at `g.wind` for the call. (wind.ts Wind.constructor)
+/// Every source the level can have, built once. `reroof` is reached with this Wind stood at `g.wind` for the call.
 pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
     let mut w = crate::wind::Wind::blank();
     let vents = g.level.vents.clone().unwrap_or_default();
@@ -185,7 +183,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
     w
 }
 
-/// The gust through an exterior door: a jet from just outside the frame, chest height, along `inward`. (wind.ts Wind.doorSource)
+/// The gust through an exterior door: a jet from just outside the frame, chest height, along `inward`.
 pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
     let fc = g.dr[d].frame_centre;
     let reach = g.k.wind.door_reach;
@@ -253,7 +251,7 @@ fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
 }
 
-/// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two. (wind.ts Wind.reroof)
+/// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two.
 pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
     // weather.ts:240 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
     if g.wind.all.is_empty() {
@@ -330,14 +328,14 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: O
     }
 }
 
-/// The storm record says whether the one field outdoors is on, and carries the roofs it blows between. (wind.ts Wind.syncField)
+/// The storm record says whether the one field outdoors is on, and carries the roofs it blows between.
 pub fn wind_sync_field(g: &mut crate::game::Game) {
     let st = g.wind.storm;
     g.tab.wind_wind_source[st].field = Some(true);
     g.tab.wind_wind_source[st].roofs = wind_field_roofs(g);
 }
 
-/// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own. (wind.ts Wind.fieldRoofs)
+/// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own.
 pub fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
     match &g.wind.lv_roofs {
         Some(r) if r.len() > 2 => Some(r.clone()),
@@ -345,13 +343,13 @@ pub fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
     }
 }
 
-/// The share 0‥1 of its own vector the storm's field has at ground point (x, z) under the roofs in force. (wind.ts Wind.stormShare)
+/// The share 0‥1 of its own vector the storm's field has at ground point (x, z) under the roofs in force.
 pub fn wind_storm_share(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let roofs = g.tab.wind_wind_source[g.wind.storm].roofs.clone();
     wind_share_under(g, x, z, roofs.as_deref())
 }
 
-/// …under the roofs given; none = the storm record's two rectangles. (wind.ts Wind.shareUnder)
+/// …under the roofs given; none = the storm record's two rectangles.
 pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option<&[Vec<f64>]>) -> f64 {
     let p: V3 = [x, 0.0, z];
     let q = match roofs {
@@ -365,7 +363,7 @@ pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option
     m::max(0.0, m::min(1.0, q[0] / low))
 }
 
-/// The wind the game's own smoke drifts by, or none in still air (an hour with no storm in it, as the drawn air has none): no wind setting and no gust in it. (wind.ts Wind.stormDrift)
+/// The wind the game's own smoke drifts by, or none in still air (an hour with no storm in it, as the drawn air has none): no wind setting and no gust in it.
 pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collision::GridWind> {
     if !wind_blows(g) {
         return None;
@@ -381,7 +379,7 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
     Some(crate::scene_collision::GridWind { x, z, low, gain, full_at, share })
 }
 
-/// Does the weather blow at all. (wind.ts Wind.blows)
+/// Does the weather blow at all.
 pub fn wind_blows(g: &crate::game::Game) -> bool {
     if !crate::weather::weather_enabled(g) {
         return false;
@@ -392,7 +390,7 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
     crate::weather::weather_kind(g).is_some() || crate::weather::weather_rain_rate(g) > 0.001 || crate::weather::weather_storm(g) > 0.01
 }
 
-/// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
+/// The storm's wind vector when it should be felt, none otherwise.
 pub fn wind_storm_wind(g: &crate::game::Game) -> Option<V3> {
     if !wind_blows(g) {
         return None;
@@ -406,7 +404,7 @@ pub fn wind_storm_wind(g: &crate::game::Game) -> Option<V3> {
 }
 
 /// Once a frame: every source's speed for this frame, the active list, and the hand-off to the smoke. Which of them a particle pool is handed is the host's, made
-/// of the standing game where a pool is (wind.ts `forParticles`). (wind.ts Wind.update)
+/// of the standing game where a pool is.
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let master = wind_of(g);
     let relax = g.k.wind.smoke_relax;
@@ -519,7 +517,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     g.stats.wind.to_smoke += recs.len() as i32;
 }
 
-/// The air's velocity at p this frame, m/s: the sum over every active source. (wind.ts Wind.at)
+/// The air's velocity at p this frame, m/s: the sum over every active source.
 pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     let sum = wind_sum(g, p);
     put(out, sum)
@@ -546,12 +544,12 @@ pub fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
     sum
 }
 
-/// The source called `name`. (wind.ts Wind.byName)
+/// The source called `name`.
 pub fn wind_by_name(g: &crate::game::Game, name: &str) -> Option<WindWindSourceId> {
     g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
 }
 
-/// A restart: every vent at once where its own cycle has it, with the mains in. (wind.ts Wind.fresh)
+/// A restart: every vent at once where its own cycle has it, with the mains in.
 pub fn wind_fresh(g: &mut crate::game::Game) {
     let t = g.time;
     for k in 0..g.wind.all.len() {
@@ -563,7 +561,7 @@ pub fn wind_fresh(g: &mut crate::game::Game) {
     }
 }
 
-/// One line per source for the panel. (wind.ts Wind.describe)
+/// One line per source for the panel.
 pub fn wind_describe(g: &crate::game::Game) -> Vec<String> {
     g.wind
         .all

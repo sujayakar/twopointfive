@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
-/// A blast over the snow is told to the picture: the crater, the dig, the throw and the shove are its own (src/picture/snow). Nothing of the game reads it.   (snowBlast.ts:142 snowBlastAt)
+/// A blast over the snow is told to the picture: the crater, the dig, the throw and the shove are its own (src/picture/snow). Nothing of the game reads it.
 pub fn snow_blast_at(g: &mut crate::game::Game, at: &[f64], radius: f64) -> bool {
     let name = crate::scene_level_load::level_name_of(g);
     if !crate::weather_kinds::snow_level(g, name.as_deref()) { return false; }

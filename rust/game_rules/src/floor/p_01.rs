@@ -1,4 +1,3 @@
-//! src/game/floor.ts lines 1 to 80
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// FLOOR[mat]: the table's row for a material, walked in the written order. (floor.ts:22)
+/// FLOOR[mat]: the table's row for a material, walked in the written order.
 fn floor_row(mat: FloorMat) -> FLOORValue {
     floor().iter().find(|(m, _)| *m == mat).unwrap().1
 }
 
-/// The material under a point on the floor (y ignored): the level's `surfaces` block, or without one the office's map. (floor.ts floorAt)
+/// The material under a point on the floor (y ignored): the level's `surfaces` block, or without one the office's map.
 pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> crate::floor::FloorMat {
     let (x, z) = (p[0], p[2]);
     if let Some(s) = s {
@@ -35,7 +34,7 @@ pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> cra
     FloorMat::Carpet
 }
 
-/// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino. (floor.ts floorOf)
+/// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino.
 pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     let l = &g.level;
     if l.surfaces.is_none() && l.scenarios.as_ref().map_or(false, |s| s.quiet.is_some()) {
@@ -45,14 +44,14 @@ pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     }
 }
 
-/// What the hearing model has under a point, as a HUD says it (None: the floors are all one). (game.ts floorUnderPlayer)
+/// What the hearing model has under a point, as a HUD says it (None: the floors are all one).
 pub fn floor_heard(g: &crate::game::Game, pos: V3) -> Option<crate::view::FloorWord> {
     use crate::{floor::FloorMat as F, view::FloorWord as W};
     if !g.tune.floor_materials { return None; }
     Some(match floor_of(g, pos) { F::Carpet => W::Carpet, F::Lino => W::Lino, F::Stone => W::Stone, F::Tile => W::Tile, F::Asphalt => W::Asphalt, F::Grass => W::Grass })
 }
 
-/// One footfall, for the mixer and the model alike: plays it and returns the level the caller files. (floor.ts tread)
+/// One footfall, for the mixer and the model alike: plays it and returns the level the caller files.
 pub fn tread(g: &mut crate::game::Game, pos: V3, base: f64, is_player: bool) -> f64 {
     if !g.tune.floor_materials {
         let real = floor_of(g, pos);

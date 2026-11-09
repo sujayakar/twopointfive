@@ -27,7 +27,7 @@ pub struct RoomfightK {
     /// how readily a defender goes to a fight next door (`rally`): × his side's chance to go each time he weighs it (FIGHT_SKILL rallyChance, 0.75 a roll). 1 = as it
     ///  was; under 1 more of them are still in their own rooms when the team gets there; 0 = nobody leaves (the `rally` switch off). The dice are drawn either way
     #[k(1.0)] pub rally_k: f64,
-    /// a man HOLDING an arc he was given (orders.ts holdArcs: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
+    /// a man HOLDING an arc he was given answers a mate's call or a footfall only inside this many degrees of it
     ///  — the other half is the other man's; 180 = as it was (he turned to any call he had a line to, and the two of them ended facing one way)
     #[k(100.0)] pub arc_half_deg: f64,
     /// A MAN TOLD TO COVER KEEPS HIS ANGLE (the maintainer, of a man covering a lane who swung a quarter turn to a man two mates were already shooting, the
@@ -68,14 +68,14 @@ pub struct RoomfightK {
     #[k(12.0)] pub preaim_deg: f64,
 }
 
-/// DRILLED DEFENDERS — hard on the night breach (difficulty.ts HARD.drilled → pressure.ts PRESSURE.drilled).
+/// DRILLED DEFENDERS — hard on the night breach.
 ///  One room, three men, no warning: the canister blinds all three and the room is taken in
 ///  two seconds, so nothing a defender could do smarter comes before he is shot. What is left is how a man takes a bang, and that is training — nerves only, no
-///  reaction, aim or hit-point number is in it. A drilled man is blind exactly as long as anybody (combat.ts FLASH.secs, untouched) and breaks as often
+///  reaction, aim or hit-point number is in it. A drilled man is blind exactly as long as anybody and breaks as often
 ///  (bangBreak, untouched); he is HALF AS SHAKEN — `shaken` × the seconds a stun canister doubles him over (FLASH.stagger 2.5‥1.0 s → 1.25‥0.5: combat.ts
 ///  detonateStun asks `drilledK`), × his flinch at a boot (startle 0.4‥0.65 s → 0.2‥0.33) and × the daze once his eyes clear (daze 1‥2 s → 0.5‥1).
 ///  So his blind burst — the room fight's own, down the door HE WAS WATCHING, twelve turns from three tenths after the flash — is partly fired instead of
-///  lost whole to the seconds he spent doubled over, and it starts AFTER the entry's own beat of silence (doortools.ts burstDry: 0.6 s) has sent the lead in:
+///  lost whole to the seconds he spent doubled over, and it starts AFTER the entry's own beat of silence has sent the lead in:
 ///  that is the bite. The first of them to fire shouts it. A breaching charge folds him as long as anybody (doortools.ts staggerSecs, untouched: still no
 ///  burst back through that doorway), and the door worked from the threshold is the other answer.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

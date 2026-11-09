@@ -1,4 +1,3 @@
-//! src/game/samlook.ts lines 1 to 105
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,37 +6,37 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// This seat's row, made if it is missing.   (samlook.ts stateOf)
+/// This seat's row, made if it is missing.
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::samlook::St {
     let pl = g.player;
     g.m.samlook.state.get_or_insert_with(pl, || St { on: None })
 }
 
-/// Smoothstep from `a` to `b`.   (samlook.ts smooth)
+/// Smoothstep from `a` to `b`.
 pub fn smooth(a: f64, b: f64, x: f64) -> f64 {
     let t = m::max(0.0, m::min(1.0, (x - a) / (b - a)));
     t * t * (3.0 - 2.0 * t)
 }
 
-/// An angle brought into -pi..pi.   (samlook.ts wrap)
+/// An angle brought into -pi..pi.
 pub fn wrap(a: f64) -> f64 {
     m::atan2(m::sin(a), m::cos(a))
 }
 
-/// His head is his own to turn.   (samlook.ts free)
+/// His head is his own to turn.
 pub fn free(g: &mut crate::game::Game) -> bool {
     let pl = &g.pl[g.player];
     !pl.down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && !g.touring && g.puppet.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
 }
 
-/// A man who is onto him, or has him in view this moment with his notice risen.   (samlook.ts samLookNoticed)
+/// A man who is onto him, or has him in view this moment with his notice risen.
 pub fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     man.state == GuardState::Alert || man.state == GuardState::Search || man.state == GuardState::Suspicious || (man.awareness > 0.08 && g.time - man.sight_t < 0.4)
 }
 
-/// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.   (samlook.ts reach)
+/// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.
 pub fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     if !crate::close::close_subject(g, gd) { return f64::INFINITY; }
     let c = g.pl[g.player].ch;
@@ -52,7 +51,7 @@ pub fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f6
     d
 }
 
-/// Picks the man his head is on this frame and remembers him.   (samlook.ts pick)
+/// Picks the man his head is on this frame and remembers him.
 pub fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
     let was = state_of(g).on;
     if !free(g) {
@@ -83,7 +82,7 @@ pub fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 
-/// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.   (samlook.ts slipOf)
+/// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.
 pub fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }
     let slip_from = g.k.samlook.slip_from;
@@ -97,12 +96,12 @@ pub fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     (1.0 - smooth(k.slip_by, k.slip_from, d)) * smooth(k.back_cos[0], k.back_cos[1], nose)
 }
 
-/// The slip's three conditions.   (samlook.ts slips)
+/// The slip's three conditions.
 pub fn slips(g: &mut crate::game::Game) -> bool {
     free(g) && g.pl[g.player].crouch && g.pl[g.player].holstered
 }
 
-/// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.   (samlook.ts slipNow)
+/// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.
 pub fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     if !slips(g) { return None; }
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -127,13 +126,13 @@ pub fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     Some(SlipNow { k: top, lean: m::min(1.0, l / top), at: [p[0] + vx * u, p[1] + 1.1, p[2] + vz * u] })
 }
 
-/// A point `up` metres over a man's feet.   (samlook.ts headOf)
+/// A point `up` metres over a man's feet.
 pub fn head_of(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
     let q = g.ch[g.gd[gd].ch].pos;
     [q[0], q[1] + up, q[2]]
 }
 
-/// Once a step, after the player's own update: what his animator is handed for the next frame's pose.   (samlook.ts samLookStep)
+/// Once a step, after the player's own update: what his animator is handed for the next frame's pose.
 pub fn sam_look_step(g: &mut crate::game::Game) {
     let c = g.pl[g.player].ch;
     let an = &mut g.ch[c].anim;

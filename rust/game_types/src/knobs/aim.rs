@@ -77,11 +77,11 @@ pub struct AimKPlayer {
     #[k(0.3)] pub moving_above: f64,
     #[k(1.15)] pub crouch_k: f64,
     /// CSS px: the reticle takes a LIGHT (a fixture, the breaker, a camera) only with the cursor this near its dot — about the light itself — or on the fixture's
-    ///  own drawn box (player.ts updateAim). SNAP_PX = the reach it had, the same as onto a man's chest (which also caps it); 0 = only a drawn fixture under the cursor
+    ///  own drawn box. SNAP_PX = the reach it had, the same as onto a man's chest (which also caps it); 0 = only a drawn fixture under the cursor
     #[k(14.0)] pub light_snap_px: f64,
 }
 
-/// A TRAINED man's edge (Guard.trained — the response team, game/qrf.ts; nobody else carries it, so the staff's numbers are the numbers above to the letter):
+/// A TRAINED man's edge:
 ///  he lines up in settleK × the settle time (so his first round comes that much sooner past his reaction beat), his hands are spreadK × his row's cone, and
 ///  qrf.ts caps his reaction beats at reactCap seconds (a dazzle or a ring in the body still roots him its full length).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

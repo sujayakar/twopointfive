@@ -36,9 +36,7 @@ pub enum SilentBoot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SilentMod {
-    /// (src/game/silent.ts:110 states)
     pub states: JsMap<PlayerId, crate::silent::State>,
-    /// (src/game/silent.ts:233 seats)
     pub seats: JsMap<PlayerId, crate::silent::SilentModSeatsValue>,
 }
 impl SilentMod {
@@ -64,9 +62,7 @@ pub struct SilentStats {
     pub tools: i32,
 }
 
-/// (src/game/silent.ts:222 TARGETS: a table nothing writes)
 pub fn targets() -> Vec<crate::orders::TargetKind> { alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None] }
 
-/// (src/game/silent.ts:222 LISTED: a table nothing writes)
 pub fn listed() -> Option<Vec<crate::orders::TargetKind>> { Some(alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::None]) }
 

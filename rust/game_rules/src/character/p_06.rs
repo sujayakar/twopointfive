@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 1733 to 2111
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the rig's named nodes as `Object.entries(N)` walks them: the key a layer asks for (the TypeScript's own name), the node's name   (character.ts N)
+/// the rig's named nodes as `Object.entries(N)` walks them: the key a layer asks for (the TypeScript's own name), the node's name
 fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
     [
         ("hips", &nn.hips), ("spine1", &nn.spine1), ("spine2", &nn.spine2), ("spine3", &nn.spine3), ("neck", &nn.neck), ("head", &nn.head),
@@ -19,7 +18,7 @@ fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
 
 // ---- what the constructor does before the animator is on a body: anim_fk_list, anim_stance_of and anim_sample_jog take a CharId (notes, ## Skeleton)
 
-/// the nodes fkPart must compute for `ends`: each and all its ancestors, parents first   (character.ts fkList, by the rig)
+/// the nodes fkPart must compute for `ends`: each and all its ancestors, parents first
 fn fk_list(rig: &crate::anim_gltf::GltfCharacter, ends: &[f64]) -> Vec<i32> {
     let mut want = vec![false; rig.nodes.len()];
     for &e in ends {
@@ -31,7 +30,7 @@ fn fk_list(rig: &crate::anim_gltf::GltfCharacter, ends: &[f64]) -> Vec<i32> {
     }
     rig.order.iter().filter(|&&i| want[i as usize]).map(|&i| i as i32).collect()
 }
-/// a run clip's stances from its toes; None if either foot never qualifies   (character.ts stanceOf: it reads no state)
+/// a run clip's stances from its toes; None if either foot never qualifies
 fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> {
     let mm = ty[0].len();
     let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
@@ -52,7 +51,7 @@ fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimS
     let c = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
     Some(crate::character::AnimStanceOf { c, c_l: cs[0], c_r: cs[1] })
 }
-/// Jog_Fwd_Loop at phase ph with its loop seam closed, in doubles as all the constructor's measuring is   (character.ts sampleJog, on the animator being built)
+/// Jog_Fwd_Loop at phase ph with its loop seam closed, in doubles as all the constructor's measuring is
 fn sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: crate::anim_skeleton::Pose) {
     let cj = kept(a, "Jog_Fwd_Loop");
     let t = ph * g.tab.clip[cj].duration;
@@ -61,7 +60,7 @@ fn sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, ou
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64) as usize;
     jog_seam_close(crate::anim_skeleton::pose_cols(g, out), rows, &a.jog_seam, k);
 }
-/// every channel whose last key misses its first carries k × the gap: the sums in doubles, each stored as a single once   (character.ts sampleJog)
+/// every channel whose last key misses its first carries k × the gap: the sums in doubles, each stored as a single once
 fn jog_seam_close(d: &mut [f32], rows: usize, seam: &[crate::character::AnimJogSeamItem], k: f64) {
     for s in seam {
         if let Some(v) = s.d {
@@ -167,7 +166,7 @@ fn throw_by_read(lo: f64, full: f64, toss_fast: f64, dist: f64, speed: Option<f6
 
 // ---- the part
 
-/// the pose under every look-only arm layer that showed this frame; none when none showed   (character.ts underPose)
+/// the pose under every look-only arm layer that showed this frame; none when none showed
 pub fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::anim_skeleton::Pose> {
     let (a, h) = match (g.ch[c].anim.arms_pre, g.ch[c].anim.hand_pre) {
         (Some(a), Some(h)) => (a, h),
@@ -190,7 +189,7 @@ pub fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::an
     Some(buf)
 }
 
-/// the animator of a rig: its poses, clips, masks, and everything measured off the clips; then his phase off the game's die   (character.ts CharacterAnimator)
+/// the animator of a rig: its poses, clips, masks, and everything measured off the clips; then his phase off the game's die
 pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim {
     let mut a = crate::character::Anim::blank();
     a.rig = ch;
@@ -354,7 +353,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     let all: Vec<ClipId> = g.tab.rig[ch].clips.values().copied().collect();
     crate::anim_skeleton::layer_clips_fit(g, &all, a.p_a.nodes as f64);
 
-    // what a layer of the Rust module is handed with the rig (skeleton.ts layerSlot)
+    // what a layer of the Rust module is handed with the rig
     let mut cast = crate::anim_skeleton::LayerCast::blank();
     for (i, e) in names.iter().enumerate() { cast.nodes.set(e.0, at[i]); }
     cast.lists.set("fkLegs", a.fk_legs.clone());
@@ -426,7 +425,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     a
 }
 
-/// the idle and life clocks set off per figure, deterministically, so a room does not breathe in step   (character.ts desync)
+/// the idle and life clocks set off per figure, deterministically, so a room does not breathe in step
 pub fn anim_desync(g: &mut crate::game::Game, c: CharId, seed: f64) {
     let a = &mut g.ch[c].anim;
     a.idle_t = desync_hash(seed, 1.0) * 20.0;
@@ -436,7 +435,7 @@ pub fn anim_desync(g: &mut crate::game::Game, c: CharId, seed: f64) {
     a.hn.seed = seed;
 }
 
-/// a round fired: the shot's clock, and a long gun's recoil sums   (character.ts fire)
+/// a round fired: the shot's clock, and a long gun's recoil sums
 pub fn anim_fire(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.shoot_t = 0.0;
     g.ch[c].anim.hn.fired = 0.0;
@@ -457,17 +456,17 @@ pub fn anim_fire(g: &mut crate::game::Game, c: CharId) {
     }
 }
 
-/// the Hit_Chest layer's clock   (character.ts hit)
+/// the Hit_Chest layer's clock
 pub fn anim_hit(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.hit_t = 0.0;
 }
 
-/// startled, from his front   (character.ts flinch)
+/// startled, from his front
 pub fn anim_flinch(g: &mut crate::game::Game, c: CharId) {
     if mv_on(g, crate::character::MvOnK::Flinch) { anim_flinch_from(g, c, None, None, None); } else { anim_hit(g, c); }
 }
 
-/// rounds going past: a duck away from where they come from   (character.ts flinchFrom)
+/// rounds going past: a duck away from where they come from
 pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>, k: Option<f64>, soft: Option<bool>) {
     let (k, soft) = (k.unwrap_or(1.0), soft.unwrap_or(false));
     if !mv_on(g, crate::character::MvOnK::Flinch) {
@@ -496,7 +495,7 @@ pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>
     m_.fl_soft = soft;
 }
 
-/// the start of a man who has just seen what he did not expect   (character.ts startleFrom)
+/// the start of a man who has just seen what he did not expect
 pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>) {
     if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
     if g.ch[c].anim.mvs.st_t >= 0.0 { return; }
@@ -505,7 +504,7 @@ pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3
     g.ch[c].anim.mvs.st_t = 0.0;
 }
 
-/// a round that went home on a man who stays up   (character.ts hitFrom)
+/// a round that went home on a man who stays up
 pub fn anim_hit_from(g: &mut crate::game::Game, c: CharId, along: Option<V3>) {
     if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
     let ht_t = g.ch[c].anim.mvs.ht_t;
@@ -524,7 +523,7 @@ pub fn anim_hit_from(g: &mut crate::game::Game, c: CharId, along: Option<V3>) {
     };
 }
 
-/// the support hand's underhand toss; off, the chop the teams used to make   (character.ts tossItem)
+/// the support hand's underhand toss; off, the chop the teams used to make
 pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>) {
     let release = release.unwrap_or(crate::character::TOSS_RELEASE);
     if !mv_on(g, crate::character::MvOnK::Toss) { anim_signal(g, c, crate::character::SignalKind::Go, None); return; }
@@ -534,14 +533,14 @@ pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>
     m_.ts_rel = v3::clamp(release, 0.08, 0.6);
 }
 
-/// a world direction, flattened, in the figure's un-twisted model frame   (character.ts flatModel)
+/// a world direction, flattened, in the figure's un-twisted model frame
 pub fn anim_flat_model(g: &crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
     let d = anim_to_model_d(g, c, [w[0], 0.0, w[2]]);
     let l = m::hyp2(d[0], d[2]);
     if l > 1e-4 { [d[0] / l, 0.0, d[2] / l] } else { fb }
 }
 
-/// the takedown strike's clock, and the knife's when it is lethal   (character.ts strike)
+/// the takedown strike's clock, and the knife's when it is lethal
 pub fn anim_strike(g: &mut crate::game::Game, c: CharId, kind: Option<crate::character::StrikeKind>, lethal: Option<bool>) {
     let (kind, lethal) = (kind.unwrap_or(crate::character::StrikeKind::Cross), lethal.unwrap_or(false));
     let a = &mut g.ch[c].anim;
@@ -559,7 +558,7 @@ pub fn anim_strike(g: &mut crate::game::Game, c: CharId, kind: Option<crate::cha
     }
 }
 
-/// a takedown's own move, right after the strike it rides   (character.ts blow)
+/// a takedown's own move, right after the strike it rides
 pub fn anim_blow(g: &mut crate::game::Game, c: CharId, style: crate::character::BlowStyle, at: V3, at2: Option<V3>, o: Option<&crate::character::BlowOpts>) {
     let none = crate::character::BlowOpts::default();
     let o = o.unwrap_or(&none);
@@ -571,7 +570,7 @@ pub fn anim_blow(g: &mut crate::game::Game, c: CharId, style: crate::character::
     a.kb_back = style == crate::character::BlowStyle::Mouth;
 }
 
-/// the move called off: eased out from where it is   (character.ts blowCancel)
+/// the move called off: eased out from where it is
 pub fn anim_blow_cancel(g: &mut crate::game::Game, c: CharId) {
     if let Some(b) = &mut g.ch[c].anim.bw {
         b.end = m::min(b.end, b.t + 0.18);
@@ -580,7 +579,7 @@ pub fn anim_blow_cancel(g: &mut crate::game::Game, c: CharId) {
     }
 }
 
-/// the man it was being done to, let go of   (character.ts takenCancel)
+/// the man it was being done to, let go of
 pub fn anim_taken_cancel(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     let begun = match &mut a.tk {
@@ -597,12 +596,12 @@ pub fn anim_taken_cancel(g: &mut crate::game::Game, c: CharId) {
     if !begun { a.tk = None; }
 }
 
-/// the man it is done to, while he is still on his feet   (character.ts taken)
+/// the man it is done to, while he is still on his feet
 pub fn anim_taken(g: &mut crate::game::Game, c: CharId, style: crate::character::TakenStyle, delay: Option<f64>) {
     g.ch[c].anim.tk = Some(crate::character::AnimTk { style, t: 0.0, delay: delay.unwrap_or(0.0), off: -1.0 });
 }
 
-/// the reload one-shot, retimed to `dur`, and the support hand's keys off the weapon's beat   (character.ts reload)
+/// the reload one-shot, retimed to `dur`, and the support hand's keys off the weapon's beat
 pub fn anim_reload(g: &mut crate::game::Game, c: CharId, dur: Option<f64>, beat: Option<crate::character::ReloadBeat>) {
     g.ch[c].anim.reload_t = 0.0;
     let d = m::max(0.3, dur.unwrap_or(1.6));
@@ -615,12 +614,12 @@ pub fn anim_reload(g: &mut crate::game::Game, c: CharId, dur: Option<f64>, beat:
     g.ch[c].anim.rl_t = 0.0;
 }
 
-/// the hand's keys off a weapon's beat   (character.ts rlBeat)
+/// the hand's keys off a weapon's beat
 pub fn anim_rl_beat(g: &mut crate::game::Game, c: CharId, b: crate::character::ReloadBeat) {
     rl_beat_keys(&mut g.ch[c].anim.rl_b, &b);
 }
 
-/// begin a change of what is in the right fist; the seconds until `to` is up   (character.ts kitSwap)
+/// begin a change of what is in the right fist; the seconds until `to` is up
 pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::character::KitItem>, to: Option<crate::character::KitItem>, shown: Option<crate::character::AnimKitSwapShown>, same: Option<bool>) -> f64 {
     use crate::character::KitItem as Kit;
     let (mut from, same) = (from, same.unwrap_or(false));
@@ -675,7 +674,7 @@ pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::c
     d
 }
 
-/// the swap dropped where it stands: the kit is where the game says, at once   (character.ts kitCancel)
+/// the swap dropped where it stands: the kit is where the game says, at once
 pub fn anim_kit_cancel(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.kit = None;
     g.ch[c].anim.kit_hold = None;   // (undefined: the kit is where the game says)
@@ -684,12 +683,12 @@ pub fn anim_kit_cancel(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.kit_lie = None;
 }
 
-/// a swap is under way   (character.ts kitBusy)
+/// a swap is under way
 pub fn anim_kit_busy(g: &crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.kit.is_some()
 }
 
-/// the goggles go down or up: by the left hand if `hand`, else a nod   (character.ts nvFlip)
+/// the goggles go down or up: by the left hand if `hand`, else a nod
 pub fn anim_nv_flip(g: &mut crate::game::Game, c: CharId, down: bool, hand: bool) {
     let reach = g.k.kit.nv.hand.reach;
     let a = &mut g.ch[c].anim;
@@ -708,7 +707,7 @@ pub fn anim_nv_flip(g: &mut crate::game::Game, c: CharId, down: bool, hand: bool
     a.nv_shown = Some(k0);
 }
 
-/// the flip let go of where it is   (character.ts nvCancel)
+/// the flip let go of where it is
 pub fn anim_nv_cancel(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     a.nv = None;
@@ -718,7 +717,7 @@ pub fn anim_nv_cancel(g: &mut crate::game::Game, c: CharId) {
     a.nv_shown = None;
 }
 
-/// the errand under way has the rifle in it   (character.ts kitRifle)
+/// the errand under way has the rifle in it
 pub fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
     use crate::character::KitItem as Kit;
     match &g.ch[c].anim.kit {
@@ -727,12 +726,12 @@ pub fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
     }
 }
 
-/// the support hand's magazine work can be shown at all   (character.ts kitHandsOn)
+/// the support hand's magazine work can be shown at all
 pub fn anim_kit_hands_on(g: &crate::game::Game, c: CharId) -> bool {
     g.k.moves.reload > 0.5
 }
 
-/// a magazine change as the drawer needs it; none when none is shown   (character.ts reloadShow)
+/// a magazine change as the drawer needs it; none when none is shown
 pub fn anim_reload_show(g: &crate::game::Game, c: CharId) -> Option<crate::character::AnimReloadShow> {
     let a = &g.ch[c].anim;
     if !(a.mv2_shown.reload > 0.5) { return None; }
@@ -743,7 +742,7 @@ pub fn anim_reload_show(g: &crate::game::Game, c: CharId) -> Option<crate::chara
     })
 }
 
-/// the change the support hand is showing, as its beat and where it is on it   (character.ts feedClock)
+/// the change the support hand is showing, as its beat and where it is on it
 pub fn anim_feed_clock(g: &crate::game::Game, c: CharId) -> Option<crate::character::AnimFeedClock> {
     let a = &g.ch[c].anim;
     if !(a.mv2_shown.reload > 0.5) { return None; }
@@ -751,13 +750,13 @@ pub fn anim_feed_clock(g: &crate::game::Game, c: CharId) -> Option<crate::charac
     Some(crate::character::AnimFeedClock { t: a.mv2.rl_at, dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull, keep: b.keep, fresh: b.fresh })
 }
 
-/// the hand's clock stops where it is and the arm eases back   (character.ts cancelReload)
+/// the hand's clock stops where it is and the arm eases back
 pub fn anim_cancel_reload(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.reload_t = -1.0;
     g.ch[c].anim.rl_t = -1.0;
 }
 
-/// the overhand throw's clock, and which swing its distance reads as   (character.ts throwItem)
+/// the overhand throw's clock, and which swing its distance reads as
 pub fn anim_throw_item(g: &mut crate::game::Game, c: CharId, dist: Option<f64>, speed: Option<f64>) {
     let (lo, full, toss_fast) = (g.k.throw_by.toss, g.k.throw_by.full, g.k.throw_by.toss_fast);
     let a = &mut g.ch[c].anim;
@@ -780,7 +779,7 @@ pub fn anim_throw_item(g: &mut crate::game::Game, c: CharId, dist: Option<f64>, 
     }
 }
 
-/// the reload one-shot is playing   (character.ts reloading)
+/// the reload one-shot is playing
 pub fn anim_reloading(g: &crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.reload_t >= 0.0
 }
@@ -844,7 +843,7 @@ mod tests {
         assert_eq!(read(12.0, None), (0xbff0000000000000, 0x3ff0000000000000));
     }
 
-    /// N as the TypeScript writes it, key by key: the pairs are by hand and a swap would compile   (character.ts:430)
+    /// N as the TypeScript writes it, key by key: the pairs are by hand and a swap would compile
     #[test]
     fn n_entries_are_the_typescripts() {
         let want: [(&str, &str); 24] = [("hips", "DEF-hips"), ("spine1", "DEF-spine.001"), ("spine2", "DEF-spine.002"), ("spine3", "DEF-spine.003"), ("neck", "DEF-neck"), ("head", "DEF-head"), ("upperArmL", "DEF-upper_arm.L"), ("forearmL", "DEF-forearm.L"), ("handL", "DEF-hand.L"), ("upperArmR", "DEF-upper_arm.R"), ("forearmR", "DEF-forearm.R"), ("handR", "DEF-hand.R"), ("thighL", "DEF-thigh.L"), ("shinL", "DEF-shin.L"), ("footL", "DEF-foot.L"), ("toeL", "DEF-toe.L"), ("thighR", "DEF-thigh.R"), ("shinR", "DEF-shin.R"), ("footR", "DEF-foot.R"), ("toeR", "DEF-toe.R"), ("shoulderL", "DEF-shoulder.L"), ("shoulderR", "DEF-shoulder.R"), ("middle1R", "DEF-f_middle.01.R"), ("middle1L", "DEF-f_middle.01.L")];

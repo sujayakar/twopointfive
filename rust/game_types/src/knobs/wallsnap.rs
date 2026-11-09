@@ -63,7 +63,7 @@ pub struct WallsnapK {
     #[k(1.4)] pub lean_clear_m: f64,
     /// THE GUN'S SHARE OF THE STEP: leanAlong is measured for his eyes, and the rifle rides a hand's width to his right — round an end on that side it is
     ///  still in the jamb when his head is clear, and its rounds stop in the wood. Up to this much further (m) he steps, by leanGunStep, until the rifle as it
-    ///  would lie from there (gunwall.ts gunClearFrom) and the first leanClearM of its round's way are clear; never less again until he is back in.
+    ///  would lie from there and the first leanClearM of its round's way are clear; never less again until he is back in.
     ///  0 = leanAlong whichever side the end is on, as it was (?noleangun = 0)
     #[k(0.42)] pub lean_gun: f64,
     #[k(0.06)] pub lean_gun_step: f64,

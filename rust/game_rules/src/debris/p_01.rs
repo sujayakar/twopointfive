@@ -1,4 +1,3 @@
-//! src/game/debris.ts lines 1 to 450
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A kind's row of the table: hearing level and knock.   (debris.ts LANDING)
+/// A kind's row of the table: hearing level and knock.
 fn landing_of(kind: ChunkKind) -> LANDINGValue {
     landing().get(String::from(kind.as_str())).unwrap().clone()
 }
@@ -50,7 +49,7 @@ fn mass_from(h: V3) -> f64 { m::min(6.0, m::max(0.1, h[0] * h[1] * h[2] * 8.0 * 
 
 fn is_on(x: Option<bool>) -> bool { x == Some(true) }
 
-/// 0‥1 off an integer (a hash, not a die).   (debris.ts hash01)
+/// 0‥1 off an integer (a hash, not a die).
 pub fn hash01(x: f64) -> f64 {
     let mut x = (js::to_i32(x) ^ (0x9E3779B9u32 as i32)) as u32;
     x = x.wrapping_mul(0x85EBCA6B);
@@ -60,13 +59,13 @@ pub fn hash01(x: f64) -> f64 {
     ((x >> 8) as f64) / 16777216.0
 }
 
-/// A new pool.   (debris.ts Debris.constructor)
+/// A new pool.
 pub fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
 
-/// The pool's size.   (debris.ts Debris.cap)
+/// The pool's size.
 pub const DEBRIS_CAP: f64 = 64.0;
 
-/// Thrown and not yet down; a piece a boot slid is not counted.   (debris.ts Debris.moving)
+/// Thrown and not yet down; a piece a boot slid is not counted.
 pub fn debris_moving(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &c in g.destr.debris.list.iter() {
@@ -76,7 +75,7 @@ pub fn debris_moving(g: &crate::game::Game) -> f64 {
     n
 }
 
-/// A chunk of `kind` thrown at `v` turning at `w`; None when the pool is full of chunks still moving.   (debris.ts Debris.spawn)
+/// A chunk of `kind` thrown at `v` turning at `w`; None when the pool is full of chunks still moving.
 pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, level: Option<f64>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let level = level.unwrap_or(0.0);
@@ -86,7 +85,7 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
     debris_spawn_raw(g, kind, box_, v, w, Some(who), Some(true))
 }
 
-/// The simulation's half of a piece that is thrown: its one landing, put in the game's falls.   (debris.ts Debris.thrown)
+/// The simulation's half of a piece that is thrown: its one landing, put in the game's falls.
 pub fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, level: f64, who: f64) {
     let c = seam_box(g, box_).c;
     let f = crate::falling::flight_of(g, c, v, G, crate::falling::FallWorld::StaticsAndProps);
@@ -102,7 +101,7 @@ pub fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, 
     }
 }
 
-/// The thrown pieces whose landing has come: the floor is told of each.   (debris.ts Debris.landings)
+/// The thrown pieces whose landing has come: the floor is told of each.
 pub fn debris_landings(g: &mut crate::game::Game) {
     let time = g.time;
     let due = crate::sim_fallshome::fall_store_due(g, time, 0.0, 0.0, Some(crate::sim_fallshome::FALL_PIECES));
@@ -117,7 +116,7 @@ pub fn debris_landings(g: &mut crate::game::Game) {
     }
 }
 
-/// spawn() without the glass door; `told` = the simulation has this piece's landing.   (debris.ts Debris.spawnRaw)
+/// spawn() without the glass door; `told` = the simulation has this piece's landing.
 pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
@@ -164,7 +163,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     Some(id)
 }
 
-/// Back to an empty pool; `serial` runs on.   (debris.ts Debris.clear)
+/// Back to an empty pool; `serial` runs on.
 pub fn debris_clear(g: &mut crate::game::Game) {
     crate::sim_fallshome::fall_store_clear(g, Some(false), Some(crate::sim_fallshome::FALL_PIECES));
     let d = &mut g.destr.debris;
@@ -177,7 +176,7 @@ pub fn debris_clear(g: &mut crate::game::Game) {
     d.feet_stats = DebrisFeetStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 };
 }
 
-/// The pool's boxes for the picture; a mate rides its chunk's pose.   (debris.ts Debris.boxes)
+/// The pool's boxes for the picture; a mate rides its chunk's pose.
 pub fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let list = g.destr.debris.list.clone();
     for c in list {
@@ -196,7 +195,7 @@ pub fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
 }
 
-/// An impulse over the pool: wakes, shoves and turns every chunk within reach; how many it moved.   (debris.ts Debris.impulse)
+/// An impulse over the pool: wakes, shoves and turns every chunk within reach; how many it moved.
 pub fn debris_impulse(g: &mut crate::game::Game, imp: crate::sheet_model::ImpulseLike, blocked: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, who: Option<f64>) -> f64 {
     if g.destr.debris.list.is_empty() { return 0.0; }
     let mut blocked = blocked;
@@ -237,11 +236,11 @@ pub fn debris_impulse(g: &mut crate::game::Game, imp: crate::sheet_model::Impuls
     n
 }
 
-/// The best man a piece is in the way of: footGap's answer, the man, his speed.   (debris.ts Debris.feet `best`)
+/// The best man a piece is in the way of: footGap's answer, the man, his speed.
 #[derive(Clone, Copy)]
 struct FootBest { hit: DebrisFootGap, m: FootMan, sp: f64 }
 
-/// Men's boots on pieces at rest: shoved ahead and aside, or out of a man they lie in; the shoves made.   (debris.ts Debris.feet)
+/// Men's boots on pieces at rest: shoved ahead and aside, or out of a man they lie in; the shoves made.
 pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k: crate::debris::FootKnobs, list: Option<&[DebrisChunkId]>, book: Option<&mut crate::debris::FootBook>) -> f64 {
     let list: Vec<DebrisChunkId> = match list { Some(l) => l.to_vec(), None => g.destr.debris.list.clone() };
     if list.is_empty() || men.is_empty() { return 0.0; }
@@ -389,7 +388,7 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
     n
 }
 
-/// A piece outside the pool, for the feet alone: a chunk record round its box, at rest.   (debris.ts Debris.loose)
+/// A piece outside the pool, for the feet alone: a chunk record round its box, at rest.
 pub fn debris_loose(g: &mut crate::game::Game, box_: AnyBoxId, lift: Option<f64>) -> DebrisChunkId {
     let l = landing_of(ChunkKind::Chunk);
     g.tab.debris_chunk.push(Chunk {
@@ -399,7 +398,7 @@ pub fn debris_loose(g: &mut crate::game::Game, box_: AnyBoxId, lift: Option<f64>
     })
 }
 
-/// A loose piece's frame: older by `dt`, and slid on if a boot set it going.   (debris.ts Debris.footStep)
+/// A loose piece's frame: older by `dt`, and slid on if a boot set it going.
 pub fn debris_foot_step(g: &mut crate::game::Game, c_2: DebrisChunkId, dt: f64) {
     let c = c_2;
     g.tab.debris_chunk[c].age += dt;
@@ -411,7 +410,7 @@ pub fn debris_foot_step(g: &mut crate::game::Game, c_2: DebrisChunkId, dt: f64) 
     while s < sub && !g.tab.debris_chunk[c].rest { debris_slide(g, c, h); s += 1; }
 }
 
-/// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.   (debris.ts Debris.footGap)
+/// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.
 pub fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
     let bc = seam_box(g, b).c;
     let (d2x, d2z) = (-d1z, d1x);
@@ -436,14 +435,14 @@ pub fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64,
     DebrisFootGap { gap: d - radius, dx: -(ou * d1x + ov * d2x) / d, dz: -(ou * d1z + ov * d2z) / d, lx: cu * d1x + cv * d2x, lz: cu * d1z + cv * d2z }
 }
 
-/// slide's `back`: the piece where it was.   (debris.ts Debris.slide)
+/// slide's `back`: the piece where it was.
 fn slide_back(g: &mut Game, b: AnyBoxId, c0: V3, rot0: Option<Quat>, yaw0: f64) {
     seam_box(g, b).c = c0;
     seam_box(g, b).rot = rot0;
     seam_box(g, b).yaw = yaw0;
 }
 
-/// A boot's piece for `h` seconds: a slider on the floor it lay on.   (debris.ts Debris.slide)
+/// A boot's piece for `h` seconds: a slider on the floor it lay on.
 pub fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     let c = c_2;
     let b = g.tab.debris_chunk[c].box_;
@@ -550,7 +549,7 @@ pub fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     ch.v = [ch.v[0] * keep, 0.0, ch.v[2] * keep];
 }
 
-/// Does a piece's footprint reach into a static? Level rays from its middle to its four corners.   (debris.ts Debris.footIn)
+/// Does a piece's footprint reach into a static? Level rays from its middle to its four corners.
 pub fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     let q = rot_of(g, b);
     let bh = seam_box(g, b).h;
@@ -580,7 +579,7 @@ pub fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     false
 }
 
-/// The pool's frame: the moving fly or slide, the resting are checked for what is under them.   (debris.ts Debris.update)
+/// The pool's frame: the moving fly or slide, the resting are checked for what is under them.
 pub fn debris_update(g: &mut crate::game::Game, dt: f64) {
     if g.destr.debris.list.is_empty() { return; }
     g.destr.debris.frame += 1.0;
@@ -642,7 +641,7 @@ fn box_add_c(g: &mut Game, b: AnyBoxId, d: V3) {
     seam_box(g, b).c = c;
 }
 
-/// A thrown chunk for `h` seconds: ballistic flight with a swept contact.   (debris.ts Debris.step)
+/// A thrown chunk for `h` seconds: ballistic flight with a swept contact.
 pub fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     let c = c_2;
     let b = g.tab.debris_chunk[c].box_;
@@ -754,7 +753,7 @@ pub fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     debris_settle_tick(g, c, h, if landed { Some([0.0, 1.0, 0.0]) } else { None });
 }
 
-/// Nearly still for SLEEP_T while touching a floor: asleep.   (debris.ts Debris.settleTick)
+/// Nearly still for SLEEP_T while touching a floor: asleep.
 pub fn debris_settle_tick(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64, floor_n: Option<V3>) {
     let c = c_2;
     let (lv, lw) = { let ch = &g.tab.debris_chunk[c]; (v3::len(ch.v), v3::len(ch.w)) };
@@ -770,7 +769,7 @@ pub fn debris_settle_tick(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64,
     }
 }
 
-/// Lays it flat and puts it to rest on what is under it; still far off its face, another settling turn instead.   (debris.ts Debris.sleep)
+/// Lays it flat and puts it to rest on what is under it; still far off its face, another settling turn instead.
 pub fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Option<PropId>) {
     let c = c_2;
     let b = g.tab.debris_chunk[c].box_;
@@ -925,7 +924,7 @@ fn footprints_meet(ac: V3, a: &Footprint, bc: V3, b: &Footprint) -> bool {
     true
 }
 
-/// A chunk's first hard touch: its knock, and the floor told unless it is dressing.   (debris.ts Debris.land)
+/// A chunk's first hard touch: its knock, and the floor told unless it is dressing.
 pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     let c = c_2;
     g.tab.debris_chunk[c].sounded = true;
@@ -945,25 +944,24 @@ pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     }
 }
 
-/// The box's half extent along world direction n.   (debris.ts supportAlong)
+/// The box's half extent along world direction n.
 pub fn support_along(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let r = rot_of(g, b);
     support_of(r, seam_box(g, b).h, n)
 }
 
-/// A slot the pool may take: at rest, or one only a boot has set sliding.   (debris.ts evictable)
+/// A slot the pool may take: at rest, or one only a boot has set sliding.
 pub fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
     let ch = &g.tab.debris_chunk[c_2];
     ch.rest || ch.foot == Some(true)
 }
 
-/// (debris.ts boundR)
 pub fn bound_r(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { bound_of(seam_box(g, b).h) }
 
-/// A nominal mass off the volume, clamped.   (debris.ts massOf)
+/// A nominal mass off the volume, clamped.
 pub fn mass_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { mass_from(seam_box(g, b).h) }
 
-/// Radians between n and the box axis layFlat would settle onto it.   (debris.ts faceTilt)
+/// Radians between n and the box axis layFlat would settle onto it.
 pub fn face_tilt(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let q = rot_of(g, b);
     face_tilt_of(q, seam_box(g, b).h, n)

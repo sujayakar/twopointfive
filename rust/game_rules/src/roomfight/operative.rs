@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the sight gain, with the hunting man's x2.2 for a scripted man.   (roomfight.ts rateOn)
+/// the sight gain, with the hunting man's x2.2 for a scripted man.
 pub fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardId, dist: f64, known: Option<bool>) -> f64 {
     let known = known.unwrap_or(false);
     let r = crate::guards::sight_gain_on(g, viewer, target, dist);
@@ -16,13 +16,13 @@ pub fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: Gu
     if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.gd[viewer].team == crate::teams::Team::Operative { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
 }
 
-/// this teammate's feet are held this frame.   (roomfight.ts short)
+/// this teammate's feet are held this frame.
 pub fn room_fight_short(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.fight.live { return false; }
     match op_id(g, gd) { Some(o) => { let s = g.tab.roomfight_op[o].short_t; g.time - s >= 0.0 && g.time - s < 0.25 } None => false }
 }
 
-/// FIGHT_SKILL.operative: `readonly skill = FIGHT_SKILL`, one table (roomfight.ts:260)
+/// FIGHT_SKILL.operative: `readonly skill = FIGHT_SKILL`, one table
 pub(super) fn skill_operative(g: &Game) -> FightSkill { *g.fight.skill.get(RoomFightSkillKey::Operative).unwrap() }
 
 /// `gd.weapon.def`: the row of WEAPONS behind a man's gun
@@ -48,7 +48,7 @@ pub(super) fn over_of(g: &Game, o: RoomfightOpId) -> crate::game::GuardScriptOve
     crate::game::GuardScriptOver { aim_at: aim, face: ov.face, walk: ov.walk }
 }
 
-/// A teammate's record in the fight, as it starts. (roomfight.ts newOp)
+/// A teammate's record in the fight, as it starts.
 pub fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> RoomfightOpId {
     let aim: V3 = [0.0, 0.0, 0.0];
     g.tab.roomfight_op.push(Op {
@@ -59,7 +59,7 @@ pub fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> RoomfightOpI
     })
 }
 
-/// A word, at most once a gap. (roomfight.ts speak)
+/// A word, at most once a gap.
 pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str, gap: Option<f64>) {
     let gap = gap.unwrap_or(1.2);
     if g.time - g.tab.roomfight_op[o].said_t < gap { return; }
@@ -67,7 +67,7 @@ pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str,
     crate::game::game_say(g, g.tab.roomfight_op[o].gd, text, None, None, None);
 }
 
-/// One teammate's frame in the fight: his eyes, who his muzzle is on, his trigger. (roomfight.ts tickOp)
+/// One teammate's frame in the fight: his eyes, who his muzzle is on, his trigger.
 pub fn room_fight_tick_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64) {
     let gd = g.tab.roomfight_op[o].gd;
     let seat = crate::seats::view_of(g, gd);
@@ -339,7 +339,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     if let Some(to) = tracked(g, o, h, dt, speed, dist, brg, sk) { fires(g, o, h, to, dt, speed, dist, sk); }
 }
 
-/// THE TRACK (aim.ts's law, this side's K): whether a round may go now, and at what point of him
+/// THE TRACK: whether a round may go now, and at what point of him
 fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist: f64, brg: f64, sk: &FightSkill) -> Option<V3> {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -453,7 +453,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     if def.pellets.is_some() { g.tab.roomfight_op[o].next = m::max(g.tab.roomfight_op[o].next, g.time + def.cd); } // no pair comes faster than a pump gun's action is worked
 }
 
-/// The muzzle onto a point, through this module's overlay on his script; nothing the order holds is written. Returns the bearing. (roomfight.ts point)
+/// The muzzle onto a point, through this module's overlay on his script; nothing the order holds is written. Returns the bearing.
 pub fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt: f64, speed: f64) -> f64 {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -482,7 +482,7 @@ pub fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt:
     brg
 }
 
-/// Is this man inside the arc an arrived hold gives him (the `mine` of roomfight.ts cue)
+/// Is this man inside the arc an arrived hold gives him
 pub(super) fn in_arc(g: &Game, c: CharId, arc: Option<f64>, h: GuardId) -> bool {
     match arc {
         None => true,
@@ -490,7 +490,7 @@ pub(super) fn in_arc(g: &Game, c: CharId, arc: Option<f64>, h: GuardId) -> bool 
     }
 }
 
-/// What turns a teammate with nobody in his sight: a hostile's round from where he has a line, else the man a mate's muzzle is on, a footfall, a door. (roomfight.ts cue)
+/// What turns a teammate with nobody in his sight: a hostile's round from where he has a line, else the man a mate's muzzle is on, a footfall, a door.
 pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -606,7 +606,7 @@ pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     }
 }
 
-/// The nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his to the shooter. (roomfight.ts doorShot)
+/// The nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his to the shooter.
 pub fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
     let r_k = g.k.roomfight;
     let p = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
@@ -655,7 +655,7 @@ pub fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3
     best
 }
 
-/// In the dark on a lit man, Sam in the line to him, and an order's walk still to make: his feet wait; the order itself is untouched. (roomfight.ts holdShort)
+/// In the dark on a lit man, Sam in the line to him, and an order's walk still to make: his feet wait; the order itself is untouched.
 pub fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
     let p = g.ch[g.gd[gd].ch].pos;
@@ -674,7 +674,7 @@ pub fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) {
     if g.time - g.tab.roomfight_op[o].short_since < g.k.roomfight.hold_short_secs { g.tab.roomfight_op[o].short_t = g.time; }
 }
 
-/// Held off his man for a friend in the line: a hostile who has fired from where he has a line takes his eyes, the masked man let go for two seconds. (roomfight.ts letGo)
+/// Held off his man for a friend in the line: a hostile who has fired from where he has a line takes his eyes, the masked man let go for two seconds.
 pub fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -708,7 +708,7 @@ pub fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
     g.tab.roomfight_op[o].turn = Some(OpTurn { to: who, at: g.time, until: g.time + 2.5, pt: None, t0: None, door: None });
 }
 
-/// On his man with no round at him for a while, and an order's walk still to make: he says so, lets the man go and walks on. (roomfight.ts walkOn)
+/// On his man with no round at him for a while, and an order's walk still to make: he says so, lets the man go and walks on.
 pub fn room_fight_walk_on(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
     let r = g.k.roomfight;
@@ -730,13 +730,13 @@ pub fn room_fight_walk_on(g: &mut crate::game::Game, o: RoomfightOpId) {
     g.tab.roomfight_op[o].track = 0.0;
 }
 
-/// His muzzle back to the order: the overlay off his script. (roomfight.ts restore)
+/// His muzzle back to the order: the overlay off his script.
 pub fn room_fight_restore(g: &mut crate::game::Game, o: RoomfightOpId) {
     if let Some(s) = g.gd[g.tab.roomfight_op[o].gd].script.as_mut() { if s.over.is_some() { s.over = None; } }
     g.tab.roomfight_op[o].track = 0.0;
 }
 
-/// A step of this module's: the order's legs kept, then the step ordered. (roomfight.ts stepTo)
+/// A step of this module's: the order's legs kept, then the step ordered.
 pub fn room_fight_step_to(g: &mut crate::game::Game, o: RoomfightOpId, p: V3, door: bool, patch: crate::roomfight::RoomFightStepToPatch) {
     let gd = g.tab.roomfight_op[o].gd;
     let s = g.gd[gd].script.unwrap();
@@ -752,7 +752,7 @@ pub fn room_fight_step_to(g: &mut crate::game::Game, o: RoomfightOpId, p: V3, do
     crate::teampace::team_fight(g, gd, Some(2.0)); // the fight's own step keeps its pace
 }
 
-/// ...and handed back: the order as it stood before the step, if nobody has ordered him since. (roomfight.ts handBack)
+/// ...and handed back: the order as it stood before the step, if nobody has ordered him since.
 pub fn room_fight_hand_back(g: &mut crate::game::Game, o: RoomfightOpId) {
     let b = g.tab.roomfight_op[o].step;
     g.tab.roomfight_op[o].step = None;
@@ -760,11 +760,11 @@ pub fn room_fight_hand_back(g: &mut crate::game::Game, o: RoomfightOpId) {
     let b = match b { Some(b) => b, None => return };
     let goal = match g.gd[gd].script.as_ref() { Some(s) => s.goal, None => return };
     if goal != Some(b.mine) || g.gd[gd].state == crate::game::GuardState::Dead { return; }
-    // Object.assign writes all four, undefined and null too: each is in the patch, so a goal of null is a new leg to nothing (squad.ts:146)
+    // Object.assign writes all four, undefined and null too: each is in the patch, so a goal of null is a new leg to nothing
     crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(b.goal), speed: Some(b.speed), strafe: Some(b.strafe), face: Some(b.face), ..Default::default() });
 }
 
-/// Stopped in an open doorway with the fight on: through it and off the opening on the side he faces, else back off it. (roomfight.ts doorway)
+/// Stopped in an open doorway with the fight on: through it and off the opening on the side he faces, else back off it.
 pub fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -796,7 +796,7 @@ pub fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, 
     g.tab.roomfight_op[o].step_until = g.time + 0.5;
 }
 
-/// A friend has stood in his line a while (or his own gun is in a wall) and he is planted: a step to the side that opens it. True: he steps. (roomfight.ts sideStep)
+/// A friend has stood in his line a while (or his own gun is in a wall) and he is planted: a step to the side that opens it. True: he steps.
 pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, speed: f64, waited: Option<f64>, why: Option<&str>) -> bool {
     let waited = waited.unwrap_or(g.tab.roomfight_op[o].line_t);
     let why = why.unwrap_or("steps round a friend in his line");

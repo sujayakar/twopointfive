@@ -103,7 +103,6 @@ pub struct CheckCmdIn {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CmdMod {
-    /// (src/game/cmd.ts:74 checkLens)
     pub check_lens: Option<CameraId>,
 }
 impl CmdMod {

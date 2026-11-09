@@ -132,7 +132,7 @@ pub struct DoortoolsK {
     /// THE ROOM'S OTHER DOOR HAS A GUN ON IT FROM THE ENTRY ITSELF (`otherDoorM`, metres; 0 = as it was: every man of a bang / open and clear on his corners,
     ///  the floor and then the sector his point gave him, the room's other doors in nobody's — the warehouse's front office and the compound's garage: two men
     ///  shot in the back through the connecting door within seconds of taking the room, 72 of 167 teammates lost in 48 warehouse runs). Every other door of the
-    ///  room being taken that NOBODY OF THE SQUAD HAS BEEN BEYOND (entrypoints.ts farKnown: one model — what the team has seen for itself) is one man's from the
+    ///  room being taken that NOBODY OF THE SQUAD HAS BEEN BEYOND is one man's from the
     ///  moment a man of the entry is on his point, his corners checked, with a line to its frame from within this many metres: the nearest such man turns his gun
     ///  onto it where he stands and keeps it there — through the rest of the search (the floor is the others': while the room is still being looked over no
     ///  more than half the entry's men are turned off it — one of two or three, two of four) and on the hold after, until an order takes him; if he drops, the

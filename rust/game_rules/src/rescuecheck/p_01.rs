@@ -1,4 +1,3 @@
-//! src/game/rescuecheck.ts lines 1 to 249
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,36 +14,36 @@ macro_rules! st {
     ($g:ident) => { $g.m.rescuecheck.states.as_mut().unwrap() };
 }
 
-/// The flat distance between two points.   (rescuecheck.ts flat)
+/// The flat distance between two points.
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// The fractional part.   (rescuecheck.ts frac)
+/// The fractional part.
 pub fn frac(x: f64) -> f64 { x - m::floor(x) }
 
-/// Up, on his feet and still in the level.   (rescuecheck.ts alive)
+/// Up, on his feet and still in the level.
 pub fn alive(g: &Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].fled
 }
 
-/// Alive, not held, not dazzled, not staggered: he can speak on the net.   (rescuecheck.ts fit)
+/// Alive, not held, not dazzled, not staggered: he can speak on the net.
 pub fn fit(g: &Game, gd: GuardId) -> bool {
     alive(g, gd) && g.gd[gd].held.is_none() && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
-/// Alert or searching.   (rescuecheck.ts roused)
+/// Alert or searching.
 pub fn roused(g: &Game, gd: GuardId) -> bool {
     let s = g.gd[gd].state;
     s == crate::game::GuardState::Alert || s == crate::game::GuardState::Search
 }
 
-/// The loud things he has heard, as a running count.   (rescuecheck.ts loudHeard)
+/// The loud things he has heard, as a running count.
 pub fn loud_heard(g: &Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
     h.shots + h.kick + h.bang
 }
 
-/// His row on the room fight's roster.   (rescuecheck.ts defOf)
+/// His row on the room fight's roster.
 pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
     for i in 0..g.fight.defs.len() {
         let d = g.fight.defs[i];
@@ -53,7 +52,7 @@ pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
     None
 }
 
-/// A line on their net: its class on the team's strip, a row of the debrief unless it is the routine check.   (rescuecheck.ts net)
+/// A line on their net: its class on the team's strip, a row of the debrief unless it is the routine check.
 pub fn net(g: &mut Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
     let cls = match cls { Some(c) => c, None => crate::cues::cue_class(text) };
     let chron = chron.unwrap_or(true);
@@ -64,10 +63,10 @@ pub fn net(g: &mut Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Optio
     crate::game::game_msg(g, &line);
 }
 
-/// Where in a band of seconds, by a key: the cast's ids and the check's number, no dice.   (rescuecheck.ts band)
+/// Where in a band of seconds, by a key: the cast's ids and the check's number, no dice.
 pub fn band(b: [f64; 2], k: f64) -> f64 { b[0] + (b[1] - b[0]) * frac(k * 0.6180339887) }
 
-/// A row of the timeline and of the room fight's log.   (rescuecheck.ts event)
+/// A row of the timeline and of the room fight's log.
 pub fn event(g: &mut Game, what: RescueCheckEventWhat, gd: Option<GuardId>, why: &str) {
     let who = match gd { Some(id) => g.gd[id].callsign.clone(), None => String::from("-") };
     let st = st!(g);
@@ -76,20 +75,20 @@ pub fn event(g: &mut Game, what: RescueCheckEventWhat, gd: Option<GuardId>, why:
     if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
 }
 
-/// The rule's floor: a rescue staged or running, in live play.   (rescuecheck.ts ruled)
+/// The rule's floor: a rescue staged or running, in live play.
 pub fn ruled(g: &Game) -> bool {
     if !g.rescue.active || g.touring || crate::director::director_showing(g) { return false; }
     let s = crate::rescue::rescue_state(g);
     s == crate::rescue::RescueState::Staged || s == crate::rescue::RescueState::Running
 }
 
-/// This man is out on the check's errand and has noticed nothing: his walk is not word of the team.   (rescuecheck.ts walking)
+/// This man is out on the check's errand and has noticed nothing: his walk is not word of the team.
 pub fn walking(g: &Game, gd: GuardId) -> bool {
     let out = match &g.m.rescuecheck.states { Some(st) => st.out.as_ref().map(|o| o.gd), None => None };
     out == Some(gd) && !roused(g, gd) && g.gd[gd].state != crate::game::GuardState::Suspicious && g.gd[gd].awareness < 0.3
 }
 
-/// Said as the rescue's tick opens, the frame's senses all in: the record of who is walking.   (rescuecheck.ts rescueCheckSay)
+/// Said as the rescue's tick opens, the frame's senses all in: the record of who is walking.
 pub fn rescue_check_say(g: &mut Game) {
     let rule = crate::owner::by::WALK;
     let mut i = 0;
@@ -101,11 +100,11 @@ pub fn rescue_check_say(g: &mut Game) {
     }
 }
 
-/// A staging, a restart.   (rescuecheck.ts rescueCheckReset)
+/// A staging, a restart.
 pub fn rescue_check_reset(g: &mut Game) { g.m.rescuecheck.states = None; }
 
 /// Who goes: a roamer on his own post first, then the door man or a guard posted outside the hostage room, the nearest by the straight line;
-/// a man any other rule has is not free.   (rescuecheck.ts goer)
+/// a man any other rule has is not free.
 pub fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option<Goer> {
     let mut first: Vec<CastItem> = Vec::new();
     for c in cast.iter().copied() {
@@ -127,20 +126,20 @@ pub fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option
     free.first().map(|p| Goer { d: p.1, gd: p.0.gd })
 }
 
-/// Where a man is looked for: where he was going, else his post, else where he stands.   (rescuecheck.ts postOf)
+/// Where a man is looked for: where he was going, else his post, else where he stands.
 pub fn post_of(g: &mut Game, cast: &[CastItem], gd: GuardId) -> V3 {
     if let Some(p) = st!(g).where_.get(gd) { return *p; }
     if let Some(c) = cast.iter().find(|c| c.gd == gd) { return c.post; }
     g.ch[g.gd[gd].ch].pos
 }
 
-/// Nothing of the team in his eye since he learned of them (no learned time: in the last half minute).   (rescuecheck.ts unseen)
+/// Nothing of the team in his eye since he learned of them (no learned time: in the last half minute).
 pub fn unseen(g: &mut Game, c_2: CastItem) -> bool {
     let since = if c_2.learned_at.is_nan() { g.time - 30.0 } else { c_2.learned_at - 1.0 };
     !(g.gd[c_2.gd].last_seen_t > since)
 }
 
-/// A leg of the walk at the pace of a man going to look.   (rescuecheck.ts walk)
+/// A leg of the walk at the pace of a man going to look.
 pub fn walk(g: &mut Game, d: RoomfightDefId, to: V3) {
     crate::pressure::run(g, d, to, None, None);
     let gd = g.tab.roomfight_def[d].gd;
@@ -148,10 +147,10 @@ pub fn walk(g: &mut Game, d: RoomfightDefId, to: V3) {
     crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
 }
 
-/// Once a frame, before the room fight's own tick.   (rescuecheck.ts rescueCheckTick)
+/// Once a frame, before the room fight's own tick.
 pub fn rescue_check_tick(g: &mut Game, dt: f64) { step_check(g, dt); rescue_check_say(g); }
 
-/// The rule's step: the words, the fight, the check, the man out.   (rescuecheck.ts stepCheck)
+/// The rule's step: the words, the fight, the check, the man out.
 pub fn step_check(g: &mut Game, _dt: f64) {
     if !ruled(g) {
         if g.m.rescuecheck.states.is_some() { let_go(g); g.m.rescuecheck.states = None; }
@@ -290,7 +289,7 @@ pub fn step_check(g: &mut Game, _dt: f64) {
     event(g, RescueCheckEventWhat::Goes, Some(go.gd), &why);
 }
 
-/// Who calls: the captor if he can, else the first man who can.   (the closure at rescuecheck.ts:158)
+/// Who calls: the captor if he can, else the first man who can.
 fn caller(g: &Game, cast: &[CastItem]) -> Option<GuardId> {
     for c in cast.iter() {
         if c.role == crate::rescue::Role::Captor && fit(g, c.gd) { return Some(c.gd); }
@@ -301,7 +300,7 @@ fn caller(g: &Game, cast: &[CastItem]) -> Option<GuardId> {
     None
 }
 
-/// The man who went, a step on.   (rescuecheck.ts tickOut)
+/// The man who went, a step on.
 pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
     let k = g.k.rescuecheck;
     let (gd, about, m_goal, m_from, phase, there_t, tries, step_t, heard0) = {
@@ -441,7 +440,7 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
     event(g, RescueCheckEventWhat::There, Some(gd), &why);
 }
 
-/// The rule let go of with a man out: he runs back to his post and is the room fight's from there.   (rescuecheck.ts letGo)
+/// The rule let go of with a man out: he runs back to his post and is the room fight's from there.
 pub fn let_go(g: &mut Game) {
     let o = match st!(g).out.take() { Some(o) => o, None => return };
     let d = def_of(g, o.gd);

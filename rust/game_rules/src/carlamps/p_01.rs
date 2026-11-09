@@ -1,4 +1,3 @@
-//! src/game/carlamps.ts lines 1 to 105
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -14,7 +13,7 @@ struct Cand { i: usize, s: usize }
 /// A box's row, to read and to write through. (src/scene/boxes.ts:66 on, Box.*)
 fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// What each generator writes for a lamp. (carlamps.ts sigs)
+/// What each generator writes for a lamp.
 pub fn sigs() -> Vec<crate::carlamps::LampSig> {
     let p = crate::scene_gwot_palette::gwot_palette();
     let (white, red) = (p.plastic_white, p.truck_red);
@@ -28,18 +27,18 @@ pub fn sigs() -> Vec<crate::carlamps::LampSig> {
     ]
 }
 
-/// Three channels within `eps`, each. (carlamps.ts near3)
+/// Three channels within `eps`, each.
 pub fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
     m::abs(a[0] - b[0]) <= eps && m::abs(a[1] - b[1]) <= eps && m::abs(a[2] - b[2]) <= eps
 }
 
-/// The box glows at all. (carlamps.ts glows)
+/// The box glows at all.
 pub fn glows(g: &mut crate::game::Game, b: BoxId) -> bool {
     let e = seam_box_row(g, b).emissive;
     e[0] > 0.0 || e[1] > 0.0 || e[2] > 0.0
 }
 
-/// The box is this generator's lamp: size, then glow or paint. (carlamps.ts fits)
+/// The box is this generator's lamp: size, then glow or paint.
 pub fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> bool {
     let (rot, h, glow, albedo) = { let x = seam_box_row(g, b); (x.rot, x.h, x.emissive, x.albedo) };
     if rot.is_some() || !near3(&h, &s.h, g.k.carlamps.fit) { return false; }
@@ -47,7 +46,7 @@ pub fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) ->
     !glows(g, b) && near3(&albedo, &s.albedo.unwrap(), g.k.carlamps.tone)
 }
 
-/// The lamp boxes of a level's vehicles in box order: each fits a generator's lamp and has its twin across the vehicle. (carlamps.ts findCarLamps)
+/// The lamp boxes of a level's vehicles in box order: each fits a generator's lamp and has its twin across the vehicle.
 pub fn find_car_lamps(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::carlamps::FoundLamp> {
     let sig = sigs();
     let mut cand: Vec<Cand> = Vec::new();
@@ -76,7 +75,7 @@ pub fn find_car_lamps(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::
     out
 }
 
-/// The light targets of a level's vehicle lamps: emissive, off the mains, no stagger, no die drawn. (carlamps.ts carLampTargets)
+/// The light targets of a level's vehicle lamps: emissive, off the mains, no stagger, no die drawn.
 pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::sim_lightshome::FixtureDef> {
     let t = &mut g.stats.carlamps;
     t.found = 0; t.head = 0; t.tail = 0; t.lit = 0;
@@ -113,18 +112,18 @@ pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate
     out
 }
 
-/// A vehicle's lamp: glass a round breaks whether it burns or not. (carlamps.ts lampGlass)
+/// A vehicle's lamp: glass a round breaks whether it burns or not.
 pub fn lamp_glass(g: &crate::game::Game, t: FixtureId) -> bool {
     g.tab.sim_lightshome_fixture[t].group == VEHICLE_GROUP
 }
 
-/// A vehicle's lamp that was dark already: breaking it puts no light out. (carlamps.ts deadLamp)
+/// A vehicle's lamp that was dark already: breaking it puts no light out.
 pub fn dead_lamp(g: &crate::game::Game, t: FixtureId) -> bool {
     let f = &g.tab.sim_lightshome_fixture[t];
     f.group == VEHICLE_GROUP && !(f.base_emissive[0] > 0.0 || f.base_emissive[1] > 0.0 || f.base_emissive[2] > 0.0)
 }
 
-/// A broken lamp's box painted dark, a whole one as the level has it (`lens`): every frame, from the target's own `broken` bit. (carlamps.ts carLampPaint)
+/// A broken lamp's box painted dark, a whole one as the level has it (`lens`): every frame, from the target's own `broken` bit.
 pub fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
     let f = &g.tab.sim_lightshome_fixture[t];
     let (Some(lens), Some(&i)) = (f.lens, f.boxes.first()) else { return };

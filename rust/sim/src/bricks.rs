@@ -13,7 +13,7 @@
 //! state alone) and which faces of each cell are open (`FACES`: asked of the box world's lines once a cell; again round every leaf at every step, since a
 //! door swings, and wherever the host says a static was written). So the faces are at every step what asking them all afresh would give: a game put back
 //! from a snapshot and one that never was step alike. WHOSE the tables of a slot are is three numbers (`MADE`): the block's stamp they were made from
-//! (src/sim/state.ts SimState.stamp: another number whenever a block was written wholesale or changed place), and the box world and the copy of it the
+//!, and the box world and the copy of it the
 //! faces were asked of. A call names the three as they are now; where one differs the tables are made again before anything is read from them.
 //!
 //! The arithmetic is + − × ÷ and the game's own exp and length, in an order that is written down (bricks by slot, cells by index): the same bits on every
@@ -404,7 +404,7 @@ fn reaches(w: usize, set: i32, p: [f64; 3], c: [f64; 3]) -> bool {
     len < 1e-4 || clear(w, set, p, c, len)
 }
 
-/// what a step is told: the model's numbers (sense.ts SENSE.smoke)
+/// what a step is told: the model's numbers
 pub struct K {
     pub decay: f64,
     pub spread: f64,
@@ -415,7 +415,7 @@ pub struct K {
     /// is reached: the step as it was). What share of it a square metre of the plan has is in `WIND`, written by the host before the step.
     pub wind_x: f64,
     pub wind_z: f64,
-    /// …and how it rises with height, as the storm's field does (game/wind.ts stormVel): `wind_low` of it at the ground, `wind_gain` more by
+    /// …and how it rises with height, as the storm's field does: `wind_low` of it at the ground, `wind_gain` more by
     /// `wind_full_at` metres up
     pub wind_low: f64,
     pub wind_gain: f64,
@@ -424,7 +424,7 @@ pub struct K {
     pub wind_keep: f64,
 }
 
-/// THE WIND'S SHARE a square metre of the plan (0 under a roof … 1 in the open: game/wind.ts stormShare, the footprints the picture's wind goes by),
+/// THE WIND'S SHARE a square metre of the plan,
 /// row by row, `2 · nbx` to a row: written by the host before a step that has wind and read by that step alone. Nothing of a game is kept here.
 static mut WIND: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 pub fn wind_addr() -> *mut f64 {

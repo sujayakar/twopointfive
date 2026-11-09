@@ -1,4 +1,3 @@
-//! src/game/wallbreak.ts lines 1 to 463
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,7 +14,7 @@ fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// the box a breakable stands in for
 fn own_box(g: &mut Game, b: WallbreakBreakableId) -> &mut crate::scene_boxes::Box { let x = g.tab.wallbreak_breakable[b].box_; seam_box(g, x) }
-/// a static by its place in the level's list: `g.col.boxes[i]` (wallbreak.ts:150, a slot and a key of `owner` are places, not IDs)
+/// a static by its place in the level's list: `g.col.boxes[i]`
 fn at(g: &Game, i: f64) -> BoxId { g.col.boxes[i as usize] }
 fn hide_box(g: &mut Game, b: BoxId) { let x = seam_box(g, b); x.flags = (js::to_i32(x.flags) | js::to_i32(HIDE)) as f64; }
 fn is_hard(b: &Breakable) -> bool { b.hard == Some(true) }
@@ -36,22 +35,22 @@ fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
     let does = seam_box(g, b).does;
     crate::scene_materials::does_of(g, does)
 }
-/// the pieces standing (wallbreak.ts:203,258 `col.boxes.length - authored`)
+/// the pieces standing
 fn pieces_up(g: &Game) -> f64 { g.col.boxes.len() as f64 - g.destr.walls.authored }
 fn budget_of(chunks: f64) -> crate::break_table::ShedBudget { crate::break_table::ShedBudget { chunks, heap: None, from: None, per: None } }
 
 // ------------------------------------------------------------------ the switch and the plain boxes
-/// Is the engine on: tune.wallBreak not put off, outside the showcases. DESTRUCTION.on is settled on. (wallbreak.ts wallBreakOn)
+/// Is the engine on: tune.wallBreak not put off, outside the showcases. DESTRUCTION.on is settled on.
 pub fn wall_break_on(g: &crate::game::Game) -> bool { g.tune.wall_break && g.destr.show_chaos.is_none() }
 
-/// A box's world bounds. (wallbreak.ts aabbOf)
+/// A box's world bounds.
 pub fn aabb_of(g: &crate::game::Game, b: &crate::scene_boxes::Box) -> crate::wallbreak::AABB {
     let cs = m::abs(m::cos(b.yaw)); let sn = m::abs(m::sin(b.yaw));
     let ex = cs * b.h[0] + sn * b.h[2]; let ez = sn * b.h[0] + cs * b.h[2];
     AABB { x0: b.c[0] - ex, x1: b.c[0] + ex, y0: b.c[1] - b.h[1], y1: b.c[1] + b.h[1], z0: b.c[2] - ez, z1: b.c[2] + ez }
 }
 
-/// Do two bounds overlap on the plan by more than `eps`. (wallbreak.ts overlapXZ)
+/// Do two bounds overlap on the plan by more than `eps`.
 pub fn overlap_xz(a: crate::wallbreak::AABB, b: crate::wallbreak::AABB, eps: Option<f64>) -> bool {
     let eps = eps.unwrap_or(0.01);
     m::min(a.x1, b.x1) - m::max(a.x0, b.x0) > eps && m::min(a.z1, b.z1) - m::max(a.z0, b.z0) > eps
@@ -513,7 +512,6 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     }
     if is_hard(&g.tab.wallbreak_breakable[b]) { for &c in &opened { g.destr.walls.shell_gaps.add(crate::Num(c)); } }
     g.stats.wallbreak.nav_opened += opened.len() as i32;
-    // (wallbreak.ts:416, :417: the two lanes of the look are told, as every way a cell opens comes through here)
     { let bl = crate::edge_look::break_like(g, b); crate::edge_look::edge_look_opened(g, &bl, &fresh, cause.as_str(), dir, quiet); crate::wallskin::wall_skin_opened(g, &bl); }
     if !quiet && (cause == LevelChangeCause::Fire || cause == LevelChangeCause::Collapse) { crate::floormess::mess_opened(g, [x0, z0, x1, z1]); }
     let walkable = !opened.is_empty(); let n_opened = opened.len();
@@ -602,7 +600,7 @@ pub fn wall_break_note(g: &mut crate::game::Game, c_2: &crate::wallbreak::WallBr
     row
 }
 
-/// Calls back on every change, on the frame it happens. Nothing ever unsubscribes (wallreact.ts:166 keeps the function only to test that it has one). (WallBreak.onChange)
+/// Calls back on every change, on the frame it happens. Nothing ever unsubscribes. (WallBreak.onChange)
 pub fn wall_break_on_change(g: &mut crate::game::Game, fn_: crate::wallbreak::ChangeListener) { g.destr.walls.listeners.push(fn_); }
 
 /// The rows after `serial`; None = the ring has already dropped some of them: re-read the level. (WallBreak.since)

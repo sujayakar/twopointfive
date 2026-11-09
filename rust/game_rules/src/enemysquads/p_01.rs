@@ -1,4 +1,3 @@
-//! src/game/enemysquads.ts lines 1 to 310
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The net's ask runs on this floor: a floor whose every squad stays in its rooms.   (enemysquads.ts netAsks)
+/// The net's ask runs on this floor: a floor whose every squad stays in its rooms.
 pub fn net_asks(g: &crate::game::Game) -> bool {
     match &g.m.enemysquads.states {
         Some(st) => st.stay_ask == Some(true),
@@ -15,7 +14,7 @@ pub fn net_asks(g: &crate::game::Game) -> bool {
     }
 }
 
-/// Hard on a squads level: the table while harder defenders are on and squads are staged, with the map's own rows over it.   (enemysquads.ts squadDrill)
+/// Hard on a squads level: the table while harder defenders are on and squads are staged, with the map's own rows over it.
 pub fn squad_drill(g: &crate::game::Game) -> Option<crate::knobs::SquadsK> {
     let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return None };
     if !g.k.pressure.on { return None; }
@@ -23,7 +22,7 @@ pub fn squad_drill(g: &crate::game::Game) -> Option<crate::knobs::SquadsK> {
     Some(match g.k.drill_at.rows.get(name) { Some(row) => drill_over(squads, row), None => squads })
 }
 
-/// `{ ...SQUADS, ...row }`: the rows the map names, the table's own for the rest.   (enemysquads.ts:309)
+/// `{ ...SQUADS, ...row }`: the rows the map names, the table's own for the rest.
 fn drill_over(mut k: crate::knobs::SquadsK, row: &DrillAtRow) -> crate::knobs::SquadsK {
     let DrillAtRow::Row { drill_net, net_k, reinforce_k, drill_own, own_up, drill_back, back_beat } = *row;
     if let Some(v) = drill_net { k.drill_net = v; }
@@ -40,7 +39,7 @@ fn drill_over(mut k: crate::knobs::SquadsK, row: &DrillAtRow) -> crate::knobs::S
 mod tests {
     use super::*;
 
-    /// A row writes what it names and leaves the rest of the table standing (the map's set, enemysquads.ts:292-302).
+    /// A row writes what it names and leaves the rest of the table standing.
     #[test]
     fn a_maps_row_writes_only_what_it_names() {
         let table = crate::knobs::SquadsK::page();

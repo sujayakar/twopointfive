@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 3305 to 3586
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,7 +14,7 @@ fn drop_plan(d: &mut crate::game::Guard) {
     d.path_goal_orbit = false;
 }
 
-/// One more round for a side.   (guards.ts tickEngagement)
+/// One more round for a side.
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     let slot = match t {
         crate::teams::Team::Guard => &mut r.guard,
@@ -26,17 +25,17 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     };
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
 }
-/// The record's copy of the rounds: a side that fired none stays absent.   (guards.ts endEngagement)
+/// The record's copy of the rounds: a side that fired none stays absent.
 fn rounds_copy(r: &crate::guards::EngagementRounds) -> crate::guards::EngageResultRounds {
     crate::guards::EngageResultRounds {  }
 }
 
-/// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.   (guards.ts assignLockdown)
+/// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.
 fn same_post(a: &crate::scene_level::Chokepoint, b: &crate::scene_level::Chokepoint) -> bool {
     a.name == b.name && a.pos == b.pos && a.yaw == b.yaw
 }
 
-/// Deal the lockdown duties: the nearest two pair up, a third holds the junction nearest the fix.   (guards.ts assignLockdown)
+/// Deal the lockdown duties: the nearest two pair up, a third holds the junction nearest the fix.
 pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<GuardId>) {
     let (mut old_lead, mut old_follow, mut old_post_man): (Option<GuardId>, Option<GuardId>, Option<GuardId>) = (None, None, None);
     let mut old_post: Option<crate::scene_level::Chokepoint> = None;
@@ -124,7 +123,7 @@ pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<G
     }
 }
 
-/// Take every man off his lockdown duty.   (guards.ts clearLockdown)
+/// Take every man off his lockdown duty.
 pub fn clear_lockdown(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.guards.len() {
@@ -136,7 +135,7 @@ pub fn clear_lockdown(g: &mut crate::game::Game) {
     }
 }
 
-/// How long a man's route is, round the loop.   (guards.ts routeLength)
+/// How long a man's route is, round the loop.
 pub fn route_length(g: &crate::game::Game, gd: GuardId) -> f64 {
     let Ok(ri) = usize::try_from(g.gd[gd].route_i) else { return 0.0; };   // (a unit's is -1)
     let Some(&r) = g.level.routes.get(ri) else { return 0.0; };
@@ -146,7 +145,7 @@ pub fn route_length(g: &crate::game::Game, gd: GuardId) -> f64 {
     s
 }
 
-/// Lockdown follower on patrol: keep station behind-left of the leader as he knows him. True while walking.   (guards.ts followLeader)
+/// Lockdown follower on patrol: keep station behind-left of the leader as he knows him. True while walking.
 pub fn follow_leader(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     let l = g.gd[gd].leader.unwrap();
     let (c, lc) = (g.gd[gd].ch, g.gd[l].ch);
@@ -203,7 +202,7 @@ pub fn follow_leader(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64)
     !arrived
 }
 
-/// Lockdown post on patrol: walk to the junction, then stand on it sweeping. True while walking.   (guards.ts holdPost)
+/// Lockdown post on patrol: walk to the junction, then stand on it sweeping. True while walking.
 pub fn hold_post(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     let (ppos, pyaw) = { let p_ = g.gd[gd].post.as_ref().unwrap(); (p_.pos, p_.yaw) };
     let c = g.gd[gd].ch;
@@ -236,7 +235,7 @@ pub fn hold_post(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> 
     !arrived
 }
 
-/// Housekeeping on a calm pass, one door a frame: pull a leaf to, throw a bolt again.   (guards.ts lockdownDoors)
+/// Housekeeping on a calm pass, one door a frame: pull a leaf to, throw a bolt again.
 pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>) {
     let calm = calm.unwrap_or(false);
     let c = g.gd[gd].ch;
@@ -293,7 +292,7 @@ pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>
     }
 }
 
-/// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.   (guards.ts spawnUnit)
+/// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
     if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
@@ -360,13 +359,13 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     Ok(gd)
 }
 
-/// What of a unit lives outside his row: his weapon light.   (guards.ts releaseUnit)
+/// What of a unit lives outside his row: his weapon light.
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) {
     let fl = g.gd[gd].flashlight;
     crate::render_lights::light_set_remove(g, fl);
 }
 
-/// Take a spawned man back out, and every hand on him. True if he was one.   (guards.ts despawnUnit)
+/// Take a spawned man back out, and every hand on him. True if he was one.
 pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].unit.is_none() { return false; }
     let Some(i) = g.guards.iter().position(|&x| x == gd) else { return false; };
@@ -398,12 +397,12 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// The engagement on this game, done or not. A copy: re-ask for it to see it move.   (guards.ts engagementOf)
+/// The engagement on this game, done or not. A copy: re-ask for it to see it move.
 pub fn engagement_of(g: &crate::game::Game) -> Option<crate::guards::Engagement> {
     g.m.guards.engagements.clone()
 }
 
-/// Name of the character with this id, for the record.   (guards.ts nameOfId)
+/// Name of the character with this id, for the record.
 pub fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) { return crate::seats::player_name(g, pl); }
     for &x in g.guards.iter() {
@@ -413,7 +412,7 @@ pub fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
     if id_2 < 0.0 { String::from("—") } else { format!("#{}", id_2) }
 }
 
-/// A list's men still in the fight: alive, on the list, not fled.   (guards.ts endEngagement living)
+/// A list's men still in the fight: alive, on the list, not fled.
 fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
     let mut n = 0.0;
     for &x in xs {
@@ -422,7 +421,7 @@ fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
     n
 }
 
-/// Close the running engagement with `outcome`.   (guards.ts endEngagement)
+/// Close the running engagement with `outcome`.
 pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEngagementOutcome) {
     let (ops, hos, t0, kills, rounds) = match g.m.guards.engagements.as_mut() {
         None => return,
@@ -439,7 +438,7 @@ pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEnga
     }
 }
 
-/// Is anybody of this list still in the fight?   (guards.ts tickEngagement living)
+/// Is anybody of this list still in the fight?
 fn living_any(g: &Game, xs: &[GuardId]) -> bool {
     for &x in xs {
         if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { return true; }
@@ -447,7 +446,7 @@ fn living_any(g: &Game, xs: &[GuardId]) -> bool {
     false
 }
 
-/// Once a frame: book this frame's rounds and deaths into the engagement, end it when decided.   (guards.ts tickEngagement)
+/// Once a frame: book this frame's rounds and deaths into the engagement, end it when decided.
 pub fn tick_engagement(g: &mut crate::game::Game) {
     let (t0, timeout, ops, hos, alive) = match g.m.guards.engagements.as_ref() {
         None => return,

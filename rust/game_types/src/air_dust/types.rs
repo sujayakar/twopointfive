@@ -35,8 +35,6 @@ pub struct AirDustStats {
     pub open: f64,
 }
 
-/// (src/game/airDust.ts:50 N: a table nothing writes)
 pub fn n() -> f64 { 4480.0 }
 
-/// (src/game/airDust.ts:52 SEND)
 pub const SEND: f64 = 0.0002;

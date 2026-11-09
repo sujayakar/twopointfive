@@ -36,7 +36,7 @@ pub struct FurnK {
     ///  "couldn't path through a hole from a wall breach" — two banks at the foot stopped him, the walk grid and the charge's own 'is it a hole' ray ("it held").
     ///  off = a bank stands in the hole it was blown under. PICTURE: the snow field (render/snowField.ts) is baked at the level's start and still draws its hill.
     pub mouth: FurnKMouth,
-    /// WHAT HUNG ON THE WALL UNDER A CHARGE (hungGoes; wallcharge.ts WALLCHARGE.hung is its switch): cut into slabs `len` m long (at most `max`) by `strips`; the
+    /// WHAT HUNG ON THE WALL UNDER A CHARGE: cut into slabs `len` m long (at most `max`) by `strips`; the
     ///  slabs within `underM` of the charge along the wall are driven through the hole at `through` m/s (lo, hi), the rest torn off into the room at `back` m/s
     ///  and along the wall at up to `side` m/s, `up` m/s off the floor, tumbling (`spin`, as throwPiece's); a long slab counts as under the charge only with its middle within `holeM` of it; `chunks` = rigid pieces one thing may make (past it,
     ///  splinters); `chips` = splinters thrown back into the room and through, at `chipV` m/s.
@@ -72,7 +72,7 @@ pub struct FurnKMouth {
     #[k(0.08)] pub base_thick: f64,
 }
 
-/// WHAT HUNG ON THE WALL UNDER A CHARGE (hungGoes; wallcharge.ts WALLCHARGE.hung is its switch): cut into slabs `len` m long (at most `max`) by `strips`; the
+/// WHAT HUNG ON THE WALL UNDER A CHARGE: cut into slabs `len` m long (at most `max`) by `strips`; the
 ///  slabs within `underM` of the charge along the wall are driven through the hole at `through` m/s (lo, hi), the rest torn off into the room at `back` m/s
 ///  and along the wall at up to `side` m/s, `up` m/s off the floor, tumbling (`spin`, as throwPiece's); a long slab counts as under the charge only with its middle within `holeM` of it; `chunks` = rigid pieces one thing may make (past it,
 ///  splinters); `chips` = splinters thrown back into the room and through, at `chipV` m/s.

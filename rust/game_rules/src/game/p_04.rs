@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 974 to 1271
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order. (game.ts Game.constructor)
+/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
 pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) {
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
@@ -326,7 +325,7 @@ fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3,
     crate::render_lights::light_set_add(g, l)
 }
 
-/// `b.flags |= BoxFlag.AreaLit`: dome and panel glow is the screen's, the light is the analytic one. (game.ts constructor)
+/// `b.flags |= BoxFlag.AreaLit`: dome and panel glow is the screen's, the light is the analytic one.
 fn mark_area_lit(g: &mut Game, id: BoxId) {
     let bit = js::to_i32(crate::scene_boxes::box_flag().area_lit);
     let b = seam_box_row(g, id);
@@ -385,12 +384,12 @@ fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::
     }
 }
 
-/// `for (const s of this.seats) s.view.x = ...`: each seat's set on Game for the call. (game.ts constructor)
+/// `for (const s of this.seats) s.view.x = ...`: each seat's set on Game for the call.
 fn stand_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
     for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut *f); }
 }
 
-/// (game.ts constructor, lightDefs) A light's def by name, the last of a name winning as a Map's does: is it on the mains.
+/// A light's def by name, the last of a name winning as a Map's does: is it on the mains.
 fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
     match level.lights.iter().rev().find(|d| d.name == name) {
         Some(d) => d.mains != Some(false),
@@ -398,7 +397,7 @@ fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
     }
 }
 
-/// (game.ts constructor, staggerOf) A contactor group's restrike stagger: the die is drawn at the group's first appearance.
+/// A contactor group's restrike stagger: the die is drawn at the group's first appearance.
 fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 {
     if !stagger.has(String::from(grp)) {
         let v = stagger.len() as f64 * 0.45 + crate::dice::draw_world(g, "game::stagger_of#1") * 0.5;
@@ -407,7 +406,7 @@ fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 
     *stagger.get(String::from(grp)).unwrap()
 }
 
-/// A line for the player's log; the log keeps five. (game.ts Game.msg)
+/// A line for the player's log; the log keeps five.
 pub fn game_msg(g: &mut crate::game::Game, text: &str) {
     let (t, serial) = (g.time, g.serial());
     g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t, serial });
@@ -415,12 +414,12 @@ pub fn game_msg(g: &mut crate::game::Game, text: &str) {
     crate::cues::cues_raw(g, text);
 }
 
-/// A man says something. (game.ts Game.say)
+/// A man says something.
 pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
     crate::guards::say(g, g_2, text, radio, force, row);
 }
 
-/// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log. (game.ts Game.note)
+/// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log.
 pub fn game_note(g: &mut crate::game::Game, text: &str) {
     if !g.quiet_utility { game_msg(g, text); }
 }

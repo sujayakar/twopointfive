@@ -32,9 +32,7 @@ pub enum HostileToO {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct TeamsMod {
-    /// (src/game/teams.ts:23 HOSTILE)
     pub hostile: JsMap<crate::teams::Team, JsMap<crate::teams::Team, bool>>,
-    /// (src/game/teams.ts:40 staffOps)
     pub staff_ops: f64,
 }
 impl TeamsMod {

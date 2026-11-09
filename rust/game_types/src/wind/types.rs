@@ -72,7 +72,6 @@ impl Default for Wind { fn default() -> Self { Self::blank() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WindMod {
-    /// (src/game/wind.ts:38 SHAPE)
     pub shape: Option<Vec<f64>>,
 }
 impl WindMod {
@@ -93,8 +92,6 @@ pub struct WindStats {
     pub storm_frames: i32,
 }
 
-/// (src/game/wind.ts:111 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/wind.ts:309 UNIT_X: a table nothing writes)
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }

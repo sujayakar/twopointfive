@@ -24,11 +24,11 @@ pub struct CkptK {
 /// THE SAVE TIMELINE (after a play test: one checkpoint to go back to is awkward, most of all in a lesson that has got away from its player). OFF here and on
 ///  the frozen stand (`TPS_SAVETIMELINE=1` raises it), ON in the page (`?savetimeline=0` puts it off). Off = three rotating autosaves, one slot by hand, nothing
 ///  kept with a team on the floor: the build as it was. On:
-///    - the saves ROLL in two rings, `auto` autosaves and `manual` saves by hand (F5 in play — player.ts asks, the end of that update writes): neither kind pushes
+///    - the saves ROLL in two rings, `auto` autosaves and `manual` saves by hand: neither kind pushes
 ///      out the other, and the slots an older build wrote are read, listed and loaded as they are (same keys, same index; the one old manual slot is the ring's first);
 ///    - every save keeps a small PICTURE of its moment, taken by the host (`Checkpoints.picture`: the simulation never sees a canvas) and stored beside the slot
 ///      (`…pic.<slot>`); a picture that does not fit is dropped, and a save that does not fit has every picture thrown out for it before it is given up;
-///    - WITH A TEAM ON THE FLOOR, where no file can be written (a unit has no slice), the save is the whole game kept in memory (rollback.ts takeSnapshot) and
+///    - WITH A TEAM ON THE FLOOR, where no file can be written (a unit has no slice), the save is the whole game kept in memory and
 ///      put back in place: this run's only, gone with the page or the run — the cards list both kinds on one strip (`timeline`), in the mission clock's order.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct SavetimelineK {

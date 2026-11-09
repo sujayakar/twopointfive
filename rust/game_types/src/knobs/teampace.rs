@@ -14,7 +14,7 @@ pub struct TeampaceK {
     #[k(2.0)] pub fight_secs: f64,
     /// … and a man a grenade took off his place goes back to it at the fight's pace, this long after he stopped running from it (s; 0 = at the walk)
     #[k(6.0)] pub back_secs: f64,
-    /// a run to cover: the least leg worth running (m), how exposed the floor he stands on must be (picture.ts exposedAt), how often it is asked (s)
+    /// a run to cover: the least leg worth running (m), how exposed the floor he stands on must be, how often it is asked (s)
     #[k(2.5)] pub dash_m: f64,
     #[k(0.5)] pub dash_seen: f64,
     #[k(0.25)] pub dash_every: f64,
@@ -46,17 +46,17 @@ pub struct TeampaceK {
     ///  weapon light, rightly, dark for it: guards.ts LIGHTS.wallOff). Now, in the walking carriage and with no line from his gun to the order's watch (to
     ///  short of it: a door's own leaf stands in its frame), the tick hands his gun a point straight ahead of his chest instead, and he walks his path
     ///  facing it (no side-step with his chest to a point he cannot see); once he has the line the watch is his again and the gun comes round to it at the
-    ///  ordered gun's own rate (guards.ts PACE.turn). ONLY the order's own watch in the walking carriage (Assignment.move: a stack, a walk to a door, a
-    ///  cover mark, a lane to cover, a stand-off) is asked: a point the unasked cover dealt him (cover.ts, dealt on a line of sight), spotted.ts's, the
+    ///  ordered gun's own rate. ONLY the order's own watch in the walking carriage (Assignment.move: a stack, a walk to a door, a
+    ///  cover mark, a lane to cover, a stand-off) is asked: a point the unasked cover dealt him, spotted.ts's, the
     ///  fight's (GuardScript.over: his own eyes) and the legs of an entry or a slice — which have no walking carriage: their point is the corner the
-    ///  muzzle leads him round to — are as they were, and so is every drill (squad.ts is not touched). doorpath.ts hands the same kind of point, the way he
+    ///  muzzle leads him round to — are as they were, and so is every drill. doorpath.ts hands the same kind of point, the way he
     ///  goes, for a gun that would cross an open leaf. `walkAimOff` / `walkAimOn`: how long the line must have been shut before the watch is given up, and clear before it is
     ///  his again (s). Off = the gun on the order's watch from the first step, as it was (walkLead answers null)
     #[k(0.25)] pub walk_aim_off: f64,
     #[k(0.5)] pub walk_aim_on: f64,
-    /// m/s from which a teammate is running: the gun goes low, nothing is fired, the boots are a sprinter's (character.ts BLEND.jogAt)
+    /// m/s from which a teammate is running: the gun goes low, nothing is fired, the boots are a sprinter's
     #[k(2.7)] pub run_at: f64,
-    /// m/s² a man with leave to run picks pace up at (guards.ts PACE.accel is 2.6: a walker leaning into a walk)
+    /// m/s² a man with leave to run picks pace up at
     #[k(6.0)] pub accel: f64,
     /// a sprinting teammate's footfall (the player's own sprint is 1)
     #[k(1.0)] pub step: f64,

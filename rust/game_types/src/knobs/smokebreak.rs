@@ -27,18 +27,18 @@ pub struct SmokebreakK {
     /// where the end is off the left hand's joint, m along the hand's own heading (worked out from the forearm) and up
     #[k(0.11)] pub tip_out: f64,
     #[k(0.02)] pub tip_up: f64,
-    /// THE THREAD off the end (the solver's units, as snowBreath.ts BREATHSTEAM: 6 /m of extinction a unit of density; +1.6 m/s² a unit of heat)
+    /// THE THREAD off the end
     pub thread: SmokebreakKThread,
     /// WHAT HE BREATHES OUT after a draw
     pub breath: SmokebreakKBreath,
     /// what the smoke scatters: a blue grey (the solver's `tint`, the puff's colour)
     #[k([0.72, 0.76, 0.86])] pub color: V3,
-    /// m: the mouth off the head joint, ahead and down (snowBreath.ts's own two numbers)
+    /// m: the mouth off the head joint, ahead and down
     #[k(0.1)] pub mouth_ahead: f64,
     #[k(0.075)] pub mouth_down: f64,
 }
 
-/// THE THREAD off the end (the solver's units, as snowBreath.ts BREATHSTEAM: 6 /m of extinction a unit of density; +1.6 m/s² a unit of heat)
+/// THE THREAD off the end
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct SmokebreakKThread {
     #[k(0.02)] pub radius: f64,

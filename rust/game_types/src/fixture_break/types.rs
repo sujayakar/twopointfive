@@ -132,11 +132,8 @@ pub struct GlowAtOut {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct FixtureBreakMod {
-    /// (src/game/fixtureBreak.ts:28 FIXLOOK)
     pub fixlook: crate::fixture_break::FixtureBreakModFIXLOOK,
-    /// (src/game/fixtureBreak.ts:64 STATE)
     pub state: Option<crate::fixture_break::State>,
-    /// (src/game/fixtureBreak.ts:92 FLOOR)
     pub floor: crate::fixture_break::FixtureBreakModFLOOR,
 }
 impl FixtureBreakMod {
@@ -159,12 +156,9 @@ pub struct FixtureBreakStats {
     pub sparks: i32,
 }
 
-/// (src/game/fixtureBreak.ts:68 LOOK)
 pub const LOOK: f64 = 10.0;
 
-/// (src/game/fixtureBreak.ts:69 DOWN: a table nothing writes)
 pub fn down() -> V3 { [0.0, -1.0, 0.0] }
 
-/// (src/game/fixtureBreak.ts:99 REST_AT: a table nothing writes)
 pub fn rest_at() -> Vec<f64> { alloc::vec![0.15, 0.5, 0.85] }
 

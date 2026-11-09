@@ -12,9 +12,7 @@ pub struct Thin {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct ThinlineMod {
-    /// (src/game/thinline.ts:12 THIN)
     pub thin: JsMap<AnyBoxId, crate::thinline::Thin>,
-    /// (src/game/thinline.ts:14 AIR)
     pub air: JsMap<AnyBoxId, Option<AnyBoxId>>,
 }
 impl ThinlineMod {

@@ -8,13 +8,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec, format};
 
-/// The man by name, if he is still at his work.   (tut-pair.script.ts:13 calm)
+/// The man by name, if he is still at his work.
 fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let u = crate::director::director_beat_unit(g, r, callsign)?;
     if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
 }
 
-/// The define pass: the program 'tutorial', its three cues and their beats, in the script's order.   (tut-pair.script.ts:10 script)
+/// The define pass: the program 'tutorial', its three cues and their beats, in the script's order.
 pub fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_pair::TutPairVars, String> {
     use crate::director::{manifest_program, program_beat, program_on_signal};
     let script = crate::scene_level::LevelScriptFn::TutPair;
@@ -30,7 +30,7 @@ pub fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::scrip
     Ok(crate::script_tut_pair::TutPairVars::default())
 }
 
-/// The beat 'gate': the man at the pickup is one of several.   (tut-pair.script.ts:18-24)
+/// The beat 'gate': the man at the pickup is one of several.
 pub fn tut_pair_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairGateFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_radio, director_beat_say, director_beat_wait};
     match f.at {
@@ -51,7 +51,7 @@ pub fn tut_pair_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     }
 }
 
-/// The beat 'park': the two at the lantern talk to each other.   (tut-pair.script.ts:27-33)
+/// The beat 'park': the two at the lantern talk to each other.
 pub fn tut_pair_park_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairParkFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_say, director_beat_wait};
     match f.at {
@@ -75,7 +75,7 @@ pub fn tut_pair_park_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     }
 }
 
-/// The beat 'yard': the last man is alone and has noticed nothing.   (tut-pair.script.ts:36-39)
+/// The beat 'yard': the last man is alone and has noticed nothing.
 pub fn tut_pair_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairYardFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_say, director_beat_wait};
     match f.at {

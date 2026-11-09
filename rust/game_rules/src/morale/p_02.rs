@@ -1,4 +1,3 @@
-//! src/game/morale.ts lines 456 to 608
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -18,7 +17,7 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
     g.ch[c].pos
 }
 
-/// His men whose duck waits on his order, nearest first. (the closure `his`, morale.ts:473)
+/// His men whose duck waits on his order, nearest first.
 fn his(g: &mut Game, gd: GuardId) -> Vec<GuardId> {
     let mut men: Vec<GuardId> = Vec::new();
     for i in 0..g.guards.len() {
@@ -34,7 +33,7 @@ fn his(g: &mut Game, gd: GuardId) -> Vec<GuardId> {
     keyed.into_iter().map(|x| x.0).collect()
 }
 
-/// one frame of a man's sequence: decides the act, fires its rounds, says its lines, and whether this file's script has him this frame (morale.ts step)
+/// one frame of a man's sequence: decides the act, fires its rounds, says its lines, and whether this file's script has him this frame
 pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if !reacts(g, gd) || row(g, gd).hole.is_none() { end(g, gd); return; }
     if g.gd[gd].script.is_none() && g.gd[gd].state != crate::game::GuardState::Alert && g.gd[gd].awareness >= ALERT_AW { return; }
@@ -197,7 +196,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     drive(g, gd, dt, false);
 }
 
-/// this file's script has him this frame: posed, gun out, his reaction beat run down (morale.ts drive)
+/// this file's script has him this frame: posed, gun out, his reaction beat run down
 pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
     pose(g, gd, rooted);
     let time = g.time;
@@ -241,7 +240,7 @@ pub fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game:
     Some(s.script)
 }
 
-/// his dread while an event's shock is still on him, 0 otherwise (morale.ts shakenOf)
+/// his dread while an event's shock is still on him, 0 otherwise
 pub fn shaken_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd).copied() {
         Some(s) if s.shock > 0.0 => dread(g, gd),
@@ -249,12 +248,12 @@ pub fn shaken_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     }
 }
 
-/// his rung: 0 steady, 1 jumpy, 2 broken (morale.ts rungOf)
+/// his rung: 0 steady, 1 jumpy, 2 broken
 pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd) { Some(s) => s.rung, None => 0.0 }
 }
 
-/// QA: what the rule has of a man, None = never met (morale.ts moraleOf)
+/// QA: what the rule has of a man, None = never met
 pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
     let s = g.m.morale.state_of.get(gd)?;
     Some(MoraleOf {
@@ -263,7 +262,7 @@ pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale
     })
 }
 
-/// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay (morale.ts moraleRelease)
+/// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay
 pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(s) = g.m.morale.state_of.get(gd).copied() {
         if s.act != MoraleAct::None || s.drive { end(g, gd); }

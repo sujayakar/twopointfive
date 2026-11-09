@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
+/// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes
 #[derive(Clone, Debug)]
 pub enum LobClean {
     Plan { kind: crate::squadthrow::SquadThrowKind, at: V3 },
@@ -388,11 +388,8 @@ pub struct FragCatchesBurst {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SquadthrowMod {
-    /// (src/game/squadthrow.ts:133 states)
     pub states: JsMap<PlayerId, crate::squadthrow::State>,
-    /// (src/game/squadthrow.ts:159 SQUADTHROW_LOG)
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
-    /// (src/game/squadthrow.ts:201 duckMates)
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
 }
 impl SquadthrowMod {
@@ -421,6 +418,5 @@ pub struct SquadthrowStats {
     pub cells: i32,
 }
 
-/// (src/game/squadthrow.ts:117 THROW_PAGE)
 pub const THROW_PAGE: &str = "throw";
 

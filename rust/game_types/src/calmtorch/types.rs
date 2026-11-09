@@ -15,9 +15,7 @@ pub struct TorchState {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CalmtorchMod {
-    /// (src/game/calmtorch.ts:46 stateOf)
     pub state_of: JsMap<GuardId, crate::calmtorch::TorchState>,
-    /// (src/game/calmtorch.ts:48 posing)
     pub posing: bool,
 }
 impl CalmtorchMod {

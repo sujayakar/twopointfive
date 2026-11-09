@@ -14,7 +14,7 @@ pub struct NightbreachK {
     #[k(1.5707963267948966)] pub sam_yaw: f64,
     /// how many teammates are staged: 2 = the pair, exactly as it always was · 4 = the FOUR-MAN SQUAD (?squad4): a RED pair and a BLUE pair (SQUAD4 below), each
     ///  man's pair in his papers (Guard.unit.pair; orders.ts men() is the one place to ask for the squad, a pair or a man). Red is the first pair: F's drill on the
-    ///  breach plan's door is theirs, Blue stands by behind them until ordered; the order menu goes to all four, a pair or one man (orders.ts `who`: T).
+    ///  breach plan's door is theirs, Blue stands by behind them until ordered; the order menu goes to all four, a pair or one man.
     ///  THE LOADOUT'S OTHER SIZES (game/loadout.ts; the page's ?squad=N): 3 = the four's first three (the red pair and Blue One) · 1 = Blue One alone and 0 = nobody,
     ///  both with NO F drill even where the level has a breach plan (the drill takes two men): whoever came is the order menu's from the first frame.
     #[k(2.0)] pub squad: f64,

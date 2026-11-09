@@ -1,4 +1,3 @@
-//! src/game/friends.ts lines 1 to 89
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,17 +6,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// The reticle passes this man over: he is not the player's enemy.   (friends.ts friendNoSnap)
+/// The reticle passes this man over: he is not the player's enemy.
 pub fn friend_no_snap(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
 }
 
-/// A man of his own side whose body the cursor's ray should know it landed on.   (friends.ts friendOnRay)
+/// A man of his own side whose body the cursor's ray should know it landed on.
 pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
 }
 
-/// Is anybody in a fight, as far as Sam's own gun is concerned.   (friends.ts friendsInFight)
+/// Is anybody in a fight, as far as Sam's own gun is concerned.
 pub fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let quiet_s = g.k.friends.quiet_s;
     if g.time - g.pl[seat.player].last_fire_t < quiet_s { return true; }
@@ -36,7 +35,7 @@ pub fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     false
 }
 
-/// The friend nearest along the line Sam's gun is held on, as far as what it is aimed at and `reachM` at most.   (friends.ts friendInSamsLine)
+/// The friend nearest along the line Sam's gun is held on, as far as what it is aimed at and `reachM` at most.
 pub fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     let aim_yaw = g.ch[c_2].aim_yaw;
@@ -60,7 +59,7 @@ pub fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<Gua
     line.best
 }
 
-/// …or the friend the CURSOR is on, only while the aim is free.   (friends.ts friendUnderCursor)
+/// …or the friend the CURSOR is on, only while the aim is free.
 pub fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let o = g.aim_friend?;
     if g.aim_snap.is_some() || g.gd[o].state == crate::game::GuardState::Dead || !g.ch[g.gd[o].ch].alive { return None; }
@@ -70,7 +69,7 @@ pub fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<Gua
 }
 
 /// This frame's answer: is his raised gun down for a friend. `Guard` = the man it is down for, `None` = down inside the beat after he left the line,
-/// `Bool(false)` = not lowered.   (friends.ts samOffFriend)
+/// `Bool(false)` = not lowered.
 pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64) -> Option<crate::friends::SamOffFriend> {
     let pl = g.player;
     let live = up
@@ -109,7 +108,7 @@ struct SamsLine {
     bt: f64,
 }
 
-/// The closure `ask` of friendInSamsLine: one man against the line, the nearest so far kept in `line`.   (friends.ts:52)
+/// The closure `ask` of friendInSamsLine: one man against the line, the nearest so far kept in `line`.
 fn ask(g: &mut Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
     if g.gd[o].state == crate::game::GuardState::Dead || !g.ch[c].alive { return; }

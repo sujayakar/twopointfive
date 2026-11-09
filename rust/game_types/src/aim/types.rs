@@ -72,12 +72,9 @@ pub struct PlayerAim {
     pub own: f64,
 }
 
-/// (src/game/aim.ts:29 SNAP_PX)
 pub const SNAP_PX: f64 = 60.0;
 
-/// (src/game/aim.ts:98 LOS_NOW)
 pub const LOS_NOW: f64 = 0.05;
 
-/// (src/game/aim.ts:249 BORE_FOUL_M)
 pub const BORE_FOUL_M: f64 = 1.2;
 

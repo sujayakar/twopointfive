@@ -1,4 +1,3 @@
-//! src/game/director.ts lines 1 to 424
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.   (director.ts liftedBudget)
+/// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.
 pub fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
     if crate::rails::rails_live(g) { Some(16.0) } else { None }
 }
 
-/// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.   (director.ts manifestOf)
+/// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.
 pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
     let mut manifest = Manifest::default();
     seam_script_define(script, &mut manifest)?;
@@ -22,7 +21,7 @@ pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::d
 /// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
 fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
-/// D.mark: a named place; a mark named again keeps its pos unless given one.   (director.ts:295)
+/// D.mark: a named place; a mark named again keeps its pos unless given one.
 pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
     if !m.marks.has(id.into()) || pos.is_some() {
         let pos = match pos {
@@ -33,22 +32,22 @@ pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3
     }
     MarkRef { id: id.into() }
 }
-/// D.volume.   (director.ts:296)
+/// D.volume.
 pub fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
     m.volumes.add(id.into());
     VolumeRef { id: id.into() }
 }
-/// D.door.   (director.ts:298)
+/// D.door.
 pub fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
     m.doors.add(id.into());
     DoorRef { id: id.into() }
 }
-/// D.loadout.   (director.ts:301)
+/// D.loadout.
 pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
     m.loadouts.set(id.into(), spec);
     LoadoutRef { id: id.into() }
 }
-/// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
+/// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.
 pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
     if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
     let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::default), beats: JsMap::new(), triggers: Vec::new() };
@@ -56,37 +55,32 @@ pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mu
     m.programs.set(name.into(), program);
     Ok(())
 }
-/// P.onStart.   (director.ts:308)
+/// P.onStart.
 pub fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::default() });
 }
-/// P.onSignal.   (director.ts:311)
+/// P.onSignal.
 pub fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::default() });
 }
-/// P.beat: `script` is whose match holds this beat's code. Err = declared twice.   (director.ts:314)
+/// P.beat: `script` is whose match holds this beat's code. Err = declared twice.
 pub fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
     if p.beats.has(name.into()) { return Err(format!("script: beat '{}' declared twice in program '{}'", name, p.name)); }
     p.beats.set(name.into(), ProgramDefBeatsValue { fn_: *script, atomic: atomic.unwrap_or(true) });
     Ok(())
 }
 
-/// (director.ts UTIL.yawTo)
 pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
-/// (director.ts UTIL.distXZ)
 pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-/// (director.ts UTIL.lerp)
 pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 }
-/// (director.ts UTIL.add)
 pub fn add(a: V3, b: V3) -> [f64; 3] { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
-/// (director.ts UTIL.ahead)
 pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] {
     let y = y.unwrap_or(p[1]);
     [p[0] + m::sin(yaw) * d, y, p[2] + m::cos(yaw) * d]
 }
-/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.   (director.ts UTIL)
+/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
 pub mod util {
     pub use super::{add, ahead, dist_xz, lerp, yaw_to};
 }
@@ -121,7 +115,7 @@ fn device_group(d: &crate::scene_level::DeviceDef) -> String {
 }
 fn door_is_in(level: &LintManifestLevel, name: &str) -> bool { level.doors.iter().any(|d| d.name == name) }
 
-/// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.   (director.ts lintManifest)
+/// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.
 pub fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
     let route_names: Vec<String> = level.routes.iter().map(|r| g.tab.route[*r].name.clone()).collect();
     lint_with_routes(m, level, &route_names)
@@ -257,7 +251,7 @@ mod tests {
     const B: V3 = [-4.1, 2.2, 9.75];
     fn bits(v: [f64; 3]) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
 
-    // ---- the verbs of D and P that no script of the nine calls and sig.rs has no name for (director.ts:297, 299, 300, 302, 303, 309, 310, 312, 313, 320-322): what the lint's other rows need to be reached
+    // ---- the verbs of D and P that no script of the nine calls and sig.rs has no name for: what the lint's other rows need to be reached
     fn d_route(manifest: &mut Manifest, id: &str) { manifest.routes.add(id.into()); }
     fn d_device(manifest: &mut Manifest, id: &str) { manifest.devices.add(id.into()); }
     fn d_plan(manifest: &mut Manifest, id: &str) { manifest.plans.set(id.into(), if id == "breach" { PlanKind::Breach } else { PlanKind::RoomClear }); }
@@ -324,7 +318,7 @@ mod tests {
         assert!(row.beats.get("go".into()).unwrap().atomic);
     }
 
-    /// the define pass's two throws, in the TypeScript's words (director.ts:305, :314); a body that fails leaves no row
+    /// the define pass's two throws, in the TypeScript's words; a body that fails leaves no row
     #[test]
     fn a_name_declared_twice_is_the_err() {
         let mut manifest = Manifest::default();

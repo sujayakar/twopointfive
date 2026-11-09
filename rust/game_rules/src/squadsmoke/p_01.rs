@@ -1,4 +1,3 @@
-//! src/game/squadsmoke.ts lines 1 to 160
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,13 +16,13 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
     }
 }
 
-/// The squad's smoke canisters left this run. (squadsmoke.ts squadSmokeLeft)
+/// The squad's smoke canisters left this run.
 pub fn squad_smoke_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     let key = crate::seats::view_key(g, seat);
     match g.m.squadsmoke.states.get(key) { Some(s) => s.cans, None => 0.0 }
 }
 
-/// A scenario has just staged its team: the squad's smoke is `cans`, and the row is on the menu only if that is one or more. (squadsmoke.ts squadSmokeStage)
+/// A scenario has just staged its team: the squad's smoke is `cans`, and the row is on the menu only if that is one or more.
 pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let n = m::max(0.0, js::or(m::floor(cans), 0.0));
     let key = crate::seats::view_key(g, &crate::seats::here(g));
@@ -49,7 +48,7 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     crate::orders::squad_orders_register(g, def, before.as_deref());
 }
 
-/// Where a can thrown from `from` on `sol` comes to rest on open floor: its landing and the run of its bounces. (squadsmoke.ts squadSmokeRest)
+/// Where a can thrown from `from` on `sol` comes to rest on open floor: its landing and the run of its bounces.
 pub fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k: Option<f64>) -> V3 {
     let roll_k = match roll_k { Some(r) => r, None => squadsmoke().roll_k };
     let v = sol.v0;
@@ -58,7 +57,7 @@ pub fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k
     [l[0] + v[0] * t, l[1], l[2] + v[2] * t]
 }
 
-/// Nothing between a can down at `a` and the spot `b` for its run along the floor. (squadsmoke.ts runClear)
+/// Nothing between a can down at `a` and the spot `b` for its run along the floor.
 pub fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let d = v3::dist_xz(a, b);
     if d < 0.05 { return true; }
@@ -76,7 +75,7 @@ pub fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     true
 }
 
-/// Has this man a hand for a throw right now. (squadsmoke.ts squadHandFree)
+/// Has this man a hand for a throw right now.
 pub fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     !(g.gd[gd].state == crate::game::GuardState::Dead
@@ -85,14 +84,14 @@ pub fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
         || crate::control::man::blind(g, gd))
 }
 
-/// Where a throw on `s` rests, the ground under its landing shortening the run. (squadsmoke.ts squadArcTo, its `restOf`)
+/// Where a throw on `s` rests, the ground under its landing shortening the run.
 fn rest_of(g: &mut Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k: f64) -> V3 {
     let bog = crate::snow_bog::snow_bog_at(g, s.land[0], 0.0, s.land[2]);
     let run = crate::snow_bog::bog_run(g, bog);
     squad_smoke_rest(from, s, Some(roll_k * run))
 }
 
-/// One man's throw to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests. None: he has none. (squadsmoke.ts squadArcTo)
+/// One man's throw to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests. None: he has none.
 pub fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
     let t = squadsmoke();
     let roll_k = match roll_k { Some(r) => r, None => t.roll_k };
@@ -120,7 +119,7 @@ pub fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Opti
     Some(SquadArcTo { from, sol, rest })
 }
 
-/// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it. (squadsmoke.ts squadSmokeThrower)
+/// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it.
 pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
     let again = squadsmoke().again_secs;
     let key = crate::seats::view_key(g, &crate::seats::here(g));
@@ -141,7 +140,7 @@ pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -
     None
 }
 
-/// The order's row on the menu: its functions are orders/rows/smokethere.rs, its `issue` the body below. (squadsmoke.ts row)
+/// The order's row on the menu: its functions are orders/rows/smokethere.rs, its `issue` the body below.
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::smokethere::ORDER, crate::orders::OrderDef {
         hot_key: Some(squadsmoke().order_key),
@@ -152,7 +151,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     crate::orders::squad_orders_row(g, def)
 }
 
-/// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given. (squadsmoke.ts:135 issue)
+/// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given.
 pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let at = target_at(t);
@@ -189,7 +188,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
     None
 }
 
-/// The squad's HUD block: what is left, while this staging brought any. (squadsmoke.ts notes)
+/// The squad's HUD block: what is left, while this staging brought any.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     match g.m.squadsmoke.states.get(crate::seats::view_key(g, seat)) {
         Some(s) if s.brought > 0.0 => vec![crate::view::Note { key: String::new(), text: format!("smoke {}", js::num_str(s.cans)) }],
@@ -197,7 +196,7 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
     }
 }
 
-/// The row's key with a menu up that lists it: the press is that row's. True: the press was the row's. (squadsmoke.ts squadSmokeKey)
+/// The row's key with a menu up that lists it: the press is that row's. True: the press was the row's.
 pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let key = squadsmoke().order_key;
     let view = crate::seats::view_key(g, &crate::seats::here(g));

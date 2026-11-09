@@ -1,4 +1,3 @@
-//! src/game/furnblast.ts lines 1 to 682
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -37,19 +36,19 @@ fn make_piece(g: &mut Game, b: BoxId, c: V3, h: V3) -> BoxId {
     let w = crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does });
     crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), stuff: w.stuff, does: w.does, ..Default::default() })
 }
-/// walls.raze (wallbreak.ts:422), spending `budget`. True = it returned a row.
+/// walls.raze, spending `budget`. True = it returned a row.
 fn raze(g: &mut Game, id: f64, who: f64, dir: V3, budget: &mut f64) -> bool {
     let mut b = crate::break_table::ShedBudget { chunks: *budget, ..Default::default() };
     let row = crate::wallbreak::wall_break_raze(g, id, who, Some(dir), Some(&mut b));
     *budget = b.chunks; row.is_some()
 }
-/// walls.razeIn (wallbreak.ts:425), spending `budget`
+/// walls.razeIn, spending `budget`
 fn raze_in(g: &mut Game, id: f64, r: [f64; 4], who: f64, dir: V3, budget: &mut f64) -> Option<LevelChange> {
     let mut b = crate::break_table::ShedBudget { chunks: *budget, ..Default::default() };
     let row = crate::wallbreak::wall_break_raze_in(g, id, Some(r), who, Some(dir), Some(&mut b));
     *budget = b.chunks; row
 }
-/// P.emit('debris', ...): the numbers both of the file's bursts share are written here (furnblast.ts:448, 627)
+/// P.emit('debris', ...): the numbers both of the file's bursts share are written here
 #[allow(clippy::too_many_arguments)]
 fn emit_debris(g: &mut Game, pos: V3, dir: V3, count: f64, speed: f64, size: f64, aspect: f64, color: V3, owner: f64) {
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, pos, dir, count, crate::render_particles::EmitOpts {
@@ -59,27 +58,26 @@ fn emit_debris(g: &mut Game, pos: V3, dir: V3, count: f64, speed: f64, size: f64
 fn land_sfx(row: &BreakRow) -> Vec<crate::debris::ChunkSfxItem> { row.land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect() }
 
 // ---------------------------------------------------------------- the file's free functions
-/// what a breaching charge is to the furniture, by its breaking radius (furnblast.ts chargeSource)
+/// what a breaching charge is to the furniture, by its breaking radius
 pub fn charge_source(radius: f64) -> crate::furnblast::BlastSource { if radius >= 1.5 { BlastSource::Wall } else { BlastSource::Door } }
-/// which row of the break table a box is: its word's (furnblast.ts breakClassOf)
+/// which row of the break table a box is: its word's
 pub fn break_class_of(g: &crate::game::Game, b: &crate::furnblast::BreakClassOfB) -> crate::scene_materials::BreakClass { crate::scene_materials::does_of_word(g, b.does.as_deref()).breaks }
-/// a box's bounds, its yaw taken in (furnblast.ts aabbOf)
+/// a box's bounds, its yaw taken in
 pub fn aabb_of(g: &mut crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
     let (c, h, yaw) = { let r = seam_box(g, b); (r.c, r.h, r.yaw) };
     let cs = m::abs(m::cos(yaw)); let sn = m::abs(m::sin(yaw)); let ex = cs * h[0] + sn * h[2]; let ez = sn * h[0] + cs * h[2];
     AABB { x0: c[0] - ex, x1: c[0] + ex, y0: c[1] - h[1], y1: c[1] + h[1], z0: c[2] - ez, z1: c[2] + ez }
 }
-/// plan distance from a point to a box (furnblast.ts distXZ)
+/// plan distance from a point to a box
 pub fn dist_xz(p: V3, a: crate::furnblast::AABB) -> f64 { m::hyp2(m::max_n(&[a.x0 - p[0], 0.0, p[0] - a.x1]), m::max_n(&[a.z0 - p[2], 0.0, p[2] - a.z1])) }
-/// a box's volume (furnblast.ts volOf)
+/// a box's volume
 pub fn vol_of(g: &mut crate::game::Game, b: BoxId) -> f64 { let h = seam_box(g, b).h; h[0] * h[1] * h[2] * 8.0 }
-/// two plan rectangles overlap by more than a centimetre (furnblast.ts overPlan)
+/// two plan rectangles overlap by more than a centimetre
 pub fn over_plan(a: crate::furnblast::OverPlanA, q: crate::furnblast::OverPlanQ) -> bool { a.x0 < q.x1 - 0.01 && a.x1 > q.x0 + 0.01 && a.z0 < q.z1 - 0.01 && a.z1 > q.z0 + 0.01 }
 
 // ---------------------------------------------------------------- class Furniture: g.destr.furn
-/// (furnblast.ts Furniture.constructor)
 pub fn furniture_new(g: &crate::game::Game) -> crate::furnblast::Furniture { Furniture::blank() }
-/// its own deterministic stream (furnblast.ts Furniture.hash)
+/// its own deterministic stream
 pub fn furniture_hash(g: &mut crate::game::Game) -> f64 {
     let c = g.destr.furn.counter; g.destr.furn.counter = c + 1.0;
     crate::debris::hash01(c * 2654435761.0)
@@ -88,7 +86,7 @@ fn find(parent: &mut [usize], mut k: usize) -> usize {
     while parent[k] != k { parent[k] = parent[parent[k]]; k = parent[k]; }
     k
 }
-/// the level's furniture, found once by shape: `groups` is filled and nothing handed back (furnblast.ts Furniture.index)
+/// the level's furniture, found once by shape: `groups` is filled and nothing handed back
 fn ensure_index(g: &mut Game) {
     if g.destr.furn.groups.is_some() { return; }
     let (r_min_top, r_max_top, r_max_long, r_max_vol) = (g.k.furn.root.min_top, g.k.furn.root.max_top, g.k.furn.root.max_long, g.k.furn.root.max_vol);
@@ -181,9 +179,9 @@ fn ensure_index(g: &mut Game) {
     js::sort_by(&mut out, |p, q| p.id - q.id);
     g.destr.furn.groups = Some(out);
 }
-/// the index made ahead of the blast, off the frame the wall goes on (furnblast.ts Furniture.warm)
+/// the index made ahead of the blast, off the frame the wall goes on
 pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on { ensure_index(g); } }
-/// does this part still stand; a cover panel, while any cell of it does (furnblast.ts Furniture.stands)
+/// does this part still stand; a cover panel, while any cell of it does
 pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool {
     let i = g.tab.furnblast_member[m].i;
     match crate::wallbreak::wall_break_breakable_at(g, i) {
@@ -192,7 +190,7 @@ pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool
     }
 }
 fn any_stands(g: &mut Game, members: &[FurnblastMemberId]) -> bool { for &mi in members { if furniture_stands(g, mi) { return true; } } false }
-/// what a blast would take first, asked before it goes off and reading only (furnblast.ts Furniture.firstToGo)
+/// what a blast would take first, asked before it goes off and reading only
 pub fn furniture_first_to_go(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource) -> Option<crate::furnblast::BlastFirst> {
     if g.destr.show_chaos.is_some() { return None; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return None; }
@@ -211,7 +209,7 @@ pub fn furniture_first_to_go(g: &mut crate::game::Game, at: V3, src: crate::furn
     }
     best.map(|group| BlastFirst { group, at: v3::copy(at), shatter_m, serial: g.serial() })
 }
-/// is static `i` part of what that first piece takes off the floor (furnblast.ts Furniture.wouldTake)
+/// is static `i` part of what that first piece takes off the floor
 pub fn furniture_would_take(g: &mut crate::game::Game, first: crate::furnblast::BlastFirst, i: f64, origins: &[V3]) -> bool {
     let mi = match g.destr.furn.member_at.get(Num(i)).copied() { Some(x) => x, None => return false };
     let grp = match g.tab.furnblast_member[mi].group.clone() { Some(x) => x, None => return false };
@@ -219,7 +217,7 @@ pub fn furniture_would_take(g: &mut crate::game::Game, first: crate::furnblast::
     if m::max(grp.a.x1 - grp.a.x0, grp.a.z1 - grp.a.z0) > g.k.furn.row_m { return furniture_row_take(g, first, &grp, origins).has(mi); }
     dist_xz(first.at, grp.a) <= first.shatter_m && furniture_exposed_box(g, origins, grp.a)
 }
-/// of a long run, the parts wouldTake can promise; one answer kept for the frame (furnblast.ts Furniture.rowTake)
+/// of a long run, the parts wouldTake can promise; one answer kept for the frame
 pub fn furniture_row_take(g: &mut crate::game::Game, first: crate::furnblast::BlastFirst, g_2: &crate::furnblast::Group, origins: &[V3]) -> JsSet<FurnblastMemberId> {
     // (line 259: `first` by its serial, and G follows from it; `origins` by value, as the row holds them)
     if let Some(kp) = &g.destr.furn.row_kept {
@@ -233,7 +231,7 @@ pub fn furniture_row_take(g: &mut crate::game::Game, first: crate::furnblast::Bl
     g.destr.furn.row_kept = Some(FurnitureRowKept { t: g.time, first: first.serial, origins: origins.to_vec(), gone: gone.clone() });
     gone
 }
-/// a long run under a blast: what is in reach with a line, then what those held up (furnblast.ts Furniture.rowFall)
+/// a long run under a blast: what is in reach with a line, then what those held up
 pub fn furniture_row_fall(g: &mut crate::game::Game, standing: &[FurnblastMemberId], at: V3, reach: f64, origins: &[V3]) -> JsSet<FurnblastMemberId> {
     let mut gone: JsSet<FurnblastMemberId> = JsSet::new();
     for &mi in standing {
@@ -255,9 +253,9 @@ pub fn furniture_row_fall(g: &mut crate::game::Game, standing: &[FurnblastMember
     }
     gone
 }
-/// is static `i` one this module has broken (furnblast.ts Furniture.broken)
+/// is static `i` one this module has broken
 pub fn furniture_broken(g: &crate::game::Game, i: f64) -> bool { g.destr.furn.hidden.has(Num(i)) }
-/// a clear line of blast: furniture is no shield, anything else is (furnblast.ts Furniture.clear)
+/// a clear line of blast: furniture is no shield, anything else is
 pub fn furniture_clear(g: &mut crate::game::Game, o: V3, p: V3) -> bool {
     let d = v3::sub(p, o); let l = v3::len(d); if l < 0.05 { return true; } let rd = v3::scale(d, 1.0 / l);
     let mut t0 = 0.0;
@@ -272,7 +270,7 @@ pub fn furniture_clear(g: &mut crate::game::Game, o: V3, p: V3) -> bool {
     }
     false
 }
-/// a line of blast from any origin to a box: its middle, over its top, or its nearest point (furnblast.ts Furniture.exposedBox)
+/// a line of blast from any origin to a box: its middle, over its top, or its nearest point
 pub fn furniture_exposed_box(g: &mut crate::game::Game, origins: &[V3], a: crate::furnblast::AABB) -> bool {
     let cx = (a.x0 + a.x1) / 2.0; let cz = (a.z0 + a.z1) / 2.0;
     for &o in origins {
@@ -283,7 +281,7 @@ pub fn furniture_exposed_box(g: &mut crate::game::Game, origins: &[V3], a: crate
 }
 
 // ---------------------------------------------------------------- the blast
-/// a charge went off at `at`: throws and breaks what it reaches (furnblast.ts Furniture.blast)
+/// a charge went off at `at`: throws and breaks what it reaches
 pub fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource, who: f64, chaos: f64) {
     if !(chaos > 0.0) || g.destr.show_chaos.is_some() { return; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return; }
@@ -319,7 +317,7 @@ pub fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast:
     g.m.furnblast.furn_log.push(line);
     if g.m.furnblast.furn_log.len() > 200 { g.m.furnblast.furn_log.drain(0..100); }
 }
-/// the level's fixed furniture: judged whole against the level as it stands, then broken nearest first (furnblast.ts Furniture.fixed)
+/// the level's fixed furniture: judged whole against the level as it stands, then broken nearest first
 fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut f64) {
     let apart_m = g.k.furn.apart_m * k; let shatter_m = g.k.furn.shatter_m * k;
     let (apart_max_vol, row_m) = (g.k.furn.root.apart_max_vol, g.k.furn.row_m);
@@ -377,7 +375,7 @@ fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut
         crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, id: grp.id, pos: c, rect: [rx0, rz0, rx1, rz1], opened, walkable, who });
     }
 }
-/// one static of a piece goes; true = this module hid a SOLID box itself (furnblast.ts Furniture.breakStatic). A member is read for `i` and `ghost` only, so mouth()'s stand-in member needs no row.
+/// one static of a piece goes; true = this module hid a SOLID box itself. A member is read for `i` and `ghost` only, so mouth()'s stand-in member needs no row.
 fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk: f64, who: f64, budget: &mut f64) -> bool {
     let b = bx(i); let c = seam_box(g, b).c; let dir = furniture_away(g, at, c);
     if crate::destruction::destruction_item_of(g, i).is_some() {   // the lane's own destructible: its road, plus the blast's shove
@@ -413,7 +411,7 @@ fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk:
     furniture_chips(g, c, [dir[0], 0.6, dir[2]], b, who, if shatter { 12.0 } else { 5.0 });
     true
 }
-/// one piece on its way: a chunk while budget and pool allow, else a burst of chips (furnblast.ts Furniture.throwPiece)
+/// one piece on its way: a chunk while budget and pool allow, else a burst of chips
 fn throw_piece_in(g: &mut Game, f: BoxId, at: V3, shatter: bool, kk: f64, row: &BreakRow, who: f64, budget: &mut f64, of: BoxId, steel: Option<SteelPart>) {
     let fc = seam_box(g, f).c; let fd = furniture_away(g, at, fc);
     let h1 = furniture_hash(g); let h2 = furniture_hash(g); let h3 = furniture_hash(g);
@@ -455,7 +453,7 @@ fn throw_piece_in(g: &mut Game, f: BoxId, at: V3, shatter: bool, kk: f64, row: &
         furniture_chips(g, fc, v, of, who, 14.0);
     }
 }
-/// what hung on the wall under a charge goes: cut into slabs, driven through the hole or torn off into the room (furnblast.ts Furniture.hungGoes)
+/// what hung on the wall under a charge goes: cut into slabs, driven through the hole or torn off into the room
 pub fn furniture_hung_goes(g: &mut crate::game::Game, b: BoxId, at: V3, n: V3, who: f64) {
     let k = g.k.furn.hung.clone();
     let base = furn_break_row(if box_class(g, b) == BreakClass::Wood { BreakClass::Wood } else { BreakClass::Board });
@@ -499,7 +497,7 @@ fn steel_part(g: &mut Game, b: BoxId, l: V3, h: V3) -> BoxId {
     let (c, yaw) = (seam_box(g, b).c, seam_box(g, b).yaw); let cs = m::cos(yaw); let sn = m::sin(yaw);
     make_piece(g, b, [c[0] + cs * l[0] + sn * l[2], c[1] + l[1], c[2] - sn * l[0] + cs * l[2]], h)
 }
-/// a steel carcass comes apart as sheet on a frame; None = not a carcass (furnblast.ts Furniture.steel). Draws nothing from the stream.
+/// a steel carcass comes apart as sheet on a frame; None = not a carcass. Draws nothing from the stream.
 pub fn furniture_steel(g: &mut crate::game::Game, b: BoxId, mode: crate::furnblast::FurnitureSteelMode, dir: V3, seed: f64) -> Option<Vec<crate::furnblast::SteelPart>> {
     let h = seam_box(g, b).h;
     if seam_box(g, b).rot.is_some() || m::min_n(&[h[0], h[1], h[2]]) * 2.0 < STEEL_CARCASS_M || m::max_n(&[h[0], h[1], h[2]]) * 2.0 > STEEL_CARCASS_MOST { return None; }
@@ -526,7 +524,7 @@ fn cuts(g: &mut Game, n: usize, uneven: f64) -> Vec<f64> {
     c.push(1.0);
     c
 }
-/// `b` cut into the boxes it flies as, by its material's row (furnblast.ts Furniture.fragments)
+/// `b` cut into the boxes it flies as, by its material's row
 pub fn furniture_fragments(g: &mut crate::game::Game, b: BoxId, row: &crate::furnblast::BreakRow, mode: crate::furnblast::FurnitureFragmentsMode) -> Vec<BoxId> {
     let (bh, bc, yaw) = (seam_box(g, b).h, seam_box(g, b).c, seam_box(g, b).yaw);
     let mut ax: [usize; 3] = [0, 1, 2];
@@ -545,7 +543,7 @@ pub fn furniture_fragments(g: &mut crate::game::Game, b: BoxId, row: &crate::fur
     } }
     out
 }
-/// the props: thrown and spun through their own solver; one beside the charge comes apart (furnblast.ts Furniture.pushable)
+/// the props: thrown and spun through their own solver; one beside the charge comes apart
 fn pushable_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut f64) {
     let throw_m = g.k.furn.throw_m * k; let break_m = g.k.furn.prop_break_m * k;
     let list = g.props.props.clone();   // (the TypeScript walks a copy too: breakProp takes one off the list)
@@ -565,7 +563,7 @@ fn pushable_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &
         g.stats.furnblast.props_thrown += 1;
     }
 }
-/// a prop comes apart: its parts thrown whole, what lay on it falls, it leaves the level (furnblast.ts Furniture.breakProp)
+/// a prop comes apart: its parts thrown whole, what lay on it falls, it leaves the level
 fn break_prop_in(g: &mut Game, p: PropId, at: V3, fall: f64, who: f64, budget: &mut f64) {
     let boxes = g.tab.props_prop[p].boxes.clone();
     for b in boxes {
@@ -590,7 +588,7 @@ pub fn furniture_roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let cx = m::floor(x - w.min[0]); let cz = m::floor(z - w.min[2]);
     cx >= 0.0 && cz >= 0.0 && cx < w.grid_w && cz < w.grid_h && i[(cz * w.grid_w + cx) as usize] == 1
 }
-/// may the mouth rule take static `i` at all, by what it was AUTHORED as (furnblast.ts Furniture.mouthOk). `saved` was a checkpoint's way past the snow switch; with the switch settled on it changes nothing.
+/// may the mouth rule take static `i` at all, by what it was AUTHORED as. `saved` was a checkpoint's way past the snow switch; with the switch settled on it changes nothing.
 pub fn furniture_mouth_ok(g: &mut crate::game::Game, i: f64, saved: Option<bool>) -> bool {
     let b = match box_at(g, i) { Some(b) => b, None => return false };
     if is_piece(g, b) || seam_box(g, b).rot.is_some() || g.destr.furn.kept.has(Num(i)) || crate::wallbreak::wall_break_breakable_at(g, i).is_some() { return false; }   // (trim is no thing)
@@ -604,7 +602,7 @@ pub fn furniture_mouth_ok(g: &mut crate::game::Game, i: f64, saved: Option<bool>
     if !(vol_of(g, b) <= g.k.furn.mouth.vol || snow_paint(g, b)) { return false; }   // (a long bank of lying snow is no heavy thing)
     !g.destr.furn.fronts.iter().any(|f| f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3)
 }
-/// everything resting on `seed`, layer by layer; None = something up there is not the rule's to take (furnblast.ts Furniture.mouthStack)
+/// everything resting on `seed`, layer by layer; None = something up there is not the rule's to take
 pub fn furniture_mouth_stack(g: &mut crate::game::Game, seed: &[crate::furnblast::AABB], done: &JsSet<crate::Num>, n: f64) -> Option<Vec<f64>> {
     let n = n as usize;
     let touch = g.k.furn.touch; let (np, ns, _, _) = bits();
@@ -627,7 +625,7 @@ pub fn furniture_mouth_stack(g: &mut crate::game::Game, seed: &[crate::furnblast
     }
     Some(out)
 }
-/// is the standing static `i` the mouth rule's to take as a THING (furnblast.ts Furniture.mouthMine)
+/// is the standing static `i` the mouth rule's to take as a THING
 pub fn furniture_mouth_mine(g: &mut crate::game::Game, i: f64, b: BoxId, a: crate::furnblast::AABB) -> bool {
     if g.destr.furn.member_at.has(Num(i)) { return true; }
     if snow_paint(g, b) { return true; }   // (lying snow banked at the wall's foot, under a roof or not)
@@ -635,7 +633,7 @@ pub fn furniture_mouth_mine(g: &mut crate::game::Game, i: f64, b: BoxId, a: crat
     let post = m::min(h[0], h[2]) < 0.1 && a.y1 > 1.5 && a.y1 - a.y0 > 1.0;   // (tall in itself: a binder on a top shelf is thin and high up, and no post)
     !post && furniture_roofed(g, c[0], c[2]) && (!truly(does.struct_) || (truly(does.counter) && a.y1 <= 2.0))
 }
-/// would mouth() take static `i` from `r`, a hole not blown yet? Reading only (furnblast.ts Furniture.mouthWouldTake)
+/// would mouth() take static `i` from `r`, a hole not blown yet? Reading only
 pub fn furniture_mouth_would_take(g: &mut crate::game::Game, i: f64, r: [f64; 4], depth: Option<f64>) -> bool {
     let depth = depth.unwrap_or(0.0);
     if g.destr.show_chaos.is_some() { return false; }
@@ -693,7 +691,7 @@ fn mouth_take(g: &mut Game, i: f64, at: V3, who: f64, budget: &mut f64, done: &m
     if member.is_some() { g.destr.furn.gone.add(Num(i)); } else { g.destr.furn.gone_mouth.add(Num(i)); }
     g.stats.furnblast.mouth += 1;
 }
-/// a hole a blast opens can be walked through: whatever still stands in a body's way over the two mouths `r` goes (furnblast.ts Furniture.mouth)
+/// a hole a blast opens can be walked through: whatever still stands in a body's way over the two mouths `r` goes
 fn mouth_in(g: &mut Game, at: V3, who: f64, r: [f64; 4], budget: &mut f64) {
     ensure_index(g);
     let n = m::min(g.col.boxes.len() as f64, g.destr.walls.authored) as usize;
@@ -783,22 +781,22 @@ fn mouth_in(g: &mut Game, at: V3, who: f64, r: [f64; 4], budget: &mut f64) {
     let walkable = !opened.is_empty();
     crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, id: hid[0], pos, rect, opened, walkable, who });
 }
-/// the way off the blast on the floor; right on it, a drawn direction (furnblast.ts Furniture.away)
+/// the way off the blast on the floor; right on it, a drawn direction
 pub fn furniture_away(g: &mut crate::game::Game, at: V3, p: V3) -> V3 {
     let dx = p[0] - at[0]; let dz = p[2] - at[2]; let l = m::hyp2(dx, dz);
     if l > 0.05 { return [dx / l, 0.0, dz / l]; }
     let a = furniture_hash(g) * m::PI * 2.0;
     [m::cos(a), 0.0, m::sin(a)]
 }
-/// a burst of chips (furnblast.ts Furniture.chips)
+/// a burst of chips
 pub fn furniture_chips(g: &mut crate::game::Game, c_2: V3, v: V3, b: BoxId, who: f64, n: f64) {
     let wood = box_does(g, b).surf == Surf::Wood;
     let albedo = seam_box(g, b).albedo;
     emit_debris(g, c_2, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), n, 2.4, if wood { 0.006 } else { 0.01 }, if wood { 3.0 } else { 1.0 }, v3::copy(albedo), who);
 }
-/// the world's geometry moved (furnblast.ts Furniture.bump)
+/// the world's geometry moved
 pub fn furniture_bump(g: &mut crate::game::Game) { g.engine.world.geom_serial += 1.0; crate::scene_collision::wrote(g); }
-/// level reset: every static this module hid back as authored, nav, sound and smoke told (furnblast.ts Furniture.reset)
+/// level reset: every static this module hid back as authored, nav, sound and smoke told
 pub fn furniture_reset(g: &mut crate::game::Game) {
     let f = &mut g.destr.furn; f.counter = 1.0; f.last = None; f.gone_props = 0.0; f.gone.clear(); f.gone_mouth.clear();
     if g.destr.furn.hidden.is_empty() { return; }
@@ -810,7 +808,7 @@ pub fn furniture_reset(g: &mut crate::game::Game) {
     // the AI was told of every piece that went: it is told the level is back too, unless the walls' own reset has just said so
     furniture_note_reset(g, FurnitureNoteResetCause::Reset);
 }
-/// one 'reset' row in the walls' change feed, unless its last row already says exactly that at this instant (furnblast.ts Furniture.noteReset)
+/// one 'reset' row in the walls' change feed, unless its last row already says exactly that at this instant
 pub fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::furnblast::FurnitureNoteResetCause) {
     let say = match g.destr.walls.changes.last() {
         None => true,

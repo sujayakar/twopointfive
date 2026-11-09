@@ -1,4 +1,3 @@
-//! src/game/squaddeal.ts lines 1 to 65
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,29 +6,29 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The men dealt into a room.   (squaddeal.ts squadDeal `n`)
+/// The men dealt into a room.
 fn n(count: &JsMap<String, f64>, r: &crate::scene_scenarios::StructureRoom) -> f64 {
     count.get(r.id.clone()).copied().unwrap_or(0.0)
 }
 
-/// A room's middle, as [x, z].   (squaddeal.ts squadDeal `mid`)
+/// A room's middle, as [x, z].
 fn mid(r: &crate::scene_scenarios::StructureRoom) -> [f64; 2] {
     [(r.bounds.x0 + r.bounds.x1) / 2.0, (r.bounds.z0 + r.bounds.z1) / 2.0]
 }
 
-/// How far the rooms' middles reach along one axis.   (squaddeal.ts squadDeal `span`)
+/// How far the rooms' middles reach along one axis.
 fn span(rooms: &[crate::scene_scenarios::StructureRoom], ax: usize) -> f64 {
     let v: Vec<f64> = rooms.iter().map(|r| mid(r)[ax]).collect();
     m::max_n(&v) - m::min_n(&v)
 }
 
 /// The structure as the squads are staged on it: as it is when its file has a squads block (an empty one too), on a lesson, or with fewer than two men
-/// dealt; else a copy with a block cut from its rooms (`rooms[i]` = the room defender i was dealt into).   (squaddeal.ts squadDeal)
+/// dealt; else a copy with a block cut from its rooms (`rooms[i]` = the room defender i was dealt into).
 pub fn squad_deal(g: &crate::game::Game, s: Option<&crate::scene_scenarios::StructureData>, rooms: &[String], lesson: Option<bool>) -> Option<crate::scene_scenarios::StructureData> {
     deal_with(&g.k.squaddeal, s, rooms, lesson)
 }
 
-/// The rule itself: it reaches nothing of the game but its own knob row.   (squaddeal.ts squadDeal)
+/// The rule itself: it reaches nothing of the game but its own knob row.
 fn deal_with(knobs: &crate::knobs::SquaddealK, s: Option<&crate::scene_scenarios::StructureData>, rooms: &[String], lesson: Option<bool>) -> Option<crate::scene_scenarios::StructureData> {
     let lesson = lesson.unwrap_or(false);
     let Some(s) = s else { return None };

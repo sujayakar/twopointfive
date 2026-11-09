@@ -1,4 +1,3 @@
-//! src/game/slotsetup.ts lines 1 to 171
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// a row's digit, the same on every gun (slotsetup.ts ROW_KEY[kind])
+/// a row's digit, the same on every gun
 fn row_digit(kind: SetupKind) -> f64 {
     *row_key().get(String::from(kind.as_str())).unwrap()
 }
 
-/// a gun's own digit (slotsetup.ts SLOT_KEY[gun])
+/// a gun's own digit
 fn slot_digit(gun: SetupGun) -> i32 {
     *slot_key().get(String::from(gun.as_str())).unwrap() as i32
 }
@@ -30,7 +29,7 @@ fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
     }
 }
 
-/// the gun in his hands, as the setup names it; None: none (slotsetup.ts setupGun)
+/// the gun in his hands, as the setup names it; None: none
 pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
     let f = crate::game::player_gun_in_hand(g, pl);
     let f = match f {
@@ -46,7 +45,7 @@ pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup
     }
 }
 
-/// what can be set on one of his guns, as it stands now (slotsetup.ts setupRows)
+/// what can be set on one of his guns, as it stands now
 pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::SetupGun) -> Vec<crate::slotsetup::SetupRow> {
     let mut rows: Vec<SetupRow> = Vec::new();
     let f = gun_of(g, pl, gun);
@@ -85,7 +84,7 @@ pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::Se
     rows
 }
 
-/// is the setup of the gun in his hands up; nothing touched (slotsetup.ts slotSetupOpen)
+/// is the setup of the gun in his hands up; nothing touched
 pub fn slot_setup_open(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     let s = match g.pl[pl].setup {
@@ -118,7 +117,7 @@ pub fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
     Some(crate::view::KitSetup { rows, back: String::from("TAB") })
 }
 
-/// Esc with the back key's rule off: shut it, and say whether there was one to shut (slotsetup.ts slotSetupShut)
+/// Esc with the back key's rule off: shut it, and say whether there was one to shut
 pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
     if !slot_setup_open(g, &crate::seats::here(g)) {
         return false;
@@ -128,7 +127,7 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)
+/// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up
 pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
     let a = g.fa[rf].attachments.clone();
@@ -146,7 +145,7 @@ pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
     0.0
 }
 
-/// a row's digit: step its position, and the click (slotsetup.ts stepRow)
+/// a row's digit: step its position, and the click
 pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &crate::slotsetup::SetupRow) {
     let pl = g.player;
     let f = gun_of(g, pl, gun);
@@ -169,7 +168,7 @@ pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row:
     crate::audio_iface::game_audio_like_play(g, "click", Some(muzzle), Some(gain), None);
 }
 
-/// a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on (slotsetup.ts drawPress)
+/// a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on
 pub fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
     for gun in [SetupGun::Pistol, SetupGun::Rifle] {
         if Some(gun) != in_hand && crate::input::input_hit(g, input, &digit_code(slot_digit(gun))) {
@@ -180,7 +179,7 @@ pub fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<cra
 }
 
 /// player.ts updatePlayer, ahead of the digits' own lines: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
-/// A digit used here is taken out of the frame (slotsetup.ts slotSetupKeys)
+/// A digit used here is taken out of the frame
 pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let pl = g.player;
     let gun = setup_gun(g, pl);

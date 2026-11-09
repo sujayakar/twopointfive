@@ -1,4 +1,3 @@
-//! src/game/lesson.ts lines 1 to 298
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -33,7 +32,7 @@ fn replace_all(line: &str, mut at: impl FnMut(&[u8], usize) -> Option<(usize, St
 fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
-/// a line that names the knife, while there is none: the right click's knockout is the blow (lesson.ts bareLine)
+/// a line that names the knife, while there is none: the right click's knockout is the blow
 pub fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
     let s = replace_words(&s, "left click to knife him", "right-click to knock him out");
@@ -61,7 +60,7 @@ fn token_say(row: usize, who: &str, held: bool, bare: bool) -> String {
     }
 }
 
-/// the first letter lower-cased (lesson.ts lower)
+/// the first letter lower-cased
 pub fn lower(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
@@ -71,7 +70,7 @@ pub fn lower(name: &str) -> String {
     }
 }
 
-/// is this name (the words between the braces, either capital) one lessonLine writes out? (lesson.ts lessonToken)
+/// is this name (the words between the braces, either capital) one lessonLine writes out?
 pub fn lesson_token(name: &str) -> bool {
     let n = lower(name);
     // /^[A-Za-z]+(?: [A-Za-z']+)*$/
@@ -81,7 +80,7 @@ pub fn lesson_token(name: &str) -> bool {
     match (0..4).find_map(|row| token_hit(row, &n)) { Some(who) => !who.split(' ').any(|w| w == "from"), None => false }
 }
 
-/// a line's tokens written out; on the page `held` is false and `bare` true when not given (lesson.ts tokenLine)
+/// a line's tokens written out; on the page `held` is false and `bare` true when not given
 pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     // (held = stalkClickOnly() with NO game: STALK.on && STALK.only && !STALK.key, false on the page · bare = CLOSE.on && CLOSE.noKnife, true on it)
     let (held, bare) = (held.unwrap_or(false), bare.unwrap_or(true));
@@ -105,7 +104,7 @@ pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String 
     })
 }
 
-/// a step's line as the HUD's row says it now; the rails' frame reads it too, so it is no picture-only code here (lesson.ts lessonLine)
+/// a step's line as the HUD's row says it now; the rails' frame reads it too, so it is no picture-only code here
 pub fn lesson_line(g: &crate::game::Game, written: &str) -> String { line_on_page(written, g.k.cmdring.wedges) }
 /// …with the ring's wedges read
 fn line_on_page(written: &str, wedges: f64) -> String {
@@ -117,25 +116,24 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 
 // ---- the tests
 
-/// one test asked: an unknown kind, or a flag no row has (which throws in the TypeScript and is caught there), is never true (lesson.ts passes)
+/// one test asked: an unknown kind, or a flag no row has (which throws in the TypeScript and is caught there), is never true
 pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool {
     test_ok(g, t, s).unwrap_or(false)
 }
 
-/// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none (lesson.ts after)
+/// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none
 pub fn after(log: &[u32], last: Option<u32>) -> usize {
     let mut k = log.len();
     while k > 0 && Some(log[k - 1]) != last { k -= 1; }
     k
 }
 
-/// (lesson.ts inside)
 pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
-/// the player a lesson is taught to, one seat today (lesson.ts who)
+/// the player a lesson is taught to, one seat today
 pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
-/// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
+/// the door a teammate is on a plain 'stack up' on, by name; None: none
 pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
@@ -143,16 +141,16 @@ pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId)
     Some(g.dr[d].def.name.clone())
 }
 
-/// a man no longer on his feet: dead, or out cold (lesson.ts downed)
+/// a man no longer on his feet: dead, or out cold
 pub fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
 
-/// a teammate on his feet (lesson.ts:127, 269)
+/// a teammate on his feet
 fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead }
 
-/// the one partner of a quiet pair: the first operative unit on his feet (lesson.ts partnerOf)
+/// the one partner of a quiet pair: the first operative unit on his feet
 pub fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
 
-/// is `v` within the record's below and above; a kind with neither field has nothing to refuse (lesson.ts band)
+/// is `v` within the record's below and above; a kind with neither field has nothing to refuse
 pub fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
     let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
@@ -315,14 +313,14 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
     }
     false
 }
-/// his own smoke can venting in `a`, on the floor no longer than `since` (lesson.ts:231)
+/// his own smoke can venting in `a`, on the floor no longer than `since`
 fn lying_can(g: &mut Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
     use crate::throwables::{item_age, item_fired, item_kind, item_pos, item_who, ItemKind};
     if k == Some("flash") || k == Some("frag") { return false; }
     let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
     items.iter().any(|&x| item_kind(g, x) == ItemKind::Smoke && item_fired(g, x) && item_who(g, x) == me && item_age(g, x) <= since && inside(a, item_pos(g, x)))
 }
-/// a bang of that kind in `a` this frame, not a charge's (lesson.ts:232)
+/// a bang of that kind in `a` this frame, not a charge's
 fn bang_in(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>) -> bool {
     if k == Some("smoke") { return false; }
     g.events.iter().any(|e| e.kind == crate::director::EventKind::Bang && !e.charge.unwrap_or(false) && (k.is_none() || (k == Some("frag")) == e.frag.unwrap_or(false)) && inside(a, e.pos))
@@ -416,7 +414,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
-/// a row's `below` and `above` (lesson.ts bandCheck)
+/// a row's `below` and `above`
 pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
     let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
@@ -468,52 +466,43 @@ fn flag_of(g: &mut Game, name: &str) -> Option<bool> {
     })
 }
 
-/// the flags a `flag` test can read off the player and the team's posture, each true while it holds (lesson.ts FLAGS)
+/// the flags a `flag` test can read off the player and the team's posture, each true while it holds
 pub mod flags {
     use super::*;
 
-    /// (lesson.ts FLAGS.crouch)
     pub fn crouch(g: &mut crate::game::Game) -> bool { g.pl[g.player].crouch }
-    /// (lesson.ts FLAGS.sprint)
     pub fn sprint(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].sprinting }
-    /// back to a wall (lesson.ts FLAGS.wall)
+    /// back to a wall
     pub fn wall(g: &mut crate::game::Game) -> bool { g.pl[g.player].wall.is_some() }
-    /// …and leaning out of its open end (lesson.ts FLAGS.peek)
+    /// …and leaning out of its open end
     pub fn peek(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].wall.as_ref().map_or(0.0, |w| w.peek) > 0.5 }
-    /// out round a wall's open end, whichever hold (lesson.ts FLAGS.lean)
+    /// out round a wall's open end, whichever hold
     pub fn lean(g: &mut crate::game::Game) -> bool {
         let Some(w) = g.pl[g.player].wall.as_ref() else { return false };
         w.lean.unwrap_or(0.0) > 0.5 || (w.kind != Some(crate::player::WallHoldKind::Stack) && w.peek > 0.5)
     }
-    /// (lesson.ts FLAGS.nv)
     pub fn nv(g: &mut crate::game::Game) -> bool { g.pl[g.player].nv }
-    /// the weapon light of the gun in hand (lesson.ts FLAGS.light)
+    /// the weapon light of the gun in hand
     pub fn light(g: &mut crate::game::Game) -> bool {
         let p = g.player;
         let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
         (crate::game::player_pistol_up(g, p) && g.fa[pistol].light_on) || (crate::game::player_rifle_up(g, p) && g.fa[rifle].light_on)
     }
-    /// (lesson.ts FLAGS.holstered)
     pub fn holstered(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holstered }
-    /// a gun in the hands (lesson.ts FLAGS.gun)
+    /// a gun in the hands
     pub fn gun(g: &mut crate::game::Game) -> bool { let p = g.player; crate::game::player_gun_in_hand(g, p).is_some() }
-    /// (lesson.ts FLAGS.ringsOut)
     pub fn rings_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].rings <= 0.0 }
-    /// (lesson.ts FLAGS.shellsOut)
     pub fn shells_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].shells <= 0.0 }
-    /// (lesson.ts FLAGS.auto)
     pub fn auto(g: &mut crate::game::Game) -> bool { g.fa[g.pl[g.player].rifle].mode != crate::weapons::FireMode::Semi }
-    /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true (lesson.ts FLAGS.setup)
+    /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true
     pub fn setup(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { crate::slotsetup::slot_setup_open(g, seat) }
-    /// (lesson.ts FLAGS.setupShut)
     pub fn setup_shut(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !crate::slotsetup::slot_setup_open(g, seat) }
-    /// (lesson.ts FLAGS.dragging)
     pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging.is_some() }
-    /// the mains are off (lesson.ts FLAGS.dark)
+    /// the mains are off
     pub fn dark(g: &mut crate::game::Game) -> bool { crate::sim_lightshome::mains_active(g) }
-    /// a wall charge is on a wall, waiting on the trigger (lesson.ts FLAGS.chargeSet)
+    /// a wall charge is on a wall, waiting on the trigger
     pub fn charge_set(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
-    /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach (lesson.ts FLAGS.chargeClear)
+    /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
     pub fn charge_clear(g: &mut crate::game::Game) -> bool {
         let c = g.wall_charge.set.first().copied();
         let at = crate::lesson::lesson_step(g).and_then(|step| step.at);
@@ -524,19 +513,17 @@ pub mod flags {
         let p = crate::wallcharge::wall_pt(g, &wall, 0.0, 0.0, None);
         (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && m::hyp2(p[0] - at[0], p[2] - at[2]) < 4.0
     }
-    /// …and one has made its hole this run (lesson.ts FLAGS.wallBlown)
+    /// …and one has made its hole this run
     pub fn wall_blown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
-    /// a man in his arm (lesson.ts FLAGS.holding)
+    /// a man in his arm
     pub fn holding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holding.is_some() }
-    /// (lesson.ts FLAGS.picking)
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
-    /// (lesson.ts FLAGS.coding)
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding.is_some() }
-    /// the order menu is up (lesson.ts FLAGS.menu)
+    /// the order menu is up
     pub fn menu(g: &mut crate::game::Game) -> bool { g.orders.menu.is_some() }
-    /// his own ring is up, with or without a key down (lesson.ts FLAGS.ownRing)
+    /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.pl[seat.player].sel; sel.open && sel.ring.is_some() }
-    /// the squad's posture is SILENT (lesson.ts FLAGS.silent)
+    /// the squad's posture is SILENT
     pub fn silent(g: &mut crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
 }
 
@@ -544,7 +531,7 @@ pub mod flags {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own answers (lesson.ts:35-78 run under bun, with the page's values)
+    /// the TypeScript's own answers
     static LOWER: &[(&str, &str)] = &[("Grab", "grab"), ("grab", "grab"), ("", ""), ("É1", "é1"), ("𐐀x", "𐐀x")];
     static BARE: &[(&str, &str)] = &[
         ("V whistles the cook out. Then hide at once, at the mark", "V whistles the cook out. Then hide at once, at the mark"),
@@ -650,7 +637,6 @@ mod tests {
     }
     #[test]
     fn the_skeletons_tables_say_what_the_typescript_says() {
-        // (the lists in lesson.ts testFault's messages, run under bun)
         assert_eq!(flags().keys().join(", "), "crouch, sprint, wall, peek, lean, nv, light, holstered, gun, ringsOut, shellsOut, auto, setup, setupShut, dragging, dark, chargeSet, chargeClear, wallBlown, holding, picking, coding, menu, ownRing, silent");
         assert_eq!(hows().join(", "), "takedown, choke, whip, ring, knife");
         assert_eq!(pair_whats().join(", "), "mark, now, set, go, go:F, go:hands, down");

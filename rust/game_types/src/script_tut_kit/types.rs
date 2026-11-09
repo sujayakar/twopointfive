@@ -3,14 +3,14 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (levels/tut-kit.script.ts:71-78) the beat 'hold': where it stands, and what lives across a yield
+/// the beat 'hold': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitHoldFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:81-101) the beat 'gun': where it stands, and what lives across a yield
+/// the beat 'gun': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitGunFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -27,28 +27,28 @@ pub struct TutKitGunFrame {
     pub mode: Option<String>,
 }
 
-/// (levels/tut-kit.script.ts:102-102) the beat 'bags': where it stands, and what lives across a yield
+/// the beat 'bags': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitBagsFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:103-103) the beat 'gap': where it stands, and what lives across a yield
+/// the beat 'gap': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitGapFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:104-104) the beat 'blind': where it stands, and what lives across a yield
+/// the beat 'blind': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitBlindFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:108-114) the beat 'shop': where it stands, and what lives across a yield
+/// the beat 'shop': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitShopFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -57,7 +57,7 @@ pub struct TutKitShopFrame {
     pub u: Option<crate::director::UnitRef>,
 }
 
-/// (levels/tut-kit.script.ts:118-126) the beat 'room': where it stands, and what lives across a yield
+/// the beat 'room': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitRoomFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -66,14 +66,14 @@ pub struct TutKitRoomFrame {
     pub pair: Vec<crate::director::UnitRef>,
 }
 
-/// (levels/tut-kit.script.ts:131-131) the beat 'loose': where it stands, and what lives across a yield
+/// the beat 'loose': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitLooseFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:132-150) the beat 'trucks': where it stands, and what lives across a yield
+/// the beat 'trucks': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitTrucksFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -86,42 +86,42 @@ pub struct TutKitTrucksFrame {
     pub i: f64,
 }
 
-/// (levels/tut-kit.script.ts:153-153) the beat 'call': where it stands, and what lives across a yield
+/// the beat 'call': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitCallFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:154-154) the beat 'box': where it stands, and what lives across a yield
+/// the beat 'box': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitBoxFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:156-156) the beat 'dark': where it stands, and what lives across a yield
+/// the beat 'dark': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitDarkFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:157-157) the beat 'bunk': where it stands, and what lives across a yield
+/// the beat 'bunk': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitBunkFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:158-158) the beat 'wall': where it stands, and what lives across a yield
+/// the beat 'wall': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitWallFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:160-160) the beat 'bunkroom': where it stands, and what lives across a yield
+/// the beat 'bunkroom': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitBunkroomFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -130,7 +130,7 @@ pub struct TutKitBunkroomFrame {
     pub sub_room: Option<alloc::boxed::Box<crate::script_tut_kit::TutKitRoomHelperFrame>>,
 }
 
-/// (levels/tut-kit.script.ts:161-161) the beat 'fuelroom': where it stands, and what lives across a yield
+/// the beat 'fuelroom': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitFuelroomFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -139,21 +139,21 @@ pub struct TutKitFuelroomFrame {
     pub sub_room: Option<alloc::boxed::Box<crate::script_tut_kit::TutKitRoomHelperFrame>>,
 }
 
-/// (levels/tut-kit.script.ts:166-166) the beat 'free': where it stands, and what lives across a yield
+/// the beat 'free': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitFreeFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:167-170) the beat 'seen': where it stands, and what lives across a yield
+/// the beat 'seen': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitSeenFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-kit.script.ts:171-185) the beat 'yard': where it stands, and what lives across a yield
+/// the beat 'yard': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitYardFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -162,7 +162,7 @@ pub struct TutKitYardFrame {
     pub two: Vec<crate::script_tut_kit::TutKitYardTwo>,
 }
 
-/// (levels/tut-kit.script.ts:55-63) the helper generator room: where it stands, and what lives across a yield
+/// the helper generator room: where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitRoomHelperFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -177,7 +177,7 @@ pub struct TutKitRoomHelperFrame {
     pub held: Vec<crate::director::UnitRef>,
 }
 
-/// (levels/tut-kit.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: aim, men, radio
+/// what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: aim, men, radio
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitVars {
     pub back_door: Option<crate::director::DoorRef>,

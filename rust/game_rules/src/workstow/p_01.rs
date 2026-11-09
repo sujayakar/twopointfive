@@ -1,4 +1,3 @@
-//! src/game/workstow.ts lines 1 to 96
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A charge is going on by your own hands.   (workstow.ts samJob)
+/// A charge is going on by your own hands.
 pub fn sam_job(g: &mut crate::game::Game) -> bool {
     crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()
 }
 
-/// Head of the player's frame: a job begun puts away what is in his hand, a job over brings it back.   (workstow.ts samStowTick)
+/// Head of the player's frame: a job begun puts away what is in his hand, a job over brings it back.
 pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut crate::game::Game, bool)) {
     let pl = g.player;
     let job = g.puppet.is_none() && sam_job(g);
@@ -57,16 +56,16 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
     g.stats.workstow.sam_up += 1;
 }
 
-/// The thing is still on its way out of his hand: the job's clock has not started.   (workstow.ts samStowing)
+/// The thing is still on its way out of his hand: the job's clock has not started.
 pub fn sam_stowing(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     match g.pl[pl].work_stow { Some(s) => !s.down, None => false }
 }
 
-/// Seconds a teammate's job waits, from the frame he is on it, for his hands to be free of his gun.   (workstow.ts mateStowLead)
+/// Seconds a teammate's job waits, from the frame he is on it, for his hands to be free of his gun.
 pub fn mate_stow_lead(g: &crate::game::Game) -> f64 { g.k.workstow.mate_down }
 
-/// Once a frame of a teammate's two-handed job, by its owner: his gun is out of his hands.   (workstow.ts mateStow)
+/// Once a frame of a teammate's two-handed job, by its owner: his gun is out of his hands.
 pub fn mate_stow(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].state == crate::game::GuardState::Dead { return; }
     match g.gd[gd].work_stow.as_mut() {
@@ -78,7 +77,7 @@ pub fn mate_stow(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// Once a frame for a man with one: a job no longer fed starts the gun back up; his fire clock is held meanwhile.   (workstow.ts mateStowTick)
+/// Once a frame for a man with one: a job no longer fed starts the gun back up; his fire clock is held meanwhile.
 pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].work_stow.is_none() { return; }
     let c = g.gd[gd].ch;
@@ -105,7 +104,7 @@ pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, if up_t < 0.0 { mate_up } else { up_t - now });
 }
 
-/// His gun is drawn out of his hands this frame (hung on its sling, or on his thigh).   (workstow.ts stowHang)
+/// His gun is drawn out of his hands this frame (hung on its sling, or on his thigh).
 pub fn stow_hang(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].work_stow {
         Some(s) => g.gd[gd].state != crate::game::GuardState::Dead
@@ -114,7 +113,7 @@ pub fn stow_hang(g: &crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// A round that leaves a gun this module has out of his hands puts it in them at once.   (workstow.ts stowFired)
+/// A round that leaves a gun this module has out of his hands puts it in them at once.
 pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     g.gd[gd].work_stow = None;
@@ -122,7 +121,7 @@ pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
     g.stats.workstow.mate_fired += 1;
 }
 
-/// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.   (workstow.ts stowFight)
+/// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.
 pub fn stow_fight(g: &crate::game::Game, gd: GuardId, a: Option<crate::workstow::StowFightA>, op: &mut crate::workstow::StowFightOp) -> bool {
     let has = a.map_or(false, |a| a.yield_t >= 0.0)
         || crate::control::man::blind(g, gd)

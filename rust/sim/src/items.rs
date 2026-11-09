@@ -1,4 +1,4 @@
-//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR (src/game/throwables.ts Throwables.update) — a can, a grenade, a magazine, a gun out of a dying
+//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR — a can, a grenade, a magazine, a gun out of a dying
 //! hand, for one tick: it ages, falls, meets the walls, the leaves and the furniture by a ray from its middle, bounces, hands the furniture a share of
 //! what it lost, and comes to rest on a floor or on a chair's seat; lying on a thing that has moved, it looks under itself and drops.
 //!
@@ -27,7 +27,7 @@ use crate::state::state;
 use crate::world::{js_abs, js_max, js_min, world, MAX_THINGS, REC, R_C, R_COS, R_H, R_SIN, SNOW_BANK, SNOW_OLD, SNOW_PACKED, TH, TH_X, TH_YAW, TH_Z, TL};
 use core::mem::{offset_of, size_of};
 
-/// THE ROWS OF A POOL. The game's own rule keeps a pool to thirty-two things (throwables.ts spawn: a thirty-third gives one up), but never gives up a can
+/// THE ROWS OF A POOL. The game's own rule keeps a pool to thirty-two things, but never gives up a can
 /// still on its fuse or venting: with thirty-two of those the pool grows, a row a can. These are the rows it may grow to (itemshome.ts ITEM_ROWS:
 /// sixty-four live cans at once is nobody's game, and there the oldest gives way). A multiple of 4.
 pub const CAP: usize = 64;
@@ -36,12 +36,12 @@ const _: () = assert!(CAP % 4 == 0);
 // a thing's truths (`flags`): lying at rest · its fuse has run (another rule's: carried here) · in a hand, placed by whoever carries it
 pub const F_SETTLED: u32 = 1;
 pub const F_CARRIED: u32 = 4;
-// the kinds this step tells apart (throwables.ts ITEM_KINDS, by their place there): what share of a bounce's momentum the furniture gets
+// the kinds this step tells apart: what share of a bounce's momentum the furniture gets
 pub const K_SMOKE: u32 = 0;
 pub const K_FRAG: u32 = 3;
 pub const K_RIFLE: u32 = 6;
 
-/// The thrown things' part of a game's block (src/sim/itemshome.ts ItemStore lays its own array out the same, byte for byte).
+/// The thrown things' part of a game's block.
 #[repr(C)]
 pub struct Items {
     /// things in the pool (rows 0 .. n, the game's list in its order)
@@ -81,7 +81,7 @@ pub struct Items {
 }
 const _: () = assert!(size_of::<Items>() == 16 + 20 * CAP * 8 + 6 * CAP * 4);
 const _: () = assert!(offset_of!(Items, px) % 16 == 0 && offset_of!(Items, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/itemshome.ts ITEM_F64 and ITEM_U32 name them the same)
+/// the columns in their order
 pub const COLS: [usize; 26] = [
     offset_of!(Items, px),
     offset_of!(Items, py),
@@ -113,7 +113,7 @@ pub const COLS: [usize; 26] = [
 
 // ---- WHAT THE HOST HANDS IN AND TAKES BACK FOR ONE WALK (scratch)
 // in: the frame's dt · the row to start at (the walk goes down from it) · whether the host has a rule for panes · whether the ground may be lying snow
-// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture (throwables.ts RIFLE_ITEM.propShare)
+// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture
 pub const P_DT: usize = 0;
 pub const P_FROM: usize = 1;
 pub const P_ASK: usize = 2;
@@ -128,7 +128,7 @@ pub const P_THING_RAYS: usize = 11;
 pub const P_SUBSTEPS: usize = 12;
 pub const P_WALKED: usize = 13;
 pub const P_RESTED: usize = 14;
-// in, LYING SNOW (read only where P_BOG is set; snowBog.ts SNOWBOG, weather.ts roofs): a landing higher than this is not on the ground · snow whose top is
+// in, LYING SNOW: a landing higher than this is not on the ground · snow whose top is
 // within this of the landing is what it landed in · how boggy trodden snow is, and old snow · the share of its bounce and of its slide a thing loses in
 // deep snow, and how much faster than on a floor it may be going and still stop dead · how many roofs the level has in force (at most MAX_ROOFS), and
 // each one's footprint (x0, z0, x1, z1)
@@ -185,7 +185,7 @@ pub fn addr(table: u32) -> usize {
     }
 }
 
-// ---- throwables.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
+// ---- throwables.ts's own numbers
 const PI: f64 = core::f64::consts::PI;
 const GRAVITY: f64 = 9.81;
 const SUB: f64 = 2.0;
@@ -289,7 +289,7 @@ fn things(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     }
     Some((out[0], out[1], out[2], out[3], world(d.w).thing_live[r as usize * TL] as usize))
 }
-/// Throwables.ray: the closest hit among the statics and the leaves (collision.ts raycast) and the furniture: how far, the face's normal, and the id
+/// Throwables.ray: the closest hit among the statics and the leaves and the furniture: how far, the face's normal, and the id
 /// of the thing of furniture PLUS ONE (0: a wall, a floor, a leaf)
 #[allow(clippy::too_many_arguments)]
 fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64) -> Option<(f64, f64, f64, f64, usize)> {

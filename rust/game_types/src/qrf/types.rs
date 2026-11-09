@@ -348,99 +348,67 @@ pub struct FlowLegs {
     pub aim: V3,
 }
 
-/// (src/game/qrf.ts:165 LOUD_MEMORY_SECS)
 pub const LOUD_MEMORY_SECS: f64 = 180.0;
 
-/// (src/game/qrf.ts:168 SILENT_CHECK_SECS)
 pub const SILENT_CHECK_SECS: f64 = 6.0;
 
-/// (src/game/qrf.ts:168 SILENT_GO_SECS)
 pub const SILENT_GO_SECS: f64 = 14.0;
 
-/// (src/game/qrf.ts:171 ANSWER_SECS)
 pub const ANSWER_SECS: f64 = 1.6;
 
-/// (src/game/qrf.ts:171 CALL30)
 pub const CALL30: f64 = 30.0;
 
-/// (src/game/qrf.ts:171 CALL10)
 pub const CALL10: f64 = 10.0;
 
-/// (src/game/qrf.ts:173 FILE_GAP)
 pub const FILE_GAP: f64 = 0.55;
 
-/// (src/game/qrf.ts:173 ENTRY_HOLD)
 pub const ENTRY_HOLD: f64 = 1.6;
 
-/// (src/game/qrf.ts:176 MOVE_SPEED)
 pub const MOVE_SPEED: f64 = 2.15;
 
-/// (src/game/qrf.ts:176 RUSH_SPEED)
 pub const RUSH_SPEED: f64 = 2.6;
 
-/// (src/game/qrf.ts:176 FILE_SPACING)
 pub const FILE_SPACING: f64 = 1.3;
 
-/// (src/game/qrf.ts:176 FILE_OFFSET)
 pub const FILE_OFFSET: f64 = 0.42;
 
-/// (src/game/qrf.ts:176 STATION_SECS)
 pub const STATION_SECS: f64 = 0.35;
 
-/// (src/game/qrf.ts:178 RETARGET_M)
 pub const RETARGET_M: f64 = 4.0;
 
-/// (src/game/qrf.ts:178 RETARGET_SECS)
 pub const RETARGET_SECS: f64 = 20.0;
 
-/// (src/game/qrf.ts:178 RECLEAR_SECS)
 pub const RECLEAR_SECS: f64 = 90.0;
 
-/// (src/game/qrf.ts:181 STACK_CAP)
 pub const STACK_CAP: f64 = 5.5;
 
-/// (src/game/qrf.ts:181 BANG_DEPTH)
 pub const BANG_DEPTH: f64 = 2.3;
 
-/// (src/game/qrf.ts:181 BANG_FUSE)
 pub const BANG_FUSE: f64 = 0.7;
 
-/// (src/game/qrf.ts:181 FLOW_GAP)
 pub const FLOW_GAP: f64 = 0.42;
 
-/// (src/game/qrf.ts:181 FLOW_CAP)
 pub const FLOW_CAP: f64 = 6.5;
 
-/// (src/game/qrf.ts:181 HOLD360_SECS)
 pub const HOLD360_SECS: f64 = 1.6;
 
-/// (src/game/qrf.ts:184 DRILL_CAP)
 pub const DRILL_CAP: f64 = 120.0;
 
-/// (src/game/qrf.ts:186 REGROUP_SECS)
 pub const REGROUP_SECS: f64 = 8.0;
 
-/// (src/game/qrf.ts:186 HUNT_AWARENESS)
 pub const HUNT_AWARENESS: f64 = 0.7;
 
-/// (src/game/qrf.ts:189 GUNFIGHT_SHOTS)
 pub const GUNFIGHT_SHOTS: f64 = 3.0;
 
-/// (src/game/qrf.ts:189 GUNFIGHT_WINDOW)
 pub const GUNFIGHT_WINDOW: f64 = 20.0;
 
-/// (src/game/qrf.ts:189 SETTLE_IN_SECS)
 pub const SETTLE_IN_SECS: f64 = 8.0;
 
-/// (src/game/qrf.ts:189 DOWN_FOR_PERIMETER)
 pub const DOWN_FOR_PERIMETER: f64 = 3.0;
 
-/// (src/game/qrf.ts:191 WALKOUT_ENGAGE_M)
 pub const WALKOUT_ENGAGE_M: f64 = 6.0;
 
-/// (src/game/qrf.ts:193 POST_SPEED)
 pub const POST_SPEED: f64 = 2.6;
 
-/// (src/game/qrf.ts:193 SWEEP_SECS)
 pub const SWEEP_SECS: f64 = 5.0;
 

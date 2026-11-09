@@ -1,4 +1,3 @@
-//! src/game/runner.ts lines 1 to 434
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

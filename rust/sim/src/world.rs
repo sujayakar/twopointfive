@@ -6,7 +6,7 @@
 //! the game: a copy that is thrown away is made again from the objects.
 //!
 //! No allocation: every table is a fixed size, so the module's memory never grows and a view the TypeScript side holds over it never dies. A level too big for
-//! a table is not copied at all (boxMirror.ts says so and the TypeScript answers, as it always did).
+//! a table is not copied at all.
 
 /// worlds the module can hold at once (a game a world: two games stepped in one process each keep theirs)
 pub const WORLDS: usize = 4;
@@ -46,7 +46,7 @@ pub const MAX_PANES: usize = 256;
 /// statics one gather can list (the host's own lists are shorter)
 pub const MAX_LIST: usize = 4096;
 /// PANES OF GLASS THAT ARE NO LONGER WHOLE (glass.rs): a row a pane with anything out of it, on its way out, coming down or gone — written by the side
-/// that still owns the breaking (game/glassbreak.ts, through boxMirror.ts), read by every line and ray here that meets the pane. A pane with no row is
+/// that still owns the breaking, read by every line and ray here that meets the pane. A pane with no row is
 /// shut everywhere. GD doubles and GW words a row (glass.rs names them).
 pub const MAX_GLASS: usize = 256;
 pub const GD: usize = 80;
@@ -82,7 +82,7 @@ pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
 pub const F_NO_SHADOW: u32 = 2;
 pub const F_GLASS: u32 = 1 << 17;
 
-/// the sheets of glass a level may have (src/scene/boxMirror.ts PANE_CAP, src/game/levelfit.ts)
+/// the sheets of glass a level may have
 pub const MAX_SHEETS: usize = 256;
 #[repr(C)]
 #[derive(Clone, Copy)]

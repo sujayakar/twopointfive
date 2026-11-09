@@ -9,7 +9,7 @@ pub struct PressureK {
     /// the three behaviours, each measurable alone (all need `on`)
     #[k(true)] pub press: bool,
     #[k(true)] pub flank: bool,
-    /// HARD ON A LEVEL THAT DECLARES SQUADS (enemysquads.ts): the press above stands down there — the squads own who moves — so harder defenders are the
+    /// HARD ON A LEVEL THAT DECLARES SQUADS: the press above stands down there — the squads own who moves — so harder defenders are the
     ///  squads themselves as a DRILLED GARRISON: enemysquads.ts SQUADS.drill* (each rule its own switch there), read only while `on` and this row are both
     ///  up and squads are staged. Off = hard on a squads level is standard run for run, as it was
     #[k(true)] pub squad_drill: bool,
@@ -30,7 +30,7 @@ pub struct PressureK {
     ///  Nobody comes, and nothing more is heard, for `standSecs`: they stand down, on the net, and the stock rules are back (a later report starts it again).
     ///  Off = a report is a fight at the nearest mate's post, as it was. A fight that starts as a fight (the first loud thing is a boot, a charge, a round in a
     ///  room) never comes through here: a team that kept surprise meets the defenders it met with this off. Off in the build, ON under the
-    ///  difficulty switch's hard (difficulty.ts HARD.warned)
+    ///  difficulty switch's hard
     #[k(false)] pub warned: bool,
     /// stood to, ALL HANDS GO THROUGH THE PRESS (needs warned): the stock rally's clock does not run while the report stands, so at the hit every man takes his
     ///  beat and joins the press (round by another door, stand and fight). Off = as the rule was first measured: the clocks armed at the report have run out by
@@ -46,7 +46,7 @@ pub struct PressureK {
     #[k(5.0)] pub stand_grace: f64,
     /// s before a man who has been in a press joins another
     #[k(14.0)] pub again_secs: f64,
-    /// A CHARGE EACH (0 = none: f6cf9316's press run for run; on under hard on The block only — difficulty.ts HARD_AT):
+    /// A CHARGE EACH:
     ///  every defender carries this many stun charges, the team's own kind, and a man of a press let
     ///  go at the fight takes the door he was put down for as a DRILL instead of walking in (tactics.ts's kill-zone doorway, built for the night staff's response
     ///  team and never yet handed a charge): on the jamb out of the opening, the call on their net ('they're in there — … stack on me, charge first'), his second
@@ -61,14 +61,14 @@ pub struct PressureK {
     ///  that room, the team's own unsuppressed gunfire came from inside it, they booted a door of it, or the man at the door has their boots in his ears through it — inside `stunKnowSecs`, and
     ///  with nothing newer (by more than `stunMovedSecs`) putting them somewhere else. A man let go without it walks on as the fight AI's man, as he did before
     ///  anybody carried a charge, and takes the door as the drill the moment his side has it (`stunLate`); a door already marked and not yet banged is let be the
-    ///  moment the newest thing they know puts the team elsewhere (`stunOff`: tactics.ts's 'the doorway is plain again').
+    ///  moment the newest thing they know puts the team elsewhere.
     #[k(20.0)] pub stun_know_secs: f64,
     #[k(3.0)] pub stun_moved_secs: f64,
     /// A LAST MAN ALONE KEEPS HIS ROOM (on; off = the last of them alive pressed like anybody — 'they've hit the others — get in there!' on a net with
     ///  nobody left on it, and off alone at four rifles; the 10-13 tapes have it five times, each stopped short by a covered lane a moment later). With it on
     ///  he neither starts a press nor walks off on the stock rally: his room, his doors, and the rules for a room's last man (fall back, dig in) as they are.
     #[k(true)] pub last_holds: bool,
-    /// THE PICKET (off: every staging as it was; off under hard too — difficulty.ts HARD.picket, built and measured, not shipped):
+    /// THE PICKET:
     ///  NEVER TWO MEN IN ONE FLASH, in the room the team comes to first. Its men are the ones no rule above reaches: no fight comes before theirs, so they hear
     ///  nothing, go nowhere, and one can through one door folds the pair of them where they stand (measured: worth next to nothing, at standard and hard alike).
     ///  Where that room has a second door, one of the pair stands OUTSIDE it instead — beyond the door farthest on foot from the team's start, off its line, his gun
@@ -110,11 +110,11 @@ pub struct PressureK {
     #[k(25.0)] pub siege_secs: f64,
     /// s between the word and the move: the cue's own length
     #[k(0.9)] pub word_secs: f64,
-    /// THE WAY OUT (off: every level as it was; ON under hard — difficulty.ts HARD.wayOut).
+    /// THE WAY OUT.
     ///  Only on a floor whose structure asks for it (tools/levels/lib/scenarios.ts StructureData.wayOut — levels/records.json: a pair's building, one man in the first room,
     ///  every hunter's way in through the one door two rifles are already on). There the men a lost room draws do not walk into it one at a time: they FORM UP
     ///  on ONE door of it — the nearest to the first of them (the `gather` road above, whatever that row says) — and hold it from back off it: `wayOutM` past
-    ///  the reach of the can that comes out of a door first (effects.ts bang.dazzleRadius round where it goes off), each with a line to the door, none in
+    ///  the reach of the can that comes out of a door first, each with a line to the door, none in
     ///  another's, out of the place's own light where the floor allows — guns on the door the team has to leave by. Nobody goes round, nobody goes in at the
     ///  noise, a man with no such spot stays home; the lead says it on their net ('back off the doors — out of their flash! let them come out to us!'): that
     ///  line is the cue. They go in on the word only when `wayOutSecs` have brought nobody out. The measured answer is SPEED: they need some eight
@@ -132,8 +132,8 @@ pub struct PressureK {
     ///  and its search; where they end up calm, they hold. ONE look per word: a place looked at is not looked at again until the team is seen or heard anew,
     ///  and never oftener than every `sweepSecs`. Nobody goes to a room a man of theirs holds (he is looking at it), while a man is still out, a press or a
     ///  fall-back is live or a report stands; somebody always stays (`sweepMen` is never fewer than two nor all of them); and A LOOK THAT LOSES A MAN IS THE
-    ///  LAST: nobody else walks out that fight. Never a squad's man (enemysquads.ts has its own form of this), a last stand's, a hostage rescue's, one on
-    ///  his way to cover or wedging a door (digin.ts; a man SET on his door may go), or one who knows a covered lane lies that way (lanes.ts). The dead say
+    ///  LAST: nobody else walks out that fight. Never a squad's man, a last stand's, a hostage rescue's, one on
+    ///  his way to cover or wedging a door, or one who knows a covered lane lies that way. The dead say
     ///  nothing: a man dropped without a sound is no word. No die is drawn.
     #[k(false)] pub sweep: bool,
     #[k(20.0)] pub sweep_secs: f64,

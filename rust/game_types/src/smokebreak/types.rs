@@ -49,7 +49,6 @@ pub struct MouthOf {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SmokebreakMod {
-    /// (src/game/smokebreak.ts:69 states)
     pub states: Option<crate::smokebreak::State>,
 }
 impl SmokebreakMod {

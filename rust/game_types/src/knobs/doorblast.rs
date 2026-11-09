@@ -48,7 +48,7 @@ pub struct DoorblastKTearM {
 ///  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
 ///  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. With `flat` the count is A COST and the same wherever the
 ///  Tab 'chaos' slider stands above nothing (a wall's still rides it: at its top drywall opens in three while a leaf asks its twelve); without, as a wall's. A
-///  round that goes on through (wallpen.ts) counts as one that stops; so does one fired with the gun pressed through the leaf (combat.ts wallAcrossArm).
+///  round that goes on through counts as one that stops; so does one fired with the gun pressed through the leaf.
 ///  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
 ///  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
 ///  dressed by the break table (breakTable.ts retag + dress: a snapped end, a splinter's taper, a board's torn corners — a door's paint would otherwise
@@ -83,6 +83,6 @@ pub struct DoorshotK {
     /// the middle of the gradient: finger-long slivers thrown on through when it goes (how many, m/s)
     #[k(alloc::vec![22.0, 3.2])] pub slivers: Vec<f64>,
     /// how loud the leaf going is — a 'kick' at the door, blamed on whoever fired the round: the door's own crack and dust, and to the floor's ears a door
-    ///  going in (guards.ts hearingCheck answers a kick floor-wide; the debrief files 'a door kicked in'), however quiet the gun was
+    ///  going in, however quiet the gun was
     #[k(0.8)] pub level: f64,
 }

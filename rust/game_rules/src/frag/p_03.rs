@@ -1,4 +1,3 @@
-//! src/game/frag.ts lines 680 to 997
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -26,7 +25,7 @@ fn flee_of(g: &Game, i: usize, gd: GuardId) -> Option<crate::game::GuardScript> 
     g.m.frag.books.as_ref().unwrap()[i].flee.get(gd).and_then(|s| s.clone())
 }
 
-/// The floor others of his side have a claim to while this grenade burns: where a mate is going, where a mate is staying.   (frag.ts takenBy)
+/// The floor others of his side have a claim to while this grenade burns: where a mate is going, where a mate is staying.
 pub fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) -> crate::frag::TakenBy {
     let (mut stay, mut go): (Vec<V3>, Vec<V3>) = (Vec::new(), Vec::new());
     let from: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
@@ -54,18 +53,18 @@ pub fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3
     crate::frag::TakenBy { stay, go }
 }
 
-/// The list the deal would hand `flee_spot` for this man off a grenade at rest at `dz` that has dealt nobody yet.   (frag.ts fleeMates)
+/// The list the deal would hand `flee_spot` for this man off a grenade at rest at `dz` that has dealt nobody yet.
 pub fn flee_mates(g: &mut crate::game::Game, gd: GuardId, dz: V3) -> Option<crate::frag::TakenBy> {
     Some(taken_by(g, None, gd, dz))
 }
 
-/// Once a frame, before the men move: each live grenade's book, then who the books have.   (frag.ts fragTick)
+/// Once a frame, before the men move: each live grenade's book, then who the books have.
 pub fn frag_tick(g: &mut crate::game::Game, dt: f64) {
     step_frag(g, dt);
     frag_say(g);
 }
 
-/// Who the grenade's books have: anybody with legs dealt on a live one's line.   (frag.ts fragSay)
+/// Who the grenade's books have: anybody with legs dealt on a live one's line.
 pub fn frag_say(g: &mut crate::game::Game) {
     let mut n = 0;
     while n < g.guards.len() {
@@ -76,7 +75,7 @@ pub fn frag_say(g: &mut crate::game::Game) {
     }
 }
 
-/// Each live grenade's book: who has noticed it, the shout, and the legs of whoever is in its line.   (frag.ts stepFrag)
+/// Each live grenade's book: who has noticed it, the shout, and the legs of whoever is in its line.
 pub fn step_frag(g: &mut crate::game::Game, _dt: f64) {
     books_of(g);
     let mut n = 0;
@@ -289,7 +288,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
 }
 
 /// THE RULE'S OWN STATE, moved a tick for one man (the first of a rule's three parts, control/; the dealing is `frag_tick`'s): once he is at his
-/// spot he gets down.   (frag.ts fragFlee, the part that writes)
+/// spot he gets down.
 pub fn frag_flee_transition(g: &mut crate::game::Game, gd: GuardId) {
     let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return };
     for i in 0..n {
@@ -315,24 +314,24 @@ pub fn frag_flee_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::ga
     None
 }
 
-/// The two as one call.   (frag.ts fragFlee)
+/// The two as one call.
 pub fn frag_flee(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     frag_flee_transition(g, gd);
     frag_flee_propose(g, gd)
 }
 
-/// Is he on his legs off a live grenade this frame.   (frag.ts fragRunning)
+/// Is he on his legs off a live grenade this frame.
 pub fn frag_running(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(b) = g.m.frag.books.as_ref() else { return false };
     b.iter().any(|l| l.flee.get(gd).and_then(|s| s.as_ref()).map_or(false, |s| s.goal.is_some()))
 }
 
-/// A grenade's bang that his OWN side threw.   (frag.ts ownBang)
+/// A grenade's bang that his OWN side threw.
 pub fn own_bang(g: &crate::game::Game, gd: GuardId, e: crate::frag::OwnBangE) -> bool {
     e.frag.unwrap_or(false) && own_noise(g, gd, e.who)
 }
 
-/// A noise filed under the id of a man of his own side.   (frag.ts ownNoise)
+/// A noise filed under the id of a man of his own side.
 pub fn own_noise(g: &crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
     let Some(who) = who else { return false };
     if who == 0.0 { return false; }
@@ -340,7 +339,7 @@ pub fn own_noise(g: &crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
     same_side(t, g.gd[gd].team)
 }
 
-/// A defender's live grenade Sam can see, or hear land, inside cueM: one HUD line, once.   (frag.ts samCue)
+/// A defender's live grenade Sam can see, or hear land, inside cueM: one HUD line, once.
 pub fn sam_cue(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     crate::seats::each_seat(g, &mut |g| if !live!(g, l).cued { cue_here(g, l, eye_at); });
 }
@@ -365,7 +364,7 @@ fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     crate::game::game_msg(g, "GRENADE — get clear");
 }
 
-/// Where a player who has read the cue would go, off the nearest cued grenade with a line to him; None when none.   (frag.ts fragStepOff)
+/// Where a player who has read the cue would go, off the nearest cued grenade with a line to him; None when none.
 pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3> {
     let speed = speed.unwrap_or(3.2);
     let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return None };
@@ -387,12 +386,12 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
     None
 }
 
-/// The men of the floor who may carry a frag.   (frag.ts defendersOf)
+/// The men of the floor who may carry a frag.
 pub fn defenders_of(g: &crate::game::Game) -> Vec<GuardId> {
     g.guards.iter().copied().filter(|&gd| g.gd[gd].team == crate::teams::Team::Hostile && g.gd[gd].unit.is_some()).collect()
 }
 
-/// Deal the floor's frags: one defender in defShare, at most defMax, by a hash of the men's ids.   (frag.ts dealCarriers)
+/// Deal the floor's frags: one defender in defShare, at most defMax, by a hash of the men's ids.
 pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) {
     let men = defenders_of(g);
     let n = m::min(g.k.frag.def_max, m::ceil(men.len() as f64 / m::max(1.0, g.k.frag.def_share)));
@@ -426,7 +425,7 @@ fn no(g: &mut Game, w: &str) {
     g.m.frag.frag_why.set(String::from(w), n);
 }
 
-/// The defenders' frags, once a frame beside `frag_tick`.   (frag.ts fragThrowTick)
+/// The defenders' frags, once a frame beside `frag_tick`.
 pub fn frag_throw_tick(g: &mut crate::game::Game, dt: f64) {
     if !g.ai_enabled || !crate::roomfight::fight_live(g) || crate::director::director_their_frags_off(g) { return; }
     let men = defenders_of(g);
@@ -557,7 +556,7 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     crate::guards::can_see_char(v, gd, pc, true).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
 }
 
-/// Of `n` spots by the fix, those of open floor with the burst's line to the man's chest; `from` given: only the first his arm lands.   (frag.ts aimSpots)
+/// Of `n` spots by the fix, those of open floor with the burst's line to the man's chest; `from` given: only the first his arm lands.
 pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: V3, n: f64) -> Vec<V3> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -587,7 +586,7 @@ pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: 
     out
 }
 
-/// The wind-up begins: the scatter, none of his own in reach, then the shout, the floor's clock and the cue. None = he is getting it out; else why not.   (frag.ts windUp)
+/// The wind-up begins: the scatter, none of his own in reach, then the shout, the floor's clock and the cue. None = he is getting it out; else why not.
 pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> {
     let gd = car!(g, c_2).gd;
     let c = g.gd[gd].ch;
@@ -638,13 +637,13 @@ pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V
     None
 }
 
-/// The grenade of a throw under way is still in his fist: swung, not yet let go.   (frag.ts fragInFist)
+/// The grenade of a throw under way is still in his fist: swung, not yet let go.
 pub fn frag_in_fist(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(b) = g.m.frag.def_books.as_ref() else { return false };
     b.carriers.iter().find(|c| c.gd == gd).and_then(|c| c.wind).map_or(false, |w| w.swung)
 }
 
-/// An arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high; no arm goes through a wall.   (frag.ts armRound)
+/// An arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high; no arm goes through a wall.
 pub fn arm_round(g: &mut crate::game::Game, p: V3, to: V3) -> V3 {
     let (dx, dz) = (to[0] - p[0], to[2] - p[2]);
     let d = js::or(m::hyp2(dx, dz), 1.0);
@@ -654,7 +653,7 @@ pub fn arm_round(g: &mut crate::game::Game, p: V3, to: V3) -> V3 {
     if crate::scene_collision::solid_blocked(g, chest, from, None) { chest } else { from }
 }
 
-/// The place in the book of the carrier who may start a throw this moment (the book is `g.m.frag.def_books`).   (frag.ts free)
+/// The place in the book of the carrier who may start a throw this moment (the book is `g.m.frag.def_books`).
 pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     if !g.ai_enabled || !crate::roomfight::fight_live(g) || crate::director::director_their_frags_off(g) { return None; }
     let b = g.m.frag.def_books.as_ref()?;
@@ -664,12 +663,12 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     Some(ci)
 }
 
-/// May he start a throw at the place `at` this moment: everything `frag_throw_at` asks but the arc and his own side.   (frag.ts fragReady)
+/// May he start a throw at the place `at` this moment: everything `frag_throw_at` asks but the arc and his own side.
 pub fn frag_ready(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
     free(g, gd).is_some() && !hostage_near(g, at)
 }
 
-/// A throw another rule asks for: only WHERE is the caller's.   (frag.ts fragThrowAt)
+/// A throw another rule asks for: only WHERE is the caller's.
 pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, toward: V3) -> crate::frag::FragThrowAt {
     use crate::frag::FragThrowAt as R;
     let Some(ci) = free(g, gd) else { return R::Busy };
@@ -703,28 +702,28 @@ pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, 
     }
 }
 
-/// He has shouted and the grenade is not yet out of his hand.   (frag.ts fragWinding)
+/// He has shouted and the grenade is not yet out of his hand.
 pub fn frag_winding(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.frag.def_books.as_ref().map_or(false, |b| b.carriers.iter().any(|x| x.gd == gd && x.wind.is_some()))
 }
 
-/// How many grenades have left his hand.   (frag.ts fragAway)
+/// How many grenades have left his hand.
 pub fn frag_away(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     g.m.frag.def_books.as_ref().and_then(|b| b.carriers.iter().find(|x| x.gd == gd)).and_then(|x| x.away).unwrap_or(0.0)
 }
 
-/// The arc comes DOWN ON THE FLOOR within `tol` of where he means it.   (frag.ts lands)
+/// The arc comes DOWN ON THE FLOOR within `tol` of where he means it.
 pub fn lands(g: &mut crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
     sol[1] <= g.k.frag.lift + 0.1 && flat(sol, p) <= tol
 }
 
-/// A live hostage in what a grenade there would reach.   (frag.ts hostageNear)
+/// A live hostage in what a grenade there would reach.
 pub fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
     let reach = g.k.frag.wound_m + g.k.frag.def_scatter[1];
     g.rescue.hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[h].ch].pos, p) < reach)
 }
 
-/// Nobody of the thrower's own side within defOwnM of where it would land with a line to it, and he not within his own arm's error.   (frag.ts ownClear)
+/// Nobody of the thrower's own side within defOwnM of where it would land with a line to it, and he not within his own arm's error.
 pub fn own_clear(g: &mut crate::game::Game, gd: GuardId, land: V3, release: Option<bool>) -> bool {
     let release = release.unwrap_or(false);
     let from: V3 = [land[0], land[1] + g.k.frag.lift, land[2]];

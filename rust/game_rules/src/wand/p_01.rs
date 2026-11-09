@@ -1,4 +1,3 @@
-//! src/game/wand.ts lines 1 to 137
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,38 +6,38 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A door the wand goes under: shut home, on its hinges, not the steel fire door. (wand.ts wandFits)
+/// A door the wand goes under: shut home, on its hinges, not the steel fire door.
 pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_off(g, d) && m::abs(crate::doors::door_angle(g, d)) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
 }
 
-/// Is 'look under it' on this door's rows for this player. (wand.ts wandOffered)
+/// Is 'look under it' on this door's rows for this player.
 pub fn wand_offered(g: &crate::game::Game, pl: PlayerId, d: DoorId) -> bool {
     g.pl[pl].wand && crate::fogofwar::fog_of_war_active(g) && wand_fits(g, d)
 }
 
-/// The wait before the lens is through: the squat's own blend in where it is drawn, else the kneel's. (wand.ts wandFeedSecs)
+/// The wait before the lens is through: the squat's own blend in where it is drawn, else the kneel's.
 pub fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
     if squat.unwrap_or(false) { g.k.stealthpose.cable_in } else { g.k.wand.quick_secs }
 }
 
-/// Is the lens through this step, for a man the caller has found planted. `t` went with the old feed. (wand.ts wandThrough)
+/// Is the lens through this step, for a man the caller has found planted. `t` went with the old feed.
 pub fn wand_through(g: &crate::game::Game, t: f64, age: f64, crouch: f64, squat: Option<bool>) -> bool {
     age >= wand_feed_secs(g, squat) - 1e-6 && crouch >= g.k.wand.quick_down
 }
 
-/// The wedge in force, degrees. (wand.ts wandFov)
+/// The wedge in force, degrees.
 pub fn wand_fov(g: &crate::game::Game) -> f64 {
     let wedge = if g.k.fog.cone { crate::fogofwar::field_deg(g) } else { g.k.wand.fov_deg };
     m::min(170.0, m::max(20.0, wedge))
 }
 
-/// The most the lens turns off square, rad. (wand.ts wandPanMax)
+/// The most the lens turns off square, rad.
 pub fn wand_pan_max(g: &crate::game::Game) -> f64 {
     m::max(0.0, 90.0 - wand_fov(g) * 0.5 - g.k.wand.blind_deg) * m::PI / 180.0
 }
 
-/// Where the lens is and the way it faces square on: the leaf's middle, `pastM` out of the face he is NOT on. (wand.ts wandLens)
+/// Where the lens is and the way it faces square on: the leaf's middle, `pastM` out of the face he is NOT on.
 pub fn wand_lens(g: &crate::game::Game, d: DoorId, side: f64) -> crate::wand::WandLens {
     let u = crate::doors::door_dir(g, d);
     lens_at(g.dr[d].def.hinge, u, g.dr[d].def.width * 0.5, side, g.k.wand.past_m, g.k.wand.eye_y)
@@ -52,7 +51,7 @@ fn lens_at(hinge: [f64; 2], u: [f64; 2], w: f64, side: f64, past_m: f64, eye_y: 
     crate::wand::WandLens { pos: [hx + u[0] * w + nx * past_m, eye_y, hz + u[1] * w + nz * past_m], yaw: m::atan2(nx, nz) }
 }
 
-/// Turn the lens of this player's look toward the frame's aim point, at its rate, inside its stops. (wand.ts wandTurn)
+/// Turn the lens of this player's look toward the frame's aim point, at its rate, inside its stops.
 pub fn wand_turn(g: &mut crate::game::Game, pl: PlayerId, aim: V3, dt: f64) {
     let Some(w) = g.pl[pl].wanding else { return };
     let l = wand_lens(g, w.door, w.side);
@@ -71,7 +70,7 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
     m::max(-max, m::min(max, pan))
 }
 
-/// The lens as one of the fog's eyes, or None while nobody is looking. (wand.ts wandEye)
+/// The lens as one of the fog's eyes, or None while nobody is looking.
 pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::fogofwar::FogEye> {
     let pl = seat.player;
     let w = g.pl[pl].wanding?;
@@ -83,7 +82,7 @@ pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<c
     Some(crate::fogofwar::FogEye { id: g.ch[c].id, pos: l.pos, look: [m::sin(a), 0.0, m::cos(a)], at: l.pos, fov: Some(fov), near: Some(0.0), wand: Some(true) })
 }
 
-/// The look let go of with nothing said; player.ts stopWand is the worded way out. (wand.ts wandDrop)
+/// The look let go of with nothing said; player.ts stopWand is the worded way out.
 pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
     if g.pl[pl].wanding.is_none() { return; }
     g.pl[pl].wanding = None;

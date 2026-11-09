@@ -1,4 +1,4 @@
-//! WHAT IS PAINTED ON A WALL GOES WITH THE WALL (src/game/wallskin.ts), whole. A sheet (an authored static that is drawn and nothing else) is drawn where
+//! WHAT IS PAINTED ON A WALL GOES WITH THE WALL, whole. A sheet (an authored static that is drawn and nothing else) is drawn where
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
 //! lane's `out`). The pieces are on the frame's list, which the tick's own counts read (the fog's `rig_from` / `rig_to`):
@@ -28,12 +28,10 @@ type Rect = [f64; 4];
 fn into_b(b: &Bx, p: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); let (x, z) = (p[0] - b.c[0], p[2] - b.c[2]); [cs * x - sn * z, p[1] - b.c[1], sn * x + cs * z] }
 fn out_of_b(b: &Bx, l: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]] }
 
-/// (src/game/wallskin.ts:84 inside)
 pub fn inside(r: [f64; 4], u: f64, v: f64) -> bool { u > r[0] && u < r[1] && v > r[2] && v < r[3] }
 
 /// WHAT STANDS of a face 2·hu × 2·hv: a point lies on the nearest thing behind it (and on any other within FLUSH of that); it is gone when it lay on
 /// something and nothing it lay on stands there; the rest stands, in rectangles each as long along the face as it can be, rows of one outline joined.
-/// (src/game/wallskin.ts:92 standing)
 pub fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f64; 4]>], cols: Option<bool>, parts: Option<&[[f64; 4]]>) -> Vec<[f64; 4]> {
     let cols = cols.unwrap_or(false); let parts: &[Rect] = parts.unwrap_or(&[]);
     let edges = |h: f64, k: usize| -> Vec<f64> {
@@ -77,14 +75,13 @@ pub fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f6
 
 // ---------------------------------------------------------------- the three asks the TypeScript hands the constructor as closures
 
-/// Static j has a road of its own (a fixture's box, one of the lane's destructibles) and is no sheet of this rule. (wallbreak.ts:198, the first closure)
+/// Static j has a road of its own (a fixture's box, one of the lane's destructibles) and is no sheet of this rule.
 pub fn wall_skin_own(g: &crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
 /// the breakable whose own box static k is, if wallbreak opens it
 fn brk_id(g: &Game, k: f64) -> Option<WallbreakBreakableId> { let b = g.destr.walls.owner.get(crate::Num(k)).copied()?; if g.tab.wallbreak_breakable[b].id == k { Some(b) } else { None } }
 // ---------------------------------------------------------------- the lane's books
 
 /// The authored statics that could be a sheet (drawn and nothing else, level, lightless) and those that are solid (met by rays and drawn, level, square).
-/// (src/game/wallskin.ts:139 WallSkin.constructor)
 pub fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallSkin {
     let f = crate::scene_boxes::box_flag();
     let lone = js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
@@ -112,13 +109,13 @@ fn ensure(g: &mut Game) {
     s.cand = made.cand; s.solid = made.solid;
 }
 
-/// Cells of B have just opened: every sheet lying on it is cut again as this frame's boxes are handed over. (src/game/wallskin.ts:150 WallSkin.opened)
+/// Cells of B have just opened: every sheet lying on it is cut again as this frame's boxes are handed over.
 pub fn wall_skin_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
     if !g.k.wallskin.on || g.destr.walls.skins.failed { return; }
     for j in wall_skin_skins_of(g, b) { g.destr.walls.skins.dirty.add(crate::Num(j)); }
 }
 
-/// The level put back: every sheet whole again. (src/game/wallskin.ts:155 WallSkin.clear)
+/// The level put back: every sheet whole again.
 pub fn wall_skin_clear(g: &mut crate::game::Game) {
     let gone: Vec<FrameBoxId> = g.destr.walls.skins.cut.values().flat_map(|l| l.iter().copied()).collect();
     for b in gone { crate::scene_boxes::box_let_go(g, b); }
@@ -129,20 +126,19 @@ pub fn wall_skin_clear(g: &mut crate::game::Game) {
     wall_skin_count(g);
 }
 
-/// (src/game/wallskin.ts:157 WallSkin.count)
 pub fn wall_skin_count(g: &mut crate::game::Game) {
     let s = &mut g.destr.walls.skins;
     let mut whole = 0.0; for l in s.cut.values() { if l.is_empty() { whole += 1.0; } }
     s.stats.cut = s.cut.len() as f64; s.stats.whole = whole; s.stats.pieces = s.last;
 }
 
-/// Once a frame, before the frame's box list is made again: what the list can still take of this lane's. (src/game/wallskin.ts:160 WallSkin.update)
+/// Once a frame, before the frame's box list is made again: what the list can still take of this lane's.
 pub fn wall_skin_update(g: &mut crate::game::Game) {
     if g.destr.walls.skins.cut.is_empty() && g.destr.walls.skins.dirty.is_empty() { return; }
     g.destr.walls.skins.room = crate::edge_look::frame_room(g, g.k.wallskin.box_slack, None);
 }
 
-/// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out. (src/game/wallskin.ts:166 WallSkin.boxes)
+/// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out.
 pub fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let on = g.k.wallskin.on && !g.destr.walls.skins.failed;
     if !on && (!g.destr.walls.skins.cut.is_empty() || !g.destr.walls.skins.dirty.is_empty()) { let f = g.destr.walls.skins.failed; wall_skin_clear(g); g.destr.walls.skins.failed = f; }   // (put down under a standing game: the bands as authored)
@@ -199,7 +195,6 @@ fn seat_of(off: f64, k: f64, w: &Bx, s: &Bx, t: f64) -> Option<Seat> {
 }
 
 /// What sheet j lies on: every authored solid it has a seat on, on its BACK (the side more of it lies against, then the nearer, then the earlier box).
-/// (src/game/wallskin.ts:200 WallSkin.backs)
 pub fn wall_skin_backs(g: &mut crate::game::Game, j: f64) -> Vec<crate::wallskin::Seat> {
     ensure(g);
     if let Some(l) = g.destr.walls.skins.seats.get(crate::Num(j)) { return l.clone(); }
@@ -228,7 +223,7 @@ pub fn wall_skin_backs(g: &mut crate::game::Game, j: f64) -> Vec<crate::wallskin
     l
 }
 
-/// A breakable's sheets: of the sheets near it, those that lie on its own box. (src/game/wallskin.ts:220 WallSkin.skinsOf)
+/// A breakable's sheets: of the sheets near it, those that lie on its own box.
 pub fn wall_skin_skins_of(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) -> Vec<f64> {
     ensure(g);
     if let Some(l) = g.destr.walls.skins.on.get(crate::Num(b.id)) { return l.clone(); }
@@ -274,7 +269,7 @@ fn uncut(g: &mut Game, j: f64) {
     g.destr.walls.skins.laid.delete(crate::Num(j));
 }
 
-/// One sheet cut again from what stands behind it. (src/game/wallskin.ts:245 WallSkin.recut)
+/// One sheet cut again from what stands behind it.
 pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
     let seats = wall_skin_backs(g, j); if seats.is_empty() { return; }
     let kk = g.k.wallskin; let fl = crate::scene_boxes::box_flag(); let col = g.col.boxes.clone();

@@ -1,4 +1,4 @@
-//! WHAT A PANE OF GLASS IS TO PLAY (src/game/glassbreak.ts, whose TypeScript is the caller and the picture): what a blow does to a pane, which pieces are held and
+//! WHAT A PANE OF GLASS IS TO PLAY: what a blow does to a pane, which pieces are held and
 //! which fall and when, what a blast takes, when the floor hears it and is littered. Statement for statement with the rule it replaced: the same hashes, the
 //! same maths (maths.rs), the same compares, in the same order. tools/qa/pane-ident.ts held the two together, every call both ways in one run.
 //!
@@ -14,7 +14,7 @@
 //! the pane's call is back, a pane at a time. Nothing a fragment's handling does is read by the rest of that pane's rule. Its one question of the world, where it
 //! comes down, is asked here at the moment it lets go, and its landing is scheduled here (falls.rs) under SHARDS.byFall.
 //!
-//! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads (src/game/levelfit.ts), by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
+//! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads, by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
 //! THE QUEUE: MAX_Q pieces waiting in a game; a piece past that stays in its frame for the next support pass. No run has come within a tenth of it.
 use crate::falls;
 use crate::glass::{classify_row, dice_out, site_of, GW_COLS, GW_CRATER, GW_DSEED, GW_FLAGS, GW_GOING, GW_N, GW_OPEN, GW_ROWS, GW_SEED, G_DICE, G_DICE_AT, G_GONE, G_RUN, G_SITE};
@@ -30,7 +30,7 @@ use prim::{floor, sqrt};
 pub const MAX_ROWS: usize = 256;
 pub const MAX_HOLES: usize = 256;
 pub const MAX_Q: usize = 4096;
-/// the window's bars one level can lose (src/game/levelfit.ts refuses a level of more; the barracks stands 22)
+/// the window's bars one level can lose
 pub const MAX_BARS: usize = 128;
 /// words of a level's on a pane's glass (setType: tools today)
 const MAX_OVERS: usize = 32;
@@ -77,7 +77,7 @@ const S_RHO: usize = 3;
 const S_RZ: usize = 7;
 const S_MERGE: usize = 8;
 
-/// A PANE THAT HAS BEEN TOUCHED (glassbreak.ts PaneState)
+/// A PANE THAT HAS BEEN TOUCHED
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Row {
@@ -159,7 +159,7 @@ pub struct Panes {
     /// pieces let go this frame (a frame's budget, across the panes)
     pub released: u32,
     pub flags: u32,
-    /// the floor's last 'glass' event per pane per shooter (glass.ts liveGap): how many, and (pane × 1024 + who, when)
+    /// the floor's last 'glass' event per pane per shooter: how many, and (pane × 1024 + who, when)
     pub nev: u32,
     pub nbl: u32,
     /// the number of the last charge seen
@@ -408,7 +408,7 @@ pub fn row_ref(g: usize, r: usize) -> &'static mut Row {
     pn(g).row(r)
 }
 
-// ---- the game's hashes (glass.ts boxSeed and pointSeed, debris.ts hash01)
+// ---- the game's hashes
 /// the language's `x | 0` of a double
 #[inline]
 pub fn int32(x: f64) -> i32 {
@@ -526,7 +526,7 @@ fn nearest_on(b: &[f64], p: [f64; 3]) -> [f64; 3] {
 fn rec(o: &World, bi: usize) -> &[f64] {
     &o.rec[bi * REC..bi * REC + REC]
 }
-/// a sheet of glass: thin across its thin axis (the game's own test: glass.ts isSheet)
+/// a sheet of glass: thin across its thin axis
 #[inline]
 fn thin(b: &[f64]) -> bool {
     js_min(b[R_H], b[R_H + 2]) <= THICK_GLASS_HALF
@@ -597,12 +597,12 @@ pub struct Ctx {
     pub w: usize,
     pub set: i32,
     pub now: f64,
-    /// a fragment's landing is the simulation's (shards.ts: its switch, and glass breaking live)
+    /// a fragment's landing is the simulation's
     pub shards: bool,
     /// (shardModel.ts SHARD.gravity: a table of authored numbers, handed in)
     pub gravity: f64,
 }
-/// one line as the rule asks it of the statics and the leaves: is something solid across it (collision.ts solidBlocked)
+/// one line as the rule asks it of the statics and the leaves: is something solid across it
 #[inline]
 fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3]) -> bool {
     lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2]).unwrap_or(true)
@@ -903,7 +903,7 @@ pub fn out_addr() -> usize {
 pub fn out_pts_addr() -> usize {
     core::ptr::addr_of!(OUT_PTS) as usize
 }
-/// THE COUNTS FOR A TOOL OR A PANEL (glassbreak.ts GB_STATS: no rule reads them back)
+/// THE COUNTS FOR A TOOL OR A PANEL
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Tally {
@@ -1026,7 +1026,6 @@ fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool) {
         OUT_N = n + 1;
     }
 }
-/// (fallshome.ts FALL_SOUNDS, by their place; FALL_UNHEARD, FALL_IF_SOUNDED, FALL_HEARD)
 const SOUND_TINKLE: f64 = 0.0;
 const SOUND_SHATTER: f64 = 1.0;
 const EV_UNHEARD: f64 = 0.0;
@@ -1466,7 +1465,7 @@ fn release_sheet(c: &Ctx, ri: usize, away: [f64; 3], kk: f64) {
 }
 
 // ---- the queue
-/// a piece's turn to leave (glassbreak.ts `pending.push`, the sort that follows it: a pane's run is kept in that order)
+/// a piece's turn to leave
 fn queue(c: &Ctx, ri: usize, fid: u32, at: f64, cause: u32, from: [f64; 3], kk: f64) {
     let p = pn(c.g);
     if !p.q_put(ri, Q { at, from, k: kk, fid, cause }) {
@@ -1728,7 +1727,7 @@ fn set_k(r: &mut Row, seq: f64, kk: f64) {
     r.bk[2 * at + 1] = kk;
     r.bk_at = r.bk_at.wrapping_add(1);
 }
-/// the arrival in hand (glassbreak.ts blastIn): its charge seen, ready for the sheets one at a time
+/// the arrival in hand: its charge seen, ready for the sheets one at a time
 pub fn blast_begin(c: &Ctx, at: [f64; 3]) {
     let (i, seq) = charge_of(pn(c.g), c.now, at);
     let p = pn(c.g);
@@ -2213,7 +2212,7 @@ pub fn take_gust(g: usize) -> bool {
     p.flags &= !FL_GUST;
     f
 }
-/// the floor's last 'glass' event per pane per shooter (glass.ts liveGap): a hit on this pane by this shooter may be told now. Entries past the gap say nothing and go.
+/// the floor's last 'glass' event per pane per shooter: a hit on this pane by this shooter may be told now. Entries past the gap say nothing and go.
 pub fn heard_gap(g: usize, pane: u32, who: f64, now: f64, gap: f64) -> bool {
     let p = pn(g);
     p.stand();
@@ -2298,7 +2297,7 @@ pub fn dice_threshold(g: usize, bi: u32) -> f64 {
     }
 }
 
-// ---- a window's bar (src/game/winbars.ts, whose TypeScript throws the pieces)
+// ---- a window's bar
 const F_BAR: u32 = 1 << 19;
 const NO_SHADOW: u32 = crate::world::F_NO_SHADOW;
 /// is static `bi` a window's bar that still stands? (the copy keeps NoShadow of the two bits a broken bar is hidden by)

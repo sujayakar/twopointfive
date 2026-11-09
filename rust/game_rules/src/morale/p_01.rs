@@ -1,4 +1,3 @@
-//! src/game/morale.ts lines 1 to 456
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,9 +7,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 type Pool = &'static [&'static str];
-/// one kind's lines (morale.ts LINES); `now` is `say` as the writing guide has it
+/// one kind's lines; `now` is `say` as the writing guide has it
 struct Lines { say: Pool, he: Option<Pool>, they: Option<Pool>, dark: Option<Pool>, lit: Option<Pool>, now: Option<Pool> }
-/// (morale.ts LINES) in the order the object is written: moraleLines walks it
+/// in the order the object is written: moraleLines walks it
 static LINES: [(LineKind, Lines); 9] = [
     (LineKind::Duck, Lines { say: &["down! get down!", "get down — stay down!", "heads down!"], he: None, they: None, dark: None, lit: None, now: None }),
     (LineKind::Call, Lines { say: &[], dark: Some(&["can't see a thing — somebody get in here!"]), lit: Some(&["right in my room — somebody get in here!"]), he: Some(&["he's coming in — I've got nobody in here!", "anyone on this net? he's right on top of me!"]),
@@ -32,7 +31,7 @@ fn lines_of(kind: LineKind) -> &'static Lines {
 /// his row as it stands, a copy to read: a writer writes the row
 fn now(g: &mut Game, gd: GuardId) -> Mind { *g.m.morale.state_of.get(gd).unwrap() }
 
-/// one line of a kind from this man, unless he said one inside `barkSecs` (morale.ts bark)
+/// one line of a kind from this man, unless he said one inside `barkSecs`
 pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, radio: bool, force: Option<bool>) -> bool {
     let st = now(g, gd);
     if !force.unwrap_or(false) && st.bark < g.k.morale.bark_secs { return false; }
@@ -49,37 +48,37 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKin
     true
 }
 
-/// distance on the floor (morale.ts flat)
+/// distance on the floor
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// his chest, or where it would be (morale.ts chestOf)
+/// his chest, or where it would be
 pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     let c = &g.ch[c_2];
     match c.bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => [c.pos[0], c.pos[1] + 1.2, c.pos[2]] }
 }
 
-/// his head, or where it would be (morale.ts headOf)
+/// his head, or where it would be
 pub fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     let c = &g.ch[c_2];
     match c.bones.get(crate::character::Bone::Head) { Some(b) => *b, None => [c.pos[0], c.pos[1] + 1.6, c.pos[2]] }
 }
 
-/// a man this file is about at all: a living defender or a man of the night staff (morale.ts ours)
+/// a man this file is about at all: a living defender or a man of the night staff
 pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let m_ = &g.gd[gd];
     m_.state != crate::game::GuardState::Dead && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
 }
 
-/// a man of the hostage rescue's cast (morale.ts rescued)
+/// a man of the hostage rescue's cast
 pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
 
-/// may a sequence have him this frame (morale.ts reacts)
+/// may a sequence have him this frame
 pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.touring || g.quiet_utility || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
-/// his row, made the first time he is met: the row itself, for a few lines (morale.ts mind)
+/// his row, made the first time he is met: the row itself, for a few lines
 pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::morale::Mind {
     if !g.m.morale.state_of.has(gd) {
         let id = g.ch[g.gd[gd].ch].id;
@@ -92,7 +91,7 @@ pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::mor
     g.m.morale.state_of.get_mut(gd).unwrap()
 }
 
-/// is he blind-dark where he stands (morale.ts inTheDark)
+/// is he blind-dark where he stands
 pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.k.morale.dark_read == crate::knobs::MoraleKDarkRead::Watch { return crate::darkfoe::dark_foe_blind(g, gd); }
     let c = g.gd[gd].ch;
@@ -105,7 +104,7 @@ pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     m::max(a, b) < g.tune.vis_floor
 }
 
-/// has he company (morale.ts hasMate)
+/// has he company
 pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let eye = head_of(g, c);
@@ -123,14 +122,14 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// the men he is counted with: his squad's, else his room's (morale.ts bandOf)
+/// the men he is counted with: his squad's, else his room's
 pub fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
     if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
     g.room_clear.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
 }
 
-/// the difficulty's mix, read once a tick (morale.ts mixNow)
+/// the difficulty's mix, read once a tick
 pub fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
     let key = format!("{}|{}|{}", g.time, g.k.pressure.on, g.k.digin.on);
     if let Some(had) = &g.m.morale.mix_at {
@@ -142,7 +141,7 @@ pub fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
     if hard { MixNow::Hard } else { MixNow::Mixed }
 }
 
-/// is he green or steady (morale.ts trainingOf)
+/// is he green or steady
 pub fn training_of(g: &mut crate::game::Game, gd: GuardId) -> crate::morale::TrainingOf {
     use crate::scene_scenarios::SquadDataTraining as Own;
     let k = g.k.morale.training;
@@ -169,23 +168,23 @@ pub fn training_of(g: &mut crate::game::Game, gd: GuardId) -> crate::morale::Tra
     } else if men.len() >= 3 && i == Some(men.len() - 1) { TrainingOf::Green } else { TrainingOf::Steady }
 }
 
-/// the first man of his band, where that man is steady (morale.ts leaderOf)
+/// the first man of his band, where that man is steady
 pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     if g.k.morale.training == Training::None { return None; }
     let l = band_of(g, gd).and_then(|men| men.first().copied())?;
     if training_of(g, l) == TrainingOf::Steady { Some(l) } else { None }
 }
 
-/// the first slice's sequence is a green man's (morale.ts folds)
+/// the first slice's sequence is a green man's
 pub fn folds(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).green || g.k.morale.training == Training::None }
 
-/// what a shock of `x` is to these men (morale.ts nerved)
+/// what a shock of `x` is to these men
 pub fn nerved(g: &crate::game::Game, x: f64) -> f64 {
     let n = g.k.morale.nerve_k;
     x * match g.k.morale.nerve { Nerve::Brittle => n.brittle, Nerve::Normal => n.normal, Nerve::Steady => n.steady }
 }
 
-/// his standing terms read afresh, on the row (morale.ts stand)
+/// his standing terms read afresh, on the row
 pub fn stand(g: &mut crate::game::Game, gd: GuardId, first: Option<bool>) {
     let first = first.unwrap_or(false);
     let alone = !has_mate(g, gd);
@@ -205,10 +204,10 @@ pub fn stand(g: &mut crate::game::Game, gd: GuardId, first: Option<bool>) {
     if !down { r.lost = false; }
 }
 
-/// does he know something is up (morale.ts roused)
+/// does he know something is up
 pub fn roused(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).shock > 0.0 || g.gd[gd].state != crate::game::GuardState::Patrol }
 
-/// where he stands, as dread (morale.ts standing)
+/// where he stands, as dread
 pub fn standing(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if !roused(g, gd) { return 0.0; }
     let s = now(g, gd);
@@ -216,13 +215,13 @@ pub fn standing(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     (if s.alone { k.alone } else { 0.0 }) + (if s.dark { k.dark } else { 0.0 }) + (if s.leader_down { k.leader_down } else { 0.0 })
 }
 
-/// shock and standing, 0 to 1 (morale.ts dread)
+/// shock and standing, 0 to 1
 pub fn dread(g: &mut crate::game::Game, gd: GuardId) -> f64 { let shock = now(g, gd).shock; v3::clamp(shock + standing(g, gd), 0.0, 1.0) }
 
-/// may he break, whatever his shock (morale.ts mayBreak)
+/// may he break, whatever his shock
 pub fn may_break(s: crate::morale::Mind) -> bool { if s.green { s.alone || (s.leader_down && s.lost) } else { s.alone && s.dark } }
 
-/// the rung his dread reads, with hysteresis (morale.ts rungNow)
+/// the rung his dread reads, with hysteresis
 pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let s = now(g, gd);
     let d = dread(g, gd);
@@ -233,7 +232,7 @@ pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     else { 0.0 }
 }
 
-/// a feed for any event: shock on one man (morale.ts moraleShock)
+/// a feed for any event: shock on one man
 pub fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
     if !ours(g, gd) || rescued(g, gd) { return; }
     mind(g, gd);
@@ -243,7 +242,7 @@ pub fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
     r.shock = m::min(cap, r.shock + n);
 }
 
-/// the leader's death: his green men, the ones who saw it, the nearest of those (morale.ts moraleManDown)
+/// the leader's death: his green men, the ones who saw it, the nearest of those
 pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
     if !ours(g, victim) { return; }
     let vc = g.gd[victim].ch;
@@ -276,19 +275,19 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
     }
 }
 
-/// seconds since he saw his leader go down (morale.ts sawLeaderFall)
+/// seconds since he saw his leader go down
 pub fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd) { Some(s) if s.fall >= 0.0 => s.fall, _ => f64::INFINITY }
 }
 
-/// a blast went off: only filed here, asked about on the next tick (morale.ts moraleBlast)
+/// a blast went off: only filed here, asked about on the next tick
 pub fn morale_blast(g: &mut crate::game::Game, at: V3, who: Option<f64>) {
     let b = Blast { at: v3::copy(at), t: g.time, who: who.unwrap_or(0.0) };
     g.m.morale.blasts_of.get_or_insert_with(Vec::new).push(b);
     g.stats.morale.blasts += 1;
 }
 
-/// a restart: blasts not yet asked about are the old floor's (morale.ts moraleReset)
+/// a restart: blasts not yet asked about are the old floor's
 pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     g.m.morale.blasts_of = None;
     if men.unwrap_or(false) {
@@ -304,7 +303,7 @@ pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     }
 }
 
-/// one filed blast, the frame after (morale.ts feed)
+/// one filed blast, the frame after
 pub fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     let from: V3 = [b.at[0], m::max(b.at[1], 0.3), b.at[2]];
     let side = if js::truthy(b.who) { Some(crate::teams::team_of_id(g, b.who)) } else { None };
@@ -370,7 +369,7 @@ pub fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     if let Some(c) = caller { mind(g, c).shout = true; }
 }
 
-/// he starts an act (morale.ts begin)
+/// he starts an act
 pub fn begin(g: &mut crate::game::Game, gd: GuardId, act: crate::morale::MoraleAct, hole: Option<V3>) {
     let r = g.m.morale.state_of.get_mut(gd).unwrap();
     r.act = act; r.t = 0.0;
@@ -378,13 +377,13 @@ pub fn begin(g: &mut crate::game::Game, gd: GuardId, act: crate::morale::MoraleA
     r.goal = None; r.rounds = 0.0; r.next = 0.0; r.by = None; r.heard = -1.0; r.said = false;
 }
 
-/// the sequence lets him go (morale.ts end)
+/// the sequence lets him go
 pub fn end(g: &mut crate::game::Game, gd: GuardId) {
     let r = g.m.morale.state_of.get_mut(gd).unwrap();
     r.act = MoraleAct::None; r.t = 0.0; r.goal = None; r.rounds = 0.0; r.next = 0.0; r.drive = false; r.shout = false; r.by = None; r.heard = -1.0; r.said = false;
 }
 
-/// the enemies plainly in his eyes this frame (morale.ts seenBy)
+/// the enemies plainly in his eyes this frame
 pub fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<CharId> {
     let mut out: Vec<CharId> = Vec::new();
     if crate::control::man::blind(g, gd) { return out; }
@@ -428,7 +427,7 @@ pub fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<
     out
 }
 
-/// a thing somebody else threw, on the move by the hole, in his view (morale.ts thrown)
+/// a thing somebody else threw, on the move by the hole, in his view
 pub fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
     let c = g.gd[gd].ch;
     let eye = head_of(g, c);
@@ -446,7 +445,7 @@ pub fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
     false
 }
 
-/// how far he can go from where he stands along (dx, dz) (morale.ts clearRun)
+/// how far he can go from where he stands along (dx, dz)
 pub fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> f64 {
     let c = g.gd[gd].ch;
     let (p, radius) = (g.ch[c].pos, g.ch[c].radius);
@@ -468,7 +467,7 @@ pub fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: 
     far
 }
 
-/// the way off the hole from where he stands, a unit vector on the floor (morale.ts awayFrom)
+/// the way off the hole from where he stands, a unit vector on the floor
 pub fn away_from(g: &crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
     let p = g.ch[c_2].pos;
     let (dx, dz) = (p[0] - hole[0], p[2] - hole[2]);
@@ -476,7 +475,7 @@ pub fn away_from(g: &crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
     if l > 0.05 { [dx / l, dz / l] } else { let y = g.ch[c_2].body_yaw; [-m::sin(y), -m::cos(y)] }
 }
 
-/// where the scrabble ends: straight back, else the longest run of a small fan (morale.ts backGoal)
+/// where the scrabble ends: straight back, else the longest run of a small fan
 pub fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -500,7 +499,7 @@ pub fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3>
     if far >= 0.5 { Some([p[0] + bx * far, 0.0, p[2] + bz * far]) } else { None }
 }
 
-/// the leader's one side step off the hole's line (morale.ts sideGoal)
+/// the leader's one side step off the hole's line
 pub fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardId>) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -521,7 +520,7 @@ pub fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<Gu
     None
 }
 
-/// one turn of a burst at the hole; false = the burst is over (morale.ts round)
+/// one turn of a burst at the hole; false = the burst is over
 pub fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate::morale::RoundOf) -> bool {
     let c = g.gd[gd].ch;
     if g.gd[gd].reload_t >= 0.0 { return false; }
@@ -543,7 +542,7 @@ pub fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: cr
     left > 0.0
 }
 
-/// the long burst is spent: the guards' own magazine change, stretched (morale.ts runDry)
+/// the long burst is spent: the guards' own magazine change, stretched
 pub fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     begin(g, gd, MoraleAct::Reload, None);
@@ -560,7 +559,7 @@ pub fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
     g.stats.morale.reloads += 1;
 }
 
-/// a bait taken: the magazine, then a short burst, then a word (morale.ts bait)
+/// a bait taken: the magazine, then a short burst, then a word
 pub fn bait(g: &mut crate::game::Game, gd: GuardId) {
     g.m.morale.state_of.get_mut(gd).unwrap().baits += 1.0;
     g.stats.morale.baits += 1;
@@ -587,7 +586,7 @@ pub fn bait(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// what this file's script holds him to this frame, on the row (morale.ts pose)
+/// what this file's script holds him to this frame, on the row
 pub fn pose(g: &mut crate::game::Game, gd: GuardId, rooted: bool) {
     let st = now(g, gd);
     let hole = st.hole.unwrap();
@@ -607,7 +606,7 @@ pub fn pose(g: &mut crate::game::Game, gd: GuardId, rooted: bool) {
     sc.over = None;
 }
 
-/// once a frame: decay, standing, the blasts filed, the rungs, each sequence's step (morale.ts moraleTick)
+/// once a frame: decay, standing, the blasts filed, the rungs, each sequence's step
 pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
     let (half_life, ask_secs) = (g.k.morale.half_life, g.k.morale.ask_secs);
     let k = m::pow(2.0, -dt / half_life);

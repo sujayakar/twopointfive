@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 418 to 809
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -53,7 +52,7 @@ fn seam_box_flags(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
 // ---------------------------------------------------------------- what a man sees
 
-/// A world point in this man's open view: range, field, nothing solid between; light is not asked. (guards.ts pointInView)
+/// A world point in this man's open view: range, field, nothing solid between; light is not asked.
 pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Option<f64>, half_deg: Option<f64>) -> bool {
     let range = range.unwrap_or(12.0);
     let half_deg = half_deg.unwrap_or(60.0);
@@ -69,7 +68,7 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
     !crate::scene_collision::segment_blocked(g, eye, p, None, None, None)
 }
 
-/// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone. (guards.ts lightOutSeen)
+/// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone.
 pub fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
     let c = g.gd[gd].ch;
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
@@ -80,7 +79,7 @@ pub fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::
     !crate::scene_collision::segment_blocked(g, eye, [e.pos[0], 0.15, e.pos[2]], None, None, None)
 }
 
-/// A man goes down at Sam's hand: every other man awake with the victim in view, or eyes on Sam, remembers it. (guards.ts witnessKill)
+/// A man goes down at Sam's hand: every other man awake with the victim in view, or eyes on Sam, remembers it.
 pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game::DownKind, by: crate::game::DownBy) {
     if !g.ai_enabled || by != crate::game::DownBy::Player { return; }
     let vc = g.gd[victim].ch;
@@ -102,7 +101,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
     }
 }
 
-/// What took a man over the alert line just now. (guards.ts alertCause)
+/// What took a man over the alert line just now.
 pub fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
     if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::guards::AlertCause::Sight; }
     if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::guards::AlertCause::Sound; }
@@ -111,14 +110,14 @@ pub fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::gua
     crate::guards::AlertCause::Radio
 }
 
-/// Floor point under a body: its pelvis once the ragdoll has it. (guards.ts bodyPos)
+/// Floor point under a body: its pelvis once the ragdoll has it.
 pub fn body_pos(g: &crate::game::Game, o: GuardId) -> V3 {
     let c = g.gd[o].ch;
     let h = hips_of(g, c);
     [h[0], 0.0, h[2]]
 }
 
-/// A found body lying within `r` metres of `p`, if any. (guards.ts nearKnownBody)
+/// A found body lying within `r` metres of `p`, if any.
 pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<GuardId> {
     let r = r.unwrap_or(4.0);
     let mut i = 0;
@@ -130,7 +129,7 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
     None
 }
 
-/// What a keyed door gives away: its keep kicked out, or standing unlocked. (guards.ts doorTamper)
+/// What a keyed door gives away: its keep kicked out, or standing unlocked.
 pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
     if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
@@ -140,7 +139,7 @@ pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::Do
 
 // ---------------------------------------------------------------- a found body: the floor's short script
 
-/// Where a man stops by a body: `stand` metres short of it, a free cell he can walk to with the body in view. (guards.ts coverSpot)
+/// Where a man stops by a body: `stand` metres short of it, a free cell he can walk to with the body in view.
 pub fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 {
     let from = g.ch[g.gd[gd].ch].pos;
     let reach = crate::scene_collision::nav_grid_find_path(g, from, bp, None, None);
@@ -167,7 +166,7 @@ pub fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) ->
     v3::copy(foot)
 }
 
-/// Where a man widens out to from a body: his arm of a fan dealt round it; None = he lets it go where he stands. (guards.ts fanSpot)
+/// Where a man widens out to from a body: his arm of a fan dealt round it; None = he lets it go where he stands.
 pub fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Option<V3> {
     let from = g.ch[g.gd[gd].ch].pos;
     let k = g.gd[b].body_fan;
@@ -208,7 +207,7 @@ pub fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> O
     None
 }
 
-/// Movement watchdog: true once he has covered less than half a metre in `secs` seconds. (guards.ts notGettingAnywhere)
+/// Movement watchdog: true once he has covered less than half a metre in `secs` seconds.
 pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, secs: f64) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let fresh = match g.gd[gd].stall_ref { None => true, Some(r) => v3::dist_xz(p, r) > 0.5 };
@@ -221,7 +220,7 @@ pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, sec
     g.gd[gd].stall_t > secs
 }
 
-/// The alert chase is over without him: down to 'search' from where he stands. (guards.ts dropToSearch)
+/// The alert chase is over without him: down to 'search' from where he stands.
 pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Search, "guards");
     g.gd[gd].search_t = 0.0;
@@ -235,7 +234,7 @@ pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>
     crate::chronicle::chron_lost(g, gd);
 }
 
-/// Every clock the alert chase keeps, back to a fresh chase. (guards.ts resetChase)
+/// Every clock the alert chase keeps, back to a fresh chase.
 pub fn reset_chase(g: &mut crate::game::Game, gd: GuardId) {
     let man = &mut g.gd[gd];
     man.alert_best = 1e9;
@@ -252,7 +251,7 @@ pub fn reset_chase(g: &mut crate::game::Game, gd: GuardId) {
     man.line_fail = None;
 }
 
-/// One frame of a man's part in the found-body script: his move speed and aim point, or None when it no longer applies. (guards.ts bodyAftermath)
+/// One frame of a man's part in the found-body script: his move speed and aim point, or None when it no longer applies.
 pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::guards::BodyAftermath> {
     use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
     let d0 = g.gd[gd].body_duty.unwrap();
@@ -384,7 +383,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
     Some(crate::guards::BodyAftermath { move_, aim })
 }
 
-/// The fix a man is left with the frame Sam goes out of sight: led 0.9 s along his way, as far as the floor is open. (guards.ts leadFix)
+/// The fix a man is left with the frame Sam goes out of sight: led 0.9 s along his way, as far as the floor is open.
 pub fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     let p: V3 = [from[0], 0.0, from[2]];
     let (vx, vz) = (vel[0], vel[2]);
@@ -419,7 +418,7 @@ pub fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     fix
 }
 
-/// Where a man's line of fire is judged from: the gun shoulder, or for a shouldered long gun the trigger-hand wrist. (guards.ts shotOrigin)
+/// Where a man's line of fire is judged from: the gun shoulder, or for a shouldered long gun the trigger-hand wrist.
 pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
     if g.ch[c_2].anim.long_gun {
         if let Some(h) = g.ch[c_2].bones.get(crate::character::Bone::HandR) { return v3::copy(*h); }
@@ -427,7 +426,7 @@ pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
     bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4)
 }
 
-/// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end. (guards.ts clearShot)
+/// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end.
 pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);
@@ -437,7 +436,7 @@ pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, from, v3::mad(from, d, (l - 0.3) / l), Some(0.02), energy)
 }
 
-/// A pinned man's one question: his side's rounds have nothing for a pane, and standing glass is the first thing on the line. (guards.ts paneFirst)
+/// A pinned man's one question: his side's rounds have nothing for a pane, and standing glass is the first thing on the line.
 pub fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     if crate::glasspen::shot_energy(g, c_2, None) != Some(0.0) { return false; }
     let from = shot_origin(g, c_2);
@@ -447,14 +446,13 @@ pub fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     let h = match crate::scene_collision::raycast(g, from, v3::scale(d, 1.0 / l), l - 0.3) { Some(h) => h, None => return false };
     if !(h.index < 1e6) { return false; }
     let i = h.index as usize;
-    // (the level's list IS col.boxes in the TypeScript, game.ts: the one Rust keeps live is g.col.boxes; `?.` is a place past its end)
     let flags = match g.col.boxes.get(i).copied() { Some(b) => seam_box_flags(g, b), None => 0.0 };
     (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
 }
 
 // ---------------------------------------------------------------- muzzle discipline
 
-/// Where a colleague stands against the aim segment: how far along, his signed offset, his 3D distance, the clearance he is owed. (guards.ts lineGeom)
+/// Where a colleague stands against the aim segment: how far along, his signed offset, his 3D distance, the clearance he is owed.
 pub fn line_geom(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> Option<crate::guards::LineGeom> {
     let c = g.gd[o].ch;
     let h = hips_of(g, c);
@@ -478,7 +476,7 @@ fn line_geom_of(from: V3, to: V3, h: V3, y0: f64, y1: f64, vel: V3) -> Option<cr
     Some(crate::guards::LineGeom { t, e, d: m::hyp3(px - ax, pz - az, ddy), clear })
 }
 
-/// The nearest living colleague in this man's intended line of aim, or None. (guards.ts colleagueInLine)
+/// The nearest living colleague in this man's intended line of aim, or None.
 pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>) -> Option<GuardId> {
     let c = g.gd[gd].ch;
     let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
@@ -503,7 +501,7 @@ pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Opt
     best
 }
 
-/// The last look before the round goes: a living colleague within a body's breadth of the segment the round will fly. (guards.ts roundPastColleague)
+/// The last look before the round goes: a living colleague within a body's breadth of the segment the round will fly.
 pub fn round_past_colleague(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>, cone_per_m: Option<f64>) -> bool {
     let cone_per_m = cone_per_m.unwrap_or(0.0);
     let from = g.ch[g.gd[gd].ch].muzzle;
@@ -530,7 +528,7 @@ pub fn round_past_colleague(g: &crate::game::Game, gd: GuardId, to: V3, except: 
     false
 }
 
-/// The point MUZZLE_REACH_M out along where his gun is held, or where that line meets the floor. (guards.ts aimAhead)
+/// The point MUZZLE_REACH_M out along where his gun is held, or where that line meets the floor.
 pub fn aim_ahead(g: &crate::game::Game, c_2: CharId) -> V3 {
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     aim_ahead_of(from, g.ch[c_2].aim_pitch, g.ch[c_2].aim_yaw)
@@ -543,7 +541,7 @@ fn aim_ahead_of(from: V3, pitch: f64, yaw: f64) -> V3 {
     [from[0] + m::sin(yaw) * cp * reach, from[1] + sy * reach, from[2] + m::cos(yaw) * cp * reach]
 }
 
-/// This frame's muzzle discipline: a colleague in the line puts the gun down, a line clear long enough lets it back up. (guards.ts muzzleCheck)
+/// This frame's muzzle discipline: a colleague in the line puts the gun down, a line clear long enough lets it back up.
 pub fn muzzle_check(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, dt: f64, except: Option<GuardId>) -> Option<GuardId> {
     g.gd[gd].muzzle_eval_t = g.time;
     let o = match to { Some(t) => colleague_in_line(g, gd, t, except), None => None };
@@ -565,7 +563,7 @@ pub fn muzzle_check(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, dt: 
     o
 }
 
-/// In a fight, the side-step that opens his line round colleague `o`: under way, none from here, or nobody to step round. (guards.ts lineStep)
+/// In a fight, the side-step that opens his line round colleague `o`: under way, none from here, or nobody to step round.
 pub fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: Option<GuardId>, dt: f64) -> crate::guards::LineStep {
     let c = g.gd[gd].ch;
     if let Some(ob) = o {

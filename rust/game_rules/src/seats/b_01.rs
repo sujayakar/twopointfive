@@ -9,13 +9,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat on Game, or CAST_KEY inside a second cast.
-/// (seats.ts SEAT_TABLES key by the view; the bridge writes a view's key as `view.player`, export.ts:83)
 pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
     if g.in_cast { CAST_KEY } else { seat.player }
 }
 
 /// A SEAT'S MAN IS MADE ANEW (a restart): every table kept per view moves its row from the man who left to the man who stands in his place.
-/// The TypeScript keys these tables by the VIEW (seats.ts SEAT_TABLES, the eighteen named there), which a restart does not replace, so what a module
+/// The TypeScript keys these tables by the VIEW, which a restart does not replace, so what a module
 /// kept for the seat is kept across it (the rear watch's book and its log, the squad's throws). Here a view's key is its seat's man (`view_key`), and a
 /// new man is a new key: without this every such module began again at a restart. The rows keep their order in each table; a row already under the
 /// new man (none is made before this is called) gives way to the seat's own.

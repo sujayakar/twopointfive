@@ -1,4 +1,3 @@
-//! src/game/rescue.ts lines 899 to 1061
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -13,7 +12,7 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
     g.ch[c].pos
 }
 
-/// where a round at this man goes: his chest bone, else above his feet   (rescue.ts:907, 932)
+/// where a round at this man goes: his chest bone, else above his feet
 fn chest_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Chest).copied() {
@@ -45,7 +44,7 @@ fn hostage_name(g: &Game, h: GuardId) -> String {
     }
 }
 
-/// the state endGuardScript is handed for a man taken off his script in place: his own, a dead man's being 'patrol'   (rescue.ts:938)
+/// the state endGuardScript is handed for a man taken off his script in place: his own, a dead man's being 'patrol'
 fn script_end_state(s: crate::game::GuardState) -> crate::squad::EndGuardScriptState {
     match s {
         crate::game::GuardState::Dead | crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol,
@@ -55,7 +54,7 @@ fn script_end_state(s: crate::game::GuardState) -> crate::squad::EndGuardScriptS
     }
 }
 
-/// the captor's clock, and the act it ends in: his gun on a hostage, the round, the next man's turn   (rescue.ts Rescue.clock)
+/// the captor's clock, and the act it ends in: his gun on a hostage, the round, the next man's turn
 pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     if g.rescue.t0.is_nan() || rescue_over(g) { return; }
     if let Some(a) = g.rescue.act.clone() {
@@ -167,7 +166,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him   (rescue.ts Rescue.endAct)
+/// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him
 pub fn rescue_end_act(g: &mut crate::game::Game) {
     let a = match g.rescue.act.take() {
         Some(a) => a,
@@ -185,7 +184,7 @@ pub fn rescue_end_act(g: &mut crate::game::Game) {
     }
 }
 
-/// the captor's clock moves to a step: noted, and two of the steps told to the player   (rescue.ts Rescue.setStep)
+/// the captor's clock moves to a step: noted, and two of the steps told to the player
 pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
     if s == g.rescue.step { return; }
     g.rescue.step = s;
@@ -197,7 +196,7 @@ pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) 
     }
 }
 
-/// the hostages' count, the room secured and held, the run's end   (rescue.ts Rescue.outcome)
+/// the hostages' count, the room secured and held, the run's end
 pub fn rescue_outcome(g: &mut crate::game::Game) {
     if rescue_over(g) { return; }
     let mut i = 0;
@@ -263,7 +262,7 @@ pub fn rescue_outcome(g: &mut crate::game::Game) {
     }
 }
 
-/// the hostages' voices: one low line at a time across the room, off no game die   (rescue.ts Rescue.voices)
+/// the hostages' voices: one low line at a time across the room, off no game die
 pub fn rescue_voices(g: &mut crate::game::Game) {
     let b = room(g);
     let hs = g.rescue.hostages.clone();
@@ -312,7 +311,7 @@ fn next_voice(g: &mut Game, alive: &[GuardId]) -> GuardId {
     alive[js::rem(n, alive.len() as f64) as usize]
 }
 
-/// the run's end: the result kept, the act let go, the card's line   (rescue.ts Rescue.end)
+/// the run's end: the result kept, the act let go, the card's line
 pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
     let lost = state == RescueEndState::Lost;
     let ops = g.rescue.ops.clone();
@@ -344,7 +343,7 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
     crate::game::game_msg(g, &line);
 }
 
-/// where it stands, in one word   (rescue.ts Rescue.state)
+/// where it stands, in one word
 pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
     if !g.rescue.active { return RescueState::Off; }
     if let Some(r) = &g.rescue.result {

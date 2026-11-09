@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 1 to 325
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// When key k (0..3) of a code is pressed, on a verb `dur` long.   (character.ts workKeyBeat)
+/// When key k (0..3) of a code is pressed, on a verb `dur` long.
 pub fn work_key_beat(k: f64, dur: f64) -> f64 {
     let work = work();
     work.key_lead + (k + 0.5) * (dur - work.key_lead) / 4.0

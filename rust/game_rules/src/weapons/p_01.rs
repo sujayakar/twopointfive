@@ -1,4 +1,3 @@
-//! src/game/weapons.ts lines 1 to 350
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A row's turn weight: its own `handling`, else its class's, else a carbine's. (weapons.ts handlingOf)
+/// A row's turn weight: its own `handling`, else its class's, else a carbine's.
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 {
     if let Some(h) = def.handling { return h; }
     let table = crate::weapons::handling_by_class();

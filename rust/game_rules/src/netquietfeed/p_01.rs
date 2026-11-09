@@ -1,4 +1,3 @@
-//! src/game/netquietfeed.ts lines 1 to 26
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,19 +11,19 @@ fn file(g: &mut Game, f: NetFeed) {
     g.m.netquietfeed.filed.get_or_insert_with(Vec::new).push(f);
 }
 
-/// `asker` asks for `who` by name: filed for netquiet's tick while `live`.   (netquietfeed.ts netFeedAsked)
+/// `asker` asks for `who` by name: filed for netquiet's tick while `live`.
 pub fn net_feed_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: GuardId, men: &[GuardId]) {
     if !g.m.netquietfeed.netfeed.live { return; }
     file(g, NetFeed { what: NetFeedWhat::Asked, by: asker, who: Some(who), men: men.to_vec() });
 }
 
-/// `finder` has a man of the squad down: filed for netquiet's tick while `live`.   (netquietfeed.ts netFeedBody)
+/// `finder` has a man of the squad down: filed for netquiet's tick while `live`.
 pub fn net_feed_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     if !g.m.netquietfeed.netfeed.live { return; }
     file(g, NetFeed { what: NetFeedWhat::Body, by: finder, who: None, men: men.to_vec() });
 }
 
-/// What was filed since the last take; the book is left empty.   (netquietfeed.ts netFeedTake)
+/// What was filed since the last take; the book is left empty.
 pub fn net_feed_take(g: &mut crate::game::Game) -> Vec<crate::netquietfeed::NetFeed> {
     let filed = &mut g.m.netquietfeed.filed;
     match filed {

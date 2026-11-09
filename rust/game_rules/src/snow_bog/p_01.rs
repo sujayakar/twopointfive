@@ -1,4 +1,3 @@
-//! src/game/snowBog.ts lines 1 to 73
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,10 +6,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `b` of the level's boxes, its row. (boxes.ts:66 Box) `g.level.boxes` is `g.col.boxes`, one array (game.ts:1100): the IDs are there, the rows have no table.
+/// `b` of the level's boxes, its row. (boxes.ts:66 Box) `g.level.boxes` is `g.col.boxes`, one array: the IDs are there, the rows have no table.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's. (snowBog.ts bogRun)
+/// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's.
 pub fn bog_run(g: &crate::game::Game, bog: f64) -> f64 {
     run_on(bog, g.k.snowbog.run)
 }
@@ -20,7 +19,7 @@ fn run_on(bog: f64, run: f64) -> f64 {
     if bog > 0.0 { m::pow(m::max(0.0, 1.0 - bog), run) } else { 1.0 }
 }
 
-/// What snow each box of the level is, a byte a box, worked out once a level. (snowBog.ts ground)
+/// What snow each box of the level is, a byte a box, worked out once a level.
 pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
     if let Some(found) = &g.m.snow_bog.ground_of { return found.clone(); }
     let kind = snow_kind();
@@ -47,18 +46,18 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
     made
 }
 
-/// May the ground bog anything in this game now. (snowBog.ts snowBogMay)
+/// May the ground bog anything in this game now.
 pub fn snow_bog_may(g: &crate::game::Game) -> bool {
     let name = crate::scene_level_load::level_name_of(g);
     crate::weather_kinds::snow_level(g, name.as_deref())
 }
 
-/// The level's snow as a byte a box. (snowBog.ts snowBogKinds)
+/// The level's snow as a byte a box.
 pub fn snow_bog_kinds(g: &mut crate::game::Game) -> Vec<u8> {
     ground(g).kinds
 }
 
-/// How boggy the ground is where a thing touched down, 0 to 1: the module's rule, over its table of the snow and the weather's roofs. (snowBog.ts snowBogAt)
+/// How boggy the ground is where a thing touched down, 0 to 1: the module's rule, over its table of the snow and the weather's roofs.
 pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     if !snow_bog_may(g) { return 0.0; }
     crate::weather::weather_roofs_now(g);

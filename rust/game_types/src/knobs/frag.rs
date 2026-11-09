@@ -8,13 +8,13 @@ use game_derive::Knobs;
 ///  stagger: seconds folded, [nearest, farthest]. lift: how far over the resting grenade the burst is judged from (a casing on the floor throws its fragments up
 ///  and out — a 5 cm door sill is no cover). Reaction: seeM / hearM = how far off a man can notice it (a line of sight to it / its clatter by the sound's own
 ///  path); react = seconds before he acts on it [trained, not], + up to reactJit; shoutM = how far his 'grenade!' carries to his own side; fleeM = men in its line
-///  inside this move; runSpeed = a defender's legs (teammates keep their own cap — unless teampace.ts lets a man run from a blast). on = the item exists at all (false: digit 5 says so).
+///  inside this move; runSpeed = a defender's legs. on = the item exists at all (false: digit 5 says so).
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct FragK {
     #[k(2.0)] pub issue: f64,
     #[k(3.0)] pub fuse: f64,
     #[k(2.4)] pub order_fuse: f64,
-    /// the squad's: how many it carries per run (doortools.ts counts them like its bangs), the key of the door tools' 'frag and clear' row (no digit: the
+    /// the squad's: how many it carries per run, the key of the door tools' 'frag and clear' row (no digit: the
     ///  page's five are taken), how far inside the frame line a teammate throws it
     #[k(2.0)] pub squad: f64,
     #[k(String::from("KeyG"))] pub order_key: String,
@@ -29,7 +29,7 @@ pub struct FragK {
     ///  power — strength at a pane d metres off = glassPower × (1 − d ∕ glassM), against the fracture model's own thresholds GLASSBREAK.blastRunK / blastDiceK /
     ///  blastSheetK: at the numbers shipped on 10-08, float glass runs out to 3.5 m, toughened glass dices to 2.8 m, a laminated sheet leaves its frame inside 2.0 m;
     ///  a stun charge, 2.6 m at 0.6, does 1.7 m / 0.65 m / never). glassPower 0 = the burst sends glass nothing of its own (the 'bang' every charge makes still stars
-    ///  it like a stun's). paneEnergy: what a fragment has for a pane on its line, in a round's units (glasspen.ts: 0.5 = a pistol round) — 0 = standing glass stops
+    ///  it like a stun's). paneEnergy: what a fragment has for a pane on its line, in a round's units — 0 = standing glass stops
     ///  it, which is the rule; holes pass whatever it is.
     #[k(4.0)] pub glass_m: f64,
     #[k(1.5)] pub glass_power: f64,

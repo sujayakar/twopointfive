@@ -89,11 +89,8 @@ pub struct FreshItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SpottedMod {
-    /// (src/game/spotted.ts:119 men)
     pub men: JsMap<GuardId, crate::spotted::Man>,
-    /// (src/game/spotted.ts:122 SPOTTED_LOG)
     pub spotted_log: Vec<crate::spotted::SpottedModSPOTTEDLOGItem>,
-    /// (src/game/spotted.ts:312 drops)
     pub drops: Option<crate::spotted::SpottedModDropsValue>,
 }
 impl SpottedMod {

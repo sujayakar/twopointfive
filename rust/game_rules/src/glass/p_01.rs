@@ -1,4 +1,3 @@
-//! src/game/glass.ts lines 1 to 245
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -14,19 +13,19 @@ fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { 
 
 // ---- private helpers ----
 
-/// `g.level.boxes[i]`: undefined off the list, as JavaScript's (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place i
+/// `g.level.boxes[i]`: undefined off the list, as JavaScript's (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript: the box at place i
 fn box_at(g: &Game, i: f64) -> Option<BoxId> {
     let ix = i as usize;
     if ix as f64 != i { return None; }
     g.col.boxes.get(ix).copied()
 }
 
-/// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
+/// the seed's word of a box's centre and half sizes: the module's
 fn box_word(c: V3, hs: V3) -> f64 {
     ::sim::panes_box_seed(c[0], c[1], c[2], hs[0], hs[1], hs[2]) as f64
 }
 
-/// the thin axis's world direction of a box of this turn and these half sizes (glass.ts:79 paneNormal, with the box read)
+/// the thin axis's world direction of a box of this turn and these half sizes
 fn normal_of(yaw: f64, h: V3) -> V3 {
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     if h[0] < h[2] { [cs, 0.0, -sn] } else { [sn, 0.0, cs] }
@@ -44,14 +43,14 @@ fn raise_noise(g: &mut Game, who: f64) {
     }
 }
 
-/// one draw of a blast's word (glass.ts:201)
+/// one draw of a blast's word
 fn blast_step(s: u32) -> u32 {
     (m::imul((s ^ (s >> 15)) as i32, 0x2C1B3C6Du32 as i32) as u32).wrapping_add(0x297A2D39)
 }
 
 // ---- the part ----
 
-/// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
+/// per-Game glass bookkeeping, made at first asking: the row itself
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {
     if g.m.glass.states.is_none() {
         let mut panes: Vec<f64> = Vec::new();
@@ -64,7 +63,7 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
     g.m.glass.states.as_mut().unwrap()
 }
 
-/// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand (glass.ts resetGlass)
+/// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand
 pub fn reset_glass(g: &mut crate::game::Game) {
     ::sim::panes::forget_heard(g.sim);   // its first test is panesUntouched's: the part's first word
     let s = match g.m.glass.states.as_mut() { Some(s) => s, None => return };
@@ -74,12 +73,12 @@ pub fn reset_glass(g: &mut crate::game::Game) {
     s.crack_at = -1e9;
 }
 
-/// every static Glass box index of this level (glass.ts glassPanes)
+/// every static Glass box index of this level
 pub fn glass_panes(g: &mut crate::game::Game) -> Vec<f64> {
     glass_state(g).panes.clone()
 }
 
-/// a box flagged Glass (glass.ts isPane)
+/// a box flagged Glass
 pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     match b {
         Some(b) => glass_flagged(g.tab.boxes[b].flags),
@@ -87,20 +86,20 @@ pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     }
 }
 
-/// a pane that can craze (thin); solid glass is glass but no sheet (glass.ts isSheet)
+/// a pane that can craze (thin); solid glass is glass but no sheet
 pub fn is_sheet(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
     if !is_pane(g, b) { return false; }
     let h = seam_box(g, b.unwrap()).h;
     m::min(h[0], h[2]) <= THICK_GLASS_HALF
 }
 
-/// the pane's unit normal: the world direction of its thin axis, sign arbitrary (glass.ts paneNormal)
+/// the pane's unit normal: the world direction of its thin axis, sign arbitrary
 pub fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (yaw, h) = { let row = seam_box(g, b); (row.yaw, row.h) };
     normal_of(yaw, h)
 }
 
-/// files a pane's crash for the floor's ears, heard from both its faces (glass.ts glassEvent)
+/// files a pane's crash for the floor's ears, heard from both its faces
 pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who: f64) {
     let serial = g.serial();
     let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() };
@@ -115,7 +114,7 @@ pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who:
     g.events.push(e);
 }
 
-/// nearest point of box b (yawed, no rot) to p, and the distance (glass.ts nearestOnBox)
+/// nearest point of box b (yawed, no rot) to p, and the distance
 pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
     let (yaw, c, h) = { let row = seam_box(g, b); (row.yaw, row.c, row.h) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
@@ -127,28 +126,28 @@ pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glas
     NearestOnBox { q, d: v3::dist(p, q) }
 }
 
-/// what a box is, as one 32-bit word: its centre and half sizes to the millimetre (glass.ts boxSeed)
+/// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
 pub fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
     let (c, hs) = { let row = seam_box(g, b); (row.c, row.h) };
     box_word(c, hs)
 }
 
-/// a box's word and a point to the millimetre, as one 32-bit word (glass.ts pointSeed)
+/// a box's word and a point to the millimetre, as one 32-bit word
 pub fn point_seed(word: f64, p: V3) -> f64 {
     ::sim::panes::point_seed(js::to_u32(word), p[0], p[1], p[2]) as f64
 }
 
-/// a 32-bit hash of where a box was hit (glass.ts hitSeed)
+/// a 32-bit hash of where a box was hit
 pub fn hit_seed(g: &mut crate::game::Game, b: BoxId, p: V3) -> f64 {
     point_seed(box_seed(g, b), p)
 }
 
-/// the seed of a blast on a box: the charge's point on the floor plan, its height left out (glass.ts blastSeed)
+/// the seed of a blast on a box: the charge's point on the floor plan, its height left out
 pub fn blast_seed(word: f64, at: V3) -> f64 {
     point_seed(word, [at[0], 0.0, at[2]])
 }
 
-/// THE IMPACT ENTRY POINT: a blow of `energy` met pane `pane` at `point` flying `dir`: the fracture filed, the crack decal, the crack heard, the event on the floor's ears (glass.ts glassImpact)
+/// THE IMPACT ENTRY POINT: a blow of `energy` met pane `pane` at `point` flying `dir`: the fracture filed, the crack decal, the crack heard, the event on the floor's ears
 pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option<V3>, energy: f64, who: f64, cause: Option<crate::glass::GlassImpactCause>, quiet: Option<bool>, opts: Option<crate::glass::GlassImpactOpts>) -> crate::glassbreak::GlassImpact {
     let cause = cause.unwrap_or(GlassImpactCause::Shot);
     let quiet = quiet.unwrap_or(false);
@@ -229,7 +228,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     res
 }
 
-/// a round (or anything else that stars glass) met pane `bi` = glassImpact at energy 1; false if `bi` is not a pane (glass.ts glassHit)
+/// a round (or anything else that stars glass) met pane `bi` = glassImpact at energy 1; false if `bi` is not a pane
 pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>, who: f64, cause: Option<crate::glass::GlassHitCause>, quiet: Option<bool>) -> bool {
     let cause = match cause.unwrap_or(GlassHitCause::Shot) {
         GlassHitCause::Shot => GlassImpactCause::Shot,
@@ -239,7 +238,7 @@ pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>,
     glass_impact(g, bi, hit_p, dir, 1.0, who, Some(cause), quiet, None).pane
 }
 
-/// stars every sheet whose nearest point is within `radius` of `at`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it (glass.ts crackNear)
+/// stars every sheet whose nearest point is within `radius` of `at`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it
 pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f64 {
     let mut n = 0.0;
     for bi in glass_panes(g) {
@@ -270,7 +269,7 @@ pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f
     n
 }
 
-/// once a frame: a stun charge beside the glazing stars the panes near it, each 'bang' event looked at once (glass.ts updateGlass)
+/// once a frame: a stun charge beside the glazing stars the panes near it, each 'bang' event looked at once
 pub fn update_glass(g: &mut crate::game::Game) {
     glass_state(g);
     // a live index: glass_break_bang can file 'glass' events on the list under the walk

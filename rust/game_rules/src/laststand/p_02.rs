@@ -1,4 +1,3 @@
-//! src/game/laststand.ts lines 410 to 618
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -20,7 +19,7 @@ fn fresh_seed(seed: f64, attempt: f64) -> f64 {
 
 // ---------------------------------------------------------------- the seams with the rest of the game
 
-/// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.   (laststand.ts fresh)
+/// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.
 pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     let (seed, attempt) = (g.room_clear.seed, g.room_clear.attempt);
     let mut die = crate::math_dice::die_of(fresh_seed(seed, attempt));
@@ -44,12 +43,12 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     }
 }
 
-/// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.   (laststand.ts lastStandTick)
+/// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.
 pub fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
 }
 
-/// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
+/// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.
 pub fn step_stand(g: &mut crate::game::Game) {
     if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
@@ -82,7 +81,7 @@ pub fn step_stand(g: &mut crate::game::Game) {
     if !st(g).at.is_empty() { tick_moved(g); }
 }
 
-/// The fight is over (RoomFight.stop): everything forgotten but the counts and the lines.   (laststand.ts lastStandStop)
+/// The fight is over (RoomFight.stop): everything forgotten but the counts and the lines.
 pub fn last_stand_stop(g: &mut crate::game::Game) {
     let Some(st) = g.m.laststand.states.as_mut() else { return };
     st.check = None;

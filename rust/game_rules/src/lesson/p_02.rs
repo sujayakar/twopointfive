@@ -1,4 +1,3 @@
-//! src/game/lesson.ts lines 298 to 429
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A new lesson: nothing done, no run yet.   (lesson.ts Lesson.constructor)
+/// A new lesson: nothing done, no run yet.
 pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
     crate::lesson::Lesson::blank()
 }
 
-/// The lesson in force (None: not live).   (lesson.ts Lesson.data)
+/// The lesson in force (None: not live).
 pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
@@ -28,24 +27,24 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
     }
 }
 
-/// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
+/// The step that is up for the mission that is running: a fresh run is on its first step.
 pub fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
-/// The index of the step that is up for the mission that is running.   (lesson.ts Lesson.index)
+/// The index of the step that is up for the mission that is running.
 pub fn lesson_index(g: &crate::game::Game) -> f64 {
     lesson_at(g)
 }
 
-/// The step that is up, if any.   (lesson.ts Lesson.step)
+/// The step that is up, if any.
 pub fn lesson_step(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonStep> {
     let l = lesson_data(g)?;
     let at = lesson_at(g);
     l.steps.get(at as usize).cloned()
 }
 
-/// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.   (lesson.ts Lesson.tick)
+/// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.
 pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     let l = match lesson_data(g) {
         Some(l) => l.clone(),
@@ -106,7 +105,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.   (lesson.ts Lesson.advance)
+/// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.
 pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
@@ -126,7 +125,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
     crate::savestate::checkpoints_request(g, "lesson", &label);
 }
 
-/// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
+/// What a step that has just come up has seen: nothing, counted from now.
 pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
@@ -155,7 +154,7 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
     }
 }
 
-/// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
+/// This frame's deeds into the step's counts.
 pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
@@ -227,7 +226,7 @@ pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut
 
 
 
-/// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
+/// The run is over, whichever scenario it was.
 pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
@@ -236,7 +235,7 @@ pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
-/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.   (lesson.ts Lesson.settling)
+/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.
 pub fn lesson_settling(g: &crate::game::Game) -> bool {
     run_is_mission(g) && g.lesson.seen.as_ref().map_or(false, |s| s.done_t.is_some() && s.done_i == Some(g.lesson.i))
 }
@@ -301,7 +300,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 }
 
 
-/// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
+/// One line of the lesson's own log, kept to its last rows.
 pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
     let row = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.lesson.log.push(row);
@@ -310,7 +309,7 @@ pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
     }
 }
 
-/// A step's line as the keys stand.   (lesson.ts lineOf)
+/// A step's line as the keys stand.
 pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
@@ -323,7 +322,7 @@ fn who_down(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     g.pl[p].down
 }
 
-/// One more of a deed, by its key.   (lesson.ts Lesson.count `add`)
+/// One more of a deed, by its key.
 fn add(s: &mut crate::lesson::StepSeen, k: String) {
     let n = s.n.get(k.clone()).copied().unwrap_or(0.0);
     s.n.set(k, n + 1.0);
@@ -334,12 +333,12 @@ fn filled(o: &Option<String>) -> Option<&str> {
     o.as_deref().filter(|s| !s.is_empty())
 }
 
-/// `this.run === g.mission`: the same run, by the Mission's serial.   (lesson.ts:320, 330, 348)
+/// `this.run === g.mission`: the same run, by the Mission's serial.
 fn run_is_mission(g: &Game) -> bool {
     g.lesson.run == Some(g.mission.serial)
 }
 
-/// `T.done` as `passes` takes it (lesson.ts:342). SKELETON-GAP: a level's test and LESSON_TESTS' test are two enums of the same rows. A word no arm's type holds is Unknown, which never passes, as `p.slot === t.slot`, `orders.who === t.who` and `men(<word>)` (no man's pair) never do.
+/// `T.done` as `passes` takes it. SKELETON-GAP: a level's test and LESSON_TESTS' test are two enums of the same rows. A word no arm's type holds is Unknown, which never passes, as `p.slot === t.slot`, `orders.who === t.who` and `men(<word>)` (no man's pair) never do.
 fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::LessonTest {
     use crate::lesson::LessonTest as T;
     use crate::orders::{SquadOrdersMenSel as Sel, Who};

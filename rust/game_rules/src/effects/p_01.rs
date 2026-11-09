@@ -1,4 +1,3 @@
-//! src/game/effects.ts lines 1 to 283
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -11,7 +10,7 @@ type Emitter = crate::smoke_types::SmokeEmitter;
 type Kind = crate::smoke_types::SmokeEmitterKind;
 type Lattice = crate::smoke_types::SmokeEmitterLattice;
 
-/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone. (combat.ts fireWeaponRaw track and port; sparks.ts tracker)
+/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone.
 pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
@@ -43,7 +42,7 @@ fn smoke_emit(g: &mut Game, e: &Emitter) {
 }
 
 // ---------------------------------------------------------------- spawners
-/// Muzzle frame for the emitter offsets: z = bore, y = up-ish, x = right. (effects.ts muzzleFrame)
+/// Muzzle frame for the emitter offsets: z = bore, y = up-ish, x = right.
 pub fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame {
     let z = v3::normalize(d);
     let mut y = v3::sub([0.0, 1.0, 0.0], v3::scale(z, z[1]));
@@ -54,24 +53,21 @@ pub fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame {
     MuzzleFrame { o: v3::copy(o), x: v3::cross(y, z), y, z }
 }
 
-/// A solver that takes nothing (spawnShot's `gas: false`). (effects.ts NO_GAS)
+/// A solver that takes nothing (spawnShot's `gas: false`).
 pub mod no_gas {
-    /// (effects.ts NO_GAS.emit)
     pub fn emit() {}
-    /// (effects.ts NO_GAS.push)
     pub fn push() {}
-    /// (effects.ts NO_GAS.inSmokeDomain)
     pub fn in_smoke_domain() -> bool {
         false
     }
 }
 
-/// An offset in the muzzle frame, as a point. (effects.ts spawnShot at3)
+/// An offset in the muzzle frame, as a point.
 fn at3(muzzle: V3, f: &MuzzleFrame, off: V3) -> V3 {
     v3::mad(v3::mad(v3::mad(muzzle, f.x, off[0]), f.y, off[1]), f.z, off[2])
 }
 
-/// A shot from `muzzle` down `dir`: bore jet, side ports, the wisp; returns the light to fire. (effects.ts spawnShot)
+/// A shot from `muzzle` down `dir`: bore jet, side ports, the wisp; returns the light to fire.
 pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO) -> Vec<crate::effects::FxLight> {
     let gas = o.gas != Some(false); // `smoke = NO_GAS`: its emit does nothing, so no call is made
     let s = shot();
@@ -130,12 +126,12 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
     }]
 }
 
-/// A burst's seeded draw in [0, 1). (effects.ts spawnBurst rnd)
+/// A burst's seeded draw in [0, 1).
 fn rnd(seed: f64, k: f64) -> f64 {
     let t = m::sin(seed * 37.31 + k * 91.7) * 43758.5453;
     t - m::floor(t)
 }
-/// A direction with its seeded deviation. (effects.ts spawnBurst wobble)
+/// A direction with its seeded deviation.
 fn wobble(seed: f64, dv: V3, amount: f64, k: f64) -> V3 {
     v3::normalize([
         dv[0] + (rnd(seed, k) - 0.5) * amount,
@@ -144,7 +140,7 @@ fn wobble(seed: f64, dv: V3, amount: f64, k: f64) -> V3 {
     ])
 }
 
-/// A stun canister coming apart at `at`: end jets, body vents, wisp, sparks and the smoke hung off them; returns the flash. (effects.ts spawnBurst)
+/// A stun canister coming apart at `at`: end jets, body vents, wisp, sparks and the smoke hung off them; returns the flash.
 pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate::effects::SpawnBurstO>) -> crate::effects::FxLight {
     let b = bang();
     let dens = b.density * b.density_gain;
@@ -226,7 +222,7 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
     FxLight { pos: v3::add(at, [0.0, b.light_lift, 0.0]), color: b.light_color, intensity: b.light_power, range: b.light_range, ttl: b.light_duration, radius: Some(b.light_radius) }
 }
 
-/// The smoke can venting along `yaw` from `at`; returns the emission time for the hiss. (effects.ts spawnVent)
+/// The smoke can venting along `yaw` from `at`; returns the emission time for the hiss.
 pub fn spawn_vent(g: &mut crate::game::Game, at: V3, yaw: f64, o: Option<crate::effects::SpawnVentO>) -> f64 {
     let o = o.unwrap_or_default();
     let v = vent();
@@ -240,7 +236,7 @@ pub fn spawn_vent(g: &mut crate::game::Game, at: V3, yaw: f64, o: Option<crate::
     seconds
 }
 
-/// Where a can lying at `item_pos` vents from, for a jet along `yaw`. (effects.ts ventMouth)
+/// Where a can lying at `item_pos` vents from, for a jet along `yaw`.
 pub fn vent_mouth(item_pos: V3, yaw: f64) -> V3 {
     let v = vent();
     [item_pos[0] + m::sin(yaw) * v.standoff, item_pos[1] + v.height, item_pos[2] + m::cos(yaw) * v.standoff]

@@ -1,4 +1,3 @@
-//! src/game/falling.ts lines 1 to 46
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The ray a falling thing asks of what it lands on: the `t` of `{ t } | null`. Statics, or the statics and then the props up to the statics' `t`, the props' answer first. (falling.ts FallWorld.raycast; shards.ts:568 g.col; debris.ts:114 solids)
+/// The ray a falling thing asks of what it lands on: the `t` of `{ t } | null`. Statics, or the statics and then the props up to the statics' `t`, the props' answer first.
 fn ask(g: &mut Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f64) -> Option<f64> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| h.t);
     match world {
@@ -19,12 +18,12 @@ fn ask(g: &mut Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f6
     }
 }
 
-/// The time a fall from `h` takes at downward speed `vy`. (falling.ts fallOf's tOf)
+/// The time a fall from `h` takes at downward speed `vy`.
 fn t_of(vy: f64, gravity: f64, h: f64) -> f64 {
     (-vy + m::sqrt(vy * vy + 2.0 * gravity * h)) / gravity
 }
 
-/// Where and when something let go at `c` with velocity `v` reaches what is under it, a share `reach_k` of the way sideways. (falling.ts fallOf)
+/// Where and when something let go at `c` with velocity `v` reaches what is under it, a share `reach_k` of the way sideways.
 pub fn fall_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, reach_k: f64, world: crate::falling::FallWorld) -> crate::falling::FallOf {
     fall_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity, reach_k)
 }
@@ -55,7 +54,7 @@ fn fall_along(ray: &mut dyn FnMut(V3, V3, f64) -> Option<f64>, c_2: V3, v: V3, g
     crate::falling::FallOf { t: t_of(vy, gravity, h), pos: [x, c[1] - h, z] }
 }
 
-/// The same question asked along the arc, for a thing thrown: when and where it comes to lie. (falling.ts flightOf)
+/// The same question asked along the arc, for a thing thrown: when and where it comes to lie.
 pub fn flight_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, world: crate::falling::FallWorld) -> crate::falling::FlightOf {
     flight_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity)
 }

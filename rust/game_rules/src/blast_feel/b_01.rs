@@ -1,4 +1,4 @@
-//! THE FEEL OF A WALL CHARGE GOING OFF (src/game/blastFeel.ts): what of it the tick itself decides or writes.
+//! THE FEEL OF A WALL CHARGE GOING OFF: what of it the tick itself decides or writes.
 //!
 //! TRANSLATED: the charges that stand set remembered for the next frame's blast (`seen`); `wall_report`, which combat's stun burst asks before it plays
 //! the can's report (true = this burst is a wall charge's, and its own report is played in the can's place); the report's sounds; the kick written to
@@ -19,16 +19,16 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The kick's strength as this machine last left it: the host's storage. Here only "asked". (src/game/blastFeel.ts:84 loadFeel)
+/// The kick's strength as this machine last left it: the host's storage. Here only "asked".
 pub fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 
-/// this view's state, made on first ask (src/game/blastFeel.ts:93 stateOf)
+/// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0 })
 }
 
-/// This module's own dice: a counter of its own through a hash. (src/game/blastFeel.ts:95 hashU)
+/// This module's own dice: a counter of its own through a hash.
 pub fn hash_u(n: f64) -> f64 {
     let mut x = (m::imul(js::to_i32(n) ^ 0x51ed270b, 0x85ebca6bu32 as i32)) as u32;
     x ^= x >> 15;
@@ -36,18 +36,15 @@ pub fn hash_u(n: f64) -> f64 {
     x ^= x >> 13;
     x as f64
 }
-/// (src/game/blastFeel.ts:96 dice)
 pub fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
-/// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0 (src/game/blastFeel.ts:98 live)
+/// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0
 pub fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
-/// (src/game/blastFeel.ts:99 thick)
 pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
-/// (src/game/blastFeel.ts:100 near)
 pub fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
-/// Where a wall charge's borrowed stun burst stands. (src/game/blastFeel.ts:102 burstAt)
+/// Where a wall charge's borrowed stun burst stands.
 pub fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
-/// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height. (src/game/blastFeel.ts:104 holed)
+/// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height.
 pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let (h, th) = (g.k.wallcharge.height, thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
@@ -55,12 +52,11 @@ pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool
 }
 
 /// Combat's stun burst, where it plays the can's report: true = this burst is a wall charge's and its own report is played (the can's is not); false =
-/// not this module's (the switch off, the DRESS row down, a thrown can, a door charge). (src/game/blastFeel.ts:109 wallReport)
+/// not this module's (the switch off, the DRESS row down, a thrown can, a door charge).
 pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
     crate::seats::first_of(g, &mut |v: &mut Game| if wall_report_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is: seats.ts)
 }
 
-/// (src/game/blastFeel.ts:110 wallReportOf)
 pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
@@ -85,7 +81,7 @@ pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
 }
 
 /// game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
-/// later stage of its blast are the team's doing: the fog's begin / done round it. (src/game/blastFeel.ts:129 blastFeelTick)
+/// later stage of its blast are the team's doing: the fog's begin / done round it.
 pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
     let who = g.ch[g.pl[g.player].ch].id;
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
@@ -93,7 +89,6 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
     crate::fogofwar::fog_of_war_done(g, was);
 }
 
-/// (src/game/blastFeel.ts:130 blastFeelTickRaw)
 pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
@@ -120,7 +115,6 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
 }
 
 /// THE KICK this frame: every live blast's snap away from it, ringing down: metres to add to the look-at for the render (None: none).
-/// (src/game/blastFeel.ts:146 kickOf)
 pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
     let f = g.m.blast_feel.feel.clone(); let time = g.time;
     let (target, forward) = { let c = &g.tab.camera[cam]; (c.target, c.forward) };
@@ -145,7 +139,6 @@ pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option
 }
 
 /// THE REPORT: crack, thump and patter from the blast, the crack thinner the further it has come; close to it, a second ring in the ears.
-/// (src/game/blastFeel.ts:162 report)
 pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;

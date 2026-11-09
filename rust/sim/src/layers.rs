@@ -1,4 +1,4 @@
-//! THE ANIMATOR'S LAYERS (src/game/character.ts CharacterAnimator) — the steps of a character's update that pose him. A layer is written once, here.
+//! THE ANIMATOR'S LAYERS — the steps of a character's update that pose him. A layer is written once, here.
 //! (Sixty-two came over from TypeScript methods of the same name, statement for statement; that TypeScript is gone.) It reads and writes the pose WHERE IT
 //! LIVES (the game's pool, poses.rs; the questions of skeleton.rs are plain calls here, with no crossing), reads its knobs and the rig's named nodes from
 //! knobs.rs, and is handed the numbers of the animator it needs on the bench's `args`, in the order its comment gives. What a layer keeps from one tick to
@@ -150,7 +150,7 @@ fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
     normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
 }
 /// A LAYER'S BLEND AND ITS SAMPLE (skeleton.rs ask_blend, ask_sample) are worked as the tick's knob says: in singles under POSEMATH.singles, as the host's
-/// own are (anim/skeleton.ts blendPose, sampleClip read the same switch as they ask)
+/// own are
 #[inline(always)]
 fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     ask_blend_how(g, a, b, w, masked, out, n, truthy(POSE_SINGLES))
@@ -170,7 +170,7 @@ fn ch(d: &[S], i: usize, c: usize) -> f64 {
 fn set_ch(d: &mut [S], i: usize, c: usize, v: f64) {
     put(d, c * (d.len() / NODE) + i, v)
 }
-/// HOLD.lower's number, or HOLD.beats.lower's while the hold is played in beats (character.ts holdLayer `LW`)
+/// HOLD.lower's number, or HOLD.beats.lower's while the hold is played in beats
 #[inline(always)]
 fn lower_k(beats: bool, in_beats: usize, plain: usize) -> f64 {
     if beats {
@@ -195,7 +195,7 @@ fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     set_ch(d, i, 1, y);
     set_ch(d, i, 2, z);
 }
-/// quat.axisAngle about the model's X, Y, Z (character.ts qPitch, qYaw, qRoll): the products with the axis's noughts are written out, since −0 is a number too
+/// quat.axisAngle about the model's X, Y, Z: the products with the axis's noughts are written out, since −0 is a number too
 #[inline(always)]
 fn q_pitch(a: f64) -> [f64; 4] {
     let s = sin(a / 2.0);
@@ -725,7 +725,7 @@ pub fn soft_knees(g: usize, at: usize) -> u32 {
     .unwrap_or(0)
 }
 
-/// CharacterAnimator.runArms — a run carries its arms close (character.ts RUNARMS): each hand read in the shoulder line's own frame (to his left along the
+/// CharacterAnimator.runArms — a run carries its arms close: each hand read in the shoulder line's own frame (to his left along the
 /// two shoulder joints, level; up; forward), its sideways travel drawn in by the run's share of the standing pose, its fore-aft travel lengthened and its
 /// front lifted by the sprint's, and the arm solved to it with the elbow behind him. The hand follows its forearm.
 /// args: 0 the run's share (jog through sprint) · 1 the sprint's
@@ -1777,7 +1777,7 @@ fn curve_k<const N: usize>(t: f64, at: &[[usize; 2]; N]) -> f64 {
     }
     curve(t, &keys)
 }
-/// the flinch's envelope over its own length, the hit's over seconds, the start's over its own length (character.ts MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE.env)
+/// the flinch's envelope over its own length, the hit's over seconds, the start's over its own length
 const FLINCH_KEYS: [[usize; 2]; 5] = [[FLINCH_ENV_0_0, FLINCH_ENV_0_1], [FLINCH_ENV_1_0, FLINCH_ENV_1_1], [FLINCH_ENV_2_0, FLINCH_ENV_2_1], [FLINCH_ENV_3_0, FLINCH_ENV_3_1], [FLINCH_ENV_4_0, FLINCH_ENV_4_1]];
 const HIT_KEYS: [[usize; 2]; 6] = [[HIT_ENV_0_0, HIT_ENV_0_1], [HIT_ENV_1_0, HIT_ENV_1_1], [HIT_ENV_2_0, HIT_ENV_2_1], [HIT_ENV_3_0, HIT_ENV_3_1], [HIT_ENV_4_0, HIT_ENV_4_1], [HIT_ENV_5_0, HIT_ENV_5_1]];
 const START_KEYS: [[usize; 2]; 5] = [[START_ENV_0_0, START_ENV_0_1], [START_ENV_1_0, START_ENV_1_1], [START_ENV_2_0, START_ENV_2_1], [START_ENV_3_0, START_ENV_3_1], [START_ENV_4_0, START_ENV_4_1]];
@@ -2227,7 +2227,7 @@ pub fn gaze_keep(g: usize, at: usize) -> u32 {
 
 // ================================================================ THE ARMS
 // An arm is posed on a COPY of the pose (a second pose of the pool, the animator's pB) and laid back through a mask: the copy is made with `ask_blend` at
-// weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints (`ask_mask`: skeleton.ts buildMask) and
+// weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints and
 // the copy is blended in. The run-forward bones are then the COPY's, as the TypeScript leaves them.
 
 /// both arms from the collar bones down (CharacterAnimator.armsMask)
@@ -2347,7 +2347,7 @@ pub fn carry_arms(g: usize, at: usize, at_b: usize, at_aim: usize) -> u32 {
 
 // ─────────────────────────────── THE HANDS ───────────────────────────────
 
-/// THE HAND PASS'S COLUMNS (character.ts hn.base, hn.note), after every layer's own numbers and columns: each side's fifteen digit joints as the locomotion
+/// THE HAND PASS'S COLUMNS, after every layer's own numbers and columns: each side's fifteen digit joints as the locomotion
 /// left them this frame (the thumb's three, then each finger's three, a rotation each), then each side's five notes (how near a layer's hand came to that,
 /// digit by digit; no layer yet = infinity). A layer that shapes a hand is handed them and hands the notes back.
 const HANDS_AT: usize = 128;
@@ -3158,7 +3158,7 @@ pub fn creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     RAN | RAN_ALL
 }
 
-/// the support arm from the upper arm down (the collar bone stays the clip's), or both arms (character.ts armMask)
+/// the support arm from the upper arm down (the collar bone stays the clip's), or both arms
 fn arm_mask(both: bool) {
     ask_mask(&[(role(UPPER_ARM_L), 1.0, true), (if both { role(UPPER_ARM_R) } else { usize::MAX }, 1.0, true)]);
 }
@@ -5986,7 +5986,6 @@ fn opt(flag: f64, v: f64) -> Option<f64> {
         None
     }
 }
-// (the pistol whip's beats, s, and the rates the kill's eased clock follows and falls back at. character.ts keeps WHIP_THRU too, for the whip's own clock: tools/qa/layer-ident.ts `caps` holds the two to each other)
 const WHIP_WIND: f64 = 0.36;
 const WHIP_STRIKE: f64 = 0.42;
 const WHIP_THRU: f64 = 0.14;
@@ -6838,7 +6837,7 @@ fn e3(u: f64) -> f64 {
     let u = clamp(u, 0.0, 1.0);
     u * u * (3.0 - 2.0 * u)
 }
-/// a unit direction turned k of the way to another (character.ts dirMix)
+/// a unit direction turned k of the way to another
 fn dir_mix(a: [f64; 3], b: [f64; 3], kk: f64) -> [f64; 3] {
     if kk <= 0.0 {
         a
@@ -6928,9 +6927,9 @@ fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua
     let (off, bore) = (kv(&[BR_HAMMER_BACK_OFF_0, BR_HAMMER_BACK_OFF_1, BR_HAMMER_BACK_OFF_2]), kv(&[BR_HAMMER_BACK_BORE_0, BR_HAMMER_BACK_BORE_1, BR_HAMMER_BACK_BORE_2]));
     (add3(mid, in_c([off[0], off[1], off[2] - clear])), normalize(in_c(bore)))
 }
-/// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is refused by name as the game loads)
+/// how many keys of a knife blow a call may hand over
 const KNIFE_KEYS: usize = 4;
-/// how many blows of a beat a call may hand over (the room on the bench: the layer is handed the two blows it reads, character.ts blowsNear)
+/// how many blows of a beat a call may hand over
 const BIG_BLOWS_MAX: usize = 64;
 const _: () = assert!(KEYS_AT + BIG_BLOWS_MAX <= crate::skeleton::ARGS);
 /// CharacterAnimator.bigLayer — the big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot
@@ -7246,7 +7245,7 @@ fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
     let b2 = cross3(&hn, &b1);
     mad3(scale3(b1, cos(psi)), b2, sin(psi))
 }
-/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is refused by name as the game loads)
+/// how many keys a table of the throw may have
 const THROW_KEYS: usize = 16;
 /// (seventeen counts, eleven tables of two numbers a key and six of four: the whole of it fits the bench's own numbers)
 const _: () = assert!(KEYS_AT + 17 + 11 * THROW_KEYS * 2 + 6 * THROW_KEYS * 4 <= crate::skeleton::ARGS);

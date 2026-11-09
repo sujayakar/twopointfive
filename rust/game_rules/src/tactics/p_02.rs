@@ -1,4 +1,3 @@
-//! src/game/tactics.ts lines 447 to 876
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -46,7 +45,7 @@ fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     }
 }
 
-/// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts:361 tacticsPenalty, the closure it returns)
+/// what tacticsPenalty's answer charges for stepping into cell (ix, iz)
 pub fn tactics_penalty_price(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {
     let TacticsPenalty::Cells { w, door_idx, door_mult, avoid } = p;
     let i = crate::Num(iz * *w + ix);
@@ -60,7 +59,7 @@ pub fn tactics_penalty_price(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f6
     price
 }
 
-/// Once a frame: keep every plan honest and deal new ones.   (tactics.ts tickPlans)
+/// Once a frame: keep every plan honest and deal new ones.
 pub fn tick_plans(g: &mut crate::game::Game) {
     let now = g.time;
     let plans = s(g).plans.clone();
@@ -235,7 +234,7 @@ fn re_deal(g: &mut Game, plan: TacticsPlanId, live: &[GuardId], fix: V3, why: &s
     }
 }
 
-/// walk / jog / run to `goal` the way the chase always did; true once there   (tactics.ts advance)
+/// walk / jog / run to `goal` the way the chase always did; true once there
 pub fn advance(g: &mut crate::game::Game, gd: GuardId, dt: f64, goal: V3, pace: f64, out: &mut crate::tactics::TacMove) -> bool {
     crate::guards::go_to(g, gd, goal, None);
     let eyes = in_contact(g, gd);
@@ -249,7 +248,7 @@ pub fn advance(g: &mut crate::game::Game, gd: GuardId, dt: f64, goal: V3, pace: 
     arrived
 }
 
-/// planted, low, chest and gun toward `at`   (tactics.ts kneelToward)
+/// planted, low, chest and gun toward `at`
 pub fn kneel_toward(g: &mut crate::game::Game, gd: GuardId, dt: f64, at: V3, out: &mut crate::tactics::TacMove, crouch: Option<f64>) {
     let crouch = crouch.unwrap_or(1.0);
     let c = g.gd[gd].ch;
@@ -263,7 +262,7 @@ pub fn kneel_toward(g: &mut crate::game::Game, gd: GuardId, dt: f64, at: V3, out
     g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(at[0] - p[0], at[2] - p[2]), 4.0 * dt);
 }
 
-/// the flankers of a plan are all set (or there are none), or somebody has eyes on the man   (tactics.ts readyToGo)
+/// the flankers of a plan are all set (or there are none), or somebody has eyes on the man
 pub fn ready_to_go(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     if g.tab.tactics_plan[plan].contact {
         return true;
@@ -289,7 +288,7 @@ pub fn ready_to_go(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     true
 }
 
-/// some flanker of the plan is not yet set but still covering ground toward his corner   (tactics.ts flankersRunning)
+/// some flanker of the plan is not yet set but still covering ground toward his corner
 pub fn flankers_running(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
@@ -301,7 +300,7 @@ pub fn flankers_running(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     false
 }
 
-/// the word: everybody pushes   (tactics.ts goNow)
+/// the word: everybody pushes
 pub fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: &str) {
     if g.tab.tactics_plan[plan].phase != PlanPhase::Approach {
         return;
@@ -325,7 +324,7 @@ pub fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, w
     }
 }
 
-/// the man reaches the fix: off the roster into the search everybody always dropped to   (tactics.ts arrive)
+/// the man reaches the fix: off the roster into the search everybody always dropped to
 pub fn arrive(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId) {
     let plan = g.tab.tactics_role[role].plan;
     g.tab.tactics_role[role].arrived = true;
@@ -344,7 +343,7 @@ pub fn arrive(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId) {
     }
 }
 
-/// a man's move on his role   (tactics.ts moveRole)
+/// a man's move on his role
 pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt: f64) -> crate::tactics::TacMove {
     let plan = g.tab.tactics_role[role].plan;
     let mut out = TacMove { move_: 0.0, aim: None, pied: false, crouch: 0.0 };
@@ -459,7 +458,6 @@ pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt
     }
 }
 
-/// (tactics.ts presserOf)
 pub fn presser_of(g: &crate::game::Game, plan: TacticsPlanId) -> Option<GuardId> {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
@@ -470,12 +468,11 @@ pub fn presser_of(g: &crate::game::Game, plan: TacticsPlanId) -> Option<GuardId>
     None
 }
 
-/// (tactics.ts roleOfMan)
 pub fn role_of_man(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> {
     s(g).roles.get(gd).copied()
 }
 
-/// Is the man this guard is after ARMED, as far as he can know   (tactics.ts armedIntruder)
+/// Is the man this guard is after ARMED, as far as he can know
 pub fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {}
@@ -497,13 +494,13 @@ pub fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: G
     crate::game::player_gun_in_hand(g, player).is_some() && g.gd[gd].sight_t >= 0.0 && now - g.gd[gd].sight_t < ARMED_SEEN_SECS
 }
 
-/// nobody else of his side is alert (and free): he is on his own with it   (tactics.ts alone)
+/// nobody else of his side is alert (and free): he is on his own with it
 pub fn alone(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     !g.guards.iter().any(|&o| o != gd && g.gd[o].team == team && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].hold)
 }
 
-/// The corner he holds, and whether it has the line on the fix   (tactics.ts loneCorner)
+/// The corner he holds, and whether it has the line on the fix
 pub fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactics::LoneCorner {
     let from = pos_of(g, gd);
     let team = g.gd[gd].team;
@@ -574,7 +571,7 @@ pub fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::ta
     LoneCorner { p: best }
 }
 
-/// The call over the net, once per hold; his side comes   (tactics.ts loneCall)
+/// The call over the net, once per hold; his side comes
 pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lone) {
     s(g);
     l.called = true;
@@ -618,7 +615,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
     }
 }
 
-/// The lone man's move: to his corner, the hold, then on alone at a walk   (tactics.ts moveLone)
+/// The lone man's move: to his corner, the hold, then on alone at a walk
 pub fn move_lone(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lone, dt: f64) -> Option<crate::tactics::TacMove> {
     let c = g.gd[gd].ch;
     let mut out = TacMove { move_: 0.0, aim: None, pied: false, crouch: 0.0 };
@@ -669,7 +666,7 @@ fn move_lone_row(g: &mut Game, gd: GuardId, mut l: Lone, dt: f64) -> Option<TacM
     out
 }
 
-/// guards.ts, the alert branch with a fix and no eyes on his man: his role, else the lone man's angle, else null = the chase   (tactics.ts tacticsAlert)
+/// guards.ts, the alert branch with a fix and no eyes on his man: his role, else the lone man's angle, else null = the chase
 pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::tactics::TacMove> {
     if !tactics_on(g) || g.gd[gd].last_known.is_none() || g.gd[gd].pinned || g.gd[gd].hold {
         return None;
@@ -731,7 +728,7 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
     move_lone_row(g, gd, l, dt)
 }
 
-/// Once a frame, before the guards move: expire what has lapsed, read this frame's rounds, keep the plans and gates honest, deal new plans.   (tactics.ts tacticsTick)
+/// Once a frame, before the guards move: expire what has lapsed, read this frame's rounds, keep the plans and gates honest, deal new plans.
 pub fn tactics_tick(g: &mut crate::game::Game, dt: f64) {
     if !tactics_on(g) {
         let busy = g.m.tactics.states.as_ref().map_or(false, |st| !st.plans.is_empty() || st.roles.len() > 0 || st.lone.len() > 0 || st.gates.len() > 0);
@@ -766,26 +763,26 @@ pub fn tactics_tick(g: &mut crate::game::Game, dt: f64) {
     tick_plans(g);
 }
 
-/// which face of d the point is on (+1 = the +n side of the closed frame line)   (tactics.ts sideOf)
+/// which face of d the point is on (+1 = the +n side of the closed frame line)
 pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
 }
 
-/// how far along hinge → latch   (tactics.ts alongOf)
+/// how far along hinge → latch
 pub fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz
 }
 
-/// a point in the door's frame: `a` along hinge → latch, `b` out from the frame line on side sg   (tactics.ts doorPt)
+/// a point in the door's frame: `a` along hinge → latch, `b` out from the frame line on side sg
 pub fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * a + f.nx * sg * b, y, f.hz + f.uz * a + f.nz * sg * b]
 }
 
-/// the level's clear plan for this door from side sg with its stack past the jamb at `near_a`   (tactics.ts planFor)
+/// the level's clear plan for this door from side sg with its stack past the jamb at `near_a`
 pub fn plan_for(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::scene_level::RoomClearPlan> {
     let n = g.level.clear_plans.as_ref().map_or(0, |v| v.len());
     for i in 0..n {
@@ -808,7 +805,7 @@ pub fn plan_for(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> O
     None
 }
 
-/// where the k-th man (0 lead, 1 second) stacks, and the facing there   (tactics.ts stackSpot)
+/// where the k-th man (0 lead, 1 second) stacks, and the facing there
 pub fn stack_spot(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> crate::tactics::StackSpot {
     let out = if near_a <= 0.0 { -1.0 } else { 1.0 }; // which way along the frame line the wall runs from the near jamb
     let jamb = door_pt(g, d, near_a, STACK_OFF_M, sg, None);
@@ -833,7 +830,7 @@ pub fn stack_spot(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k:
     StackSpot { pos, face: face_of(pos) }
 }
 
-/// the slice: stations across the opening as far back as the floor allows, each with the point in the room his muzzle is on   (tactics.ts sliceStations)
+/// the slice: stations across the opening as far back as the floor allows, each with the point in the room his muzzle is on
 pub fn slice_stations(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::tactics::SliceStations> {
     let w = g.dr[d].def.width;
     let dir = if near_a <= 0.0 { 1.0 } else { -1.0 };
@@ -866,7 +863,7 @@ pub fn slice_stations(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) ->
     None
 }
 
-/// the entry legs for man k: the plan's beyond the frame line, else a stride and a half in and a leg to his side   (tactics.ts entryLegs)
+/// the entry legs for man k: the plan's beyond the frame line, else a stride and a half in and a leg to his side
 pub fn entry_legs(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> Vec<V3> {
     let f = crate::guards::frame_of(g, d);
     let w = g.dr[d].def.width;
@@ -903,7 +900,7 @@ pub fn entry_legs(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k:
     legs
 }
 
-/// Step him along a local path to `target` at `speed`; true once there.   (tactics.ts stepGate)
+/// Step him along a local path to `target` at `speed`; true once there.
 pub fn step_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, dt: f64, target: V3, speed: f64, face: Option<f64>) -> bool {
     let c = g.gd[gd].ch;
     let speed = crate::condition::condition_pace(g, gd, speed);
@@ -950,7 +947,7 @@ pub fn step_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     arrived || flat(g.ch[c].pos, target) < 0.15
 }
 
-/// stood still on the mark, turning to `face`   (tactics.ts standGate)
+/// stood still on the mark, turning to `face`
 pub fn stand_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, face: Option<f64>) {
     let c = g.gd[gd].ch;
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);
@@ -960,7 +957,7 @@ pub fn stand_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, face: Option<
     }
 }
 
-/// the other man on this doorway for this side, by role (a copy of his gate)   (tactics.ts gateMate)
+/// the other man on this doorway for this side, by role (a copy of his gate)
 pub fn gate_mate(g: &mut crate::game::Game, g_2: &crate::tactics::Gate, role: crate::tactics::GateMateRole, except: GuardId) -> Option<crate::tactics::GateMate> {
     s(g);
     let want = match role {
@@ -977,7 +974,7 @@ pub fn gate_mate(g: &mut crate::game::Game, g_2: &crate::tactics::Gate, role: cr
     None
 }
 
-/// The lead's call, once per danger record, and the summons of the nearest free man of his side   (tactics.ts gateCall)
+/// The lead's call, once per danger record, and the summons of the nearest free man of his side
 pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     let rec = g_2.rec;
     if g.tab.tactics_danger_rec[rec].called {
@@ -1101,7 +1098,7 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     crate::game::game_say(g, best, &answer, None, None, None);
 }
 
-/// Does this man's way take him through (or up to) a doorway dangerous to his side he has not yet taken as a drill: the gate has him.   (tactics.ts tryEngage)
+/// Does this man's way take him through (or up to) a doorway dangerous to his side he has not yet taken as a drill: the gate has him.
 pub fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerRecId]) -> Option<crate::tactics::Gate> {
     s(g);
     let c_pos = pos_of(g, gd);
@@ -1174,7 +1171,6 @@ pub fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerR
             None => (sg, near_a, plan),
         };
         let ss = stack_spot(g, d, use_side, use_near, if role == GateRole::Lead { 0.0 } else { 1.0 }, use_plan.as_ref());
-        // (lanes.ts: that jamb — or the floor beyond the doorway — is in the line of guns his side knows of: he is stopped short by that rule instead)
         if crate::lanes::lane_covers(g, gd, ss.pos) {
             continue;
         }
@@ -1225,7 +1221,7 @@ pub fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerR
     None
 }
 
-/// guards.ts followPath, first thing: true = the gate has this man's feet this frame. The gate is lent to runGate and written back.   (tactics.ts doorGate)
+/// guards.ts followPath, first thing: true = the gate has this man's feet this frame. The gate is lent to runGate and written back.
 pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     if !tactics_on(g) {
         return false;
@@ -1260,7 +1256,7 @@ pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) ->
     held
 }
 
-/// a charge in the air or on the floor when its thrower leaves the drill goes off on its own short fuse   (tactics.ts looseCan)
+/// a charge in the air or on the floor when its thrower leaves the drill goes off on its own short fuse
 pub fn loose_can(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
     if let Some(can) = g_2.can {
         if !crate::throwables::item_fired(g, can) {
@@ -1270,7 +1266,7 @@ pub fn loose_can(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
     }
 }
 
-/// a man off his gate, what he has done of the drill counted on the doorway's record   (tactics.ts releaseGate)
+/// a man off his gate, what he has done of the drill counted on the doorway's record
 pub fn release_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, why: &str) {
     s(g).gates.delete(gd);
     loose_can(g, g_2);

@@ -1,4 +1,3 @@
-//! src/game/netquiet.ts lines 433 to 519
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// What he watches from the spot: the arc's middle, moved round until his doors sit in his eyes. (netquiet.ts watch)
+/// What he watches from the spot: the arc's middle, moved round until his doors sit in his eyes.
 pub fn watch(g: &mut crate::game::Game, gd: GuardId) {
     let eye_slack = g.k.netquiet.eye_slack;
     let n = g.m.netquiet.state_of.get_mut(gd).unwrap();
@@ -22,7 +21,7 @@ fn look_from(s: V3, yaw: f64, eye: f64, eye_half: f64, arc: f64, eye_slack: f64)
     [s[0] + m::sin(y) * 6.0, 0.0, s[2] + m::cos(y) * 6.0]
 }
 
-/// What a man holding a room watches: the last man's arc, low on his spot; a whip's noise. (netquiet.ts netQuietLook)
+/// What a man holding a room watches: the last man's arc, low on his spot; a whip's noise.
 pub fn net_quiet_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     if netquiet_qa().broken { return; }
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return };
@@ -37,7 +36,7 @@ pub fn net_quiet_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     if let Some(at) = at { pt[0] = at[0]; pt[1] = 0.0; pt[2] = at[2]; }
 }
 
-/// How he stands and where his gun goes: low on his spot he is crouched; a whipping man comes round to the noise. (netquiet.ts netQuietPose)
+/// How he stands and where his gun goes: low on his spot he is crouched; a whipping man comes round to the noise.
 pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
     let n = g.m.netquiet.state_of.get(gd)?;
     let (low, whip_at) = (n.low, n.whip_at);

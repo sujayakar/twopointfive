@@ -3,7 +3,7 @@ use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
 /// the switch and its numbers: on (?flinch=0 = nobody ducks at a round but on the suppression
-///  model's own edge, as it was). `least` / `full`: what a round must weigh (suppression.ts: wNear by how near it passed + wHit by how near it struck) to duck a
+///  model's own edge, as it was). `least` / `full`: what a round must weigh to duck a
 ///  man at all, and to duck him all the way — between them from `far` of the duck up to the whole; `minTravel`: m from the muzzle inside which a round ducks
 ///  nobody (the man at the shooter's elbow); `steadyK` × for a steady defender; `friendly`: a round of his own side ducks him too. `run` (off in the module
 ///  like the switch itself, raised by the page; ?flinchrun=0): a green man alone under close fire for `breakSecs` s drops it and runs; `hotSecs`: how long

@@ -1,4 +1,3 @@
-//! src/game/aim.ts lines 1 to 368
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Back to nothing; `last_shot` stays, as in the TypeScript. (aim.ts AimState.clear)
+/// Back to nothing; `last_shot` stays, as in the TypeScript.
 pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.track = 0.0;
     this.tgt_key = String::new();
@@ -22,17 +21,17 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.left_track = 0.0;
 }
 
-/// Is the moving-feet rule of aimcost.ts in force? Never under a show. (aim.ts moveCost)
+/// Is the moving-feet rule of aimcost.ts in force? Never under a show.
 pub fn move_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
-/// Is the lamp rule of aimcost.ts in force? Never under a show. (aim.ts lampCost)
+/// Is the lamp rule of aimcost.ts in force? Never under a show.
 pub fn lamp_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
-/// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet. (aim.ts feedFeet)
+/// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet.
 pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, on: bool, hold: Option<f64>) {
     let hold = hold.unwrap_or(speed);
     a.speed_sm += (speed - a.speed_sm) * (1.0 - m::exp(-dt / m::max(tau, 1e-3)));
@@ -42,13 +41,13 @@ pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed:
     a.move_sm = if on { crate::aimcost::feet_hold(g, a.move_sm, hold, dt) } else { 0.0 };
 }
 
-/// What the feet term reads for this shooter right now, m/s. (aim.ts feetOf)
+/// What the feet term reads for this shooter right now, m/s.
 pub fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
     let f = m::max(m::hyp2(vel[0], vel[2]), a.speed_sm - steady_pace);
     if on { m::max(f, a.move_sm) * g.k.aimcost.move_k } else { f }
 }
 
-/// Feed one frame of the target into the bookkeeping; true if the bearing jumped. (aim.ts feedTarget)
+/// Feed one frame of the target into the bookkeeping; true if the bearing jumped.
 pub fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: f64, jump_deg: f64, tau: f64) -> bool {
     let dx = at[0] - from[0];
     let dz = at[2] - from[2];
@@ -69,7 +68,7 @@ pub fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], 
     jumped
 }
 
-/// Once a frame per living, free, unscripted guard: the bearing to his foe, its rate, and the track. (aim.ts trackGuard)
+/// Once a frame per living, free, unscripted guard: the bearing to his foe, its rate, and the track.
 pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
@@ -144,17 +143,17 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
 }
 
-/// Seconds to settle fully at this range. (aim.ts settleTime)
+/// Seconds to settle fully at this range.
 pub fn settle_time(p: crate::aim::SettleTimeP, dist: f64) -> f64 {
     m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0)
 }
 
-/// The first-shot gate; true with the model off. (aim.ts aimReady)
+/// The first-shot gate; true with the model off.
 pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.tune.aim_model || g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// The standoff's flank round: are the feet he remembers still enough? (aim.ts feetSettled)
+/// The standoff's flank round: are the feet he remembers still enough?
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
     !move_cost(g) || g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
 }
@@ -172,7 +171,7 @@ fn foe_or_player(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     }
 }
 
-/// The terms of a guard's cone under the model. (aim.ts guardTerms)
+/// The terms of a guard's cone under the model.
 pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim::GuardTerms {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
@@ -194,7 +193,7 @@ pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate:
     crate::aim::GuardTerms { spread: hands * settle + tgt + own + extra }
 }
 
-/// What to hand fireWeapon for this guard's round; stamps `last_shot`. (aim.ts guardRound)
+/// What to hand fireWeapon for this guard's round; stamps `last_shot`.
 pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Option<bool>) -> crate::combat::FireOpts {
     if !g.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
@@ -205,7 +204,7 @@ pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Op
     crate::combat::FireOpts { spread: Some(t.spread), steady: Some(true), ..Default::default() }
 }
 
-/// The whole cone a guard's round is drawn from. (aim.ts handsCone)
+/// The whole cone a guard's round is drawn from.
 pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
     if !g.tune.aim_model {
         let s = ai_spread_of(g, gd);
@@ -216,7 +215,7 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
     guard_terms(g, gd, extra).spread
 }
 
-/// Stop to shoot: true when the caller should brake him to a standstill. (aim.ts aimBrake)
+/// Stop to shoot: true when the caller should brake him to a standstill.
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
@@ -225,7 +224,7 @@ pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: boo
     brake
 }
 
-/// Fed the round this guard has just let go: count it if it went into the frame on his half of the line. (aim.ts noteBore)
+/// Fed the round this guard has just let go: count it if it went into the frame on his half of the line.
 pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
     if !g.tune.aim_model {
         return;
@@ -251,7 +250,7 @@ pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
     }
 }
 
-/// Two rounds running into the frame from where he stands: that spot is no line. (aim.ts boreFouled)
+/// Two rounds running into the frame from where he stands: that spot is no line.
 pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let f = match g.gd[gd].aim.fouled {
         Some(f) if g.tune.aim_model => f,
@@ -264,7 +263,7 @@ pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     f.n >= 2.0
 }
 
-/// Once a frame: Sam's track on what is under the reticle, its caps, and that man's rate across his view. (aim.ts trackPlayer)
+/// Once a frame: Sam's track on what is under the reticle, its caps, and that man's rate across his view.
 pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let p = g.k.aim.player;
@@ -348,12 +347,12 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     a.track = m::min(cap, a.track + rate * dt);
 }
 
-/// He has you lined up: his track is past the aim model's first-shot gate. (aim.ts guardAcquired)
+/// He has you lined up: his track is past the aim model's first-shot gate.
 pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// Sam's cone under the model and his track: nothing with the model off or under the puppet. (aim.ts playerAim)
+/// Sam's cone under the model and his track: nothing with the model off or under the puppet.
 pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
     if !g.tune.aim_model || g.puppet.is_some() {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
@@ -376,7 +375,7 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
     crate::aim::PlayerAim { spread: (base * settle + tgt + own) * kk, track, base, settle, tgt, own }
 }
 
-/// The one term Sam's fire sites add to their spread; stamps `last_shot`. (aim.ts samAim)
+/// The one term Sam's fire sites add to their spread; stamps `last_shot`.
 pub fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);

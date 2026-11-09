@@ -10,12 +10,12 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
 
-/// Men a game holds at once, at most.   (levelfit.ts menMost)
+/// Men a game holds at once, at most.
 pub fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
     crate::guards::MAX_SKINNED + civilians + g.k.seats.max - 1.0
 }
 
-/// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.   (levelfit.ts menHeld)
+/// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.
 pub fn men_held(g: &mut crate::game::Game) -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
     let doors = crate::sim_doorshome::door_io(g).max_contacts;
@@ -23,14 +23,14 @@ pub fn men_held(g: &mut crate::game::Game) -> f64 {
     m::min(held, crate::sim_propshome::prop_io(g).max_contacts)
 }
 
-/// What one step is handed of the men, at most.   (levelfit.ts handOverMost)
+/// What one step is handed of the men, at most.
 pub fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
     let door_men = men_most(g, civilians) * (crate::game::body_door_particles().len() as f64 + 1.0);
     let prop_men = men_most(g, civilians);
     crate::levelfit::HandOverMost { door_men, prop_men }
 }
 
-/// How many of each counted thing the game holds.   (levelfit.ts levelCaps)
+/// How many of each counted thing the game holds.
 pub fn level_caps() -> crate::levelfit::LevelFit {
     let l = crate::sim_lightshome::light_caps();
     crate::levelfit::LevelFit {
@@ -51,7 +51,7 @@ fn box_at(boxes: &[BoxId], i: f64) -> Option<BoxId> {
     if i >= 0.0 && i == m::floor(i) { boxes.get(i as usize).copied() } else { None }
 }
 
-/// A fixture box's markings that can feed a lamp.   (levelfit.ts levelCounts `marked`)
+/// A fixture box's markings that can feed a lamp.
 fn marked(g: &Game, group: &str, b: Option<BoxId>) -> f64 {
     let Some(b) = b else { return 0.0 };
     let row = &g.tab.boxes[b];
@@ -59,7 +59,7 @@ fn marked(g: &Game, group: &str, b: Option<BoxId>) -> f64 {
     match &row.marks { Some(l) => l.len() as f64, None => 0.0 }
 }
 
-/// What a level says of itself, counted before it is built.   (levelfit.ts levelCounts)
+/// What a level says of itself, counted before it is built.
 pub fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> crate::levelfit::LevelFit {
     let (mut parts, mut sheets) = (0.0, 0.0);
     for p in level.props.iter() { parts += p.parts.len() as f64; }
@@ -97,14 +97,14 @@ pub fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCou
     }
 }
 
-/// Statics that carry a cut record.   (levelfit.ts cutStatics)
+/// Statics that carry a cut record.
 pub fn cut_statics(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() { if g.tab.boxes[b].cut.as_ref().is_some_and(|c| !c.is_empty()) { n += 1.0; } }
     n
 }
 
-/// The clumps the largest sheet of a level's glass dices into, as the rule cuts them.   (levelfit.ts clumpsMost)
+/// The clumps the largest sheet of a level's glass dices into, as the rule cuts them.
 pub fn clumps_most(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() {
@@ -117,7 +117,7 @@ pub fn clumps_most(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
     n
 }
 
-/// The grid's own count of the game's box world: cells, entries of them, tilted statics. Both callers' `col` is `g.col`, so it is read there: StoodCol has no method.   (collision.ts StaticCollision.gridCount)
+/// The grid's own count of the game's box world: cells, entries of them, tilted statics. Both callers' `col` is `g.col`, so it is read there: StoodCol has no method.
 fn grid_count(g: &Game) -> (f64, f64, f64) {
     let mut entries = 0.0;
     for c in g.col.cells.iter() { entries += c.len() as f64; }
@@ -136,7 +136,7 @@ fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
     n
 }
 
-/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast. Written here on the Stood's own lists: posehome.ts's two functions have no other caller and are still stubs.   (posehome.ts manSingles, eachPosed)
+/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast. Written here on the Stood's own lists: posehome.ts's two functions have no other caller and are still stubs.
 fn man_singles_of(g: &mut Game, s: &crate::levelfit::Stood) -> f64 {
     let (Some(guards), Some(civilians)) = (&s.guards, &s.civilians) else { return 0.0 };
     if s.seats.is_none() || s.player.is_none() { return 0.0; }
@@ -158,7 +158,7 @@ fn row(row: &str, what: &str, has: f64, cap: f64, table: Option<&str>) -> crate:
     crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
 }
 
-/// Every count of a stood game against what holds it.   (levelfit.ts fitRows)
+/// Every count of a stood game against what holds it.
 pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Vec<crate::levelfit::FitRow> {
     let col = &g_2.col;
     let lv = &g_2.level;
@@ -233,19 +233,19 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
 
 // ---- the functions translated code calls
 
-/// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.   (levelfit.ts civMost)
+/// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.
 pub fn civ_most(g: &mut crate::game::Game) -> f64 {
     let held = men_held(g);
     held - men_most(g, 0.0)
 }
 
-/// A level the game will not load, said by its name where it has one.   (levelfit.ts levelTooBig)
+/// A level the game will not load, said by its name where it has one.
 pub fn level_too_big(g: &crate::game::Game, why: &str) -> String {
     let name = crate::scene_level_load::level_name_of(g);
     crate::scene_box_mirror::too_big(name.as_deref(), why)
 }
 
-/// A fixture's box that lights the room as a flat panel, or nothing: too thick, too small, or a kind of fixture that only glows.   (levelfit.ts flatPanel)
+/// A fixture's box that lights the room as a flat panel, or nothing: too thick, too small, or a kind of fixture that only glows.
 pub fn flat_panel(group: &str, h: &[f64]) -> Option<crate::levelfit::FlatPanel> {
     if group == "server_leds" || group == "emergency" || group == crate::carlamps::VEHICLE_GROUP { return None; }
     let thin: usize = if h[0] <= h[1] && h[0] <= h[2] { 0 } else if h[1] <= h[2] { 1 } else { 2 };
@@ -256,7 +256,7 @@ pub fn flat_panel(group: &str, h: &[f64]) -> Option<crate::levelfit::FlatPanel> 
     Some(crate::levelfit::FlatPanel { thin: thin as f64, a0: a0 as f64, a1: a1 as f64, area })
 }
 
-/// Why this level cannot be loaded, in words, or nothing: it fits.   (levelfit.ts levelOver)
+/// Why this level cannot be loaded, in words, or nothing: it fits.
 pub fn level_over(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> Option<String> {
     let has = level_counts(g, level);
     let cap = level_caps();
@@ -274,7 +274,7 @@ pub fn level_over(g: &mut crate::game::Game, level: &crate::levelfit::LevelCount
     if over.is_empty() { None } else { Some(level_too_big(g, &over.join(", "))) }
 }
 
-/// The room a level leaves for its pieces: how many more statics, entries of the grid's cells and cut rows the copy holds than the level stands with. Infinity where there is no module.   (levelfit.ts breakRoom)
+/// The room a level leaves for its pieces: how many more statics, entries of the grid's cells and cut rows the copy holds than the level stands with. Infinity where there is no module.
 pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol, tables: &JsMap<String, f64>) -> crate::levelfit::BreakRoom {
     let boxes = table(tables, "boxes").unwrap_or(0.0);
     if !js::truthy(boxes) { return crate::levelfit::BreakRoom { boxes: f64::INFINITY, items: f64::INFINITY, cuts: f64::INFINITY }; }
@@ -287,7 +287,7 @@ pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol, tables
     }
 }
 
-/// Why this stood game cannot be played, in words, or nothing: every row of the count not held in play is inside what holds it.   (levelfit.ts stoodOver)
+/// Why this stood game cannot be played, in words, or nothing: every row of the count not held in play is inside what holds it.
 pub fn stood_over(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Option<String> {
     let over: Vec<String> = fit_rows(g, g_2, tables).iter()
         .filter(|r| !r.play.unwrap_or(false) && r.has > r.cap)

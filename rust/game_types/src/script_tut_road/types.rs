@@ -3,21 +3,21 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (levels/tut-road.script.ts:54-57) the beat 'hold': where it stands, and what lives across a yield
+/// the beat 'hold': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadHoldFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts:61-61) the beat 'cease': where it stands, and what lives across a yield
+/// the beat 'cease': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadCeaseFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts:62-77) the beat 'road': where it stands, and what lives across a yield
+/// the beat 'road': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadRoadFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -28,14 +28,14 @@ pub struct TutRoadRoadFrame {
     pub i: f64,
 }
 
-/// (levels/tut-road.script.ts:81-81) the beat 'way': where it stands, and what lives across a yield
+/// the beat 'way': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadWayFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts:86-99) the beat 'hut': where it stands, and what lives across a yield
+/// the beat 'hut': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadHutFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -46,7 +46,7 @@ pub struct TutRoadHutFrame {
     pub i: f64,
 }
 
-/// (levels/tut-road.script.ts:104-123) the beat 'gun': where it stands, and what lives across a yield
+/// the beat 'gun': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadGunFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -63,21 +63,21 @@ pub struct TutRoadGunFrame {
     pub mode: Option<String>,
 }
 
-/// (levels/tut-road.script.ts:124-124) the beat 'bags': where it stands, and what lives across a yield
+/// the beat 'bags': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadBagsFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts:125-125) the beat 'ease': where it stands, and what lives across a yield
+/// the beat 'ease': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadEaseFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts:130-148) the beat 'gate': where it stands, and what lives across a yield
+/// the beat 'gate': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadGateFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -90,14 +90,14 @@ pub struct TutRoadGateFrame {
     pub i: f64,
 }
 
-/// (levels/tut-road.script.ts:152-152) the beat 'open': where it stands, and what lives across a yield
+/// the beat 'open': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadOpenFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
-/// (levels/tut-road.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: aim
+/// what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: aim
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadVars {
     pub hut_door: Option<crate::director::DoorRef>,

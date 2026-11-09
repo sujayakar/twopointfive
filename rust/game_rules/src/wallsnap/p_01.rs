@@ -1,4 +1,3 @@
-//! src/game/wallsnap.ts lines 1 to 128
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Within 0..1; a NaN stays a NaN. (wallsnap.ts clamp01)
+/// Within 0..1; a NaN stays a NaN.
 pub fn clamp01(x: f64) -> f64 {
     if x < 0.0 { 0.0 } else if x > 1.0 { 1.0 } else { x }
 }
 
-/// Seconds the take runs for a glide of `dist` metres and a turn of `turn` radians. (wallsnap.ts wsTakeSecs)
+/// Seconds the take runs for a glide of `dist` metres and a turn of `turn` radians.
 pub fn ws_take_secs(g: &crate::game::Game, dist: f64, turn: f64) -> f64 {
     take_secs(&g.k.wallsnap, dist, turn)
 }
@@ -22,7 +21,7 @@ fn take_secs(w: &crate::knobs::WallsnapK, dist: f64, turn: f64) -> f64 {
     m::min(w.take_max, m::max(w.take_min, t)) * m::max(0.25, w.slow_take)
 }
 
-/// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s. (wallsnap.ts wsPressNear)
+/// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s.
 pub fn ws_press_near(g: &crate::game::Game, into: f64) -> f64 {
     press_near(&g.k.wallsnap, into)
 }
@@ -31,12 +30,12 @@ fn press_near(w: &crate::knobs::WallsnapK, into: f64) -> f64 {
     m::max(w.press_near, w.press_flow + w.press_secs * m::max(0.0, into))
 }
 
-/// Ease-out by power p: 0 to 0, 1 to 1, fastest at the start. (wallsnap.ts wsEase)
+/// Ease-out by power p: 0 to 0, 1 to 1, fastest at the start.
 pub fn ws_ease(s: f64, p: f64) -> f64 {
     1.0 - m::pow(1.0 - clamp01(s), p)
 }
 
-/// The landing's settle, t seconds after the back arrived. (wallsnap.ts wsHit)
+/// The landing's settle, t seconds after the back arrived.
 pub fn ws_hit(g: &crate::game::Game, t: f64) -> f64 {
     hit(g.k.wallsnap.hit_peak, t)
 }
@@ -45,12 +44,12 @@ fn hit(a: f64, t: f64) -> f64 {
     if t < 0.0 || t > 8.0 * a { 0.0 } else { (t / a) * m::exp(1.0 - t / a) }
 }
 
-/// The cursor's point about a wall's end: angle (degrees) from the wall's line carried on, and distance from the corner. (wallsnap.ts wsCornerAngle)
+/// The cursor's point about a wall's end: angle (degrees) from the wall's line carried on, and distance from the corner.
 pub fn ws_corner_angle(a: f64, b: f64) -> crate::wallsnap::WsCornerAngle {
     crate::wallsnap::WsCornerAngle { deg: m::atan2(-b, a) * 180.0 / m::PI, dist: m::hyp2(a, b) }
 }
 
-/// The angle (degrees) up to which a man `back` short of the end and `off` the plane already sees past the corner. (wallsnap.ts wsSeenDeg)
+/// The angle (degrees) up to which a man `back` short of the end and `off` the plane already sees past the corner.
 pub fn ws_seen_deg(back: f64, off: f64) -> f64 {
     m::atan2(off, back) * 180.0 / m::PI
 }

@@ -1,4 +1,4 @@
-//! A BROKEN WALL'S LOOK (src/game/edgeLook.ts), whole: the standing pieces round a cut, the rubble at its foot, the soot. Every piece is a box keyed
+//! A BROKEN WALL'S LOOK, whole: the standing pieces round a cut, the rubble at its foot, the soot. Every piece is a box keyed
 //! MKEY.look on the frame's list, which no ray of the game meets; but the fog of war keeps a record of every keyed loose thing of that list and caps its
 //! records, the boots scuff the rubble at rest, and the frame's room is budgeted with these boxes in it: so the tick does read what this lane writes, and
 //! the lane runs here as it runs in the TypeScript.
@@ -20,20 +20,20 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 type Bx = crate::scene_boxes::Box;
 
-/// what this lane reads of a breakable, as it stands now (edgeLook.ts BreakLike: the TypeScript hands the Breakable itself)
+/// what this lane reads of a breakable, as it stands now
 pub fn break_like(g: &Game, b: WallbreakBreakableId) -> BreakLike {
     let r = &g.tab.wallbreak_breakable[b];
     BreakLike { id: r.id, kind: r.kind, surf: String::from(r.surf.as_str()), box_: r.box_, nx: r.nx, ny: r.ny, nz: r.nz, yb: r.yb.clone(), open: r.open.clone() }
 }
 
 /// What the frame's box list can take of a picture-only lane's boxes: the table, less the level's boxes, less what the frame keeps for its own (`FRAME_BOXES`, or
-/// `now`: what a lane has seen on the list as it stands), less `slack`. (src/game/edgeLook.ts:82 frameRoom, which took last frame's count: a host's)
+/// `now`: what a lane has seen on the list as it stands), less `slack`.
 pub fn frame_room(g: &crate::game::Game, slack: f64, now: Option<f64>) -> f64 {
     let w = &g.engine.world;
     w.max_boxes - w.statics.len() as f64 - now.unwrap_or(crate::scene_boxes::FRAME_BOXES) - slack
 }
 
-/// Cells of a wall just opened: the look's one hook. (src/game/edgeLook.ts:104 EdgeLook.opened)
+/// Cells of a wall just opened: the look's one hook.
 pub fn edge_look_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, fresh: &[f64], cause: &str, dir: Option<V3>, quiet: bool) {
     // (the copies this lane already holds of this breakable read its cells as they now stand: the TypeScript holds the object)
     { let e = &mut g.destr.edge_look;
@@ -44,7 +44,7 @@ pub fn edge_look_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
 }
 
 /// The frame a wall goes: only the soot's record and its marks land on it; the wall is dressed on the next frame and its rubble shed a few cells a frame
-/// after that. A checkpoint being applied does it all at once. (src/game/edgeLook.ts:111 EdgeLook.dress)
+/// after that. A checkpoint being applied does it all at once.
 pub fn edge_look_dress(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, fresh: &[f64], cause: &str, dir: Option<V3>, quiet: bool) {
     let wall = matches!(b.kind, crate::wallbreak::BKind::Wall);
     if wall { g.destr.edge_look.dirty.set(crate::Num(b.id), b.clone()); }
@@ -60,7 +60,7 @@ pub fn edge_look_dress(g: &mut crate::game::Game, b: &crate::edge_look::BreakLik
     if let Some(f) = f { if blast && !quiet { edge_look_scorch(g, b, f, fresh, dir); } }
 }
 
-/// The wall's own frame: u along it, y up, v across it. (src/game/edgeLook.ts:178 EdgeLook.frame)
+/// The wall's own frame: u along it, y up, v across it.
 pub fn edge_look_frame(g: &crate::game::Game, b: &crate::edge_look::BreakLike) -> crate::edge_look::Frame {
     let (c, h, yaw) = { let r = &g.tab.boxes[b.box_]; (r.c, r.h, r.yaw) };
     let along_x = b.nx > 1.0 || h[0] >= h[2];
@@ -75,14 +75,14 @@ pub fn edge_look_frame(g: &crate::game::Game, b: &crate::edge_look::BreakLike) -
     }
 }
 
-/// A place in the wall's frame. (src/game/edgeLook.ts:184 EdgeLook.at)
+/// A place in the wall's frame.
 pub fn edge_look_at(g: &crate::game::Game, f: crate::edge_look::Frame, u: f64, y: f64, v: f64) -> V3 {
     let c = g.tab.boxes[f.b].c;
     at_c(c, &f, u, y, v)
 }
 fn at_c(c: V3, f: &Frame, u: f64, y: f64, v: f64) -> V3 { [c[0] + f.along[0] * u + f.nrm[0] * v, y, c[2] + f.along[2] * u + f.nrm[2] * v] }
 
-/// The oldest litter goes first past the cap. (src/game/edgeLook.ts:118 EdgeLook.cap)
+/// The oldest litter goes first past the cap.
 pub fn edge_look_cap(g: &mut crate::game::Game) {
     let most = g.m.edge_look.edge.max_rubble;
     while g.destr.edge_look.rubble.len() as f64 > most {
@@ -94,7 +94,7 @@ pub fn edge_look_cap(g: &mut crate::game::Game) {
     g.stats.edge_look.rubble = g.destr.edge_look.rubble.len() as i32;
 }
 
-/// The level put back. (src/game/edgeLook.ts:124 EdgeLook.clear)
+/// The level put back.
 pub fn edge_look_clear(g: &mut crate::game::Game) {
     let e = core::mem::replace(&mut g.destr.edge_look, EdgeLook::blank());
     for l in e.decor.values() { for &b in l { crate::scene_boxes::box_let_go(g, b); } }
@@ -104,7 +104,7 @@ pub fn edge_look_clear(g: &mut crate::game::Game) {
     let s = &mut g.stats.edge_look; s.decor = 0; s.rubble = 0; s.flying = 0;
 }
 
-/// Once a frame: the frame's room, a wall dressed or a few cells shed, the fragments in flight moved. (src/game/edgeLook.ts:127 EdgeLook.update)
+/// Once a frame: the frame's room, a wall dressed or a few cells shed, the fragments in flight moved.
 pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
     g.destr.edge_look.room = frame_room(g, g.m.edge_look.edge.box_slack, None);
     if !g.destr.edge_look.held {
@@ -134,7 +134,7 @@ pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
     g.destr.edge_look.flying = fl; g.stats.edge_look.flying = fl as i32;
 }
 
-/// Kicked rubble: the fragments at rest are shoved by the men's feet as the pool's pieces are, over records of this lane's own. (src/game/edgeLook.ts:153 EdgeLook.feet)
+/// Kicked rubble: the fragments at rest are shoved by the men's feet as the pool's pieces are, over records of this lane's own.
 pub fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k: crate::debris::FootKnobs, dt: f64) {
     if g.destr.edge_look.rubble.is_empty() { return; }
     let mut list: Vec<DebrisChunkId> = Vec::new();
@@ -174,7 +174,7 @@ pub fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan],
     }
 }
 
-/// Every wall that opened since the last flush is dressed again. (src/game/edgeLook.ts:167 EdgeLook.flush)
+/// Every wall that opened since the last flush is dressed again.
 pub fn edge_look_flush(g: &mut crate::game::Game) {
     if g.destr.edge_look.dirty.is_empty() { return; }
     let all: Vec<BreakLike> = g.destr.edge_look.dirty.values().cloned().collect();
@@ -184,7 +184,7 @@ pub fn edge_look_flush(g: &mut crate::game::Game) {
     g.stats.edge_look.decor = n as i32;
 }
 
-/// This lane's pieces into the frame's dynamic list (after the lane's debris). (src/game/edgeLook.ts:169 EdgeLook.boxes)
+/// This lane's pieces into the frame's dynamic list (after the lane's debris).
 pub fn edge_look_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if g.destr.edge_look.held { g.destr.edge_look.held = false; } else { edge_look_flush(g); }   // (a wall that opened this frame is dressed on the next: `dress`)
     let e = &g.destr.edge_look;
@@ -222,7 +222,7 @@ impl Lay {
         if x >= 1.0 { c } else { v3::scale(c, 0.4 + 0.6 * x * x * (3.0 - 2.0 * x)) }
     }
     fn next_key(&mut self) -> i32 { let k = self.key; self.key = self.key.wrapping_add(1); k }
-    /// a plate in the wall's plane: half extents a × hb × ht, turned `th` in the plane, centred (u, y), v across (edgeLook.ts:186 plate)
+    /// a plate in the wall's plane: half extents a × hb × ht, turned `th` in the plane, centred (u, y), v across
     fn plate(&self, u: f64, y: f64, v: f64, a: f64, hb: f64, ht: f64, th: f64, albedo: V3, key: i32, solid: bool) -> Bx {
         let f = &self.f;
         let (c, s) = (m::cos(th), m::sin(th));
@@ -240,7 +240,7 @@ impl Lay {
         p.stuff = None; p.does = None;
         self.push(p);
     }
-    /// A RAGGED EDGE as one broken line: control points standing d out of the straight cut, each stretch between two of them one plate (edgeLook.ts:212)
+    /// A RAGGED EDGE as one broken line: control points standing d out of the straight cut, each stretch between two of them one plate
     #[allow(clippy::too_many_arguments)]
     fn ragged(&mut self, ax: f64, ay: f64, bx: f64, by: f64, nx: f64, ny: f64, reach: Reach, bury: f64, past_a: f64, past_b: f64, tag: f64) {
         let len = m::hyp2(bx - ax, by - ay); if len < 0.12 { return; }
@@ -281,7 +281,7 @@ impl Lay {
     }
 }
 
-/// The standing pieces of one wall, made again from its cells. (src/game/edgeLook.ts:193 EdgeLook.rebuild)
+/// The standing pieces of one wall, made again from its cells.
 pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
     g.stats.edge_look.rebuilds += 1;
     let f = edge_look_frame(g, b);
@@ -427,7 +427,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
 
 // ---------------------------------------------------------------- rubble
 
-/// Does a fragment at `p` (reach `r`) lie in a tripwire's beam? A look-only slab in a beam's line casts no shadow. (src/game/edgeLook.ts:327 EdgeLook.inBeam)
+/// Does a fragment at `p` (reach `r`) lie in a tripwire's beam? A look-only slab in a beam's line casts no shadow.
 pub fn edge_look_in_beam(g: &crate::game::Game, p: V3, r: f64) -> bool {
     for &l in g.devices.lasers.iter() {
         let lz = &g.tab.devices_laser_rt[l]; let (f, d) = (lz.def.from, lz.dir);
@@ -437,7 +437,7 @@ pub fn edge_look_in_beam(g: &crate::game::Game, p: V3, r: f64) -> bool {
     false
 }
 
-/// What one opened cell leaves at the foot: fragments at rest positions hashed off the cell, flying there from the cell unless quiet. (src/game/edgeLook.ts:332 EdgeLook.shed)
+/// What one opened cell leaves at the foot: fragments at rest positions hashed off the cell, flying there from the cell unless quiet.
 pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f: Option<crate::edge_look::Frame>, c_2: f64, dir: Option<V3>, quiet: bool, blast: bool) {
     let c = c_2;
     let (bc, bh, byaw, paint, stuff, does) = { let x = &g.tab.boxes[b.box_]; (x.c, x.h, x.yaw, x.albedo, x.stuff, x.does) };
@@ -525,7 +525,7 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
             flags: Some((js::to_i32(fl.dynamic) | no_shadow) as f64), name: Some(String::from("rubble")),
             mkey: Some(MKEY_LOOK + 8388608.0 + (js::to_i32(serial) & 0x7fffff) as f64), ..Default::default() });
         let bx = crate::scene_boxes::box_kept(g, bv);
-        // the cut switch: its outline by its material's row (breakTable.ts); a big piece casts its shadow
+        // the cut switch: its outline by its material's row; a big piece casts its shadow
         if crate::break_table::breaks_shape_loose(g, bx.into(), &b.surf, (id * 4096.0 + c) * 32.0 + i) {
             p1 = g.tab.frame_boxes[bx].c;
             if m::max(hx, hz) >= 0.15 && !edge_look_in_beam(g, p1, m::max(hx, hz)) { let x = &mut g.tab.frame_boxes[bx]; x.flags = (js::to_i32(x.flags) & !no_shadow) as f64; }
@@ -550,13 +550,13 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     }
 }
 
-/// One soot mark, the picture's alone. (edgeLook.ts:406-409,423)
+/// One soot mark, the picture's alone.
 fn soot(g: &mut crate::game::Game, pos: V3, normal: V3, size: f64, param: f64) {
     let opts = crate::render_decals::DecalOpts { param: Some(param), look: Some(true), ..Default::default() };
     crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
 }
 
-/// Soot round a blast's gap: where along the wall the charge opened it (the edge pieces there are sooted), then both faces of the wall about the opening, the floor at its foot, the rim of what still stands. (src/game/edgeLook.ts:398 EdgeLook.scorch)
+/// Soot round a blast's gap: where along the wall the charge opened it (the edge pieces there are sooted), then both faces of the wall about the opening, the floor at its foot, the rim of what still stands.
 pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f: crate::edge_look::Frame, fresh: &[f64], dir: Option<V3>) {
     let (mut k0, mut k1) = (1e9_f64, -1.0_f64);
     let per = b.nx * b.nz;
@@ -610,5 +610,5 @@ pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
     }
 }
 
-/// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path). (src/game/edgeLook.ts:99 EdgeLook.constructor)
+/// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path).
 pub fn edge_look_new(g: &crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }

@@ -1,4 +1,3 @@
-//! src/game/gunroles.ts lines 1 to 184
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ the two tables
-/// What a row is for, where it is for something: `ROLE` of a weapon's id (gunroles.ts:69).
+/// What a row is for, where it is for something: `ROLE` of a weapon's id.
 fn role_row(id: crate::weapons::WeaponId) -> Option<GunRole> {
     use crate::weapons::WeaponId as W;
     match id {
@@ -18,7 +17,7 @@ fn role_row(id: crate::weapons::WeaponId) -> Option<GunRole> {
         _ => None,
     }
 }
-/// Who goes through a door when, 0 first and 2 last: `RANK` (gunroles.ts:71).
+/// Who goes through a door when, 0 first and 2 last: `RANK`.
 fn rank_row(r: GunRole) -> f64 {
     match r {
         GunRole::Room => 0.0,
@@ -26,16 +25,16 @@ fn rank_row(r: GunRole) -> f64 {
         GunRole::Reach | GunRole::Belt => 2.0,
     }
 }
-/// A whole number as a template string has it: `-0` reads `0` (gunroles.ts:104, 118).
+/// A whole number as a template string has it: `-0` reads `0`.
 fn round_text(x: f64) -> String {
     alloc::format!("{}", m::round(x) + 0.0)
 }
-/// What a man's two draws are hashed from: his place in the cast and his mark; the salt is 0, `SAMESTART.on` being settled (gunroles.ts:103-104).
+/// What a man's two draws are hashed from: his place in the cast and his mark; the salt is 0, `SAMESTART.on` being settled.
 fn deal_key(i: usize, x: f64, z: f64) -> String {
     alloc::format!("0|{}|{}|{}", i, round_text(x * 10.0), round_text(z * 10.0))
 }
 
-/// `WEAPONS[id]`, for a read (gunroles.ts:91, 92, 118). A Firearm's `def` is this table's key, one row an id.
+/// `WEAPONS[id]`, for a read. A Firearm's `def` is this table's key, one row an id.
 fn row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(id).unwrap()
 }
@@ -54,19 +53,19 @@ fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
     row(g, g.fa[g.gd[gd].weapon].def)
 }
 
-/// What his primary is for. (gunroles.ts gunRole)
+/// What his primary is for.
 pub fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
     if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)
 }
 
-/// His place through a door. (gunroles.ts rankOf)
+/// His place through a door.
 pub fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     rank_row(gun_role(g, gd))
 }
 
-/// The clear floor from his mark toward what he watches, chest high (m). (gunroles.ts lineOf)
+/// The clear floor from his mark toward what he watches, chest high (m).
 pub fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
     let dx = to[0] - p[0];
     let dz = to[2] - p[2];
@@ -79,7 +78,7 @@ pub fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
     }
 }
 
-/// A row of the table into a man's hands: nothing for the row he carries or one switched off. (gunroles.ts gunHand)
+/// A row of the table into a man's hands: nothing for the row he carries or one switched off.
 pub fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::WeaponId) {
     let held = g.gd[gd].weapon;
     if g.fa[held].def == id_2 || !row(g, id_2).enabled { return; }
@@ -93,7 +92,7 @@ pub fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::We
     g.ch[c].muzzle_ahead = def.muzzle_ahead;
 }
 
-/// A cast is dealt its guns, once, with the men on their marks and the doors as the mission opens with them. (gunroles.ts gunDeal)
+/// A cast is dealt its guns, once, with the men on their marks and the doors as the mission opens with them.
 pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> Vec<crate::gunroles::GunDealItem> {
     use crate::weapons::WeaponId as W;
     if men.is_empty() { return Vec::new(); }
@@ -164,14 +163,14 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
     out
 }
 
-/// A defender with the belt-fed gun keeps the post he was dealt. (gunroles.ts gunKeepsPost)
+/// A defender with the belt-fed gun keeps the post he was dealt.
 pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].team != crate::teams::Team::Hostile || g.gd[gd].state == crate::game::GuardState::Dead || gun_role(g, gd) != GunRole::Belt { return false; }
     g.stats.gunroles.posts += 1;
     true
 }
 
-/// What this dealing of men to stack marks costs for the guns in it. (gunroles.ts gunFileCost)
+/// What this dealing of men to stack marks costs for the guns in it.
 pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) -> f64 {
     let d: Vec<f64> = spots.iter().map(|s| m::hyp2(s[0] - front[0], s[2] - front[2])).collect();
     let file_cost = g.k.gunroles.file_cost;
@@ -184,14 +183,14 @@ pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) 
     c
 }
 
-/// The men's ranks for that price: None for men whose guns are all of one kind. (gunroles.ts gunFileRanks)
+/// The men's ranks for that price: None for men whose guns are all of one kind.
 pub fn gun_file_ranks(g: &crate::game::Game, men: &[GuardId]) -> Option<Vec<f64>> {
     if men.len() < 2 { return None; }
     let r: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     if r.iter().all(|&x| x == r[0]) { None } else { Some(r) }
 }
 
-/// Of the men who may go first, the ones whose gun is the room's. (gunroles.ts gunFirst)
+/// Of the men who may go first, the ones whose gun is the room's.
 pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
@@ -202,12 +201,12 @@ pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     keep
 }
 
-/// Why he went ahead of the lead: his gun goes through a door before the lead's. (gunroles.ts gunBefore)
+/// Why he went ahead of the lead: his gun goes through a door before the lead's.
 pub fn gun_before(g: &crate::game::Game, first: GuardId, lead: GuardId) -> bool {
     rank_of(g, first) < rank_of(g, lead)
 }
 
-/// The turn the men go in by, the long guns last in the order they had; the man picked first never moves. (gunroles.ts gunTurn)
+/// The turn the men go in by, the long guns last in the order they had; the man picked first never moves.
 pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 { return turn.to_vec(); }
     let mut long: Vec<GuardId> = Vec::new();
@@ -221,7 +220,7 @@ pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> 
     out
 }
 
-/// The men through a blown wall, nearest the hole first: the long guns' men after the others. (gunroles.ts gunLast)
+/// The men through a blown wall, nearest the hole first: the long guns' men after the others.
 pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
@@ -233,13 +232,13 @@ pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     out
 }
 
-/// The gap between a blinded defender's rounds: the staging's own for an automatic, the gun's own rate for one that fires a round a pull. (gunroles.ts gunBlindGap)
+/// The gap between a blinded defender's rounds: the staging's own for an automatic, the gun's own rate for one that fires a round a pull.
 pub fn gun_blind_gap(g: &crate::game::Game, gd: GuardId, every: f64) -> f64 {
     let d = held_row(g, gd);
     if d.modes.contains(&crate::weapons::FireMode::Auto) { every } else { m::max(every, d.cd) }
 }
 
-/// What an opening `d` metres off is worth to him over another man, for his gun. (gunroles.ts gunLane)
+/// What an opening `d` metres off is worth to him over another man, for his gun.
 pub fn gun_lane(g: &crate::game::Game, gd: GuardId, d: f64, reach: f64) -> f64 {
     let r = gun_role(g, gd);
     let k = m::min(1.0, m::max(0.0, d / m::max(reach, 0.1)));
@@ -252,7 +251,7 @@ pub fn gun_lane(g: &crate::game::Game, gd: GuardId, d: f64, reach: f64) -> f64 {
     }
 }
 
-/// How many rounds his trigger sends before the beat between strings; 0 is the controlled pair. (gunroles.ts gunString)
+/// How many rounds his trigger sends before the beat between strings; 0 is the controlled pair.
 pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
     let w = g.gd[gd].weapon;
     let d = g.fa[w].def;
@@ -264,7 +263,7 @@ pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
     if r == GunRole::Reach { 1.0 } else { 0.0 }
 }
 
-/// The seconds to the next round inside a string. (gunroles.ts gunStringGap)
+/// The seconds to the next round inside a string.
 pub fn gun_string_gap(g: &crate::game::Game, gd: GuardId) -> f64 {
     let d = held_row(g, gd);
     match &d.burst {
@@ -273,7 +272,7 @@ pub fn gun_string_gap(g: &crate::game::Game, gd: GuardId) -> f64 {
     }
 }
 
-/// How much wider than his hands the k-th round of a string is drawn. (gunroles.ts gunStringGrow)
+/// How much wider than his hands the k-th round of a string is drawn.
 pub fn gun_string_grow(g: &crate::game::Game, gd: GuardId, k: f64) -> f64 {
     match &held_row(g, gd).burst {
         Some(b) => m::min(b.spread_cap, b.spread_per_round * k),

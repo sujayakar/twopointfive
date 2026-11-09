@@ -1,4 +1,3 @@
-//! src/game/orders.ts lines 1 to 366
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A row's digit off its key code: `Digit1` to `Digit9`, else 0.   (orders.ts digitOf)
+/// A row's digit off its key code: `Digit1` to `Digit9`, else 0.
 pub fn digit_of(code: &str) -> f64 {
     match code.strip_prefix("Digit").map(str::as_bytes) {
         Some(&[d @ b'1'..=b'9']) => (d - b'0') as f64,

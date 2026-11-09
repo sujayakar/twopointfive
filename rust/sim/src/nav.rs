@@ -23,7 +23,7 @@ pub const MAX_WAY: usize = 1 << 13;
 /// table here can be outgrown, whatever cap the caller puts on the search: a search closes a cell once and lists eight more at most as it does (so the
 /// open list and the list of cells written hold 1 + 8 × cells entries at most), and a way has no more waypoints than the floor has cells. The floor is
 /// the BUILD's (src/scene/world.ts WORLD: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
-/// once by the host (collision.ts NavGrid.there), and never a level's.
+/// once by the host, and never a level's.
 pub const MAX_FLOOR: usize = least(least(MAX_NAV, MAX_WAY), (MAX_OPEN - 1) / 8);
 const fn least(a: usize, b: usize) -> usize {
     if a < b {
@@ -178,7 +178,7 @@ pub const NEED: i32 = -3;
 /// the cells one NEED can name (a search's step names eight at most; a leg of the smoothing, the cells along it)
 pub const MAX_NEED: usize = 1024;
 
-/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH (collision.ts findPath's `penalty`: a multiplier, read as 1 where it is under 1). THE SEARCH IS
+/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH. THE SEARCH IS
 /// WRITTEN ONCE, OVER THIS: a search with no penalty is the search whose every price is 1 (`Flat`); one with a penalty of the host's is the search
 /// over the prices the host has handed in so far (`Asked`), which does not know a cell until the host has priced it. A rule that moves here
 /// brings a source of its own that always knows, and the waiting below goes with `Asked`.

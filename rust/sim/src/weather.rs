@@ -3,9 +3,9 @@
 //! the lot is, and how wet a man is. Statement for statement. Who is asked and who draws it stays TypeScript: `sound.rs` and `bricks.rs` answer the box world and the
 //! smoke and know nothing of weather, and the PRODUCT of their answer with this one is taken by whoever asks.
 //!
-//! WHAT IS NOT HERE, AND WHY: rain, snow and wet as they are drawn (rainFx.ts, snowFx.ts, wetGround.ts and the rest: dressing, reading this); the kinds' tables
-//! (weatherKinds.ts: authored numbers handed in when a kind is set); the lot's soaked box (a Box of the host's, which a round's material still reads); a man's
-//! place, head and coat (fields of TypeScript objects, handed over as a call's numbers until the men's columns land); the hour (hours.ts: last, on the lamps' table).
+//! WHAT IS NOT HERE, AND WHY: rain, snow and wet as they are drawn; the kinds' tables
+//!; the lot's soaked box (a Box of the host's, which a round's material still reads); a man's
+//! place, head and coat (fields of TypeScript objects, handed over as a call's numbers until the men's columns land); the hour.
 use crate::air::Air;
 use crate::knobs::{k, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS};
 use crate::lines;
@@ -67,7 +67,7 @@ const PI: f64 = 3.141592653589793;
 pub fn under_roof(w: &Weather, x: f64, z: f64) -> bool {
     under(&w.roofs, w.roofs_n as usize, x, z)
 }
-/// …over any table of footprints (inclusive edges, as weatherKinds.ts inRect): the thrown things' walk hands its own over
+/// …over any table of footprints: the thrown things' walk hands its own over
 #[inline]
 pub fn under(roofs: &[f64], n: usize, x: f64, z: f64) -> bool {
     let mut i = 0;
@@ -138,7 +138,7 @@ pub fn roofs_box(cx: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64, ceiling: 
         l.n += 1;
     }
 }
-/// how many slabs were roofs at all, table or no table (a level with more than the table holds is refused as it loads: levelfit.ts)
+/// how many slabs were roofs at all, table or no table
 pub fn roofs_seen() -> usize {
     roof_list().seen
 }

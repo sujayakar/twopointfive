@@ -25,9 +25,7 @@ pub struct NetquietfeedModNETFEED {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NetquietfeedMod {
-    /// (src/game/netquietfeed.ts:10 NETFEED)
     pub netfeed: crate::netquietfeed::NetquietfeedModNETFEED,
-    /// (src/game/netquietfeed.ts:13 filed)
     pub filed: Option<Vec<crate::netquietfeed::NetFeed>>,
 }
 impl NetquietfeedMod {

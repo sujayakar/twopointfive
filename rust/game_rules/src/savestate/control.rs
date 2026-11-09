@@ -3,7 +3,7 @@
 //!
 //! `tick` runs once after every step, on the frame as it now stands. Autosaves and saves by hand are two rings, neither of which pushes the other out; a run's saves are
 //! its own, and a fresh run starts with none. F5 is read off the step's own record. A run is the mission that is up (`Mission.serial`). The books are the game's own `saves`, and go back with a game put
-//! back, but for what belongs to the host and to the run as it is NOW: the shelf, the counts, the log and the switch.   (src/game/savestate.ts Checkpoints)
+//! back, but for what belongs to the host and to the run as it is NOW: the shelf, the counts, the log and the switch.
 use super::*;
 use crate::game::{Game, GuardState, MissionStage};
 use crate::ids::*;
@@ -30,7 +30,7 @@ fn note(g: &mut Game, what: String) {
 fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
-/// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
+/// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
@@ -43,7 +43,7 @@ pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<
     None
 }
 
-/// Somebody who is no guard is about to bring the floor up.   (civilians.ts civilianCompromise)
+/// Somebody who is no guard is about to bring the floor up.
 fn civilian_compromise(g: &mut Game) -> Option<String> {
     use crate::civilians::{CivCause, CivState, PendKind};
     if !crate::civilians::civilians_on_floor(g) { return None; }
@@ -62,7 +62,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
     Some(format!("word of {} is about to move the floor", g.gd[who].callsign))
 }
 
-/// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.   (savestate.ts canSave)
+/// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.
 fn unsettled(g: &mut Game) -> Option<String> {
     if crate::lighting::is_daylight(g) { return Some(String::from("daylight is in")); }
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
@@ -79,7 +79,7 @@ fn unsettled(g: &mut Game) -> Option<String> {
     if !g.rings.is_empty() || !g.shells.is_empty() || crate::stickycam::sticky_flying(g, &crate::seats::here(g)) { return Some(String::from("a round or a camera is in flight")); }
     None
 }
-/// what his hands or his feet are in the middle of   (savestate.ts playerBusy)
+/// what his hands or his feet are in the middle of
 fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     let p = &g.pl[seat.player];
     let a = &g.ch[p.ch].anim;

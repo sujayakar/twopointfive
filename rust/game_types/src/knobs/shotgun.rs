@@ -8,7 +8,7 @@ use game_derive::Knobs;
 ///  man's mark while a spot further down the list is free (the second man with the gun does not shoot it from inside the lead on his jamb) · the lock he aims
 ///  at: this far in from the latch edge, this high · shells he may put into it before the stack gives up on the gun and boots it · seconds his muzzle may take
 ///  to come onto it.
-///  GLASS IS NOT COVER, for him too (orders.ts behindGlass — the stack's own rule; nothing of this runs while rounds stop in glass): where a spot of the list
+///  GLASS IS NOT COVER, for him too: where a spot of the list
 ///  stands in a line of fire through a pane he takes the lock FROM HIS OWN SIDE of the frame instead of crossing the opening to stand in front of the sidelight
 ///  his stack was moved off — from his own mark when it is clear of the opening, the lock within `markReach` of it, its bore on the leaf and no mate within
 ///  `line` of the shot, else (his mark on the hinge side) from the first of `hinge` ([metres past the HINGE edge, metres off the wall]: every one clear of the

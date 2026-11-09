@@ -27,7 +27,7 @@ pub struct SuppressionK {
     /// × what a COLLEAGUE's round adds to a guard (his own side's fire going past him, from behind and beside: he knows where it is going — it rattles, it does not
     ///  pin; abreast and just-ahead are already nothing by minTravel and by muzzle discipline lowering the rear gun). Sam's rounds on them and theirs on Sam: × 1.
     #[k(0.5)] pub friendly_k: f64,
-    /// temperament (game.ts TEMPERAMENT): how readily each kind of man accrues it — the hard man shrugs off what rattles the nervy one
+    /// temperament: how readily each kind of man accrues it — the hard man shrugs off what rattles the nervy one
     #[k({ let mut t = JsMap::new(); t.set(String::from("steady"), 1.0); t.set(String::from("nervy"), 1.25); t.set(String::from("hard"), 0.8); t })] pub keen: JsMap<String, f64>,
     /// ---- guard reactions (§4.2), all behind tune.suppression
     /// s ≥ flinch: the start (anim), a bark, the next round a beat late, every round wider and the cadence slower while it lasts, no running INTO fire;

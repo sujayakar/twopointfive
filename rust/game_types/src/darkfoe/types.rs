@@ -27,7 +27,6 @@ pub struct DarkFoeSpot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct DarkfoeMod {
-    /// (src/game/darkfoe.ts:77 stateOf)
     pub state_of: JsMap<GuardId, crate::darkfoe::FoeState>,
 }
 impl DarkfoeMod {
@@ -49,5 +48,4 @@ pub struct DarkfoeStats {
     pub no_spot: i32,
 }
 
-/// (src/game/darkfoe.ts:160 WAY_TRIES)
 pub const WAY_TRIES: f64 = 6.0;

@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 588 to 974
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Stamp fix_t if the fix has moved since last looked at; called once a frame by update_guard. (game.ts Guard.trackFix)
+/// Stamp fix_t if the fix has moved since last looked at; called once a frame by update_guard.
 pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     let lk = match g.gd[id].last_known {
         Some(lk) => lk,
@@ -20,7 +19,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
 }
 
-/// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own). (game.ts Guard.constructor)
+/// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own).
 pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2: f64, route: RouteId, route_i: i32, flashlight: LightId, tint: V3, look: Option<&crate::game::GuardNewLook>) -> GuardId {
     let id = g.gd.push(Guard::blank());
     g.gd[id].witness = new_witness();

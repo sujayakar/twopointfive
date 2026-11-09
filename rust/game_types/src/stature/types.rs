@@ -14,9 +14,7 @@ pub struct STATURETUNE {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct StatureMod {
-    /// (src/game/stature.ts:47 shown)
     pub shown: JsMap<CharId, f64>,
-    /// (src/game/stature.ts:103 byId)
     pub by_id: Vec<Option<CharId>>,
 }
 impl StatureMod {
@@ -28,9 +26,7 @@ impl StatureMod {
     }
 }
 
-/// (src/game/stature.ts:26 STATURE: a table nothing writes)
 pub fn stature() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("civilian_1"), 0.93); t.set(String::from("defender_2"), 0.97); t.set(String::from("defender_3"), 1.04); t.set(String::from("operator_2"), 1.02); t.set(String::from("operator_3"), 0.99); t.set(String::from("operator_4"), 1.03); t.set(String::from("operator_5"), 1.0); t } }
 
-/// (src/game/stature.ts:31 STATURE_TUNE: a table nothing writes)
 pub fn stature_tune() -> crate::stature::STATURETUNE { crate::stature::STATURETUNE { jitter: 0.015, min: 0.92, max: 1.05, ease_per_sec: 0.25 } }
 

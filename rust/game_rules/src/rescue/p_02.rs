@@ -1,4 +1,3 @@
-//! src/game/rescue.ts lines 438 to 899
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,14 +21,14 @@ fn last_log_order(g: &Game, seat: &crate::seats::SeatRef) -> Option<u32> { seat.
 fn hot(g: &Game) -> bool { g.k.rescue.start == crate::knobs::RescueKStart::Hot }
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 
-/// A line in the scenario's log, cut when it grows long. (rescue.ts Rescue.note)
+/// A line in the scenario's log, cut when it grows long.
 pub fn rescue_note(g: &mut crate::game::Game, what: &str) {
     let t = g.time;
     g.rescue.log.push(RescueLogItem { t, what: String::from(what) });
     if g.rescue.log.len() > 600 { g.rescue.log.drain(0..150); }
 }
 
-/// A line said once a staging. (rescue.ts Rescue.once)
+/// A line said once a staging.
 pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
     if !g.rescue.said.has(String::from(key)) {
         g.rescue.said.add(String::from(key));
@@ -37,13 +36,12 @@ pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
     }
 }
 
-/// (rescue.ts Rescue.over)
 pub fn rescue_over(g: &crate::game::Game) -> bool { g.rescue.result.is_some() }
 
-/// Dynamic tempo: the clock is running. (rescue.ts Rescue.dynamic)
+/// Dynamic tempo: the clock is running.
 pub fn rescue_dynamic(g: &crate::game::Game) -> bool { !g.rescue.t0.is_nan() }
 
-/// Sam's word on the hostage room. (rescue.ts Rescue.orderDoor)
+/// Sam's word on the hostage room.
 pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueOrderDoor> {
     if !g.rescue.active || rescue_over(g) || g.pl[g.player].down { return None; }
     crate::doortools::door_tools_sync(g);
@@ -107,20 +105,20 @@ pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::Res
     Some(if dyn_ { RescueOrderDoor::Bang } else { RescueOrderDoor::Stack })
 }
 
-/// Sam put him there himself. (rescue.ts Rescue.pick, its `posted`)
+/// Sam put him there himself.
 fn posted(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(g, seat, o) { Some(a) => a, None => return false };
     if g.tab.orders_assignment[a].post.is_none() { return false; }
     if g.rescue.auto.has(a) { return false; }
     !crate::rescueflow::rescue_flow_gave(g, Some(a))
 }
-/// posted, and on a 'cover' of his own: he stays on it. (rescue.ts Rescue.pick)
+/// posted, and on a 'cover' of his own: he stays on it.
 fn posted_cover(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
     if !posted(g, seat, o) { return false; }
     let a = crate::orders::squad_orders_of(g, seat, o).unwrap();
     crate::orders::rows::is(g, a, crate::orders::Is::Covers)
 }
-/// The man of `l` in the room nearest the side door. (rescue.ts Rescue.pick, its `near`)
+/// The man of `l` in the room nearest the side door.
 fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: DoorId) -> Option<GuardId> {
     let fc = g.dr[sd].frame_centre;
     let mut inside: Vec<(GuardId, V3)> = l.iter().map(|&o| (o, pos_of(g, o))).filter(|x| in_rect(x.1, sb)).collect();
@@ -128,7 +126,7 @@ fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: D
     inside.first().map(|x| x.0)
 }
 
-/// Who F takes, and to which door. (rescue.ts Rescue.pick)
+/// Who F takes, and to which door.
 pub fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePick> {
     let up: Vec<GuardId> = g.rescue.ops.iter().copied().filter(|&o| alive(g, o)).collect();
     if up.is_empty() { return None; }
@@ -169,7 +167,7 @@ pub fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePic
     if !front.is_empty() || !side.is_empty() { Some(RescuePick { front, side }) } else { None }
 }
 
-/// One door's order. (rescue.ts Rescue.launch, its `give`)
+/// One door's order.
 fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, why: &mut Vec<String>, who: &[GuardId], d: DoorId, is_side: bool) {
     let kind = if g.door_tools.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
     let face = rescue_face_of(g, d);
@@ -192,7 +190,7 @@ fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, why: &mut V
     }
 }
 
-/// F's entry, given: the door tools' order on each door, through one gate. (rescue.ts Rescue.launch)
+/// F's entry, given: the door tools' order on each door, through one gate.
 pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, front: &[GuardId], side: &[GuardId], go: bool) -> Option<String> {
     let gate = crate::doortools::door_tools_together(g, Some(go));
     let mut ops: Vec<EntryOpsItem> = Vec::new();
@@ -231,7 +229,7 @@ pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, 
     Some(String::from(tail))
 }
 
-/// Starts clock one; at a free start the men not on an order fall in. (rescue.ts Rescue.startClock)
+/// Starts clock one; at a free start the men not on an order fall in.
 pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
     if !g.rescue.t0.is_nan() { return; }
     g.rescue.t0 = g.time;
@@ -254,7 +252,7 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
     }
 }
 
-/// Once a frame from the game's update. (rescue.ts Rescue.tick)
+/// Once a frame from the game's update.
 pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.rescue.active { return; }
     let gone = g.rescue.ops.iter().chain(g.rescue.hostiles.iter()).any(|x| !g.guards.contains(x))
@@ -286,7 +284,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     rescue_voices(g);
 }
 
-/// This frame's loud things: the last one the team did is where a roamer goes. (rescue.ts Rescue.hear)
+/// This frame's loud things: the last one the team did is where a roamer goes.
 pub fn rescue_hear(g: &mut crate::game::Game) {
     let mut mine: Vec<f64> = vec![g.ch[g.pl[g.player].ch].id];
     for &o in &g.rescue.ops { mine.push(g.ch[g.gd[o].ch].id); }
@@ -314,7 +312,7 @@ pub fn rescue_hear(g: &mut crate::game::Game) {
     if hot(g) && g.rescue.t0.is_nan() && flat(pl_pos(g, &crate::seats::here(g)), g.k.rescue.sam_at) > 0.6 { rescue_start_clock(g, "move"); }
 }
 
-/// Clock two: who has learned, who is set, the late reaction, the roamers let go. (rescue.ts Rescue.defenders)
+/// Clock two: who has learned, who is set, the late reaction, the roamers let go.
 pub fn rescue_defenders(g: &mut crate::game::Game) {
     use crate::game::GuardState;
     use crate::roomfight::DefMode;
@@ -432,7 +430,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
     if own { g.rescue.blind_rounds = g.fight.blind_rounds; }
 }
 
-/// The captor's word on their net. (rescue.ts Rescue.crewCall)
+/// The captor's word on their net.
 pub fn rescue_crew_call(g: &mut crate::game::Game) {
     let hostiles = g.rescue.hostiles.clone();
     let cap = hostiles.iter().copied().find(|&h| def_of(g, h).role == Role::Captor && alive(g, h) && g.gd[h].held.is_none());
@@ -450,7 +448,7 @@ pub fn rescue_crew_call(g: &mut crate::game::Game) {
     say_radio(g, cap, line);
 }
 
-/// One of the captor's two men on the word: true = a roamer who is the crew's this frame. `d` is the caller's copy of his row: it is read as it stands on the way in and put right on the way out. (rescue.ts Rescue.crew)
+/// One of the captor's two men on the word: true = a roamer who is the crew's this frame. `d` is the caller's copy of his row: it is read as it stands on the way in and put right on the way out.
 pub fn rescue_crew(g: &mut crate::game::Game, h: GuardId, d: &mut crate::rescue::Def, f: Option<RoomfightDefId>) -> bool {
     let crewed = crew_on_row(g, h, *d, f);
     *d = *g.rescue.defs.get(h).unwrap();
@@ -565,7 +563,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         }
     }
     { let now = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, now, None); }
-    // N !== D.noise0 asks which noise, not where: by its serial (rescue.ts:675)
+    // N !== D.noise0 asks which noise, not where: by its serial
     let at_door = match g.rescue.noise {
         Some(n) => g.rescue.noise_serial != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
         None => false,
@@ -594,7 +592,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
     d.role == Role::Roamer
 }
 
-/// Off his post on the room fight's 'move'. (rescue.ts Rescue.crewMove)
+/// Off his post on the room fight's 'move'.
 pub fn rescue_crew_move(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId, goal: V3, by: Option<DoorId>) {
     let at = pos_of(g, h);
     let fd = &mut g.tab.roomfight_def[f];
@@ -613,7 +611,7 @@ pub fn rescue_crew_move(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId
     });
 }
 
-/// The way a man coming for the hostages walks, a point at eye height every metre and a half. (rescue.ts Rescue.crewWay)
+/// The way a man coming for the hostages walks, a point at eye height every metre and a half.
 pub fn rescue_crew_way(g: &mut crate::game::Game, p: V3) -> Vec<V3> {
     if let Some(way) = &g.rescue.way { return way.clone(); }
     let sam_at = g.k.rescue.sam_at;
@@ -634,7 +632,7 @@ pub fn rescue_crew_way(g: &mut crate::game::Game, p: V3) -> Vec<V3> {
     out
 }
 
-/// Does a walk from `c` along `path` put a foot where `bad` says, asked every half metre. (rescue.ts Rescue.crewLegs)
+/// Does a walk from `c` along `path` put a foot where `bad` says, asked every half metre.
 pub fn rescue_crew_legs(g: &mut crate::game::Game, c_2: V3, path: &[V3], bad: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> bool {
     let mut q = c_2;
     for &w in path {
@@ -650,7 +648,7 @@ pub fn rescue_crew_legs(g: &mut crate::game::Game, c_2: V3, path: &[V3], bad: &m
     false
 }
 
-/// From how many points of the way a man standing at `p` is seen. (rescue.ts Rescue.crewSeen)
+/// From how many points of the way a man standing at `p` is seen.
 pub fn rescue_crew_seen(g: &mut crate::game::Game, p: V3, p_2: V3, near_m: f64) -> f64 {
     let e: V3 = [p[0], 1.5, p[2]];
     let mut n = 0.0;
@@ -660,7 +658,7 @@ pub fn rescue_crew_seen(g: &mut crate::game::Game, p: V3, p_2: V3, near_m: f64) 
     n
 }
 
-/// Floor in another room with a clear line of fire to two of the places a stack stands. (rescue.ts Rescue.crewCrossSpot, its `fires`)
+/// Floor in another room with a clear line of fire to two of the places a stack stands.
 fn fires(g: &mut Game, p: V3, pt: V3, out: Option<RoomfightRoomId>, stack: &[V3]) -> bool {
     let d = flat(p, pt);
     if d < 5.0 || d > 14.0 || crate::roomfight::room_fight_room_at(g, p) == out { return false; }
@@ -671,7 +669,7 @@ fn fires(g: &mut Game, p: V3, pt: V3, out: Option<RoomfightRoomId>, stack: &[V3]
     n >= 2
 }
 
-/// A gun on the stack: where he stands if it passes, else a spot he can walk to. (rescue.ts Rescue.crewCrossSpot)
+/// A gun on the stack: where he stands if it passes, else a spot he can walk to.
 pub fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f64) -> Option<V3> {
     let c = pos_of(g, h);
     let b = rescue_bounds(g);
@@ -726,7 +724,7 @@ pub fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk
     None
 }
 
-/// How many places looking in see a man at `p`. (rescue.ts Rescue.crewHide, its `seen`)
+/// How many places looking in see a man at `p`.
 fn hide_seen(g: &mut Game, p: V3, pt: V3, looks: &[V3]) -> f64 {
     let mut n = rescue_crew_seen(g, p, pt, 0.0);
     for &w in looks {
@@ -735,7 +733,7 @@ fn hide_seen(g: &mut Game, p: V3, pt: V3, looks: &[V3]) -> f64 {
     n
 }
 
-/// A roamer out of sight: the floor of his own room seen from the fewest places. (rescue.ts Rescue.crewHide)
+/// A roamer out of sight: the floor of his own room seen from the fewest places.
 pub fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId, p: V3) -> Option<V3> {
     let c = pos_of(g, h);
     let room = g.tab.roomfight_def[f].room?;
@@ -769,7 +767,7 @@ pub fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId
     best
 }
 
-/// A man with the stack in his line of fire rests his gun on the floor outside the hostage door. (rescue.ts Rescue.crewLook)
+/// A man with the stack in his line of fire rests his gun on the floor outside the hostage door.
 pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let look = match g.rescue.defs.get(gd) { Some(d) if d.crew == DefCrew::Cross => d.look, _ => None };
     if let Some(look) = look {
@@ -777,7 +775,7 @@ pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     }
 }
 
-/// A man of Hard's crew lying in wait, whose place the net must not give away. (rescue.ts Rescue.crewHides)
+/// A man of Hard's crew lying in wait, whose place the net must not give away.
 pub fn rescue_crew_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.rescue.defs.get(gd).map(|d| d.crew) {
         Some(DefCrew::Cross) | Some(DefCrew::Wait) => rescue_crew_on(g),
@@ -785,10 +783,10 @@ pub fn rescue_crew_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// Hard's rescue crew is on: Hard writes both rows, so they stay tests. (rescue.ts Rescue.crewOn)
+/// Hard's rescue crew is on: Hard writes both rows, so they stay tests.
 pub fn rescue_crew_on(g: &crate::game::Game) -> bool { g.k.pressure.on && g.k.pressure.rescue_crew }
 
-/// A man sent to the corridor door from inside the server room goes out the way he came in. (rescue.ts Rescue.roundBy)
+/// A man sent to the corridor door from inside the server room goes out the way he came in.
 pub fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
     let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), op);
     let sb = rescue_from_bounds(g);
@@ -803,7 +801,7 @@ pub fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
     g.tab.orders_assignment[a].new_leg = true;
 }
 
-/// A man the scenario lets go of where he stands: the order menu's 'cover'. (rescue.ts Rescue.post)
+/// A man the scenario lets go of where he stands: the order menu's 'cover'.
 pub fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, door: Option<&str>) {
     let p = pos_of(g, op);
     let y = match look { Some(look) => v3::yaw_to(p, look), None => g.ch[g.gd[op].ch].body_yaw };
@@ -821,7 +819,7 @@ pub fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, doo
     if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) { g.rescue.auto.add(a); }
 }
 
-/// F's entry as it goes: the door tools' beats into the log, 'set', the room called. (rescue.ts Rescue.tickEntry)
+/// F's entry as it goes: the door tools' beats into the log, 'set', the room called.
 pub fn rescue_tick_entry(g: &mut crate::game::Game) {
     use crate::doortools::DoorToolKind;
     if g.rescue.entry.is_none() { return; }
@@ -923,7 +921,7 @@ pub fn rescue_tick_entry(g: &mut crate::game::Game) {
     }
 }
 
-/// The team's men in the hostage room pan their lights across it until somebody's eyes find a man. (rescue.ts Rescue.search)
+/// The team's men in the hostage room pan their lights across it until somebody's eyes find a man.
 pub fn rescue_search(g: &mut crate::game::Game) {
     let b = rescue_bounds(g);
     let t = g.time;
@@ -981,7 +979,7 @@ pub fn rescue_search(g: &mut crate::game::Game) {
     }
 }
 
-/// His search is over: the sector the door tools left him on, back. (rescue.ts Rescue.searched)
+/// His search is over: the sector the door tools left him on, back.
 pub fn rescue_searched(g: &mut crate::game::Game, o: GuardId) {
     let was = g.rescue.search_a.get(o).cloned();
     g.rescue.search_t.delete(o);
@@ -994,7 +992,7 @@ pub fn rescue_searched(g: &mut crate::game::Game, o: GuardId) {
     }
 }
 
-/// F's entry is over; the room called, its men hold it. (rescue.ts Rescue.endEntry)
+/// F's entry is over; the room called, its men hold it.
 pub fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
     let en = match g.rescue.entry.take() { Some(en) => en, None => return };
     g.rescue.door_orders = 0.0;
@@ -1027,10 +1025,10 @@ pub fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
     }
 }
 
-/// The last loud thing the team did. (rescue.ts Rescue.noiseAt)
+/// The last loud thing the team did.
 pub fn rescue_noise_at(g: &crate::game::Game) -> Option<V3> { g.rescue.noise }
 
-/// The living and the dead of the cast as their radio check reads them. (rescue.ts Rescue.cast)
+/// The living and the dead of the cast as their radio check reads them.
 pub fn rescue_cast(g: &crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
     g.rescue.hostiles.iter().map(|&gd| {
         let d = def_of(g, gd);
@@ -1038,15 +1036,15 @@ pub fn rescue_cast(g: &crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
     }).collect()
 }
 
-/// A man the flush sends is nobody's to send again. (rescue.ts Rescue.letGo)
+/// A man the flush sends is nobody's to send again.
 pub fn rescue_let_go(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(d) = g.rescue.defs.get_mut(gd) { d.released = true; d.crew = DefCrew::Out; }
 }
 
-/// The floor just outside the hostage room's main door. (rescue.ts Rescue.outsidePoint)
+/// The floor just outside the hostage room's main door.
 pub fn rescue_outside_point(g: &crate::game::Game) -> V3 { rescue_room_point(g, RescueRoomPointWhich::Outside) }
 
-/// The floor a metre outside the hostage room's side door. (rescue.ts Rescue.sideOutside)
+/// The floor a metre outside the hostage room's side door.
 pub fn rescue_side_outside(g: &crate::game::Game) -> Option<V3> {
     let n = rescue_data(g)?.side?.door;
     let d = crate::doors::doors_by_name(g, &n)?;
@@ -1054,7 +1052,7 @@ pub fn rescue_side_outside(g: &crate::game::Game) -> Option<V3> {
     Some(rescue_out_of(g, d, b, 1.0))
 }
 
-/// The way round to the side door. (rescue.ts Rescue.sideWay)
+/// The way round to the side door.
 pub fn rescue_side_way(g: &crate::game::Game) -> Vec<V3> {
     let o = match rescue_side_outside(g) { Some(o) => o, None => return Vec::new() };
     let mut way: Vec<V3> = Vec::new();
@@ -1063,7 +1061,7 @@ pub fn rescue_side_way(g: &crate::game::Game) -> Vec<V3> {
     way
 }
 
-/// Who holds the hostages right now. (rescue.ts Rescue.captor)
+/// Who holds the hostages right now.
 pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
     let b = rescue_bounds(g);
     let all: Vec<GuardId> = g.rescue.hostages.iter().copied().filter(|&h| alive(g, h)).collect();
@@ -1090,7 +1088,7 @@ pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
     }
 }
 
-/// The captor's last warning, as the men at a door have it. (rescue.ts Rescue.lastWarning)
+/// The captor's last warning, as the men at a door have it.
 pub fn rescue_last_warning(g: &mut crate::game::Game, d: DoorId) -> bool {
     if !g.rescue.active || rescue_over(g) || g.rescue.t0.is_nan() { return false; }
     let s = match rescue_data(g) { Some(s) => s, None => return false };

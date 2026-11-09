@@ -4,7 +4,7 @@
 //! STATEMENT FOR STATEMENT, as lines.rs is: the same cells in the same order, a box met once a pass, the same pushes added in the same order — a body pushed
 //! out of two boxes ends where the TypeScript leaves it, to the bit. tools/qa/rust-check.ts holds the two together.
 //!
-//! What is not here: whether a broken pane can be walked through (game/glassbreak.ts) is a rule of the TypeScript's; the copy carries its answer for each
+//! What is not here: whether a broken pane can be walked through is a rule of the TypeScript's; the copy carries its answer for each
 //! pane as it stood when the copy was last compared (K_WALK), and the rule says so when it changes one.
 
 use crate::world::*;

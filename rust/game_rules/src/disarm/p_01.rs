@@ -1,4 +1,3 @@
-//! src/game/disarm.ts lines 1 to 138
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,16 +6,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// (disarm.ts lerp)
 pub fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
 
-/// (disarm.ts sstep)
 pub fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
 }
 
-/// player.ts startGrab, once the hold exists: the gun still in his hand is the disarm's to take. (disarm.ts disarmBegin)
+/// player.ts startGrab, once the hold exists: the gun still in his hand is the disarm's to take.
 pub fn disarm_begin(g: &mut crate::game::Game) {
     let pl = g.player;
     let Some((gd, variant)) = g.pl[pl].holding.as_ref().map(|h| (h.g, h.variant)) else { return };
@@ -30,19 +27,19 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
     if leads(g, Some(strip)) { g.pl[pl].catch_due = Some(g.time + g.k.hold.first.catch); }
 }
 
-/// The grab's first voice (player.ts startGrab, every grab): the strip is heard first when the disarm leads. Its rate is pinned. (disarm.ts disarmCatch)
+/// The grab's first voice: the strip is heard first when the disarm leads. Its rate is pinned.
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
     let s = g.pl[g.player].holding.as_ref().and_then(|h| h.strip);
     if leads(g, s) { return; }
     crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
 
-/// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap. (disarm.ts leads)
+/// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap.
 pub fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
     match s { Some(s) => !s.rap, None => false }
 }
 
-/// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there. (disarm.ts lead)
+/// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there.
 pub fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
     if !leads(g, Some(s)) { return 1.0; }
     let (k_take, k_drop) = (g.k.hold.strip.take, g.k.hold.strip.drop);
@@ -52,17 +49,17 @@ pub fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
     else { 1.0 }
 }
 
-/// What both figures' hold layers are told of it this frame (player.ts holdTail). (disarm.ts disarmPose)
+/// What both figures' hold layers are told of it this frame.
 pub fn disarm_pose(s: crate::disarm::Strip) -> crate::character::StripPose {
     crate::character::StripPose { t: s.t, at: Some(s.at) }
 }
 
-/// Sam's right fist is the gun's, not yet the knife's (combat.ts handProps). (disarm.ts disarmHand)
+/// Sam's right fist is the gun's, not yet the knife's.
 pub fn disarm_hand(g: &crate::game::Game, h: &crate::player::Hold) -> bool {
     match h.strip { Some(s) => s.t < g.k.hold.strip.knife, None => false }
 }
 
-/// Once a frame, after everybody has been posed (game.ts): the move's clock, the take, the gun carried, the gun let go. (disarm.ts disarmTick)
+/// Once a frame, after everybody has been posed: the move's clock, the take, the gun carried, the gun let go.
 pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let pl_ch = g.pl[pl].ch;
@@ -125,17 +122,15 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     if s.t >= g.k.hold.strip.home { clear_strip(g, pl); }
 }
 
-/// (disarm.ts handOf)
 pub fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })
 }
 
-/// (disarm.ts long)
 pub fn long(kind: &str) -> bool { kind == "rifle" }
 
-/// The gun leaves his hand: an item from here on, his `dropped`, his hands empty; in Sam's hand or, rapped out by the pistol hold, falling. (disarm.ts take)
+/// The gun leaves his hand: an item from here on, his `dropped`, his hands empty; in Sam's hand or, rapped out by the pistol hold, falling.
 /// Its writes go to `s`: the caller holds the move and puts it back in the hold.
 pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
     let gd = g.pl[pl].holding.as_ref().unwrap().g;
@@ -170,7 +165,7 @@ pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Stri
     }
 }
 
-/// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear. (disarm.ts carry)
+/// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear.
 pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
     let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
@@ -191,7 +186,7 @@ pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
 }
 
 /// Let go of: it falls from where it is with the pair's own motion and a little push out to that man's right; never from inside a wall. The throw's fall is
-/// timed so the knock stays a beat: he throws it down just hard enough to land `fall` seconds on, and never into a wall. (disarm.ts letGo)
+/// timed so the knock stays a beat: he throws it down just hard enough to land `fall` seconds on, and never into a wall.
 pub fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) {
     let fall = fall.unwrap_or(0.0);
     let y = g.ch[by].body_yaw;
@@ -237,7 +232,7 @@ pub fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f6
     crate::throwables::item_set_vel(g, it, [vx, -down, vz]);
 }
 
-/// The gun on the floor: one dull knock, the first time it lands, on what it lands on by the face it struck (Item.onBounce). (disarm.ts gunDown)
+/// The gun on the floor: one dull knock, the first time it lands, on what it lands on by the face it struck (Item.onBounce).
 pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
     if n[1] < 0.6 { return; }
     if sp < 0.7 { return; }

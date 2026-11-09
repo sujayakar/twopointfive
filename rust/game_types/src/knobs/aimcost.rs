@@ -22,7 +22,7 @@ pub struct AimcostK {
     #[k(0.16)] pub bare_device: f64,
     /// m/s: a guard starts no burst while his remembered feet are over this (never looser than his own `stopToShoot`)
     #[k(1.2)] pub plant_at: f64,
-    /// m/s: a man takes an aimed round PAST A COLLEAGUE in Sam's arm (guards.ts, the standoff's flank round) only with his remembered feet under this —
+    /// m/s: a man takes an aimed round PAST A COLLEAGUE in Sam's arm only with his remembered feet under this —
     ///  the line is 0.45 m clear of his own man, and a cone still open from the walk round found him (standoff-flank, the page's stand)
     #[k(0.3)] pub flank_at: f64,
 }

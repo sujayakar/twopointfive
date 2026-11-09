@@ -1,4 +1,3 @@
-//! src/math/dice.ts lines 1 to 63
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The die's bit in the block's head: which systems' state is at home there.   (dicehome.ts simTenant's `bit`)
+/// The die's bit in the block's head: which systems' state is at home there.
 const DICE_BIT: u32 = 1;
 
 /// A die made and spent inside one call: the stream of `roll(die_of(a))`.   (dice.ts mulberry32)
@@ -61,7 +60,6 @@ pub fn sim_dice_n(this: &crate::math_dice::SimDice) -> f64 {
 }
 
 /// As a game's frame opens: `g.dice` is the die sim_random draws, and it moves into or out of the game's block as RUST.dice wishes.
-/// (dice.ts useDice; dicehome.ts wants, into, outOf, with state.ts settle's test of the bit: neither has a part)
 pub fn use_dice(g: &mut crate::game::Game) {
     let want = g.m.sim_sim.dice_on && g.dice.is_some();
     let st = ::sim::state::state(g.sim);

@@ -1,4 +1,3 @@
-//! src/game/pairup.ts lines 1 to 98
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A rule is in force: the switch, and its own row (settled on, on the page).   (pairup.ts pairUp)
+/// A rule is in force: the switch, and its own row (settled on, on the page).
 pub fn pair_up(g: &crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
     g.k.pairup.on
 }
 
-/// The switch reaches the three parts: on, all three on unless this visit put one back; `off` (the row turned off), all three off and out of their stores.   (pairup.ts pairUpApply)
+/// The switch reaches the three parts: on, all three on unless this visit put one back; `off` (the row turned off), all three off and out of their stores.
 pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     let off = off.unwrap_or(false);
     if g.k.pairup.on {
@@ -28,7 +27,7 @@ pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     }
 }
 
-/// This visit's own word against one part: the address and the environment are the host's, so here it is what the TypeScript answers with neither a page nor a process.   (pairup.ts putBack)
+/// This visit's own word against one part: the address and the environment are the host's, so here it is what the TypeScript answers with neither a page nor a process.
 pub fn put_back(name: &str) -> bool {
     false
 }

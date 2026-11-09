@@ -1,4 +1,3 @@
-//! src/game/doorthrow.ts lines 1 to 114
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.   (doorthrow.ts sideOf)
+/// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.
 pub fn side_of(t: crate::teams::Team) -> f64 {
     if t == crate::teams::Team::Player || t == crate::teams::Team::Operative {
         1.0
@@ -18,7 +17,7 @@ pub fn side_of(t: crate::teams::Team) -> f64 {
     }
 }
 
-/// The guard or civilian whose body has this character id.   (doorthrow.ts manOf)
+/// The guard or civilian whose body has this character id.
 pub fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
     for i in 0..g.guards.len() {
         let x = g.guards[i];
@@ -35,7 +34,7 @@ pub fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
     None
 }
 
-/// Doors.man: side | MAN_FOLDED | MAN_BRACED | MAN_CALM | MAN_HELD for this id; 0 = nobody the game knows.   (doorthrow.ts doorMan)
+/// Doors.man: side | MAN_FOLDED | MAN_BRACED | MAN_CALM | MAN_HELD for this id; 0 = nobody the game knows.
 pub fn door_man(g: &mut Game, who: f64) -> f64 {
     let (again, now) = (g.k.doorthrow.again, g.time);
     let folded_bit = js::to_i32(crate::doors::MAN_FOLDED);
@@ -74,7 +73,7 @@ pub fn door_man(g: &mut Game, who: f64) -> f64 {
     (js::to_i32(side) | (if now < until { folded_bit } else { 0 }) | braced | (if calm { calm_bit } else { 0 })) as f64
 }
 
-/// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).   (doorthrow.ts teamOf)
+/// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).
 pub fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
     if crate::seats::is_man_id(g, id_2) {
         return Some(crate::teams::Team::Player);
@@ -82,7 +81,7 @@ pub fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
     man_of(g, id_2).map(|gd| g.gd[gd].team)
 }
 
-/// After the leaves are stepped: a carried man is settled against the walls, a struck man startled or thrown.   (doorthrow.ts doorThrowAfter)
+/// After the leaves are stepped: a carried man is settled against the walls, a struck man startled or thrown.
 pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
     for c in contacts {
         let moved = c.moved == Some(true);
@@ -123,7 +122,7 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
     }
 }
 
-/// The counters of one throw.   (doorthrow.ts count)
+/// The counters of one throw.
 pub fn count(g: &mut Game, s: crate::doors::DoorStrike) {
     if s.tier == crate::doors::DoorStrikeTier::Boot {
         g.stats.doorthrow.kicked += 1;
@@ -135,7 +134,7 @@ pub fn count(g: &mut Game, s: crate::doors::DoorStrike) {
     }
 }
 
-/// A leaf merely opened into him.   (doorthrow.ts startleMan)
+/// A leaf merely opened into him.
 pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
@@ -181,7 +180,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
 }
 
-/// A leaf slammed or booted into him: folded and blind for the seconds, by the stun charge's two stamps.   (doorthrow.ts throwMan)
+/// A leaf slammed or booted into him: folded and blind for the seconds, by the stun charge's two stamps.
 pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
@@ -237,7 +236,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
 }
 
-/// A leaf slammed or booted into the seat's man.   (doorthrow.ts throwSam)
+/// A leaf slammed or booted into the seat's man.
 pub fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;

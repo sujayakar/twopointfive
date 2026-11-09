@@ -19,7 +19,7 @@ pub static TUTORIAL: Tutorial = Tutorial {
     finish: Some(|b| Box::pin(async move { b.to([6.0, 0.0, 14.0], 30.0).await; })),   // (out by the track gate)
 };
 
-// the level's marks (tools/levels/tut-quiet.ts TQ)
+// the level's marks
 const DARK: V3 = [15.2, 0.0, 17.6];
 const WHISTLE: V3 = [21.5, 0.0, 17.8];
 const HIDE: V3 = [23.9, 0.0, 19.05];

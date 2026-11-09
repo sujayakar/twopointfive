@@ -1,4 +1,4 @@
-//! THE DOORS' STEP (src/game/doors.ts Doors.update, and Door.place at its end) — every leaf of a level for one tick: what was written onto it since the last
+//! THE DOORS' STEP — every leaf of a level for one tick: what was written onto it since the last
 //! one, the men and the bodies in its swing (who turns it, whom it moves, whom it passes), its free swing, its stops, its closer, its latch and its lock's
 //! clocks; and then where its box stands.
 //!
@@ -12,7 +12,7 @@
 //! and what a leaf did to him, the noises the leaves made, in order (`ev`), and each leaf's two handles (`out`: the picture's).
 //!
 //! THE LEAF'S BOX IS WRITTEN HERE. A rule in this module that moves a box writes the box world's ROW (world.rs: list 0 of the leaves, a door's own index)
-//! and the host makes the Box object the picture draws follow it (src/scene/boxMirror.ts `follow`) before any TypeScript runs again. So a rule here that
+//! and the host makes the Box object the picture draws follow it before any TypeScript runs again. So a rule here that
 //! asks a line after it has turned a leaf asks the leaf where it now stands, with no crossing.
 //!
 //! The floor a moved man may stand on is the statics' (collide.rs, the same world), asked here as the host's two functions ask it (game.ts: the doors'
@@ -27,7 +27,7 @@ use prim::{floor, sqrt};
 /// doors a level can have and still keep them here (more: the TypeScript keeps them, as it did)
 pub const CAP: usize = 64;
 
-// ---- THE COLUMNS (src/sim/doorshome.ts DC names them by the same numbers; tools/qa/rust-check.ts holds the two lists to each other)
+// ---- THE COLUMNS
 pub const ANGLE: usize = 0;
 pub const VEL: usize = 1;
 pub const QUIET_T: usize = 2;
@@ -117,7 +117,7 @@ pub const O_H2X: usize = 3;
 pub const O_H2Z: usize = 4;
 pub const NOUT: usize = 5;
 
-// a contact (doors.ts DoorContact), a column each: in …
+// a contact, a column each: in …
 pub const K_X: usize = 0;
 pub const K_Y: usize = 1;
 pub const K_Z: usize = 2;
@@ -159,7 +159,7 @@ pub const KF_VEL: u32 = 64;
 pub const KF_RUN: u32 = 128;
 pub const KF_HAND: u32 = 256;
 
-// a noise (doors.ts DoorEvent): the door, the sound (the place of its name in DoorSound), who, how loud, whether the door's kept centre was made anew for
+// a noise: the door, the sound (the place of its name in DoorSound), who, how loud, whether the door's kept centre was made anew for
 // it, and that centre
 pub const NEV: usize = 6;
 pub const S_CREAK: f64 = 0.0;
@@ -185,7 +185,7 @@ pub const P_WMIN_Z: usize = 12;
 pub const P_WMAX_Z: usize = 13;
 /// the foot of a walker's span as the statics are asked it (collision.ts footBand(0.2))
 pub const P_FOOT: usize = 14;
-/// the head of the settled man's span (player.ts settleSpot: crouched or not)
+/// the head of the settled man's span
 pub const P_SETTLE_Y1: usize = 15;
 // … and out
 pub const P_EVENTS: usize = 16;
@@ -248,7 +248,7 @@ pub fn cap(table: u32) -> usize {
     }
 }
 
-// ---- doors.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
+// ---- doors.ts's own numbers
 const SOLID_SLIDE: f64 = 2.2;
 const SOLID_TRIES: f64 = 3.0;
 const SOLID_FADE: f64 = 0.5;
@@ -271,7 +271,7 @@ const SHOVE_OPENS_BELOW: f64 = 1.2;
 const SHOVE_RATE: f64 = 7.2;
 const TURN_RATE: f64 = 15.0;
 const KICK_SUBSTEP: f64 = 0.16;
-// what Doors.man answers (doors.ts)
+// what Doors.man answers
 const MAN_SIDE: i32 = 3;
 const MAN_FOLDED: i32 = 4;
 const MAN_BRACED: i32 = 8;
@@ -327,7 +327,7 @@ struct Step {
     ev: usize,
 }
 
-/// the drive's own columns (doors.ts DRIVE_COLS: DriveCols' fields, each one)
+/// the drive's own columns
 const DRIVE_COLS: [usize; 11] = [DRIVE_WHO, DRIVE_DIR, DRIVE_KIND, DRIVE_T, DRIVE_FROM, DRIVE_QUIET, DRIVE_SIDE, DRIVE_RATE, DRIVE_PX, DRIVE_PZ, DRIVE_HIT];
 
 impl Step {
@@ -335,7 +335,7 @@ impl Step {
     fn on(&self, k: usize, i: usize) -> bool {
         self.s.c[k][i] != 0.0
     }
-    /// `d.drive = null` (doors.ts Door's setter): the drive is over and leaves nothing — its flag down and every column of its record zero
+    /// `d.drive = null`: the drive is over and leaves nothing — its flag down and every column of its record zero
     #[inline]
     fn drive_off(&mut self, i: usize) {
         self.s.c[DRIVE][i] = 0.0;

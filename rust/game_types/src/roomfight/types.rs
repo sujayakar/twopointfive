@@ -356,17 +356,12 @@ pub struct RoomFightStepToPatch {
     pub over: Option<crate::game::GuardScriptOver>,
 }
 
-/// (src/game/roomfight.ts:260 FIGHT_SKILL: a table nothing writes)
 pub fn fight_skill() -> JsMap<String, crate::roomfight::FightSkill> { { let mut t = JsMap::new(); t.set(String::from("operative"), crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(String::from("hostile"), crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t } }
 
-/// (src/game/roomfight.ts:293 ROOM_MAX_CELLS)
 pub const ROOM_MAX_CELLS: f64 = 2400.0;
 
-/// (src/game/roomfight.ts:294 ROOM_DX: a table nothing writes)
 pub fn room_dx() -> Vec<f64> { alloc::vec![1.0, -1.0, 0.0, 0.0] }
 
-/// (src/game/roomfight.ts:294 ROOM_DZ: a table nothing writes)
 pub fn room_dz() -> Vec<f64> { alloc::vec![0.0, 0.0, 1.0, -1.0] }
 
-/// (src/game/roomfight.ts:315 GLASS_LOOK)
 pub const GLASS_LOOK: f64 = 4.0;

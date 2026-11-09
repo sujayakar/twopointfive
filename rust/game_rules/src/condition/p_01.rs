@@ -1,4 +1,3 @@
-//! src/game/condition.ts lines 1 to 114
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Is this man hurt now; `now` is the clock asked of, the game's by default.   (condition.ts isHurt)
+/// Is this man hurt now; `now` is the clock asked of, the game's by default.
 pub fn is_hurt(g: &crate::game::Game, m: crate::condition::Man, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     let hurt_at = match m {
@@ -18,7 +17,7 @@ pub fn is_hurt(g: &crate::game::Game, m: crate::condition::Man, now: Option<f64>
     g.k.condition.hurt_secs <= 0.0 || now - hurt_at < g.k.condition.hurt_secs
 }
 
-/// A blast reached this man and left him up: he is hurt from now. False = not given.   (condition.ts conditionHurt)
+/// A blast reached this man and left him up: he is hurt from now. False = not given.
 pub fn condition_hurt(g: &mut crate::game::Game, m: &crate::condition::Man) -> bool {
     let man = *m;
     if g.touring || g.puppet.is_some() { return false; }
@@ -36,17 +35,17 @@ pub fn condition_hurt(g: &mut crate::game::Game, m: &crate::condition::Man) -> b
     true
 }
 
-/// The speed a man's legs may be asked for: a hurt one's is capped.   (condition.ts conditionPace)
+/// The speed a man's legs may be asked for: a hurt one's is capped.
 pub fn condition_pace(g: &crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     if is_hurt(g, Man::Guard(gd), None) { m::min(speed, g.k.condition.hurt_pace) } else { speed }
 }
 
-/// The fire his rounds are opened by: never less than `hurt_sup` on a hurt man.   (condition.ts conditionSup)
+/// The fire his rounds are opened by: never less than `hurt_sup` on a hurt man.
 pub fn condition_sup(g: &crate::game::Game, m: crate::condition::Man, v: f64) -> f64 {
     if is_hurt(g, m, None) { m::max(v, g.k.condition.hurt_sup) } else { v }
 }
 
-/// What state a man is in, the stamps read as they stand.   (condition.ts conditionOf)
+/// What state a man is in, the stamps read as they stand.
 pub fn condition_of(g: &crate::game::Game, m: crate::condition::Man) -> crate::condition::Condition {
     let (down, sup, dazzled_until, stagger_until) = man_marks(g, m);
     Condition {
@@ -72,7 +71,7 @@ fn man_marks(g: &Game, m: Man) -> (bool, f64, f64, f64) {
     }
 }
 
-/// The panel's line: every man in anything but good order.   (condition.ts conditionSummary)
+/// The panel's line: every man in anything but good order.
 pub fn condition_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     let mut parts: Vec<String> = Vec::new();
     let me = seat.player;
@@ -98,7 +97,7 @@ pub fn condition_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
     out
 }
 
-/// One man's states as words, in the panel's order.   (condition.ts conditionSummary's word)
+/// One man's states as words, in the panel's order.
 fn word(c: Condition) -> String {
     let mut words: Vec<&str> = Vec::new();
     if c.shaken { words.push("shaken"); }
@@ -108,7 +107,7 @@ fn word(c: Condition) -> String {
     words.join(" ")
 }
 
-/// Every frame, after the stun poses are dealt: each man's condition to his figure, by one rule.   (condition.ts conditionPose)
+/// Every frame, after the stun poses are dealt: each man's condition to his figure, by one rule.
 pub fn condition_pose(g: &mut crate::game::Game) {
     let on = !g.touring && !crate::director::director_showing(g);
     for pl in crate::seats::men(g) { deal(g, on, Man::Player(pl)); }
@@ -118,7 +117,7 @@ pub fn condition_pose(g: &mut crate::game::Game) {
     }
 }
 
-/// One man's condition to his figure; off, whatever it put there comes off.   (condition.ts conditionPose's deal)
+/// One man's condition to his figure; off, whatever it put there comes off.
 fn deal(g: &mut Game, on: bool, m: Man) {
     let c = match m {
         Man::Guard(id) => g.gd[id].ch,

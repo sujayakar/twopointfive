@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// WHICH OF THE THREE A GUN IS: a Pistol's and a Rifle's own rows are fields of the one Firearm (g.fa)
 #[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
 pub enum GunKind { Plain, Pistol, Rifle }
-/// WHAT A RELOAD TELLS ITS OWNER AS IT GOES (weapons.ts ReloadEvents, callbacks in the TypeScript: player.ts:362 and :381 are the only callers that give any). The body matches on it at each stage
+/// WHAT A RELOAD TELLS ITS OWNER AS IT GOES. The body matches on it at each stage
 #[derive(Clone, Debug, ToBytes)]
 pub enum ReloadEvents {
     None,
@@ -18,7 +18,6 @@ pub enum ReloadEvents {
 /// what gunreload.ts feedPlan returns: own sounds at the cues, their times, what an empty one leaving the gun is drawn as
 #[derive(Clone, Debug, ToBytes)]
 pub struct FeedPlan { pub cues: Option<Vec<FeedCue>>,  pub drop: Option<f64> }
-/// (gunreload.ts FeedCue)
 #[derive(Clone, Debug, ToBytes)]
 pub struct FeedCue { pub t: f64, pub sfx: String, pub gain: f64, pub rate: f64 }
 
@@ -383,7 +382,6 @@ pub struct FirearmStartReloadShells {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WeaponsMod {
-    /// (src/game/weapons.ts:325 WEAPONS)
     pub weapons: JsMap<crate::weapons::WeaponId, crate::weapons::WeaponDef>,
 }
 impl WeaponsMod {
@@ -394,5 +392,4 @@ impl WeaponsMod {
     }
 }
 
-/// (src/game/weapons.ts:342 HANDLING_BY_CLASS: a table nothing writes)
 pub fn handling_by_class() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("pistol"), 1.0); t.set(String::from("carbine"), 0.82); t.set(String::from("rifle"), 0.7); t.set(String::from("shotgun"), 0.75); t } }

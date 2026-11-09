@@ -1,4 +1,3 @@
-//! src/game/lanes.ts lines 1 to 367
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// the side this rule is for   (lanes.ts SIDE)
+/// the side this rule is for
 const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
 /// the game's state as a path, once it exists (`g.time` and the like can be read beside it); a call that takes `g` needs it let go first
@@ -17,12 +16,12 @@ macro_rules! st {
     };
 }
 
-/// A new game's state: the TypeScript's own literal, whose clocks are not zero.   (lanes.ts fresh)
+/// A new game's state: the TypeScript's own literal, whose clocks are not zero.
 pub fn fresh(g: &mut crate::game::Game) -> crate::lanes::State {
     State { said_t: -100.0, t: -1.0, ..State::default() }
 }
 
-/// The game's state, made if it has none: the row itself.   (lanes.ts S)
+/// The game's state, made if it has none: the row itself.
 pub fn s<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::lanes::State {
     if g.m.lanes.states.is_none() {
         let f = fresh(g);
@@ -31,28 +30,28 @@ pub fn s<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::lanes::State {
     g.m.lanes.states.as_mut().unwrap()
 }
 
-/// The distance on the plan.   (lanes.ts flat)
+/// The distance on the plan.
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A man the rule is for: a defender of a live room fight, on his feet.   (lanes.ts mine)
+/// A man the rule is for: a defender of a live room fight, on his feet.
 pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let r = &g.gd[gd];
     r.team == SIDE && r.unit.is_some() && r.state != crate::game::GuardState::Dead && r.held.is_none()
 }
 
-/// One of his who is neither dazzled nor staggering.   (lanes.ts fit)
+/// One of his who is neither dazzled nor staggering.
 pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
-/// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)   (lanes.ts live)
+/// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)
 pub fn live(g: &mut crate::game::Game) -> bool {
     crate::roomfight::fight_live(g) && g.ai_enabled && !g.touring
 }
 
-/// WHO THE LANES HAVE: the lane a man held short of it or out for a look round its corner is on, while that lane stands.   (lanes.ts laneOf)
+/// WHO THE LANES HAVE: the lane a man held short of it or out for a look round its corner is on, while that lane stands.
 pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
     let st = g.m.lanes.states.as_ref()?;
     let lane = match st.held.get(gd) {
@@ -62,7 +61,7 @@ pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
     st.lanes.iter().copied().find(|&l| g.tab.lanes_lane[l].id == lane)
 }
 
-/// The owner's record says what this file's state says of him.   (lanes.ts laneSay)
+/// The owner's record says what this file's state says of him.
 pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
     let (rule, t) = (crate::owner::by::LANE, g.time);
     if lane_of(g, gd).is_some() && !crate::owner::has(g, gd, crate::owner::by::RUNNER) {
@@ -72,31 +71,31 @@ pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// He is held short of a lane.   (lanes.ts heldOn)
+/// He is held short of a lane.
 pub fn held_on(g: &mut crate::game::Game, gd: GuardId, h: crate::lanes::StateHeldValue) {
     s(g).held.set(gd, h);
     lane_say(g, gd);
 }
 
-/// He is no longer held.   (lanes.ts heldOff)
+/// He is no longer held.
 pub fn held_off(g: &mut crate::game::Game, gd: GuardId) {
     s(g).held.delete(gd);
     lane_say(g, gd);
 }
 
-/// He is out for a look.   (lanes.ts peekOn)
+/// He is out for a look.
 pub fn peek_on(g: &mut crate::game::Game, gd: GuardId, p: crate::lanes::Peek) {
     s(g).peek.set(gd, p);
     lane_say(g, gd);
 }
 
-/// He is back from his look.   (lanes.ts peekOff)
+/// He is back from his look.
 pub fn peek_off(g: &mut crate::game::Game, gd: GuardId) {
     s(g).peek.delete(gd);
     lane_say(g, gd);
 }
 
-/// Every man this file had, let go of: the state goes with them.   (lanes.ts letGo)
+/// Every man this file had, let go of: the state goes with them.
 pub fn let_go(g: &mut crate::game::Game) {
     let (rule, t) = (crate::owner::by::LANE, g.time);
     for gd in s(g).held.keys() {
@@ -107,7 +106,7 @@ pub fn let_go(g: &mut crate::game::Game) {
     }
 }
 
-/// A lane has gone: whoever it held is nobody's until the half-second's sweep says what becomes of him.   (lanes.ts lanesGone)
+/// A lane has gone: whoever it held is nobody's until the half-second's sweep says what becomes of him.
 pub fn lanes_gone(g: &mut crate::game::Game) {
     for gd in s(g).held.keys() {
         lane_say(g, gd);
@@ -117,7 +116,7 @@ pub fn lanes_gone(g: &mut crate::game::Game) {
     }
 }
 
-/// Where he looks from.   (lanes.ts eyeOf)
+/// Where he looks from.
 pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -126,7 +125,7 @@ pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     }
 }
 
-/// The nav cell a point lies in, −1 off the grid.   (lanes.ts cellAt)
+/// The nav cell a point lies in, −1 off the grid.
 pub fn cell_at(g: &crate::game::Game, p: V3) -> f64 {
     let n = &g.col.nav;
     let x = m::floor(p[0] / n.cell);
@@ -138,14 +137,14 @@ pub fn cell_at(g: &crate::game::Game, p: V3) -> f64 {
     z * n.w + x + 0.0
 }
 
-/// A point lies on a mask's floor.   (lanes.ts inMask)
+/// A point lies on a mask's floor.
 pub fn in_mask(g: &crate::game::Game, m: Option<&[u8]>, p: V3) -> bool {
     let Some(m) = m else { return false };
     let i = cell_at(g, p);
     i >= 0.0 && m.get(i as usize) == Some(&1)
 }
 
-/// The side has it on the net, or he has it himself.   (lanes.ts knows)
+/// The side has it on the net, or he has it himself.
 pub fn knows(g: &crate::game::Game, l: LanesLaneId, gd: GuardId) -> bool {
     knows_row(&g.tab.lanes_lane[l], gd)
 }
@@ -155,7 +154,7 @@ fn knows_row(l: &Lane, gd: GuardId) -> bool {
     l.known || l.knowers.has(gd)
 }
 
-/// An enemy he saw this close inside the last second: a fight already.   (lanes.ts closeFight)
+/// An enemy he saw this close inside the last second: a fight already.
 pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
@@ -164,7 +163,7 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     flat(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 
-/// He is going in behind a charge; a lapsed entry is dropped as it is asked.   (lanes.ts pushing)
+/// He is going in behind a charge; a lapsed entry is dropped as it is asked.
 pub fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).push.get(gd).copied() else { return false };
     if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
@@ -174,7 +173,7 @@ pub fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// The energy a lane's lines are asked at: its heaviest gun's, or nothing. (LANES.glass settled on.)   (lanes.ts laneE)
+/// The energy a lane's lines are asked at: its heaviest gun's, or nothing. (LANES.glass settled on.)
 pub fn lane_e(g: &crate::game::Game, l: LanesLaneId) -> Option<f64> {
     e_of(&g.tab.lanes_lane[l])
 }
@@ -184,7 +183,7 @@ fn e_of(l: &Lane) -> Option<f64> {
     if l.e > 0.0 { Some(l.e) } else { None }
 }
 
-/// His own senses have the fire since `t`.   (lanes.ts roused)
+/// His own senses have the fire since `t`.
 pub fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
     let r = &g.gd[gd];
     r.state == crate::game::GuardState::Alert
@@ -195,7 +194,7 @@ pub fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
         || (r.witness.heard.last_shot_t >= 0.0 && r.witness.heard.last_shot_t >= t - 2.5)
 }
 
-/// He is sent round at the guns; a lapsed entry is dropped, and his errand unless he is set.   (lanes.ts flanking)
+/// He is sent round at the guns; a lapsed entry is dropped, and his errand unless he is set.
 pub fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).flank.get(gd).copied() else { return false };
     if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
@@ -209,7 +208,7 @@ pub fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// The body with this id is up.   (lanes.ts upId)
+/// The body with this id is up.
 pub fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
     if crate::seats::is_man_id(g, id_2) {
         return match crate::seats::man_by_id(g, id_2) {
@@ -220,12 +219,12 @@ pub fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
     g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && g.gd[o].state != crate::game::GuardState::Dead)
 }
 
-/// His row in the room fight.   (lanes.ts defOf)
+/// His row in the room fight.
 pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
-/// A line in the fight's log.   (lanes.ts note)
+/// A line in the fight's log.
 pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     let who = match gd {
         Some(x) => g.gd[x].callsign.clone(),
@@ -238,7 +237,7 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     }
 }
 
-/// The floor one gun at `from` covers along the line to `at`: nav cells in the wedge with a line of fire from the gun.   (lanes.ts wedge)
+/// The floor one gun at `from` covers along the line to `at`: nav cells in the wedge with a line of fire from the gun.
 pub fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
     let k = g.k.lanes;
     let (c, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
@@ -294,7 +293,7 @@ pub fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, 
     }
 }
 
-/// The floor of every lane the side knows.   (lanes.ts remask)
+/// The floor of every lane the side knows.
 pub fn remask(g: &mut crate::game::Game) {
     let size = (g.col.nav.w * g.col.nav.h) as usize;
     s(g);
@@ -315,7 +314,7 @@ pub fn remask(g: &mut crate::game::Game) {
     st.ver += 1.0;
 }
 
-/// The floor of every lane THIS man knows of: the net's, and what he has seen and not yet had said. A copy, by the review's answer.   (lanes.ts maskOf)
+/// The floor of every lane THIS man knows of: the net's, and what he has seen and not yet had said. A copy, by the review's answer.
 pub fn mask_of(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<u8>> {
     let size = (g.col.nav.w * g.col.nav.h) as usize;
     s(g);
@@ -352,7 +351,7 @@ pub fn mask_of(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<u8>> {
     Some(mask)
 }
 
-/// One of a lane's guns has a line of fire to a man standing at `p`.   (lanes.ts gunOn)
+/// One of a lane's guns has a line of fire to a man standing at `p`.
 pub fn gun_on(g: &mut crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64>) -> bool {
     let wide = wide.unwrap_or(0.0);
     let q: V3 = [p[0], 1.1, p[2]];
@@ -387,7 +386,7 @@ pub fn gun_on(g: &mut crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64
     false
 }
 
-/// The lane this man knows of that a point of floor lies in.   (lanes.ts laneAt)
+/// The lane this man knows of that a point of floor lies in.
 pub fn lane_at(g: &mut crate::game::Game, p: V3, gd: GuardId) -> Option<LanesLaneId> {
     let i = cell_at(g, p);
     if i < 0.0 {
@@ -400,7 +399,7 @@ pub fn lane_at(g: &mut crate::game::Game, p: V3, gd: GuardId) -> Option<LanesLan
     })
 }
 
-/// …or whose guns have a line to it (the floor beside the wedge is no cover).   (lanes.ts laneOn)
+/// …or whose guns have a line to it (the floor beside the wedge is no cover).
 pub fn lane_on(g: &mut crate::game::Game, p: V3, gd: GuardId) -> Option<LanesLaneId> {
     if let Some(l) = lane_at(g, p, gd) {
         return Some(l);
@@ -417,12 +416,12 @@ pub fn lane_on(g: &mut crate::game::Game, p: V3, gd: GuardId) -> Option<LanesLan
     None
 }
 
-/// which lane goes first when a side keeps too many: stray rounds before a lane, an unsaid one before one on the net   (lanes.ts cost, rank)
+/// which lane goes first when a side keeps too many: stray rounds before a lane, an unsaid one before one on the net
 fn rank(x: &Lane) -> i32 {
     (if x.known { 2 } else { 0 }) + (if x.weight >= 1.0 { 1 } else { 0 })
 }
 
-/// What a side has just suffered: fire from `from` landed at `at`, on a man dropped (`down`) or past a living one.   (lanes.ts cost)
+/// What a side has just suffered: fire from `from` landed at `at`, on a man dropped (`down`) or past a living one.
 pub fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: bool, who: f64) {
     let k = g.k.lanes;
     let now = g.time;
@@ -600,13 +599,13 @@ pub fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: boo
     }
 }
 
-/// where the fire landed is floor of the lane already   (lanes.ts cost, 329)
+/// where the fire landed is floor of the lane already
 fn landed_in_it(g: &Game, l: LanesLaneId, at: V3) -> bool {
     let i = cell_at(g, at);
     g.tab.lanes_lane[l].cells.as_ref().unwrap().has(crate::Num(i))
 }
 
-/// a lane's floor has changed: the side's mask made again if it is on the net, else a man's own floor is out of date   (lanes.ts 328, 329)
+/// a lane's floor has changed: the side's mask made again if it is on the net, else a man's own floor is out of date
 fn remask_or_bump(g: &mut Game, l: LanesLaneId) {
     if g.tab.lanes_lane[l].known {
         remask(g);
@@ -615,7 +614,7 @@ fn remask_or_bump(g: &mut Game, l: LanesLaneId) {
     }
 }
 
-/// A fit man of the side has a line to what happened at `at`, inside `reach` and not behind his back.   (lanes.ts sees)
+/// A fit man of the side has a line to what happened at `at`, inside `reach` and not behind his back.
 pub fn sees(g: &mut crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
@@ -633,7 +632,7 @@ pub fn sees(g: &mut crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
     !crate::scene_collision::segment_blocked(g, eye, [at[0], 0.9, at[2]], None, None, None)
 }
 
-/// The lane goes on the net.   (lanes.ts becomeKnown)
+/// The lane goes on the net.
 pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
     let k = g.k.lanes;
     let now = g.time;
@@ -676,7 +675,7 @@ pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
     note(g, Some(who), &what);
 }
 
-/// This frame's rounds (the shot events' own muzzle → impact segments): who of the side they dropped, whom they passed.   (lanes.ts readRounds)
+/// This frame's rounds (the shot events' own muzzle → impact segments): who of the side they dropped, whom they passed.
 pub fn read_rounds(g: &mut crate::game::Game) {
     let mut ei = 0;
     while ei < g.events.len() {

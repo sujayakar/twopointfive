@@ -112,7 +112,6 @@ pub struct SimSlabshomeModSLABSSTEPPED {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SimSlabshomeMod {
-    /// (src/sim/slabshome.ts:135 SLABS_STEPPED)
     pub slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED,
 }
 impl SimSlabshomeMod {
@@ -123,21 +122,15 @@ impl SimSlabshomeMod {
     }
 }
 
-/// (src/sim/slabshome.ts:22 SLAB_CAP)
 pub const SLAB_CAP: f64 = 64.0;
 
-/// (src/sim/slabshome.ts:25 SLAB_F64: a table nothing writes)
 pub fn slab_f64() -> [String; 17] { [String::from("px"), String::from("py"), String::from("pz"), String::from("vx"), String::from("vy"), String::from("vz"), String::from("a"), String::from("spin"), String::from("tip"), String::from("tipV"), String::from("t"), String::from("ang"), String::from("wedged"), String::from("bw"), String::from("bl"), String::from("bx"), String::from("by")] }
 
-/// (src/sim/slabshome.ts:28 SLAB_HEAD)
 pub const SLAB_HEAD: f64 = 16.0;
 
-/// (src/sim/slabshome.ts:31 SLF: a table nothing writes)
 pub fn slf() -> crate::sim_slabshome::SLF { crate::sim_slabshome::SLF { rest: 1.0, landed: 2.0, back: 4.0, bits: 8.0 } }
 
-/// (src/sim/slabshome.ts:41 SLAB_BIT)
 pub const SLAB_BIT: f64 = 64.0;
 
-/// (src/sim/slabshome.ts:44 SWAPPED: a table nothing writes)
 pub fn swapped() -> [String; 3] { [String::from("flags"), String::from("who"), String::from("door")] }
 

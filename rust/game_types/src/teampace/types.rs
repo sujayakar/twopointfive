@@ -75,15 +75,10 @@ pub struct TeampaceModAimSeenValue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct TeampaceMod {
-    /// (src/game/teampace.ts:112 leave)
     pub leave: JsMap<GuardId, crate::teampace::Leave>,
-    /// (src/game/teampace.ts:114 ran)
     pub ran: JsMap<GuardId, crate::teampace::TeampaceModRanValue>,
-    /// (src/game/teampace.ts:116 dash)
     pub dash: JsMap<GuardId, crate::teampace::TeampaceModDashValue>,
-    /// (src/game/teampace.ts:118 reasonT)
     pub reason_t: JsMap<GuardId, f64>,
-    /// (src/game/teampace.ts:128 aimSeen)
     pub aim_seen: JsMap<GuardId, crate::teampace::TeampaceModAimSeenValue>,
 }
 impl TeampaceMod {
@@ -108,11 +103,8 @@ pub struct TeampaceStats {
     pub secs: f64,
 }
 
-/// (src/game/teampace.ts:120 FRAME)
 pub const FRAME: f64 = 0.1;
 
-/// (src/game/teampace.ts:126 AIM_SHORT)
 pub const AIM_SHORT: f64 = 0.5;
 
-/// (src/game/teampace.ts:126 WALK_AHEAD)
 pub const WALK_AHEAD: f64 = 3.0;

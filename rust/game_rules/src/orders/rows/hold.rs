@@ -11,7 +11,7 @@ pub const ORDER: Row = Row { is: &[Is::Holds, Is::LooksAbout, Is::Resumed, Is::K
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("hold position") }
 
-/// 'hold'.issue: a running man plants a stride on; the squad of four take an approach each (orders.ts:618)
+/// 'hold'.issue: a running man plants a stride on; the squad of four take an approach each
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let mut posts: Vec<V3> = Vec::with_capacity(men.len());
     for &gd in men {

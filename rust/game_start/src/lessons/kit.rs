@@ -23,7 +23,7 @@ pub static TUTORIAL: Tutorial = Tutorial {
     finish: None,
 };
 
-// the level's marks (tools/levels/tut-kit.ts)
+// the level's marks
 const AXIS: f64 = 14.25;
 const JAMB: V3 = [15.1, 0.0, 11.7];
 const INNER_X: f64 = 12.5;

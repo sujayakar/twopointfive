@@ -57,7 +57,6 @@ pub struct Team {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NvgMod {
-    /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
 }
 impl NvgMod {
@@ -68,8 +67,6 @@ impl NvgMod {
     }
 }
 
-/// (src/game/nvg.ts:138 LOOK_M: a table nothing writes)
 pub fn look_m() -> Vec<f64> { alloc::vec![2.0, 5.0, 8.0, 12.0, 16.0] }
 
-/// (src/game/nvg.ts:138 TUBE_M)
 pub const TUBE_M: f64 = 8.0;

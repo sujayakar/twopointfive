@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 693 to 1031
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,7 +11,7 @@ fn tuck_to(t: &mut Vec<f64>, w: f64, i: usize, v: f64) {
     t[i] += (v - t[i]) * w;
 }
 
-/// A long carriage's targets pulled toward WALL_TUCK.long by w (0‥1), in place. (character.ts longTuck)
+/// A long carriage's targets pulled toward WALL_TUCK.long by w (0‥1), in place.
 pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     let w = v3::clamp(gun_wall, 0.0, 1.0);
     let c = lc();
@@ -31,13 +30,13 @@ pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     t[c.fwd as usize] -= v3::clamp(gun_wall - 1.0, 0.0, 1.0) * wall.over;
 }
 
-/// Is the stagger's fold up: `too` is the figure's own foldToo. (character.ts foldOn)
+/// Is the stagger's fold up: `too` is the figure's own foldToo.
 pub fn fold_on(g: &Game, too: Option<bool>) -> bool {
     let too = too.unwrap_or(false);
     g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && too))
 }
 
-/// One part of the motion pass: on? (character.ts mvOn)
+/// One part of the motion pass: on?
 pub fn mv_on(g: &Game, k: crate::character::MvOnK) -> bool {
     use crate::character::MvOnK;
     let t = &g.k.moves;
@@ -68,13 +67,13 @@ fn q_at(a: &[f32], n: f64) -> f64 {
     a.get(n as usize).map_or(m::NAN, |x| *x as f64)
 }
 
-/// The angle between the rotation at a[i] (its four numbers `s` apart) and the one at b[k‥k+3]. (character.ts qAng)
+/// The angle between the rotation at a[i] (its four numbers `s` apart) and the one at b[k‥k+3].
 pub fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
     let d = m::abs(q_at(a, i) * q_at(b, k) + q_at(a, i + s) * q_at(b, k + 1.0) + q_at(a, i + 2.0 * s) * q_at(b, k + 2.0) + q_at(a, i + 3.0 * s) * q_at(b, k + 3.0));
     if d >= 1.0 { 0.0 } else { 2.0 * m::acos(d) }
 }
 
-/// MOVES.entry's lane: something (dx, dz) from a man stands before his muzzle. (character.ts inDipLane)
+/// MOVES.entry's lane: something (dx, dz) from a man stands before his muzzle.
 pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool {
     let l = mv2().dip.lane;
     let fx = m::sin(gun_yaw);

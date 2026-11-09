@@ -111,11 +111,8 @@ pub struct DoorAhead {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct DarkdoorMod {
-    /// (src/game/darkdoor.ts:76 stateOf)
     pub state_of: JsMap<GuardId, crate::darkdoor::Fear>,
-    /// (src/game/darkdoor.ts:79 readsOf)
     pub reads_of: Option<JsMap<crate::Num, crate::darkdoor::Read>>,
-    /// (src/game/darkdoor.ts:81 cellsOf)
     pub cells_of: Option<JsMap<crate::Num, Vec<f64>>>,
 }
 impl DarkdoorMod {
@@ -140,5 +137,4 @@ pub struct DarkdoorStats {
     pub asks: i32,
 }
 
-/// (src/game/darkdoor.ts:88 LINES: a table nothing writes)
 pub fn lines() -> JsMap<String, crate::darkdoor::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("call"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("I'm not going in there alone. get up here."), String::from("not in there. not on my own — get up here!")], he: Some(alloc::vec![String::from("he could be anywhere in that. somebody get up here.")]), they: Some(alloc::vec![String::from("they could be anywhere in that. somebody get up here.")]) }); t.set(String::from("self"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("no. not in there. not on my own."), String::from("pitch black. no. not alone."), String::from("not a chance. not by myself.")], he: None, they: None }); t.set(String::from("copy"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("copy. coming."), String::from("on my way. stay put."), String::from("hold there — coming to you.")], he: None, they: None }); t.set(String::from("with"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("on you. get a light in there."), String::from("I'm here. lights on — go."), String::from("right behind you. go on.")], he: None, they: None }); t.set(String::from("nobody"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("nobody's coming."), String::from("no one. all right — leave it."), String::from("nobody. forget that room.")], he: None, they: None }); t.set(String::from("alone"), crate::darkdoor::LINESValue { say: alloc::vec![String::from("fine. fine — I'll do it myself."), String::from("nobody ever comes. going in."), String::from("all right. slow. going in.")], he: None, they: None }); t } }

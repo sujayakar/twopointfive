@@ -1,4 +1,3 @@
-//! src/game/smokebreak.ts lines 1 to 167
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A blank row of counts.   (smokebreak.ts fresh)
+/// A blank row of counts.
 pub fn fresh() -> crate::smokebreak::SmokeBreakStats {
     SmokeBreakStats { men: 0.0, lit: 0.0, draws: 0.0, flames: 0.0, embers: 0.0, breaths: 0.0, frames: 0.0 }
 }
@@ -19,13 +18,13 @@ fn ensure_state(g: &mut Game) {
     }
 }
 
-/// The game's row, made on first asking. A COPY: a writer goes through `g.m.smokebreak.states`.   (smokebreak.ts stateOf)
+/// The game's row, made on first asking. A COPY: a writer goes through `g.m.smokebreak.states`.
 pub fn state_of(g: &mut crate::game::Game) -> crate::smokebreak::State {
     ensure_state(g);
     g.m.smokebreak.states.clone().unwrap()
 }
 
-/// A word's bits, stirred. Everything is modulo 2^32 in the TypeScript too, so u32 arithmetic gives its bits.   (smokebreak.ts mix)
+/// A word's bits, stirred. Everything is modulo 2^32 in the TypeScript too, so u32 arithmetic gives its bits.
 pub fn mix(x: f64) -> f64 {
     let x0 = js::to_u32(x);
     let mut x = (x0 ^ 61) ^ (x0 >> 16);
@@ -41,7 +40,7 @@ fn script_smokes(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.smoke.unwrap_or(false))
 }
 
-/// Is this man smoking now: a script that says so, on his feet where it sent him, nobody's arm round him.   (smokebreak.ts smoking)
+/// Is this man smoking now: a script that says so, on his feet where it sent him, nobody's arm round him.
 pub fn smoking(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(s) = g.gd[gd].script.as_ref() else { return false };
     s.smoke.unwrap_or(false)
@@ -65,12 +64,12 @@ fn hand_of(k: &crate::knobs::SmokebreakK, t: f64) -> HandAt {
     HandAt { up: if up { 1.0 } else { 0.0 }, drawn: up && into >= at + 0.6, cycle, into }
 }
 
-/// How far up his hand is asked this second of his smoke (0‥1), and whether the end is at his mouth.   (smokebreak.ts handAt)
+/// How far up his hand is asked this second of his smoke (0‥1), and whether the end is at his mouth.
 pub fn hand_at(g: &crate::game::Game, t: f64) -> crate::smokebreak::HandAt {
     hand_of(&g.k.smokebreak, t)
 }
 
-/// His mouth, off the head joint, and the way his breath leaves it.   (smokebreak.ts mouthOf)
+/// His mouth, off the head joint, and the way his breath leaves it.
 pub fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
     let c = c_2;
     let hd = crate::character::character_head_dir(g, c);
@@ -87,7 +86,7 @@ pub fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthO
     }
 }
 
-/// The lit end: off the left hand's joint along the forearm's line, a little up.   (smokebreak.ts tipOf)
+/// The lit end: off the left hand's joint along the forearm's line, a little up.
 pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
     let c = c_2;
     let h = *g.ch[c].bones.get(crate::character::Bone::HandL)?;
@@ -187,7 +186,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
     }
 }
 
-/// Once a frame, after the characters are posed: each told man's clock, hand and lights, and what the host shows of his smoke.   (smokebreak.ts updateSmokeBreak)
+/// Once a frame, after the characters are posed: each told man's clock, hand and lights, and what the host shows of his smoke.
 pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
     if !(dt > 0.0) {
         return;

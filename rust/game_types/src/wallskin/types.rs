@@ -70,14 +70,10 @@ pub struct WallSkinStats {
     pub uncut: f64,
 }
 
-/// (src/game/wallskin.ts:78 EPS)
 pub const EPS: f64 = 0.0001;
 
-/// (src/game/wallskin.ts:78 ALL: a table nothing writes)
 pub fn all() -> [f64; 4] { [-1000000000.0, 1000000000.0, -1000000000.0, 1000000000.0] }
 
-/// (src/game/wallskin.ts:78 SLOTS)
 pub const SLOTS: f64 = 16.0;
 
-/// (src/game/wallskin.ts:80 FLUSH)
 pub const FLUSH: f64 = 0.002;

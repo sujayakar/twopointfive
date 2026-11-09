@@ -1,4 +1,3 @@
-//! src/sim/sim.ts lines 1 to 427
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// why the linked simulation cannot answer ('' = it can): only a version that differs is left of the TypeScript's reasons. (sim.ts start's check)
+/// why the linked simulation cannot answer ('' = it can): only a version that differs is left of the TypeScript's reasons.
 fn why_not_linked() -> String {
     let abi = ::sim::sim_abi();
     if abi as f64 != SIM_ABI {
@@ -16,19 +15,19 @@ fn why_not_linked() -> String {
     String::new()
 }
 
-/// The module's face: rust/sim is linked, so nothing is compiled or started and the check of its version is what is left. (sim.ts start)
+/// The module's face: rust/sim is linked, so nothing is compiled or started and the check of its version is what is left.
 pub fn start() -> crate::sim_sim::SimExports {
     let no = why_not_linked();
     if !no.is_empty() { panic!("{}", no); }
     SimExports {  }
 }
 
-/// Why this build cannot run the module ('' = it can). (sim.ts simWhyNot)
+/// Why this build cannot run the module ('' = it can).
 pub fn sim_why_not() -> String {
     why_not_linked()
 }
 
-/// The module's face; panics with what sim_why_not says where it cannot run. (sim.ts sim)
+/// The module's face; panics with what sim_why_not says where it cannot run.
 pub fn sim() -> crate::sim_sim::SimExports {
     let no = sim_why_not();
     if !no.is_empty() { panic!("{}", no); }

@@ -29,7 +29,7 @@ pub struct HandleK {
     #[k(0.34)] pub body: f64,
     #[k(0.1)] pub slack: f64,
     #[k(0.05)] pub near: f64,
-    /// … he turns to the handle (this long at most), pulls (doors.ts pull), and walks on when the leaf stands `clear` rad open, has stopped, or after `wait` s; a leaf standing
+    /// … he turns to the handle (this long at most), pulls, and walks on when the leaf stands `clear` rad open, has stopped, or after `wait` s; a leaf standing
     ///  `clear` open on that face wants no hand. `press`: seconds a man leaning on a leaf from that face, with no walk to its handle, takes to pull it as before
     #[k(0.35)] pub turn: f64,
     #[k(1.05)] pub clear: f64,

@@ -1,4 +1,3 @@
-//! src/game/seenwalk.ts lines 1 to 91
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,13 +6,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The memo's key of a block: two nav cells each way.   (seenwalk.ts seenPrice)
+/// The memo's key of a block: two nav cells each way.
 fn block_of(ix: f64, iz: f64) -> (f64, f64, f64) {
     let (bx, bz) = ((js::to_i32(ix) >> 1) as f64, (js::to_i32(iz) >> 1) as f64);
     (bx, bz, bz * 8192.0 + bx)
 }
 
-/// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. Hands back the row.   (seenwalk.ts sharedOf)
+/// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. Hands back the row.
 pub fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut doors = String::new();
     let mut i = 0;
@@ -51,12 +50,12 @@ pub fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     g.m.seenwalk.shared.as_mut().unwrap()
 }
 
-/// Nothing kept: a restart, a checkpoint loaded.   (seenwalk.ts seenReset)
+/// Nothing kept: a restart, a checkpoint loaded.
 pub fn seen_reset(g: &mut crate::game::Game) {
     g.m.seenwalk.shared = None;
 }
 
-/// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.   (seenwalk.ts seenPrice)
+/// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.
 pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
     let all = shared_of(g).eyes.clone();
     g.stats.seenwalk.asks += 1;
@@ -83,7 +82,7 @@ pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<cr
     Some(SeenPrice::Floor { x0, x1, z0, z1, eyes })
 }
 
-/// What a price `seen_price` handed back asks of a cell.   (seenwalk.ts seenPrice, the returned closure)
+/// What a price `seen_price` handed back asks of a cell.
 pub fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::SeenPrice, ix: f64, iz: f64) -> f64 {
     let SeenPrice::Floor { x0, x1, z0, z1, eyes } = price;
     let cs = g.col.nav.cell;

@@ -31,7 +31,7 @@ pub struct GlassbreakK {
     #[k(0.03)] pub run_ring_secs: f64,
     /// falling glass is heard (one crack + one 'glass' hearing event) at most once per pane per this many seconds
     #[k(0.25)] pub crack_gap: f64,
-    /// base radii (m) of the three chords round a blow, by type — each ≥ 1.57× the last (glassPattern.ts: the chords of a sector must nest) — and [3] the base distance of
+    /// base radii (m) of the three chords round a blow, by type — each ≥ 1.57× the last — and [3] the base distance of
     ///  the daggers' snaps (annealed) / of the web's outer ring (laminated); × (0.75 + 0.25 e) clamped 0.8‥1.4
     #[k({ let mut t = JsMap::new(); t.set(GlassbreakKRhoKey::Annealed, [0.03, 0.07, 0.14, 0.5]); t.set(GlassbreakKRhoKey::Laminated, [0.018, 0.05, 0.11, 0.22]); t })] pub rho: JsMap<GlassbreakKRhoKey, [f64; 4]>,
     /// radial cracks a blow starts: [fewest, spread] (≤ 12 in all), and the share of an annealed site's sectors with no middle chord
@@ -51,7 +51,7 @@ pub struct GlassbreakK {
     #[k(0.7)] pub stand_ny: f64,
     #[k(0.3)] pub stand_foot: f64,
     #[k(0.02)] pub balance_tol: f64,
-    /// blast(): default reach (m) to a pane's nearest point, and the power a stun charge's 'bang' carries (glass.ts updateGlass); a TOOTH — a piece on the frame under
+    /// blast(): default reach (m) to a pane's nearest point, and the power a stun charge's 'bang' carries; a TOOTH — a piece on the frame under
     ///  toothArea m² — is left in by a blast weaker than toothK there (the jagged rim a blown window keeps)
     #[k(2.6)] pub blast_m: f64,
     #[k(0.6)] pub bang_power: f64,

@@ -159,9 +159,7 @@ pub struct RescueFlowCameIn {
     pub t: f64,
 }
 
-/// (src/game/rescueflow.ts:68 COLOUR: a table nothing writes)
 pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("unknown"), [1.0, 0.55, 0.08]); t.set(String::from("looked"), [0.6, 0.62, 0.5]); t.set(String::from("hot"), [2.6, 0.12, 0.05]); t.set(String::from("held"), [0.12, 0.5, 1.6]); t.set(String::from("cleared"), [0.1, 1.0, 0.3]); t } }
 
-/// (src/game/rescueflow.ts:69 EYE)
 pub const EYE: f64 = 1.55;
 

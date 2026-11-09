@@ -1,4 +1,3 @@
-//! src/game/teamtally.ts lines 1 to 39
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.   (teamtally.ts teamTallied)
+/// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.
 pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.quiet.active
         || g.gd[gd].state != crate::game::GuardState::Dead
@@ -27,7 +26,7 @@ pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
     mates.iter().any(|&m| g.ch[g.gd[m].ch].id == killer)
 }
 
-/// At the end of a step: tally the defenders the partner put down in it.   (teamtally.ts teamTallyTick)
+/// At the end of a step: tally the defenders the partner put down in it.
 pub fn team_tally_tick(g: &mut crate::game::Game) {
     if !g.quiet.active || !crate::mission::mission_live(g) {
         return;

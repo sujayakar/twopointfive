@@ -1,6 +1,6 @@
 //! THE MISSION LIST BEFORE A GAME: its rows in the page's order, the sheet of one mission, a choice pressed on it, and the links they all make. What it holds of its own is `Sitting`: the
 //! visitor's address, the hour and weather picked on it, the way in picked per mission, and what this machine keeps of the levers. The difficulty, the levers and the quiet picks are the game's
-//! own tables. (src/ui/missions.ts, startpage.ts, levers.ts: what those screens lit and wrote, without the screens.)
+//! own tables.
 use crate::difficulty::{self, Difficulty, DifficultyNow, DifficultyWordsLevel, KitRung, LeverKey};
 use crate::game::Game;
 use crate::hours::{self, HourId};

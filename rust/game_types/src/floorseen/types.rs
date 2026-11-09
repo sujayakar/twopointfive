@@ -21,11 +21,8 @@ impl FloorSeen {
 }
 impl Default for FloorSeen { fn default() -> Self { Self::blank() } }
 
-/// (src/game/floorseen.ts:16 EVERY)
 pub const EVERY: f64 = 12.0;
 
-/// (src/game/floorseen.ts:16 REFRESH)
 pub const REFRESH: f64 = 1.0;
 
-/// (src/game/floorseen.ts:16 NEVER)
 pub const NEVER: f64 = -1000000000.0;

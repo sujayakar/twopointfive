@@ -1,4 +1,3 @@
-//! src/game/fire.ts lines 320 to 439
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

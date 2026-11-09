@@ -1,4 +1,3 @@
-//! src/game/doorway.ts lines 401 to 481
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -13,7 +12,7 @@ const BEFORE_WIDE: f64 = 0.25;
 /// against a leaf: a man's own radius and a little
 const BRUSH_M: f64 = 0.6;
 
-/// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame. (doorway.ts offThreshold)
+/// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame.
 pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>, dt: f64, need_shot: bool) -> bool {
     if !ours(g, gd) || g.gd[gd].script.is_some() || g.touring { return false; }
     let aim_at = match aim_at { Some(a) => a, None => return false };
@@ -117,7 +116,7 @@ fn exposed(g: &mut Game, aim_at: V3, p: V3) -> i32 {
     e
 }
 
-/// `p` is in a door's way for a man left standing there: in some frame's own strip, or where a leaf swings. (doorway.ts doorwayInWay)
+/// `p` is in a door's way for a man left standing there: in some frame's own strip, or where a leaf swings.
 pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
@@ -167,7 +166,7 @@ pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
     shut && !open   // (an open leaf beside it he moves as ever)
 }
 
-/// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man. (doorway.ts doorwayHeldBy)
+/// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man.
 pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
@@ -176,7 +175,7 @@ pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     }
 }
 
-/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb. (doorway.ts doorGateStopped)
+/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb.
 pub fn door_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
@@ -186,7 +185,7 @@ pub fn door_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The nearest floor to `p`, within `clearM`, that is not `bad`, walkable straight from `p`, never through a frame to its other face, `apart` clear of every
-/// `taken`; of the nearest ring that has any, the spot farthest from the doors by it. (doorway.ts doorwayClearNear)
+/// `taken`; of the nearest ring that has any, the spot farthest from the doors by it.
 pub fn doorway_clear_near(g: &mut crate::game::Game, p: V3, bad: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool, taken: Option<&[V3]>, apart: Option<f64>, face: Option<V3>) -> Option<V3> {
     let taken: &[V3] = taken.unwrap_or(&[]);
     let apart = apart.unwrap_or(g.k.doormanners.apart);

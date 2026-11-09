@@ -1,4 +1,3 @@
-//! src/game/squadnet.ts lines 1 to 165
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,17 +6,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A fresh set of the net's counters. (squadnet.ts newStats)
+/// A fresh set of the net's counters.
 pub fn new_stats() -> crate::squadnet::SquadNetStats {
     crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
 }
 
-/// The net as a game starts it; the class's constructor adds nothing to its initialisers. (squadnet.ts SquadNet.constructor)
+/// The net as a game starts it; the class's constructor adds nothing to its initialisers.
 pub fn squad_net_new(g: &crate::game::Game) -> crate::squadnet::SquadNet {
     crate::squadnet::SquadNet::blank()
 }
 
-/// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing. (squadnet.ts SquadNet.reset)
+/// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing.
 pub fn squad_net_reset(g: &mut crate::game::Game) {
     let n = &mut g.squad_net;
     n.rows = Vec::new();
@@ -28,13 +27,13 @@ pub fn squad_net_reset(g: &mut crate::game::Game) {
     n.stats = new_stats();
 }
 
-/// A teammate said a line with his head off your screen: the net clicks. (squadnet.ts SquadNet.line)
+/// A teammate said a line with his head off your screen: the net clicks.
 pub fn squad_net_line(g: &mut crate::game::Game) {
     g.squad_net.stats.lines += 1.0;
     g.squad_net.click_due = true;
 }
 
-/// Once a frame, after everybody has moved: who went down this frame, rows past their time, the one sound owed. (squadnet.ts SquadNet.tick)
+/// Once a frame, after everybody has moved: who went down this frame, rows past their time, the one sound owed.
 pub fn squad_net_tick(g: &mut crate::game::Game) {
     let t = g.time;
     if t < g.squad_net.last_t { squad_net_reset(g); }
@@ -74,7 +73,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     g.squad_net.down_due = false;
 }
 
-/// What a quick-key pick that is not a plain open adds: the end of its row and the answer. (squadnet.ts whyWords)
+/// What a quick-key pick that is not a plain open adds: the end of its row and the answer.
 pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
@@ -99,7 +98,7 @@ fn ends_plural(name: &str) -> bool {
     back.next() == Some('s') && matches!(back.next(), Some(c) if c != 's')
 }
 
-/// The call a lead makes when an entry is over. None: nothing is said. (squadnet.ts roomCall)
+/// The call a lead makes when an entry is over. None: nothing is said.
 pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool, seen: bool) -> Option<String> {
     if !inside && left <= 0.0 {
         g.squad_net.stats.clears += 1.0;
@@ -113,7 +112,7 @@ pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool,
     None
 }
 
-/// The call at the end of an entry into a room the mission has no name for; `open` = open floor. (squadnet.ts plainCall)
+/// The call at the end of an entry into a room the mission has no name for; `open` = open floor.
 pub fn plain_call(g: &mut crate::game::Game, open: bool, left: f64, inside: bool, seen: bool) -> Option<String> {
     let call = if open {
         if seen { None } else { Some(String::from("clear so far.")) }
@@ -124,7 +123,7 @@ pub fn plain_call(g: &mut crate::game::Game, open: bool, left: f64, inside: bool
     call
 }
 
-/// Does a man at p stand in that room's flood, a doorway of the room's own counted. (squadnet.ts inFlood)
+/// Does a man at p stand in that room's flood, a doorway of the room's own counted.
 pub fn in_flood(g: &mut crate::game::Game, r: &crate::squadnet::InFloodR, p: V3) -> bool {
     let cell = g.col.nav.cell;
     let c = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));

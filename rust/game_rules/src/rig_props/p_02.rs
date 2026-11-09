@@ -1,4 +1,3 @@
-//! src/game/rigProps.ts lines 419 to 839
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The hand frame the pistol group lives in: wrist origin, z the bore, y the top of the slide.   (rigProps.ts pistolFrame)
+/// The hand frame the pistol group lives in: wrist origin, z the bore, y the top of the slide.
 pub fn pistol_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::PistolFrameP, in_hand: Option<bool>) -> crate::rig_props::PistolFrame {
     let in_hand = in_hand.unwrap_or(false);
     let hf = if in_hand { Some(crate::character::character_grip_frame_r(g, c_2)) } else { None };
@@ -22,7 +21,7 @@ pub fn pistol_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_
     PistolFrame { hand_f, g: apply_adj(hand_f, p.adj) }
 }
 
-/// The frame `k` of the way from a to b: origins lerped, axes slerped.   (rigProps.ts mixFrame)
+/// The frame `k` of the way from a to b: origins lerped, axes slerped.
 pub fn mix_frame(a: crate::rig_props::Frame, b: crate::rig_props::Frame, k: f64) -> crate::rig_props::Frame {
     if k <= 0.0 {
         return a;
@@ -39,7 +38,7 @@ pub fn mix_frame(a: crate::rig_props::Frame, b: crate::rig_props::Frame, k: f64)
     }
 }
 
-/// The thigh holster's group frame off three joints and the body's forward, in whatever one space they are given.   (rigProps.ts holsterFrameOf)
+/// The thigh holster's group frame off three joints and the body's forward, in whatever one space they are given.
 pub fn holster_frame_of(th: V3, kn: V3, hp: V3, fwd: V3, h: Option<crate::rig_props::RigHolster>) -> crate::rig_props::Frame {
     let h = h.unwrap_or_else(|| crate::rig_props::rig().holster);
     let down = v3::normalize(v3::sub(kn, th));
@@ -50,7 +49,7 @@ pub fn holster_frame_of(th: V3, kn: V3, hp: V3, fwd: V3, h: Option<crate::rig_pr
     apply_adj(frame_from(v3::mad(v3::mad(v3::mad(th, down, h.down), outward, h.out), fwd, h.fwd), down, Some(fwd)), h.adj)
 }
 
-/// The long model drawn for a gun in his hands, or for the one that is not (slung, hung); none = the group's own parts.   (rigProps.ts longLookOf)
+/// The long model drawn for a gun in his hands, or for the one that is not (slung, hung); none = the group's own parts.
 pub fn long_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::rig_props::LongLookOf> {
     let k = g.ch[c_2].gun_look?;
     let a = if held { k.hand } else { k.long };
@@ -64,7 +63,7 @@ pub fn long_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<cr
     crate::gunlook::long_model(g, k.long).map(|l| LongLookOf { id: k.long.unwrap(), l })
 }
 
-/// A long model's support-hand grip for the animator; `fit` moves it with the gun as drawn, and a fist round a post into the hook of the fingers.   (rigProps.ts modelGrip)
+/// A long model's support-hand grip for the animator; `fit` moves it with the gun as drawn, and a fist round a post into the hook of the fingers.
 pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::character::AnimLongGrip> {
     let fit = fit.unwrap_or(false);
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
@@ -85,7 +84,7 @@ pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: 
     })
 }
 
-/// How far ahead of the wrist along the bore a long model's muzzle is.   (rigProps.ts modelMuzzleAhead)
+/// How far ahead of the wrist along the bore a long model's muzzle is.
 pub fn model_muzzle_ahead(g: &crate::game::Game, id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let l = crate::gunlook::long_model(g, Some(id_2))?;
@@ -97,7 +96,7 @@ fn sheath_w(c: &crate::character::CharacterChestFrame, v: V3) -> V3 {
     v3::mad(v3::mad(v3::scale(c.left, v[0]), c.up, v[1]), c.fwd, v[2])
 }
 
-/// The sheath's frame in the world this frame: origin the sheathed handle's grip, z handle to tip, x off the chest. None before his first update.   (rigProps.ts sheathFrame)
+/// The sheath's frame in the world this frame: origin the sheathed handle's grip, z handle to tip, x off the chest. None before his first update.
 pub fn sheath_frame(g: &crate::game::Game, c_2: CharId, s: Option<crate::rig_props::RigSheath>) -> Option<crate::rig_props::Frame> {
     let s = s.unwrap_or_else(|| crate::rig_props::rig().sheath);
     let c = crate::character::character_chest_frame(g, c_2)?;
@@ -107,20 +106,20 @@ pub fn sheath_frame(g: &crate::game::Game, c_2: CharId, s: Option<crate::rig_pro
     Some(Frame { o: v3::add(c.o, sheath_w(&c, s.at)), x, y: v3::cross(z, x), z })
 }
 
-/// The carbine's group frame: the sidearm's hand frame moved by the group adj onto the bore above the trigger.   (rigProps.ts carbineFrame)
+/// The carbine's group frame: the sidearm's hand frame moved by the group adj onto the bore above the trigger.
 pub fn carbine_frame(g: &crate::game::Game, c_2: CharId, hand: V3, c_3: crate::rig_props::RigCarbine) -> crate::rig_props::CarbineFrame {
     let f = pistol_frame(g, c_2, hand, PistolFrameP { adj: c_3.adj }, None);
     CarbineFrame { hand_f: f.hand_f, g: f.g }
 }
 
-/// What the animator needs of the carbine to put the support hand on the gun.   (rigProps.ts carbineGrip)
+/// What the animator needs of the carbine to put the support hand on the gun.
 pub fn carbine_grip(rig: Option<crate::rig_props::Rig>) -> crate::character::AnimLongGrip {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let gl = rig.carbine.grip_l;
     long_grip_of(rig.carbine.adj, LongGripOfG { off: gl.off, fingers: gl.fingers, back: gl.back })
 }
 
-/// How far ahead of the wrist along the bore the carbine's muzzle is.   (rigProps.ts carbineMuzzleAhead)
+/// How far ahead of the wrist along the bore the carbine's muzzle is.
 pub fn carbine_muzzle_ahead(rig: Option<crate::rig_props::Rig>) -> f64 {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     muzzle_ahead_of(rig.carbine.adj, rig.carbine.muzzle)
@@ -136,7 +135,7 @@ fn dir_in(f: &Frame, d: V3) -> V3 {
     v3::normalize(v3::mad(v3::mad(v3::scale(f.x, d[0]), f.y, d[1]), f.z, d[2]))
 }
 
-/// A long gun's support-hand grip (gripL through the group adj) in the trigger hand's gun frame.   (rigProps.ts longGripOf)
+/// A long gun's support-hand grip (gripL through the group adj) in the trigger hand's gun frame.
 pub fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate::rig_props::LongGripOfG) -> crate::character::AnimLongGrip {
     let f = apply_adj(unit_frame(), group_adj);
     crate::character::AnimLongGrip {
@@ -146,13 +145,13 @@ pub fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate::rig_pr
     }
 }
 
-/// Metres ahead of the wrist along the bore to the far end of a long gun's foremost part.   (rigProps.ts muzzleAheadOf)
+/// Metres ahead of the wrist along the bore to the far end of a long gun's foremost part.
 pub fn muzzle_ahead_of(group_adj: Option<crate::rig_props::Adj>, part: crate::rig_props::Seg) -> f64 {
     let f = apply_adj(apply_adj(unit_frame(), group_adj), part.adj);
     v3::mad(f.o, f.z, part.l1)[2]
 }
 
-/// The right hand that holds the rifle as it hangs in front, in the torso's axes off the mid-back joint.   (rigProps.ts slingFrontHand)
+/// The right hand that holds the rifle as it hangs in front, in the torso's axes off the mid-back joint.
 pub fn sling_front_hand(g: &crate::game::Game, s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>) -> crate::rig_props::SlingFrontHand {
     let s = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
     let rest = rest.unwrap_or(0.0);
@@ -232,12 +231,12 @@ fn part_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, f: Frame, s: Seg,
     seg_at(g, out, f, s, adj, albedo, no_glow(), None, None, None, None, None);
 }
 
-/// A gun group's frame moved by a GRIPFIT shift, in its own axes.   (rigProps.ts fitFrame)
+/// A gun group's frame moved by a GRIPFIT shift, in its own axes.
 pub fn fit_frame(g_2: crate::rig_props::Frame, d: V3) -> crate::rig_props::Frame {
     Frame { o: v3::mad(v3::mad(v3::mad(g_2.o, g_2.x, d[0]), g_2.y, d[1]), g_2.z, d[2]), ..g_2 }
 }
 
-/// Two adjustments mixed, none being zero: a part going over from how it sits in one frame to how it sits in another.   (rigProps.ts mixAdj)
+/// Two adjustments mixed, none being zero: a part going over from how it sits in one frame to how it sits in another.
 pub fn mix_adj(a: Option<crate::rig_props::Adj>, b: Option<crate::rig_props::Adj>, k: f64) -> Option<crate::rig_props::Adj> {
     if k <= 0.0 || (a.is_none() && b.is_none()) {
         return a;
@@ -251,7 +250,7 @@ pub fn mix_adj(a: Option<crate::rig_props::Adj>, b: Option<crate::rig_props::Adj
     })
 }
 
-/// The gun group's frame as the hand itself has it (bore wrist to knuckles, top the thumb side), `roll` of the way from the usual frame.   (rigProps.ts kitGunFrame)
+/// The gun group's frame as the hand itself has it (bore wrist to knuckles, top the thumb side), `roll` of the way from the usual frame.
 pub fn kit_gun_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::KitGunFrameP, g_2: crate::rig_props::Frame, roll: f64) -> crate::rig_props::Frame {
     let kn = bone(g, c_2, crate::character::Bone::FingerR);
     let kn = match kn {
@@ -270,7 +269,7 @@ pub fn kit_gun_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig
     mix_frame(g_2, apply_adj(frame_from(hand, z, Some(th)), p.adj), roll)
 }
 
-/// A magazine in the support hand: one dark box up out of the fist; `own` / `col` give a gun's own feed its extents and colour.   (rigProps.ts magBoxL)
+/// A magazine in the support hand: one dark box up out of the fist; `own` / `col` give a gun's own feed its extents and colour.
 pub fn mag_box_l(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, kind: crate::slotsetup::SetupGun, fit: Option<bool>, own: Option<V3>, col: Option<V3>) {
     let fit = fit.unwrap_or(false);
     let (a, b) = (bone(g, c_2, crate::character::Bone::HandL), bone(g, c_2, crate::character::Bone::FingerL));
@@ -320,7 +319,7 @@ pub fn mag_box_l(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>
     out.push(made.into());
 }
 
-/// Held and worn props for one character as small boxes, appended to `out`. Call after his update: it needs his bones.   (rigProps.ts rigBoxes)
+/// Held and worn props for one character as small boxes, appended to `out`. Call after his update: it needs his bones.
 pub fn rig_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let mut meta = meta;
@@ -334,7 +333,7 @@ pub fn rig_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::Ri
     }
 }
 
-/// His kit, the big slot's tool apart: Sam's three slots, or a guard's torch, pistol or long gun.   (rigProps.ts kitBoxes)
+/// His kit, the big slot's tool apart: Sam's three slots, or a guard's torch, pistol or long gun.
 pub fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: crate::rig_props::Rig, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
     let mut meta = meta;
     let hand = bone(g, c_2, crate::character::Bone::HandR);
@@ -557,7 +556,7 @@ fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut V
     }
 }
 
-/// The pistol group with a model's slide, grip and can in place of its own; each keeps the group part's adjustment.   (rigProps.ts pistolAs)
+/// The pistol group with a model's slide, grip and can in place of its own; each keeps the group part's adjustment.
 pub fn pistol_as(p: crate::rig_props::RigPistol, m: crate::gunlook::PistolModel) -> crate::rig_props::RigPistol {
     RigPistol {
         slide: Seg { adj: p.slide.adj, ..of_model(m.slide) },
@@ -570,7 +569,7 @@ pub fn pistol_as(p: crate::rig_props::RigPistol, m: crate::gunlook::PistolModel)
     }
 }
 
-/// A model's colour word as a colour.   (rigProps.ts modelCol)
+/// A model's colour word as a colour.
 pub fn model_col(c_2: crate::gunlook::ModelCol, black: bool) -> V3 {
     use crate::gunlook::ModelCol;
     let cols = col();
@@ -594,7 +593,7 @@ pub fn model_col(c_2: crate::gunlook::ModelCol, black: bool) -> V3 {
     }
 }
 
-/// A long gun's model laid out in a group's frame: the lens lit, the magazine left out with `no_mag`, the feed cover's parts swung up `cover`.   (rigProps.ts longModelBoxes)
+/// A long gun's model laid out in a group's frame: the lens lit, the magazine left out with `no_mag`, the feed cover's parts swung up `cover`.
 pub fn long_model_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, l: &crate::gunlook::LongModel, g_2: crate::rig_props::Frame, lens: V3, black: bool, no_mag: bool, cover: f64) {
     use crate::gunlook::ModelPartIs;
     let mut cf: Option<Frame> = None;
@@ -617,7 +616,7 @@ pub fn long_model_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, l: &
     }
 }
 
-/// The pistol model drawn for his sidearm: the one in his hand if `held` and it is one, else the one on his thigh.   (rigProps.ts pistolLookOf)
+/// The pistol model drawn for his sidearm: the one in his hand if `held` and it is one, else the one on his thigh.
 pub fn pistol_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::gunlook::PistolModel> {
     let k = g.ch[c_2].gun_look?;
     if held {
@@ -628,7 +627,7 @@ pub fn pistol_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<
     crate::gunlook::pistol_model(g, k.side)
 }
 
-/// What a reload under way shows on the model in his hands, and the thing in his support hand.   (rigProps.ts modelInHands)
+/// What a reload under way shows on the model in his hands, and the thing in his support hand.
 pub fn model_in_hands(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::GunModelId, l: &crate::gunlook::LongModel, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, lens: V3, black: bool, no_mag: bool) {
     let wid = weapon_of(id_2);
     let sh = crate::gunreload::reload_show(g, c_2, wid);
@@ -638,7 +637,7 @@ pub fn model_in_hands(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapo
     crate::gunreload::reload_hand_boxes(g, c_2, wid, out);
 }
 
-/// The sidearm in a thigh holster: the drawn gun's part boxes hung on the leg's frame.   (rigProps.ts holsterBoxes)
+/// The sidearm in a thigh holster: the drawn gun's part boxes hung on the leg's frame.
 pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, parts: crate::rig_props::HolsterBoxesParts, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, holster_rig: Option<crate::rig_props::RigHolster>) {
     let mut meta = meta;
     let th = bone(g, c_2, crate::character::Bone::ThighR);
@@ -690,7 +689,7 @@ pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBo
     }
 }
 
-/// The combat knife in the right fist: four traced boxes with his owner byte; where it ends up is the hand's doing.   (rigProps.ts knifeBoxes)
+/// The combat knife in the right fist: four traced boxes with his owner byte; where it ends up is the hand's doing.
 pub fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigKnife>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
     let mut meta = meta;
     let hand = match bone(g, c_2, crate::character::Bone::HandR) {
@@ -711,7 +710,7 @@ pub fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxI
     part(g, out, f, k.edge, cols.edge, None, &mut meta, "knife.edge", "edge strip (lighter)", Some(KNIFE_TAG));
 }
 
-/// The knife's sheath on the left chest webbing: the dark body always, and with `full` the knife's handle and guard standing out of its mouth.   (rigProps.ts sheathBoxes)
+/// The knife's sheath on the left chest webbing: the dark body always, and with `full` the knife's handle and guard standing out of its mouth.
 pub fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, full: Option<bool>, rig: Option<crate::rig_props::Rig>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
     let mut meta = meta;
     let full = full.unwrap_or(true);
@@ -730,7 +729,7 @@ pub fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBox
     }
 }
 
-/// A canister in the fist, the throwable's own body and band.   (rigProps.ts heldCanBoxes)
+/// A canister in the fist, the throwable's own body and band.
 pub fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigCan>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, fit: Option<bool>, left: Option<bool>) {
     use crate::game::ThrowKind;
     let mut meta = meta;
@@ -767,13 +766,13 @@ pub fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game:
     seg(g, out, f1, k.band, band, Some([0.0, 0.0, 0.0]), meta.as_deref_mut(), Some("can.band"), None, None, None);
 }
 
-/// The can of a throw off the free hand: in the left fist, as a fitted can is in the right.   (rigProps.ts freeCanBoxes)
+/// The can of a throw off the free hand: in the left fist, as a fitted can is in the right.
 pub fn free_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
     g.m.rig_props.cur_owner = owner_of(g, c_2);
     held_can_boxes(g, c_2, kind, out, None, meta, Some(true), Some(true));
 }
 
-/// The guards' carbine: eleven boxes off the right hand, or a model of its own in the group's frame; `at` is the frame when it is somewhere other than his hands.   (rigProps.ts carbineBoxes)
+/// The guards' carbine: eleven boxes off the right hand, or a model of its own in the group's frame; `at` is the frame when it is somewhere other than his hands.
 pub fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, c_3: crate::rig_props::RigCarbine, lens: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) {
     let mut meta = meta;
     let hand = match bone(g, c_2, crate::character::Bone::HandR) {

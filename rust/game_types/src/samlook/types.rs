@@ -18,7 +18,6 @@ pub struct SlipNow {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SamlookMod {
-    /// (src/game/samlook.ts:33 STATE)
     pub state: JsMap<PlayerId, crate::samlook::St>,
 }
 impl SamlookMod {

@@ -1,4 +1,4 @@
-//! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT (src/game/moths.ts), whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
+//! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT, whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
 //! the frame's list (MKEY.test + 0x4000 + i), and the fog of war keeps a record of every keyed loose thing of that list and caps its records, the
 //! frame's room is budgeted with them in it, and the men's kit starts behind them in the list (`rig_from`). So the tick reads what this lane writes,
 //! and the lane runs here, under its DRESS row, as it runs in the TypeScript.
@@ -11,7 +11,7 @@ use crate::m;
 use crate::v3::{self, quat, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// integer hash → [0, 1): the module's dice, every choice off its own serial (src/game/moths.ts:28 h01)
+/// integer hash → [0, 1): the module's dice, every choice off its own serial
 pub fn h01(x: f64) -> f64 {
     let mut x = m::imul(js::to_i32(x) ^ 0x2545F491, 0x9E3779B1u32 as i32) as u32;
     x ^= x >> 15;
@@ -19,10 +19,9 @@ pub fn h01(x: f64) -> f64 {
     x ^= x >> 13;
     (x >> 8) as f64 / 16777216.0
 }
-/// (src/game/moths.ts:29 smooth)
 pub fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - a) / (b - a))); t * t * (3.0 - 2.0 * t) }
 
-/// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them. (src/game/moths.ts:37 Moths.constructor)
+/// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them.
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
     let k = moths(); let mut out = Moths::blank();
     for t in g.targets.clone() {
@@ -47,14 +46,14 @@ pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
     out
 }
 
-/// The deal back as constructed (an encounter restart: a restarted encounter repeats). (src/game/moths.ts:48 Moths.clear)
+/// The deal back as constructed (an encounter restart: a restarted encounter repeats).
 pub fn moths_clear(g: &mut crate::game::Game) {
     let n = g.moths.lamps.len() as f64;
     for (i, mo) in g.moths.moths.iter_mut().enumerate() { mo.shown = 0.0; mo.lamp = if n > 0.0 { js::rem(i as f64, n) } else { 0.0 }; }
     for l in g.moths.lamps.iter_mut() { l.act = 0.0; }
 }
 
-/// Once a frame (game.ts, after the wind): move the moths. (src/game/moths.ts:51 Moths.update)
+/// Once a frame: move the moths.
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
     let k = moths();
@@ -117,7 +116,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     g.stats.moths.shown = shown;
 }
 
-/// The moths' boxes into the frame's dynamic list (only the ones about). (src/game/moths.ts:100 Moths.boxes)
+/// The moths' boxes into the frame's dynamic list (only the ones about).
 pub fn moths_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for mo in g.moths.moths.iter() { if mo.shown > 0.01 { out.push(mo.box_.into()); } }
 }

@@ -1,4 +1,3 @@
-//! src/game/glassbreak.ts lines 1 to 219
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the one gate every entry point takes first (glassbreak.ts glassBreakLive). GLASSFX.on is settled on.
+/// the one gate every entry point takes first. GLASSFX.on is settled on.
 pub fn glass_break_live(g: &crate::game::Game) -> bool {
     g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
 }
 
-/// what the module has counted at place `i` of panes.rs Tally; no place (a count only the host keeps) is 0 (glassbreak.ts tally)
+/// what the module has counted at place `i` of panes.rs Tally; no place (a count only the host keeps) is 0
 pub fn tally(i: Option<f64>) -> f64 {
     let Some(i) = i else { return 0.0; };
     debug_assert!(i >= 0.0 && (i as usize) < core::mem::size_of::<::sim::panes::Tally>() / 8);

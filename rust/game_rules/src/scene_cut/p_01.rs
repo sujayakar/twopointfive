@@ -1,4 +1,3 @@
-//! src/scene/cut.ts lines 1 to 247
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

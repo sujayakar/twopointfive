@@ -8,5 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:75 HostApi.invalidateWorldCache)
+/// BOUNDARY NO-OP (the picture's / the host's):
 pub fn host_api_invalidate_world_cache(g: &crate::game::Game) {}

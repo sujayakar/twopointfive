@@ -1,4 +1,3 @@
-//! src/game/shutdoor.ts lines 1 to 231
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,33 +11,33 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 {
     g.ch[g.gd[gd].ch].pos
 }
 
-/// Distance on the floor. (shutdoor.ts flat)
+/// Distance on the floor.
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A floor point in the door's frame: `along` from the hinge, `off` out on face `side`. (shutdoor.ts ptOf)
+/// A floor point in the door's frame: `along` from the hinge, `off` out on face `side`.
 pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
 }
 
-/// Where the door's handle comes to. (shutdoor.ts handleOf)
+/// Where the door's handle comes to.
 pub fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
     let w = g.dr[d].def.width;
     pt_of(g, d, w - k().handle_in, 0.0, 1.0)
 }
 
-/// A line of the order's log, newest last. (shutdoor.ts note)
+/// A line of the order's log, newest last.
 pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
-/// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)
+/// Does d stand open (off its hinges it reads wide open: its row is there, greyed).
 pub fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
 }
 
-/// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack. (shutdoor.ts inShutSwing)
+/// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack.
 pub fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
     let pad = pad.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
@@ -53,12 +52,12 @@ pub fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Opti
     th >= 0.0 && th <= m::abs(angle)
 }
 
-/// A wall, a sill or a pane between two floor points at shin height, the level's statics only. (shutdoor.ts walled)
+/// A wall, a sill or a pane between two floor points at shin height, the level's statics only.
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
-/// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body. (shutdoor.ts stands)
+/// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body.
 pub fn stands(g: &mut crate::game::Game, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     let mut q: V3 = [p[0], 0.0, p[2]];
@@ -71,7 +70,7 @@ fn spot_ok(g: &mut Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !walled(g, ref_, p)
 }
 
-/// The place d is shut from on face `side`, as it stands now; None: none. (shutdoor.ts shutSpot)
+/// The place d is shut from on face `side`, as it stands now; None: none.
 pub fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
     let w = g.dr[d].def.width;
     let hd = handle_of(g, d);
@@ -115,7 +114,7 @@ pub fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crat
     best.map(|p| Spot { pos: p, yaw: face(p), side, far: true })
 }
 
-/// Both faces' places for the leaf as it stands, kept for the frame. (shutdoor.ts spotsOf)
+/// Both faces' places for the leaf as it stands, kept for the frame.
 pub fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
     let angle = crate::doors::door_angle(g, d);
     let key = alloc::format!("{}|{}|{}", js::num_str(g.time), g.dr[d].def.name, js::to_fixed(angle, 3));
@@ -129,7 +128,7 @@ pub fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutd
     spots
 }
 
-/// The length of his walk to p by the walkers' grid (infinity: no way). (shutdoor.ts walk)
+/// The length of his walk to p by the walkers' grid (infinity: no way).
 pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     let at = pos_of(g, gd);
     if flat(at, p) < 0.5 { return flat(at, p); }
@@ -143,14 +142,14 @@ pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     l + flat(q, p)
 }
 
-/// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one). (shutdoor.ts fromFile)
+/// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).
 pub fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(g, seat, gd) { Some(a) => a, None => return false };
     let row = &g.tab.orders_assignment[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
 }
 
-/// Who shuts it, from where: the shortest walk to a place it can be shut from, or why none of them can. (shutdoor.ts plan)
+/// Who shuts it, from where: the shortest walk to a place it can be shut from, or why none of them can.
 pub fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> crate::shutdoor::Plan {
     let spots = spots_of(g, d);
     if spots[0].is_none() && spots[1].is_none() { return Plan::Text(String::from("no place to shut it from.")); }
@@ -198,7 +197,7 @@ fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
     false
 }
 
-/// Who or what is in the leaf's way shut (None: nothing); `seen`: the menu's question, an enemy the picture does not show is not given away. (shutdoor.ts inTheWay)
+/// Who or what is in the leaf's way shut (None: nothing); `seen`: the menu's question, an enemy the picture does not show is not given away.
 pub fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
     let seen = seen.unwrap_or(false);
     let player = g.player;
@@ -228,7 +227,7 @@ pub fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, se
     if g.pl[player].down && body_in_swing(g, d, sam_ch) { Some(String::from("a body's in its way.")) } else { None }
 }
 
-/// An enemy somebody of the team has in sight right now through that doorway. (shutdoor.ts contactThrough)
+/// An enemy somebody of the team has in sight right now through that doorway.
 pub fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
     let player = g.player;
     let sam_ch = g.pl[player].ch;
@@ -251,7 +250,7 @@ pub fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
     false
 }
 
-/// Why these men cannot shut that door (None: one of them can): the row's `valid`. (shutdoor.ts whyNotShut)
+/// Why these men cannot shut that door (None: one of them can): the row's `valid`.
 pub fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Option<String> {
     if crate::doors::door_off(g, d) { return Some(String::from("it's off its hinges.")); }
     if crate::doors::door_latched(g, d) { return Some(String::from("it's shut.")); }
@@ -263,7 +262,7 @@ pub fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Op
     }
 }
 
-/// He is sent to a place of the door's. (shutdoor.ts send)
+/// He is sent to a place of the door's.
 pub fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor::Spot) {
     let name = crate::orders::door_words(g, d);
     let fc = g.dr[d].frame_centre;
@@ -282,14 +281,14 @@ pub fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shut
     crate::orders::squad_orders_assign(g, gd, &a);
 }
 
-/// His hand on it: the leaf is pulled to; a leaf somebody propped is let go of. (shutdoor.ts pull)
+/// His hand on it: the leaf is pulled to; a leaf somebody propped is let go of.
 pub fn pull(g: &mut crate::game::Game, d: DoorId, gd: GuardId) {
     if crate::doors::door_quiet_t(g, d) < 0.0 { crate::doors::door_set_quiet_t(g, d, 0.0); }
     let who = g.ch[g.gd[gd].ch].id;
     crate::doors::doors_pull_to(g, d, who);
 }
 
-/// His order is over: back into the file if that is where he was taken from, else he holds where he stands. (shutdoor.ts finish)
+/// His order is over: back into the file if that is where he was taken from, else he holds where he stands.
 pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job>) {
     g.m.shutdoor.jobs.delete(gd);
     let c = g.gd[gd].ch;
@@ -340,7 +339,7 @@ fn store(g: &mut Game, gd: GuardId, j: Job) {
     if let Some(row) = g.m.shutdoor.jobs.get_mut(gd) { *row = j; }
 }
 
-/// The order's stages, once a frame for its man before he is posed. (shutdoor.ts tick)
+/// The order's stages, once a frame for its man before he is posed.
 pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let mut j = match g.m.shutdoor.jobs.get(gd).copied() {
         Some(j) if g.tab.orders_assignment[a].door == Some(j.door) => j,
@@ -359,7 +358,6 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         return;
     }
     if j.phase == JobPhase::Go {
-        // (the runner has called his walk off and told Sam so: orders.ts's stuck rule)
         let stopped = match g.tab.orders_assignment[a].post { None => true, Some(post) => flat(post, j.spot.pos) > 0.05 };
         let there = !stopped && flat(p, j.spot.pos) < 0.4;
         if !stopped && !there && t - j.t0 <= k().go_cap { return; }
@@ -443,7 +441,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
 }
 
-/// The def's `issue`: the man is sent and his job set; Some: why it cannot be done. (shutdoor.ts registerShutDoor issue)
+/// The def's `issue`: the man is sent and his job set; Some: why it cannot be done.
 pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let d = match t { crate::orders::OrderTarget::Door(t) => t.door, _ => return Some(String::from("no door")) };
     let (gd, spot) = match plan(g, d, men) {
@@ -466,7 +464,7 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
     None
 }
 
-/// The row, on the door tools' page in the charge's place while the door stands open. (shutdoor.ts registerShutDoor)
+/// The row, on the door tools' page in the charge's place while the door stands open.
 pub fn register_shut_door(g: &mut crate::game::Game) {
     let def = crate::orders::rows::def(&crate::orders::rows::shutdoor::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Door],

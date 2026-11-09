@@ -27,7 +27,7 @@ pub fn all_missions() -> Vec<ScenarioEntry> {
 /// drawn rows in this order.
 pub fn tutorial_missions() -> Vec<ScenarioEntry> {
     vec![
-        // one man and his rifle (tools/levels/tut-road.ts): one snowed-in mountain road, where every wreck and wall on the way up is the cover for the next key. Lit for the night: three
+        // one man and his rifle: one snowed-in mountain road, where every wreck and wall on the way up is the cover for the next key. Lit for the night: three
         // fires, two trucks' lamps and a thin moon on snow
         ScenarioEntry {
             level: said("tut-road.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
@@ -37,7 +37,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
             teaches: list(&["Move, sprint and crouch", "Take cover on a wall and lean out", "Aim, shoot and reload", "Switch to full auto and shoot a door down", "Shoot through a thin wall"]),
             ..row("tut-road", "The pass road, alone", ScenarioEntryKind::Quiet, 0.0)
         },
-        // the squad, with him on the ground (tools/levels/tut-team.ts: the tunnel station's floor, the player behind his own truck): one order and one word
+        // the squad, with him on the ground: one order and one word
         ScenarioEntry {
             level: said("tut-team.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
             place: said("A road tunnel's station, under snow"), lean: Some(Lean::Loud), defenders: Some(5.0), squads: Some(true),
@@ -46,7 +46,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
             teaches: list(&["Zoom out to see your squad", "Move the squad with one key", "Stack the squad up on a door, then send them in", "Call the squad back to you"]),
             ..row("tut-team", "The tunnel", ScenarioEntryKind::Roomclear, 4.0)
         },
-        // his kit, then the squad's (tools/levels/tut-kit.ts): the fuel halt at night. He goes in alone and uses each thing he carries once, then calls his four up and has them use theirs. Built for
+        // his kit, then the squad's: the fuel halt at night. He goes in alone and uses each thing he carries once, then calls his four up and has them use theirs. Built for
         // the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's. The count is of the men on the floor as it opens: its script stands five more up
         ScenarioEntry {
             level: said("tut-kit.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night), weather: Some(ScenarioEntryWeather::Clear), seed: Some(1.0),
@@ -56,7 +56,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
             teaches: list(&["Throw smoke, a frag and a stun grenade", "Blow a locked door with your own charge", "Use your rifle's launcher and your pistol", "Give your squad orders from their ring", "Cut the lights and fight in the dark"]),
             ..row("tut-kit", "The fuel stop", ScenarioEntryKind::Roomclear, 4.0)
         },
-        // the squad in two pairs (tools/levels/tut-queue.ts): every stop is a thing one order to all four loses and two orders win. The last light: a low sun and long shadows across the yard
+        // the squad in two pairs: every stop is a thing one order to all four loses and two orders win. The last light: a low sun and long shadows across the yard
         ScenarioEntry {
             level: said("tut-queue.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Dusk), weather: Some(ScenarioEntryWeather::Clear), seed: Some(1.0),
             place: said("A walled relay post in the hills"), lean: Some(Lean::Loud), defenders: Some(8.0), squads: Some(true),
@@ -74,7 +74,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
             teaches: list(&["Stay low and out of the light", "Whistle to lure a guard, then grab him", "Knock a guard out with a sponge round", "Locks, the breaker box and night vision", "Leave the way you came in"]),
             ..row("tut-quiet", "The ledger", ScenarioEntryKind::Quiet, 0.0)
         },
-        // quiet, as two (tools/levels/tut-pair.ts): each stretch of a truck park is one thing a second man makes possible
+        // quiet, as two: each stretch of a truck park is one thing a second man makes possible
         ScenarioEntry {
             level: said("tut-pair.json"), group: Some(MissionGroup::Tutorial), off_list: Some(true),
             place: said("A walled truck park, at night"), lean: Some(Lean::Quiet), defenders: Some(4.0),
@@ -242,7 +242,6 @@ pub fn quiet_missions() -> Vec<ScenarioEntry> {
             blurb: said("There's a camera on the lit gate and a keypad on the strongroom. The clerk who knows the code smokes alone in the dark. Two tripwires guard the back door."),
             ..row("vault-quiet", "The counting house", ScenarioEntryKind::Quiet, 0.0)
         },
-        // (built for two: tools/levels/crossing.ts, quiet-relay.ts each have one place that wants a second man; the partner is silent from the start)
         ScenarioEntry {
             level: said("crossing.json"), untuned: Some(true), off_list: Some(true),
             place: said("A border checkpoint, the customs house across the road"), lean: Some(Lean::Quiet), defenders: Some(6.0),

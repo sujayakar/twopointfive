@@ -1,4 +1,3 @@
-//! src/game/weather.ts lines 1 to 496
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -25,7 +24,7 @@ fn seam_console_warn(_line: String) {}
 /// A box's row (Box.* in the TypeScript): the one seam left. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript (game.ts:1219), statics appended later included. `level.boxes` is not a field in Rust.
+/// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript, statics appended later included. `level.boxes` is not a field in Rust.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 
 /// Paints a box's row.
@@ -457,7 +456,7 @@ pub fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>
 pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
     weather_sync_roofs(g, None);
     // THE FRAME'S NUMBERS (weather.ts:350, :351, :356, :373-381). The part left them out as the picture's, but skeleton 5.2's bridge carries `g.engine.weather`
-    // as a thing the tick reads (wet.ts rainNow reads `.rain` to say who is rained on), so the tick writes it as the TypeScript does.
+    // as a thing the tick reads, so the tick writes it as the TypeScript does.
     if g.engine.weather.is_none() { g.engine.weather = Some(crate::render_frame::no_weather()); }
     if !g.weather.on { zero(g.engine.weather.as_mut().unwrap()); weather_set_rain_now(g, 0.0); return; }
     // day: the storm holds still and shows nothing; the night gets it back as it was

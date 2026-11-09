@@ -5,14 +5,14 @@
 //! TypeScript says WHY each line is what it is (the embedded origin, the pad, which cells matter); this file only has to be it. tools/qa/rust-check.ts holds
 //! the two together: every question a mission asks answered by both, and the missions themselves played both ways.
 //!
-//! THE RAY (collision.ts raycast, and boxes.ts rayBox whole: where a ray first enters anything, how far along, and the face it enters by) is here too: the
+//! THE RAY is here too: the
 //! same leaves first, the same cells in the same half-metre steps, the nearest entry kept. Every rule of the things that flies something through a level
 //! asks it (a torn leaf, a thrown can, a round).
 //!
 //! WHETHER A PANE IS OPEN where a line or a ray meets it is answered here (glass.rs, over the copy of every pane that is no longer whole): a line that
 //! crosses a hole is not stopped by the pane, and a ray flies on through it to what stands beyond, as the TypeScript's own walks do pane by pane.
 //!
-//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line (game/glasspen.ts). The module asks
+//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line. The module asks
 //! nobody (it imports nothing): for a line of fire the walk LISTS the glass the line crosses that is not open there — which pane, and where the line
 //! enters it — and goes on; the host judges the list when the walk is back.
 
@@ -21,7 +21,7 @@ use crate::maths::hypot3;
 use crate::world::*;
 use prim::{floor, sqrt};
 
-/// how far past a box's own bounds the early rejects still count it as near (collision.ts SEG_PAD)
+/// how far past a box's own bounds the early rejects still count it as near
 const SEG_PAD: f64 = 0.05;
 const INF: f64 = f64::INFINITY;
 
@@ -306,7 +306,7 @@ fn leaves_blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b
 pub const ASK_GLASS: u32 = 1; // the game has a rule for an open pane (glass.rs): glass crossed where it is open is not in the way
 pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and every cell is walked in the old order (the list's order is the scan's)
 
-/// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along (collision.ts segmentBlocked's three statements for one): 0 = the line goes on (the
+/// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along: 0 = the line goes on (the
 /// pane is open there by the game's rule, or it is a line of fire and the pane is noted for the penetration rule) · −1 = the pane stops it · −2 = the
 /// list of panes is full
 #[inline]
@@ -623,7 +623,7 @@ fn walked(a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Result<f64, O
         Ok(len)
     }
 }
-/// IS A MAN HIDDEN FROM AN EYE (fogofwar.ts lineToMan, guards.ts eyeContact): the chest first, and the head only behind a blocked chest
+/// IS A MAN HIDDEN FROM AN EYE: the chest first, and the head only behind a blocked chest
 #[inline]
 #[allow(clippy::too_many_arguments)]
 pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> Option<bool> {
@@ -666,7 +666,7 @@ pub fn leaf_line(w: usize, set: i32, need: u32, a0: f64, a1: f64, a2: f64, b0: f
     Some(leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set))
 }
 
-// ---- THE RAY: the nearest thing along it, how far, and the face it is entered by (collision.ts raycast, boxes.ts rayBox)
+// ---- THE RAY: the nearest thing along it, how far, and the face it is entered by
 
 /// one slab of rayBox with the face it enters by: the interval cut down by the faces at ±h along axis `k`; the entry's axis and sign kept. false = nothing left
 #[inline(always)]
@@ -836,7 +836,7 @@ pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
 /// the ray's answer when nothing is met, and when the host must answer it itself (a ray that is not a number)
 pub const RAY_NONE: i32 = -1;
 pub const RAY_HOST: i32 = -2;
-/// what a leaf's index is offset by in the answer (collision.ts raycast: index ≥ 1e6 = a dynamic occluder)
+/// what a leaf's index is offset by in the answer
 pub const RAY_LEAF: i32 = 1_000_000;
 /// …and a box the question added
 pub const RAY_EXTRA: i32 = 2_000_000;

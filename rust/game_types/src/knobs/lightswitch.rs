@@ -17,6 +17,6 @@ pub struct LightswitchK {
     /// where the door's own wall gives no place for one (glass, a corner): m about the door the room's other walls are tried within
     #[k(4.0)] pub scan_m: f64,
     #[k(1.5)] pub guard_secs: f64,
-    /// s his hand is at the plate after the tap (the picture only; handring.ts `turn` adds his turn's time to it for Sam)
+    /// s his hand is at the plate after the tap
     #[k(0.3)] pub hand_secs: f64,
 }

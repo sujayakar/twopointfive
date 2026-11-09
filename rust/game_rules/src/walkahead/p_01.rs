@@ -1,4 +1,3 @@
-//! src/game/walkahead.ts lines 1 to 83
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `seat`'s man walked through `cmds` (oldest first, `dt` seconds each) from where the game has him, on a copy of him: writes nothing to the game.
-/// `path`, when given, gets his place after each record; its length is set. (walkahead.ts walkAhead)
+/// `path`, when given, gets his place after each record; its length is set.
 pub fn walk_ahead(g: &mut crate::game::Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: f64, path: Option<&mut Vec<V3>>) -> crate::walkahead::Ahead {
     let mut path = path;
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| walk_in_view(g, seat, cmds, dt, path.as_deref_mut()))
@@ -54,7 +53,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
     Ahead { pos: m.char.pos, aim_yaw: m.char.aim_yaw, follow: f, aim, free }
 }
 
-/// The closure handed to Game.aside: every record, walked on `m`. (walkahead.ts:49 to 78)
+/// The closure handed to Game.aside: every record, walked on `m`.
 fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[crate::cmd::PlayerCmd], dt: f64, m: &mut crate::player::Legs, aim: &mut Option<V3>, path: Option<&mut Vec<V3>>) {
     let mut path = path;
     let cam = crate::game::game_aside_lens(g); // scratch, never the seat's own camera

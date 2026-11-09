@@ -1,4 +1,3 @@
-//! src/game/close.ts lines 463 to 487
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Once a frame before the guards: the seated men kept on their marks while calm, stood up when not.   (close.ts closeSeatTick)
+/// Once a frame before the guards: the seated men kept on their marks while calm, stood up when not.
 pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     match &g.m.close.seated {
         Some(seated) if !seated.is_empty() => {}
@@ -46,7 +45,7 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Everybody up, this seat's close-in memory gone.   (close.ts closeReset)
+/// Everybody up, this seat's close-in memory gone.
 pub fn close_reset(g: &mut crate::game::Game) {
     let seated = g.m.close.seated.as_ref().map(|seated| seated.keys()).unwrap_or_default();
     for gd in seated {

@@ -1,13 +1,13 @@
 //! THE KNOBS AND THE NAMED NODES RUST CODE READS — one list of each, by the name the TypeScript has for it.
 //!
-//! A knob is a number of a table the game registers (src/game/knobs.ts knobRegistry: `MV.gait.lean`), tuned in the panel, carried by a recording, put on or
+//! A knob is a number of a table the game registers, tuned in the panel, carried by a recording, put on or
 //! off by a stand. It is CONFIG, the same for every game in the process, and no state of a game: so it is not in a game's block (state.rs) and no snapshot
 //! carries it. Code here reads a knob by its line below (`k(GAIT_LEAN)`); the host reads the list once (`names`), finds each path in the registry (a path
 //! that is not a number there is an error as the module starts work, and a red line in tools/qa/rust-check.ts), and writes every value as a tick opens
-//! (src/game/rustknobs.ts). A part of the game that wants a knob in Rust adds a line; nothing else is written for it.
-//! A path that starts `ANIM.` is a number of the animator's own tables (character.ts animTables: authored, in no registry, tuned by no panel), read the same way.
+//!. A part of the game that wants a knob in Rust adds a line; nothing else is written for it.
+//! A path that starts `ANIM.` is a number of the animator's own tables, read the same way.
 //!
-//! A ROLE is a node of a character's rig by the name the animator has for it (src/game/character.ts `N`: `spine1` …). The host writes the node's index for
+//! A ROLE is a node of a character's rig by the name the animator has for it. The host writes the node's index for
 //! each line of that list when it puts a rig on the bench (skeleton.rs): `role(SPINE1)`. `NO_ROLE` until then.
 //!
 //! Both tables are copies the host proves, never state: what was written for the last tick is what this tick's first reader would find, so the host writes
@@ -1328,7 +1328,6 @@ table! { Knob, KNOBS, KNOB_NAMES;
     SNEAK_GUN_IN_STAND_1 = "ANIM.SNEAK.gunInStand.1",
     SNEAK_GUN_IN_STAND_2 = "ANIM.SNEAK.gunInStand.2",
     SNEAK_HAND_IN = "ANIM.SNEAK.handIn",
-    // (not a layer's own: the rule a layer's blend and sample are worked by — single.rs, anim/skeleton.ts POSEMATH)
     POSE_SINGLES = "POSEMATH.singles",
     GB_MAX_SITES = "GLASSBREAK.maxSites",
     GB_BREAK_E_A = "GLASSBREAK.breakE.annealed",

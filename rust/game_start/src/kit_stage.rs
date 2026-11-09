@@ -99,7 +99,7 @@ fn team_start(data: &Json, way: usize) -> [f64; 2] {
     let v = sp.nums();
     [v[0], v[2]]
 }
-/// THE PLAN OF A WAY, ASKED OF A LEVEL'S FILE WITH NO GAME STOOD (tools/qa/kitview-plan.ts, the level author's check): the level as a start would build it for the way, and the plan as `make_plan` makes it, on the
+/// THE PLAN OF A WAY, ASKED OF A LEVEL'S FILE WITH NO GAME STOOD: the level as a start would build it for the way, and the plan as `make_plan` makes it, on the
 /// free floor of the file's boxes with what the plan sinks taken off it. `level` is what the picture would load (null: the file as it is). `ref_` is a team start and not the spawn alone: on a way that writes no
 /// `side` the start is what says which side the team is on, and the spawn is another way's or the plain night's.
 pub fn plan_of_file(file: &Json, way: usize) -> Json {

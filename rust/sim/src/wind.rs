@@ -7,7 +7,7 @@
 use crate::maths::{exp, hypot2, hypot3};
 use crate::world::{js_max, js_min, or_one, smoothstep};
 
-/// the field's shape (wind.ts WIND_FIELD): how a jet blown at a floor turns along it, its support across, the storm's ceiling, its lee off a roof, its share of
+/// the field's shape: how a jet blown at a floor turns along it, its support across, the storm's ceiling, its lee off a roof, its share of
 /// itself at the ground and what it gains by `STORM_FULL_AT` metres up, how a vent's record becomes a jet
 pub const DEFLECT_H: f64 = 0.55;
 pub const DEFLECT_LOSS: f64 = 0.35;

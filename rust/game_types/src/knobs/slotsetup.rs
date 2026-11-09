@@ -20,7 +20,7 @@ use game_derive::Knobs;
 ///              3  the light      (a kit that carries one)
 ///            The digit steps its row and the setup shuts (`stay`: it stays up for another). So the two presses are always the same two: 2 1 is the
 ///            rifle's selector, 2 2 its next load (the '2 again' the build had, one press on), 2 3 its light; 1 3 the pistol's light.
-///   SHUT     by a pick; by the back key (backkey.ts); by the trigger, the right button or a reload (none of them is taken: the round goes — and a
+///   SHUT     by a pick; by the back key; by the trigger, the right button or a reload (none of them is taken: the round goes — and a
 ///            round that goes later, off a click the kit's handling kept through the draw, shuts it as it leaves); by a digit
 ///            that is no row (the gun's own shuts it and no more, any other is the slot it always was); when what is in his hands changes or something
 ///            takes them; when the order menu or the Space list comes up (the digits are theirs). No clock runs on it (`pop`, below): it is a MODE he

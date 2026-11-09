@@ -1,4 +1,3 @@
-//! src/game/rails.ts lines 1 to 213
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A step's `after` line as its order stands: given (1), or given and waiting on his word (2). (rails.ts said)
+/// A step's `after` line as its order stands: given (1), or given and waiting on his word (2).
 pub fn said(a: &crate::scene_scenarios::LessonStepAfter, gave: f64) -> Option<String> {
     if gave == 2.0 { a.word.clone().or_else(|| a.line.clone()) } else { a.line.clone() }
 }
 
-/// A lookout as one of the fog's eyes. (rails.ts lookoutEye)
+/// A lookout as one of the fog's eyes.
 pub fn lookout_eye(id_2: f64, e: crate::rails::LookoutEyeE) -> crate::fogofwar::FogEye {
     crate::fogofwar::FogEye {
         id: id_2,

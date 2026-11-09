@@ -1,4 +1,3 @@
-//! src/game/weather.ts lines 496 to 530
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

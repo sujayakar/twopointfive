@@ -1,4 +1,3 @@
-//! src/sim/weatherhome.ts lines 1 to 41
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,21 +6,21 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// The block of a slot as doubles: `st.d`. Take it for one read or write and let it go.   (state.ts SimState.d)
+/// The block of a slot as doubles: `st.d`. Take it for one read or write and let it go.
 fn block_d(slot: usize) -> &'static mut [f64] {
     unsafe { core::slice::from_raw_parts_mut(::sim::state::addr(slot) as *mut f64, ::sim::state::LEN >> 3) }
 }
-/// The module's scratch, as doubles from its first: what `f64()` reads at `wxScratch()`.   (weatherhome.ts wxOut's `m[a + i]`)
+/// The module's scratch, as doubles from its first: what `f64()` reads at `wxScratch()`.
 fn scratch_d() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
 }
 
-/// The module's scratch, as an index of doubles over its memory.   (weatherhome.ts wxScratch)
+/// The module's scratch, as an index of doubles over its memory.
 pub fn wx_scratch() -> f64 {
     (::sim::sim_scratch() as usize >> 3) as f64
 }
 
-/// How many of `boxes` are roofs at all, by the rule roofsOf makes the table with.   (weatherhome.ts roofsCounted)
+/// How many of `boxes` are roofs at all, by the rule roofsOf makes the table with.
 pub fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ceiling: f64) -> f64 {
     ::sim::weather::roofs_begin();
     for b in boxes {
@@ -30,7 +29,7 @@ pub fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ce
     ::sim::weather::roofs_seen() as f64
 }
 
-/// Copy `n` doubles from the scratch.   (weatherhome.ts wxOut)
+/// Copy `n` doubles from the scratch.
 pub fn wx_out(n: f64) -> Vec<f64> {
     let m = scratch_d();
     let mut out = Vec::new();

@@ -33,13 +33,9 @@ pub struct FindSpot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct OpeningMod {
-    /// (src/game/opening.ts:30 urlRead)
     pub url_read: bool,
-    /// (src/game/opening.ts:38 seen)
     pub seen: JsSet<GuardId>,
-    /// (src/game/opening.ts:40 born)
     pub born: JsMap<GuardId, f64>,
-    /// (src/game/opening.ts:42 spots)
     pub spots: JsMap<RouteId, crate::opening::OpeningModSpotsValue>,
 }
 impl OpeningMod {
@@ -53,5 +49,4 @@ impl OpeningMod {
     }
 }
 
-/// (src/game/opening.ts:40 FRESH_SECS)
 pub const FRESH_SECS: f64 = 0.25;

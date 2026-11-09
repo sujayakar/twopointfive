@@ -1,4 +1,3 @@
-//! src/game/gunlook.ts lines 1 to 208
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// What a row has of its own; None: its stand-in fields are the gun.   (gunlook.ts gunOwn)
+/// What a row has of its own; None: its stand-in fields are the gun.
 pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()
 }
 
-/// The voice its report is played with.   (gunlook.ts voiceOf)
+/// The voice its report is played with.
 pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
     match gun_own(g, def).and_then(|own| own.voice) {
         Some(voice) => voice,
@@ -20,7 +19,7 @@ pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Strin
     }
 }
 
-/// The flame and the flash's light gain it fires with.   (gunlook.ts flameOf)
+/// The flame and the flash's light gain it fires with.
 pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
     match gun_own(g, def).and_then(|own| own.flame) {
         Some(flame) => flame,
@@ -28,24 +27,24 @@ pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate
     }
 }
 
-/// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.   (gunlook.ts under)
+/// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.
 pub fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongModelGripL {
     let x = x.unwrap_or(0.099);
     let y = y.unwrap_or(-0.059);
     LongModelGripL { off: [x, y, z], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }
 }
 
-/// A long gun's model by its id; None: the group draws its own parts.   (gunlook.ts longModel)
+/// A long gun's model by its id; None: the group draws its own parts.
 pub fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
-/// A hand gun's model by its id.   (gunlook.ts pistolModel)
+/// A hand gun's model by its id.
 pub fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 
-/// Which models are on a man, from the rows he carries: the one in his hands and the others.   (gunlook.ts gunLookOf)
+/// Which models are on a man, from the rows he carries: the one in his hands and the others.
 pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
     use crate::weapons::{WeaponClass, WeaponDefRig, WeaponId};
     let mut l = into.unwrap_or(GunLook { hand: None, long: None, side: None, bare_long: None, bare_side: None });
@@ -160,7 +159,7 @@ mod tests {
         assert_eq!(f.0, LONG_BITS);
     }
 
-    /// … and of the hand guns' (gunlook.ts PISTOL_MODELS).
+    /// … and of the hand guns'.
     #[test]
     fn pistol_table_is_the_typescripts_bits() {
         let mut f = Fold(0xcbf2_9ce4_8422_2325);

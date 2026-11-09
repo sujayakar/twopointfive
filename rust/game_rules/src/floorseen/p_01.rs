@@ -1,4 +1,3 @@
-//! src/game/floorseen.ts lines 1 to 43
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A new record: empty maps, frame 0; its one argument was the game.   (floorseen.ts FloorSeen.constructor)
+/// A new record: empty maps, frame 0; its one argument was the game.
 pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
     crate::floorseen::FloorSeen::blank()
 }
 
-/// Once a frame: bring the staggered living men's record of seen floor up to date; `reach` in metres.   (floorseen.ts FloorSeen.tick)
+/// Once a frame: bring the staggered living men's record of seen floor up to date; `reach` in metres.
 pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     let (cs, w, h, t) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h, g.time);
     let frame = {
@@ -80,7 +79,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     }
 }
 
-/// How many of `cells` (nav cell indices) `gd` has seen since game time `since`.   (floorseen.ts FloorSeen.count)
+/// How many of `cells` (nav cell indices) `gd` has seen since game time `since`.
 pub fn floor_seen_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64], since: f64) -> f64 {
     let s = seat.door_tools.seen.as_ref().unwrap();
     let Some(a) = s.at.get(gd) else { return 0.0 };

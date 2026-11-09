@@ -1,4 +1,4 @@
-//! THE FURNITURE MEN SHOVE (src/game/props.ts PropSystem.update) — every chair, carton, bin and plant of a level for one tick: it coasts and comes to rest,
+//! THE FURNITURE MEN SHOVE — every chair, carton, bin and plant of a level for one tick: it coasts and comes to rest,
 //! the men walking into it set it going and are held back by what cannot yield, it knocks into its neighbours, a swinging leaf sweeps it aside, a door frame
 //! guides it through, the statics stop it; and the scrapes and knocks all that makes.
 //!
@@ -11,7 +11,7 @@
 //!   · ROWS ARE DENSE AND IN THE GAME'S OWN ORDER: rows 0 .. n are the things in the level now, in the order the TypeScript's list keeps them (a level's
 //!     own, a thing a blast took out gone from it), and the step walks 0 .. n with no test and no table. A thing is named from outside by its id, which
 //!     does not move: `row[id]` says where it is, `id[row]` who is there. A THING THAT LEAVES (PropSystem.remove) is moved behind the live rows, those
-//!     after it closing up in order; a level put back (reset) is every row its own id again. Both are the host's (src/sim/propshome.ts PropStore): no
+//!     after it closing up in order; a level put back (reset) is every row its own id again. Both are the host's: no
 //!     rule here takes a thing out.
 //!   · A COLUMN A NUMBER, AS NARROW AS IT IS: the lengths, speeds, angles and clocks are doubles (the rules are worked in doubles); the three truths are
 //!     bits of ONE u32 (`flags`); who moved it last is an i32; the two tables u32. Each column starts on a 16-byte boundary and is CAP rows long.
@@ -23,7 +23,7 @@
 //! of each thing BY ROW (`def`), the men (`con`), which of the box world's leaves may sweep them (`leaf`: a leaf off its hinges is none), the door
 //! frames (`way`), the switches and numbers (`par`). What comes back the same way: where each man ends, and the noises in the order they were made (`ev`).
 //!
-//! NO BOX OF THE BOX WORLD IS WRITTEN HERE. Furniture is not in it (nothing sees, hears or walks by a chair: props.ts says why), so the boxes the picture
+//! NO BOX OF THE BOX WORLD IS WRITTEN HERE. Furniture is not in it, so the boxes the picture
 //! draws are placed by the host from these columns after the call (Prop.place), as they always were. The statics a thing rests against and the leaves that
 //! sweep it are READ from the world's copy (world.rs, collide.rs gather).
 use crate::collide;
@@ -74,7 +74,7 @@ pub struct Props {
 }
 const _: () = assert!(size_of::<Props>() == 16 + 11 * CAP * 8 + 4 * CAP * 4);
 const _: () = assert!(offset_of!(Props, x) % 16 == 0 && offset_of!(Props, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/propshome.ts PROP_F64 and PROP_U32 name them the same), for the host to hold its offsets to
+/// the columns in their order, for the host to hold its offsets to
 pub const COLS: [usize; 15] = [
     offset_of!(Props, x),
     offset_of!(Props, z),
@@ -116,7 +116,7 @@ pub const D_REST: usize = 9;
 pub const D_CHAIR: usize = 10;
 pub const NDEF: usize = 11;
 
-// a man (props.ts PropContact), a column each: where he is (in, and out: where the furniture leaves him), how he moves, how big, who, how heavy, eased past
+// a man, a column each: where he is (in, and out: where the furniture leaves him), how he moves, how big, who, how heavy, eased past
 pub const K_X: usize = 0;
 pub const K_Z: usize = 1;
 pub const K_VX: usize = 2;
@@ -135,7 +135,7 @@ pub const Y_UZ: usize = 3;
 pub const Y_HALF: usize = 4;
 pub const NWAY: usize = 5;
 
-// a noise (props.ts PropEvent): the thing, which sound (src/sim/propshome.ts PROP_SOUNDS) and for a roll whether it starts (1) or stops (0), where, who is
+// a noise: the thing, which sound and for a roll whether it starts (1) or stops (0), where, who is
 // blamed, how loud and how fast, and whether the thing was rolling on its castors when it was made
 pub const E_PROP: usize = 0;
 pub const E_SOUND: usize = 1;
@@ -229,7 +229,7 @@ pub fn cap(table: u32) -> usize {
     }
 }
 
-// ---- props.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
+// ---- props.ts's own numbers
 const MAX_V: f64 = 5.0;
 const MAX_W: f64 = 9.0;
 const SLEEP_V: f64 = 0.04;
@@ -241,7 +241,7 @@ const Y_MIN: f64 = 0.04;
 const NEAR: usize = 256;
 const PI: f64 = core::f64::consts::PI;
 
-/// what two footprints do to each other (props.ts `sat`): the way out for B, how deep, and where they touch
+/// what two footprints do to each other: the way out for B, how deep, and where they touch
 #[derive(Clone, Copy)]
 struct Sat {
     nx: f64,
@@ -333,7 +333,7 @@ fn sat_rects(ax: f64, az: f64, acs: f64, asn: f64, ahx: f64, ahz: f64, bx: f64, 
     Some(Sat { nx: bnx, nz: bnz, depth: best, px, pz })
 }
 
-/// a man's circle against a thing's footprint (props.ts `cc`): the way out for him, how deep, and the point on the thing
+/// a man's circle against a thing's footprint: the way out for him, how deep, and the point on the thing
 struct Touch {
     nx: f64,
     nz: f64,
@@ -583,7 +583,6 @@ impl Step {
             let mut any = false;
             for k in 0..n {
                 let b = asking(self.w).list[k] as usize * REC;
-                // (props.ts works out the cos and sin of the static's yaw here; the copy keeps the same two beside the yaw, written by the same maths)
                 let (bx, bz, bhx, bhz) = (o.rec[b + R_C], o.rec[b + R_C + 2], o.rec[b + R_H], o.rec[b + R_H + 2]);
                 let (bcs, bsn) = (o.rec[b + R_COS], o.rec[b + R_SIN]);
                 let (dx, dz) = (self.s.x[i] - bx, self.s.z[i] - bz);
@@ -875,7 +874,6 @@ pub fn update(g: usize, w: usize) -> u32 {
         }
     }
     let mut st = Step { s, io, w, enabled: f & F_ENABLED != 0, castor: f & F_CASTOR != 0, n, nc, nl, nw, ev: 0, wrong: false };
-    // (≤ 1/60 s a substep: props.ts update)
     let steps = js_min(4.0, js_max(1.0, js_ceil(dt * 60.0 - 1e-6)));
     let h = dt / steps;
     let mut s = 0.0;
@@ -892,7 +890,7 @@ pub fn update(g: usize, w: usize) -> u32 {
     st.ev as u32
 }
 
-/// THE PASSES OF THE LEVEL'S SETTLE (props.ts PropSystem.settle): authoring overlaps — a chair tucked under a table's edge, a bin grazing a desk's corner —
+/// THE PASSES OF THE LEVEL'S SETTLE: authoring overlaps — a chair tucked under a table's edge, a bin grazing a desk's corner —
 /// are resolved once, silently, as the level is stood up, and where a thing comes to stand is its home.
 pub const SETTLE_PASSES: usize = 12;
 /// PropSystem.settle's passes for the game in slot `g`, over world `w`: every thing against the statics, then thing against thing, SETTLE_PASSES times,

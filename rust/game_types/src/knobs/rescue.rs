@@ -37,8 +37,8 @@ pub struct RescueK {
     ///  last — so no room is known empty); off = the break room first
     #[k(1.0)] pub roamers: f64,
     #[k(1.5)] pub crew_call_secs: f64,
-    /// how many teammates are staged (game/loadout.ts — the page's ?squad=N; scenarioRun.ts writes it): 2 = the pair, exactly as it always was · 0 / 1 = nobody /
-    ///  Blue One alone · 3 / 4 = the four-man squad's first three / all of it (nightbreach.ts SQUAD4: a red pair and a blue pair, in pairs for the order menu), the
+    /// how many teammates are staged: 2 = the pair, exactly as it always was · 0 / 1 = nobody /
+    ///  Blue One alone · 3 / 4 = the four-man squad's first three / all of it, the
     ///  men past the second stood a stride behind the pair's marks. F takes whoever is up, as ever.
     #[k(2.0)] pub squad: f64,
     /// where the team is staged: the LEVEL's (tools/levels/lib/scenarios.ts RescueData.team — start() writes the team start of the level it stages on here; these are the

@@ -10,10 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // SPARKS ARE NOT THE PICTURE'S ALONE (room-clear-four tick 1621: the stun grenade's burst, detonate_stun_raw < spawn_burst < sparks_emit_burst, a stub).
 // triage.json had sparks.ts as dress, "unsure": effects.ts:262-266 hangs a smoke trail on each spark of a burst by `tracker(i)`, and the CPU smoke is what the senses
-// read; the frame's box list takes a box a live spark (game.ts:1820, no DRESS row). So the whole class is translated: round one's three no-ops (clear, update, boxes)
+// read; the frame's box list takes a box a live spark. So the whole class is translated: round one's three no-ops (clear, update, boxes)
 // would have left every trail standing at the burst point. `tracker` itself is effects' Track::Spark { slot, gen_ } (p_effects_01 track_at): its stub stays.
 
-/// a free slot, else the spark nearest its end   (sparks.ts Sparks.slot)
+/// a free slot, else the spark nearest its end
 pub fn sparks_slot(g: &crate::game::Game) -> f64 {
     let n = m::min(js::to_i32(g.sparks.params.max_live) as f64, g.sparks.pool.len() as f64);
     let (mut worst, mut wf) = (0usize, -1.0);
@@ -27,19 +27,18 @@ pub fn sparks_slot(g: &crate::game::Game) -> f64 {
     }
     worst as f64
 }
-/// (sparks.ts Sparks.spawn)
 pub fn sparks_spawn(g: &mut crate::game::Game, at: V3, vel: V3, life: f64) -> f64 {
     let i = sparks_slot(g);
     let s = &mut g.sparks.pool[i as usize];
     s.pos = v3::copy(at); s.vel = vel; s.age = 0.0; s.life = life; s.alive = true; s.gen_ += 1.0;
     i
 }
-/// deterministic per-spark hash in [0,1)   (sparks.ts Sparks.h)
+/// deterministic per-spark hash in [0,1)
 pub fn sparks_h(i: f64, k: f64, seed: f64) -> f64 {
     let t = m::sin((i + 1.0) * 12.9898 + k * 78.233 + seed * 53.17) * 43758.5453;
     t - m::floor(t)
 }
-/// a ground burst: the upward hemisphere narrowed by `spread`, turned toward vertical by `lift`   (sparks.ts Sparks.emitBurst)
+/// a ground burst: the upward hemisphere narrowed by `spread`, turned toward vertical by `lift`
 pub fn sparks_emit_burst(g: &mut crate::game::Game, at: V3, o: crate::sparks::SparksEmitBurstO, seed: f64) -> Vec<f64> {
     let mut out = Vec::new();
     let mut i = 0.0;
@@ -56,12 +55,11 @@ pub fn sparks_emit_burst(g: &mut crate::game::Game, at: V3, o: crate::sparks::Sp
     }
     out
 }
-/// (sparks.ts Sparks.clear)
 pub fn sparks_clear(g: &mut crate::game::Game) {
     for s in g.sparks.pool.iter_mut() { s.alive = false; }
     g.sparks.live = 0.0;
 }
-/// the sparks fly, meet the walls and the floor, and die   (sparks.ts Sparks.update; the game always hands its own collision)
+/// the sparks fly, meet the walls and the floor, and die
 pub fn sparks_update(g: &mut crate::game::Game, dt: f64) {
     let p = g.sparks.params;
     let decay = m::exp(-p.drag * dt);
@@ -86,7 +84,7 @@ pub fn sparks_update(g: &mut crate::game::Game, dt: f64) {
     }
     g.sparks.live = live;
 }
-/// one thin emissive box a live spark, along its travel   (sparks.ts Sparks.boxes)
+/// one thin emissive box a live spark, along its travel
 pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let p = g.sparks.params;
     let t = p.thickness * 0.5;

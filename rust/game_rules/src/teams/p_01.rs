@@ -1,4 +1,3 @@
-//! src/game/teams.ts lines 1 to 67
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Does side `a` treat side `b` as an enemy: the whole rule of who fights whom.   (teams.ts isHostile)
+/// Does side `a` treat side `b` as an enemy: the whole rule of who fights whom.
 pub fn is_hostile(g: &crate::game::Game, a: crate::teams::Team, b: crate::teams::Team) -> bool {
     cell(&g.m.teams, a, b)
 }
@@ -17,17 +16,17 @@ fn cell(t: &TeamsMod, a: Team, b: Team) -> bool {
     *t.hostile.get(a).unwrap().get(b).unwrap()
 }
 
-/// A scenario's defender, for the words of a line both sides' AI says: a spawned hostile, up against a team.   (teams.ts defenderWords)
+/// A scenario's defender, for the words of a line both sides' AI says: a spawned hostile, up against a team.
 pub fn defender_words(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_some() && g.gd[gd].team == Team::Hostile
 }
 
-/// The name a man's own side calls him by in a line; none for a defender.   (teams.ts spokenName)
+/// The name a man's own side calls him by in a line; none for a defender.
 pub fn spoken_name(g: &crate::game::Game, o: GuardId) -> Option<String> {
     if defender_words(g, o) { None } else { Some(g.gd[o].callsign.clone()) }
 }
 
-/// The quiet mission with a partner: on for that run, the night staff and an operative are foes; off, neutral.   (teams.ts staffVsOperatives)
+/// The quiet mission with a partner: on for that run, the night staff and an operative are foes; off, neutral.
 pub fn staff_vs_operatives(g: &mut crate::game::Game, on: bool) {
     count_switch(&mut g.m.teams, on);
 }
@@ -40,19 +39,19 @@ fn count_switch(t: &mut TeamsMod, on: bool) {
     t.hostile.get_mut(Team::Guard).unwrap().set(Team::Operative, foes);
 }
 
-/// The side a body is on: a player's, or that of the Guard whose body it is ('guard' for a stray).   (teams.ts teamOfChar)
+/// The side a body is on: a player's, or that of the Guard whose body it is ('guard' for a stray).
 pub fn team_of_char(g: &mut crate::game::Game, c_2: CharId) -> crate::teams::Team {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return Team::Player; }
     g.guards.iter().find(|&&x| g.gd[x].ch == c_2).map_or(Team::Guard, |&x| g.gd[x].team)
 }
 
-/// The side of the body with this id: 'player' for a player's, else the living or dead Guard's, else 'guard'.   (teams.ts teamOfId)
+/// The side of the body with this id: 'player' for a player's, else the living or dead Guard's, else 'guard'.
 pub fn team_of_id(g: &crate::game::Game, id_2: f64) -> crate::teams::Team {
     if crate::seats::man_by_id(g, id_2).is_some() { return Team::Player; }
     g.guards.iter().find(|&&x| g.ch[g.gd[x].ch].id == id_2).map_or(Team::Guard, |&x| g.gd[x].team)
 }
 
-/// Is `o` (an AI man, or the player) an enemy of this man's side.   (teams.ts hostileTo)
+/// Is `o` (an AI man, or the player) an enemy of this man's side.
 pub fn hostile_to(g: &crate::game::Game, gd: GuardId, o: crate::teams::HostileToO) -> bool {
     let a = g.gd[gd].team;
     let b = match o {
@@ -62,7 +61,7 @@ pub fn hostile_to(g: &crate::game::Game, gd: GuardId, o: crate::teams::HostileTo
     is_hostile(g, a, b)
 }
 
-/// The body his foe is: the player he has in mind, or the hostile AI man; none when he has nobody.   (teams.ts foeChar)
+/// The body his foe is: the player he has in mind, or the hostile AI man; none when he has nobody.
 pub fn foe_char(g: &crate::game::Game, gd: GuardId) -> Option<CharId> {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {
@@ -74,7 +73,7 @@ pub fn foe_char(g: &crate::game::Game, gd: GuardId) -> Option<CharId> {
     }
 }
 
-/// His foe is out of the fight: the player down, or the man dead. False with nobody.   (teams.ts foeDown)
+/// His foe is out of the fight: the player down, or the man dead. False with nobody.
 pub fn foe_down(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {
@@ -86,7 +85,7 @@ pub fn foe_down(g: &crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// His foe is crouched: the player's crouch, or the AI man's crouch pose.   (teams.ts foeCrouched)
+/// His foe is crouched: the player's crouch, or the AI man's crouch pose.
 pub fn foe_crouched(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {

@@ -1,4 +1,3 @@
-//! src/game/fogofwar.ts lines 806 to 1156
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

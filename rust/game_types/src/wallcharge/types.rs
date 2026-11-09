@@ -3,20 +3,20 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a walk's answer kept for the open menu (wallcharge.ts keptWalks): a 'w|' key's length of walk (-1: no way), an 'r|' key's refusal from SquadOrders.reach (None: he can walk it)
+/// a walk's answer kept for the open menu: a 'w|' key's length of walk (-1: no way), an 'r|' key's refusal from SquadOrders.reach (None: he can walk it)
 #[derive(Clone, Debug, ToBytes)]
 pub enum WallChargeWalkAnswer {
     Walk { len: f64 },
     Reach { why: Option<String> },
 }
-/// whose store a walk's answer is kept in (wallcharge.ts type Kept): the open menu's (g.wall_charge.walks, counted in g.wall_charge.keep), one order's re-deal (WallOp.repick_kept), or one call's own (clearOf)
+/// whose store a walk's answer is kept in: the open menu's (g.wall_charge.walks, counted in g.wall_charge.keep), one order's re-deal (WallOp.repick_kept), or one call's own (clearOf)
 #[derive(Clone, Debug)]
 pub enum WallChargeKept {
     Menu,
     Repick { op: WallOpId },
     Local { memo: JsMap<String, f64> },
 }
-/// what underFire's two answers close over (wallcharge.ts underFire): the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits: the TypeScript keeps them by the array's identity)
+/// what underFire's two answers close over: the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits: the TypeScript keeps them by the array's identity)
 #[derive(Clone, Debug)]
 pub enum WallChargeFireAsk {
     Lines { wall: Option<crate::wallcharge::WallSpot>, all: Vec<V3>, memo: JsMap<[crate::Num; 3], f64>, hit: JsMap<[crate::Num; 3], bool> },
@@ -445,7 +445,6 @@ pub struct WallChargeSamJob {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WallchargeMod {
-    /// (src/game/wallcharge.ts:302 skyMemo)
     pub sky_memo: Option<JsMap<crate::Num, f64>>,
 }
 impl WallchargeMod {
@@ -456,14 +455,10 @@ impl WallchargeMod {
     }
 }
 
-/// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;
 
-/// (src/game/wallcharge.ts:301 SKY_TOP)
 pub const SKY_TOP: f64 = 12.0;
 
-/// (src/game/wallcharge.ts:301 SKY_OFF: a table nothing writes)
 pub fn sky_off() -> Vec<f64> { alloc::vec![0.5, 1.0, 1.6] }
 
-/// (src/game/wallcharge.ts:301 SKY_ALONG: a table nothing writes)
 pub fn sky_along() -> Vec<f64> { alloc::vec![-0.5, 0.0, 0.5] }

@@ -129,11 +129,8 @@ pub struct BlastFeelModFEELFireChunks {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelMod {
-    /// (src/game/blastFeel.ts:47 FEEL)
     pub feel: crate::blast_feel::BlastFeelModFEEL,
-    /// (src/game/blastFeel.ts:82 loaded)
     pub loaded: bool,
-    /// (src/game/blastFeel.ts:92 STATE)
     pub state: JsMap<PlayerId, crate::blast_feel::State>,
 }
 impl BlastFeelMod {

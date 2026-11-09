@@ -1,4 +1,3 @@
-//! src/game/stealthfeed.ts lines 1 to 16
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// One frame's word to Sam's animator, before any state poses him; under a show or a puppet, or down: nothing fed.   (stealthfeed.ts stealthFeed)
+/// One frame's word to Sam's animator, before any state poses him; under a show or a puppet, or down: nothing fed.
 pub fn stealth_feed(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;

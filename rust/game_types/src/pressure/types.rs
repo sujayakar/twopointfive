@@ -280,9 +280,7 @@ pub struct Aim {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct PressureMod {
-    /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,
-    /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
 }
 impl PressureMod {
@@ -294,23 +292,16 @@ impl PressureMod {
     }
 }
 
-/// (src/game/pressure.ts:306 ROOM_CELLS)
 pub const ROOM_CELLS: f64 = 500.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_BAND)
 pub const STAND_OFF_BAND: f64 = 7.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_TRIES)
 pub const STAND_OFF_TRIES: f64 = 10.0;
 
-/// (src/game/pressure.ts:308 PAIR_WAIT_SECS)
 pub const PAIR_WAIT_SECS: f64 = 6.0;
 
-/// (src/game/pressure.ts:309 CUE_FIRST_SECS)
 pub const CUE_FIRST_SECS: f64 = 1.0;
 
-/// (src/game/pressure.ts:1001 CALLED_SECS)
 pub const CALLED_SECS: f64 = 30.0;
 
-/// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
 pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

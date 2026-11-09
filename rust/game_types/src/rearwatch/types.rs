@@ -70,7 +70,6 @@ pub struct RearWaysItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct RearwatchMod {
-    /// (src/game/rearwatch.ts:106 books)
     pub books: JsMap<PlayerId, crate::rearwatch::Book>,
 }
 impl RearwatchMod {
@@ -95,14 +94,10 @@ pub struct RearwatchStats {
     pub room_far: i32,
 }
 
-/// (src/game/rearwatch.ts:109 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/rearwatch.ts:109 CHEST)
 pub const CHEST: f64 = 1.1;
 
-/// (src/game/rearwatch.ts:112 FORMED_M)
 pub const FORMED_M: f64 = 1.5;
 
-/// (src/game/rearwatch.ts:239 FALLING)
 pub const FALLING: &str = "falling in";

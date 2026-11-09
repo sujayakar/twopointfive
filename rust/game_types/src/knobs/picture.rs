@@ -18,7 +18,7 @@ pub struct PictureK {
     /// a man tells his net of an enemy once he has known of him this long; a defender with no squad of his own tells the men inside `shoutM`
     #[k(1.0)] pub tell_secs: f64,
     #[k(16.0)] pub shout_m: f64,
-    /// a report under the gunshot line is placed by ear out to this far along the way the sound takes (× how well that way carries: guards.ts's own rule);
+    /// a report under the gunshot line is placed by ear out to this far along the way the sound takes;
     ///  gunfire is heard over the whole floor, as the game's hearing has it
     #[k(7.0)] pub pop_m: f64,
     /// a place he looks at tells him something (it is empty; a man lies there) only if it is lit this well on the light meter's scale, or is this near (m)
@@ -49,7 +49,7 @@ pub struct PictureK {
     #[k(0.6)] pub step_after: f64,
     #[k(1.5)] pub step_rest: f64,
     #[k(5.0)] pub step_secs: f64,
-    /// the floor view of one man's picture (ui/pictureviz.ts): 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas
+    /// the floor view of one man's picture: 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas
     #[k(PictureKShow::Off)] pub show: PictureKShow,
     /// the view's reach round the man (m)
     #[k(9.0)] pub show_m: f64,

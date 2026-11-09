@@ -51,7 +51,6 @@ pub struct WeatherPreset {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WeatherKindsMod {
-    /// (src/game/weatherKinds.ts:41 WEATHER_PRESETS)
     pub weather_presets: JsMap<crate::weather_kinds::WeatherKind, crate::weather_kinds::WeatherPreset>,
 }
 impl WeatherKindsMod {
@@ -62,14 +61,10 @@ impl WeatherKindsMod {
     }
 }
 
-/// (src/game/weatherKinds.ts:19 WEATHER_KINDS: a table nothing writes)
 pub fn weather_kinds() -> Vec<String> { alloc::vec![String::from("clear"), String::from("overcast"), String::from("rain"), String::from("downpour"), String::from("fog"), String::from("dust")] }
 
-/// (src/game/weatherKinds.ts:108 SNOW_LEVELS: a table nothing writes)
 pub fn snow_levels() -> Vec<String> { alloc::vec![String::from("pass"), String::from("tut-team"), String::from("tut-quiet"), String::from("tut-road")] }
 
-/// (src/game/weatherKinds.ts:143 ROOF_Q)
 pub const ROOF_Q: f64 = 0.2;
 
-/// (src/game/weatherKinds.ts:172 WEATHER_KEY)
 pub const WEATHER_KEY: &str = "weather";

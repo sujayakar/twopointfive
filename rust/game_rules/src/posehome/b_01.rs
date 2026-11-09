@@ -54,7 +54,7 @@ fn come_home(g: &mut Game, c: CharId) {
     if !map.is_empty() { replace(g, c, &map); }
 }
 
-/// EVERYBODY OUT, THE POOL EMPTIED, THOSE WHO ARE THERE BACK IN (posehome.ts moveOut, then moveIn's second pass): the sets of the men on the lists in
+/// EVERYBODY OUT, THE POOL EMPTIED, THOSE WHO ARE THERE BACK IN: the sets of the men on the lists in
 /// the lists' order, each set's poses in the order it made them. A man who is on no list keeps his floats outside the pool (rows of `loose_poses`,
 /// as the TypeScript's go out into arrays of their own) until he is on one again. A ragdoll's pose is a pose of its own on both sides and is not
 /// the pool's to move (a carried game may still hold one in the pool: it goes back in after the sets).
@@ -135,7 +135,7 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
     }
 }
 
-// ---- THE STAGE (anim/skeleton.ts stageOpen / stageShut)
+// ---- THE STAGE
 //
 // An animator's update runs over poses that stand in a pool (its layers are handed their poses by their places). A man of a ticking game has his in
 // the game's pool. A man made INSIDE a tick is not at home until the next tick opens: the TypeScript lends his update "the stage", a block of its
@@ -143,7 +143,7 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
 // update: his poses go in past what is in use, and as it shuts they come out into the rows they came from and the pool is as it was, to the byte.
 
 /// The update of a man whose set is not at home opens: his poses into the pool's end, his handles on them, and the set told it stands (a pose it
-/// makes during the update is made there). None: the set is at home and nothing is lent.   (skeleton.ts stageOpen)
+/// makes during the update is made there). None: the set is at home and nothing is lent.
 pub fn stage_open(g: &mut Game, c: CharId) -> Option<Stage> {
     let set = g.ch[c].anim.poses;
     if g.tab.pose_set[set].home.is_some() || g.tab.pose_set[set].list.is_empty() { return None; }
@@ -166,7 +166,7 @@ pub fn stage_open(g: &mut Game, c: CharId) -> Option<Stage> {
 }
 
 /// …and shuts: every pose of his out again (those lent, into the rows they came from; one made during the update, into a row of its own), and the
-/// pool's end zeros again.   (skeleton.ts stageShut)
+/// pool's end zeros again.
 pub fn stage_shut(g: &mut Game, c: CharId, st: Stage) {
     let mut map: BTreeMap<u32, Pose> = BTreeMap::new();
     for (home, own) in st.back.iter().copied() {

@@ -40,7 +40,7 @@ pub struct Clearing {
     pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
     pub a: GuardId,
     pub b: Option<GuardId>,
-    /// INVENTED: g.serial() where a clear is begun (guards.ts planClears): a reader holds it by identity to know a new one began
+    /// INVENTED: g.serial() where a clear is begun: a reader holds it by identity to know a new one began
     pub serial: u32,
 }
 impl Clearing {
@@ -278,7 +278,7 @@ pub struct OrderPatch {
     pub direct: Option<Option<bool>>,
     pub smoke: Option<Option<bool>>,
     pub over: Option<Option<crate::game::GuardScriptOver>>,
-    /// INVENTED: true only from a caller that passes a goal it keeps and moves (orders.ts:1519, qrf.ts:828, :851): that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot (squad.ts:146)
+    /// INVENTED: true only from a caller that passes a goal it keeps and moves: that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot
     pub held: bool,
 }
 
@@ -331,9 +331,7 @@ pub enum Perceive {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SquadMod {
-    /// (src/game/squad.ts:39 settleWatch)
     pub settle_watch: JsMap<GuardId, crate::squad::SquadModSettleWatchValue>,
-    /// (src/game/squad.ts:42 walkWatch)
     pub walk_watch: JsMap<GuardId, crate::squad::SquadModWalkWatchValue>,
 }
 impl SquadMod {
@@ -345,38 +343,26 @@ impl SquadMod {
     }
 }
 
-/// (src/game/squad.ts:31 SETTLE)
 pub const SETTLE: f64 = 0.6;
 
-/// (src/game/squad.ts:35 FACE_WITHIN)
 pub const FACE_WITHIN: f64 = 1.0;
 
-/// (src/game/squad.ts:395 STACK_CAP)
 pub const STACK_CAP: f64 = 6.0;
 
-/// (src/game/squad.ts:397 KICK_BACK)
 pub const KICK_BACK: f64 = 0.7;
 
-/// (src/game/squad.ts:400 CENTRE_CHECK: a table nothing writes)
 pub fn centre_check() -> crate::squad::CENTRECHECK { crate::squad::CENTRECHECK { corner: 0.95, total: 3.0, min_leg: 0.6 } }
 
-/// (src/game/squad.ts:423 BODY_LINES: a table nothing writes)
 pub fn body_lines() -> crate::squad::BODYLINES { crate::squad::BODYLINES { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — apart from him.")), side1: Some(String::from("my side's clear. …he's right here.")), push1: None, under2: Some(String::from("checking under… just him.")), nothing2: Some(String::from("nothing else down here.")), corner1: Some(String::from("corner's clear. only him.")), empty2: Some(String::from("room's clear — nobody but him.")), radio1: None } }
 
-/// (src/game/squad.ts:429 BODY_LINES_NOW: a table nothing writes)
 pub fn body_lines_now() -> crate::squad::BODYLINESNOW { crate::squad::BODYLINESNOW { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — except for him.")), side1: None, push1: None, under2: None, nothing2: None, corner1: None, empty2: None, radio1: None } }
 
-/// (src/game/squad.ts:430 BODY_LINES_COLD_NOW: a table nothing writes)
 pub fn body_lines_cold_now() -> crate::squad::BODYLINESCOLDNOW { crate::squad::BODYLINESCOLDNOW { stack1: None, stack2: None, go2: None, in1: None, side2: None, side1: None, push1: None, under2: None, nothing2: Some(String::from("nothing else down here. he took a hard hit.")), corner1: None, empty2: None, radio1: None } }
 
-/// (src/game/squad.ts:432 BODY_LINES_COLD: a table nothing writes)
 pub fn body_lines_cold() -> crate::squad::BODYLINESCOLD { crate::squad::BODYLINESCOLD { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — just him, out cold.")), side1: Some(String::from("my side's clear. …he's here — still breathing.")), push1: None, under2: Some(String::from("checking under… just him. breathing.")), nothing2: Some(String::from("nothing else down here. he took a proper hit.")), corner1: Some(String::from("corner's clear. only him.")), empty2: Some(String::from("room's clear — nobody but him, and he's breathing.")), radio1: None } }
 
-/// (src/game/squad.ts:450 SUSPECT)
 pub const SUSPECT: f64 = 0.4;
 
-/// (src/game/squad.ts:473 APPROACH_SPEED)
 pub const APPROACH_SPEED: f64 = 1.6;
 
-/// (src/game/squad.ts:475 DRILL_CAP)
 pub const DRILL_CAP: f64 = 32.0;

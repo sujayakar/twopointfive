@@ -1,4 +1,3 @@
-//! src/game/roomfit.ts lines 1 to 255
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is. (roomfit.ts wayWords)
+/// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is.
 pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("on the way to {}", p),
@@ -15,7 +14,7 @@ pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     }
 }
 
-/// A row's words for a watch down a run of floor. (roomfit.ts runWords)
+/// A row's words for a watch down a run of floor.
 pub fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("watching {}", p),
@@ -23,7 +22,7 @@ pub fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     }
 }
 
-/// How far `p` is from the stretch a → b in plan, only between its ends. (roomfit.ts offLine)
+/// How far `p` is from the stretch a → b in plan, only between its ends.
 pub fn off_line(p: V3, a: V3, b: V3) -> f64 {
     let bx = b[0] - a[0];
     let bz = b[2] - a[2];
@@ -34,12 +33,12 @@ pub fn off_line(p: V3, a: V3, b: V3) -> f64 {
     m::hyp2(a[0] + bx * k - p[0], a[2] + bz * k - p[2])
 }
 
-/// How much the way Sam pointed adds in front and takes off behind. (roomfit.ts threatsOf frontOf)
+/// How much the way Sam pointed adds in front and takes off behind.
 fn front_of(front_k: f64, yaw: f64, front: f64) -> f64 {
     1.0 + front_k * m::cos(v3::wrap_angle(yaw - front))
 }
 
-/// What there is to watch from the space round `at`, heaviest first. (roomfit.ts threatsOf)
+/// What there is to watch from the space round `at`, heaviest first.
 pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, front: f64, reach: Option<f64>) -> Vec<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     let reach = reach.unwrap_or(k.reach);
@@ -97,7 +96,7 @@ pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: 
     out
 }
 
-/// Has a man stood at `q` a line to it: a door, to just short of its frame and, its leaf open, on into the doorway; else to the point. (roomfit.ts sees)
+/// Has a man stood at `q` a line to it: a door, to just short of its frame and, its leaf open, on into the doorway; else to the point.
 pub fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
     let eye: V3 = [q[0], EYE, q[2]];
     let d = v3::dist_xz(q, t.at);
@@ -109,7 +108,7 @@ pub fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> boo
     !(!crate::doors::door_off(g, door) && m::abs(crate::doors::door_angle(g, door)) >= 0.5 && crate::scene_collision::segment_blocked(g, eye, t.at, None, None, None))
 }
 
-/// What a man stood at `p` with his eyes spare could watch, heaviest first. (roomfit.ts watchablesAt)
+/// What a man stood at `p` with his eyes spare could watch, heaviest first.
 pub fn watchables_at(g: &mut crate::game::Game, p: V3, front: f64, reach: f64, bodies: &[V3]) -> Vec<crate::roomfit::Watchable> {
     let k = g.k.roomfit;
     let at: V3 = [p[0], 0.0, p[2]];
@@ -123,7 +122,7 @@ pub fn watchables_at(g: &mut crate::game::Game, p: V3, front: f64, reach: f64, b
     out
 }
 
-/// Is `q` in the funnel of this way, on the space's own face of it. (roomfit.ts inFunnel)
+/// Is `q` in the funnel of this way, on the space's own face of it.
 pub fn in_funnel(g: &crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> bool {
     let k = g.k.roomfit;
     let (o_at, o_half) = { let o = &g.tab.cover_opening[w.o]; (o.at, o.half) };
@@ -134,7 +133,7 @@ pub fn in_funnel(g: &crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> b
     m::abs(x * w.in_n[1] - z * w.in_n[0]) < o_half + k.funnel_pad + k.funnel_flare * m::max(0.0, dn)
 }
 
-/// A man's Fit for a place and what he watches there. (roomfit.ts fitSpots mk)
+/// A man's Fit for a place and what he watches there.
 fn mk(at: V3, pos: V3, t: Option<&crate::roomfit::Threat>, front: f64) -> crate::roomfit::Fit {
     crate::roomfit::Fit {
         at: v3::copy(at),
@@ -151,7 +150,7 @@ fn mk(at: V3, pos: V3, t: Option<&crate::roomfit::Threat>, front: f64) -> crate:
     }
 }
 
-/// Counts what a deal gave each man. (roomfit.ts fitSpots count)
+/// Counts what a deal gave each man.
 fn count(g: &mut Game, fits: Vec<crate::roomfit::Fit>) -> Vec<crate::roomfit::Fit> {
     for f in fits.iter() {
         match f.key.as_deref() {
@@ -168,7 +167,7 @@ fn held_has(held: &[String], key: &str) -> bool {
     held.iter().any(|h| h.as_str() == key)
 }
 
-/// Clear of the furniture that can be shoved, where it stands now. (roomfit.ts fitSpots clear)
+/// Clear of the furniture that can be shoved, where it stands now.
 fn clear(g: &mut Game, q: V3) -> bool {
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
@@ -183,12 +182,12 @@ fn clear(g: &mut Game, q: V3) -> bool {
     true
 }
 
-/// A wall or furniture `d` metres off along `yaw`. (roomfit.ts fitSpots wallAt)
+/// A wall or furniture `d` metres off along `yaw`.
 fn wall_at(g: &Game, q: V3, yaw: f64, d: f64) -> bool {
     crate::scene_collision::nav_grid_is_blocked(g, q[0] + m::sin(yaw) * d, q[2] + m::cos(yaw) * d)
 }
 
-/// How good `q` is for a man whose job is `t`; `out` without its row `me` is the others. (roomfit.ts fitSpots score)
+/// How good `q` is for a man whose job is `t`; `out` without its row `me` is the others.
 fn score(g: &Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], q: V3, t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], me: usize) -> f64 {
     let k = g.k.roomfit;
     let mut s0 = 0.0;
@@ -234,7 +233,7 @@ fn score(g: &Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[
     s
 }
 
-/// The best place on the floor `c` for row `i`'s job `t`. (roomfit.ts fitSpots pick)
+/// The best place on the floor `c` for row `i`'s job `t`.
 fn pick(g: &mut Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], c: &[V3], t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], i: usize) -> Option<crate::roomfit::Fit> {
     let mut best: Option<V3> = None;
     let mut bs = -m::INF;
@@ -246,7 +245,7 @@ fn pick(g: &mut Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies:
     best.map(|b| mk(at, b, t, front))
 }
 
-/// THE DEAL: a place and a watch for each of `n` men sent to `at`. None: no floor there to deal. (roomfit.ts fitSpots)
+/// THE DEAL: a place and a watch for each of `n` men sent to `at`. None: no floor there to deal.
 pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3, bodies: Option<&[V3]>, held: Option<&[String]>) -> Option<Vec<crate::roomfit::Fit>> {
     let bodies: &[V3] = bodies.unwrap_or(&[]);
     let held: &[String] = held.unwrap_or(&[]);
@@ -329,7 +328,7 @@ pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3
     Some(count(g, fits))
 }
 
-/// The longest clear run from `q` at eye height that is `sectorDeg` clear of every mate's gun. (roomfit.ts spareRun)
+/// The longest clear run from `q` at eye height that is `sectorDeg` clear of every mate's gun.
 pub fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     const B: usize = 16;
@@ -364,7 +363,7 @@ pub fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::r
     best
 }
 
-/// Which spots are one pair's: the two nearest one another, then the rest. (roomfit.ts fitGroups)
+/// Which spots are one pair's: the two nearest one another, then the rest.
 pub fn fit_groups(fits: &[crate::roomfit::Fit]) -> Vec<f64> {
     let n = fits.len();
     if n < 3 { return vec![0.0; n]; }
@@ -385,7 +384,7 @@ pub fn fit_groups(fits: &[crate::roomfit::Fit]) -> Vec<f64> {
     (0..n).map(|i| if i == a || i == b { 0.0 } else { 1.0 }).collect()
 }
 
-/// He takes the deal's watch into his order. (roomfit.ts take)
+/// He takes the deal's watch into his order.
 pub fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit::Fit) {
     let row = &mut g.tab.orders_assignment[a];
     row.watch = f.watch.map(v3::copy);
@@ -393,7 +392,7 @@ pub fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit
     row.there = if f.words.is_empty() { String::from("in position") } else { alloc::format!("in position · {}", f.words) };
 }
 
-/// Once a frame for each man under 'move': he takes his watch up over the last steps onto his mark; standing, he looks again once a second. (roomfit.ts fitTick)
+/// Once a frame for each man under 'move': he takes his watch up over the last steps onto his mark; standing, he looks again once a second.
 pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let k = g.k.roomfit;
     let (post, f_on, f_next_t, f_at, f_front) = {

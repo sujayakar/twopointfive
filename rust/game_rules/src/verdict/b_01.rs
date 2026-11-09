@@ -8,14 +8,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.   (verdict.ts rowFile)
+/// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.
 pub fn row_file(g: &crate::game::Game) -> Option<String> {
     let name = crate::scene_level_load::level_name_of(g)?;
     if name.is_empty() || name == "office" { return None; }
     Some(alloc::format!("{}.json", name))
 }
 
-/// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.   (verdict.ts loudRow)
+/// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.
 pub fn loud_row(g: &crate::game::Game) -> bool {
     let file = row_file(g);
     let run = crate::scenario_run::running_scenario(g, file.as_deref(), None);
@@ -28,7 +28,7 @@ pub fn loud_row(g: &crate::game::Game) -> bool {
     }
 }
 
-/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.   (verdict.ts Verdict.ended)
+/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.
 pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     use crate::scenario_run::ActiveScenario as K;
     let kind = crate::scenario_run::active_scenario(g);

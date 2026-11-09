@@ -20,7 +20,7 @@ pub static TUTORIAL: Tutorial = Tutorial {
 };
 
 const REACT: f64 = 0.6;
-// the level's marks (tools/levels/tut-pair.ts TP)
+// the level's marks
 const FIRST: V3 = [9.4, 0.0, 20.0];
 const GAP: V3 = [17.3, 0.0, 17.1];
 const BEHIND_B: V3 = [19.6, 0.0, 17.75];

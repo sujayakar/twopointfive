@@ -1,4 +1,3 @@
-//! src/game/he40.ts lines 1 to 206
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -79,7 +78,7 @@ pub fn shell_bodies(g: &mut crate::game::Game) -> Vec<CharId> {
     out
 }
 
-/// This round's flight table in the launcher's shape (TypeScript hands HE40 itself to launcher.ts).
+/// This round's flight table in the launcher's shape.
 fn ballistics(g: &Game) -> crate::launcher::Ballistics {
     let k = g.k.he40;
     crate::launcher::Ballistics {

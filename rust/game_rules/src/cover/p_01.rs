@@ -1,4 +1,3 @@
-//! src/game/cover.ts lines 1 to 233
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// One run of free cells in row `v`, cells `a` to `b`. (cover.ts Run)
+/// One run of free cells in row `v`, cells `a` to `b`.
 #[derive(Clone, Copy)]
 struct Run { a: i32, b: i32, v: i32 }
 
@@ -15,23 +14,22 @@ struct Run { a: i32, b: i32, v: i32 }
 struct Grid<'a> { nav: &'a crate::cover::GapsOfNav, along_x: bool, w: i32, h: i32, c: f64 }
 
 impl Grid<'_> {
-    /// Blocked, or off the grid. (cover.ts blk)
+    /// Blocked, or off the grid.
     fn blk(&self, u: i32, v: i32) -> bool {
         if u < 0 || v < 0 || u >= self.w || v >= self.h { return true; }
         let nav_w = self.nav.w as i32;
         let i = if self.along_x { v * nav_w + u } else { u * nav_w + v };
         self.nav.blocked[i as usize] == 1
     }
-    /// (cover.ts pt)
     fn pt(&self, u: f64, v: f64) -> V3 { if self.along_x { [u, CHEST, v] } else { [v, CHEST, u] } }
-    /// The middle of a run. (cover.ts at)
+    /// The middle of a run.
     fn at(&self, r: Run) -> V3 { self.pt(((r.a + r.b + 1) as f64) * 0.5 * self.c, ((r.v as f64) + 0.5) * self.c) }
-    /// Any free cell across the run's width in row `v`. (cover.ts open)
+    /// Any free cell across the run's width in row `v`.
     fn open(&self, r: Run, v: i32) -> bool {
         for u in r.a..=r.b { if !self.blk(u, v) { return true; } }
         false
     }
-    /// Something a man cannot be seen over on this side of the chain: tried down the middle of a run's row and along both its edges. (cover.ts side)
+    /// Something a man cannot be seen over on this side of the chain: tried down the middle of a run's row and along both its edges.
     fn side(&self, ch: &[Run], lo: bool, solid: &mut Option<&mut dyn FnMut(V3, V3) -> bool>) -> bool {
         let Some(solid) = solid else { return true; };
         for r in ch {
@@ -44,7 +42,6 @@ impl Grid<'_> {
         }
         false
     }
-    /// (cover.ts mk)
     fn mk(&self, kind: crate::cover::OpeningKind, r: Run, other: Option<Run>, ci: usize, n: [f64; 2]) -> Opening {
         let p = self.at(r);
         Opening {
@@ -60,7 +57,7 @@ impl Grid<'_> {
     }
 }
 
-/// The gaps of a nav grid as fresh values, which nothing holds yet: `along_x` lays the runs along x, the caller asks both ways; `solid` says whether a line is shut to sight. (cover.ts gapsOf)
+/// The gaps of a nav grid as fresh values, which nothing holds yet: `along_x` lays the runs along x, the caller asks both ways; `solid` says whether a line is shut to sight.
 pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<crate::cover::Opening> {
     let mut solid = solid;
     let (nav_w, nav_h) = (nav.w as i32, nav.h as i32);

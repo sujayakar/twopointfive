@@ -1,4 +1,3 @@
-//! src/game/camera.ts lines 1 to 154
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -149,7 +148,7 @@ fn draw_out(c: &mut FollowCamera) {
     rebuild(c);
 }
 
-/// The matrices from look-at, angles and distance; the tick calls it too (game.ts:1665, journal.ts:879). (camera.ts FollowCamera.rebuild)
+/// The matrices from look-at, angles and distance; the tick calls it too. (camera.ts FollowCamera.rebuild)
 pub fn follow_camera_rebuild(g: &mut Game, id: CameraId) {
     rebuild(&mut g.tab.camera[id])
 }

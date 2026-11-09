@@ -34,7 +34,7 @@ pub struct FollowCamera {
     pub draw_vp: crate::v3::m4::Mat4,
     pub auto_yaw_t: f64,
     pub yaw_goal: Option<f64>,
-    /// INVENTED: bumped by every whole write of desired (game.ts:1614, :1626), for Seat.takeCut (cmd.ts:191)
+    /// INVENTED: bumped by every whole write of desired, for Seat.takeCut
     pub desired_serial: u32,
 }
 impl FollowCamera {

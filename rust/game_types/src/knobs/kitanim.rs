@@ -21,12 +21,12 @@ pub struct KitanimK {
     /// …and A CLICK MADE WHILE A CAN IS STILL COMING TO THE FIST IS KEPT for the whole fetch ('5, click' in one breath throws as the can arrives — it used to throw
     ///  nothing for up to two thirds of a second): the most such a click may wait, s. 0 = dropped, as it was.
     #[k(1.0)] pub throw_keep: f64,
-    /// the most a lock-out may be once no errand is running (= player.ts RIFLE_EQUIP_SECS, the build's own rifle beat; the probes hold the two equal)
+    /// the most a lock-out may be once no errand is running
     #[k(0.45)] pub plain_lock: f64,
     /// the magazine changes, in seconds on the weapon's clock — written for the pistol's 1.6 s row and the rifle's 2.4 s row and scaled to whatever row the gun in
     ///  hand has. out = the old magazine leaves the gun · keep = it is in the dump pouch (tactical only) · in_ = the fresh one is seated · rack = slide / handle
     pub beats: KitanimKBeats,
-    /// m to the close-in mode's man at which closeness is 1 (the knife's reach); it is 0 at the mode's own edge (close.ts CLOSE.modeM)
+    /// m to the close-in mode's man at which closeness is 1 (the knife's reach); it is 0 at the mode's own edge
     #[k(1.1)] pub close_near: f64,
 }
 

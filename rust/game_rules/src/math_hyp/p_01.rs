@@ -1,4 +1,3 @@
-//! src/math/hyp.ts lines 1 to 140
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

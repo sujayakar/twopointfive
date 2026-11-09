@@ -3,17 +3,17 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then (enemysquads.ts roundCtx); rear is RoundCtx.rear
+/// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then; rear is RoundCtx.rear
 #[derive(Clone, Debug)]
 pub enum RoundHot {
     Places { known: Vec<crate::enemysquads::Known>, ajar: Vec<V3> },
 }
-/// what RoundCtx.hotCell closed over: its memo of hot by nav cell, filled as a search reaches each cell and kept for as long as the record (enemysquads.ts roundCtx)
+/// what RoundCtx.hotCell closed over: its memo of hot by nav cell, filled as a search reaches each cell and kept for as long as the record
 #[derive(Clone, Debug)]
 pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
 }
-/// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own (enemysquads.ts:287, the rows its literal names; merged as { ...SQUADS, ...row } at :306). One arm: the proposal shape has no key for a new struct
+/// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own. One arm: the proposal shape has no key for a new struct
 #[derive(Clone, Debug, ToBytes)]
 pub enum DrillAtRow {
     Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },
@@ -498,13 +498,9 @@ pub struct NetSend {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct EnemysquadsMod {
-    /// (src/game/enemysquads.ts:281 STATES)
     pub states: Option<crate::enemysquads::State>,
-    /// (src/game/enemysquads.ts:513 CTX)
     pub ctx: Option<crate::enemysquads::RoundCtx>,
-    /// (src/game/enemysquads.ts:879 BANGS)
     pub bangs: JsMap<GuardId, crate::enemysquads::EnemysquadsModBANGSValue>,
-    /// (src/game/enemysquads.ts:1130 GLIMPSED)
     pub glimpsed: JsMap<GuardId, f64>,
 }
 impl EnemysquadsMod {
@@ -518,32 +514,22 @@ impl EnemysquadsMod {
     }
 }
 
-/// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)
 pub fn count() -> Vec<String> { alloc::vec![String::from("nobody"), String::from("one"), String::from("two"), String::from("three"), String::from("four")] }
 
-/// (src/game/enemysquads.ts:616 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("Zero"), String::from("One"), String::from("Two"), String::from("Three"), String::from("Four"), String::from("Five"), String::from("Six"), String::from("Seven"), String::from("Eight"), String::from("Nine"), String::from("Ten"), String::from("Eleven"), String::from("Twelve"), String::from("Thirteen"), String::from("Fourteen"), String::from("Fifteen"), String::from("Sixteen")] }
 
-/// (src/game/enemysquads.ts:1040 LOOK_AT_M)
 pub const LOOK_AT_M: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1040 LOOK_NEAR_M)
 pub const LOOK_NEAR_M: f64 = 2.5;
 
-/// (src/game/enemysquads.ts:1040 LOOK_ROUND_M)
 pub const LOOK_ROUND_M: f64 = 3.5;
 
-/// (src/game/enemysquads.ts:1043 LOOK_SECS)
 pub const LOOK_SECS: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1193 NET_OUT_SECS)
 pub const NET_OUT_SECS: f64 = 90.0;
 
-/// (src/game/enemysquads.ts:1195 HUNG_SECS)
 pub const HUNG_SECS: f64 = 10.0;
 
-/// (src/game/enemysquads.ts:1264 NET_BREATH)
 pub const NET_BREATH: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1292 NET_TRIES)
 pub const NET_TRIES: f64 = 2.0;

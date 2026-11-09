@@ -1,4 +1,3 @@
-//! src/game/throwplan.ts lines 1 to 125
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -14,7 +13,7 @@ struct RayHit {
     prop: bool,
 }
 
-/// the walls first, then the props no further than the wall; a prop's hit wins (throwplan.ts throwFlight's `ray`)
+/// the walls first, then the props no further than the wall; a prop's hit wins
 fn ray(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RayHit> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
     let reach = match &st { Some(s) => s.t, None => tmax };
@@ -25,7 +24,7 @@ fn ray(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RayHit> {
     }
 }
 
-/// Where a thing thrown from `from` at `v0` goes off: the item pool's own flight, moving nothing and rolling no die.   (throwplan.ts throwFlight)
+/// Where a thing thrown from `from` at `v0` goes off: the item pool's own flight, moving nothing and rolling no die.
 pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, from: V3, v0: V3, step: Option<f64>) -> crate::throwplan::ThrowFlight {
     let step = step.unwrap_or(1.0 / 60.0);
     let frag = kind == crate::squadthrow::SquadThrowKind::Frag;
@@ -70,7 +69,7 @@ pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThr
                 if vn < 0.0 {
                     let v_n = v3::scale(nrm, vn);
                     let v_t = v3::sub(vel, v_n);
-                    // lying snow under it (snowBog.ts; 0 = none)
+                    // lying snow under it
                     let bog = if nrm[1] > 0.6 && !ht.prop { crate::snow_bog::snow_bog_at(g, pos[0], pos[1] - radius, pos[2]) } else { 0.0 };
                     vel = v3::add(v3::scale(v_t, m::max(0.0, 1.0 - friction * (0.5 + 0.5 * m::abs(nrm[1])))), v3::scale(v_n, -restitution));
                     bounces += 1;
@@ -126,7 +125,7 @@ pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThr
     }
 }
 
-/// The walls that stand by a spot, for a bank: where rays out from over it first meet something solid, a hand's width off its face, the nearest first.   (throwplan.ts throwWalls)
+/// The walls that stand by a spot, for a bank: where rays out from over it first meet something solid, a hand's width off its face, the nearest first.
 pub fn throw_walls(g: &mut crate::game::Game, at: V3) -> Vec<V3> {
     let (lob_walls, lob_wall_h, lob_wall_m) = (g.k.squadthrow.lob_walls, g.k.squadthrow.lob_wall_h, g.k.squadthrow.lob_wall_m);
     let o: V3 = [at[0], at[1] + lob_wall_h, at[2]];
@@ -144,7 +143,7 @@ pub fn throw_walls(g: &mut crate::game::Game, at: V3) -> Vec<V3> {
     out.into_iter().map(|x| x.0).collect()
 }
 
-/// The hand a throw at `aim` leaves, for a man stood at `p`: ahead of him toward it, under his head. None: it would be in a wall.   (throwplan.ts handAt)
+/// The hand a throw at `aim` leaves, for a man stood at `p`: ahead of him toward it, under his head. None: it would be in a wall.
 pub fn hand_at(g: &mut crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option<V3> {
     let k = crate::squadsmoke::squadsmoke();
     let d = v3::dist_xz(p, aim);
@@ -157,7 +156,7 @@ pub fn hand_at(g: &mut crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option
     if crate::scene_collision::solid_blocked(g, [p[0], p[1] + up, p[2]], from, None) { None } else { Some(from) }
 }
 
-/// It went off by the spot: within lobNearM of it over the floor, not up on something tall, nothing solid between the two.   (throwplan.ts throwHits)
+/// It went off by the spot: within lobNearM of it over the floor, not up on something tall, nothing solid between the two.
 pub fn throw_hits(g: &mut crate::game::Game, end: V3, at: V3, slack: Option<f64>) -> bool {
     let slack = slack.unwrap_or(0.0);
     v3::dist_xz(end, at) <= g.k.squadthrow.lob_near_m + slack
@@ -165,7 +164,7 @@ pub fn throw_hits(g: &mut crate::game::Game, end: V3, at: V3, slack: Option<f64>
         && !crate::scene_collision::solid_blocked(g, [end[0], end[1] + 0.25, end[2]], [at[0], at[1] + 0.25, at[2]], None)
 }
 
-/// Flies a throw at `aim` from `from` at each of `paces`, keeping in `best` the one that goes off nearest `at`.   (throwplan.ts throwTo's `fly`)
+/// Flies a throw at `aim` from `from` at each of `paces`, keeping in `best` the one that goes off nearest `at`.
 fn fly(g: &mut Game, kind: crate::squadthrow::SquadThrowKind, at: V3, from: V3, aim: V3, paces: &[f64], miss: &mut f64, best: &mut Option<ThrowTo>, lim: &mut Option<&mut ThrowToLim>) {
     let (dx, dy, dz) = (aim[0] - from[0], aim[1] - from[1], aim[2] - from[2]);
     let dist = m::hyp2(dx, dz);
@@ -195,7 +194,7 @@ fn fly(g: &mut Game, kind: crate::squadthrow::SquadThrowKind, at: V3, from: V3, 
     }
 }
 
-/// One man's worked-out throw at a spot: the hand, the throw and where it goes off. None: no way of throwing there.   (throwplan.ts throwTo)
+/// One man's worked-out throw at a spot: the hand, the throw and where it goes off. None: no way of throwing there.
 pub fn throw_to(g: &mut crate::game::Game, gd: GuardId, at: V3, kind: crate::squadthrow::SquadThrowKind, stood: Option<V3>, walls: Option<&[V3]>, lim: Option<&mut crate::throwplan::ThrowToLim>) -> Option<crate::throwplan::ThrowTo> {
     let mut lim = lim;
     let c = g.gd[gd].ch;

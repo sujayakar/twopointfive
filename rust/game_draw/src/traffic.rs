@@ -14,7 +14,7 @@ use game::scene_scenarios::Rect;
 
 type V3 = [f64; 3];
 const RES: f64 = 8.0;
-/// the map's size, in texels (render/wear.ts: the world's floor at RES a metre)
+/// the map's size, in texels
 fn map_size() -> (usize, usize) { let w = game::scene_world::world(); ((w.grid_w * w.grid_cell * RES) as usize, (w.grid_h * w.grid_cell * RES) as usize) }
 const LANE_SIGMA: f64 = 0.34;
 const DOOR_SIGMA: f64 = 0.55;

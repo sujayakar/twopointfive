@@ -59,6 +59,5 @@ impl Default for SeatSet {
     }
 }
 
-/// (src/game/seats.ts:44 SEAT_KINDS: a table nothing writes)
 pub fn seat_kinds() -> Vec<String> { alloc::vec![String::from("roomclear"), String::from("nightbreach")] }
 

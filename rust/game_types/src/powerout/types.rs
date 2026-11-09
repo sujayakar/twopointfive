@@ -127,7 +127,6 @@ pub struct CoverSpot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct PoweroutMod {
-    /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,
 }
 impl PoweroutMod {

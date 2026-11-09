@@ -1,4 +1,4 @@
-//! THE FRACTURE PATTERN'S POLYGONS (src/game/glassPattern.ts gpFragments, gpHull, gpClipRect, gpPolyArea, gpDicePoly, gpDiceKey): what a pane's sites cut it
+//! THE FRACTURE PATTERN'S POLYGONS: what a pane's sites cut it
 //! into, as convex polygons in the pane's own (u along it, v up). glass.rs holds the hashes and which piece a point is in; this file holds what each piece IS.
 //! No state: every answer is the sites' and the frame's. common.wgsl keeps the shader's copy of the half glass.rs holds.
 //!
@@ -146,7 +146,7 @@ fn region(d: &[f64], ns: usize, i: usize, hu: f64, hv: f64) -> Poly {
     g
 }
 
-/// one piece of a pane (glassPattern.ts GpFrag, but for its neighbours, which `neighbours` works out)
+/// one piece of a pane
 #[derive(Clone, Copy)]
 pub struct Frag {
     pub fid: u32,
@@ -671,7 +671,7 @@ impl Dice {
     }
 }
 
-/// THE MOST CLUMPS A SHEET MAY COME DOWN IN (a sheet of more is refused as its level loads, by name: src/game/levelfit.ts): the order they let go in is worked out
+/// THE MOST CLUMPS A SHEET MAY COME DOWN IN: the order they let go in is worked out
 /// whole when it is first asked for
 pub const MAX_CLUMPS: usize = 8192;
 #[derive(Clone, Copy)]

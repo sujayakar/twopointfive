@@ -11,7 +11,6 @@ pub struct DestructionSwitchModBLASTPACE {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct DestructionSwitchMod {
-    /// (src/game/destructionSwitch.ts:47 BLAST_PACE)
     pub blast_pace: crate::destruction_switch::DestructionSwitchModBLASTPACE,
 }
 impl DestructionSwitchMod {

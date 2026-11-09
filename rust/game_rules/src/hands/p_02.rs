@@ -1,4 +1,3 @@
-//! src/game/hands.ts lines 512 to 539
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Another man's hand on a door he works: the door tools' lead at his handle, a leaf he just shoved, a leaf he pulls to. Moves nothing. (hands.ts teamDoorHand)
+/// Another man's hand on a door he works: the door tools' lead at his handle, a leaf he just shoved, a leaf he pulls to. Moves nothing.
 pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> {
     if g.touring { return None; }
     let c = g.gd[gd].ch;
@@ -32,7 +31,7 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
     None
 }
 
-/// The door tools' lead a step from the handle he was sent to, among the door work on Game: the seat this pass is about. (hands.ts:523)
+/// The door tools' lead a step from the handle he was sent to, among the door work on Game: the seat this pass is about.
 fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) -> Option<DoorId> {
     let mut i = 0;
     while i < seat.door_tools.ops.len() {
@@ -47,7 +46,7 @@ fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) 
     None
 }
 
-/// A cancel or a restart: hands off everything. (hands.ts handsCancel)
+/// A cancel or a restart: hands off everything.
 pub fn hands_cancel(g: &mut crate::game::Game) {
     let p = g.player;
     g.pl[p].door_move = None;

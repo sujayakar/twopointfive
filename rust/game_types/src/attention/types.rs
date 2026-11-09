@@ -108,9 +108,7 @@ pub struct AttentionLendO {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct AttentionMod {
-    /// (src/game/attention.ts:100 memOf)
     pub mem_of: JsMap<GuardId, crate::attention::Mem>,
-    /// (src/game/attention.ts:106 ATTENTION_LOG)
     pub attention_log: Vec<crate::attention::AttentionModATTENTIONLOGItem>,
 }
 impl AttentionMod {
@@ -134,23 +132,16 @@ pub struct AttentionStats {
     pub worn: i32,
 }
 
-/// (src/game/attention.ts:103 STALE)
 pub const STALE: f64 = 0.25;
 
-/// (src/game/attention.ts:112 WARY: a table nothing writes)
 pub fn wary() -> Vec<String> { alloc::vec![String::from("again?"), String::from("…that's twice.")] }
 
-/// (src/game/attention.ts:112 WARY_FOE: a table nothing writes)
 pub fn wary_foe() -> Vec<String> { alloc::vec![String::from("again. stay sharp."), String::from("twice now.")] }
 
-/// (src/game/attention.ts:113 SPENT: a table nothing writes)
 pub fn spent() -> Vec<String> { alloc::vec![String::from("no. somebody's doing that."), String::from("that's no accident. come out.")] }
 
-/// (src/game/attention.ts:113 SPENT_FOE: a table nothing writes)
 pub fn spent_foe() -> Vec<String> { alloc::vec![String::from("that's bait. search the place."), String::from("someone's playing us. sweep it.")] }
 
-/// (src/game/attention.ts:114 BROKE: a table nothing writes)
 pub fn broke() -> Vec<String> { alloc::vec![String::from("—wait."), String::from("what—")] }
 
-/// (src/game/attention.ts:115 DONE_FOE: a table nothing writes)
 pub fn done_foe() -> Vec<String> { alloc::vec![String::from("…nothing."), String::from("nothing there.")] }

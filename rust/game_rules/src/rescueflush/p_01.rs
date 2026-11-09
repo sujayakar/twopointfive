@@ -1,4 +1,3 @@
-//! src/game/rescueflush.ts lines 1 to 213
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,32 +6,32 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Distance on the floor.   (rescueflush.ts flat)
+/// Distance on the floor.
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// A new one: the field initialisers; the constructor only keeps `g` and `R`.   (rescueflush.ts RescueFlush.constructor)
+/// A new one: the field initialisers; the constructor only keeps `g` and `R`.
 pub fn rescue_flush_new(g: &crate::game::Game) -> crate::rescueflush::RescueFlush { RescueFlush::blank() }
 
-/// Back to nothing having happened.   (rescueflush.ts RescueFlush.reset)
+/// Back to nothing having happened.
 pub fn rescue_flush_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flush;
     f.fell_at = m::NAN; f.next_at = m::NAN; f.gone_at = m::NAN; f.count = 0.0; f.sent.clear(); f.barred.clear();
 }
 
-/// The rule is up on this run (RESCUEFLUSH.on is settled true).   (rescueflush.ts RescueFlush.live)
+/// The rule is up on this run (RESCUEFLUSH.on is settled true).
 pub fn rescue_flush_live(g: &crate::game::Game) -> bool {
     g.rescue.active && g.rescue.result.is_none() && g.ai_enabled && crate::roomfight::room_fight_on(g)
 }
 
-/// The living hostages, in the list's order.   (rescueflush.ts RescueFlush.alive)
+/// The living hostages, in the list's order.
 pub fn rescue_flush_alive(g: &crate::game::Game) -> Vec<GuardId> {
     g.rescue.hostages.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
 }
 
-/// He came for her: his wait is `killSecs`.   (rescueflush.ts RescueFlush.came)
+/// He came for her: his wait is `killSecs`.
 pub fn rescue_flush_came(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.flush.sent.has(gd) }
 
-/// HIS LINE ON HER: the distance, or Infinity when out of reach, blocked or smoked.   (rescueflush.ts RescueFlush.line)
+/// HIS LINE ON HER: the distance, or Infinity when out of reach, blocked or smoked.
 pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> f64 {
     let (cb, cv) = (g.gd[by].ch, g.gd[v].ch);
     let (pb, pv) = (g.ch[cb].pos, g.ch[cv].pos);
@@ -53,7 +52,7 @@ fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
     best
 }
 
-/// THE GUN ON HER: the man of theirs with a clear line to a living hostage, nearest to one; `keep` keeps it while it holds for him.   (rescueflush.ts RescueFlush.holder)
+/// THE GUN ON HER: the man of theirs with a clear line to a living hostage, nearest to one; `keep` keeps it while it holds for him.
 pub fn rescue_flush_holder(g: &mut crate::game::Game, keep: Option<GuardId>) -> Option<GuardId> {
     if !rescue_flush_live(g) || g.rescue.flush.fell_at.is_nan() { return None; }
     let alive = rescue_flush_alive(g);
@@ -70,7 +69,7 @@ fn plan_bounds(g: &Game) -> Option<crate::scene_level::BreachPlanBounds> {
     crate::rescue::rescue_bounds(g).map(|r| crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 })
 }
 
-/// Which of `of` he HAS: those in the room with him, and those on his line once the room has fallen.   (rescueflush.ts RescueFlush.victims)
+/// Which of `of` he HAS: those in the room with him, and those on his line once the room has fallen.
 pub fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &[GuardId]) -> Vec<GuardId> {
     let b = plan_bounds(g);
     let here = crate::squad::in_bounds(g.ch[g.gd[by].ch].pos, b, None);
@@ -115,7 +114,7 @@ fn clear_path(g: &mut Game, h: GuardId) {
     gd.path = Vec::new(); gd.path_serial = gd.path_serial.wrapping_add(1); gd.path_goal = None; gd.path_goal_orbit = false;
 }
 
-/// Once a frame from rescue.ts tick(), after its defenders() and before its clock().   (rescueflush.ts RescueFlush.tick)
+/// Once a frame from rescue.ts tick(), after its defenders() and before its clock().
 pub fn rescue_flush_tick(g: &mut crate::game::Game) {
     if !rescue_flush_live(g) { return; }
     let b = plan_bounds(g);
@@ -205,7 +204,7 @@ fn covered(g: &mut Game, h: GuardId, door: Option<V3>) -> bool {
     match door { Some(d) => crate::lanes::lane_covers(g, h, d), None => false }
 }
 
-/// Where the k-th word sends a man.   (rescueflush.ts RescueFlush.goalOf)
+/// Where the k-th word sends a man.
 pub fn rescue_flush_goal_of(g: &crate::game::Game, k: f64, in_room: bool) -> crate::rescueflush::Goal {
     if in_room || g.rescue.flush.gone_at.is_nan() {
         return if js::rem(k, 2.0) == 1.0 && crate::rescue::rescue_data(g).map_or(false, |s| s.side.is_some()) { Goal::Side } else { Goal::Room };
@@ -213,7 +212,7 @@ pub fn rescue_flush_goal_of(g: &crate::game::Game, k: f64, in_room: bool) -> cra
     if js::rem(k, 2.0) == 0.0 { Goal::Out } else { Goal::Noise }
 }
 
-/// The point a goal means: a hostage in the room or the room's middle, the team's noise, the way out.   (rescueflush.ts RescueFlush.pointOf)
+/// The point a goal means: a hostage in the room or the room's middle, the team's noise, the way out.
 pub fn rescue_flush_point_of(g: &crate::game::Game, goal: crate::rescueflush::Goal, alive: &[GuardId]) -> Option<V3> {
     if crate::rescue::rescue_data(g).is_none() { return None; }
     if goal == Goal::Room || goal == Goal::Side {
@@ -226,7 +225,7 @@ pub fn rescue_flush_point_of(g: &crate::game::Game, goal: crate::rescueflush::Go
     crate::rescueend::rescue_end_out(g)
 }
 
-/// Let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net.   (rescueflush.ts RescueFlush.send)
+/// Let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net.
 pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescueflush::Goal, at: V3, n: f64, via: Option<&[V3]>) {
     let via: &[V3] = via.unwrap_or(&[]);
     let f = fight_def_of(g, h);

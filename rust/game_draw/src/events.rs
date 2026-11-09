@@ -311,7 +311,7 @@ impl Events {
     }
 }
 
-/// how tense the floor is, 0 to 1   (guards.ts tension, by the opposition's nerves)
+/// how tense the floor is, 0 to 1
 fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);

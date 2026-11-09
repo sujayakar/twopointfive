@@ -3,7 +3,7 @@
 //!   face_debug_panic(h, how)           A PLANTED PANIC, for the check of the road back from one: how 0 inside the borrow of game `h`, as a rule of the tick would (the game is lost);
 //!                                      how 1 outside any game (nothing is lost but the call)
 //!   face_kit_plan(p, n, way) -> 1 | 0  of no game: `p`, `n` are a level file's text, `way` a way of its kit picture's block; 1: the plan as JSON at face_out
-//!                                      (`game_start::kit_stage::plan_of_file`, tools/qa/kitview-plan.ts); 0: why not, in words
+//!; 0: why not, in words
 #[no_mangle]
 pub extern "C" fn face_debug_panic(h: u32, how: u32) {
     super::hook();

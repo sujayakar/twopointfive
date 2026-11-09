@@ -152,7 +152,6 @@ pub struct EdgeLookModEDGEScorch {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct EdgeLookMod {
-    /// (src/game/edgeLook.ts:40 EDGE)
     pub edge: crate::edge_look::EdgeLookModEDGE,
 }
 impl EdgeLookMod {
@@ -175,11 +174,8 @@ pub struct EdgeLookStats {
     pub rebuilds: i32,
 }
 
-/// (src/game/edgeLook.ts:87 MKEY_LOOK)
 pub const MKEY_LOOK: f64 = 150994944.0;
 
-/// (src/game/edgeLook.ts:88 STEEL: a table nothing writes)
 pub fn steel() -> V3 { [0.5, 0.52, 0.54] }
 
-/// (src/game/edgeLook.ts:89 UP: a table nothing writes)
 pub fn up() -> V3 { [0.0, 1.0, 0.0] }

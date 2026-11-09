@@ -21,22 +21,22 @@ fn put_job(g: &mut Game, gd: GuardId, j: Job) {
     }
 }
 
-/// Distance on the floor. (wandorder.ts flat)
+/// Distance on the floor.
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// Is there a fog to look into. (wandorder.ts live; WAND.on and WAND.mate are settled on)
+/// Is there a fog to look into.
 pub fn live(g: &mut crate::game::Game) -> bool {
     crate::fogofwar::fog_of_war_active(g)
 }
 
-/// Is a wand in his kit. (wandorder.ts carries)
+/// Is a wand in his kit.
 pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::kit::kit_of(g, gd).map_or(false, |k| k.wand)
 }
 
-/// The fight has him: its lease, blind, folded, or the room fight's aim over his order. (wandorder.ts fought)
+/// The fight has him: its lease, blind, folded, or the room fight's aim over his order.
 pub fn fought(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     g.tab.orders_assignment[a].yield_t >= 0.0
         || crate::control::man::blind(g, gd)
@@ -44,21 +44,21 @@ pub fn fought(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> 
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
-/// A point half a metre off the frame on face `side`: what Doors.workSpot is asked from. (wandorder.ts onFace)
+/// A point half a metre off the frame on face `side`: what Doors.workSpot is asked from.
 pub fn on_face(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
     let u = crate::doors::door_dir(g, d);
     let c = g.dr[d].frame_centre;
     [c[0] - u[1] * side * 0.5, 0.0, c[2] + u[0] * side * 0.5]
 }
 
-/// His kneeling spot on that face of the leaf. (wandorder.ts spotOn)
+/// His kneeling spot on that face of the leaf.
 pub fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot {
     let from = on_face(g, d, side);
     let along = g.dr[d].def.width * 0.5;
     crate::doors::doors_work_spot(g, d, from, Some(0.5), Some(along))
 }
 
-/// Who of `men` takes it and where he kneels: the nearest carrier who can walk to the door's face; else why not. (wandorder.ts pick)
+/// Who of `men` takes it and where he kneels: the nearest carrier who can walk to the door's face; else why not.
 pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Pick {
     let crate::orders::OrderTarget::Door(t) = t else { return Pick::Text(String::from("not a door.")) };
     let d = t.door;
@@ -99,7 +99,7 @@ pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::Order
     }
 }
 
-/// The lens comes out and he gets up; the next feed is a full one if he had been on his knee. `j` is the caller's copy: the caller puts it back. (wandorder.ts lensOut)
+/// The lens comes out and he gets up; the next feed is a full one if he had been on his knee. `j` is the caller's copy: the caller puts it back.
 pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job) {
     if j.knelt {
         let c = g.gd[gd].ch;
@@ -113,7 +113,6 @@ pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder
 }
 
 /// Done with it: the lens out, a word, a plain hold: beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands.
-/// (wandorder.ts settle)
 pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job, line: Option<&str>, moved: bool) {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let c = g.gd[gd].ch;
@@ -169,7 +168,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
     }
 }
 
-/// Gives the one man the look, and opens his job. `Issue::Arm1(())` is the TypeScript's `void`; it never returns words. (wandorder.ts issue)
+/// Gives the one man the look, and opens his job. `Issue::Arm1(())` is the TypeScript's `void`; it never returns words.
 pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
     let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };
@@ -232,7 +231,7 @@ pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::Orde
     Issue::Arm1(())
 }
 
-/// The order's beat for one man: walk, kneel, feed, look; ends when the leaf moves, the switch goes, or his mark is moved. (wandorder.ts tick)
+/// The order's beat for one man: walk, kneel, feed, look; ends when the leaf moves, the switch goes, or his mark is moved.
 pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let Some(mut j) = job(g, &crate::seats::here(g), gd) else { return };
     if j.a != a {
@@ -306,7 +305,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     g.tab.orders_assignment[a].there = there;
 }
 
-/// The order's row on the menus. (wandorder.ts row)
+/// The order's row on the menus.
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER, crate::orders::OrderDef {
         hot_key: Some(g.k.wand.order_key.clone()),
@@ -318,7 +317,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 }
 
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
-/// fight or another order has; reads the row's key while a menu lists it. True = the key was the order's (and is eaten). (wandorder.ts wandOrderKey)
+/// fight or another order has; reads the row's key while a menu lists it. True = the key was the order's (and is eaten).
 pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let mut want = false;
@@ -390,7 +389,6 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
 }
 
 /// His lens as his eye among the fog's, or None while he is not looking: the player's lens by every number, swept over its arc on the game's clock.
-/// (wandorder.ts mateWandEye)
 pub fn mate_wand_eye(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     let seat = crate::seats::view_of(g, gd);
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| eye_in_view(g, gd))
@@ -432,7 +430,7 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     })
 }
 
-/// Every teammate's live lens: a device feed under 'only my own eyes'. (wandorder.ts mateWandEyes)
+/// Every teammate's live lens: a device feed under 'only my own eyes'.
 pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(st) = g.m.wandorder.states.get(k) else { return Vec::new() };

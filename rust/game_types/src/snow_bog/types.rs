@@ -19,7 +19,6 @@ pub struct SNOWKIND {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SnowBogMod {
-    /// (src/game/snowBog.ts:41 groundOf)
     /// (scratch, read by nobody who did not just write it: in no bytes)
     #[bytes(skip)]
     pub ground_of: Option<crate::snow_bog::Ground>,
@@ -32,5 +31,4 @@ impl SnowBogMod {
     }
 }
 
-/// (src/game/snowBog.ts:39 SNOW_KIND: a table nothing writes)
 pub fn snow_kind() -> crate::snow_bog::SNOWKIND { crate::snow_bog::SNOWKIND { bare: 1.0, packed: 2.0, old: 3.0, bank: 4.0 } }

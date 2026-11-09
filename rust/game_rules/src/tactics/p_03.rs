@@ -1,4 +1,3 @@
-//! src/game/tactics.ts lines 876 to 1039
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -18,7 +17,7 @@ fn gate_read(g: &mut Game, man: GuardId) -> Option<GateRead> {
     Some(GateRead { phase: row.phase, action: row.action, thrower: row.thrower, cross_at: row.cross_at })
 }
 
-/// One frame of a man's gate.   (tactics.ts runGate)
+/// One frame of a man's gate.
 pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, dt: f64) -> bool {
     use crate::game::GuardState;
     let c = g.gd[gd].ch;
@@ -90,7 +89,7 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
         GatePhase::Open => {   // a shut leaf: his hand on the lever, shoved into the room and the closer held off; then the charge or the slice
             // (hs: None = not asked yet, Some(None) = asked, the stack's own jamb serves; Some(Some) = the handle's place)
             if !g_2.opened && !matches!(g_2.hs, Some(None)) && crate::doors::door_is_closed(g, d) {
-                // (handleside.ts) the lever is worked from the handle's own place
+                // the lever is worked from the handle's own place
                 if g_2.hs.is_none() {
                     let pos = g.ch[c].pos;
                     let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, g_2.side, pos, None, None) } else { None };
@@ -213,14 +212,14 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
     }
 }
 
-/// Eyes and muzzle down and away from the opening: the foot of the wall behind him along it.   (tactics.ts awayLook)
+/// Eyes and muzzle down and away from the opening: the foot of the wall behind him along it.
 pub fn away_look(g: &mut crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, pos: V3) -> V3 {
     let f = crate::guards::frame_of(g, d);
     let out = if g_2.near_a <= 0.0 { -1.0 } else { 1.0 };
     [pos[0] + f.ux * out * 1.4 + f.nx * g_2.side * 0.4, 0.15, pos[2] + f.uz * out * 1.4 + f.nz * g_2.side * 0.4]
 }
 
-/// Across the opening, or straight to the cross where there is no floor for it or the leaf is shut.   (tactics.ts beginSlice)
+/// Across the opening, or straight to the cross where there is no floor for it or the leaf is shut.
 pub fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     let st = slice_stations(g, g_2.door, g_2.side, g_2.near_a);
     let st = match st {
@@ -235,7 +234,7 @@ pub fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tact
     g.stats.tactics.slices += 1;
 }
 
-/// The legs through the doorway; a second goes half a second behind.   (tactics.ts beginCross)
+/// The legs through the doorway; a second goes half a second behind.
 pub fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     let k = if g_2.role == GateRole::Lead { 0.0 } else { 1.0 };
     let plan = plan_for(g, g_2.door, g_2.side, g_2.near_a);
@@ -244,7 +243,7 @@ pub fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tact
     g_2.cross_at = g.time + (if g_2.role == GateRole::Lead { 0.0 } else { 0.5 });
 }
 
-/// The charge goes in round the near jamb, on a fuse only this gate's clock runs.   (tactics.ts beginToss)
+/// The charge goes in round the near jamb, on a fuse only this gate's clock runs.
 pub fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, thrower: GuardId) {
     let d = g_2.door;
     if let Some(k) = g.m.tactics.kit.get_mut(thrower) { k.stuns = m::max(0.0, k.stuns - 1.0); }
@@ -273,7 +272,7 @@ pub fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tacti
     g_2.can = Some(it); g_2.toss_t = g.time; g_2.land_t = -1.0; g_2.phase = GatePhase::Toss; g_2.t = 0.0;
 }
 
-/// Keep the gates honest once a frame (a man reset out of the list, a corpse); the phases run from followPath.   (tactics.ts tickGates)
+/// Keep the gates honest once a frame (a man reset out of the list, a corpse); the phases run from followPath.
 pub fn tick_gates(g: &mut crate::game::Game) {
     let men = s(g).gates.keys();
     for man in men {
@@ -284,7 +283,7 @@ pub fn tick_gates(g: &mut crate::game::Game) {
     }
 }
 
-/// A gated man's eyes and muzzle and how low he is; None for everybody else.   (tactics.ts tacticsLook)
+/// A gated man's eyes and muzzle and how low he is; None for everybody else.
 pub fn tactics_look(g: &crate::game::Game, gd: GuardId) -> Option<crate::tactics::TacticsLook> {
     if !g.tune.tactics { return None; }
     let row = g.m.tactics.states.as_ref()?.gates.get(gd)?;

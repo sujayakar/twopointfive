@@ -49,7 +49,7 @@ pub fn team_card_for(g: &Game, f: &TeamFor) -> CardFor {
     CardFor { no_fog: !crate::scenario_run::fog_of_query(g, &f.link) }
 }
 
-/// The stealth card's kit, where it stands for yours.   (loadout.ts syncHand; kit.ts kitStealthHand)
+/// The stealth card's kit, where it stands for yours.
 pub fn team_hand(g: &Game, f: &TeamFor) -> Option<KitHand> {
     if !cards_on(g, Some(f)) || !matches!(f.entry.kind, LoadoutKind::Quiet | LoadoutKind::Solo) { return None; }
     let cams = link_cams(g, f);

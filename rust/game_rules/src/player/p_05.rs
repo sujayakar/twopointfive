@@ -1,4 +1,3 @@
-//! src/game/player.ts lines 1611 to 2027
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -46,7 +45,7 @@ fn unhook(g: &mut Game, gd: GuardId) {
     g.tab.game_talk[talk].held_since = -1.0;
 }
 
-/// One frame with a man in his arm: the beat's clock and inputs, his rows, the gun, then the pair's movement.   (player.ts updateHold)
+/// One frame with a man in his arm: the beat's clock and inputs, his rows, the gun, then the pair's movement.
 pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -214,7 +213,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             gun = hold!(g, p).variant == crate::character::HoldVariant::Gun;
         }
         let swapping = hold!(g, p).swap_t < k.swap;
-        // ---- his rows, performed this frame (interact.ts → Game.act)
+        // ---- his rows, performed this frame
         let act = match &g.act {
             Some(a) if a.kind == crate::game::InteractableKind::Held => a.verb,
             _ => None,
@@ -363,7 +362,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             h.fire_queued = false;
             h.gun_out = v3::damp(h.gun_out, 0.0, 6.0, dt);
         }
-        // what the rest of the frame reads of H, read BEFORE the round: fireWeapon can end the hold (a blast reaching Sam: combat.ts freeHeld), and the TypeScript's H lives on detached
+        // what the rest of the frame reads of H, read BEFORE the round: fireWeapon can end the hold, and the TypeScript's H lives on detached
         let (gun_out, hit_at, phase_after, fire_now) = {
             let h = hold!(g, p);
             (h.gun_out, h.hit_at, h.phase, gun_held && h.fire_queued && h.gun_out > 0.8)
@@ -505,7 +504,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
     hold_tail(g, dt, speed, Some(own));
 }
 
-/// The end of a hold frame, Sam's side, shared with the frames that end the hold: both animators told the beat, the rail light, Sam's step events.   (player.ts holdTail)
+/// The end of a hold frame, Sam's side, shared with the frames that end the hold: both animators told the beat, the rail light, Sam's step events.
 pub fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
     use crate::character::{Stance, UpperMode};
     let own = own.unwrap_or(-1.0);
@@ -611,7 +610,7 @@ pub fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64
     tail_end(g, dt, speed, c);
 }
 
-/// holdTail's last lines, with a hold or without one: the sling, the body's bake, the rail light, the dragging shuffle.   (player.ts holdTail)
+/// holdTail's last lines, with a hold or without one: the sling, the body's bake, the rail light, the dragging shuffle.
 fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
     let p = g.player;
     arm_rifle(g, false, None);
@@ -636,7 +635,7 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
     }
 }
 
-/// A new beat of the hold: its clock from nought, nothing chosen, nothing queued, Sam's question dead.   (player.ts setPhase)
+/// A new beat of the hold: its clock from nought, nothing chosen, nothing queued, Sam's question dead.
 pub fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     let p = g.player;
     let Some(h) = g.pl[p].holding.as_mut() else { return };
@@ -651,7 +650,7 @@ pub fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) 
     cancel_ask(g);
 }
 
-/// Stop the choke / the whip under way (a Space tap, a step, Esc): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.   (player.ts easeOffHold)
+/// Stop the choke / the whip under way (a Space tap, a step, Esc): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
 pub fn ease_off_hold(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
@@ -676,7 +675,7 @@ pub fn ease_off_hold(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.1), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.2 }));
 }
 
-/// Sam's unfinished question dies in his mouth, and a remark waiting its turn with it; an answer the man has begun runs on.   (player.ts cancelAsk)
+/// Sam's unfinished question dies in his mouth, and a remark waiting its turn with it; an answer the man has begun runs on.
 pub fn cancel_ask(g: &mut crate::game::Game) {
     let p = g.player;
     let time = g.time;
@@ -691,7 +690,7 @@ pub fn cancel_ask(g: &mut crate::game::Game) {
     }
 }
 
-/// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear, the log's 'you ▸'. Nobody answers it.   (player.ts sayAfter)
+/// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear, the log's 'you ▸'. Nobody answers it.
 pub fn say_after(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(a) = g.pl[p].holding.as_mut().and_then(|h| h.after.take()) else { return };
@@ -709,7 +708,7 @@ fn say_over_sam(g: &mut Game, text: &str, time: f64) {
     crate::game::game_note(g, &format!("you ▸ {text}"));
 }
 
-/// E with the man already in the arm: the OTHER hold from here, and HOLD.secs.swap of lockout begun.   (player.ts swapHold)
+/// E with the man already in the arm: the OTHER hold from here, and HOLD.secs.swap of lockout begun.
 pub fn swap_hold(g: &mut crate::game::Game) {
     use crate::character::HoldVariant as Var;
     let p = g.player;
@@ -755,7 +754,7 @@ pub fn swap_hold(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
 }
 
-/// HOLD.secs.chokeHold after the choke was chosen: the elbow starts to close.   (player.ts startChoke)
+/// HOLD.secs.chokeHold after the choke was chosen: the elbow starts to close.
 pub fn start_choke(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
@@ -768,7 +767,7 @@ pub fn start_choke(g: &mut crate::game::Game) {
     prop_noise(g, pos, CHOKE_NOISE);
 }
 
-/// HOLD.secs.chokeHold after the whip was chosen: the pistol comes off his head and cocks back; the crack is whipOut's.   (player.ts startWhip)
+/// HOLD.secs.chokeHold after the whip was chosen: the pistol comes off his head and cocks back; the crack is whipOut's.
 pub fn start_whip(g: &mut crate::game::Game) {
     let p = g.player;
     if g.pl[p].holding.is_none() {
@@ -781,22 +780,22 @@ pub fn start_whip(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.12), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
 }
 
-/// The knife's clock in the hold.   (player.ts killSecs)
+/// The knife's clock in the hold.
 pub fn kill_secs(g: &crate::game::Game) -> f64 {
     g.k.hold.secs.kill
 }
 
-/// Seconds into the knife's clock at which the blade is in: the hold broken from there on leaves the man dead all the same.   (player.ts killCut)
+/// Seconds into the knife's clock at which the blade is in: the hold broken from there on leaves the man dead all the same.
 pub fn kill_cut(g: &crate::game::Game) -> f64 {
     g.k.hold.kill.hit * kill_secs(g)
 }
 
-/// The knife is going in on the man in his arm: a commit nothing eases off.   (player.ts holdKilling)
+/// The knife is going in on the man in his arm: a commit nothing eases off.
 pub fn hold_killing(h: &crate::player::Hold) -> bool {
     h.phase == crate::character::HoldPhase::Kill
 }
 
-/// The left click with a man in the arm: the knife, committed from this frame; he is dead when its clock runs out.   (player.ts startKill)
+/// The left click with a man in the arm: the knife, committed from this frame; he is dead when its clock runs out.
 pub fn start_kill(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
@@ -806,7 +805,7 @@ pub fn start_kill(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.55), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 
-/// The man rigid in front, HOLD.dist ahead on Sam's facing, kept out of the statics; what the walls take off his station Sam gives up too.   (player.ts placeHeld)
+/// The man rigid in front, HOLD.dist ahead on Sam's facing, kept out of the statics; what the walls take off his station Sam gives up too.
 pub fn place_held(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -833,7 +832,7 @@ pub fn place_held(g: &mut crate::game::Game) {
     }
 }
 
-/// Living guards are as solid to the man in his arm as to Sam: one closer than KEEP_OFF to the held man's centre pushes the PAIR back.   (player.ts keepHeldOffGuards)
+/// Living guards are as solid to the man in his arm as to Sam: one closer than KEEP_OFF to the held man's centre pushes the PAIR back.
 pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -869,7 +868,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Where the exchange with the man in his arm stands. `speaking` says the man's bubble is his answer: a write goes to `g.gd[h.g].bubble`.   (player.ts heldTalk)
+/// Where the exchange with the man in his arm stands. `speaking` says the man's bubble is his answer: a write goes to `g.gd[h.g].bubble`.
 pub fn held_talk(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::player::Hold) -> crate::player::HeldTalk {
     let gd = h.g;
     let talk = g.gd[gd].talk;
@@ -895,7 +894,7 @@ pub fn held_talk(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate:
     crate::player::HeldTalk { asking, sam_up, ready, settled, speaking: speaking.is_some() }
 }
 
-/// A tap on his row, one EXCHANGE: Sam's line first, up for its beat; the answer follows when it ends.   (player.ts askHeld)
+/// A tap on his row, one EXCHANGE: Sam's line first, up for its beat; the answer follows when it ends.
 pub fn ask_held(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(h) = g.pl[p].holding.clone() else { return };
@@ -937,7 +936,7 @@ pub fn ask_held(g: &mut crate::game::Game) {
     crate::game::game_note(g, &format!("you ▸ {text}"));
 }
 
-/// Sam's line has hung its beat: the man answers it, and the muffled sound of it under the arm.   (player.ts answerHeld)
+/// Sam's line has hung its beat: the man answers it, and the muffled sound of it under the arm.
 pub fn answer_held(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
@@ -949,7 +948,7 @@ pub fn answer_held(g: &mut crate::game::Game) {
     }
 }
 
-/// The man has given the keyed door up: Sam takes what is on his belt; with the man in his arm, Sam's word on it follows the man's line down.   (player.ts takeKey)
+/// The man has given the keyed door up: Sam takes what is on his belt; with the man in his arm, Sam's word on it follows the man's line down.
 pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) {
     let p = g.player;
     let mut fresh: Vec<String> = Vec::new();
@@ -985,7 +984,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     }
 }
 
-/// After the door leaves have had their say: whatever a leaf shoved the held man off his station by, the PAIR gives. Not during the reach.   (player.ts settleHeld)
+/// After the door leaves have had their say: whatever a leaf shoved the held man off his station by, the PAIR gives. Not during the reach.
 pub fn settle_held(g: &mut crate::game::Game) {
     let p = g.player;
     let gd = match &g.pl[p].holding {
@@ -1010,7 +1009,7 @@ pub fn settle_held(g: &mut crate::game::Game) {
     crate::character::character_update(g, c, 0.0);
 }
 
-/// The choke run through HOLD.secs.choke: he goes limp in the arm and folds forward at Sam's feet, out cold.   (player.ts chokeOut)
+/// The choke run through HOLD.secs.choke: he goes limp in the arm and folds forward at Sam's feet, out cold.
 pub fn choke_out(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
@@ -1027,7 +1026,7 @@ pub fn choke_out(g: &mut crate::game::Game) {
     g.pl[p].holding = None;
 }
 
-/// The knife run through its clock: he is dead in the arm and let fall at Sam's feet.   (player.ts killOut)
+/// The knife run through its clock: he is dead in the arm and let fall at Sam's feet.
 pub fn kill_out(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
@@ -1057,7 +1056,7 @@ pub fn kill_out(g: &mut crate::game::Game) {
     g.pl[p].holding = None;
 }
 
-/// The whip run through HOLD.secs.whip: the pistol lands behind his right ear and he drops out of the arm, the loudest thing a hold does.   (player.ts whipOut)
+/// The whip run through HOLD.secs.whip: the pistol lands behind his right ear and he drops out of the arm, the loudest thing a hold does.
 pub fn whip_out(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
@@ -1079,7 +1078,7 @@ pub fn whip_out(g: &mut crate::game::Game) {
     g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, 0.5);
 }
 
-/// He comes out of the arm his own man and an instant witness; a man already down is only unhooked.   (player.ts handBack)
+/// He comes out of the arm his own man and an instant witness; a man already down is only unhooked.
 pub fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     let mut stagger = stagger;
     let hc = g.gd[gd].ch;

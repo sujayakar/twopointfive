@@ -8,27 +8,27 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Hard's drilled defenders: only the night breach by itself, under the press's own switch.   (roomfight.ts drilledOn)
+/// Hard's drilled defenders: only the night breach by itself, under the press's own switch.
 pub fn drilled_on(g: &crate::game::Game) -> bool {
     g.k.pressure.on && g.k.pressure.drilled && g.night_breach.active && g.night_breach.layout.is_none()
 }
 
-/// × the seconds a stun canister doubles this man over: DRILLED.shaken for a drilled defender, 1 for anybody else.   (roomfight.ts drilledK)
+/// × the seconds a stun canister doubles this man over: DRILLED.shaken for a drilled defender, 1 for anybody else.
 pub fn drilled_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].team == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
 }
 
-/// Distance on the floor.   (roomfight.ts flat)
+/// Distance on the floor.
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A draw of the simulation's die in a range.   (roomfight.ts pick)
+/// A draw of the simulation's die in a range.
 pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     r[0] + crate::dice::draw_for(g, "roomfight::pick#1", who) * (r[1] - r[0])
 }
 
-/// His head bone, or where it would be.   (roomfight.ts eyeOf)
+/// His head bone, or where it would be.
 pub fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     match g.ch[c_2].bones.get(crate::character::Bone::Head) {
         Some(p) => *p,
@@ -36,7 +36,7 @@ pub fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// His chest bone, or where it would be.   (roomfight.ts chestOf)
+/// His chest bone, or where it would be.
 pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     match g.ch[c_2].bones.get(crate::character::Bone::Chest) {
         Some(p) => *p,
@@ -44,7 +44,7 @@ pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.   (roomfight.ts pairSmoke)
+/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     let (eye, chest) = (eye_of(g, a), chest_of(g, b));
     let t = crate::sense::smoke_between(g, eye, chest);
@@ -56,7 +56,7 @@ pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     }
 }
 
-/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.   (roomfight.ts lampGlare)
+/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.
 pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
     let l = g.gd[o].flashlight;
@@ -75,12 +75,12 @@ pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     m::max(0.0, g.k.roomfight.lamp + g.tune.vis_slope * m::log(k))
 }
 
-/// Is the room fight running this frame?   (roomfight.ts fightLive)
+/// Is the room fight running this frame?
 pub fn fight_live(g: &crate::game::Game) -> bool {
     g.fight.live
 }
 
-/// The clearance a friend is owed against a line of fire `l` long, he `t` of the way along it.   (roomfight.ts closeLane)
+/// The clearance a friend is owed against a line of fire `l` long, he `t` of the way along it.
 pub fn close_lane(g: &crate::game::Game, clear: f64, t: f64, l: f64) -> f64 {
     lane(clear, t, l, g.k.roomfight.point_blank)
 }
@@ -90,7 +90,7 @@ pub(super) fn lane(clear: f64, t: f64, l: f64, point_blank: f64) -> f64 {
     m::min(clear, if t > 1.0 && l < point_blank { 0.3 } else { 0.3 + 0.25 * m::max(0.0, t) * l })
 }
 
-/// How fast the player on this body is really getting anywhere; Infinity while not known yet.   (roomfight.ts RoomFight.samSpeedOf)
+/// How fast the player on this body is really getting anywhere; Infinity while not known yet.
 pub fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 {
     let mut i = 0;
     while i < g.seats.len() {
@@ -107,19 +107,19 @@ pub fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 {
     m::INF
 }
 
-/// A new room fight: the class's field initialisers; its constructor only keeps `g`.   (roomfight.ts RoomFight.constructor)
+/// A new room fight: the class's field initialisers; its constructor only keeps `g`.
 pub fn room_fight_new(g: &crate::game::Game) -> crate::roomfight::RoomFight {
     crate::roomfight::RoomFight::blank()
 }
 
-/// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).   (roomfight.ts RoomFight.on)
+/// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).
 pub fn room_fight_on(g: &crate::game::Game) -> bool {
     if !(g.ai_enabled && g.tune.teams && !g.touring && !g.quiet_utility && g.puppet.is_none()) { return false; }
     let show_runs = match g.director.run { Some(r) => !g.tab.director_run[r].ended, None => false };
     !(show_runs && !crate::rails::rails_live(g))
 }
 
-/// A line of the fight's log, kept to its last few hundred.   (roomfight.ts RoomFight.note)
+/// A line of the fight's log, kept to its last few hundred.
 pub fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
     let t = g.time;
@@ -132,12 +132,12 @@ pub(super) fn op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId>
     g.fight.ops.iter().copied().find(|&o| g.tab.roomfight_op[o].gd == gd)
 }
 
-/// An operative's muzzle is on a man, or coming onto him.   (roomfight.ts RoomFight.engaged)
+/// An operative's muzzle is on a man, or coming onto him.
 pub fn room_fight_engaged(g: &crate::game::Game, gd: GuardId) -> bool {
     match op_of(g, gd) { Some(o) => g.tab.roomfight_op[o].tgt.is_some(), None => false }
 }
 
-/// Seconds he has been on his man with no round at him from where he stands.   (roomfight.ts RoomFight.noShot)
+/// Seconds he has been on his man with no round at him from where he stands.
 pub fn room_fight_no_shot(g: &crate::game::Game, gd: GuardId) -> f64 {
     match op_of(g, gd) {
         Some(o) if g.tab.roomfight_op[o].tgt.is_some() => g.tab.roomfight_op[o].block_t,
@@ -145,7 +145,7 @@ pub fn room_fight_no_shot(g: &crate::game::Game, gd: GuardId) -> f64 {
     }
 }
 
-/// An operative is on a man, turning to one, or lost one inside the last `secs`.   (roomfight.ts RoomFight.busy)
+/// An operative is on a man, turning to one, or lost one inside the last `secs`.
 pub fn room_fight_busy(g: &crate::game::Game, gd: GuardId, secs: f64) -> bool {
     let now = g.time;
     match op_of(g, gd) {
@@ -157,7 +157,7 @@ pub fn room_fight_busy(g: &crate::game::Game, gd: GuardId, secs: f64) -> bool {
     }
 }
 
-/// An operative has a living hostile in his sight right now, target or not.   (roomfight.ts RoomFight.contact)
+/// An operative has a living hostile in his sight right now, target or not.
 pub fn room_fight_contact(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     let Some(o) = op_of(g, gd) else { return false; };
@@ -167,12 +167,12 @@ pub fn room_fight_contact(g: &crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// Does any living teammate see this man right now?   (roomfight.ts RoomFight.teamSees)
+/// Does any living teammate see this man right now?
 pub fn room_fight_team_sees(g: &crate::game::Game, h: GuardId) -> bool {
     room_fight_seen_by(g, h).len() > 0
 }
 
-/// The living teammates who see this man: the scripted by this module's meters, one on the fight AI by its own eyes.   (roomfight.ts RoomFight.seenBy)
+/// The living teammates who see this man: the scripted by this module's meters, one on the fight AI by its own eyes.
 pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     let t = g.time;
     let mut out = Vec::new();
@@ -201,16 +201,14 @@ pub(super) fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::
 /// a man off `g.guards` by his body's number (`g.guards.find(x => x.char.id === e.who)`)
 pub(super) fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { let w = who?; g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == w) }
 
-/// is the floor hot in this teammate's ears.   (roomfight.ts hotFor)
+/// is the floor hot in this teammate's ears.
 pub fn room_fight_hot_for(g: &crate::game::Game, gd: GuardId) -> bool { g.time - room_fight_hot_of(g, gd) < g.k.roomfight.team_hot }
 
-/// (roomfight.ts hotOf)
 pub fn room_fight_hot_of(g: &crate::game::Game, gd: GuardId) -> f64 { match op_id(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
 
-/// (roomfight.ts opOf)
 pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_id(g, gd) }
 
-/// Once a frame from Game.update.   (roomfight.ts tick)
+/// Once a frame from Game.update.
 pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     if !room_fight_on(g) { if g.fight.live { room_fight_stop(g); } return; }
     let any = g.guards.iter().any(|&x| g.gd[x].unit.is_some() && (g.gd[x].team == crate::teams::Team::Hostile || g.gd[x].team == crate::teams::Team::Operative));
@@ -265,7 +263,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     crate::laststand::last_stand_tick(g);
 }
 
-/// an enemy's footfall: heard by a teammate as any man hears a step (roomfight.ts:480)
+/// an enemy's footfall: heard by a teammate as any man hears a step
 pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
     let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile => w, _ => return };
@@ -284,7 +282,7 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     if let Some(o) = near { g.tab.roomfight_op[o].step_by = Some(OpStepBy { by: w, t: e.time, at: [from[0], 1.1, from[2]] }); }
 }
 
-/// a door noise under an enemy's hand, kept for cue() (roomfight.ts:493)
+/// a door noise under an enemy's hand, kept for cue()
 pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
     let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile && g.gd[w].unit.is_some() => w, _ => return };
@@ -316,7 +314,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     if free == 0 { if let (Some(o), Some(at)) = (post, post_at) { g.tab.roomfight_op[o].door_by = Some(OpDoorBy { by: w, t: e.time, at, door: dr }); } }
 }
 
-/// every man as this module found him.   (roomfight.ts stop)
+/// every man as this module found him.
 pub fn room_fight_stop(g: &mut crate::game::Game) {
     crate::pressure::press_stop(g); crate::laststand::last_stand_stop(g);
     let mut i = 0;
@@ -336,7 +334,7 @@ pub fn room_fight_stop(g: &mut crate::game::Game) {
     crate::digin::dig_in_reset(g);
 }
 
-/// a fresh staging.   (roomfight.ts reset)
+/// a fresh staging.
 pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
     g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::default();

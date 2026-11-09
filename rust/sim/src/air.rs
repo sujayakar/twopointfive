@@ -5,7 +5,7 @@
 //! An opening between two cells is asked of the statics alone (three heights, both ways), and of the door leaves as rectangles, re-read whenever a leaf has moved.
 //!
 //! WHAT IS NOT STATE and is made again (`Plan`, a set a slot of the blocks, as bricks.rs's tables): which cells are roofed and the lists walked over them are the roofs',
-//! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp (src/sim/state.ts SimState.stamp).
+//! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp.
 use crate::knobs::{k, AIRDUST_DIFFUSE, AIRDUST_RECHECK_SECS, AIRDUST_SETTLE, AIRDUST_STEP};
 use crate::lines;
 use crate::maths::{cos, hypot2, sin};
@@ -14,7 +14,7 @@ use crate::world::{js_abs, js_ceil, js_max, js_min, world, K_ROT, MAX_LEAVES, RE
 use core::mem::size_of;
 use prim::floor;
 
-/// the plan: scene/airGrid.ts's half-metre cells over the 40 × 28 m world (the host holds its own numbers to these as it stands up: airDust.ts)
+/// the plan: scene/airGrid.ts's half-metre cells over the 40 × 28 m world
 pub const AIR_W: usize = 80;
 pub const AIR_H: usize = 56;
 pub const AIR_CELL: f64 = 0.5;
@@ -122,7 +122,7 @@ pub struct Said {
     pub open: f64,
 }
 
-/// the fixed step in use (airDust.ts stepSecs): held to what the explicit scheme and a frame can take
+/// the fixed step in use: held to what the explicit scheme and a frame can take
 #[inline]
 fn step_secs() -> f64 {
     let h = k(AIRDUST_STEP);

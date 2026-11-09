@@ -8,7 +8,7 @@ use game_derive::Knobs;
 ///  its squares where the doubles used the game's compensated length. A pose's numbers are stored as singles either way; what moves is their LAST PLACE, so it
 ///  is a rule of play: off = the build as it was, to the bit. Why: four singles fit a lane where two doubles do, and the compensated length is eight
 ///  divides and a root a node — in the module a blend is a third to a quarter of the time (docs/agents/rust.md has both languages' numbers). OFF here and on
-///  the frozen stand; the page raises it (host/profile.ts).
+///  the frozen stand; the page raises it.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct PosemathK {
     #[k(true)] pub singles: bool,

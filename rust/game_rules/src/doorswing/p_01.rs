@@ -1,4 +1,3 @@
-//! src/game/doorswing.ts lines 1 to 185
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -20,7 +19,7 @@ struct Given {
     server_room: crate::doorswing::Rect,
 }
 
-/// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.   (doorswing.ts sideOf)
+/// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.
 pub fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     let c = g.dr[d].def.closed_dir;
     let ux = m::cos(c);
@@ -39,12 +38,12 @@ pub fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     }
 }
 
-/// A rectangle's middle.   (doorswing.ts mid)
+/// A rectangle's middle.
 pub fn mid(r: crate::doorswing::Rect) -> [f64; 2] {
     [(r.x0 + r.x1) / 2.0, (r.z0 + r.z1) / 2.0]
 }
 
-/// A rectangle's area.   (doorswing.ts area)
+/// A rectangle's area.
 pub fn area(r: crate::doorswing::Rect) -> f64 {
     m::abs((r.x1 - r.x0) * (r.z1 - r.z0))
 }
@@ -52,7 +51,7 @@ pub fn area(r: crate::doorswing::Rect) -> f64 {
 /// What roofOver reads of a static: c, h, yaw, flags.
 type BoxNumbers = (V3, V3, f64, f64);
 
-/// A static's numbers by its ID (doorswing.ts:56 `level.boxes`, which is `g.col.boxes`).
+/// A static's numbers by its ID.
 fn seam_box_numbers(g: &Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
 
 /// roofOver's count over the statics' numbers.
@@ -86,7 +85,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
     n
 }
 
-/// How many of ROOF_PTS points just off face `s` of a door have a roof over them.   (doorswing.ts roofOver)
+/// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
 pub fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
     let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
@@ -106,7 +105,7 @@ fn outside_side(p: f64, mi: f64) -> f64 {
     }
 }
 
-/// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.   (doorswing.ts outsideOf)
+/// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.
 pub fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
     if !g.dr[d].def.exterior.unwrap_or(false) {
         return 0.0;
@@ -116,7 +115,7 @@ pub fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
     outside_side(p, mi)
 }
 
-/// floors' `flood`: the component of `start`, flooded and its size kept on the first asking.   (doorswing.ts floors)
+/// floors' `flood`: the component of `start`, flooded and its size kept on the first asking.
 fn floors_flood(comp: &mut [i32], sizes: &mut Vec<f64>, wall: &[u8], w: usize, h: usize, start: usize) -> i32 {
     if comp[start] >= 0 {
         return comp[start];
@@ -150,7 +149,7 @@ fn floors_flood(comp: &mut [i32], sizes: &mut Vec<f64>, wall: &[u8], w: usize, h
     id
 }
 
-/// The nav cells either face of every door opens on with every doorway shut: per door, the cells reachable off each face.   (doorswing.ts floors)
+/// The nav cells either face of every door opens on with every doorway shut: per door, the cells reachable off each face.
 pub fn floors(g: &mut crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
     let (wf, hf, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (w, h) = (wf as usize, hf as usize);
@@ -259,7 +258,7 @@ fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64;
     Some(seen)
 }
 
-/// How much floor on face `s` of a door (m²) a man reaches the doorway from with no leaf there and not with the leaf open on that face; −1 = nowhere to stand at the doorway.   (doorswing.ts leafCut)
+/// How much floor on face `s` of a door (m²) a man reaches the doorway from with no leaf there and not with the leaf open on that face; −1 = nowhere to stand at the doorway.
 pub fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
     let stop = if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth };
     if stop < 0.9 {
@@ -338,7 +337,7 @@ pub fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
     best
 }
 
-/// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.   (doorswing.ts leafSwings)
+/// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.
 pub fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
     let stop = m::min(if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth }, LEAF_REST);
     let c = g.dr[d].def.closed_dir;
@@ -549,7 +548,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
     dealt
 }
 
-/// Deal every door of the level its side (Door.setSwing) and say why.   (doorswing.ts dealSwings)
+/// Deal every door of the level its side (Door.setSwing) and say why.
 pub fn deal_swings(g: &mut crate::game::Game) -> Vec<crate::doorswing::SwingDeal> {
     if !g.doors.list.is_empty() {
         crate::scene_collision::window(g, &mut |g| deal_all(g))
@@ -616,7 +615,7 @@ mod tests {
         p
     }
 
-    /// Every rule of `tries` and the outside rule against the TypeScript's own dealSwings on one made-up level (scene and answers from bun, doorswing.ts with `col` null; the box world and setSwing are stubs here, so the leaf room rule is not reached).
+    /// Every rule of `tries` and the outside rule against the TypeScript's own dealSwings on one made-up level.
     #[test]
     fn rules_answer_as_the_typescript() {
         let mut g = Game::blank();

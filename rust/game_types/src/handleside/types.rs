@@ -84,17 +84,11 @@ pub enum NearStand {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct HandlesideMod {
-    /// (src/game/handleside.ts:69 states)
     pub states: JsMap<GuardId, crate::handleside::St>,
-    /// (src/game/handleside.ts:71 hands)
     pub hands: JsMap<DoorId, GuardId>,
-    /// (src/game/handleside.ts:72 rested)
     pub rested: JsMap<GuardId, crate::handleside::HandlesideModRestedValue>,
-    /// (src/game/handleside.ts:73 lined)
     pub lined: JsMap<GuardId, crate::handleside::HandlesideModLinedValue>,
-    /// (src/game/handleside.ts:78 faces)
     pub faces: JsMap<DoorId, crate::handleside::HandlesideModFacesValue>,
-    /// (src/game/handleside.ts:355 stepped)
     pub stepped: JsMap<GuardId, f64>,
 }
 impl HandlesideMod {

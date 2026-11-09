@@ -1,4 +1,3 @@
-//! src/game/noshove.ts lines 1 to 138
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's. (noshove.ts fallingInYields)
+/// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's.
 pub fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() { return false; }
     match crate::orders::squad_orders_of(g, seat, gd) {
@@ -16,7 +15,7 @@ pub fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) ->
     }
 }
 
-/// player.ts updatePlayer, first thing: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player. (noshove.ts noShoveBegin)
+/// player.ts updatePlayer, first thing: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player.
 pub fn no_shove_begin(g: &mut Game, pl: Option<&mut crate::player::Legs>) {
     let now = g.time;
     match pl {
@@ -34,7 +33,7 @@ pub fn no_shove_begin(g: &mut Game, pl: Option<&mut crate::player::Legs>) {
     }
 }
 
-/// player.ts keepOffGuards: a man moved him by this much, after the walls had their say. (noshove.ts noShoveNote)
+/// player.ts keepOffGuards: a man moved him by this much, after the walls had their say.
 pub fn no_shove_note(g: &mut Game, dx: f64, dz: f64, pl: Option<&mut crate::player::Legs>) {
     let now = g.time;
     match pl {
@@ -58,7 +57,7 @@ fn note_on(shoved: &mut [f64; 2], shoved_t: &mut f64, shoved_from: &mut [f64; 2]
     shoved[0] += dx; shoved[1] += dz;
 }
 
-/// player.ts keepOffGuards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more. (noshove.ts noShoveBack)
+/// player.ts keepOffGuards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more.
 pub fn no_shove_back(g: &Game, seat: &crate::seats::SeatRef, mx: f64, mz: f64, l: f64, pl: Option<&crate::player::Legs>) -> f64 {
     let (shoved, shoved_t, shoved_from) = match pl {
         Some(pl) => (pl.shoved, pl.shoved_t, pl.shoved_from),
@@ -74,7 +73,7 @@ fn back_from(shoved: [f64; 2], shoved_from: [f64; 2], mx: f64, mz: f64, l: f64) 
     m::max(0.0, m::min(crate::player::KEEP_OFF, d0) - l)
 }
 
-/// orders.ts tick: the player has covered (dx, dz) since the last tick: the step his own legs took of it, less what the men took back. Always `Some` (its switch is settled on). (noshove.ts noShoveOwn)
+/// orders.ts tick: the player has covered (dx, dz) since the last tick: the step his own legs took of it, less what the men took back. Always `Some` (its switch is settled on).
 pub fn no_shove_own(g: &mut Game, dx: f64, dz: f64) -> Option<[f64; 2]> {
     let p = g.player;
     if g.pl[p].shoved_t != g.time { return Some([dx, dz]); }
@@ -94,7 +93,7 @@ fn own_step(pos: V3, sx: f64, sz: f64, sl: f64, shoved_from: [f64; 2]) -> [f64; 
     [mx + sx / sl * t, mz + sz / sl * t]
 }
 
-/// squad.ts runGuardScript, after his step and its collisions: he stood at (x0, z0) before it. He goes round the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs). (noshove.ts noShoveKeep)
+/// squad.ts runGuardScript, after his step and its collisions: he stood at (x0, z0) before it. He goes round the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs).
 pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bool {
     if !falling_in_yields(g, &crate::seats::here(g), gd) { return false; }
     let (ring, back) = (g.k.noshove.ring, g.k.noshove.back);

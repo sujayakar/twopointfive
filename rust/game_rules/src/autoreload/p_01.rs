@@ -1,4 +1,3 @@
-//! src/game/autoreload.ts lines 1 to 37
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Would this player's gun (the one in his hands) start its reload by itself this frame? (autoreload.ts autoReloadDue)
+/// Would this player's gun (the one in his hands) start its reload by itself this frame?
 pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> bool {
     if g.touring || g.puppet.is_some() || g.pl[pl].equip_t > 0.0 || g.pl[pl].dragging.is_some() { return false; }
     // The chamber, not the rounds: a full magazine under an empty chamber cannot fire.
@@ -16,7 +15,7 @@ pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> b
     !(since >= 0.0 && since < g.k.reload.delay)
 }
 
-/// The words for a gun just gone dry: the reload is coming, so R is not asked for. (autoreload.ts autoReloads)
+/// The words for a gun just gone dry: the reload is coming, so R is not asked for.
 pub fn auto_reloads(g: &crate::game::Game, gun: FirearmId) -> bool {
     !g.touring && !g.puppet.is_some() && !g.fa[gun].spare.is_empty()
 }

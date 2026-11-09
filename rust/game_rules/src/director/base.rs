@@ -156,7 +156,7 @@ pub fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBea
     out
 }
 
-/// INVENTED: what q.door answers (director.ts:127, :849); `swing` is D.swing, DOORWAY.oneWay being settled true on the page
+/// INVENTED: what q.door answers; `swing` is D.swing, DOORWAY.oneWay being settled true on the page
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
 
@@ -183,7 +183,7 @@ pub fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::d
     Ok(())
 }
 
-/// INVENTED: the script of the level of this name, as scene/levelScripts.ts LEVEL_SCRIPTS hangs it (each script file is levels/<name>.script.ts)
+/// INVENTED: the script of the level of this name, as scene/levelScripts.ts LEVEL_SCRIPTS hangs it
 pub fn level_script_of(name: &str) -> Option<crate::scene_level::LevelScriptFn> {
     use crate::scene_level::LevelScriptFn as S;
     match name {

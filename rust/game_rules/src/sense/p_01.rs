@@ -118,7 +118,7 @@ pub fn light_asked(g: &mut crate::game::Game, p: V3, owners: &[f64], steady: boo
     crate::guards::light_at(g, p, Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
 }
 
-/// ASKING THE SENSES FROM OUTSIDE A TICK (src/game/sense.ts senseTool); no rule asks it. `what` 0: the light on points (`xs`: 1 for what the place lights with nothing that
+/// ASKING THE SENSES FROM OUTSIDE A TICK; no rule asks it. `what` 0: the light on points (`xs`: 1 for what the place lights with nothing that
 /// passes, the level's lamps left out by what feeds them, how many owners follow, the owners whose carried lamps are left out, then x y z each) · 1: how much of the light along lines the smoke lets through (six numbers each) · 2: a canister's smoke let out
 /// at x y z, to the game and to the picture alike · 3: the smoke cleared, the same.
 pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> {

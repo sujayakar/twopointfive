@@ -1,4 +1,4 @@
-//! WHAT A PANE IS TO A ROUND (src/game/glasspen.ts, whose TypeScript is the caller): what a sheet takes from a round crossing it, how the round turns, where it
+//! WHAT A PANE IS TO A ROUND: what a sheet takes from a round crossing it, how the round turns, where it
 //! leaves, the flight over panes, and the through-holes rounds have left. One rule for a round and for a line-of-fire question: a man fires through a pane exactly
 //! when his round would get through it. Statement for statement with the rule it replaced. What a round does next and what it files is the caller's.
 //!

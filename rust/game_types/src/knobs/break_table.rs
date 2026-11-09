@@ -32,7 +32,7 @@ pub struct BreaksK {
     /// the KINKED metal panel (the one "bent" a cut box can draw: two halves of one plate meeting on a fold): the angle between the halves (deg), how far the fold
     ///  may turn off square (deg) and sit off the middle (share of the half length), the shortest plate that kinks (half length, m), and the gap between two (s: one a blast)
     pub kink: BreaksKKink,
-    /// FURNITURE'S STEEL (furnblast.ts hands a cabinet over as what it is — sheet steel on a frame — not as the block its paint reads as): the sheet's half thickness
+    /// FURNITURE'S STEEL: the sheet's half thickness
     ///  (m); the shallow fold every torn-off sheet carries (deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
     ///  crease `dent` m deep at one end running out toward the other, never deeper than `dentMost` of the side it bites; and stands OPEN where its door was: that face's
     ///  frame `rim` m wide stands `lip` m back from the dark panel it holds (the paint × `inside`)
@@ -74,7 +74,7 @@ pub struct BreaksKKink {
     #[k(0.5)] pub gap_secs: f64,
 }
 
-/// FURNITURE'S STEEL (furnblast.ts hands a cabinet over as what it is — sheet steel on a frame — not as the block its paint reads as): the sheet's half thickness
+/// FURNITURE'S STEEL: the sheet's half thickness
 ///  (m); the shallow fold every torn-off sheet carries (deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
 ///  crease `dent` m deep at one end running out toward the other, never deeper than `dentMost` of the side it bites; and stands OPEN where its door was: that face's
 ///  frame `rim` m wide stands `lip` m back from the dark panel it holds (the paint × `inside`)

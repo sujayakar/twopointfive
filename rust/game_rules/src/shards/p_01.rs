@@ -1,4 +1,3 @@
-//! src/game/shards.ts lines 1 to 156
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The one gate: the switch on AND glass breaking live.   (shards.ts shardsLive)
+/// The one gate: the switch on AND glass breaking live.
 pub fn shards_live(g: &crate::game::Game) -> bool {
     g.tune.glass_shards && crate::glassbreak::glass_break_live(g)
 }
 
-/// `x >>> 0`, as the number it is in the TypeScript.   (shards.ts u32)
+/// `x >>> 0`, as the number it is in the TypeScript.
 pub fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }

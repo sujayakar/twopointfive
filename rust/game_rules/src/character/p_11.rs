@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 3981 to 4293
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,9 +8,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the bench
 
-/// where a layer's columns go on the bench's `args` (skeleton.ts LAYER_COLS_AT)
+/// where a layer's columns go on the bench's `args`
 const COLS: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
-/// where a layer's keys go on the bench's `args` (skeleton.ts LAYER_KEYS_AT)
+/// where a layer's keys go on the bench's `args`
 const KEYS: usize = crate::anim_skeleton::LAYER_KEYS_AT as usize;
 
 /// the bench's `args`: a layer's own numbers from 0, its columns from COLS (`f64()` at `POSE_BENCH.args`). Never hold it across a call that may use the bench.
@@ -21,27 +20,27 @@ fn args_read() -> &'static [f64; ::sim::skeleton::ARGS] { &::sim::skeleton::benc
 /// a boolean as the bench holds it
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 
-/// HOLD_PH[phase] (character.ts:1109), the phase's number on the bench
+/// HOLD_PH[phase], the phase's number on the bench
 fn hold_no(p: HoldPhase) -> f64 { *hold_ph().get(String::from(p.as_str())).unwrap() }
-/// WORK_NO[kind] (character.ts:1136), the kind's number on the bench
+/// WORK_NO[kind], the kind's number on the bench
 fn work_kind_no(k: WorkKind) -> f64 { *work_no().get(String::from(k.as_str())).unwrap() }
 
 // ---- the door hand
 
-/// doorCols.get onto the bench (character.ts:3984)
+/// doorCols.get onto the bench
 fn door_cols_get(g: &mut Game, c: CharId) {
     let s = &g.ch[c].anim.dp;
     let (a, o) = (args(), COLS);
     a[o] = s.w_l.x; a[o + 1] = s.w_l.v; a[o + 2] = s.w_r.x; a[o + 3] = s.w_r.v; a[o + 4] = b01(s.reach_ok); a[o + 5] = b01(s.right);
 }
-/// doorCols.put off the bench (character.ts:3985)
+/// doorCols.put off the bench
 fn door_cols_put(g: &mut Game, c: CharId) {
     let s = &mut g.ch[c].anim.dp;
     let (a, o) = (args_read(), COLS);
     s.w_l.x = a[o]; s.w_l.v = a[o + 1]; s.w_r.x = a[o + 2]; s.w_r.v = a[o + 3]; s.reach_ok = a[o + 4] != 0.0; s.right = a[o + 5] != 0.0;
 }
 
-/// The door hand's numbers onto the bench, the layer, its columns back. (character.ts doorLayerAsk)
+/// The door hand's numbers onto the bench, the layer, its columns back.
 pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: crate::character::DoorPush, dt: f64, intent: f64, armed: bool, tw_y: f64, tw_p: f64) {
     let n = anim_to_model_d(g, c, l.n);
     let p = anim_to_model_p(g, c, l.p);
@@ -60,24 +59,24 @@ pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: cr
 
 // ---- handwork
 
-/// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands? (character.ts workInfo)
+/// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands?
 pub fn anim_work_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimWorkInfo {
     let k = &g.ch[c].anim.wk;
     crate::character::AnimWorkInfo { pose: k.last.clone(), w: k.shown, hand: k.main, two: k.two }
 }
 
-/// The verb is done: the pose carries on by itself for `secs` past its end. (character.ts workAfter)
+/// The verb is done: the pose carries on by itself for `secs` past its end.
 pub fn anim_work_after(g: &mut crate::game::Game, c: CharId, secs: f64) {
     if g.ch[c].anim.wk.last.is_some() { g.ch[c].anim.wk.after = secs; }
 }
 
-/// A line over the radio: the left hand goes up for about `secs`. (character.ts radio)
+/// A line over the radio: the left hand goes up for about `secs`.
 pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
     let r = &mut g.ch[c].anim.rx;
     r.left = m::max(r.left, v3::clamp(secs, 0.8, 3.0));
 }
 
-/// What the gun hand visibly holds: the rule's, unless a swap is running. (character.ts swapHeld)
+/// What the gun hand visibly holds: the rule's, unless a swap is running.
 pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
@@ -91,12 +90,12 @@ pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::char
     if a < k.away { s.from } else if a < k.take { None } else { s.to }
 }
 
-/// How far the swap's hand is at the torch on his belt this frame. (character.ts swapBelt)
+/// How far the swap's hand is at the torch on his belt this frame.
 pub fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.sw.belt
 }
 
-/// The swap's progress (-1: none), what it goes to, and whether one waits. (character.ts swapInfo)
+/// The swap's progress (-1: none), what it goes to, and whether one waits.
 pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
     let s = &g.ch[c].anim.sw;
     crate::character::AnimSwapInfo {
@@ -105,7 +104,7 @@ pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::Ani
     }
 }
 
-/// The torch and sidearm swap's clock, and its arm when it shows. (character.ts swapLayer)
+/// The torch and sidearm swap's clock, and its arm when it shows.
 pub fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) {
     if taken { g.ch[c].anim.sw.t = -1.0; return; }
     let weapon = g.ch[c].anim.sw.to == Some(AnimCarry::Weapon);
@@ -132,13 +131,13 @@ pub fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: boo
     g.ch[c].anim.sw.shown = true;
 }
 
-/// The swap's arm, by its envelope e and how far across k. (character.ts swapPose)
+/// The swap's arm, by its envelope e and how far across k.
 pub fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_swap_pose_ask(g, c, slot, e, k, weapon, tw_y, tw_p, sw);
 }
 
-/// The swap's numbers onto the bench, and the layer. (character.ts swapPoseAsk)
+/// The swap's numbers onto the bench, and the layer.
 pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
     {
         let f = g.ch[c].anim.hand_fix[1];
@@ -150,7 +149,7 @@ pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64
     anim_hands_ask(g, c, &mut |_g| ::sim::layers::swap_pose(slot, at, at_b, at_rest, at_sw) as f64);
 }
 
-/// Hands at work on a thing: the gate, and the layer when it runs. (character.ts workLayer)
+/// Hands at work on a thing: the gate, and the layer when it runs.
 pub fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool, armed: bool, tw_y: f64, tw_p: f64) {
     let k = &mut g.ch[c].anim.wk;
     if k.last.is_none() { k.shown = 0.0; return; }
@@ -166,20 +165,20 @@ pub fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool
     anim_work_layer_ask(g, c, slot, &l, dt, live, armed, tw_y, tw_p);
 }
 
-/// workCols.get onto the bench (character.ts:4055)
+/// workCols.get onto the bench
 fn work_cols_get(g: &mut Game, c: CharId) {
     let k = &g.ch[c].anim.wk;
     let (a, o) = (args(), COLS);
     a[o] = k.w_l.x; a[o + 1] = k.w_l.v; a[o + 2] = k.w_r.x; a[o + 3] = k.w_r.v; a[o + 4] = b01(k.ok_l); a[o + 5] = b01(k.ok_r); a[o + 6] = k.main; a[o + 7] = b01(k.two); a[o + 8] = k.shown;
 }
-/// workCols.put off the bench (character.ts:4056)
+/// workCols.put off the bench
 fn work_cols_put(g: &mut Game, c: CharId) {
     let k = &mut g.ch[c].anim.wk;
     let (a, o) = (args_read(), COLS);
     k.w_l.x = a[o]; k.w_l.v = a[o + 1]; k.w_r.x = a[o + 2]; k.w_r.v = a[o + 3]; k.ok_l = a[o + 4] != 0.0; k.ok_r = a[o + 5] != 0.0; k.main = if js::truthy(a[o + 6]) { 1.0 } else { 0.0 }; k.two = a[o + 7] != 0.0; k.shown = a[o + 8];
 }
 
-/// The work hands' numbers onto the bench, the layer, its columns back. (character.ts workLayerAsk)
+/// The work hands' numbers onto the bench, the layer, its columns back.
 pub fn anim_work_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: &crate::character::WorkPose, dt: f64, live: bool, armed: bool, tw_y: f64, tw_p: f64) {
     let p = anim_to_model_p(g, c, l.p);
     let n = anim_to_model_d(g, c, l.n);
@@ -201,13 +200,13 @@ pub fn anim_work_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: &c
     work_cols_put(g, c);
 }
 
-/// The torch up in the hand that holds it, weight e. (character.ts torchUpLayer)
+/// The torch up in the hand that holds it, weight e.
 pub fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_torch_up_layer_ask(g, c, slot, e);
 }
 
-/// The torch's numbers onto the bench, and the layer. (character.ts torchUpLayerAsk)
+/// The torch's numbers onto the bench, and the layer.
 pub fn anim_torch_up_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64) {
     {
         let f = g.ch[c].anim.hand_fix[1];
@@ -219,7 +218,7 @@ pub fn anim_torch_up_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e
     crate::anim_skeleton::layer_ran(g, code, c);
 }
 
-/// A hand to the radio: its clock and spring, and the pose when it shows. (character.ts radioLayer)
+/// A hand to the radio: its clock and spring, and the pose when it shows.
 pub fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
     let r = &mut g.ch[c].anim.rx;
     r.left = m::max(0.0, r.left - dt);
@@ -233,13 +232,13 @@ pub fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: boo
     anim_radio_pose(g, c, w, hw);
 }
 
-/// The hand at the radio by w, and the head's share hw. (character.ts radioPose)
+/// The hand at the radio by w, and the head's share hw.
 pub fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_radio_pose_ask(g, c, slot, w, hw);
 }
 
-/// The radio's numbers onto the bench, and the layer. (character.ts radioPoseAsk)
+/// The radio's numbers onto the bench, and the layer.
 pub fn anim_radio_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, hw: f64) {
     {
         let f = g.ch[c].anim.hand_fix[0];
@@ -253,13 +252,13 @@ pub fn anim_radio_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
 
 // ---- holding a man, and being held
 
-/// One man holding another from behind, weight w. (character.ts holdLayer)
+/// One man holding another from behind, weight w.
 pub fn anim_hold_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_hold_layer_ask(g, c, slot, w, dt);
 }
 
-/// holdCols.get onto the bench (character.ts:4125)
+/// holdCols.get onto the bench
 fn hold_cols_get(g: &mut Game, c: CharId) {
     let an = &g.ch[c].anim;
     let (a, o) = (args(), COLS);
@@ -275,7 +274,7 @@ fn hold_cols_get(g: &mut Game, c: CharId) {
     a[o + 28] = match &an.hd_fix { Some(x) => x.w, None => 0.0 };
     a[o + 29] = match &an.hd_fix { Some(x) => x.rw, None => 0.0 };
 }
-/// holdCols.put off the bench (character.ts:4128)
+/// holdCols.put off the bench
 fn hold_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
     let (a, o) = (args(), COLS);
@@ -291,7 +290,7 @@ fn hold_cols_put(g: &mut Game, c: CharId) {
     } else { None };
 }
 
-/// The hold's numbers onto the bench, the layer, its columns back. (character.ts holdLayerAsk)
+/// The hold's numbers onto the bench, the layer, its columns back.
 pub fn anim_hold_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, dt: f64) {
     let (hold_pose, h) = { let an = &g.ch[c].anim; (an.hold_pose, an.hold_pose.unwrap_or(an.hd_last)) };
     let sp = match &hold_pose { Some(hp) => hp.strip, None => None };
@@ -322,13 +321,13 @@ pub fn anim_hold_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
     hold_cols_put(g, c);
 }
 
-/// The held man, weight w. (character.ts heldLayer)
+/// The held man, weight w.
 pub fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_held_layer_ask(g, c, slot, w, dt);
 }
 
-/// heldCols.get onto the bench (character.ts:4159)
+/// heldCols.get onto the bench
 fn held_cols_get(g: &mut Game, c: CharId) {
     let an = &g.ch[c].anim;
     let (a, o) = (args(), COLS);
@@ -341,7 +340,7 @@ fn held_cols_get(g: &mut Game, c: CharId) {
         for i in 0..4 { a[o + 17 + sd * 5 + i] = match q { Some(v) => v[i], None => 0.0 }; }
     }
 }
-/// heldCols.put off the bench (character.ts:4161)
+/// heldCols.put off the bench
 fn held_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
     let (a, o) = (args(), COLS);
@@ -356,7 +355,7 @@ fn held_cols_put(g: &mut Game, c: CharId) {
     }
 }
 
-/// The held man's numbers onto the bench, the layer, its columns back. (character.ts heldLayerAsk)
+/// The held man's numbers onto the bench, the layer, its columns back.
 pub fn anim_held_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, dt: f64) {
     {
         let show = g.m.character.hold_show;
@@ -376,7 +375,7 @@ pub fn anim_held_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
     held_cols_put(g, c);
 }
 
-/// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold. (character.ts holdBusy)
+/// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold.
 pub fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let an = &mut g.ch[c].anim;
     // (undefined, null or a word: all three are told apart)
@@ -397,7 +396,7 @@ pub fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
 
 // ---- the big tool
 
-/// The big slot's tool in his hands: the way out that poses nothing, then the layer. (character.ts bigLayer)
+/// The big slot's tool in his hands: the way out that poses nothing, then the layer.
 pub fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character::AnimBigTool, tw_y: f64, tw_p: f64) {
     let stowing = b.end >= 0.0 && b.t >= b.end;
     let us = if stowing { v3::clamp((b.t - b.end) / m::max(1e-3, b.stow), 0.0, 1.0) } else { 0.0 };
@@ -413,20 +412,20 @@ pub fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character
     anim_big_layer_ask(g, c, slot, b, &near, tw_y, tw_p);
 }
 
-/// bigCols.get onto the bench (character.ts:4210)
+/// bigCols.get onto the bench
 fn big_cols_get(g: &mut Game, c: CharId) {
     let an = &g.ch[c].anim;
     let (a, o) = (args(), COLS);
     a[o] = an.big_k; a[o + 1] = b01(an.big_under); a[o + 2] = an.big_at_back; a[o + 3] = an.big_grab;
 }
-/// bigCols.put off the bench (character.ts:4211)
+/// bigCols.put off the bench
 fn big_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
     let (a, o) = (args_read(), COLS);
     an.big_k = a[o]; an.big_under = a[o + 1] != 0.0; an.big_at_back = a[o + 2]; an.big_grab = a[o + 3];
 }
 
-/// The big tool's numbers onto the bench, the layer, its columns back. `blows`: the blows the layer reads. (character.ts bigLayerAsk)
+/// The big tool's numbers onto the bench, the layer, its columns back. `blows`: the blows the layer reads.
 pub fn anim_big_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::AnimBigTool, blows: &[f64], tw_y: f64, tw_p: f64) {
     let ham = b.kind == AnimBigToolKind::Hammer;
     let p = if (b.at[0] + b.at[1] + b.at[2]).is_finite() { anim_to_model_p(g, c, b.at) } else { [0.0, 1.0, 0.8] };
@@ -458,14 +457,14 @@ pub fn anim_big_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
 
 // ---- the throw
 
-/// The overhand throw at t. (character.ts throwLayer)
+/// The overhand throw at t.
 pub fn anim_throw_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     let tables = throw_tables(g.ch[c].anim.thr_low >= 0.0);   // (the swing's tables in the module's order)
     anim_throw_layer_ask(g, c, slot, t, &tables.k1, &tables.k3);
 }
 
-/// throwCols.get onto the bench (character.ts:4245)
+/// throwCols.get onto the bench
 fn throw_cols_get(g: &mut Game, c: CharId) {
     let an = &g.ch[c].anim;
     let (a, o) = (args(), COLS);
@@ -475,7 +474,7 @@ fn throw_cols_get(g: &mut Game, c: CharId) {
         a[o + 5 + i] = match &an.thr_last { Some(l) => l.l[i], None => 0.0 };
     }
 }
-/// throwCols.put off the bench (character.ts:4246)
+/// throwCols.put off the bench
 fn throw_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
     let (a, o) = (args_read(), COLS);
@@ -483,7 +482,7 @@ fn throw_cols_put(g: &mut Game, c: CharId) {
     an.thr_last = if js::truthy(a[o + 1]) { Some(crate::character::AnimThrLast { r: [a[o + 2], a[o + 3], a[o + 4]], l: [a[o + 5], a[o + 6], a[o + 7]] }) } else { None };
 }
 
-/// The swing's tables, the throw's numbers onto the bench, the layer, its columns back: seventeen counts, then eleven tables of (time, value) keys and six of (time, vector). (character.ts throwLayerAsk)
+/// The swing's tables, the throw's numbers onto the bench, the layer, its columns back: seventeen counts, then eleven tables of (time, value) keys and six of (time, vector).
 pub fn anim_throw_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, k1: &[Vec<[f64; 2]>], k3: &[Vec<(f64, Vec<f64>)>]) {
     {
         let an = &g.ch[c].anim;
@@ -514,7 +513,7 @@ pub fn anim_throw_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f
 
 // ---- the capsules' records
 
-/// One capsule record [a, r, b] of Character.capsules: the segment a to c, its far end carried `extend_b` further along it. (character.ts capRec)
+/// One capsule record [a, r, b] of Character.capsules: the segment a to c, its far end carried `extend_b` further along it.
 pub fn cap_rec(a: V3, c_2: V3, r: f64, extend_b: Option<f64>) -> Vec<f64> {
     let extend_b = extend_b.unwrap_or(0.0);
     let (mut bx, mut by, mut bz) = (c_2[0], c_2[1], c_2[2]);
@@ -526,7 +525,7 @@ pub fn cap_rec(a: V3, c_2: V3, r: f64, extend_b: Option<f64>) -> Vec<f64> {
     vec![a[0], a[1], a[2], r, bx, by, bz]
 }
 
-/// The shoe's capsule: heel to past the toe along the sole. (character.ts capSole)
+/// The shoe's capsule: heel to past the toe along the sole.
 pub fn cap_sole(foot: V3, toe: V3) -> Vec<f64> {
     let up = TOE_FLOOR_Y;
     let heel: V3 = [foot[0] - (toe[0] - foot[0]) * 0.35, m::min(foot[1], toe[1] - up + 0.033 + (foot[1] - toe[1]) * 0.15), foot[2] - (toe[2] - foot[2]) * 0.35];

@@ -227,20 +227,14 @@ pub struct DebrisFootGap {
     pub lz: f64,
 }
 
-/// (src/game/debris.ts:62 G)
 pub const G: f64 = 9.81;
 
-/// (src/game/debris.ts:63 SLEEP_V)
 pub const SLEEP_V: f64 = 0.22;
 
-/// (src/game/debris.ts:63 SLEEP_W)
 pub const SLEEP_W: f64 = 1.2;
 
-/// (src/game/debris.ts:63 SLEEP_T)
 pub const SLEEP_T: f64 = 0.25;
 
-/// (src/game/debris.ts:67 DEBRIS_IMP: a table nothing writes)
 pub fn debris_imp() -> crate::debris::DEBRISIMP { crate::debris::DEBRISIMP { gain: 0.35, up_k: 0.7, v_max: 3.0, wake: 0.1, tumble: 0.5 } }
 
-/// (src/game/debris.ts:69 LANDING: a table nothing writes)
 pub fn landing() -> JsMap<String, crate::debris::LANDINGValue> { { let mut t = JsMap::new(); t.set(String::from("tile"), crate::debris::LANDINGValue { level: 0.4, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 0.75, gain: 0.9 }, crate::debris::LANDINGValueSfxItem { name: String::from("magDrop"), rate: 0.5, gain: 0.35 }] }); t.set(String::from("housing"), crate::debris::LANDINGValue { level: 0.5, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 0.6, gain: 1.0 }, crate::debris::LANDINGValueSfxItem { name: String::from("lightBreak"), rate: 0.8, gain: 0.45 }] }); t.set(String::from("clutter"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.45, gain: 0.5 }] }); t.set(String::from("binder"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.1, gain: 0.55 }] }); t.set(String::from("chunk"), crate::debris::LANDINGValue { level: 0.2, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.3, gain: 0.4 }] }); t.set(String::from("shard"), crate::debris::LANDINGValue { level: 0.3, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("glassCrack"), rate: 1.9, gain: 0.3 }, crate::debris::LANDINGValueSfxItem { name: String::from("casingTink"), rate: 0.6, gain: 0.35 }] }); t } }

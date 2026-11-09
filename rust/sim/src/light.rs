@@ -90,9 +90,9 @@ struct Lamp {
 fn carried(l: &[f64]) -> Lamp {
     Lamp { pos: [l[L_POS], l[L_POS + 1], l[L_POS + 2]], range: l[L_RANGE], radius: l[L_RADIUS], kind: l[L_KIND], dir: [l[L_DIR], l[L_DIR + 1], l[L_DIR + 2]], outer: l[L_OUTER], inner: l[L_INNER], color: [l[L_COLOR], l[L_COLOR + 1], l[L_COLOR + 2]], int: l[L_I] }
 }
-/// THE READER'S GATES ON A ROW (guards.ts lampAsked's, for a lamp nobody carries): it burns, and NOTHING ELSE OF A ROW THAT IS OUT IS READ (what feeds
+/// THE READER'S GATES ON A ROW: it burns, and NOTHING ELSE OF A ROW THAT IS OUT IS READ (what feeds
 /// it may have stopped writing it: a fire's lamp that is out is the picture's alone) · the question does not leave it out · its first self has a
-/// strength above nothing · it is no moon (kind 2 has the sun's own shadow test, hours.ts). Then the self the question takes: the steady one where it
+/// strength above nothing · it is no moon. Then the self the question takes: the steady one where it
 /// asks for those and the row has one (its place, size and strength; the rest is the lamp's).
 #[inline(always)]
 fn row(l: &Lights, r: usize, q: &Rows) -> Option<Lamp> {
@@ -214,7 +214,7 @@ pub struct Shade {
 }
 pub const NO_SHADE: Shade = Shade { sigma: 0.0, g: 0, stamp: 0.0 };
 
-/// the six axis normals the renderer's meter takes its best face over (guards.ts METER_NORMALS)
+/// the six axis normals the renderer's meter takes its best face over
 const N6: [[f64; 3]; 6] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
 
 /// guards.ts lightWindow: (1 − (d/range)⁴)², clamped

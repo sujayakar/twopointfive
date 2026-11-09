@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The knobs (no panel rows: ?noroomfit for a visit, the table by name from the console / a play-through's --set — it is in knobs.ts's registry).
+/// The knobs.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RoomfitK {
     /// the floor the men may take: within `spread0 + spreadPer × men` metres of the point (two men 2.2, four 3.2)

@@ -12,7 +12,6 @@ pub struct RustknobsModRUSTKNOBS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct RustknobsMod {
-    /// (src/game/rustknobs.ts:18 RUST_KNOBS)
     pub rust_knobs: crate::rustknobs::RustknobsModRUSTKNOBS,
 }
 impl RustknobsMod {

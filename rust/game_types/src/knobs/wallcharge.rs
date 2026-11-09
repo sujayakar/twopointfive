@@ -57,7 +57,7 @@ pub struct WallchargeK {
     #[k(3.0)] pub lane_watch: f64,
     /// the points inside, [across the hole's centre line, past the far face] in metres — first man's first; mirrored / pulled in where the floor says no
     #[k(alloc::vec![[-1.3, 1.9], [1.3, 1.9], [-2.1, 1.0], [2.1, 1.0]])] pub pods: Vec<[f64; 2]>,
-    /// THE TRADE: what one wall charge takes out of the squad's breaching bag (doortools.ts DoorTools.charges, 2 a run): 2 = the whole bag, so a run is one wall OR
+    /// THE TRADE: what one wall charge takes out of the squad's breaching bag: 2 = the whole bag, so a run is one wall OR
     ///  two doors, chosen at the wall — the row is offered only while the bag holds it, and all of it comes back if the charge comes off the wall unblown.
     ///  1 = a wall costs what a door costs (the build before this knob, by digest)
     #[k(2.0)] pub cost: f64,
@@ -105,7 +105,7 @@ pub struct WallchargeK {
 
 /// A WALL SHOT, FELT (the maintainer, 10-19, of a room taken through a blown wall: "the smoke after a wall shot makes it too hard -- we should probably (1) turn
 ///  down its density a little and (2) make it so everyone in the room gets more of a shock"). With `on`:
-///  (1) the charge's pall (destruction.ts CHAOS.pall.wall) is asked at `pall` of its density, the picture's dust thinned with it: the hole reads sooner. Only the
+///  (1) the charge's pall is asked at `pall` of its density, the picture's dust thinned with it: the hole reads sooner. Only the
 ///      wall charge's: a grenade's pall and the charge's borrowed report are as they were.
 ///  (2) EVERY defender in the room the hole opens into is shocked. One with a line to the hole, as before, but longer: folded (rooted, no round) `staggerSecs`
 ///      (it was DOORTOOLS.staggerSecs, 2.0) and blind `stunSecs` at the wall · at stunM (it was DOORTOOLS.stunSecs, 6.0 · 2.5). One with NO line to the hole,
@@ -133,7 +133,7 @@ pub struct WallshotK {
 ///      the player too (he was blind a second or two), a civilian, and one of ours whatever the team's size (on a team of more than two he was blind a second
 ///      or two; on a team of two he already went down);
 ///    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size (on a team of two he took the defenders' longer stun and fold).
-///  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode, never the tour's scripted player. A man with god mode
+///  The player goes down as a round puts him down: never in god mode, never the tour's scripted player. A man with god mode
 ///  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release. With the safety radius on (the page) the trigger's row names who
 ///  is too close and who is behind the wall before he presses it. No hit points anywhere: nobody takes more or fewer rounds.
 ///  OFF here and on the frozen stand (TPS_WALLKILL=1); ON in the page (?wallkill=0). Check: tools/qa/wallkill-check.ts (WALLKILL_BREAK=1).

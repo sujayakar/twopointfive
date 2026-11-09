@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (levels/tut-queue.script.ts:44-82) the beat 'gun': where it stands, and what lives across a yield
+/// the beat 'gun': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueGunFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -24,7 +24,7 @@ pub struct TutQueueGunFrame {
     pub k: f64,
 }
 
-/// (levels/tut-queue.script.ts:88-124) the beat 'gates': where it stands, and what lives across a yield
+/// the beat 'gates': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueGatesFrame {
     /// at: the resume point: 0 before the first step. A state per yield
@@ -39,7 +39,7 @@ pub struct TutQueueGatesFrame {
     pub off: bool,
 }
 
-/// (levels/tut-queue.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: alive, isOpen
+/// what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: alive, isOpen
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueVars {
     pub front: Option<crate::director::DoorRef>,

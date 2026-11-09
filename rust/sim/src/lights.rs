@@ -1,4 +1,4 @@
-//! THE LEVEL'S LIGHTS (src/game/lighting.ts, the machines of src/game/devices.ts) — whether a fixture is on, broken, blinded, what the mains are doing, the one
+//! THE LEVEL'S LIGHTS — whether a fixture is on, broken, blinded, what the mains are doing, the one
 //! number a fixture burns at this tick (its `factor`), the lamp each fixture feeds as a light question reads it, and a camera's and a tripwire's own machine.
 //!
 //! WHAT IS STATE AND WHAT IS NOT. Everything here is the `lights` part of the game's block (state.rs). What men do about the dark is not here (the guards' edge
@@ -13,7 +13,7 @@
 //! the words, sounds, men sent and marks on the debrief that have always gone with them, at the place in the tick they always were.
 //!
 //! THE LAMPS ARE ROWS IN THE ORDER OF THE ENGINE'S LIST. A row is one lamp a fixture feeds (a fixture's own light, an area light of a flat fixture or a marking,
-//! a beacon's spot, a camera's cone), in the order of `engine.lights`, stood once as the level is built (lightshome.ts `stand`). The order is what a sum of
+//! a beacon's spot, a camera's cone), in the order of `engine.lights`, stood once as the level is built. The order is what a sum of
 //! floats over them is made of, so nothing sorts them. Lamps nobody's fixture feeds stay the question's own (a man's torch, a flash), and each is written with
 //! how many rows stand before it in the list as it stands then.
 //!
@@ -24,7 +24,7 @@ use crate::world::{js_max, js_min};
 use core::mem::{offset_of, size_of};
 use prim::floor;
 
-/// fixtures a level holds (src/game/levelfit.ts refuses a level over any of these at load, by name). The fullest level today has 73.
+/// fixtures a level holds. The fullest level today has 73.
 pub const TARGETS: usize = 256;
 /// lamps fixtures feed. The fullest level today has 52. The same as light.rs MAX_LAMPS: the sweep and a question hold no more.
 pub const ROWS: usize = 256;
@@ -44,7 +44,7 @@ pub const T_MAINS: u32 = 8;
 pub const T_HAND: u32 = 16;
 pub const T_AUTHORED: u32 = 32;
 pub const T_EMISSIVE: u32 = 64;
-// a row's truths (`row_bits`): burning (the reader's gate is this, the first self's intensity > 0 and kind != 2: light.rs, as guards.ts lampAsked) · who asks what the PLACE lights leaves it out · a screen's own lamp · what feeds it (two bits) · it has a steady self (`sx` … `s_intensity`, `feed` says; else they are zeros and the first self is both)
+// a row's truths (`row_bits`): burning · who asks what the PLACE lights leaves it out · a screen's own lamp · what feeds it (two bits) · it has a steady self (`sx` … `s_intensity`, `feed` says; else they are zeros and the first self is both)
 pub const R_ON: u32 = 1;
 pub const R_PASSING: u32 = 2;
 pub const R_SCREEN: u32 = 4;
@@ -109,10 +109,10 @@ const CAMERA_DECAY: f64 = 0.5;
 const CAMERA_REARM_SECS: f64 = 20.0;
 /// a tripwire, once broken, cannot be broken again for this long (one crossing is one report, not sixty)
 const LASER_COOLDOWN: f64 = 4.0;
-/// the cone starts this far out of the lens (the beam starts at the lens face; devices.ts CONE's other numbers are the picture's)
+/// the cone starts this far out of the lens
 const CONE_AHEAD: f64 = 0.1;
 
-/// The lights' part of a game's block (src/sim/lightshome.ts reads it by the module's own column offsets, `cap`).
+/// The lights' part of a game's block.
 #[repr(C)]
 pub struct Lights {
     /// fixtures, rows, beacons, cameras, tripwires
@@ -206,7 +206,7 @@ const _: () = assert!(
             + 15 * CAMERAS * 8 + 4 * CAMERAS * 4
             + 3 * LASERS * 8 + 4 * LASERS * 4
 );
-/// the columns in their order (src/sim/lightshome.ts LIGHT_COLS names them the same, and reads where each is from here)
+/// the columns in their order
 pub const COLS: [usize; 67] = [
     offset_of!(Lights, n), offset_of!(Lights, rows), offset_of!(Lights, beacons), offset_of!(Lights, cameras), offset_of!(Lights, lasers),
     offset_of!(Lights, mains), offset_of!(Lights, since), offset_of!(Lights, until), offset_of!(Lights, restored_at), offset_of!(Lights, fix_t),
@@ -270,7 +270,7 @@ fn supply(time: f64, dark: f64) -> f64 {
     1.0
 }
 
-/// the mains back (lighting.ts endBlackout's own numbers)
+/// the mains back
 #[inline]
 fn back(l: &mut Lights, time: f64) {
     l.mains = 0;
@@ -386,7 +386,7 @@ fn set_hand(l: &mut Lights, t: usize, a: f64) {
     }
 }
 
-/// A WALL SWITCH: the first `n` fixtures of `IDS`, the room's circuit (lightswitch.ts flipSwitch). On: what a hand put out; in a room no hand put out, the room as
+/// A WALL SWITCH: the first `n` fixtures of `IDS`, the room's circuit. On: what a hand put out; in a room no hand put out, the room as
 /// authored (all of it, where the level left the whole room dark), a flat fixture striking as it comes back unless `strike` is 0. Off: every one that is on, and
 /// the time on each. (Who saw it go is the caller's, which asks before it calls: the factor does not move here.)
 pub fn flip(g: usize, on: bool, time: f64, strike: bool, n: usize) {
@@ -423,7 +423,7 @@ pub fn flip(g: usize, on: bool, time: f64, strike: bool, n: usize) {
     }
 }
 
-/// ONE TICK OF THE LIGHTS (lighting.ts updateTargets): the mains' own clock and the timer at the panel, the beacons, each fixture's factor and each lamp as it
+/// ONE TICK OF THE LIGHTS: the mains' own clock and the timer at the panel, the beacons, each fixture's factor and each lamp as it
 /// burns. `near`: one of theirs is at the panel (who is the caller's). `es`: the renderer setting an area light's strength is scaled by, an input.
 pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u32 {
     let l = &mut state(g).lights;
@@ -499,13 +499,13 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
     ev
 }
 
-/// a device works this frame: powered, unbroken, not knocked out (devices.ts alive)
+/// a device works this frame: powered, unbroken, not knocked out
 #[inline(always)]
 fn alive(l: &Lights, t: usize) -> bool {
     l.factor[t] > 0.05 && l.bits[t] & T_BROKEN == 0
 }
 
-/// THE CAMERA'S OWN HALF BEFORE ITS PICTURE (devices.ts updateCamera, down to the picture): the pan, the cone it throws, the feed dropping once, and the picture
+/// THE CAMERA'S OWN HALF BEFORE ITS PICTURE: the pan, the cone it throws, the feed dropping once, and the picture
 /// emptying when it cannot see. `live`: devices sense. `cones`: its cone is shown.
 pub fn camera_pan(g: usize, i: usize, dt: f64, live: bool, cones: bool) -> u32 {
     let l = &mut state(g).lights;
@@ -584,7 +584,7 @@ pub fn camera_see(g: usize, i: usize, time: f64, dt: f64, visible: bool, gain: f
     out
 }
 
-/// THE TRIPWIRE'S OWN HALF BEFORE WHAT IS IN ITS BEAM (devices.ts updateLaser, its first lines): the feed dropping once, and no beam at all with no power.
+/// THE TRIPWIRE'S OWN HALF BEFORE WHAT IS IN ITS BEAM: the feed dropping once, and no beam at all with no power.
 pub fn laser_open(g: usize, i: usize) -> u32 {
     let l = &mut state(g).lights;
     let t = l.las_target[i] as usize;

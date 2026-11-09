@@ -1,4 +1,3 @@
-//! src/scene/boxes.ts lines 1 to 1246
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -276,7 +275,6 @@ fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: 
     if js::truthy(skip_owner) && owner == skip_owner { return; }
     let Some(r) = ray_box(g, ro, rd, id, near.best) else { return };
     if r.t < near.best || (r.t == near.best && (i as f64) < near.bi) {
-        // (`this.glassOpen`: a FnField, and glassbreak.ts:214 is the only thing that sets it, so its closure's body is written here)
         if g.engine.world.glass_open.is_some() && js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len()
             && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i as f64, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
         *near = Nearest { best: r.t, bi: i as f64, bn: r.n };

@@ -9,21 +9,20 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// (verdict.ts:98) a man's walk is at most this many samples, one every half second until it is halved; a hole counts as walked through this near
+/// a man's walk is at most this many samples, one every half second until it is halved; a hole counts as walked through this near
 const PATH_CAP: usize = 1500;
 const PATH_SECS: f64 = 0.5;
 const HOLE_M: f64 = 0.9;
 
-/// A run a verdict can be given on: never a show's, the tour's or a puppet's.   (verdict.ts Verdict.live)
+/// A run a verdict can be given on: never a show's, the tour's or a puppet's.
 fn live(g: &Game) -> bool { !g.touring && !g.quiet_utility && g.puppet.is_none() && !g.mission_in_tour }
-/// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).   (verdict.ts Verdict.started)
+/// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
-/// Seconds since the try started.   (verdict.ts Verdict.secs)
+/// Seconds since the try started.
 fn secs(g: &Game) -> f64 { if started(g) { m::max(0.0, g.time - g.verdict.t0) } else { 0.0 } }
-/// (verdict.ts Verdict.fired)
 fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
 
-/// The last order anybody gave, off the books' logs, by its row's serial (None: none yet).   (seats.ts lastOrder)
+/// The last order anybody gave, off the books' logs, by its row's serial (None: none yet).
 fn last_order(g: &Game) -> Option<u32> {
     if crate::seats::one_book(g) { return crate::seats::here(g).orders.log.last().map(|e| e.serial); }
     let mut best: Option<(f64, u32)> = None;
@@ -33,7 +32,7 @@ fn last_order(g: &Game) -> Option<u32> {
     best.map(|b| b.1)
 }
 
-/// Is the team in more than one pair.   (seats.ts teamPaired)
+/// Is the team in more than one pair.
 pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, seat); }
     let (mut red, mut blue) = (false, false);
@@ -44,7 +43,7 @@ pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     red && blue
 }
 
-/// Where the room clear stages its team's first man (None: no room clear is up, or its structure names none).   (roomclear.ts startAt)
+/// Where the room clear stages its team's first man (None: no room clear is up, or its structure names none).
 fn start_at(g: &Game) -> Option<V3> {
     if !crate::roomclear::room_clear_scenario_active(g) { return None; }
     let s = crate::roomclear::room_clear_scenario_structure(g)?;
@@ -53,7 +52,7 @@ fn start_at(g: &Game) -> Option<V3> {
     s.team.as_ref().map(|t| t.sam)
 }
 
-/// A new run: everything this module holds of the last one goes.   (verdict.ts Verdict.fresh)
+/// A new run: everything this module holds of the last one goes.
 fn fresh(g: &mut Game, tail: Option<u32>) {
     let men = crate::seats::men(g);
     let origins: Vec<V3> = men.iter().map(|&pl| g.ch[g.pl[pl].ch].pos).collect();
@@ -72,19 +71,17 @@ fn fresh(g: &mut Game, tail: Option<u32>) {
     v.resumed = resumed; v.t0 = t0;
 }
 
-/// (verdict.ts track)
 fn track(id: f64, name: String, tone: Option<crate::host_findme::OutlineHue>, human: bool, gd: Option<GuardId>) -> Track {
     Track { id, name, tone, human, gd, state: ManState::Up, down_at: -1.0, down_room: String::new(), down_by: String::new(), down_pos: None, drops: Vec::new(), path: Vec::new(), every: PATH_SECS, next: 0.0 }
 }
 
-/// The humans of the team, then its AI men: a track each, made the first tick he is seen.   (verdict.ts Verdict.roster)
+/// The humans of the team, then its AI men: a track each, made the first tick he is seen.
 fn roster(g: &mut Game) {
     use crate::host_findme::OutlineHue as Hue;
     for pl in crate::seats::men(g) {
         let id = g.ch[g.pl[pl].ch].id;
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let seat = crate::seats::seat_of_man(g, pl);
-        // (seats.ts SEAT_TONES: 'you', 'purple', by the seat's place)
         let tone = if (g.tab.cmd_seat[seat].index as usize) % 2 == 0 { Hue::You } else { Hue::Purple };
         let name = crate::seats::player_name(g, pl);
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
@@ -99,7 +96,7 @@ fn roster(g: &mut Game) {
     }
 }
 
-/// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.   (verdict.ts Verdict.onlyMate)
+/// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.
 fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     let x = &g.gd[h];
     if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) { return None; }
@@ -108,7 +105,7 @@ fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     if n == 1 { one } else { None }
 }
 
-/// This tick read: who is where, who fell, who dropped whom, whether the team has been found, the mains, a hole walked through.   (verdict.ts Verdict.watch)
+/// This tick read: who is where, who fell, who dropped whom, whether the team has been found, the mains, a hole walked through.
 fn watch(g: &mut Game) {
     let now = secs(g);
     // the defenders: every man hostile to the player this run has met
@@ -179,7 +176,7 @@ fn watch(g: &mut Game) {
     }
 }
 
-/// The way a won run was won: quiet, dark, walls, doors, in that order.   (verdict.ts Verdict.approach)
+/// The way a won run was won: quiet, dark, walls, doors, in that order.
 fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Approach {
     let (s, n) = (&g.mission.stats, &g.chronicle.counts);
     // a loaded run lost this module's own latches: for the kinds that can be loaded the chronicle says the same, and for the stealth game the
@@ -192,7 +189,7 @@ fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Appr
     if g.verdict.through { Approach::Walls } else { Approach::Doors }
 }
 
-/// The run is over: its one verdict is made, and stays.   (verdict.ts Verdict.close)
+/// The run is over: its one verdict is made, and stays.
 fn close(g: &mut Game, end: (bool, &'static str, String)) {
     use crate::scenario_run::ActiveScenario as K;
     let kind = crate::scenario_run::active_scenario(g);
@@ -220,7 +217,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
 }
 
 /// THE VERDICT'S TICK, after the scenarios, and the mission have had this tick, so every end they wrote is in. The first
-/// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
+/// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }
     let tail = last_order(g);
@@ -238,14 +235,13 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
         }
         if moved || fired(g) != g.verdict.fired0 || tail != g.verdict.order0 { g.verdict.t0 = g.time; }
     }
-    // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
     if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }
     watch(g);
     if let Some(end) = ended(g) { close(g, end); }
 }
 
 /// HOW THE MISSION ENDED, read off the latched record: None while it is being played (and for a run that is not this mission any more), else whether
-/// it was won, the end's word and why. A read; while the answer is None it allocates nothing.   (verdict.ts Verdict.result)
+/// it was won, the end's word and why. A read; while the answer is None it allocates nothing.
 pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
     if g.verdict.run != Some(g.mission.serial) { return None; }
     g.verdict.res.as_ref().map(|r| (r.won, r.word.as_str(), r.why.as_str()))

@@ -1,4 +1,3 @@
-//! src/game/input.ts lines 1 to 111
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

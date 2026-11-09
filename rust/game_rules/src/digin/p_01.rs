@@ -1,4 +1,3 @@
-//! src/game/digin.ts lines 1 to 462
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,10 +8,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the table of defaults and the state
 
-/// Back to the defaults; a level's difficulty does this. The stored copy is the host's. (digin.ts resetDigIn)
+/// Back to the defaults; a level's difficulty does this. The stored copy is the host's.
 pub fn reset_dig_in(g: &mut Game) { g.k.digin = crate::digin::digin_defaults(); }
 
-/// The game's state, made on first use by the file's own literal: the row itself. (digin.ts stateOf)
+/// The game's state, made on first use by the file's own literal: the row itself.
 pub fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
     g.m.digin.states.get_or_insert_with(|| crate::digin::St {
         men: JsMap::new(),
@@ -29,19 +28,19 @@ pub fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
 
 // ---------------------------------------------------------------- small things
 
-/// Distance on the floor. (digin.ts flat)
+/// Distance on the floor.
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// A draw from [min, max]. (digin.ts pick)
+/// A draw from [min, max].
 pub fn pick(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "digin::pick#1", who) * (r[1] - r[0]) }
 
-/// A draw from [min, max] at the table's pace. (digin.ts paced)
+/// A draw from [min, max] at the table's pace.
 pub fn paced(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     let p = pick(g, who, r);
     p * m::max(0.1, g.k.digin.pace)
 }
 
-/// One of these, by the die. (digin.ts oneOf)
+/// One of these, by the die.
 pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, a: &[T]) -> T {
     let i = m::floor(crate::dice::draw_for(g, "digin::one_of#1", who) * a.len() as f64);
     match a.get(i as usize) {
@@ -50,10 +49,10 @@ pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, 
     }
 }
 
-/// The point at this height. (digin.ts at)
+/// The point at this height.
 pub fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
-/// A line in the file's log, capped, and in the fight's. (digin.ts log)
+/// A line in the file's log, capped, and in the fight's.
 pub fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
     g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
     if g.m.digin.digin_log.len() > 400 {
@@ -64,7 +63,7 @@ pub fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
 
 // ---------------------------------------------------------------- who can hear it
 
-/// Every player who is up and the living teammates, with their ears. (digin.ts listeners)
+/// Every player who is up and the living teammates, with their ears.
 pub fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
@@ -83,7 +82,7 @@ pub fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
     out
 }
 
-/// The nearest ear a sound of this reach gets to. (digin.ts heardBy)
+/// The nearest ear a sound of this reach gets to.
 pub fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::HeardBy> {
     let mut best = None;
     let mut bd = m::INF;
@@ -98,7 +97,7 @@ pub fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::Hea
     best
 }
 
-/// The same by the hearing model's law for door and furniture noise. (digin.ts heardNoise)
+/// The same by the hearing model's law for door and furniture noise.
 pub fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::HeardNoise> {
     let mut best = None;
     let mut bd = m::INF;
@@ -113,7 +112,7 @@ pub fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::He
     best
 }
 
-/// A cue reached the team, before they first stepped in. (digin.ts cue)
+/// A cue reached the team, before they first stepped in.
 pub fn cue(g: &Game, r: Option<&mut crate::digin::RoomSt>, kind: crate::digin::Cue) {
     let r = match r {
         Some(r) => r,
@@ -124,7 +123,7 @@ pub fn cue(g: &Game, r: Option<&mut crate::digin::RoomSt>, kind: crate::digin::C
     if r.cue_at.is_nan() { r.cue_at = g.time; }
 }
 
-/// A line of his out loud: said only when somebody on the team's side can hear it. (digin.ts shout)
+/// A line of his out loud: said only when somebody on the team's side can hear it.
 pub fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate::digin::RoomSt>) -> bool {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -142,7 +141,7 @@ pub fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate::digin:
 
 // ---------------------------------------------------------------- which door will they come by
 
-/// A path's length on the floor. (digin.ts pathLen)
+/// A path's length on the floor.
 pub fn path_len(from: V3, path: &[V3]) -> f64 {
     let mut l = 0.0;
     let mut q = from;
@@ -153,7 +152,7 @@ pub fn path_len(from: V3, path: &[V3]) -> f64 {
     l
 }
 
-/// How far on foot from `a` to `b`; infinity: no way found. (digin.ts wayTo)
+/// How far on foot from `a` to `b`; infinity: no way found.
 pub fn way_to(g: &mut Game, a: V3, b: V3) -> f64 {
     let p = crate::roomfight::room_fight_free_near(g, a).unwrap_or(a);
     let q = crate::roomfight::room_fight_free_near(g, b).unwrap_or(b);
@@ -163,7 +162,7 @@ pub fn way_to(g: &mut Game, a: V3, b: V3) -> f64 {
     }
 }
 
-/// The room's entries by the way round from `from` to their far side, never through the room: [expected, second or -1]. (digin.ts expectEntries)
+/// The room's entries by the way round from `from` to their far side, never through the room: [expected, second or -1].
 pub fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [f64; 2] {
     let src = crate::roomfight::room_fight_free_near(g, from).unwrap_or(from);
     let entries = g.tab.roomfight_room[room].entries.clone();
@@ -344,7 +343,7 @@ struct PreCell { p: V3, n: f64, hope: f64 }
 #[derive(Clone, Copy)]
 struct CandCell { p: V3, s: f64, n: f64 }
 
-/// The spot in the room to hold his door from, by the five best places, best hope first. (digin.ts coverSpot)
+/// The spot in the room to hold his door from, by the five best places, best hope first.
 pub fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, deep: bool) -> crate::digin::CoverSpot {
     let room = r.room;
     let entries = g.tab.roomfight_room[room].entries.clone();
@@ -439,7 +438,7 @@ pub fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &cra
     crate::digin::CoverSpot { spot: None, here: here > -5.0, look }
 }
 
-/// Off the door's line: every second living man of the room. (digin.ts wantsDeep)
+/// Off the door's line: every second living man of the room.
 pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
     let me = g.tab.roomfight_def[d].gd;
     let mut at_ = 0usize;
@@ -453,7 +452,7 @@ pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool
 
 // ---------------------------------------------------------------- moving
 
-/// The room fight's own 'move' mode, by his script's legs. (digin.ts move)
+/// The room fight's own 'move' mode, by his script's legs.
 pub fn move_(g: &mut Game, d: RoomfightDefId, goal: V3, speed: f64) {
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;
@@ -479,7 +478,7 @@ pub fn move_(g: &mut Game, d: RoomfightDefId, goal: V3, speed: f64) {
     });
 }
 
-/// The fear he keeps on his door. (digin.ts fear)
+/// The fear he keeps on his door.
 pub fn fear(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) {
     let fear = g.k.digin.fear;
     let ev = &mut g.tab.roomfight_def[d].ev;
@@ -489,7 +488,7 @@ pub fn fear(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) {
     }
 }
 
-/// The nearest unused furniture of his room within reach of him and of the door. (digin.ts nearestProp)
+/// The nearest unused furniture of his room within reach of him and of the door.
 pub fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight::Entry, skip: Option<&JsSet<PropId>>) -> Option<PropId> {
     let (gd, room) = { let row = &g.tab.roomfight_def[d]; (row.gd, row.room) };
     let c = g.gd[gd].ch;
@@ -516,7 +515,7 @@ pub fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight::Entry,
     best
 }
 
-/// The furniture's noise: sound, an event, a cue if the team hears it, a teammate's call. (digin.ts scrape)
+/// The furniture's noise: sound, an event, a cue if the team hears it, a teammate's call.
 pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut crate::digin::RoomSt>, thud: Option<bool>) {
     let thud = thud.unwrap_or(false);
     let p = m.prop.unwrap();
@@ -556,7 +555,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
     }
 }
 
-/// The furniture goes under the handle: the door's own lock, against its far face, to a lock no ring fits. (digin.ts wedge)
+/// The furniture goes under the handle: the door's own lock, against its far face, to a lock no ring fits.
 pub fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &mut crate::digin::RoomSt, e: &mut crate::roomfight::Entry) {
     let gd = g.tab.roomfight_def[d].gd;
     let door = e.door;
@@ -579,7 +578,7 @@ pub fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &mut crat
     log(g, Some(gd), &alloc::format!("wedges {}", name));
 }
 
-/// May this door be wedged. (digin.ts wedgeable)
+/// May this door be wedged.
 pub fn wedgeable(g: &Game, d: DoorId) -> bool {
     !g.dr[d].def.steel.unwrap_or(false)
         && !crate::doors::door_locked(g, d)
@@ -588,7 +587,7 @@ pub fn wedgeable(g: &Game, d: DoorId) -> bool {
         && crate::devices::devices_pad_of(g, d).is_none()
 }
 
-/// Where his own ears last put them. (digin.ts heardAt)
+/// Where his own ears last put them.
 pub fn heard_at(g: &Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
     let row = &g.tab.roomfight_def[d];
     match row.noise_at {
@@ -599,15 +598,15 @@ pub fn heard_at(g: &Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
 
 // ---------------------------------------------------------------- doors (DIGIN.shutOpen is settled off on the page: the rule folds away)
 
-/// The entry his hands are on or he is on his way to. (digin.ts doorOf)
+/// The entry his hands are on or he is on his way to.
 pub fn door_of(g: &Game, m: crate::digin::Man) -> f64 {
     if m.brace >= 0.0 { m.brace } else { m.entry }
 }
 
-/// Seconds a hand waits on a pulled leaf. (digin.ts latchSecs)
+/// Seconds a hand waits on a pulled leaf.
 pub fn latch_secs(g: &mut Game) -> f64 { 2.5 }
 
-/// His hand goes on the leaf: pulled to, the wait begun. (digin.ts handOn)
+/// His hand goes on the leaf: pulled to, the wait begun.
 pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) {
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;

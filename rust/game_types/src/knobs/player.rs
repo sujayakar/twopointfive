@@ -2,10 +2,10 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// Sam's hands on the FN2000 (combat.ts fireWeapon's `spread`: ± half of it per axis on the unit direction): a shouldered long gun
+/// Sam's hands on the FN2000: a shouldered long gun
 ///  standing still, on the move (any ground speed over `moveAt`), × crouched, × braced on the foregrip — which he now ALWAYS is with it in the hands (Player.braced:
 ///  no brace input any more, so braceK is simply the rifle's in-hand steadiness and `still` × braceK the cone a standing round is drawn with) — then + the AUTO string's
-///  own growth off the row (weapons.ts AutoSpec) and + his suppression's (suppression.ts samSpread), as the pistol's rounds get. The pistol stays dead-on.
+///  own growth off the row and + his suppression's, as the pistol's rounds get. The pistol stays dead-on.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RifleSpreadK {
     #[k(0.01)] pub still: f64,
@@ -41,8 +41,7 @@ pub struct FootfallK {
 ///  down a crouched man no longer gains on a patrol (1.13 against tune.guardWalk 1.15). On: the wheel is nobody's pace (his pace is whole, a saved notch
 ///  included), the walk and the sprint are as they were, and the crouch-walk IS the sneak, at `crouch` m/s — under the walk, so the walk keeps its job, and
 ///  0.3 m/s over a patrol's (the two metres from the close-in mode's edge to reach in about six seconds; it was thirteen). The sidle along a wall and a
-///  hauled body keep tune.playerCrouch. ON in the page unless ?twogears=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand
-///  (src/host/standup.ts; TPS_TWOGEARS=1 turns it on there).
+///  hauled body keep tune.playerCrouch. ON in the page unless ?twogears=0; off here and on the harness's frozen stand
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct TwogearsK {
     #[k(1.45)] pub crouch: f64,
@@ -51,8 +50,8 @@ pub struct TwogearsK {
 /// SHIFT IN A CROUCH IS A FAST CROUCH WALK (the maintainer, 10-23: "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint
 ///  properly"). With `on`, Shift held while he is crouched no longer stands him up into the sprint: he stays down and covers ground at `pace` (m/s; between
 ///  the walk's 1.55 and the run), each footfall at `loud` (the crouch walk's is 0.125, the walk's 0.26, a run's 0.6: quicker than walking and heard further
-///  than walking, a good deal less than running), and it is no sneak (unseen.ts samSneaks). The sprint is the standing man's: [C] first. He is not
-///  `sprinting` — his hands are still his own (a door, a switch, a grab) — and a hold on left click (stalk.ts) is the creep whatever Shift says, as before.
+///  than walking, a good deal less than running), and it is no sneak. The sprint is the standing man's: [C] first. He is not
+///  `sprinting` — his hands are still his own (a door, a switch, a grab) — and a hold on left click is the creep whatever Shift says, as before.
 ///  A body in tow is let go of, as a sprint's is. Not under a puppet or a tour (their Shift is the old one). Off = Shift stands him up, as it did.
 ///  The page turns it on (?crouchrun=0 puts it back); off here and on the frozen stand (TPS_CROUCHRUN=1). Its look: character.ts DASH.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

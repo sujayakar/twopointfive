@@ -40,12 +40,12 @@ pub struct GuardEyeK {
 
 /// HOW THE TEAM CARRIES ITSELF. A teammate (an operative unit, while the room fight is live — a scenario, never a showcase's cast) is a man with a rifle and a
 ///  plate carrier: `max` is the most his legs are ever asked for, whoever asks (an order's leg, a drill's flow, the fight AI's chase, a step off a doorway) — a
-///  purposeful walk with some jog in it, none of the sprint clip (character.ts BLEND: the walk carries to 1.6 m/s, the sprint starts past 2.7) — and he LEANS INTO a
+///  purposeful walk with some jog in it, none of the sprint clip — and he LEANS INTO a
 ///  move: his speed rises by no more than `accel` m/s² (he stops as crisply as ever: a man arriving on a mark is on it). And his GUN TRAVELS: the runner
-///  (squad.ts) put a scripted man's muzzle on its aim point the frame the point changed — an order given, a corner checked, the fight's own read taking over
+/// put a scripted man's muzzle on its aim point the frame the point changed — an order given, a corner checked, the fight's own read taking over
 ///  from behind his shoulder: a rifle, a head and a weapon light's cone through 60‥150° in one frame, a few times a minute per man (tools/qa/playthrough.ts
 ///  counted them) — now it comes round to a point an ORDER (or the unasked cover) gives it at `turn` rad/s at most (0 = on the point at once, as it was): 8 is
-///  the operatives' own body turn (roomfight.ts FIGHT_SKILL.operative.turn) — a quarter turn in a fifth of a second. A point his own EYES have given him
+///  the operatives' own body turn — a quarter turn in a fifth of a second. A point his own EYES have given him
 ///  (GuardScript.over: the room fight's read, which eases itself — roomfight.ts point()) is not slowed: throttled too, the pair lost three more rooms in six.
 ///  What that point may not do is TELEPORT: when it passes behind his back the waist's twist clamp flips from one shoulder to the other, 150° and more in a
 ///  frame — that crossing is swung through his front at `swing` rad/s (0 = the flip, as it was; 30 is a half turn in a tenth of a second).

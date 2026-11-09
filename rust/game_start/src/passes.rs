@@ -1,6 +1,6 @@
-//! WHAT A STAND-UP DOES TO A LEVEL'S BOXES before they go to the world (`src/host/standup.ts populateHost`), in its order: the thin things that
-//! stand free marked (`src/scene/thin.ts`), a window's bars marked
-//! (`src/scene/bars.ts`), and each box that says a shape given its record and its pieces of trim (`src/scene/shapes.ts`). Line for line from the
+//! WHAT A STAND-UP DOES TO A LEVEL'S BOXES before they go to the world, in its order: the thin things that
+//! stand free marked, a window's bars marked
+//!, and each box that says a shape given its record and its pieces of trim (`src/scene/shapes.ts`). Line for line from the
 //! TypeScript. A level is stood ONCE here, on boxes fresh from its file, so the passes' "put back what an earlier stand-up gave" halves
 //! (plainLevel, thinClear, barClear) have nothing to do and are not written.
 use alloc::vec::Vec;
@@ -73,7 +73,7 @@ fn stands_free(ai: usize, boxes: &[Box], width: f64) -> bool {
     }
     true
 }
-/// A LEVEL'S THIN THINGS (thin.ts thinLevel): every static's mark off, then on the ones that stand free. Answers how many.
+/// A LEVEL'S THIN THINGS: every static's mark off, then on the ones that stand free. Answers how many.
 pub fn thin_level(g: &mut Game, ids: &[BoxId], doors: &[LevelDoorDef]) -> usize {
     let f = box_flag();
     for &b in ids { set(&mut g.tab.boxes[b], f.thin, false); }
@@ -123,7 +123,7 @@ fn in_opening(ai: usize, boxes: &[Box]) -> bool {
     }
     false
 }
-/// A LEVEL'S WINDOW BARS (bars.ts barLevel): every static's mark off, then on the ones the rule names. Answers how many.
+/// A LEVEL'S WINDOW BARS: every static's mark off, then on the ones the rule names. Answers how many.
 pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
     let f = box_flag();
     for &b in ids { set(&mut g.tab.boxes[b], f.bar, false); }

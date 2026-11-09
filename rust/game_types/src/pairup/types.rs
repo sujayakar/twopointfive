@@ -21,7 +21,6 @@ pub struct PairupModPAIRHELD {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct PairupMod {
-    /// (src/game/pairup.ts:72 PAIR_HELD)
     pub pair_held: crate::pairup::PairupModPAIRHELD,
 }
 impl PairupMod {

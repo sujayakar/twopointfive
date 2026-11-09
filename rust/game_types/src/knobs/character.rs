@@ -7,18 +7,18 @@ use game_derive::Knobs;
 
 /// The hold's contact constants. The two roots are locked HOLD.dist apart on ONE facing, so a point on the other man
 ///  is a constant in each figure's own model space (x = the figure's left, y up, z ahead of its root) — no bone hand-off between the characters. Timings are the
-///  controller's too (player.ts reads secs). First-pass numbers off the mannequin's measured joints; the viewer will get a page to tune them like RIG.
+///  controller's too. First-pass numbers off the mannequin's measured joints; the viewer will get a page to tune them like RIG.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct HoldK {
     #[k(0.9)] pub regrab: f64,
-    /// A HOLD WITH NO KNIFE (HeldPose.bare, fed by player.ts under game/close.ts CLOSE.noKnife): the held man's right hand was half up beside his head, open, palm
+    /// A HOLD WITH NO KNIFE: the held man's right hand was half up beside his head, open, palm
     ///  forward — frozen under a blade. With no blade it was a pale open hand waving over the pair, the brightest thing on screen. It is on the arm across his
     ///  throat instead, fingers hooked over it: this much of the choke's own clawing station, without the clawing (0 = the raised hand, as before).
     #[k(0.9)] pub bare_grip: f64,
     /// …and he is HAULED BACK onto the arm, not stood beside it (judged on stills from the game's camera: upright, Sam hid him and only his two elbows showed
     ///  either side of Sam's head). `bareArch`° more arch over the spine while he has his feet, his elbows carried down (`bareElbow` of the way to hanging). And
-    ///  THE YANK (HoldPose / HeldPose.yank = seconds since Sam's step in landed, fed by player.ts with the stalk's grab): for `in` s his chest goes back `arch`°
-    ///  further and Sam sits `sink` m into it, held `hold` s, let out over `out` s — the pose's share of the haul back (stalk.ts STALK.yank moves the pair).
+    ///  THE YANK: for `in` s his chest goes back `arch`°
+    ///  further and Sam sits `sink` m into it, held `hold` s, let out over `out` s — the pose's share of the haul back.
     #[k(-11.0)] pub bare_arch: f64,
     #[k(0.6)] pub bare_elbow: f64,
     pub yank: HoldKYank,
@@ -61,7 +61,7 @@ pub struct HoldK {
     ///  either stand's poses (a fixed down push landed a frame early on the frozen stand's). COUNTED IN FRAMES OF THE PAGE, where the grab begins inside an
     ///  update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is 15 frames after the catch (0.25 s) and
     ///  the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is the middle of the falls that land
-    ///  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it (journal.ts). With `stripFirst`
+    ///  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it. With `stripFirst`
     ///  up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either order. `push`
     ///  down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn until
     ///  it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the frame).
@@ -72,7 +72,7 @@ pub struct HoldK {
     /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
     ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
     ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-    ///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip) · the knife across his throat, from the free hand
+    ///  long the row starts nothing · the knife across his throat, from the free hand
     ///  leaving for his mouth to him let go of (the cut lands HOLD.kill.hit of the way in)
     pub secs: HoldKSecs,
     /// ---- Sam, his model space (the man's root sits at [0, 0, dist]; his neck joint stands about [0, 1.43, dist − 0.02], the front of his throat ~7 cm ahead of that)
@@ -118,7 +118,7 @@ pub struct HoldK {
     /// degrees the head drops forward / tips as he goes
     #[k(26.0)] pub loll: f64,
     #[k(11.0)] pub loll_roll: f64,
-    /// the choke's LOWERING (takedown.ts TAKEDOWN.lower → HoldPose.low / HeldPose.low; 0 = none of it): over the last stretch of the choke, as he goes limp, the
+    /// the choke's LOWERING: over the last stretch of the choke, as he goes limp, the
     /// man goes down onto his heels with his trunk folding forward and Sam sinks with him, bowed over him, the arm still round his neck — lowered, never dropped.
     /// `from` … `by` = the shares of the (eased) choke it starts at and is all the way down by; `up` = the spring (1/s) both come back up on when the choke is eased off (down, they follow the clock). The man: `sink` / `fwd` m the pelvis goes down / away from Sam over pinned feet, `hip` / `fold` degrees
     /// his pelvis and his spine pitch forward, `hang` = how far his hanging hands' marks go down / forward (further down and his arm runs out mid-way: the elbow snaps straight in a frame). Sam: `samSink` m of pelvis over pinned feet with the knees
@@ -127,7 +127,7 @@ pub struct HoldK {
     /// halves together: with these the hand stays within 1.5 cm of where it sat on his neck standing, all the way down, and the arm never past 0.91 of its reach —
     /// more sink for the man, or less for Sam, and the arm runs out (the hand slides up off his neck onto his face).
     pub lower: HoldKLower,
-    /// THE KILL FROM THE HOLD (phase 'kill', the arm variant; takedown.ts TAKEDOWN.kill — off, or the gun variant: the phase is drawn as 'held'). Shares of the
+    /// THE KILL FROM THE HOLD. Shares of the
     /// clock (secs.kill): by `wind` Sam's free hand is off the throat and clamped over the man's mouth, his head hauled back onto Sam's shoulder, and the blade is
     /// set at the far side of his neck; the fist is drawn back across — the throat's middle at `hit` — and on OUT wide to Sam's right by `out`, elbow up (what the
     /// camera overhead reads); he stands cut for the beat between `hit` and `go`, his hands at his throat; from `go` his knees give and he goes forward and down,
@@ -141,7 +141,7 @@ pub struct HoldK {
     /// his right arm out from under the blade's way; in at his neck they read as the choke), `clutch` = at his own throat after the cut; chin° / arch° hauled
     /// back, the head's jolt° [yaw, pitch] as the blade goes across, `sink` / `fwd` m and `hip` / `fold`° as he goes, `hang` as HOLD.lower's.
     pub kill: HoldKKill,
-    /// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands
+    /// THE CHOKE'S BEATS, off the clips — shares of the eased choke: `clamp` = over which both his hands
     /// come onto the forearm (a quarter second in, where they took 0.8 s), `off` = over which they come OFF it and fall, before the lowering starts (they fell
     /// with it, through it), `tipBy` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back the way they came on a
     /// spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = HOLD.lower's table as the beats
@@ -149,7 +149,7 @@ pub struct HoldK {
     /// way down by 85 %, so the last third of a second is HELD at the bottom, and deeper — his fold, Sam's lean and sink — the arm's follow refitted to it (the
     /// hand within 1.5 cm of where it sat on his neck, the arm to 0.94 of its reach). `after` = 1/s Sam comes up off him once he is out, while he stands still.
     pub beats: HoldKBeats,
-    /// THE CHOKE'S HAUL (takedown.ts TAKEDOWN.haul; off = the choke as it was). The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
+    /// THE CHOKE'S HAUL. The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
     /// theory sam has him in a chokehold and then lifts him up and back out of the air a bit when choking". Off the clips (the choke seen from the front): a tenth
     /// of a second in Sam straightens and hauls him up, the man's head forced back into his chest, and leans back through the squeeze; the man is arched back
     /// onto him, hips ahead of his shoulders. Shares of the eased choke: `in` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
@@ -292,7 +292,7 @@ pub struct HoldKFirst {
 ///  either stand's poses (a fixed down push landed a frame early on the frozen stand's). COUNTED IN FRAMES OF THE PAGE, where the grab begins inside an
 ///  update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is 15 frames after the catch (0.25 s) and
 ///  the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is the middle of the falls that land
-///  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it (journal.ts). With `stripFirst`
+///  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it. With `stripFirst`
 ///  up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either order. `push`
 ///  down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn until
 ///  it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the frame).
@@ -324,7 +324,7 @@ pub struct HoldKStrip {
 /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
 ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
 ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip) · the knife across his throat, from the free hand
+///  long the row starts nothing · the knife across his throat, from the free hand
 ///  leaving for his mouth to him let go of (the cut lands HOLD.kill.hit of the way in)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HoldKSecs {
@@ -363,7 +363,7 @@ pub struct HoldKKnife {
     #[k(5.0)] pub clav: f64,
 }
 
-/// the choke's LOWERING (takedown.ts TAKEDOWN.lower → HoldPose.low / HeldPose.low; 0 = none of it): over the last stretch of the choke, as he goes limp, the
+/// the choke's LOWERING: over the last stretch of the choke, as he goes limp, the
 /// man goes down onto his heels with his trunk folding forward and Sam sinks with him, bowed over him, the arm still round his neck — lowered, never dropped.
 /// `from` … `by` = the shares of the (eased) choke it starts at and is all the way down by; `up` = the spring (1/s) both come back up on when the choke is eased off (down, they follow the clock). The man: `sink` / `fwd` m the pelvis goes down / away from Sam over pinned feet, `hip` / `fold` degrees
 /// his pelvis and his spine pitch forward, `hang` = how far his hanging hands' marks go down / forward (further down and his arm runs out mid-way: the elbow snaps straight in a frame). Sam: `samSink` m of pelvis over pinned feet with the knees
@@ -389,7 +389,7 @@ pub struct HoldKLower {
     #[k([0.5, 0.22])] pub sam_arm: [f64; 2],
 }
 
-/// THE KILL FROM THE HOLD (phase 'kill', the arm variant; takedown.ts TAKEDOWN.kill — off, or the gun variant: the phase is drawn as 'held'). Shares of the
+/// THE KILL FROM THE HOLD. Shares of the
 /// clock (secs.kill): by `wind` Sam's free hand is off the throat and clamped over the man's mouth, his head hauled back onto Sam's shoulder, and the blade is
 /// set at the far side of his neck; the fist is drawn back across — the throat's middle at `hit` — and on OUT wide to Sam's right by `out`, elbow up (what the
 /// camera overhead reads); he stands cut for the beat between `hit` and `go`, his hands at his throat; from `go` his knees give and he goes forward and down,
@@ -434,7 +434,7 @@ pub struct HoldKKill {
     #[k([0.2, 0.2])] pub hang: [f64; 2],
 }
 
-/// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands
+/// THE CHOKE'S BEATS, off the clips — shares of the eased choke: `clamp` = over which both his hands
 /// come onto the forearm (a quarter second in, where they took 0.8 s), `off` = over which they come OFF it and fall, before the lowering starts (they fell
 /// with it, through it), `tipBy` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back the way they came on a
 /// spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = HOLD.lower's table as the beats
@@ -470,7 +470,7 @@ pub struct HoldKBeatsLower {
     #[k([0.52, 0.29])] pub sam_arm: [f64; 2],
 }
 
-/// THE CHOKE'S HAUL (takedown.ts TAKEDOWN.haul; off = the choke as it was). The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
+/// THE CHOKE'S HAUL. The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
 /// theory sam has him in a chokehold and then lifts him up and back out of the air a bit when choking". Off the clips (the choke seen from the front): a tenth
 /// of a second in Sam straightens and hauls him up, the man's head forced back into his chest, and leans back through the squeeze; the man is arched back
 /// onto him, hips ahead of his shoulders. Shares of the eased choke: `in` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
@@ -591,7 +591,7 @@ pub struct HoldKGunKnock {
 
 /// SAM SPRINTS WITH BOTH HANDS ON THE PISTOL (the maintainer, 10-25: "sprinting with pistol animation is weird, should keep two hands on it and at low
 ///  ready, like rifle sprinting animation"). A sprint took the pistol's layer off (`upper` 'none'), so the gun rode a pumping fist while the rifle's sprint
-///  is the long gun's low ready in both hands. With `on`, a figure told `runReady` (player.ts: the sprint, the pistol in his hand) and in no stance of its own
+///  is the long gun's low ready in both hands. With `on`, a figure told `runReady` and in no stance of its own
 ///  takes the pistol's LOW READY over the running legs — the stance every man moving between doors already has, arms only — drawn in toward the belt as a
 ///  runner carries it: the low ready's spring targets go to these (STANCES' units; fwd / up from the pelvis, pitch in degrees, tuck 0‥1). Off, or the
 ///  input never raised (every guard, every teammate, the frozen stand): the animator as it was, to the bit. First numbers, off the capsule strips.
@@ -625,7 +625,7 @@ pub struct RunarmsK {
     #[k(0.85)] pub pole_w: f64,
 }
 
-/// THE FAST CROUCH WALK'S LOOK (CharacterAnimator.dash; the rule and its pace are player.ts CROUCHRUN): at 2.5 m/s the crouch cycle as it stands takes 3.5 steps
+/// THE FAST CROUCH WALK'S LOOK: at 2.5 m/s the crouch cycle as it stands takes 3.5 steps
 ///  a second on a 1.44 m stride — a wound-up toy. By `dash` the stride is this much longer and the cadence that much lower (the planted foot keeps the ground's
 ///  speed, as the deliberate retime's does), the pelvis a little lower to pay for the reach and the trunk further over its knees, the head brought level back
 ///  out of it. Eased in and out at `rate` (1/s). Nothing here runs at dash 0.
@@ -637,7 +637,7 @@ pub struct DashK {
     #[k(7.0)] pub rate: f64,
 }
 
-/// HE WATCHES A MAN, AND GIVES HIM ROOM AS HE PASSES (watchLayer; game/samlook.ts feeds `watchAt` / `slipAt`. The looks only: nothing reads them back).
+/// HE WATCHES A MAN, AND GIVES HIM ROOM AS HE PASSES.
 ///  THE LOOK: the head goes to the point — the chest a little, the neck, the head (`share`) — as far off the chest's line as `yaw`° and `up` / `down`° of
 ///  pitch; the angle follows the point at `rate` 1/s (a man swapped for another is a turn of the head, not a cut) and the whole comes and goes at `wRate`.
 ///  THE SLIP: crouched beside a man, by how near he is (`slipK`): the trunk tips `lean`° away from him with the head brought level back out of it, the pelvis
@@ -671,7 +671,7 @@ pub struct WatchK {
 ///  along the round), a walk that tells the two sides apart (the team sunk onto bent knees and leaning into the gun, gliding; the defenders upright, shoulders
 ///  swinging, elbow out), falls that do not all go over backwards, and the stack's shoulder squeeze. Every part has its own switch and `on` is the master:
 ///  **on = 0 is the animator exactly as it was** (every new branch below is behind `mvOn`, the old statements untouched) — the headless harness stands up with it
-///  off (host/standup.ts), so every frozen digest holds; the page has it on, `?nomoves` puts it off. Poses feed the game (the muzzle rides the hand, hit columns
+///  off, so every frozen digest holds; the page has it on, `?nomoves` puts it off. Poses feed the game (the muzzle rides the hand, hit columns
 ///  ride the hips and chest), so ON is a different simulation in the small.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct MovesK {
@@ -737,8 +737,8 @@ pub struct MovesK {
     #[k(1.0)] pub steady_run: f64,
 }
 
-/// The motion pass's numbers. Pairs are [untrained, trained], read by CharacterAnimator.trained (0 … 1; the game sets it per side — game.ts). First-pass values
-///  judged on pose strips (tools/qa/pose-strip.ts), not yet on a GPU.
+/// The motion pass's numbers. Pairs are [untrained, trained], read by CharacterAnimator.trained. First-pass values
+///  judged on pose strips, not yet on a GPU.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct MvK {
     pub recoil: MvKRecoil,
@@ -901,11 +901,11 @@ pub struct TurnK {
 }
 
 /// A MAN WHO HAS RUN BREATHES HARD, AND IT SHOWS (the maintainer, 10-19: "characters should breathe more forcefully when sprinting (e.g. on snow levels)").
-///  The game had two breaths and no third: the chest's (the life layer below) and, on a snow level, the steam off the mouth (snowBreath.ts). There is no breath
+///  The game had two breaths and no third: the chest's (the life layer below) and, on a snow level, the steam off the mouth. There is no breath
 ///  SOUND and none is made here. With `on`, both of the two are stronger with effort — a sprint, and the while after it — and neither is touched at rest:
 ///    THE CHEST (lifeLayer): blown he heaves `chestAmp` × the resting turn at `chestRate` Hz (it was LIFE.breathAmpRun 2.6 at breathRateRun 0.62), is blown in
 ///      `chestUp` s of a run past 3.2 m/s (it was 4) and has his wind back in `chestDown` s (it was 8). Running, the gait still carries the chest as it did.
-///    THE STEAM (snowBreath.ts, picture only): blown he breathes every `every` s (it was SNOWBREATH.everyHard 1.3), each breath `puffs` records of `count`
+///    THE STEAM: blown he breathes every `every` s (it was SNOWBREATH.everyHard 1.3), each breath `puffs` records of `count`
 ///      puffs (3 of 5) thrown at `jet` × the resting speed (1.3) and `size` × its size (hardK 1.5; its opacity is full from half effort either way), leaving with `carry` of his own velocity (0.6);
 ///      blown in `up` s (effortUp 4), his wind back in `down` s (effortDown 12). Each is the resting number at effort 0 and this one at 1, straight between.
 ///  Effort is what it was: his ground speed and nothing else (no stamina exists and none is made); a teammate never sprints: at his fastest walk (2.2 m/s, a little over where effort begins) his steam is a seventh of the way to blown, and his chest's is the resting one (it wants 3.2 m/s).
@@ -1122,7 +1122,7 @@ pub struct KitKClose {
 ///     its authored size for `through` s either side of the release, so it lets go where the whole throw does and the path has no corner — the balance arm's
 ///     path and turn toward the pose underneath from `offMin`, the crouched sit-up from `sit`, by a smoothstep of the distance;
 ///   · `full` m and over — the overhand as authored. No distance told, or the switch off, is that too, bit for bit.
-///  With the switch on the fist also drops its can the frame the thrown one is in the air (combat.ts: `throwing` runs three frames past the release).
+///  With the switch on the fist also drops its can the frame the thrown one is in the air.
 ///  The body the picture shows is the body the guards see and shoot at (one model): a toss keeps a crouched head down where the overhand sits him up.
 ///  UNTUNED by eye (nobody has seen these on a GPU).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

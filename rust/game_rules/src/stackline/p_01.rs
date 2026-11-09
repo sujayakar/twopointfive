@@ -1,4 +1,3 @@
-//! src/game/stackline.ts lines 1 to 63
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,13 +6,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.   (stackline.ts stackLineOpen)
+/// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
 pub fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
 }
 
-/// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.   (stackline.ts stackLineSees)
+/// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.
 pub fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
     let kn = g.k.stackline;
     let f = crate::guards::frame_of(g, d);
@@ -29,7 +28,7 @@ pub fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -
     false
 }
 
-/// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.   (stackline.ts stackLinePace)
+/// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.
 pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId, left: f64, brisk: f64) -> Option<f64> {
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {

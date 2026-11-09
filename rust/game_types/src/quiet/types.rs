@@ -123,7 +123,6 @@ pub struct QuietWords {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct QuietMod {
-    /// (src/game/quiet.ts:60 holder)
     pub holder: bool,
 }
 impl QuietMod {
@@ -142,11 +141,8 @@ pub struct QuietStats {
     pub mates: i32,
 }
 
-/// (src/game/quiet.ts:53 EXIT_HALF_W)
 pub const EXIT_HALF_W: f64 = 1.8;
 
-/// (src/game/quiet.ts:55 EXIT_DEPTH)
 pub const EXIT_DEPTH: f64 = 12.0;
 
-/// (src/game/quiet.ts:362 FIRST_SIGHT_M)
 pub const FIRST_SIGHT_M: f64 = 16.0;

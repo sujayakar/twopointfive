@@ -175,9 +175,7 @@ pub enum CloseTookWhat {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CloseMod {
-    /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
-    /// (src/game/close.ts:148 SEATED)
     pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
 }
 impl CloseMod {
@@ -202,11 +200,8 @@ pub struct CloseStats {
     pub unseats: i32,
 }
 
-/// (src/game/close.ts:40 DEGR)
 pub const DEGR: f64 = 0.017453292519943295;
 
-/// (src/game/close.ts:117 BEHIND_COS)
 pub const BEHIND_COS: f64 = -0.25;
 
-/// (src/game/close.ts:446 SIT_CLIP: a table nothing writes)
 pub fn sit_clip() -> crate::close::SITCLIP { crate::close::SITCLIP { clip: String::from("Sitting_Idle_Loop"), loop_: true, rate: 1.0, in_: 0.7, out: 0.8 } }

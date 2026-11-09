@@ -1,4 +1,3 @@
-//! src/game/orders.ts lines 2099 to 2475
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -101,7 +100,7 @@ fn worked_out(v: &SquadOrdersWorkedValueItem) -> SquadOrdersWorkedMarks {
     }
 }
 
-/// A door face with no floor at either jamb: every place the men could stand for it instead, worked out once per face.   (orders.ts SquadOrders.workedMarks)
+/// A door face with no floor at either jamb: every place the men could stand for it instead, worked out once per face.
 pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::orders::SquadOrdersWorkedMarks {
     let key = if side > 0.0 { 0 } else { 1 };
     if !g.orders.worked.has(d) { g.orders.worked.set(d, vec![None, None]); }
@@ -156,7 +155,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
     out
 }
 
-/// The marks teammates outside `men` hold on this door under an order.   (orders.ts SquadOrders.heldOn)
+/// The marks teammates outside `men` hold on this door under an order.
 pub fn squad_orders_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], ignore: Option<&[GuardId]>) -> Vec<V3> {
     let ignore = ignore.unwrap_or(&[]);
     let mut out = Vec::new();
@@ -169,7 +168,7 @@ pub fn squad_orders_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef,
     out
 }
 
-/// `n` worked marks for such a face, best first by walk + workSeenM × seen, returned nearest the door first; None: the face has floor at a jamb, or not that many marks.   (orders.ts SquadOrders.workedPick)
+/// `n` worked marks for such a face, best first by walk + workSeenM × seen, returned nearest the door first; None: the face has floor at a jamb, or not that many marks.
 pub fn squad_orders_worked_pick(g: &mut crate::game::Game, d: DoorId, side: f64, n: f64, taken: &[V3], min_m: Option<f64>) -> Option<Vec<V3>> {
     let min_m = min_m.unwrap_or(0.0);
     if n < 1.0 { return None; }
@@ -189,7 +188,7 @@ pub fn squad_orders_worked_pick(g: &mut crate::game::Game, d: DoorId, side: f64,
     Some(out)
 }
 
-/// Worked marks as a stack: the first man has it to open, everybody faces it; the men to one hand of the opening are one file.   (orders.ts SquadOrders.workedStack)
+/// Worked marks as a stack: the first man has it to open, everybody faces it; the men to one hand of the opening are one file.
 pub fn squad_orders_worked_stack(g: &mut crate::game::Game, d: DoorId, side: f64, n: f64, taken: &[V3]) -> Option<Vec<crate::orders::StackPost>> {
     let marks = squad_orders_worked_pick(g, d, side, n, taken, None)?;
     let (th, hg, w, c) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].frame_centre);
@@ -207,7 +206,7 @@ pub fn squad_orders_worked_stack(g: &mut crate::game::Game, d: DoorId, side: f64
     Some(out)
 }
 
-/// Is this place the mark a man of the order already stands on, on this door?   (orders.ts SquadOrders.stoodOn)
+/// Is this place the mark a man of the order already stands on, on this door?
 pub fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], p: V3) -> bool {
     for (gd, &a) in seat.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
@@ -220,7 +219,7 @@ pub fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::SeatRef
     false
 }
 
-/// Does a piece of furniture stand on this place, where it is now (its footprint, and a hand's breadth round it)?   (orders.ts SquadOrders.onFurniture)
+/// Does a piece of furniture stand on this place, where it is now (its footprint, and a hand's breadth round it)?
 pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
     if g.orders.fur_in { return false; }
     for i in 0..g.props.props.len() {
@@ -236,7 +235,7 @@ pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
     false
 }
 
-/// `k` marks back from a door on face `side` for men its walls have no room for; as many as there are.   (orders.ts SquadOrders.rearPosts)
+/// `k` marks back from a door on face `side` for men its walls have no room for; as many as there are.
 pub fn squad_orders_rear_posts(g: &mut crate::game::Game, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> { squad_orders_rear_posts_over(g, &crate::ask::Over::OWN, d, side, k, taken) }
 /// …of the world as the question takes it
 pub fn squad_orders_rear_posts_over(g: &mut crate::game::Game, over: &crate::ask::Over, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> {
@@ -265,7 +264,7 @@ pub fn squad_orders_rear_posts_over(g: &mut crate::game::Game, over: &crate::ask
     out
 }
 
-/// The target give() acts on: a door order is carried out from the side of the door the men it goes to are on.   (orders.ts SquadOrders.forMen)
+/// The target give() acts on: a door order is carried out from the side of the door the men it goes to are on.
 pub fn squad_orders_for_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::orders::OrderTarget {
     if let OrderTarget::Door(td) = t {
         if squad_orders_big(g, &crate::seats::here(g)) && !men.is_empty() {
@@ -276,7 +275,7 @@ pub fn squad_orders_for_men(g: &mut crate::game::Game, t: &crate::orders::OrderT
     t.clone()
 }
 
-/// One face's cost for the men: every man's walk to the floor before it.   (orders.ts SquadOrders.sideFor's cost)
+/// One face's cost for the men: every man's walk to the floor before it.
 fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>, side: f64) -> f64 {
     let (hg, w, th) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let (ux, uz) = (m::cos(th), m::sin(th));
@@ -309,7 +308,7 @@ fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>,
     c
 }
 
-/// Which face of the door the men stack on; Sam's on a near tie, and the known face where one is.   (orders.ts SquadOrders.sideFor)
+/// Which face of the door the men stack on; Sam's on a near tie, and the known face where one is.
 pub fn squad_orders_side_for(g: &mut crate::game::Game, d: DoorId, men: &[GuardId], sam_side: f64) -> f64 {
     let mut dear: JsSet<crate::Num> = JsSet::new();   // this doorway, and every doorway whose leaf is shut
     for i in 0..g.doors.list.len() {
@@ -360,7 +359,7 @@ fn arc_rec(x: &mut ArcDeal<'_>, i: usize, s: f64) {
     }
 }
 
-/// Left holding: which way each man of a group faces, an approach each; a man alone keeps the way he faces (None).   (orders.ts SquadOrders.holdArcs)
+/// Left holding: which way each man of a group faces, an approach each; a man alone keeps the way he faces (None).
 pub fn squad_orders_hold_arcs(g: &mut crate::game::Game, at: &[V3]) -> Vec<Option<crate::orders::SquadOrdersHoldArcsItem>> {
     let n = at.len();
     let mut out: Vec<Option<SquadOrdersHoldArcsItem>> = vec![None; n];
@@ -535,7 +534,7 @@ fn lane_way(g: &mut Game, w: Way<'_>, base: &[V3], pen: Option<Pen<'_>>) -> Opti
 }
 fn route_none() -> SquadOrdersRoute { SquadOrdersRoute { why: None, via: Vec::new(), how: None, lock: None } }
 
-/// How he gets there: `why` he cannot, or `via`, waypoints round a door locked against Sam, a room nobody has been in, a lane, a lit floor.   (orders.ts SquadOrders.route)
+/// How he gets there: `why` he cannot, or `via`, waypoints round a door locked against Sam, a room nobody has been in, a lane, a lit floor.
 pub fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: Option<DoorId>, thru: Option<DoorId>, why_only: Option<bool>) -> crate::orders::SquadOrdersRoute {
     let why_only = why_only.unwrap_or(false);
     let at = g.ch[g.gd[gd].ch].pos;
@@ -553,7 +552,6 @@ pub fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: O
     }
     let own = match shy { Some(s) => through(g, from, &path, s), None => false };
     let round = own && squad_orders_big(g, &crate::seats::here(g));   // (the short way to his mark runs through the very door he is to stack on)
-    // (cleared.ts: the short way runs through a room nobody of the team has been in: `off_m` metres of it)
     let cleared_dear = g.k.orders.cleared_dear;
     let unk = crate::cleared::cleared_rooms_dear_for(g, from, to, cleared_dear, None);
     let off_m = match unk.as_ref() { Some(u) => along(g, from, &path, Pen::Dear(u)), None => 0.0 };
@@ -688,7 +686,7 @@ fn sw_take(g: &mut Game, b: OrdersAssignmentId, w: &[V3]) {
     row.new_leg = true;   // (orders.ts:2346: the corners are a fresh list and the goal one of its points or a copy: a new object, so a new leg; on Assignment.new_leg's list)
 }
 
-/// A pair goes round one way: at the end of a giving, men of one order and door nearly together who would split round a building take one of their two ways.   (orders.ts SquadOrders.sameWays)
+/// A pair goes round one way: at the end of a giving, men of one order and door nearly together who would split round a building take one of their two ways.
 pub fn squad_orders_same_ways(g: &mut crate::game::Game, men: &[GuardId]) {
     let t = g.time;
     let ring = squad_orders_ring(g, &crate::seats::here(g));
@@ -732,7 +730,7 @@ pub fn squad_orders_same_ways(g: &mut crate::game::Game, men: &[GuardId]) {
     }
 }
 
-/// The ordered door: the way to a point inside for a man an entry sends in by `d`, by the door's mouth on the face away from the point; None when the short way is right.   (orders.ts SquadOrders.byDoor)
+/// The ordered door: the way to a point inside for a man an entry sends in by `d`, by the door's mouth on the face away from the point; None when the short way is right.
 pub fn squad_orders_by_door(g: &mut crate::game::Game, from: V3, to: V3, d: DoorId, plain: &[V3]) -> Option<Vec<V3>> {
     let room = crate::cleared::cleared_rooms_room_at(g, to);
     let here = crate::cleared::cleared_rooms_room_at(g, from);
@@ -771,7 +769,7 @@ pub fn squad_orders_by_door(g: &mut crate::game::Game, from: V3, to: V3, d: Door
     Some(via)
 }
 
-/// Fall in: the corners of the way to his place in the file that keeps out of rooms nobody has been in; [] when the short way does, or there is no such way.   (orders.ts SquadOrders.roundRooms)
+/// Fall in: the corners of the way to his place in the file that keeps out of rooms nobody has been in; [] when the short way does, or there is no such way.
 pub fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Vec<V3> {
     let at = g.ch[g.gd[gd].ch].pos;
     let from = free_from(g, &crate::seats::here(g), at);
@@ -787,7 +785,7 @@ pub fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, to: V3) 
     all_but_last(&path)
 }
 
-/// The crumb of the trail that a place `back` metres behind the player lies just past: the index of the older end of its stretch; -1 off the trail's end.   (orders.ts SquadOrders.slotCrumb)
+/// The crumb of the trail that a place `back` metres behind the player lies just past: the index of the older end of its stretch; -1 off the trail's end.
 pub fn squad_orders_slot_crumb(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: f64) -> f64 {
     let sam = g.ch[g.pl[seat.player].ch].pos;
     let t = &seat.orders.trail;
@@ -821,7 +819,7 @@ fn trail_doors_on(g: &Game, w: &[V3]) -> JsSet<DoorId> {
     out
 }
 
-/// A follower goes by the doors Sam took: the trail's corners where his own short way to his place ends through other doors; [] otherwise.   (orders.ts SquadOrders.trailWay)
+/// A follower goes by the doors Sam took: the trail's corners where his own short way to his place ends through other doors; [] otherwise.
 pub fn squad_orders_trail_way(g: &mut crate::game::Game, gd: GuardId, slot: V3, on_trail: V3, j: f64) -> Vec<V3> {
     let t = g.orders.trail.clone();
     if t.len() < 4 { return Vec::new(); }
@@ -866,19 +864,19 @@ pub fn squad_orders_trail_way(g: &mut crate::game::Game, gd: GuardId, slot: V3, 
     mid
 }
 
-/// The word he says why he cannot get there, or None.   (orders.ts SquadOrders.reach)
+/// The word he says why he cannot get there, or None.
 pub fn squad_orders_reach(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<String> {
     squad_orders_asked(g, gd, to).why
 }
 
-/// The door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by. Sam's squad only.   (orders.ts SquadOrders.walkTry)
+/// The door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by. Sam's squad only.
 pub fn squad_orders_walk_try(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::orders::SquadOrdersWalkTry> {
     if g.orders.cast.is_some() { return None; }
     let l = squad_orders_asked(g, gd, to).lock?;
     if crate::doortools::door_tools_untried(g, l.door, l.side) { Some(SquadOrdersWalkTry { door: l.door, side: l.side }) } else { None }
 }
 
-/// The men of a 'move' whose way runs at such a door, each dealt a stack mark on the face he comes to it by; Text: that door has no room for them.   (orders.ts SquadOrders.walkStacks)
+/// The men of a 'move' whose way runs at such a door, each dealt a stack mark on the face he comes to it by; Text: that door has no room for them.
 pub fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: V3) -> Option<crate::orders::SquadOrdersWalkStacks> {
     if g.orders.cast.is_some() { return None; }
     let mut out: Option<JsMap<GuardId, SquadOrdersWalkStacksMapValue>> = None;
@@ -926,7 +924,7 @@ type Tries = crate::doortools::DoorToolsDoneItemLaneBackTries;
 fn on_to_assign(s: &TriesOn) -> SquadOrdersAssignA { order_as!(SquadOrdersAssignA, s, |t: Option<Box<Tries>>| t.map(|b| *b)) }
 fn assign_to_on(s: &SquadOrdersAssignA) -> TriesOn { order_as!(TriesOn, s, |t: Option<Tries>| t.map(Box::new)) }
 
-/// A man of them sent: to his stack mark on that door, in the stack's carriage, still on his 'move'.   (orders.ts SquadOrders.walkSend)
+/// A man of them sent: to his stack mark on that door, in the stack's carriage, still on his 'move'.
 pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersAssignA) {
     let fc = g.dr[t.door].frame_centre;
     let a = SquadOrdersAssignA {
@@ -960,7 +958,7 @@ fn walk_stop(g: &mut Game, mm: GuardId) {
     squad_orders_assign(g, mm, &a);
 }
 
-/// The door they came to turned out free, or stands open: the walk is asked again for each of them, as the order would be asked fresh.   (orders.ts SquadOrders.walkOn)
+/// The door they came to turned out free, or stands open: the walk is asked again for each of them, as the order would be asked fresh.
 pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
     let all: Vec<GuardId> = men.iter().copied().filter(|&mm| tries_of(g, &crate::seats::here(g), mm).is_some()).collect();
     if all.is_empty() { return; }

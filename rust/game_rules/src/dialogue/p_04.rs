@@ -1,4 +1,3 @@
-//! src/game/dialogue.ts lines 1218 to 1392
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,23 +6,23 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).   (dialogue.ts forceScript)
+/// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).
 pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {
     g.m.dialogue.script_by_talk.delete(talk);
     g.m.dialogue.forced_by_talk.set(talk, id_2.map(String::from));
 }
 
-/// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
+/// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.
 pub fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
     g.m.dialogue.forced_by_talk.get(talk).cloned()
 }
 
-/// The script of this id.   (dialogue.ts scriptById)
+/// The script of this id.
 pub fn script_by_id(id_2: &str) -> Option<crate::dialogue::Script> {
     scripts().into_iter().find(|sc| sc.id == id_2)
 }
 
-/// The script for this man: the one already dealt, else, at his first exchange only, dealt now: unplayed first, then a stable hash of his callsign.   (dialogue.ts scriptFor)
+/// The script for this man: the one already dealt, else, at his first exchange only, dealt now: unplayed first, then a stable hash of his callsign.
 pub fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId) -> Option<crate::dialogue::Script> {
     if let Some(dealt) = g.m.dialogue.script_by_talk.get(talk) { return dealt.clone(); }
     let mut sc: Option<Script> = None;
@@ -62,13 +61,13 @@ pub fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialogue
     sc
 }
 
-/// `Number(played(key))`: 1 if this session has played it and the rotation is on.   (dialogue.ts scriptFor, played)
+/// `Number(played(key))`: 1 if this session has played it and the rotation is on.
 fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
     let played = SCRIPT_ROTATE && ctx.recent.as_ref().is_some_and(|r| r.has(String::from(key)));
     if played { 1.0 } else { 0.0 }
 }
 
-/// Does this script fit the man and the moment, and does every line it would say to him resolve now.   (dialogue.ts scriptFits)
+/// Does this script fit the man and the moment, and does every line it would say to him resolve now.
 pub fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     if sc.t != ctx.t || !sc.k.contains(&ctx.k) { return false; }
     if let Some(band) = &sc.band { if !band.contains(&ctx.band) { return false; } }
@@ -88,12 +87,12 @@ pub fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx:
     true
 }
 
-/// Still his script this press: his knowledge of Sam has not climbed past what it was written for.   (dialogue.ts scriptLive)
+/// Still his script this press: his knowledge of Sam has not climbed past what it was written for.
 pub fn script_live(sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx) -> bool {
     sc.k.contains(&ctx.k)
 }
 
-/// The beat for stage `s`: a `room` beat swapped for the room's own menace where the table has the room.   (dialogue.ts beatFor)
+/// The beat for stage `s`: a `room` beat swapped for the room's own menace where the table has the room.
 pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx) -> crate::dialogue::Beat {
     let b = script_beat(sc, s).clone();
     if b.room != Some(true) { return b; }
@@ -107,14 +106,14 @@ pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx:
     Beat { sam: r.sam.clone(), sam_now: None, him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
 }
 
-/// The man's line off a beat for this man; `None` if it does not resolve.   (dialogue.ts himOf)
+/// The man's line off a beat for this man; `None` if it does not resolve.
 pub fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
     let (raw, k) = him_raw(b, ctx)?;
     let text = expand(&raw, &ctx_tokens_map(&ctx.tokens))?;
     if text.is_empty() { None } else { Some(HimOf { text }) }
 }
 
-/// Which of the beat's lines is this man's: by his knowledge, else his temperament, else '*'; `mild` where STOIC_BITE is 0.   (dialogue.ts himOf)
+/// Which of the beat's lines is this man's: by his knowledge, else his temperament, else '*'; `mild` where STOIC_BITE is 0.
 fn him_raw(b: &Beat, ctx: &DialogueCtx) -> Option<(String, HimOfK)> {
     if STOIC_BITE == 0.0 {
         if let Some(mild) = b.mild.as_ref().filter(|x| !x.is_empty()) { return Some((mild.clone(), HimOfK::Empty)); }
@@ -139,7 +138,7 @@ fn him_k(k: Knowledge) -> HimOfK {
     }
 }
 
-/// `ctx.facts[n]`, a row of the record by its word.   (dialogue.ts:1309)
+/// `ctx.facts[n]`, a row of the record by its word.
 fn fact(ctx: &DialogueCtx, n: Need) -> bool {
     let f = &ctx.facts;
     let row = match n {
@@ -168,7 +167,7 @@ fn fact(ctx: &DialogueCtx, n: Need) -> bool {
     row == Some(true)
 }
 
-/// `sc.beats[s]`. A stage past the table throws in the TypeScript (`b.room` of undefined), and panics here.   (dialogue.ts:1318)
+/// `sc.beats[s]`. A stage past the table throws in the TypeScript (`b.room` of undefined), and panics here.
 fn script_beat(sc: &Script, s: StageKey) -> &Beat {
     match s {
         StageKey::X => &sc.beats.x,

@@ -1,4 +1,3 @@
-//! src/game/enemysquads.ts lines 1536 to 1572
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

@@ -20,7 +20,7 @@ pub static TUTORIAL: Tutorial = Tutorial {
     finish: None,
 };
 
-// the level's marks (tools/levels/tut-road.ts)
+// the level's marks
 const POST_X0: f64 = 11.0;
 const GATEWAY_A: f64 = 13.65;
 const HUT_X0: f64 = 17.0;

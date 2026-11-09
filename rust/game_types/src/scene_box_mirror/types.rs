@@ -172,13 +172,9 @@ pub struct SceneBoxMirrorModTHINGS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneBoxMirrorMod {
-    /// (src/scene/boxMirror.ts:55 CLOCK)
     pub clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK,
-    /// (src/scene/boxMirror.ts:57 COPIES)
     pub copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES,
-    /// (src/scene/boxMirror.ts:59 LEAVES)
     pub leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES,
-    /// (src/scene/boxMirror.ts:65 THINGS)
     pub things: crate::scene_box_mirror::SceneBoxMirrorModTHINGS,
 }
 impl SceneBoxMirrorMod {
@@ -192,114 +188,77 @@ impl SceneBoxMirrorMod {
     }
 }
 
-/// (src/scene/boxMirror.ts:38 REC)
 pub const REC: f64 = 16.0;
 
-/// (src/scene/boxMirror.ts:38 R_COS)
 pub const R_COS: f64 = 6.0;
 
-/// (src/scene/boxMirror.ts:38 R_SIN)
 pub const R_SIN: f64 = 7.0;
 
-/// (src/scene/boxMirror.ts:38 R_YAW)
 pub const R_YAW: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:38 R_ROT)
 pub const R_ROT: f64 = 9.0;
 
-/// (src/scene/boxMirror.ts:38 R_CUT)
 pub const R_CUT: f64 = 13.0;
 
-/// (src/scene/boxMirror.ts:38 R_CUTN)
 pub const R_CUTN: f64 = 14.0;
 
-/// (src/scene/boxMirror.ts:38 R_KIND)
 pub const R_KIND: f64 = 15.0;
 
-/// (src/scene/boxMirror.ts:38 K_ROT)
 pub const K_ROT: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:38 K_ROUND)
 pub const K_ROUND: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:38 K_CUT)
 pub const K_CUT: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:38 K_WALK)
 pub const K_WALK: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:38 F_GLASS)
 pub const F_GLASS: f64 = 131072.0;
 
-/// (src/scene/boxMirror.ts:39 T_REC)
 pub const T_REC: f64 = 0.0;
 
-/// (src/scene/boxMirror.ts:39 T_LEAF)
 pub const T_LEAF: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:39 T_CUT)
 pub const T_CUT: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:39 T_PANE_T)
 pub const T_PANE_T: f64 = 3.0;
 
-/// (src/scene/boxMirror.ts:39 T_START)
 pub const T_START: f64 = 6.0;
 
-/// (src/scene/boxMirror.ts:39 T_ITEMS)
 pub const T_ITEMS: f64 = 7.0;
 
-/// (src/scene/boxMirror.ts:39 T_TILTED)
 pub const T_TILTED: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:39 T_LIST)
 pub const T_LIST: f64 = 13.0;
 
-/// (src/scene/boxMirror.ts:39 T_THING)
 pub const T_THING: f64 = 14.0;
 
-/// (src/scene/boxMirror.ts:40 T_GLASS)
 pub const T_GLASS: f64 = 16.0;
 
-/// (src/scene/boxMirror.ts:40 T_VIEW)
 pub const T_VIEW: f64 = 19.0;
 
-/// (src/scene/boxMirror.ts:45 THING_SET)
 pub const THING_SET: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:45 TH)
 pub const TH: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:45 TL)
 pub const TL: f64 = 3.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_BOXES)
 pub const OWE_BOXES: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_GLASS)
 pub const OWE_GLASS: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_VIEW)
 pub const OWE_VIEW: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:50 PANE_CAP)
 pub const PANE_CAP: f64 = 256.0;
 
-/// (src/scene/boxMirror.ts:51 PLANE)
 pub const PLANE: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:51 CUT_ROW)
 pub const CUT_ROW: f64 = 32.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_NONE)
 pub const VIEW_NONE: f64 = 0.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_BLOWN)
 pub const VIEW_BLOWN: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_GIVES)
 pub const VIEW_GIVES: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:101 MIRRORED: a table nothing writes)
 pub fn mirrored() -> f64 { 4294901770.0 }
 

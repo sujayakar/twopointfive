@@ -47,9 +47,7 @@ pub enum LightEventCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct LightingMod {
-    /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,
-    /// (src/game/lighting.ts:178 dayStates)
     pub day_states: Option<crate::lighting::DayState>,
 }
 impl LightingMod {
@@ -69,5 +67,4 @@ pub struct LightingStats {
     pub max_back: f64,
 }
 
-/// (src/game/lighting.ts:34 LENS_SLANT)
 pub const LENS_SLANT: f64 = 0.3;

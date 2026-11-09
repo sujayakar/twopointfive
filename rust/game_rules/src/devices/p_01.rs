@@ -1,4 +1,3 @@
-//! src/game/devices.ts lines 1 to 439
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -29,22 +28,22 @@ fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map
 fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
-/// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
+/// A camera of the level: its machine is rust/sim's row `slot`.
 pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
     g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
 }
-/// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
+/// A tripwire of the level: its machine is rust/sim's row `slot`.
 pub fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
     g.tab.devices_laser_rt.push(LaserRt { def: def.clone(), target, dir, len, slot, st })
 }
-/// Append a report to the capped log with its sequence number.   (devices.ts Devices.note)
+/// Append a report to the capped log with its sequence number.
 pub fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR) {
     g.devices.seq += 1.0;
     let row = DeviceLogRow {  };
     g.devices.log.push(row);
     if g.devices.log.len() > 48 { let over = g.devices.log.len() - 48; g.devices.log.drain(0..over); }
 }
-/// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.   (devices.ts Devices.constructor)
+/// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.
 pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     let mut this = Devices::blank();
     let defs = g.level.devices.clone().unwrap_or_default();
@@ -98,15 +97,15 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     }
     this
 }
-/// The keypad on this door, if it is a keypad door.   (devices.ts Devices.padOf)
+/// The keypad on this door, if it is a keypad door.
 pub fn devices_pad_of(g: &crate::game::Game, d: DoorId) -> Option<crate::devices::KeypadRt> {
     g.devices.pad_by_door.get(d).cloned()
 }
-/// `speaker` has just said the code of `lock_id` aloud.   (devices.ts Devices.overhearSaid)
+/// `speaker` has just said the code of `lock_id` aloud.
 pub fn devices_overhear_said(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
     overhear(g, speaker, lock_id)
 }
-/// The keypad whose door stands nearest a floor point.   (devices.ts Devices.padNear)
+/// The keypad whose door stands nearest a floor point.
 pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::KeypadRt> {
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
@@ -116,7 +115,7 @@ pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).   (devices.ts Devices.reset)
+/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).
 pub fn devices_reset(g: &mut crate::game::Game) {
     for c in g.devices.cameras.clone() {
         let yaw = g.tab.devices_camera_rt[c].def.yaw;
@@ -127,15 +126,15 @@ pub fn devices_reset(g: &mut crate::game::Game) {
     g.devices.radio_count = 0.0;
 }
 
-/// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
+/// Powered, unbroken, not knocked out: the device works this frame.
 pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
-/// Live play: devices sense.   (devices.ts sensing)
+/// Live play: devices sense.
 pub fn sensing(g: &crate::game::Game) -> bool {
     g.ai_enabled && !g.quiet_utility && !g.touring && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
-/// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
+/// Lit-seconds per second a camera's integrator fills at.
 pub fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
     let pl = seat.player;
     let light = g.pl[pl].visibility;
@@ -143,19 +142,19 @@ pub fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64,
     let crouch = if g.pl[pl].crouch { 0.75 } else { 1.0 };
     m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, seat, crate::kitload::LoadSeenWho::Player)
 }
-/// The lens's look direction at yaw / pitch.   (devices.ts lensDir)
+/// The lens's look direction at yaw / pitch.
 pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
     let cp = m::cos(pitch);
     [m::sin(yaw) * cp, m::sin(pitch), m::cos(yaw) * cp]
 }
-/// Pan the cameras, run their pictures, run the beams, key the code being entered.   (devices.ts updateDevices)
+/// Pan the cameras, run their pictures, run the beams, key the code being entered.
 pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
     for c in g.devices.cameras.clone() { update_camera(g, c, dt, live); }
     for l in g.devices.lasers.clone() { let on = live && g.tune.lasers; update_laser(g, l, dt, on); }
     crate::seats::each_seat(g, &mut |v: &mut Game| update_coding(v, dt));
 }
-/// One camera's frame: the pan, the feed dropping, the picture, what it does about it.   (devices.ts updateCamera)
+/// One camera's frame: the pan, the feed dropping, the picture, what it does about it.
 pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: bool) {
     let c = c_2;
     let d = g.tab.devices_camera_rt[c].def.clone();
@@ -188,7 +187,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     if has(r, bit.suspect) { camera_suspect(g, c); }
     if has(r, bit.alarm) { camera_alarm(g, c); }
 }
-/// The picture has movement: a man sent, the radio, the debrief.   (devices.ts cameraSuspect)
+/// The picture has movement: a man sent, the radio, the debrief.
 pub fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
@@ -203,7 +202,7 @@ pub fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     chron_device(g, ChronDeviceKind::CameraSpotted, &row, Some(seen));
     devices_note(g, &DevicesNoteR {  });
 }
-/// The picture has him: the floor's fix, everybody sharp, the floor up a step.   (devices.ts cameraAlarm)
+/// The picture has him: the floor's fix, everybody sharp, the floor up a step.
 pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
@@ -238,7 +237,7 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     devices_note(g, &DevicesNoteR {  });
 }
 
-/// One beam's frame: where it ends, what breaks it, the trip.   (devices.ts updateLaser)
+/// One beam's frame: where it ends, what breaks it, the trip.
 pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let (slot, dir, len) = (g.tab.devices_laser_rt[l].slot, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
@@ -308,7 +307,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
         laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
-/// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
+/// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.
 pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
     let h = match g.ch[c_2].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => return None };
     let along = v3::clamp(((h[0] - a[0]) * (b[0] - a[0]) + (h[2] - a[2]) * (b[2] - a[2])) / m::max(1e-6, m::pow(v3::dist_xz(a, b), 2.0)), 0.0, 1.0);
@@ -320,7 +319,7 @@ pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V
     }
     None
 }
-/// A beam broken: the chirp, the radio, a man sent, by the beam's level.   (devices.ts laserTrip)
+/// A beam broken: the chirp, the radio, a man sent, by the beam's level.
 pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<PlayerId>, at: V3) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
@@ -347,7 +346,7 @@ pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option
     chron_device(g, ChronDeviceKind::LaserTripped, &row, Some(at));
     devices_note(g, &DevicesNoteR {  });
 }
-/// A camera or an emitter shot dead: control loses the feed and sends the nearest calm man to look at it.   (devices.ts deviceDown)
+/// A camera or an emitter shot dead: control loses the feed and sends the nearest calm man to look at it.
 pub fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3) {
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
@@ -362,7 +361,7 @@ pub fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3)
     let where_ = crate::chronicle::room_of(g, floor);
     devices_note(g, &DevicesNoteR {  });
 }
-/// The nearest calm, free staff man is sent to `pos` on control's word: a task that survives the suspicion decay.   (devices.ts sendToLook)
+/// The nearest calm, free staff man is sent to `pos` on control's word: a task that survives the suspicion decay.
 pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<GuardId> {
     let goal = match crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2]) { Some(p) => p, None => v3::copy(pos) };
     let mut best: Option<GuardId> = None;
@@ -392,7 +391,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
     Some(id)
 }
-/// Control's voice on the net.   (devices.ts control)
+/// Control's voice on the net.
 pub fn control(g: &mut crate::game::Game, text: &str) {
     crate::game::game_msg(g, &format!("radio: CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
@@ -402,7 +401,7 @@ pub fn control(g: &mut crate::game::Game, text: &str) {
     row.set(String::from("text"), Some(crate::chronicle::ChronicleDataValue::Text(String::from(text))));
     crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Radio, Some(&row), None);
 }
-/// The debrief's rows, through the mission's own live gate.   (devices.ts chronDevice)
+/// The debrief's rows, through the mission's own live gate.
 pub fn chron_device(g: &mut crate::game::Game, kind: crate::devices::ChronDeviceKind, data: &JsMap<String, Option<crate::devices::ChronDeviceDataValue>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     use crate::chronicle::{ChronKind, ChronicleDataValue as V, ChronicleNDataValue as N};
     let k = match kind {
@@ -429,7 +428,7 @@ pub fn chron_device(g: &mut crate::game::Game, kind: crate::devices::ChronDevice
 }
 
 // ---------------------------------------------------------------- keypads
-/// The player learns the code of lock `lock_id`; whether it was news.   (devices.ts learnCode)
+/// The player learns the code of lock `lock_id`; whether it was news.
 pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices::LearnCodeHow, from: Option<GuardId>) -> bool {
     let pl = g.player;
     if g.pl[pl].codes.has(String::from(lock_id)) { return false; }
@@ -451,7 +450,7 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     devices_note(g, &DevicesNoteR {  });
     true
 }
-/// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.   (devices.ts overhear)
+/// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.
 pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
     let mut any = false;
     crate::seats::each_seat(g, &mut |g| { if overhear_here(g, speaker, lock_id, any) { any = true; } });
@@ -469,7 +468,7 @@ fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, tol
     if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
     learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
 }
-/// The digits as said ('7-3-9-1').   (devices.ts spell)
+/// The digits as said ('7-3-9-1').
 pub fn spell(code: &str) -> String {
     let mut out = String::new();
     for (i, ch) in code.chars().enumerate() {
@@ -478,12 +477,12 @@ pub fn spell(code: &str) -> String {
     }
     out
 }
-/// What a pad's door is called on the HUD.   (devices.ts padDoorName)
+/// What a pad's door is called on the HUD.
 pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> String {
     let name = &g.dr[k.door].def.name;
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
-/// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
+/// Is `d` a keypad door locked against the player where he stands, and does he know its code.
 pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
@@ -491,7 +490,7 @@ pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId,
     let known = g.pl[pl].codes.has(g.dr[d].lock_id.clone());
     Some(PadState { pad, known })
 }
-/// The 'code' row: start keying it in. HANDWORK settled on: every key beeps under his finger (pad_hands), no first beep here.   (devices.ts startCoding)
+/// The 'code' row: start keying it in. HANDWORK settled on: every key beeps under his finger (pad_hands), no first beep here.
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
@@ -507,7 +506,7 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     p.hand_wait = 0.0;
     true
 }
-/// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.   (devices.ts denyPad)
+/// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.
 pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let k = match devices_pad_of(g, d) { Some(k) => k, None => return };
     crate::audio_iface::game_audio_like_play(g, "deny", Some(k.def.pos), Some(0.45), None);
@@ -522,14 +521,14 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let where_ = crate::chronicle::room_of(g, here);
     devices_note(g, &DevicesNoteR {  });
 }
-/// Break off keying.   (devices.ts stopCoding)
+/// Break off keying.
 pub fn stop_coding(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].coding.is_none() { return; }
     g.pl[pl].coding = None;
     g.pl[pl].code_t = 0.0;
 }
-/// Once a frame: the code going in, the door on the last key; broken off if he leaves or the door stops being against him.   (devices.ts updateCoding)
+/// Once a frame: the code going in, the door on the last key; broken off if he leaves or the door stops being against him.
 pub fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let d = match g.pl[pl].coding { Some(d) => d, None => return };
@@ -567,14 +566,14 @@ pub fn update_coding(g: &mut crate::game::Game, dt: f64) {
 }
 
 // ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)
-/// The devices' boxes into the frame's list, keyed by ordinal.   (devices.ts deviceBoxes)
+/// The devices' boxes into the frame's list, keyed by ordinal.
 pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
     device_boxes_raw(g, out);
     let base = crate::scene_boxes::mkey().device;
     for k in n0..out.len() { seam_set_mkey(g, out[k], base + (k - n0) as f64); }
 }
-/// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.   (devices.ts deviceBoxesRaw)
+/// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.
 pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
@@ -628,7 +627,7 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
 // ---------------------------------------------------------------- geometry
-/// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
+/// Closest points between segments p and b: the distance and the point on b.
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {
     let (d1, d2, r) = (v3::sub(p1, p0), v3::sub(b1, b0), v3::sub(p0, b0));
     let (a, e, f) = (v3::dot(d1, d1), v3::dot(d2, d2), v3::dot(d2, r));

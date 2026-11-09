@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RailsK {
-    /// the cursor this near (px) the step's mark on the screen is ON the mark's place, whatever stands between the eye and it (orders.ts targetUnder)
+    /// the cursor this near (px) the step's mark on the screen is ON the mark's place, whatever stands between the eye and it
     #[k(40.0)] pub snap_px: f64,
     /// a step's `onWay`: a man of the squad under an order whose mark is within this many metres of the step's own is on his way to it (0: never)
     #[k(6.0)] pub way_m: f64,

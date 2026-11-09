@@ -1,4 +1,4 @@
-//! A LEAF OFF ITS HINGES, IN THE AIR (src/game/doorblast.ts stepSlab) — the loose slab a blast or a boot at a run sent out of its frame, for one tick: it
+//! A LEAF OFF ITS HINGES, IN THE AIR — the loose slab a blast or a boot at a run sent out of its frame, for one tick: it
 //! flies, drags its foot, topples about it, is stopped dead by the walls its rays find, is pushed out of what its toppling reaches, slams flat, slides
 //! out and comes to rest clear of every static.
 //!
@@ -38,7 +38,7 @@ pub const F_LANDED: u32 = 2;
 pub const F_BACK: u32 = 4;
 pub const F_BITS: u32 = 8;
 
-/// The slabs' part of a game's block (src/sim/slabshome.ts SlabStore lays its own array out the same, byte for byte).
+/// The slabs' part of a game's block.
 #[repr(C)]
 pub struct Slabs {
     /// slabs in all, and how many of them are in the air (rows 0 .. fly)
@@ -73,7 +73,7 @@ pub struct Slabs {
 }
 const _: () = assert!(size_of::<Slabs>() == 16 + 17 * CAP * 8 + 4 * CAP * 4);
 const _: () = assert!(offset_of!(Slabs, px) % 16 == 0 && offset_of!(Slabs, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/slabshome.ts SLAB_F64 and SLAB_U32 name them the same)
+/// the columns in their order
 pub const COLS: [usize; 21] = [
     offset_of!(Slabs, px),
     offset_of!(Slabs, py),
@@ -159,12 +159,12 @@ pub fn cap(table: u32) -> usize {
     }
 }
 
-// ---- doorblast.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
+// ---- doorblast.ts's own numbers
 const HALF_PI: f64 = core::f64::consts::PI / 2.0;
 const PI: f64 = core::f64::consts::PI;
 const LIFT: f64 = 0.005;
 const G: f64 = 9.8;
-/// statics one gather of the TypeScript's can list (doorblast.ts OV)
+/// statics one gather of the TypeScript's can list
 const OV: usize = 512;
 
 /// a slab as the step works on it (the columns the step may write, copied in and, if the step is this module's to take, out)
