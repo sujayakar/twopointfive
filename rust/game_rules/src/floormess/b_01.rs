@@ -18,7 +18,7 @@ const UP: V3 = [0.0, 1.0, 0.0];
 const DOWN: V3 = [0.0, -1.0, 0.0];
 /// statics a fit or a film asks about at most
 const NEAR: usize = 192;
-fn on(g: &Game) -> bool { g.decals.enabled && g.destr.show_chaos.is_none() && crate::destruction::chaos_of(g) > 0.0 }
+fn on(g: &Game) -> bool { g.destr.show_chaos.is_none() && crate::destruction::chaos_of(g) > 0.0 }
 /// 0‥1 off a place and a number: the same mark in the same place every run
 fn h(x: f64, z: f64, k: f64) -> f64 {
     crate::debris::hash01((m::imul(js::to_i32(m::round(x * 64.0)), 73856093) ^ m::imul(js::to_i32(m::round(z * 64.0)), 19349663) ^ m::imul(js::to_i32(k + 1.0), js::to_i32(2654435761.0))) as f64)

@@ -70,7 +70,6 @@ fn count(g: &Game) -> f64 { mark_set(g).map_or(0.0, |s| s.list.len() as f64) }
 
 /// The stun charge went off at `at`: the big scorch on whatever it lay on (a chair's seat: that one rides the chair), and weaker splashes up what stands within a metre.
 pub fn lay_bang(g: &mut Game, at: V3) {
-    if !g.decals.enabled { return; }
     let from = [at[0], at[1] + 0.25, at[2]];
     let down = [0.0, -1.0, 0.0];
     // what it lay on: the nearer of a static or leaf under it and a prop's part under it
@@ -122,7 +121,6 @@ pub fn lay_bang(g: &mut Game, at: V3) {
 
 /// A boot through the lock of a leaf from `from`'s side: a rubber scuff by the lock at kicking height on that face, riding the leaf as it flies.
 pub fn lay_kick(g: &mut Game, d: DoorId, from: V3) {
-    if !g.decals.enabled { return; }
     let side = crate::doors::doors_side(g, d, from);
     let u = crate::doors::door_dir(g, d);
     let (w, hinge, thick, leaf) = (g.dr[d].def.width, g.dr[d].def.hinge, g.dr[d].thick, g.dr[d].box_);

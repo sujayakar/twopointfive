@@ -114,8 +114,7 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
     }
     let fumble = g.level.breaker.fumble.unwrap_or(2.2);
     let hand_t = crate::sim_lightshome::mains_fix_t(g) + dt;
-    let es = g.engine.settings.emissive_scale;
-    let ev = ::sim::lights::step(g.sim, time, dt, near.is_some(), fumble, es);
+    let ev = ::sim::lights::step(g.sim, time, dt, near.is_some(), fumble);
     if ev & ::sim::lights::EV_RAN_OUT != 0 {
         mains_back(g);
     }

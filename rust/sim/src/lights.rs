@@ -424,8 +424,8 @@ pub fn flip(g: usize, on: bool, time: f64, strike: bool, n: usize) {
 }
 
 /// ONE TICK OF THE LIGHTS (lighting.ts updateTargets): the mains' own clock and the timer at the panel, the beacons, each fixture's factor and each lamp as it
-/// burns. `near`: one of theirs is at the panel (who is the caller's). `es`: the renderer setting an area light's strength is scaled by, an input.
-pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u32 {
+/// burns. `near`: one of theirs is at the panel (who is the caller's).
+pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64) -> u32 {
     let l = &mut state(g).lights;
     let mut ev = 0;
     if active(l) && !permanent(l) && time >= l.until {
@@ -491,7 +491,7 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
             tube(l, r, time);
         } else if role == R_AREA {
             let f = l.factor[l.row_target[r] as usize];
-            let i = l.row_base[r] * f * es;
+            let i = l.row_base[r] * f;
             burn(l, r, f > 0.001, i);
             tube(l, r, time);
         }
