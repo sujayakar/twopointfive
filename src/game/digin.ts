@@ -147,7 +147,7 @@ export const DIGIN_DEFAULTS = JSON.parse(JSON.stringify(DIGIN)) as typeof DIGIN;
  *  page puts it on (host/profile.ts; ?nohaulhome = the haul as it was). tools/qa/haulhome-check.ts */
 export const HAULHOME = { on: false };
 export const DIGIN_STATS = {
-  heard: 0, far: 0, dug: 0, moved: 0, stayed: 0, hauls: 0, /** braceInRoom: props pushed from beside (the spot behind was not his room's) · props passed over for it */ braceBeside: 0, bracePassed: 0, braced: 0, kicked: 0, pulledTo: 0, radio: 0, shouts: 0, scrapes: 0, callouts: 0, noRally: 0, aborted: 0, caught: 0, steady: 0, tried: 0, deep: 0, bangCalls: 0, gathered: 0, gatherLost: 0,
+  heard: 0, far: 0, dug: 0, moved: 0, stayed: 0, hauls: 0, /** braceInRoom: props pushed from beside (the spot behind was not his room's) · props passed over for it */ braceBeside: 0, bracePassed: 0, braced: 0, kicked: 0, pulledTo: 0, radio: 0, shouts: 0, scrapes: 0, callouts: 0, aborted: 0, caught: 0, steady: 0, tried: 0, deep: 0, bangCalls: 0, gathered: 0, gatherLost: 0,
   /** men of a press / last men who fell back INTO a dug-in room (pressure.ts's fall-back seam) */
   refuge: 0,
   /** DIGIN.lanes: set men who left a spot in a covered lane for another of their room · who found none and stayed */

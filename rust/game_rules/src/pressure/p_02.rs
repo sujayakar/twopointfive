@@ -427,14 +427,10 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = gd_of(g, d);
     let again = g.k.pressure.again_secs;
     let hold = crate::roomfight::DefMode::Hold;
-    // (rallyAt Infinity = somebody pinned him to his room: not ours either)
-    let ok0 = df(g, d).mode == hold && !state_of(g).of.has(d) && df(g, d).noise_out && g.gd[gd].held.is_none() && df(g, d).rally_at != m::INF
-        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
+    let ok0 = df(g, d).mode == hold && !state_of(g).of.has(d) && df(g, d).noise_out && crate::owner::kept(g, gd, crate::owner::by::PRESS).is_none()
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
-        && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
-        && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
+        && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) };
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
     let ok = ok0 && !lone;
@@ -503,7 +499,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let mut others: Vec<RoomfightDefId> = Vec::new();
     if by_way {
         for &x in &defs {
-            if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode != crate::roomfight::DefMode::Free && !state_of(g).of.has(x) && g.gd[gd_of(g, x)].held.is_none() && df(g, x).rally_at != m::INF { others.push(x); }
+            if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode != crate::roomfight::DefMode::Free && !state_of(g).of.has(x) && crate::owner::kept(g, gd_of(g, x), crate::owner::by::PRESS).is_none() { others.push(x); }
         }
     }
     let far_room = by_way && my_room.is_some() && !next_door(g, my_room, tt);

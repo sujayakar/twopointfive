@@ -390,6 +390,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                 crate::control::set_pinned(g, h, false, "rescue");
                 if let Some(f) = f {
                     let now = g.time;
+                    crate::owner::release(g, h, crate::owner::by::MISSION, now);
                     let fd = &mut g.tab.roomfight_def[f];
                     fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
                 }
@@ -412,8 +413,8 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             if let Some(f) = f {
                 if d.in_room {
                     let now = g.time;
-                    let fd = &mut g.tab.roomfight_def[f];
-                    fd.rally_at = f64::INFINITY; fd.lost_at = now + 1.0;
+                    crate::owner::claim(g, h, crate::owner::by::MISSION, now, None);
+                    g.tab.roomfight_def[f].lost_at = now + 1.0;
                 }
                 if !d.set && crate::control::man::blind(g, h) {
                     g.tab.roomfight_def[f].burst.n = crate::nightbreach::blind().rounds;
@@ -573,13 +574,13 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         if let Some(spot) = d.spot {
             if flat(pos_of(g, h), spot) > 1.2 {
                 g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
-                g.tab.roomfight_def[f].rally_at = f64::NAN;
+                { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
                 rescue_note(g, &format!("crew:short:{}", name));
                 return false;
             }
         }
     }
-    g.tab.roomfight_def[f].rally_at = f64::INFINITY;
+    { let now = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, now, None); }
     // N !== D.noise0 asks which noise, not where: by its serial (rescue.ts:675)
     let at_door = match g.rescue.noise {
         Some(n) => g.rescue.noise_serial != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
@@ -591,6 +592,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         crate::control::set_hold(g, h, false, "rescue");
         crate::control::set_pinned(g, h, false, "rescue");
         let now = g.time;
+        crate::owner::release(g, h, crate::owner::by::MISSION, now);
         let fd = &mut g.tab.roomfight_def[f];
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
