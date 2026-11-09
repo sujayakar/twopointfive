@@ -335,7 +335,7 @@ pub fn nvg_sight(g: &mut crate::game::Game, viewer: GuardId, o: GuardId) -> f64 
     if !nvg_down(g, viewer) {
         return 0.0;
     }
-    let on_him = g.gd[o].irradiance;
+    let on_him = g.shown[g.gd[o].ch].irradiance;
     let e = on_him + crate::irlight::ir_on_man(g, o);
     tube_vis(g, e)
 }

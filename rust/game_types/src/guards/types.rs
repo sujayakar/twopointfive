@@ -3,6 +3,13 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// THE LIGHT ON A MAN: what stands on him, and how visible that makes him, eased
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Shown {
+    pub visibility: f64,
+    pub irradiance: f64,
+}
+
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to
 #[derive(Clone, Debug, ToBytes)]
 pub enum LitSeenTgt {

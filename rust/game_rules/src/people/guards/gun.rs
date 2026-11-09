@@ -210,14 +210,14 @@ pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
-/// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility.
-pub(super) fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    let c = g.gd[gd].ch;
+/// The light meter of a man, whoever he is: what stands on him, and how visible it makes him, eased.
+pub fn light_meter(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let [stands, e] = light_on(g, c);
-    g.gd[gd].irradiance = stands;
-    let was = g.gd[gd].visibility;
+    if !e.is_finite() { return; }
     let to = crate::game::game_visibility_of(g, e);
-    g.gd[gd].visibility = v3::damp(was, to, 6.0, dt);
+    let s = &mut g.shown[c];
+    s.irradiance = stands;
+    s.visibility = if s.visibility.is_finite() { v3::damp(s.visibility, to, 6.0, dt) } else { to };
 }
 
 // ------------------------------------------------------------ a unit's foe
