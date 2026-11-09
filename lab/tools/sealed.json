@@ -18,9 +18,22 @@
 0.8,
 -4
 ],
-"lamps": "off",
+"lamps": "auto",
 "doors": 0,
-"maps": true
+"maps": true,
+"mains": false,
+"groups": {
+"atrium": 0,
+"orange": 0,
+"green": 0,
+"blue": 0,
+"gallery": 0,
+"studio": 0,
+"lounge": 0,
+"landing": 0,
+"terrace": 0,
+"pool": 0
+}
 },
 {
 "w": 640,
@@ -31,17 +44,31 @@
 "denlin",
 "onelin"
 ],
-"paths": 300,
-"name": "open",
+"paths": 700,
+"name": "lit by day beside it",
 "dist": 9,
 "hour": 15.0,
 "cut": 2.55,
 "look": [
 -8,
 0.8,
--4
+4
 ],
-"lamps": "on",
-"doors": 0
+"lamps": "auto",
+"doors": 0,
+"maps": true,
+"mains": false,
+"groups": {
+"atrium": 0,
+"orange": 0,
+"green": 0,
+"blue": 0,
+"gallery": 0,
+"studio": 0,
+"lounge": 0,
+"landing": 0,
+"terrace": 0,
+"pool": 0
+}
 }
 ]
