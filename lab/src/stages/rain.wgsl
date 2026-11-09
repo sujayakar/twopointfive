@@ -18,11 +18,11 @@ fn phase(mu: f32) -> f32 { let g = 0.62; return 0.35 + 0.65 * (1.0 - g * g) / po
   let since = (run - far) / sp; if (run > far) { splash = 1.0; at = x0 + d * (far - 0.01); }
   if (hidden || since > 0.22 || (hit.piece == NOTHING && run > 60.0)) { drops[i] = o; return; }
   // what lights it
-  let rd = normalize(at - frame.camPos.xyz); var L = skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 0.55 + frame.sunE.xyz * (phase(dot(rd, frame.sunDir.xyz)) * 0.02);
+  let rd = normalize(at - frame.camPos.xyz); var L = skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 0.34 + frame.sunE.xyz * (phase(dot(rd, frame.sunDir.xyz)) * 0.02);
   var best = vec2f(0.0); var who = vec2i(-1); for (var q = 0u; q < frame.counts.x; q++) { if (lamps[q].on <= 0.0) { continue; } let a = aimLamp(q, at, vec2f(0.5)); let w = lum(a.E) * phase(dot(rd, a.dir)); if (w > best.x) { best = vec2f(w, best.x); who = vec2i(i32(q), who.x); } else if (w > best.y) { best.y = w; who.y = i32(q); } }
   for (var q = 0u; q < 2u; q++) { if (who[q] < 0 || best[q] < 1e-4) { continue; } let a = aimLamp(u32(who[q]), at, vec2f(0.5)); L += a.E * (phase(dot(rd, a.dir)) * 0.055) * lum(visible(at, a.dir, 1e-3, a.dist - 0.05)); }
   let px = distance(at, frame.camPos.xyz) * 2.0 * length(frame.camUp.xyz) / frame.size.w; let edge = 1.0 - smoothstep(0.75, 1.0, away); let near = smoothstep(0.8, 2.4, distance(at, frame.camPos.xyz));
-  if (splash > 0.0) { let u = since / 0.22; let r = (0.012 + 0.055 * sqrt(u)) * size; o.head = vec4f(at, r); o.tail = vec4f(u, 0.0, 0.0, 1.0); o.light = vec4f(L, 0.34 * (1.0 - u) * edge * near); drops[i] = o; return; }
+  if (splash > 0.0) { let u = since / 0.22; let r = (0.012 + 0.055 * sqrt(u)) * size; o.head = vec4f(at, r); o.tail = vec4f(u, 0.0, 0.0, 1.0); o.light = vec4f(L, 0.20 * (1.0 - u) * edge * near); drops[i] = o; return; }
   let wide = 0.006 * size; let w = max(wide, 0.85 * px); let long = min(sp * (1.0 / 34.0) * (0.55 + 0.9 * g.w), run);
-  o.head = vec4f(at, w); o.tail = vec4f(at - d * long, 0.0); o.light = vec4f(L, min(1.0, 2.6 * wide / w) * (0.35 + 0.5 * h.w) * edge * near); drops[i] = o;
+  o.head = vec4f(at, w); o.tail = vec4f(at - d * long, 0.0); o.light = vec4f(L, min(1.0, 1.9 * wide / w) * (0.35 + 0.5 * h.w) * edge * near); drops[i] = o;
 }
