@@ -47,7 +47,7 @@ records go up, never state.
 
 **A fixture's light and a mark are the game's, whatever the picture shows.** A fixture's light for a question is a fact of the level (`al.base`); the
 panel's emissive slider moves only the surfaces the shader draws. The marking lights are always registered, at the level's `markTexel` or
-`MARKING_TEXEL`, and `?nomarkings` is the picture's alone. Marks are always laid; `?nodecals` and the panel's switch stop the upload
+`MARKING_TEXEL`, and `?nomarkings` is the picture's alone. Marks are always laid; the panel's switch stops the upload
 (`src/render/decals.ts`). A wet character's look is the last number of a look (`src/draw/look.ts`). Never seen on a GPU.
 
 **No rule reads a picture's setting: the game tells the picture its sky.** `told` (`rust/game_rules/src/hours/told.rs`) works out the sky, the haze, the
