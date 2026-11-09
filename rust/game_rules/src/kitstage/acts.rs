@@ -147,6 +147,11 @@ fn spare_sam(g: &mut Game, st: &mut KitStage, on: bool) {
     if on { if st.a.seen_was.is_none() { st.a.seen_was = Some(g.k.samstun.own_seen); } g.k.samstun.own_seen = false; }
     else if let Some(w) = st.a.seen_was.take() { g.k.samstun.own_seen = w; }
 }
+/// the game's rows a row holds, put back as they were: the tables outlast a staging
+pub(super) fn tables_back(g: &mut Game, st: &mut KitStage) {
+    stay(g, st, false);
+    spare_sam(g, st, false);
+}
 fn mates_can(g: &Game, seat: &crate::seats::SeatRef) -> bool { let me = sam_id(g, seat); g.items.items.iter().any(|&i| th::item_kind(g, i) == th::ItemKind::Flash && !th::item_fired(g, i) && th::item_who(g, i) != me) }
 
 // ------------------------------------------------------------ cans
