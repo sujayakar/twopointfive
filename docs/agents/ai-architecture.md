@@ -58,13 +58,15 @@ Decide and act are together in `lent` and `behave::act`.
 news), `foe`. Each takes the writer's name. Anybody can read the fields, and no rule writes them any other way.
 
 **Who moves him now: the list.** `rules!` in `control/mod.rs` is one line a rule, and the line's place is its rank: `frag`, `runner`, `morale`,
-`startle`, `duck`. What a rule asks for decides where it is asked, and the compiler holds it to that:
+`startle`, `duck`, `lost`, `rally`. What a rule asks for decides where it is asked, and the compiler holds it to that:
 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
 - A rule whose `Ask` is `TakeCover` is `Stage::Cover`, asked at the top of `alert` by `grant_cover`, so only of a man who is alert with no script and
   no body rule. He gets down (`TakeCover::down`) or goes crouched to a spot (`TakeCover::to`), gun lowered, firing nothing, hands free to reload. A
   blind or staggered man gets down wherever it sends him.
+- A rule whose `Ask` is `LeavePost` is `Stage::Post`, asked by `grant_post` of a defender at his post who can see, once he has looked and reacted. He
+  goes on a leg or loose, once: on the leg, his script has him.
 
 `grant_from` is the arbiter: from the top, it runs a rule's `transition`, then asks its `propose`, and the first answer has him. A rule below the
 winner is neither moved nor asked. `record` writes the `Holder` once a tick (`Dead`, `Held`, a rule, `Script`, `Own`) and tells a rule that had him

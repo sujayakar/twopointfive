@@ -28,7 +28,7 @@ impl Reaction for Rule {
             Outcome::Arrived => crate::suppression::end_displace(g, gd, "there"),
             Outcome::GoingNowhere => crate::suppression::end_displace(g, gd, "going nowhere"),
             Outcome::Moving => if g.time - g.gd[gd].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
-            Outcome::Down | Outcome::Script(_) => {}
+            Outcome::Down | Outcome::Script(_) | Outcome::Left => {}
         }
     }
 }
