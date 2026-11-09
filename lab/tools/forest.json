@@ -1,0 +1,178 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-camp",
+  "dist": 22,
+  "look": [
+   0,
+   0.8,
+   -2.2
+  ],
+  "cut": 6.0,
+  "yaw": 0.35,
+  "pitch": 0.7,
+  "samples": 220,
+  "fire": [
+   [
+    0.2,
+    0.06,
+    -3.9
+   ]
+  ],
+  "run": true,
+  "tick": 200,
+  "hour": 18.1,
+  "wet": 1,
+  "rain": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-canopy",
+  "dist": 60,
+  "look": [
+   0,
+   4,
+   0
+  ],
+  "yaw": 0.35,
+  "pitch": 0.75,
+  "samples": 90,
+  "run": true,
+  "tick": 200,
+  "hour": 18.1,
+  "wet": 1,
+  "rain": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-pond",
+  "dist": 14,
+  "look": [
+   6.2,
+   0.4,
+   4.6
+  ],
+  "cut": 6.0,
+  "yaw": 0.5,
+  "pitch": 0.5,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 18.1,
+  "wet": 1,
+  "rain": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-hut",
+  "dist": 13,
+  "look": [
+   -10.4,
+   1.0,
+   -5.2
+  ],
+  "cut": 6.0,
+  "yaw": 0.6,
+  "pitch": 0.5,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 18.1,
+  "wet": 1,
+  "rain": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-ferns",
+  "dist": 6,
+  "look": [
+   -8.6,
+   0.4,
+   3.2
+  ],
+  "cut": 6.0,
+  "yaw": 0.6,
+  "pitch": 0.45,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 18.1,
+  "wet": 1,
+  "rain": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-day",
+  "dist": 24,
+  "look": [
+   0,
+   0.8,
+   -1
+  ],
+  "cut": 6.0,
+  "yaw": 0.35,
+  "pitch": 0.7,
+  "samples": 200,
+  "run": true,
+  "tick": 200,
+  "hour": 11.5,
+  "wet": 0.4
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "f-night-play",
+  "dist": 14,
+  "pitch": 0.85,
+  "yaw": 0.35,
+  "cut": 6.0,
+  "hour": 22.5,
+  "tick": 200,
+  "samples": 160,
+  "run": true,
+  "wet": 1,
+  "rain": 1,
+  "fire": [
+   [
+    0.2,
+    0.06,
+    -3.9
+   ]
+  ],
+  "play": {
+   "at": [
+    -7.4,
+    0.05,
+    1.5
+   ],
+   "x": 0.9,
+   "z": -0.3,
+   "aim": [
+    0.5,
+    1.2,
+    -3.0
+   ],
+   "up": true
+  }
+ }
+]

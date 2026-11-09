@@ -8,6 +8,7 @@ import { Camera } from './camera';
 import { makeBuilding, poseDoor, type Building } from './scene/building';
 import type { Piece } from './scene/world';
 import { makeStreet } from './scene/street';
+import { makeForest } from './scene/forest';
 import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
 import { Sway } from './sway';
@@ -26,7 +27,7 @@ import { mapLamps, lampMapCode } from './lampmap';
 import { mapJoins, joinCode } from './joins';
 
 export const TICK = 1 / 60;
-export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet };
+export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest };
 export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void> }
 
 export class Lab {
