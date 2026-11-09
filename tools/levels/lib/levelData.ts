@@ -115,6 +115,8 @@ export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPerio
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
  *  `floor?` as everywhere. The grille itself is an ordinary box (group 'ceiling.vents') like a door's frame is. */
 export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; notes?: string; }
+/** What HUMS in a room (rust/game_draw Lasting; docs/level-format.md 'Hums'): a sound that goes on at `pos` at `level` (0‥1), dying to nothing `radius` m off; `mains?` (absent = true): it is on the breaker. */
+export interface HumData { id: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; floor?: string; pos: Vec3; level: number; radius: number; mains?: boolean; notes?: string; }
 /** TODO(G2): links between floors (a stair volume joining nav cells of two floors, with a traversal cost and a footstep material). */
 export type ConnectorData =
   | { id: string; kind: 'stair' | 'ladder'; from: { floor: string; c: Vec3; h: Vec3 }; to: { floor: string; c: Vec3; h: Vec3 }; cost?: number; mat?: SurfaceMat; notes?: string };
@@ -159,6 +161,8 @@ export interface LevelData {
   devices: DeviceData[];
   /** HVAC supply vents (rust/game_rules/src/wind) — optional block: absent = still air indoors */
   vents?: VentData[];
+  /** what hums in its rooms — optional block: absent = nothing does */
+  hums?: HumData[];
   connectors: ConnectorData[];
   mission: MissionData;
   /** the mains panel: `panel` / `led` are BoxData ids (OCP the panel for a blackout, shoot it for a permanent one); `fumble?` = seconds a man sent to the
@@ -179,7 +183,7 @@ export interface LevelData {
  *  hand-edit typo like "emmisive" must fail loudly, not vanish on the next save) and canonicalLevelData (which keeps exactly these). Adding a field to the
  *  format = add it to its interface above, to this list, and to both directions in levelLoad.ts. The drill plans are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -191,7 +195,7 @@ export const KEYS = {
   door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
-  vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
+  vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
   connector: ['id', 'kind', 'from', 'to', 'cost', 'mat', 'notes'], connEnd: ['floor', 'c', 'h'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
@@ -444,6 +448,16 @@ export function validateLevelData(d: LevelData): string[] {
       if (v.period !== undefined && !(isNum(v.period) && v.period > 0)) err(w, 'period s > 0');
       if (v.duty !== undefined && !(isNum(v.duty) && v.duty >= 0 && v.duty <= 1)) err(w, 'duty in [0, 1]');
       if (v.phase !== undefined && !isNum(v.phase)) err(w, 'phase s number');
+      if (v.mains !== undefined && typeof v.mains !== 'boolean') err(w, 'mains boolean'); if (v.notes !== undefined && typeof v.notes !== 'string') err(w, 'notes string');
+    });
+  }
+  // what hums — optional block: absent = nothing
+  if (d.hums !== undefined) {
+    const hums = recs('hums', d.hums); uniq('hums', hums.map(v => (v as any)?.id)); if (hums.length > 16) err('hums', 'sixteen at most: the mixer holds a voice for each');
+    hums.forEach((v, i) => {
+      if (!isObj(v)) return; const w = `hums[${i}] '${show(v.id)}'`; known(w, v, KEYS.hum); floorOk(w, v.floor);
+      if (!['hum', 'servers', 'buzz', 'wind'].includes(v.kind as string)) err(w, "kind 'hum' | 'servers' | 'buzz' | 'wind'"); if (!isVec(v.pos)) err(w, 'pos Vec3');
+      if (!(isNum(v.level) && v.level > 0 && v.level <= 1)) err(w, 'level in (0, 1]'); if (!(isNum(v.radius) && v.radius > 0 && v.radius <= 40)) err(w, 'radius m in (0, 40]');
       if (v.mains !== undefined && typeof v.mains !== 'boolean') err(w, 'mains boolean'); if (v.notes !== undefined && typeof v.notes !== 'string') err(w, 'notes string');
     });
   }
@@ -951,6 +965,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     ...(d.marks?.length ? { marks: d.marks.map(m => pick(m, KEYS.mark)) } : {}),
     devices: d.devices.map(v => v.kind === 'camera' ? pick(v, KEYS.camera) : v.kind === 'keypad' ? pick(v, KEYS.keypad) : pick(v, KEYS.laser)),
     ...(d.vents ? { vents: d.vents.map(v => pick(v, KEYS.vent)) } : {}),
+    ...(d.hums ? { hums: d.hums.map(v => pick(v, KEYS.hum)) } : {}),
     connectors: d.connectors.map(c => ({ ...pick(c, KEYS.connector), from: pick(c.from, KEYS.connEnd), to: pick(c.to, KEYS.connEnd) })),
     mission: { ...pick(d.mission, KEYS.mission), objectives: d.mission.objectives.map(o => o.kind === 'reach' ? { ...pick(o, KEYS.reach), area: rect(o.area) } : o.kind === 'drive' ? pick(o, KEYS.drive) : pick(o, KEYS.exfil)) },
     breaker: pick(d.breaker, KEYS.breaker),

@@ -254,6 +254,12 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 - `period` over 0 s; default steady. `duty` 0 to 1; default 1. `phase` seconds; default 0.
 - `mains` default true, so a blackout stops the air.
 
+`hums` is optional, sixteen at most: what hums in the level's rooms, heard by the player alone. The office has six.
+
+- `id` text, unique. `kind` hum, servers, buzz or wind. `pos` V3.
+- `level` over 0 to 1, at it. `radius` over 0 up to 40 m, where there is nothing of it.
+- `mains` default true, so a blackout stops it.
+
 
 ## Glass
 

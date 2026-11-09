@@ -139,14 +139,14 @@ pub struct Loaded {
 /// THE RECORDS OF THE FILE THAT THE GAME KEEPS AS ITS OWN TYPES (`records.rs`), read member for member.
 struct Typed {
     scenarios: Option<game::scene_scenarios::LevelScenarios>, surfaces: Option<game::scene_level_data::SurfacesData>,
-    devices: Vec<DeviceDef>, vents: Option<Vec<VentDef>>, civilians: Option<Vec<CivilianDef>>, clear_plans: Vec<RoomClearPlan>, breach: Option<BreachPlan>,
+    devices: Vec<DeviceDef>, vents: Option<Vec<VentDef>>, hums: Option<Vec<game::scene_level::HumDef>>, civilians: Option<Vec<CivilianDef>>, clear_plans: Vec<RoomClearPlan>, breach: Option<BreachPlan>,
 }
 fn typed(data: &Json) -> Typed {
     fn opt<T: FromJson>(data: &Json, key: &str) -> Option<T> { if data.has(key) { Some(T::from_json(data.get(key), key)) } else { None } }
     let plans = data.get("plans");
     Typed {
         scenarios: opt(data, "scenarios"), surfaces: opt(data, "surfaces"),
-        devices: FromJson::from_json(data.get("devices"), "devices"), vents: opt(data, "vents"), civilians: opt(data, "civilians"),
+        devices: FromJson::from_json(data.get("devices"), "devices"), vents: opt(data, "vents"), hums: opt(data, "hums"), civilians: opt(data, "civilians"),
         clear_plans: FromJson::from_json(plans.get("roomClear"), "plans.roomClear"),
         breach: if plans.has("breach") { Some(FromJson::from_json(plans.get("breach"), "plans.breach")) } else { None },
     }
@@ -255,7 +255,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     let records = typed(data);
     let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
-    level.devices = Some(records.devices); level.vents = records.vents; level.civilians = records.civilians; level.breach = records.breach;
+    level.devices = Some(records.devices); level.vents = records.vents; level.hums = records.hums; level.civilians = records.civilians; level.breach = records.breach;
     if data.has("daylight") {
         let d = data.get("daylight");
         level.daylight = Some(DaylightDef {

@@ -76,7 +76,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
     });
 }
 
-/// The rolling chairs' voices, once a step right after the props have moved; nothing in the simulation reads this and no die is drawn. (game.ts Game.rollTick)
+/// The rolling chairs that are heard (`voice`, a number of its own each time one sets off), once a step right after the props have moved; nothing in the simulation reads this and no die is drawn. (game.ts Game.rollTick)
 pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
     if g.rolls.is_empty() { return; }
     let voice = crate::game::roll_voice();
@@ -96,9 +96,7 @@ pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
             g.rolls[i].move_t = g.time;
             if !js::truthy(g.rolls[i].voice) {
                 g.roll_seq += 1.0;
-                let tok = g.roll_seq;
-                g.rolls[i].voice = tok;
-                crate::audio_iface::game_audio_like_play(g, "chairRoll", Some([px, 0.05, pz]), Some(voice.gain), Some(&crate::audio_iface::PlayOpts::ChairRoll { tok }));   // (the `follow` closure: audio_follow_now answers by the token)
+                g.rolls[i].voice = g.roll_seq;
             }
         } else if js::truthy(g.rolls[i].voice) && (!here || g.time - g.rolls[i].move_t > voice.grace || g.time < g.rolls[i].move_t) {
             g.rolls[i].voice = 0.0;

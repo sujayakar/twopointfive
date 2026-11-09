@@ -53,7 +53,7 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
 export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
 /** one rung the climb has taken, newest last (undone in reverse) */
 type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
-/** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10; ?aim=asnow|60|90|120|display, ?aim=0 = asnow). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
+/** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
  *  above and no line below takes another road — the ladder byte for byte as it was (aims at a 60 Hz budget, spends headroom on resolution, cuts only under 45 fps). N > 0 = HOLD N fps (never more
  *  than the display has been seen to show — Quality.displayHz; AIM_DISPLAY = that rate itself): the climb, the cut and the preset hop all work to N.
  *    · the GPU budget is U = 1000 / N − overheadMs (what a frame costs past the compute union: raster passes, CPU, present — the 1.67 ms PLAN_BUDGET_MS always implied at 60); the climb's bands
@@ -69,7 +69,7 @@ type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' 
  *  assumes the 1.67 ms of overhead, a Mac take shows ~2.8 — the cut by rate is what corrects it at 90 / 120. */
 export const AIM_DISPLAY = 999;
 export const HOLD = { cut: 0.965, aim: 1.03, cruise: 0.975, pacedMs: 6, pacedWindows: 5, hotWindows: 2, blindWindows: 8, restore: 0.9, restoreWindows: 6, overheadMs: 1000 / CLIMB.budgetFps - PLAN_BUDGET_MS };
-/** THE PACED CHECK (as now: settings.ladderPaced; under an aim: settings.ladderHeld, the block under PACED — with it off an aim has only its own `holdBound`; default on, `?ladderpaced=0`; off = the rule as it was: 'the union over LADDER.cutGpuFrac of the
+/** THE PACED CHECK (as now: settings.ladderPaced; under an aim: settings.ladderHeld, the block under PACED — with it off an aim has only its own `holdBound`; default on; off = the rule as it was: 'the union over LADDER.cutGpuFrac of the
  *  frame = the GPU is the limit'). A page held to 30 fps by something no pixel buys off (the browser's energy saver, a power mode, a slow display) with High at its start costing 12‥14 ms of
  *  union read as GPU-bound by that rule, was cut to ×0.57 and on down for nothing, and nothing gave the pixels back (the way up wants 58 fps): the maintainer's Mac, 10-10 — 30 fps at ×0.57
  *  and ×0.50 with the union at 8.9 ms. `Quality.pacedStep`, once a window, judged on the window's mean frame without its longest one:
@@ -88,7 +88,7 @@ export const HOLD = { cut: 0.965, aim: 1.03, cruise: 0.975, pacedMs: 6, pacedWin
  *      keeps the page proven paced (so the GPU still makes the frame in half the pace: nothing lost when the pacing lifts, even on a fixed display); a step after which the frame grew by
  *      `gain` is taken off again and held off as a failed climb rung is. The rest of the way up is the plain restore's (58 fps), and the climb past the tier's start keeps its own rule. */
 export const PACED = { band: 0.06, gain: 0.05, windows: 2, upWindows: 4, trialSecs: 12, backSecs: 30, recheckSecs: 120, recheckMax: 3, probeGain: 0.15 };
-/** SHARP SHED (settings.ladderShed, default on, `?laddershed=0`; the maintainer's pick of 10-25 off his own takes: 'Auto drops it'). UNDER AUTO, where the ladder would take pixels off
+/** SHARP SHED (settings.ladderShed, default on; the maintainer's pick of 10-25 off his own takes: 'Auto drops it'). UNDER AUTO, where the ladder would take pixels off
  *  the tier's own picture — the cut by rate, the step for the back-off band, the cut taken with a load spike's rungs, an aim's judged cut, a preset starved away — and sharp direct is drawing and the tier's
  *  to place (no ?sharp / ?nosharp / ?noiq), it lets sharp direct go INSTEAD, with its two riders (the decoupled jitter, GBAA): the output-size kernels are the one part of a frame that
  *  fewer pixels do not shrink (the maintainer's Mac at High ×0.5: 4.9 of 15.5 ms, and he saw no difference in a fight with it off). Rungs the climb put ON TOP of the tier's start still come off first: they are
@@ -110,7 +110,7 @@ export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
  *  calibration waits the same way and no longer (calibrateTick: past `maxSecs` it measures the picture as it is, `early`, and measures once more when the set is in). With the
  *  first-frame start off the count is never above 0 and none of this runs. */
 export const STANDS_IN = { maxSecs: 30 };
-/** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
+/** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
  *  band. On a page the browser holds to 30 fps the GPU clocks down and every pass reads about half again longer (the maintainer's Mac on a low battery, 10-14: 6.7‥7.4 ms free-running,
  *  10.7‥12 ms held, same settings), so High's start read 13.9 ms, went down to 600 rows for a rate that stayed 30, and never came back. With the switch on `pacedStep` runs for an aim too:
@@ -145,7 +145,7 @@ export function ladderBands(aim: number, displayHz = 0): Bands {
   const u = Math.max(2, 1000 / target - HOLD.overheadMs);
   return { hold: true, target, cutFps: HOLD.cut * target, aimFps: HOLD.aim * target, restoreFps: Infinity, starvedFps: HOLD.cut * target, cruisingFps: HOLD.cruise * target, backoffFps: HOLD.cut * target, budget: u * (1000 / CLIMB.budgetFps) / PLAN_BUDGET_MS, planBudget: u, gpuFloor: 0 };
 }
-/** ?aim= / a menu's word → settings.ladderAim (null = not one of them; '0' is 'asnow' said as the setting's own number) */
+/** a menu's word → settings.ladderAim (null = not one of them; '0' is 'asnow' said as the setting's own number) */
 export function ladderAimOf(word: string | null | undefined): number | null {
   const w = (word ?? '').trim().toLowerCase();
   return w === 'asnow' || w === '0' ? 0 : w === '60' ? 60 : w === '90' ? 90 : w === '120' ? 120 : w === 'display' ? AIM_DISPLAY : null;   // (the five the card and the Tab row offer, no others: a row that cannot show the value it holds would lie)

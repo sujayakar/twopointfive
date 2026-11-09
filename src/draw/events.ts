@@ -6,9 +6,9 @@ import type { SmokeSystem } from '../smoke/smoke';
 import type { SmokeEmitter } from '../smoke/types';
 import type { Vec3 } from '../math/vec';
 import type { Drawn } from './drawn';
-import type { AudioEngine } from '../audio/audio';
+import type { AudioEngine, LastingSound } from '../audio/audio';
 import type { FloorMat } from '../audio/floors';
-import { AirPush, Anchor, Emit, EMIT_SHAPES, FLOORS, Footfall, Heard, Kick, PKINDS, Roll, Section, SmokeSource, SMOKE_KINDS, Sound } from './sections';
+import { AirPush, Anchor, Emit, EMIT_SHAPES, FLOORS, Footfall, Heard, Kick, Lasting, PKINDS, Section, SmokeSource, SMOKE_KINDS, Sound } from './sections';
 
 /** the ids played in the last `KEPT` ticks, by kind */
 const KEPT = 120;
@@ -33,14 +33,13 @@ export class DrawEvents {
   private played = new Played();
   private anchors = new Map<number, { pos: Vec3; dir: Vec3 }>();
   private names: string[] = [];
-  private rolls = new Map<number, { pos: Vec3; k: number; t: number }>();
   constructor(private D: Drawn, private particles: Particles | null, private smoke: SmokeSystem, private audio: AudioEngine, private nameOf: (i: number) => string) {}
-  cut(): void { this.played.forget(); this.anchors.clear(); this.rolls.clear(); this.names.length = 0; }
+  cut(): void { this.played.forget(); this.anchors.clear(); this.names.length = 0; }
   private v3(o: number): Vec3 { const f = this.D.f; return [f[o], f[o + 1], f[o + 2]]; }
   private v3said(o: number): Vec3 | undefined { return this.D.f[o] === this.D.f[o] ? this.v3(o) : undefined; }
 
-  /** the game stands anew: what lets smoke out where it stands, whoever heard it begin */
-  stands(): void { this.ride(); this.sources(); }
+  /** the game stands anew: what goes on where it stands is seen and heard, whoever heard it begin */
+  stands(): void { this.ride(); this.sources(); this.lasting(); }
   /** the tick that has just run */
   from(): void {
     this.ride(); this.sounds();
@@ -61,19 +60,27 @@ export class DrawEvents {
       if (shape === SHAPE_STRIDE) { if (stir > 0) this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.min(STRIDE_MOST, Math.hypot(vel[0], vel[1], vel[2]) * Math.min(STIR_MOST, stir)), radius: f[o + AirPush.radius] }); continue; }
       this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + AirPush.radius], lattice: LATTICES[u[o + AirPush.lattice]], line: shape === SHAPE_LINE ? len : undefined, body: shape === SHAPE_BODY ? len : undefined, push: said(f[o + AirPush.hard]) }); }
   }
-  /** the sounds of the tick that has just run, after what they follow is known */
+  /** what sounds for as long as it goes on */
+  private lasting(): void {
+    const D = this.D, rows: LastingSound[] = [];
+    for (let i = 0, o = D.at[Section.lasting]; i < D.n[Section.lasting]; i++, o += Lasting.row) {
+      const name = this.named(D.u[o + Lasting.name]);
+      rows.push({ name, id: D.u[o + Lasting.id], pos: this.v3(o + Lasting.at), gain: D.f[o + Lasting.gain], hard: D.f[o + Lasting.hard], age: said(D.f[o + Lasting.age]) ?? Infinity, left: said(D.f[o + Lasting.left]) ?? Infinity, reach: D.f[o + Lasting.reach] });
+    }
+    this.audio.lasting(rows, D.f[D.at[Section.heard] + Heard.time]);
+  }
+  /** a sound's name, by its number (the module is asked once, and its memory may have grown) */
+  private named(n: number): string { if (!this.names[n]) { this.names[n] = this.nameOf(n); this.D.fresh(); } return this.names[n]; }
+  /** the sounds of the tick that has just run */
   private sounds(): void {
-    const D = this.D, A = this.audio, h = D.at[Section.heard], t = D.f[h + Heard.time];
-    this.rolls.forEach(r => { r.t = -1; });
-    for (let i = 0, o = D.at[Section.rolls]; i < D.n[Section.rolls]; i++, o += Roll.row) { const v = D.u[o + Roll.voice]; let r = this.rolls.get(v); if (!r) this.rolls.set(v, r = { pos: [0, 0, 0], k: 0, t: 0 }); r.pos[0] = D.f[o + Roll.at]; r.pos[2] = D.f[o + Roll.at + 1]; r.k = D.f[o + Roll.hard]; r.t = t; }
-    for (const [v, r] of this.rolls) if (r.t < 0) this.rolls.delete(v);
+    this.lasting();
+    const D = this.D, A = this.audio, h = D.at[Section.heard];
     A.rain(D.f[h + Heard.rain]);
     // (each call below asks the module, whose memory may have grown: the views are looked at afresh after it)
     for (let i = 0, o = D.at[Section.sounds]; i < D.n[Section.sounds]; i++, o += Sound.row, D.fresh()) if (this.played.once(Section.sounds, D.u[o + Sound.tick], D.u[o + Sound.serial])) {
-      const f = D.f, u = D.u, n = u[o + Sound.name], voice = u[o + Sound.follows] - 1, pos = u[o + Sound.placed] ? this.v3(o + Sound.pos) : null, y = f[o + Sound.pos + 1], gain = said(f[o + Sound.gain]);
-      const opts = voice >= 0 ? { follow: () => { const r = this.rolls.get(voice); if (!r) return null; r.pos[1] = y; return r; } } : { rate: said(f[o + Sound.rate]), duration: said(f[o + Sound.duration]), lowpass: said(f[o + Sound.lowpass]), pan: said(f[o + Sound.pan]), wet: said(f[o + Sound.wet]) };
-      A.play(this.names[n] ??= this.nameOf(n), pos, gain, opts); }
-    for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) { const m = D.u[o + Footfall.floor]; A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, m ? FLOORS[m - 1] as FloorMat : undefined); }
+      const name = this.named(D.u[o + Sound.name]), f = D.f, pos = D.u[o + Sound.placed] ? this.v3(o + Sound.pos) : null;
+      A.play(name, pos, said(f[o + Sound.gain]), { rate: said(f[o + Sound.rate]), lowpass: said(f[o + Sound.lowpass]), pan: said(f[o + Sound.pan]), wet: said(f[o + Sound.wet]) }); }
+    for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, FLOORS[D.u[o + Footfall.floor]] as FloorMat);
   }
   private sources(): void { const D = this.D; for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, D.u[o + SmokeSource.tick], D.u[o + SmokeSource.serial])) this.source(o); }
   /** a source of smoke, with the push of the air that goes with it, as today's solver takes them: one emitter */

@@ -254,6 +254,7 @@ async function main(): Promise<void> {
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
   const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
+  audio.outdoors = weather.roofs.outdoors;
 
   // ---- the player
   const input = new Input(canvas); if (hud) hud.overlay.cardClosed = () => input.focusGame(); input.saveKey = () => !title && !play && !brief?.up;   // (F5 is the game's while a run is on: a save by hand)

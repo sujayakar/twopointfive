@@ -69,18 +69,18 @@ export interface RenderSettings {
   // union under CLIMB.headroom of the frame budget for CLIMB.window s) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
   // volumetrics ¼ → ½). Off = the ladder as it was.
   ladderClimb: boolean;
-  /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; ?aim=asnow|60|90|120|display, ?aim=0 = asnow; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
+  /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
    *  only under 45 fps — the ladder byte for byte as it was before the aim); 60 / 90 / 120 = HOLD that rate (never more than the display has been seen to show): cut resolution, then the preset, the moment a
    *  fight would drop under it, climb only on the headroom left under ITS budget; 999 = hold the display's own rate. Trades resolution for frame rate. DEFAULT 60 (the maintainer's pick, 10-10: '60fps can be our target'); ?aim=asnow = the old ladder for the visit. */
   ladderAim: number;
-  /** the as-now ladder's PACED CHECK (ui/quality.ts PACED; ?ladderpaced=0; Tab ▸ Frame): a page something else holds to a low frame rate (the browser's energy saver, a power mode) is not cut
+  /** the as-now ladder's PACED CHECK (ui/quality.ts PACED; Tab ▸ Frame): a page something else holds to a low frame rate (the browser's energy saver, a power mode) is not cut
    *  for it, a cut (or a preset drop) that bought no frame rate is taken back, and a scale left low is given back as far as it provably costs nothing. false = the rule as it was (the union over 11 ms = the GPU is the limit). */
   ladderPaced: boolean;
-  /** the same check under an aim (ui/quality.ts, the block under PACED; ?ladderheld=0; Tab ▸ Frame): hold 60 on a page something else holds to a low frame rate keeps its pixels — a slow
+  /** the same check under an aim (ui/quality.ts, the block under PACED; Tab ▸ Frame): hold 60 on a page something else holds to a low frame rate keeps its pixels — a slow
    *  frame far over its GPU work takes a judged cut (to where the union fits the aim's frame less 6 ms); the frame no shorter there = the pixels straight back and that rate remembered
    *  as the page's pace, where nothing is cut for the union's size and a scale left low comes back on the frame's own room, each step judged. false = an aim as it was. */
   ladderHeld: boolean;
-  /** auto lets sharp direct go before it shrinks the picture (ui/quality.ts SHED; ?laddershed=0; Tab ▸ Frame): where auto's ladder would take pixels off the tier's own picture or give the
+  /** auto lets sharp direct go before it shrinks the picture (ui/quality.ts SHED; Tab ▸ Frame): where auto's ladder would take pixels off the tier's own picture or give the
    *  preset up, and sharp direct is drawing, sharp direct goes instead (its output-size kernels are the part of a frame fewer pixels do not shrink), stays off across auto's preset hops, and
    *  comes back when the union priced with it fits again. false = the ladder as it was. Auto only: a pinned preset keeps its rows. */
   ladderShed: boolean;
