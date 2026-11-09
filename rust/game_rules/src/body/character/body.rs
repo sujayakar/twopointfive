@@ -624,7 +624,31 @@ fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
         }
     }
     skel_rag_pose(g, id);
+    rag_toes_over_the_floor(g, id, rag_id, &n);
     character_read_bones(g, id, dt);
+}
+
+/// A fallen man's foot whose toe the pose would put under his floor is turned at the ankle until it is not. The rag has no toe: what is drawn past its ankle is this.
+fn rag_toes_over_the_floor(g: &mut Game, id: CharId, rag_id: RagdollId, n: &AnimNodes) {
+    let rg = crate::ragdoll::rag();
+    let ground = g.ch[id].pos[1];
+    // (what last frame turned is looked at afresh, on what the rag has done since)
+    let rd = g.ch[id].rd.as_mut().unwrap();
+    let (was_l, was_r) = (rd.ov[n.foot_l].take(), rd.ov[n.foot_r].take());
+    if was_l.is_some() || was_r.is_some() { skel_rag_pose(g, id); }
+    for (foot, toe, ank) in [(n.foot_l, n.toe_l, rg.ank_l), (n.foot_r, n.toe_r, rg.ank_r)] {
+        let (a, t) = (node_pos(g, id, foot), node_pos(g, id, toe));
+        let v = v3::sub(t, a);
+        let (l, flat) = (v3::len(v), m::hyp2(v[0], v[2]));
+        let want = crate::ragdoll::ragdoll_floor_under(&g.tab.ragdoll[rag_id], ank) + crate::character::TOE_FLOOR_Y - ground - a[1];
+        if v[1] >= want || l < 1e-6 { continue; }
+        let up = m::min(want, 0.95 * l);
+        let out = m::sqrt(l * l - up * up) / m::max(flat, 1e-6);
+        let q = v3::quat::from_to(v3::normalize(v), v3::normalize([v[0] * out, up, v[2] * out]));
+        let rot = v3::quat::mul(q, g.ch[id].skel.global_rot[foot]);   // (all of it in his model, as the skeleton holds it)
+        g.ch[id].rd.as_mut().unwrap().ov[foot] = Some(crate::anim_skeleton::NodeOverride { rot, pos: None });
+        skel_rag_pose(g, id);
+    }
 }
 
 /// a particle's place (fallGuide's P)
