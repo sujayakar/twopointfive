@@ -18,9 +18,7 @@ const STANDARD: (DifficultyNow, bool, bool, bool) = (DifficultyNow::Standard, fa
 fn hard_on_the_link_stands_a_hard_game() {
     for seed in SEEDS {
         let p = stood("&hard", seed);
-        let cone = p.g.k.hard.cone;
-        assert_eq!(rows(&p), (DifficultyNow::Hard, true, true, cone), "seed {}: &hard", seed);
-        assert!(cone, "seed {}: the fog's cone is hard's", seed);
+        assert_eq!(rows(&p), (DifficultyNow::Hard, true, true, true), "seed {}: &hard, the fog's cone with it", seed);
         drop(p);
         assert_eq!(rows(&stood("", seed)), STANDARD, "seed {}: the same link without the word", seed);
     }
