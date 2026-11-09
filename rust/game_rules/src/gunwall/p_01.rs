@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn closing_is_never_negative() {
-        let mut s = St::zeroed();
+        let mut s = St::default();
         s.vx = 2.0;
         s.vz = -1.0;
         assert_eq!(closing(s, [1.0, 0.0, 0.0]), 2.0);
@@ -474,7 +474,7 @@ mod tests {
         let (mut g, c) = game_with(false, 0.2, 0.0, None);
         g.time = 3.0;
         st(&mut g, c).low = true;
-        st(&mut g, c).hold = Some(Hold::zeroed());
+        st(&mut g, c).hold = Some(Hold::default());
         assert!(!gun_walled(&mut g, c, None, None, 0.016, None, None));
         let s = *row(&mut g, c);
         assert!(s.t == 3.0 && s.vt == 3.0 && !s.low && s.rose && s.hold.is_none());

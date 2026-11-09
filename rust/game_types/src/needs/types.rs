@@ -1,12 +1,11 @@
-//! The types of `needs`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `needs`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum NeedKind {
-    Smoke,
+    #[default] Smoke,
     Coffee,
     Water,
     Stretch,
@@ -22,8 +21,7 @@ impl NeedKind {
     }
 }
 
-/// (TypeScript: NeedSpot, src/game/needs.ts:38)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NeedSpot {
     pub kind: crate::needs::NeedKind,
     pub name: String,
@@ -31,22 +29,8 @@ pub struct NeedSpot {
     pub face: f64,
     pub loop_: Option<Vec<V3>>,
 }
-impl NeedSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedSpot {
-            kind: crate::needs::NeedKind::Smoke,
-            name: String::new(),
-            pos: [0.0; 3],
-            face: 0.0,
-            loop_: None,
-        }
-    }
-}
-impl Default for NeedSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Need, src/game/needs.ts:93)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Need {
     pub kind: crate::needs::NeedKind,
     pub level: f64,
@@ -54,24 +38,10 @@ pub struct Need {
     pub wp: f64,
     pub trip_m: f64,
 }
-impl Need {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Need {
-            kind: crate::needs::NeedKind::Smoke,
-            level: 0.0,
-            fill_min: 0.0,
-            wp: 0.0,
-            trip_m: 0.0,
-        }
-    }
-}
-impl Default for Need { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum TripPhase {
-    Going,
+    #[default] Going,
     Telegraph,
     Dwell,
     Returning,
@@ -87,8 +57,7 @@ impl TripPhase {
     }
 }
 
-/// (TypeScript: Trip, src/game/needs.ts:95)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Trip {
     pub kind: crate::needs::NeedKind,
     pub spot: crate::needs::NeedSpot,
@@ -113,39 +82,8 @@ pub struct Trip {
     pub line: String,
     pub gap_before: f64,
 }
-impl Trip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Trip {
-            kind: crate::needs::NeedKind::Smoke,
-            spot: crate::needs::NeedSpot::zeroed(),
-            phase: crate::needs::TripPhase::Going,
-            forced: false,
-            t0: 0.0,
-            depart_at: 0.0,
-            left_at: 0.0,
-            arrived_at: 0.0,
-            dwell_until: 0.0,
-            back_at: 0.0,
-            wp: 0.0,
-            out_yaw: 0.0,
-            watched: false,
-            told: false,
-            partner: None,
-            radio: false,
-            reply_at: 0.0,
-            replied: false,
-            necked: false,
-            loop_i: 0.0,
-            line: String::new(),
-            gap_before: 0.0,
-        }
-    }
-}
-impl Default for Trip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NeedMem, src/game/needs.ts:110)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NeedMem {
     pub needs: Vec<crate::needs::Need>,
     pub trip: Option<crate::needs::Trip>,
@@ -155,24 +93,8 @@ pub struct NeedMem {
     pub shaken: bool,
     pub dealt: bool,
 }
-impl NeedMem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedMem {
-            needs: Vec::new(),
-            trip: None,
-            last_back_at: 0.0,
-            trips: 0.0,
-            cancels: 0.0,
-            shaken: false,
-            dealt: false,
-        }
-    }
-}
-impl Default for NeedMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NeedsManSnap, src/game/needs.ts:407)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NeedsManSnap {
     pub needs: Vec<crate::needs::Need>,
     pub trip: Option<crate::needs::NeedsManSnapTrip>,
@@ -182,24 +104,8 @@ pub struct NeedsManSnap {
     pub shaken: bool,
     pub dealt: bool,
 }
-impl NeedsManSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsManSnap {
-            needs: Vec::new(),
-            trip: None,
-            last_back_at: 0.0,
-            trips: 0.0,
-            cancels: 0.0,
-            shaken: false,
-            dealt: false,
-        }
-    }
-}
-impl Default for NeedsManSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:407 NeedsManSnap.trip, src/game/needs.ts:407 NeedsManSnap.trip)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NeedsManSnapTrip {
     pub kind: crate::needs::NeedKind,
     pub radio: bool,
@@ -223,165 +129,54 @@ pub struct NeedsManSnapTrip {
     pub gap_before: f64,
     pub partner: f64,
 }
-impl NeedsManSnapTrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsManSnapTrip {
-            kind: crate::needs::NeedKind::Smoke,
-            radio: false,
-            t0: 0.0,
-            wp: 0.0,
-            phase: crate::needs::TripPhase::Going,
-            told: false,
-            line: String::new(),
-            forced: false,
-            depart_at: 0.0,
-            watched: false,
-            replied: false,
-            necked: false,
-            left_at: 0.0,
-            arrived_at: 0.0,
-            dwell_until: 0.0,
-            back_at: 0.0,
-            out_yaw: 0.0,
-            reply_at: 0.0,
-            loop_i: 0.0,
-            gap_before: 0.0,
-            partner: 0.0,
-        }
-    }
-}
-impl Default for NeedsManSnapTrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NeedsSnap, src/game/needs.ts:408)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NeedsSnap {
     pub men: Vec<Option<crate::needs::NeedsManSnap>>,
     pub last_depart_at: f64,
 }
-impl NeedsSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsSnap {
-            men: Vec::new(),
-            last_depart_at: 0.0,
-        }
-    }
-}
-impl Default for NeedsSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:82 NEEDS_DEFAULTS, src/game/needs.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NEEDSDEFAULTS {
     pub rate_k: f64,
     pub max_away: f64,
     pub announce_lead: f64,
     pub dwell: crate::needs::NEEDSDEFAULTSDwell,
 }
-impl NEEDSDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NEEDSDEFAULTS {
-            rate_k: 0.0,
-            max_away: 0.0,
-            announce_lead: 0.0,
-            dwell: crate::needs::NEEDSDEFAULTSDwell::zeroed(),
-        }
-    }
-}
-impl Default for NEEDSDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:82 NEEDSDEFAULTS.dwell, src/game/needs.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NEEDSDEFAULTSDwell {
     pub smoke: f64,
     pub coffee: f64,
     pub water: f64,
     pub stretch: f64,
 }
-impl NEEDSDEFAULTSDwell {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NEEDSDEFAULTSDwell {
-            smoke: 0.0,
-            coffee: 0.0,
-            water: 0.0,
-            stretch: 0.0,
-        }
-    }
-}
-impl Default for NEEDSDEFAULTSDwell { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:121 floorOf, src/game/needs.ts:121)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NeedsModFloorOfValue {
     pub last_depart_at: f64,
 }
-impl NeedsModFloorOfValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsModFloorOfValue {
-            last_depart_at: 0.0,
-        }
-    }
-}
-impl Default for NeedsModFloorOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:126 NEEDS_LOG, src/game/needs.ts:126)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NeedsModNEEDSLOGItem {
     pub t: f64,
     pub who: String,
     pub what: String,
 }
-impl NeedsModNEEDSLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsModNEEDSLOGItem {
-            t: 0.0,
-            who: String::new(),
-            what: String::new(),
-        }
-    }
-}
-impl Default for NeedsModNEEDSLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:127 NEEDS_DEBUG, src/game/needs.ts:127)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NEEDSDEBUG {
 }
-impl NEEDSDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NEEDSDEBUG {
-        }
-    }
-}
-impl Default for NEEDSDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:54 ownSpot(s), src/game/needs.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OwnSpotS {
     pub name: String,
     pub pos: V3,
     pub face: f64,
     pub loop_: Option<Vec<V3>>,
 }
-impl OwnSpotS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnSpotS {
-            name: String::new(),
-            pos: [0.0; 3],
-            face: 0.0,
-            loop_: None,
-        }
-    }
-}
-impl Default for OwnSpotS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:115 needsMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NeedsMem {
     pub needs: Vec<crate::needs::Need>,
     pub trip: Option<crate::needs::Trip>,
@@ -391,24 +186,8 @@ pub struct NeedsMem {
     pub shaken: bool,
     pub dealt: bool,
 }
-impl NeedsMem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsMem {
-            needs: Vec::new(),
-            trip: None,
-            last_back_at: 0.0,
-            trips: 0.0,
-            cancels: 0.0,
-            shaken: false,
-            dealt: false,
-        }
-    }
-}
-impl Default for NeedsMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:117 needsTrip ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NeedsTrip {
     pub kind: crate::needs::NeedKind,
     pub spot: crate::needs::NeedSpot,
@@ -433,53 +212,12 @@ pub struct NeedsTrip {
     pub line: String,
     pub gap_before: f64,
 }
-impl NeedsTrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsTrip {
-            kind: crate::needs::NeedKind::Smoke,
-            spot: crate::needs::NeedSpot::zeroed(),
-            phase: crate::needs::TripPhase::Going,
-            forced: false,
-            t0: 0.0,
-            depart_at: 0.0,
-            left_at: 0.0,
-            arrived_at: 0.0,
-            dwell_until: 0.0,
-            back_at: 0.0,
-            wp: 0.0,
-            out_yaw: 0.0,
-            watched: false,
-            told: false,
-            partner: None,
-            radio: false,
-            reply_at: 0.0,
-            replied: false,
-            necked: false,
-            loop_i: 0.0,
-            line: String::new(),
-            gap_before: 0.0,
-        }
-    }
-}
-impl Default for NeedsTrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:138 departurePoint ->, src/game/needs.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DeparturePoint {
     pub wp: f64,
     pub m: f64,
 }
-impl DeparturePoint {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DeparturePoint {
-            wp: 0.0,
-            m: 0.0,
-        }
-    }
-}
-impl Default for DeparturePoint { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

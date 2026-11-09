@@ -914,11 +914,11 @@ mod tests {
     use super::*;
 
     fn piece(g: &mut Game, n: usize, side: f64, age: f64) -> DebrisChunkId {
-        let mut b = crate::scene_boxes::Box::zeroed();
+        let mut b = crate::scene_boxes::Box::default();
         b.h = [side, side / 2.0, side / 4.0];
         let box_ = BoxId::from_ix(n);
         *seam_box(g, box_) = b;
-        let mut c = crate::debris::Chunk::zeroed();
+        let mut c = crate::debris::Chunk::default();
         c.box_ = box_.into();
         c.age = age;
         g.tab.debris_chunk.push(c)

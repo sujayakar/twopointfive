@@ -1,12 +1,11 @@
-//! The types of `render_decals`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_decals`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DecalKind {
-    Bullet,
+    #[default] Bullet,
     Scorch,
     Scuff,
     Chip,
@@ -28,8 +27,7 @@ impl DecalKind {
     }
 }
 
-/// (TypeScript: Decal, src/render/decals.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Decal {
     pub kind: crate::render_decals::DecalKind,
     pub pos: V3,
@@ -46,50 +44,15 @@ pub struct Decal {
     pub box_idx: f64,
     pub hidden: bool,
 }
-impl Decal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Decal {
-            kind: crate::render_decals::DecalKind::Bullet,
-            pos: [0.0; 3],
-            n: [0.0; 3],
-            t: [0.0; 3],
-            radius: 0.0,
-            param: 0.0,
-            seed: 0.0,
-            serial: 0.0,
-            pane: 0.0,
-            box_: None,
-            local: None,
-            look: None,
-            box_idx: 0.0,
-            hidden: false,
-        }
-    }
-}
-impl Default for Decal { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/decals.ts:49 Decal.local, src/render/decals.ts:49)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DecalLocal {
     pub p: V3,
     pub n: V3,
     pub t: V3,
 }
-impl DecalLocal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DecalLocal {
-            p: [0.0; 3],
-            n: [0.0; 3],
-            t: [0.0; 3],
-        }
-    }
-}
-impl Default for DecalLocal { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DecalOpts, src/render/decals.ts:58)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DecalOpts {
     pub tangent: Option<V3>,
     pub param: Option<f64>,
@@ -99,23 +62,7 @@ pub struct DecalOpts {
     pub seed: Option<f64>,
     pub pane: Option<f64>,
 }
-impl DecalOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DecalOpts {
-            tangent: None,
-            param: None,
-            look: None,
-            attach: None,
-            clamp_to: None,
-            seed: None,
-            pane: None,
-        }
-    }
-}
-impl Default for DecalOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Decals, src/render/decals.ts:130)
 #[derive(Clone, Debug)]
 pub struct Decals {
     pub list: Vec<crate::render_decals::Decal>,
@@ -126,7 +73,7 @@ pub struct Decals {
     pub device: crate::Opaque,
 }
 impl Decals {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Decals {
             list: Vec::new(),
@@ -140,8 +87,7 @@ impl Decals {
 }
 impl Default for Decals { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/render/decals.ts:96 WEAR_MARK, src/render/decals.ts:96)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WEARMARK {
     pub look: f64,
     pub materials: f64,
@@ -151,38 +97,12 @@ pub struct WEARMARK {
     pub max_half: f64,
     pub face_tol: f64,
 }
-impl WEARMARK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WEARMARK {
-            look: 0.0,
-            materials: 0.0,
-            reach0: 0.0,
-            reach1: 0.0,
-            min_half: 0.0,
-            max_half: 0.0,
-            face_tol: 0.0,
-        }
-    }
-}
-impl Default for WEARMARK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/decals.ts:103 DEFAULTS, src/render/decals.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DEFAULTSValue {
     pub radius: f64,
     pub param: f64,
 }
-impl DEFAULTSValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DEFAULTSValue {
-            radius: 0.0,
-            param: 0.0,
-        }
-    }
-}
-impl Default for DEFAULTSValue { fn default() -> Self { Self::zeroed() } }
 
 /// (src/render/decals.ts:143 DECALS_CAP)
 pub const DECALS_CAP: f64 = 512.0;

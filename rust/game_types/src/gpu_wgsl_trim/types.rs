@@ -1,10 +1,9 @@
-//! The types of `gpu_wgsl_trim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gpu_wgsl_trim`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Decl, src/gpu/wgslTrim.ts:41)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Decl {
     pub text: String,
     pub name: Option<String>,
@@ -13,124 +12,43 @@ pub struct Decl {
     pub fn_: bool,
     pub ids: Vec<String>,
 }
-impl Decl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Decl {
-            text: String::new(),
-            name: None,
-            root: false,
-            entry: false,
-            fn_: false,
-            ids: Vec::new(),
-        }
-    }
-}
-impl Default for Decl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:16 SHADER_TRIM, src/gpu/wgslTrim.ts:16)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SHADERTRIM {
     pub on: bool,
 }
-impl SHADERTRIM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SHADERTRIM {
-            on: false,
-        }
-    }
-}
-impl Default for SHADERTRIM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:38 SHADER_FOLD, src/gpu/wgslTrim.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SHADERFOLD {
     pub on: bool,
 }
-impl SHADERFOLD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SHADERFOLD {
-            on: false,
-        }
-    }
-}
-impl Default for SHADERFOLD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:195 folded, src/gpu/wgslTrim.ts:195)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GpuWgslTrimModFoldedValue {
     pub own: JsMap<String, bool>,
     pub by: JsMap<String, crate::gpu_wgsl_trim::Decl>,
 }
-impl GpuWgslTrimModFoldedValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GpuWgslTrimModFoldedValue {
-            own: JsMap::new(),
-            by: JsMap::new(),
-        }
-    }
-}
-impl Default for GpuWgslTrimModFoldedValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:233 trimTotals, src/gpu/wgslTrim.ts:233)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GpuWgslTrimModTrimTotals {
     pub modules: f64,
     pub before: f64,
     pub after: f64,
     pub ms: f64,
 }
-impl GpuWgslTrimModTrimTotals {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GpuWgslTrimModTrimTotals {
-            modules: 0.0,
-            before: 0.0,
-            after: 0.0,
-            ms: 0.0,
-        }
-    }
-}
-impl Default for GpuWgslTrimModTrimTotals { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:121 chainAt ->, src/gpu/wgslTrim.ts:121)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ChainAt {
     pub arms: Vec<crate::gpu_wgsl_trim::ChainAtArmsItem>,
     pub last: Option<String>,
     pub end: f64,
 }
-impl ChainAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChainAt {
-            arms: Vec::new(),
-            last: None,
-            end: 0.0,
-        }
-    }
-}
-impl Default for ChainAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/gpu/wgslTrim.ts:121 ChainAt.arms, src/gpu/wgslTrim.ts:121)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ChainAtArmsItem {
     pub test: String,
     pub block: String,
 }
-impl ChainAtArmsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChainAtArmsItem {
-            test: String::new(),
-            block: String::new(),
-        }
-    }
-}
-impl Default for ChainAtArmsItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

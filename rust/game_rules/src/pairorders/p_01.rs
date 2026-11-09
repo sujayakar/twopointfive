@@ -31,7 +31,7 @@ pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
 /// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
 pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
     // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
-    g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
+    g.orders.people = Some(crate::orders::SquadOrdersPeople::default());
     crate::pairorders::PairOrders::blank()
 }
 

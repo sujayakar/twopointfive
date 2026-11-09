@@ -3,25 +3,13 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/game/aim.ts:31 AIM, src/game/aim.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimK {
     pub guard: crate::knobs::AimKGuard,
     pub player: crate::knobs::AimKPlayer,
 }
-impl AimK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimK {
-            guard: crate::knobs::AimKGuard::zeroed(),
-            player: crate::knobs::AimKPlayer::zeroed(),
-        }
-    }
-}
-impl Default for AimK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:32 AimK.guard, src/game/aim.ts:32)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimKGuard {
     pub settle_secs: f64,
     pub range_ref: f64,
@@ -43,36 +31,8 @@ pub struct AimKGuard {
     pub shoot_band: f64,
     pub brake_lead: f64,
 }
-impl AimKGuard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimKGuard {
-            settle_secs: 0.0,
-            range_ref: 0.0,
-            near_k: 0.0,
-            acquire_min: 0.0,
-            unsettled_k: 0.0,
-            on_deg: 0.0,
-            lose_rate: 0.0,
-            mem_secs: 0.0,
-            jump_deg: 0.0,
-            target_move_k: 0.0,
-            target_move_cap: 0.0,
-            rate_tau: 0.0,
-            shooter_move_k: 0.0,
-            feet_tau: 0.0,
-            steady_pace: 0.0,
-            stop_to_shoot: 0.0,
-            moving_track_cap: 0.0,
-            shoot_band: 0.0,
-            brake_lead: 0.0,
-        }
-    }
-}
-impl Default for AimKGuard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:64 AimK.player, src/game/aim.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimKPlayer {
     pub settle_secs: f64,
     pub range_ref: f64,
@@ -96,72 +56,20 @@ pub struct AimKPlayer {
     pub level: f64,
     pub low: f64,
 }
-impl AimKPlayer {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimKPlayer {
-            settle_secs: 0.0,
-            range_ref: 0.0,
-            near_k: 0.0,
-            unsettled_k: 0.0,
-            lose_rate: 0.0,
-            base_stand: 0.0,
-            base_crouch: 0.0,
-            target_move_k: 0.0,
-            target_move_cap: 0.0,
-            rate_tau: 0.0,
-            jump_deg: 0.0,
-            shooter_move_k: 0.0,
-            feet_tau: 0.0,
-            steady_pace: 0.0,
-            sprint_cap: 0.0,
-            walk_cap: 0.0,
-            moving_above: 0.0,
-            crouch_k: 0.0,
-            light_snap_px: 0.0,
-            level: 0.0,
-            low: 0.0,
-        }
-    }
-}
-impl Default for AimKPlayer { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:95 TRAINED, src/game/aim.ts:95)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TrainedK {
     pub settle_k: f64,
     pub spread_k: f64,
     pub react_cap: f64,
 }
-impl TrainedK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TrainedK {
-            settle_k: 0.0,
-            spread_k: 0.0,
-            react_cap: 0.0,
-        }
-    }
-}
-impl Default for TrainedK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:86 AI_TUNE, src/game/guards.ts:86)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AiTuneK {
     pub motion_acuity: bool,
 }
-impl AiTuneK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AiTuneK {
-            motion_acuity: false,
-        }
-    }
-}
-impl Default for AiTuneK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:367 BODY_LIGHT, src/game/guards.ts:367)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BodyLightK {
     pub lit: f64,
     pub lit_near: f64,
@@ -169,22 +77,8 @@ pub struct BodyLightK {
     pub far_m: f64,
     pub smoke: f64,
 }
-impl BodyLightK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BodyLightK {
-            lit: 0.0,
-            lit_near: 0.0,
-            near_m: 0.0,
-            far_m: 0.0,
-            smoke: 0.0,
-        }
-    }
-}
-impl Default for BodyLightK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1263 GUARD_EYE, src/game/guards.ts:1263)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardEyeK {
     pub range: f64,
     pub half_deg: f64,
@@ -197,27 +91,8 @@ pub struct GuardEyeK {
     pub far_hi: f64,
     pub far_k: f64,
 }
-impl GuardEyeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardEyeK {
-            range: 0.0,
-            half_deg: 0.0,
-            near_m: 0.0,
-            near_deg: 0.0,
-            far: false,
-            far_fix_at: 0.0,
-            far_range: 0.0,
-            far_lo: 0.0,
-            far_hi: 0.0,
-            far_k: 0.0,
-        }
-    }
-}
-impl Default for GuardEyeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:57 NEEDS, src/game/needs.ts:57)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NeedsK {
     pub rate_k: f64,
     pub max_away: f64,
@@ -236,33 +111,8 @@ pub struct NeedsK {
     pub pace_k: f64,
     pub stuck_secs: f64,
 }
-impl NeedsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsK {
-            rate_k: 0.0,
-            max_away: 0.0,
-            announce_lead: 0.0,
-            say_lead: 0.0,
-            stretch_lead: 0.0,
-            partner_m: 0.0,
-            reply_after: 0.0,
-            dwell: JsMap::new(),
-            min_wait: 0.0,
-            min_trip_m: 0.0,
-            after_cancel: 0.0,
-            after_alert: 0.0,
-            rest_secs: 0.0,
-            floor_gap_secs: 0.0,
-            pace_k: 0.0,
-            stuck_secs: 0.0,
-        }
-    }
-}
-impl Default for NeedsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/whistle.ts:31 WHISTLE, src/game/whistle.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WhistleK {
     pub level: f64,
     pub reach_k: f64,
@@ -276,28 +126,8 @@ pub struct WhistleK {
     pub glance_max: f64,
     pub gain: f64,
 }
-impl WhistleK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WhistleK {
-            level: 0.0,
-            reach_k: 0.0,
-            horizon: 0.0,
-            cooldown: 0.0,
-            twice_window: 0.0,
-            awareness: 0.0,
-            react_t: 0.0,
-            walk_floor: 0.0,
-            glance_secs: 0.0,
-            glance_max: 0.0,
-            gain: 0.0,
-        }
-    }
-}
-impl Default for WhistleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wet.ts:49 WET, src/game/wet.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WetK {
     pub soak_per_sec: f64,
     pub dry_per_sec: f64,
@@ -315,32 +145,8 @@ pub struct WetK {
     pub line_band: f64,
     pub print_fade_secs: f64,
 }
-impl WetK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WetK {
-            soak_per_sec: 0.0,
-            dry_per_sec: 0.0,
-            bead_runoff_secs: 0.0,
-            bead_density: 0.0,
-            bead_size: 0.0,
-            trail_len: 0.0,
-            rough_wet: 0.0,
-            rough_dry: 0.0,
-            darken: 0.0,
-            darken_mul: 0.0,
-            spec_gain: 0.0,
-            drip_secs: 0.0,
-            prints: 0.0,
-            line_band: 0.0,
-            print_fade_secs: 0.0,
-        }
-    }
-}
-impl Default for WetK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wind.ts:42 WIND, src/game/wind.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WindK {
     pub def: f64,
     pub vent_k: f64,
@@ -361,35 +167,8 @@ pub struct WindK {
     pub debris_k: f64,
     pub near_m: f64,
 }
-impl WindK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindK {
-            def: 0.0,
-            vent_k: 0.0,
-            storm_k: 0.0,
-            door_k: 0.0,
-            door_reach: 0.0,
-            door_spread_deg: 0.0,
-            door_open_rad: 0.0,
-            gust_amp: 0.0,
-            gust_period: 0.0,
-            storm_gust_amp: 0.0,
-            storm_gust_period: 0.0,
-            ramp_up: 0.0,
-            ramp_down: 0.0,
-            smoke_relax: 0.0,
-            sheet_wake: 0.0,
-            sheet_kick: 0.0,
-            debris_k: 0.0,
-            near_m: 0.0,
-        }
-    }
-}
-impl Default for WindK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:81 CIV, src/game/civilians.ts:81)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CivK {
     pub eye: crate::knobs::CivKEye,
     pub eye_busy: crate::knobs::CivKEyeBusy,
@@ -428,116 +207,32 @@ pub struct CivK {
     pub greet_pair_secs: f64,
     pub greet_floor_secs: f64,
 }
-impl CivK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CivK {
-            eye: crate::knobs::CivKEye::zeroed(),
-            eye_busy: crate::knobs::CivKEyeBusy::zeroed(),
-            eye_alarmed: crate::knobs::CivKEyeAlarmed::zeroed(),
-            keen_k: 0.0,
-            gun_k: 0.0,
-            gun_m: 0.0,
-            glimpse_at: 0.0,
-            spot_at: 0.0,
-            startle_secs: 0.0,
-            startle_again_secs: 0.0,
-            body_m: 0.0,
-            freeze: [0.0; 2],
-            run_speed: 0.0,
-            walk_speed: 0.0,
-            creep_speed: 0.0,
-            report_m: 0.0,
-            report_secs: 0.0,
-            phone_secs: 0.0,
-            guard_bonus_m: 0.0,
-            exit_malus_m: 0.0,
-            past_threat_m: 0.0,
-            corner_m: 0.0,
-            reflee_m: 0.0,
-            lone_secs: 0.0,
-            settle_secs: 0.0,
-            comply_min: 0.0,
-            scream_m: 0.0,
-            see_m: 0.0,
-            see_lit: 0.0,
-            found_m: 0.0,
-            found_secs: 0.0,
-            outside_call_secs: 0.0,
-            greet: false,
-            greet_m: 0.0,
-            greet_pair_secs: 0.0,
-            greet_floor_secs: 0.0,
-        }
-    }
-}
-impl Default for CivK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:83 CivK.eye, src/game/civilians.ts:83)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CivKEye {
     pub range: f64,
     pub half_deg: f64,
     pub near_m: f64,
     pub near_deg: f64,
 }
-impl CivKEye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CivKEye {
-            range: 0.0,
-            half_deg: 0.0,
-            near_m: 0.0,
-            near_deg: 0.0,
-        }
-    }
-}
-impl Default for CivKEye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:84 CivK.eyeBusy, src/game/civilians.ts:84)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CivKEyeBusy {
     pub range: f64,
     pub half_deg: f64,
     pub near_m: f64,
     pub near_deg: f64,
 }
-impl CivKEyeBusy {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CivKEyeBusy {
-            range: 0.0,
-            half_deg: 0.0,
-            near_m: 0.0,
-            near_deg: 0.0,
-        }
-    }
-}
-impl Default for CivKEyeBusy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:85 CivK.eyeAlarmed, src/game/civilians.ts:85)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CivKEyeAlarmed {
     pub range: f64,
     pub half_deg: f64,
     pub near_m: f64,
     pub near_deg: f64,
 }
-impl CivKEyeAlarmed {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CivKEyeAlarmed {
-            range: 0.0,
-            half_deg: 0.0,
-            near_m: 0.0,
-            near_deg: 0.0,
-        }
-    }
-}
-impl Default for CivKEyeAlarmed { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:66 CHAOS, src/game/destruction.ts:66)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosK {
     pub def: f64,
     pub heat_tau: f64,
@@ -568,45 +263,8 @@ pub struct ChaosK {
     pub pall: crate::knobs::ChaosKPall,
     pub mess: crate::knobs::ChaosKMess,
 }
-impl ChaosK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosK {
-            def: 0.0,
-            heat_tau: 0.0,
-            cell: 0.0,
-            t_decal: 0.0,
-            t_paper: 0.0,
-            t_burst: 0.0,
-            t_puff: 0.0,
-            t_knock: 0.0,
-            t_tile: 0.0,
-            bang_heat: 0.0,
-            puffs_per_sec: 0.0,
-            puffs_per_frame: 0.0,
-            papers_per_sec: 0.0,
-            knocks_per_sec: 0.0,
-            tile_gap_secs: 0.0,
-            tiles_per_encounter: 0.0,
-            decals_per_sec: 0.0,
-            paper_reach_m: 0.0,
-            knock_reach_m: 0.0,
-            sheets_per_stack: 0.0,
-            puff: crate::knobs::ChaosKPuff::zeroed(),
-            tile: crate::knobs::ChaosKTile::zeroed(),
-            vel_low: 0.0,
-            vel_high_k: 0.0,
-            imp: crate::knobs::ChaosKImp::zeroed(),
-            loud: crate::knobs::ChaosKLoud::zeroed(),
-            pall: crate::knobs::ChaosKPall::zeroed(),
-            mess: crate::knobs::ChaosKMess::zeroed(),
-        }
-    }
-}
-impl Default for ChaosK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:78 ChaosK.puff, src/game/destruction.ts:78)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKPuff {
     pub radius: f64,
     pub density: f64,
@@ -616,81 +274,29 @@ pub struct ChaosKPuff {
     pub push: f64,
     pub expand: f64,
 }
-impl ChaosKPuff {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKPuff {
-            radius: 0.0,
-            density: 0.0,
-            ttl: 0.0,
-            speed: 0.0,
-            temp: 0.0,
-            push: 0.0,
-            expand: 0.0,
-        }
-    }
-}
-impl Default for ChaosKPuff { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:79 ChaosK.tile, src/game/destruction.ts:79)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKTile {
     pub half: V3,
     pub albedo: V3,
 }
-impl ChaosKTile {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKTile {
-            half: [0.0; 3],
-            albedo: [0.0; 3],
-        }
-    }
-}
-impl Default for ChaosKTile { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:84 ChaosK.imp, src/game/destruction.ts:84)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKImp {
     pub bang: crate::knobs::ChaosKImpBang,
     pub impact: crate::knobs::ChaosKImpImpact,
     pub thud: crate::knobs::ChaosKImpThud,
     pub chaos_k: f64,
 }
-impl ChaosKImp {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKImp {
-            bang: crate::knobs::ChaosKImpBang::zeroed(),
-            impact: crate::knobs::ChaosKImpImpact::zeroed(),
-            thud: crate::knobs::ChaosKImpThud::zeroed(),
-            chaos_k: 0.0,
-        }
-    }
-}
-impl Default for ChaosKImp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:85 ChaosKImp.bang, src/game/destruction.ts:85)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKImpBang {
     pub radius: f64,
     pub strength: f64,
     pub up: f64,
 }
-impl ChaosKImpBang {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKImpBang {
-            radius: 0.0,
-            strength: 0.0,
-            up: 0.0,
-        }
-    }
-}
-impl Default for ChaosKImpBang { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:86 ChaosKImp.impact, src/game/destruction.ts:86)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKImpImpact {
     pub radius: f64,
     pub strength: f64,
@@ -698,43 +304,16 @@ pub struct ChaosKImpImpact {
     pub bias_k: f64,
     pub debris_m: f64,
 }
-impl ChaosKImpImpact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKImpImpact {
-            radius: 0.0,
-            strength: 0.0,
-            up: 0.0,
-            bias_k: 0.0,
-            debris_m: 0.0,
-        }
-    }
-}
-impl Default for ChaosKImpImpact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:87 ChaosKImp.thud, src/game/destruction.ts:87)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKImpThud {
     pub radius: f64,
     pub strength: f64,
     pub up: f64,
     pub per_frame: f64,
 }
-impl ChaosKImpThud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKImpThud {
-            radius: 0.0,
-            strength: 0.0,
-            up: 0.0,
-            per_frame: 0.0,
-        }
-    }
-}
-impl Default for ChaosKImpThud { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:92 ChaosK.loud, src/game/destruction.ts:92)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKLoud {
     pub fixture_hit_m: f64,
     pub fixture_blast_m: f64,
@@ -748,28 +327,8 @@ pub struct ChaosKLoud {
     pub burst_queue: f64,
     pub burst_secs: f64,
 }
-impl ChaosKLoud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKLoud {
-            fixture_hit_m: 0.0,
-            fixture_blast_m: 0.0,
-            stun_fixture_m: 0.0,
-            stun_panels: false,
-            fixtures_per_encounter: 0.0,
-            fixture_gap_secs: 0.0,
-            blast_dust_floor: 0.0,
-            blast_dust_puffs: 0.0,
-            heat_k: 0.0,
-            burst_queue: 0.0,
-            burst_secs: 0.0,
-        }
-    }
-}
-impl Default for ChaosKLoud { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:121 ChaosK.pall, src/game/destruction.ts:121)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKPall {
     pub on: bool,
     pub solver: bool,
@@ -783,28 +342,8 @@ pub struct ChaosKPall {
     pub wall: crate::knobs::ChaosKPallWall,
     pub burst: crate::knobs::ChaosKPallBurst,
 }
-impl ChaosKPall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKPall {
-            on: false,
-            solver: false,
-            per_window: 0.0,
-            window_secs: 0.0,
-            slack: 0.0,
-            clear: 0.0,
-            clear_y: 0.0,
-            min_radius: 0.0,
-            max_gain: 0.0,
-            wall: crate::knobs::ChaosKPallWall::zeroed(),
-            burst: crate::knobs::ChaosKPallBurst::zeroed(),
-        }
-    }
-}
-impl Default for ChaosKPall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:123 ChaosKPall.wall, src/game/destruction.ts:123)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKPallWall {
     pub near: f64,
     pub far: f64,
@@ -822,32 +361,8 @@ pub struct ChaosKPallWall {
     pub dust_size: f64,
     pub dust_speed: f64,
 }
-impl ChaosKPallWall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKPallWall {
-            near: 0.0,
-            far: 0.0,
-            radius: 0.0,
-            density: 0.0,
-            ttl: 0.0,
-            speed: 0.0,
-            temp: 0.0,
-            push: 0.0,
-            expand: 0.0,
-            spread: 0.0,
-            out: 0.0,
-            dust: [0.0; 2],
-            dust_life: 0.0,
-            dust_size: 0.0,
-            dust_speed: 0.0,
-        }
-    }
-}
-impl Default for ChaosKPallWall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:124 ChaosKPall.burst, src/game/destruction.ts:124)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKPallBurst {
     pub ring: f64,
     pub core_gain: f64,
@@ -865,32 +380,8 @@ pub struct ChaosKPallBurst {
     pub dust_speed: f64,
     pub smoke: [f64; 3],
 }
-impl ChaosKPallBurst {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKPallBurst {
-            ring: 0.0,
-            core_gain: 0.0,
-            radius: 0.0,
-            density: 0.0,
-            ttl: 0.0,
-            speed: 0.0,
-            temp: 0.0,
-            push: 0.0,
-            expand: 0.0,
-            spread: 0.0,
-            dust: 0.0,
-            dust_life: 0.0,
-            dust_size: 0.0,
-            dust_speed: 0.0,
-            smoke: [0.0; 3],
-        }
-    }
-}
-impl Default for ChaosKPallBurst { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:132 ChaosK.mess, src/game/destruction.ts:132)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMess {
     pub on: bool,
     pub stand_y: f64,
@@ -905,29 +396,8 @@ pub struct ChaosKMess {
     pub top: crate::knobs::ChaosKMessTop,
     pub rubble: crate::knobs::ChaosKMessRubble,
 }
-impl ChaosKMess {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMess {
-            on: false,
-            stand_y: 0.0,
-            clear_y: 0.0,
-            under: 0.0,
-            min_radius: 0.0,
-            crowd: 0.0,
-            roof_y: 0.0,
-            burst: crate::knobs::ChaosKMessBurst::zeroed(),
-            wall: crate::knobs::ChaosKMessWall::zeroed(),
-            foot: crate::knobs::ChaosKMessFoot::zeroed(),
-            top: crate::knobs::ChaosKMessTop::zeroed(),
-            rubble: crate::knobs::ChaosKMessRubble::zeroed(),
-        }
-    }
-}
-impl Default for ChaosKMess { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:138 ChaosKMess.burst, src/game/destruction.ts:138)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessBurst {
     pub core: f64,
     pub lobes: f64,
@@ -935,41 +405,15 @@ pub struct ChaosKMessBurst {
     pub lobe: f64,
     pub strength: f64,
 }
-impl ChaosKMessBurst {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessBurst {
-            core: 0.0,
-            lobes: 0.0,
-            reach: 0.0,
-            lobe: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessBurst { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMess.wall, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessWall {
     pub out: f64,
     pub near: crate::knobs::ChaosKMessWallNear,
     pub far: crate::knobs::ChaosKMessWallFar,
 }
-impl ChaosKMessWall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessWall {
-            out: 0.0,
-            near: crate::knobs::ChaosKMessWallNear::zeroed(),
-            far: crate::knobs::ChaosKMessWallFar::zeroed(),
-        }
-    }
-}
-impl Default for ChaosKMessWall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMessWall.near, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessWallNear {
     pub core: f64,
     pub lobes: f64,
@@ -977,22 +421,8 @@ pub struct ChaosKMessWallNear {
     pub lobe: f64,
     pub strength: f64,
 }
-impl ChaosKMessWallNear {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessWallNear {
-            core: 0.0,
-            lobes: 0.0,
-            reach: 0.0,
-            lobe: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessWallNear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMessWall.far, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessWallFar {
     pub core: f64,
     pub lobes: f64,
@@ -1000,62 +430,23 @@ pub struct ChaosKMessWallFar {
     pub lobe: f64,
     pub strength: f64,
 }
-impl ChaosKMessWallFar {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessWallFar {
-            core: 0.0,
-            lobes: 0.0,
-            reach: 0.0,
-            lobe: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessWallFar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:142 ChaosKMess.foot, src/game/destruction.ts:142)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessFoot {
     pub out: f64,
     pub radius: f64,
     pub per_metre: f64,
     pub strength: f64,
 }
-impl ChaosKMessFoot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessFoot {
-            out: 0.0,
-            radius: 0.0,
-            per_metre: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessFoot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:144 ChaosKMess.top, src/game/destruction.ts:144)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessTop {
     pub lo: f64,
     pub hi: f64,
     pub strength: f64,
 }
-impl ChaosKMessTop {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessTop {
-            lo: 0.0,
-            hi: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessTop { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destruction.ts:146 ChaosKMess.rubble, src/game/destruction.ts:146)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ChaosKMessRubble {
     pub least: f64,
     pub grow: f64,
@@ -1064,23 +455,8 @@ pub struct ChaosKMessRubble {
     pub crowd: f64,
     pub strength: f64,
 }
-impl ChaosKMessRubble {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaosKMessRubble {
-            least: 0.0,
-            grow: 0.0,
-            min: 0.0,
-            max: 0.0,
-            crowd: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for ChaosKMessRubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/launcher.ts:28 RING, src/game/launcher.ts:28)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RingK {
     pub speed: f64,
     pub gravity: f64,
@@ -1103,54 +479,14 @@ pub struct RingK {
     pub spent_speed_max: f64,
     pub solve_iters: f64,
 }
-impl RingK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RingK {
-            speed: 0.0,
-            gravity: 0.0,
-            drag: 0.0,
-            radius: 0.0,
-            life: 0.0,
-            substeps: 0.0,
-            ko_below_neck: 0.0,
-            stagger: 0.0,
-            stagger_fire_cd: 0.0,
-            stagger_aware: 0.0,
-            stagger_back: 0.0,
-            launch_noise: 0.0,
-            clack_noise: 0.0,
-            ko_noise: 0.0,
-            hit_noise: 0.0,
-            prop_j: 0.0,
-            restitution: 0.0,
-            keep_tangent: 0.0,
-            spent_speed_max: 0.0,
-            solve_iters: 0.0,
-        }
-    }
-}
-impl Default for RingK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:337 LAUNCHER, src/game/weapons.ts:337)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LauncherK {
     pub rings: f64,
     pub cd: f64,
 }
-impl LauncherK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LauncherK {
-            rings: 0.0,
-            cd: 0.0,
-        }
-    }
-}
-impl Default for LauncherK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/he40.ts:27 HE40, src/game/he40.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct He40K {
     pub speed: f64,
     pub gravity: f64,
@@ -1169,50 +505,14 @@ pub struct He40K {
     pub keep_tangent: f64,
     pub spent_speed_max: f64,
 }
-impl He40K {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        He40K {
-            speed: 0.0,
-            gravity: 0.0,
-            drag: 0.0,
-            radius: 0.0,
-            life: 0.0,
-            substeps: 0.0,
-            solve_iters: 0.0,
-            arm_m: 0.0,
-            standoff: 0.0,
-            launch_noise: 0.0,
-            dud_noise: 0.0,
-            dud_hit_noise: 0.0,
-            prop_j: 0.0,
-            restitution: 0.0,
-            keep_tangent: 0.0,
-            spent_speed_max: 0.0,
-        }
-    }
-}
-impl Default for He40K { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:340 LAUNCHER40, src/game/weapons.ts:340)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Launcher40K {
     pub rounds: f64,
     pub cd: f64,
 }
-impl Launcher40K {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Launcher40K {
-            rounds: 0.0,
-            cd: 0.0,
-        }
-    }
-}
-impl Default for Launcher40K { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:75 FRAG, src/game/frag.ts:75)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FragK {
     pub on: bool,
     pub issue: f64,
@@ -1280,82 +580,8 @@ pub struct FragK {
     pub def_scatter: [f64; 2],
     pub cue_m: f64,
 }
-impl FragK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FragK {
-            on: false,
-            issue: 0.0,
-            fuse: 0.0,
-            order_fuse: 0.0,
-            squad: 0.0,
-            order_key: String::new(),
-            order_in: 0.0,
-            lethal_m: 0.0,
-            wound_m: 0.0,
-            destr_m: 0.0,
-            wound_kill: 0.0,
-            stagger: [0.0; 2],
-            lift: 0.0,
-            sam_stun: false,
-            door_stun: false,
-            wall_stun: false,
-            glass_m: 0.0,
-            glass_power: 0.0,
-            pane_energy: 0.0,
-            see_m: 0.0,
-            hear_m: 0.0,
-            react: [0.0; 2],
-            react_jit: 0.0,
-            shout_m: 0.0,
-            flee_m: 0.0,
-            run_speed: 0.0,
-            flee_wise: false,
-            flee_keep: 0.0,
-            rest_props: false,
-            flee_apart: false,
-            flee_apart_m: 0.0,
-            flee_lane_m: 0.0,
-            flee_sam: false,
-            flee_look: false,
-            down_kill: false,
-            down_shove: 0.0,
-            wall_flee: false,
-            flee_door: false,
-            flee_door_open: 0.0,
-            flee_door_in: 0.0,
-            flee_door_dip: 0.0,
-            flee_door_mouth: 0.0,
-            flee_door_leaf: 0.0,
-            flee_door_via: 0.0,
-            flee_door_via_m: 0.0,
-            flee_door_new: 0.0,
-            flee_door_most: 0.0,
-            flee_door_try: 0.0,
-            flee_door_nodes: 0.0,
-            defenders: false,
-            def_share: 0.0,
-            def_max: 0.0,
-            def_fuse: 0.0,
-            def_wind: 0.0,
-            def_near: 0.0,
-            def_far: 0.0,
-            def_past: 0.0,
-            def_fresh: 0.0,
-            def_blocked: 0.0,
-            def_bunch: 0.0,
-            def_bunch_secs: 0.0,
-            def_gap: 0.0,
-            def_own_m: 0.0,
-            def_scatter: [0.0; 2],
-            cue_m: 0.0,
-        }
-    }
-}
-impl Default for FragK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shotgun.ts:52 SHOTGUN, src/game/shotgun.ts:52)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShotgunK {
     pub on: bool,
     pub spots: Vec<[f64; 2]>,
@@ -1371,30 +597,8 @@ pub struct ShotgunK {
     pub shells: f64,
     pub aim_cap: f64,
 }
-impl ShotgunK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShotgunK {
-            on: false,
-            spots: Vec::new(),
-            clear: 0.0,
-            hinge: Vec::new(),
-            mark_reach: 0.0,
-            line: 0.0,
-            own_beat: 0.0,
-            own_slack: 0.0,
-            own_side: false,
-            lock_in: 0.0,
-            lock_h: 0.0,
-            shells: 0.0,
-            aim_cap: 0.0,
-        }
-    }
-}
-impl Default for ShotgunK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:25 GLASS, src/game/glass.ts:25)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassK {
     pub hear_m: f64,
     pub hear_level: f64,
@@ -1407,42 +611,13 @@ pub struct GlassK {
     pub both_faces: bool,
     pub ear_off: f64,
 }
-impl GlassK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassK {
-            hear_m: 0.0,
-            hear_level: 0.0,
-            bang_m: 0.0,
-            bang_cracks: 0.0,
-            r_min: 0.0,
-            r_max: 0.0,
-            crack_gap: 0.0,
-            live_gap: 0.0,
-            both_faces: false,
-            ear_off: 0.0,
-        }
-    }
-}
-impl Default for GlassK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:44 GLASSFX, src/game/glass.ts:44)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassfxK {
     pub on: bool,
 }
-impl GlassfxK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassfxK {
-            on: false,
-        }
-    }
-}
-impl Default for GlassfxK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:56 GLASSBREAK, src/game/glassbreak.ts:56)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct GlassbreakK {
     pub max_sites: f64,
     pub break_e: crate::knobs::GlassbreakKBreakE,
@@ -1490,78 +665,13 @@ pub struct GlassbreakK {
     pub gust_speed_k: f64,
     pub walk_clear_h: f64,
 }
-impl GlassbreakK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassbreakK {
-            max_sites: 0.0,
-            break_e: crate::knobs::GlassbreakKBreakE::zeroed(),
-            punch_e: 0.0,
-            run_single_e: 0.0,
-            run_star: 0.0,
-            run_ring_secs: 0.0,
-            crack_gap: 0.0,
-            rho: JsMap::new(),
-            radials: JsMap::new(),
-            merge: 0.0,
-            rz_min: 0.0,
-            think: 0.0,
-            stagger_per_m: 0.0,
-            stagger_jit: 0.0,
-            hang_area: 0.0,
-            grip: crate::knobs::GlassbreakKGrip::zeroed(),
-            stand_ny: 0.0,
-            stand_foot: 0.0,
-            balance_tol: 0.0,
-            blast_m: 0.0,
-            bang_power: 0.0,
-            tooth_area: 0.0,
-            tooth_k: 0.0,
-            blast_run_k: 0.0,
-            blast_dice_k: 0.0,
-            blast_sheet_k: 0.0,
-            rake_open: 0.0,
-            rake_m: 0.0,
-            dice_grain: 0.0,
-            clump_m: 0.0,
-            dice_hang: 0.0,
-            dice_speed: 0.0,
-            clumps_per_frame: 0.0,
-            releases_per_frame: 0.0,
-            out: 0.0,
-            spin: 0.0,
-            blast_out: 0.0,
-            shard_albedo: [0.0; 3],
-            chip_color: [0.0; 3],
-            chips_per_m2: 0.0,
-            chips_min: 0.0,
-            dice_chips_per_m2: 0.0,
-            crumb_every: 0.0,
-            gust_speed_k: 0.0,
-            walk_clear_h: 0.0,
-        }
-    }
-}
-impl Default for GlassbreakK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:59 GlassbreakK.breakE, src/game/glassbreak.ts:59)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakKBreakE {
     pub annealed: f64,
     pub tempered: f64,
 }
-impl GlassbreakKBreakE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassbreakKBreakE {
-            annealed: 0.0,
-            tempered: 0.0,
-        }
-    }
-}
-impl Default for GlassbreakKBreakE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum GlassbreakKRhoKey {
     Annealed,
@@ -1576,7 +686,6 @@ impl GlassbreakKRhoKey {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum GlassbreakKRadialsKey {
     Annealed,
@@ -1591,27 +700,14 @@ impl GlassbreakKRadialsKey {
     }
 }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:78 GlassbreakK.grip, src/game/glassbreak.ts:78)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakKGrip {
     pub side: f64,
     pub top: f64,
     pub wedged: f64,
 }
-impl GlassbreakKGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassbreakKGrip {
-            side: 0.0,
-            top: 0.0,
-            wedged: 0.0,
-        }
-    }
-}
-impl Default for GlassbreakKGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:61 GLASSPEN, src/game/glasspen.ts:61)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct GlasspenK {
     pub on: bool,
     pub energy: JsMap<String, f64>,
@@ -1636,39 +732,8 @@ pub struct GlasspenK {
     pub fracture_k: f64,
     pub foes_through: bool,
 }
-impl GlasspenK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlasspenK {
-            on: false,
-            energy: JsMap::new(),
-            by_class: JsMap::new(),
-            default_energy: 0.0,
-            cost: JsMap::new(),
-            ref_thick: 0.0,
-            oblique_max: 0.0,
-            graze_cos: 0.0,
-            min_energy: 0.0,
-            max_panes: 0.0,
-            deflect_deg: 0.0,
-            bend_k: 0.0,
-            hole_r: 0.0,
-            hole_k: 0.0,
-            holes: 0.0,
-            shell_r: 0.0,
-            stack_eyes: 0.0,
-            stack_energy: 0.0,
-            stack_least: false,
-            stack_least_k: 0.0,
-            fracture_k: 0.0,
-            foes_through: false,
-        }
-    }
-}
-impl Default for GlasspenK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:66 SHARDS, src/game/shards.ts:66)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShardsK {
     pub mid_per_m2: f64,
     pub mid_min: f64,
@@ -1733,113 +798,20 @@ pub struct ShardsK {
     pub crunch_add: f64,
     pub grind: f64,
 }
-impl ShardsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShardsK {
-            mid_per_m2: 0.0,
-            mid_min: 0.0,
-            mid_max: 0.0,
-            mid_size: 0.0,
-            mid_life: 0.0,
-            fine_per_m2: 0.0,
-            fine_min: 0.0,
-            fine_max: 0.0,
-            fine_size: 0.0,
-            fine_life: 0.0,
-            back_share: 0.0,
-            hit_fine_min: 0.0,
-            hit_back_share: 0.0,
-            spall_out: 0.0,
-            spall_back: 0.0,
-            dice_per_m2: 0.0,
-            dice_min: 0.0,
-            dice_max: 0.0,
-            dice_life: 0.0,
-            dice_fine_share: 0.0,
-            crater_per_m2: 0.0,
-            crater_max: 0.0,
-            exit_fines: 0.0,
-            exit_speed: 0.0,
-            speed: 0.0,
-            live_cap: 0.0,
-            cap_floor: 0.0,
-            over_cap: 0.0,
-            press_life: 0.0,
-            press_from: 0.0,
-            recs_per_frame: 0.0,
-            defer_max: 0.0,
-            plate_min_area: 0.0,
-            plate_share: 0.0,
-            child_min_area: 0.0,
-            shatter_v0: 0.0,
-            shatter_v1: 0.0,
-            rest_crumbs: 0.0,
-            crumb_size: 0.0,
-            rest_frost: false,
-            cut_edge: 0.0,
-            cut_see: 0.0,
-            cut_rim: 0.0,
-            cut_anim: false,
-            cut_body: 0.0,
-            cut_see_rest: 0.0,
-            cut_rest_body: 0.0,
-            max_gen: 0.0,
-            contact: crate::knobs::ShardsKContact::zeroed(),
-            sounds_per_frame: 0.0,
-            pending_max: 0.0,
-            sound_gap: JsMap::new(),
-            sound_thicken: 0.0,
-            sound_owed_secs: 0.0,
-            level: 0.0,
-            event_gap: 0.0,
-            by_fall: false,
-            underfoot: false,
-            crunch_full: 0.0,
-            crunch_gain: 0.0,
-            crunch_add: 0.0,
-            grind: 0.0,
-        }
-    }
-}
-impl Default for ShardsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:103 ShardsK.contact, src/game/shards.ts:103)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShardsKContact {
     pub keep_floor: f64,
     pub keep_wall: f64,
     pub rest: f64,
 }
-impl ShardsKContact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShardsKContact {
-            keep_floor: 0.0,
-            keep_wall: 0.0,
-            rest: 0.0,
-        }
-    }
-}
-impl Default for ShardsKContact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1259 TALK_TUNE, src/game/dialogue.ts:1259)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TalkTuneK {
     pub scripts: bool,
 }
-impl TalkTuneK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TalkTuneK {
-            scripts: false,
-        }
-    }
-}
-impl Default for TalkTuneK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:95 HOLD, src/game/character.ts:95)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldK {
     pub drop_gun: bool,
     pub regrab: f64,
@@ -1893,68 +865,8 @@ pub struct HoldK {
     pub struggle: crate::knobs::HoldKStruggle,
     pub gun: crate::knobs::HoldKGun,
 }
-impl HoldK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldK {
-            drop_gun: false,
-            regrab: 0.0,
-            bare_grip: 0.0,
-            bare_arch: 0.0,
-            bare_elbow: 0.0,
-            yank: crate::knobs::HoldKYank::zeroed(),
-            lunge: crate::knobs::HoldKLunge::zeroed(),
-            sway: crate::knobs::HoldKSway::zeroed(),
-            apart: crate::knobs::HoldKApart::zeroed(),
-            way_shape: false,
-            catch_shape: false,
-            catch: crate::knobs::HoldKCatch::zeroed(),
-            hit_shape: false,
-            lay_ahead: 0.0,
-            hit: crate::knobs::HoldKHit::zeroed(),
-            disarm: false,
-            strip_first: false,
-            first: crate::knobs::HoldKFirst::zeroed(),
-            strip: crate::knobs::HoldKStrip::zeroed(),
-            one_facing: false,
-            dist: 0.0,
-            secs: crate::knobs::HoldKSecs::zeroed(),
-            throat: [0.0; 3],
-            via_l: [0.0; 3],
-            over_l: [0.0; 3],
-            tight: [0.0; 3],
-            lean: 0.0,
-            choke_lean: 0.0,
-            head_pitch: 0.0,
-            brace: 0.0,
-            knife: crate::knobs::HoldKKnife::zeroed(),
-            rest_l: [0.0; 3],
-            claw_l: [0.0; 3],
-            raised_r: [0.0; 3],
-            via_up: [0.0; 3],
-            claw_r: [0.0; 3],
-            hang: Vec::new(),
-            arch: 0.0,
-            chin_up: 0.0,
-            aside: 0.0,
-            clav_up: 0.0,
-            loll: 0.0,
-            loll_roll: 0.0,
-            lower: crate::knobs::HoldKLower::zeroed(),
-            kill: crate::knobs::HoldKKill::zeroed(),
-            beats: crate::knobs::HoldKBeats::zeroed(),
-            haul: crate::knobs::HoldKHaul::zeroed(),
-            sag: [0.0; 2],
-            breath: crate::knobs::HoldKBreath::zeroed(),
-            struggle: crate::knobs::HoldKStruggle::zeroed(),
-            gun: crate::knobs::HoldKGun::zeroed(),
-        }
-    }
-}
-impl Default for HoldK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:109 HoldK.yank, src/game/character.ts:109)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKYank {
     pub arch: f64,
     pub sink: f64,
@@ -1962,41 +874,15 @@ pub struct HoldKYank {
     pub hold: f64,
     pub out: f64,
 }
-impl HoldKYank {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKYank {
-            arch: 0.0,
-            sink: 0.0,
-            in_: 0.0,
-            hold: 0.0,
-            out: 0.0,
-        }
-    }
-}
-impl Default for HoldKYank { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:115 HoldK.lunge, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKLunge {
     pub dip: f64,
     pub back: f64,
     pub t: [f64; 3],
 }
-impl HoldKLunge {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKLunge {
-            dip: 0.0,
-            back: 0.0,
-            t: [0.0; 3],
-        }
-    }
-}
-impl Default for HoldKLunge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:115 HoldK.sway, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKSway {
     pub m: f64,
     pub secs: f64,
@@ -2005,40 +891,14 @@ pub struct HoldKSway {
     pub in_: f64,
     pub out: f64,
 }
-impl HoldKSway {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKSway {
-            m: 0.0,
-            secs: 0.0,
-            twist: 0.0,
-            his: 0.0,
-            in_: 0.0,
-            out: 0.0,
-        }
-    }
-}
-impl Default for HoldKSway { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:115 HoldK.apart, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKApart {
     pub side: f64,
     pub tip: f64,
 }
-impl HoldKApart {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKApart {
-            side: 0.0,
-            tip: 0.0,
-        }
-    }
-}
-impl Default for HoldKApart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:135 HoldK.catch, src/game/character.ts:135)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldKCatch {
     pub via: V3,
     pub over: V3,
@@ -2061,37 +921,8 @@ pub struct HoldKCatch {
     pub sam_lift: f64,
     pub settle: f64,
 }
-impl HoldKCatch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKCatch {
-            via: [0.0; 3],
-            over: [0.0; 3],
-            at: [0.0; 2],
-            arm_in: 0.0,
-            ready_out: [0.0; 2],
-            jolt: crate::knobs::HoldKCatchJolt::zeroed(),
-            fling: crate::knobs::HoldKCatchFling::zeroed(),
-            sink: 0.0,
-            hips: 0.0,
-            heels: [0.0; 2],
-            seat: [0.0; 3],
-            seat_lean: 0.0,
-            brace: [0.0; 2],
-            brace_lift: 0.0,
-            yank_sit: 0.0,
-            feet: Vec::new(),
-            lift: 0.0,
-            sam_feet: Vec::new(),
-            sam_lift: 0.0,
-            settle: 0.0,
-        }
-    }
-}
-impl Default for HoldKCatch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:136 HoldKCatch.jolt, src/game/character.ts:136)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKCatchJolt {
     pub t: [f64; 4],
     pub fwd: f64,
@@ -2099,22 +930,8 @@ pub struct HoldKCatchJolt {
     pub clav: f64,
     pub dip: f64,
 }
-impl HoldKCatchJolt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKCatchJolt {
-            t: [0.0; 4],
-            fwd: 0.0,
-            head: 0.0,
-            clav: 0.0,
-            dip: 0.0,
-        }
-    }
-}
-impl Default for HoldKCatchJolt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:136 HoldKCatch.fling, src/game/character.ts:136)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldKCatchFling {
     pub t: [f64; 2],
     pub land: [f64; 2],
@@ -2122,22 +939,8 @@ pub struct HoldKCatchFling {
     pub drift: V3,
     pub arm_in: [f64; 2],
 }
-impl HoldKCatchFling {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKCatchFling {
-            t: [0.0; 2],
-            land: [0.0; 2],
-            to: Vec::new(),
-            drift: [0.0; 3],
-            arm_in: [0.0; 2],
-        }
-    }
-}
-impl Default for HoldKCatchFling { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:157 HoldK.hit, src/game/character.ts:157)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKHit {
     pub t: [f64; 4],
     pub hips: f64,
@@ -2147,43 +950,15 @@ pub struct HoldKHit {
     pub sam_in: f64,
     pub sam_dip: f64,
 }
-impl HoldKHit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKHit {
-            t: [0.0; 4],
-            hips: 0.0,
-            dip: 0.0,
-            head: 0.0,
-            heave: 0.0,
-            sam_in: 0.0,
-            sam_dip: 0.0,
-        }
-    }
-}
-impl Default for HoldKHit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:172 HoldK.first, src/game/character.ts:172)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKFirst {
     pub take: f64,
     pub drop: f64,
     pub catch: f64,
 }
-impl HoldKFirst {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKFirst {
-            take: 0.0,
-            drop: 0.0,
-            catch: 0.0,
-        }
-    }
-}
-impl Default for HoldKFirst { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:197 HoldK.strip, src/game/character.ts:197)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKStrip {
     pub take: f64,
     pub out: f64,
@@ -2207,38 +982,8 @@ pub struct HoldKStrip {
     pub fall: f64,
     pub spin: f64,
 }
-impl HoldKStrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKStrip {
-            take: 0.0,
-            out: 0.0,
-            drop: 0.0,
-            follow: 0.0,
-            knife: 0.0,
-            home: 0.0,
-            free: 0.0,
-            up: 0.0,
-            meet: [0.0; 3],
-            torn: [0.0; 3],
-            over: [0.0; 3],
-            wrench: [0.0; 3],
-            low: [0.0; 3],
-            yaw: 0.0,
-            rap: [0.0; 3],
-            hold: [0.0; 2],
-            pitch: [0.0; 3],
-            rest: 0.0,
-            push: [0.0; 2],
-            fall: 0.0,
-            spin: 0.0,
-        }
-    }
-}
-impl Default for HoldKStrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:214 HoldK.secs, src/game/character.ts:214)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKSecs {
     pub grab: f64,
     pub choke_hold: f64,
@@ -2247,23 +992,8 @@ pub struct HoldKSecs {
     pub swap: f64,
     pub kill: f64,
 }
-impl HoldKSecs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKSecs {
-            grab: 0.0,
-            choke_hold: 0.0,
-            choke: 0.0,
-            whip: 0.0,
-            swap: 0.0,
-            kill: 0.0,
-        }
-    }
-}
-impl Default for HoldKSecs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:228 HoldK.knife, src/game/character.ts:228)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKKnife {
     pub hand: V3,
     pub blade: V3,
@@ -2277,28 +1007,8 @@ pub struct HoldKKnife {
     pub head_yaw: f64,
     pub clav: f64,
 }
-impl HoldKKnife {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKKnife {
-            hand: [0.0; 3],
-            blade: [0.0; 3],
-            back: [0.0; 3],
-            via: [0.0; 3],
-            off_hand: [0.0; 3],
-            off_blade: [0.0; 3],
-            off_back: [0.0; 3],
-            off_secs: 0.0,
-            side: 0.0,
-            head_yaw: 0.0,
-            clav: 0.0,
-        }
-    }
-}
-impl Default for HoldKKnife { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:253 HoldK.lower, src/game/character.ts:253)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKLower {
     pub from: f64,
     pub by: f64,
@@ -2315,31 +1025,8 @@ pub struct HoldKLower {
     pub sam_look: f64,
     pub sam_arm: [f64; 2],
 }
-impl HoldKLower {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKLower {
-            from: 0.0,
-            by: 0.0,
-            up: 0.0,
-            sink: 0.0,
-            fwd: 0.0,
-            hip: 0.0,
-            fold: 0.0,
-            hang: [0.0; 2],
-            sam_sink: 0.0,
-            sam_fwd: 0.0,
-            sam_knees: 0.0,
-            sam_lean: 0.0,
-            sam_look: 0.0,
-            sam_arm: [0.0; 2],
-        }
-    }
-}
-impl Default for HoldKLower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:268 HoldK.kill, src/game/character.ts:268)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldKKill {
     pub wind: f64,
     pub hit: f64,
@@ -2370,45 +1057,8 @@ pub struct HoldKKill {
     pub fold: f64,
     pub hang: [f64; 2],
 }
-impl HoldKKill {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKKill {
-            wind: 0.0,
-            hit: 0.0,
-            out: 0.0,
-            go: 0.0,
-            after: 0.0,
-            mouth: [0.0; 3],
-            chest: [0.0; 3],
-            collar: [0.0; 3],
-            set: [0.0; 3],
-            across: [0.0; 3],
-            wide: [0.0; 3],
-            low: [0.0; 3],
-            wide_blade: [0.0; 3],
-            wide_back: [0.0; 3],
-            lean: [0.0; 2],
-            yaw: [0.0; 2],
-            sam_sink: 0.0,
-            look: 0.0,
-            reach: Vec::new(),
-            clutch: Vec::new(),
-            chin: 0.0,
-            arch: 0.0,
-            jolt: [0.0; 2],
-            sink: 0.0,
-            fwd: 0.0,
-            hip: 0.0,
-            fold: 0.0,
-            hang: [0.0; 2],
-        }
-    }
-}
-impl Default for HoldKKill { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:282 HoldK.beats, src/game/character.ts:282)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKBeats {
     pub clamp: [f64; 2],
     pub off: [f64; 2],
@@ -2418,24 +1068,8 @@ pub struct HoldKBeats {
     pub after: f64,
     pub lower: crate::knobs::HoldKBeatsLower,
 }
-impl HoldKBeats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKBeats {
-            clamp: [0.0; 2],
-            off: [0.0; 2],
-            tip_by: [0.0; 2],
-            tip: 0.0,
-            back: 0.0,
-            after: 0.0,
-            lower: crate::knobs::HoldKBeatsLower::zeroed(),
-        }
-    }
-}
-impl Default for HoldKBeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:283 HoldKBeats.lower, src/game/character.ts:283)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKBeatsLower {
     pub from: f64,
     pub by: f64,
@@ -2452,31 +1086,8 @@ pub struct HoldKBeatsLower {
     pub sam_look: f64,
     pub sam_arm: [f64; 2],
 }
-impl HoldKBeatsLower {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKBeatsLower {
-            from: 0.0,
-            by: 0.0,
-            up: 0.0,
-            sink: 0.0,
-            fwd: 0.0,
-            hip: 0.0,
-            fold: 0.0,
-            hang: [0.0; 2],
-            sam_sink: 0.0,
-            sam_fwd: 0.0,
-            sam_knees: 0.0,
-            sam_lean: 0.0,
-            sam_look: 0.0,
-            sam_arm: [0.0; 2],
-        }
-    }
-}
-impl Default for HoldKBeatsLower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:295 HoldK.haul, src/game/character.ts:295)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKHaul {
     pub in_: [f64; 2],
     pub out: [f64; 2],
@@ -2492,49 +1103,15 @@ pub struct HoldKHaul {
     pub toes: f64,
     pub kick: [f64; 2],
 }
-impl HoldKHaul {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKHaul {
-            in_: [0.0; 2],
-            out: [0.0; 2],
-            down: 0.0,
-            sam_lean: 0.0,
-            sam_arm: [0.0; 2],
-            lift: 0.0,
-            back: 0.0,
-            recline: 0.0,
-            arch: 0.0,
-            chin: 0.0,
-            feet: [0.0; 2],
-            toes: 0.0,
-            kick: [0.0; 2],
-        }
-    }
-}
-impl Default for HoldKHaul { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:298 HoldK.breath, src/game/character.ts:298)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKBreath {
     pub hz: f64,
     pub pitch: f64,
     pub clav: f64,
 }
-impl HoldKBreath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKBreath {
-            hz: 0.0,
-            pitch: 0.0,
-            clav: 0.0,
-        }
-    }
-}
-impl Default for HoldKBreath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:301 HoldK.struggle, src/game/character.ts:301)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKStruggle {
     pub rise: f64,
     pub fade_from: f64,
@@ -2546,26 +1123,8 @@ pub struct HoldKStruggle {
     pub dip: f64,
     pub hz: V3,
 }
-impl HoldKStruggle {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKStruggle {
-            rise: 0.0,
-            fade_from: 0.0,
-            fade_to: 0.0,
-            yaw: 0.0,
-            roll: 0.0,
-            head: 0.0,
-            claw: 0.0,
-            dip: 0.0,
-            hz: [0.0; 3],
-        }
-    }
-}
-impl Default for HoldKStruggle { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:307 HoldK.gun, src/game/character.ts:307)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldKGun {
     pub hand: V3,
     pub bore: V3,
@@ -2594,43 +1153,8 @@ pub struct HoldKGun {
     pub duck: crate::knobs::HoldKGunDuck,
     pub knock: crate::knobs::HoldKGunKnock,
 }
-impl HoldKGun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKGun {
-            hand: [0.0; 3],
-            bore: [0.0; 3],
-            out_hand: [0.0; 3],
-            kick_pitch: 0.0,
-            kick_back: 0.0,
-            via_a: [0.0; 3],
-            via_b: [0.0; 3],
-            via_bore: [0.0; 3],
-            wind_hand: [0.0; 3],
-            wind_bore: [0.0; 3],
-            hit_hand: [0.0; 3],
-            hit_bore: [0.0; 3],
-            thru_hand: [0.0; 3],
-            lean: 0.0,
-            side: 0.0,
-            head_yaw: 0.0,
-            head_pitch: 0.0,
-            wind_yaw: 0.0,
-            hit_yaw: 0.0,
-            clav: 0.0,
-            hands_up: Vec::new(),
-            aside: 0.0,
-            away_yaw: 0.0,
-            chin_up: 0.0,
-            duck: crate::knobs::HoldKGunDuck::zeroed(),
-            knock: crate::knobs::HoldKGunKnock::zeroed(),
-        }
-    }
-}
-impl Default for HoldKGun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:322 HoldKGun.duck, src/game/character.ts:322)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKGunDuck {
     pub yaw: f64,
     pub roll: f64,
@@ -2638,41 +1162,15 @@ pub struct HoldKGunDuck {
     pub hunch: f64,
     pub secs: f64,
 }
-impl HoldKGunDuck {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKGunDuck {
-            yaw: 0.0,
-            roll: 0.0,
-            pitch: 0.0,
-            hunch: 0.0,
-            secs: 0.0,
-        }
-    }
-}
-impl Default for HoldKGunDuck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:323 HoldKGun.knock, src/game/character.ts:323)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldKGunKnock {
     pub yaw: f64,
     pub roll: f64,
     pub pitch: f64,
 }
-impl HoldKGunKnock {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldKGunKnock {
-            yaw: 0.0,
-            roll: 0.0,
-            pitch: 0.0,
-        }
-    }
-}
-impl Default for HoldKGunKnock { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/suppression.ts:26 SUPPRESSION, src/game/suppression.ts:26)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SuppressionK {
     pub near_r: f64,
     pub w_near: f64,
@@ -2709,51 +1207,8 @@ pub struct SuppressionK {
     pub floor_line_secs: f64,
     pub sam_spread: f64,
 }
-impl SuppressionK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SuppressionK {
-            near_r: 0.0,
-            w_near: 0.0,
-            hit_r: 0.0,
-            w_hit: 0.0,
-            min_travel: 0.0,
-            half_life: 0.0,
-            cap: 0.0,
-            kick_decay: 0.0,
-            down_accrual: 0.0,
-            friendly_k: 0.0,
-            keen: JsMap::new(),
-            flinch: 0.0,
-            pinned: 0.0,
-            release: 0.0,
-            head_down: [0.0; 2],
-            flinch_delay: 0.0,
-            head_down_delay: 0.0,
-            guard_spread: 0.0,
-            gap_k: 0.0,
-            standoff_pace_k: 0.0,
-            displace_after: 0.0,
-            displace_min: 0.0,
-            displace_max: 0.0,
-            cover_hold: 0.0,
-            displace_cooldown: 0.0,
-            displace_cap_secs: 0.0,
-            displace_pace: 0.0,
-            displace_crouch: 0.0,
-            src_memory_secs: 0.0,
-            bark_secs: 0.0,
-            floor_bark_secs: 0.0,
-            pair_secs: 0.0,
-            floor_line_secs: 0.0,
-            sam_spread: 0.0,
-        }
-    }
-}
-impl Default for SuppressionK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:227 RIFLE_SPREAD, src/game/player.ts:227)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RifleSpreadK {
     pub still: f64,
     pub moving: f64,
@@ -2761,79 +1216,29 @@ pub struct RifleSpreadK {
     pub crouch_k: f64,
     pub brace_k: f64,
 }
-impl RifleSpreadK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RifleSpreadK {
-            still: 0.0,
-            moving: 0.0,
-            move_at: 0.0,
-            crouch_k: 0.0,
-            brace_k: 0.0,
-        }
-    }
-}
-impl Default for RifleSpreadK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:243 FOOTFALL, src/game/player.ts:243)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FootfallK {
     pub once: bool,
     pub travel: f64,
     pub owed: bool,
     pub owe: f64,
 }
-impl FootfallK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FootfallK {
-            once: false,
-            travel: 0.0,
-            owed: false,
-            owe: 0.0,
-        }
-    }
-}
-impl Default for FootfallK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:207 TWOGEARS, src/game/player.ts:207)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TwogearsK {
     pub on: bool,
     pub crouch: f64,
 }
-impl TwogearsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TwogearsK {
-            on: false,
-            crouch: 0.0,
-        }
-    }
-}
-impl Default for TwogearsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:215 CROUCHRUN, src/game/player.ts:215)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CrouchrunK {
     pub on: bool,
     pub pace: f64,
     pub loud: f64,
 }
-impl CrouchrunK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CrouchrunK {
-            on: false,
-            pace: 0.0,
-            loud: 0.0,
-        }
-    }
-}
-impl Default for CrouchrunK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:693 RUNREADY, src/game/character.ts:693)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RunreadyK {
     pub on: bool,
     pub fwd: f64,
@@ -2841,22 +1246,8 @@ pub struct RunreadyK {
     pub pitch: f64,
     pub tuck: f64,
 }
-impl RunreadyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunreadyK {
-            on: false,
-            fwd: 0.0,
-            up: 0.0,
-            pitch: 0.0,
-            tuck: 0.0,
-        }
-    }
-}
-impl Default for RunreadyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:704 RUNARMS, src/game/character.ts:704)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RunarmsK {
     pub on: bool,
     pub at: f64,
@@ -2868,26 +1259,8 @@ pub struct RunarmsK {
     pub pole: V3,
     pub pole_w: f64,
 }
-impl RunarmsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunarmsK {
-            on: false,
-            at: 0.0,
-            keep: 0.0,
-            mid: 0.0,
-            swing: 0.0,
-            pump: 0.0,
-            lift: 0.0,
-            pole: [0.0; 3],
-            pole_w: 0.0,
-        }
-    }
-}
-impl Default for RunarmsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/samlook.ts:28 SAMLOOK, src/game/samlook.ts:28)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SamlookK {
     pub on: bool,
     pub near_m: f64,
@@ -2901,49 +1274,16 @@ pub struct SamlookK {
     pub slip_by: f64,
     pub back_cos: [f64; 2],
 }
-impl SamlookK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamlookK {
-            on: false,
-            near_m: 0.0,
-            full_m: 0.0,
-            back_deg: 0.0,
-            keep_deg: 0.0,
-            notice_m: 0.0,
-            swap_m: 0.0,
-            slip: false,
-            slip_from: 0.0,
-            slip_by: 0.0,
-            back_cos: [0.0; 2],
-        }
-    }
-}
-impl Default for SamlookK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1007 DASH, src/game/character.ts:1007)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DashK {
     pub stride: f64,
     pub drop: f64,
     pub lean: f64,
     pub rate: f64,
 }
-impl DashK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DashK {
-            stride: 0.0,
-            drop: 0.0,
-            lean: 0.0,
-            rate: 0.0,
-        }
-    }
-}
-impl Default for DashK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:999 WATCH, src/game/character.ts:999)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WatchK {
     pub yaw: f64,
     pub down: f64,
@@ -2961,32 +1301,8 @@ pub struct WatchK {
     pub slip_rate: f64,
     pub squeeze: f64,
 }
-impl WatchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WatchK {
-            yaw: 0.0,
-            down: 0.0,
-            up: 0.0,
-            share: [0.0; 3],
-            rate: 0.0,
-            w_rate: 0.0,
-            lean: 0.0,
-            drop: 0.0,
-            away: 0.0,
-            arm_out: 0.0,
-            arm_down: 0.0,
-            arm_w: 0.0,
-            arm_side: [0.0; 2],
-            slip_rate: 0.0,
-            squeeze: 0.0,
-        }
-    }
-}
-impl Default for WatchK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stalk.ts:33 STALK, src/game/stalk.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StalkK {
     pub on: bool,
     pub only: bool,
@@ -3063,108 +1379,14 @@ pub struct StalkK {
     pub low_begin_m: f64,
     pub low_out_m: f64,
 }
-impl StalkK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StalkK {
-            on: false,
-            only: false,
-            cursor_m: 0.0,
-            begin_cos: 0.0,
-            out_cos: 0.0,
-            station_m: 0.0,
-            grab_m: 0.0,
-            pace: 0.0,
-            close_min: 0.0,
-            close_k: 0.0,
-            ease_up: 0.0,
-            ease_down: 0.0,
-            tell: false,
-            reach_from: 0.0,
-            reach: 0.0,
-            rise_from: 0.0,
-            rise_by: 0.0,
-            rise: 0.0,
-            catch_secs: 0.0,
-            catch_m: 0.0,
-            catch_long: 0.0,
-            turn_in: false,
-            catch_stride: 0.0,
-            yank: 0.0,
-            yank_room: 0.0,
-            yank_with: false,
-            corner: false,
-            corner_m: 0.0,
-            corner_deg: 0.0,
-            jolt: 0.0,
-            jolt_face: 0.0,
-            jolt_secs: 0.0,
-            corner_show: false,
-            corner_see: 0.0,
-            corner_reach: [0.0; 2],
-            corner_coil: 0.0,
-            corner_rise: 0.0,
-            key: false,
-            key_m: 0.0,
-            low: false,
-            low_from: 0.0,
-            low_by: 0.0,
-            low_k: 0.0,
-            low_drop: 0.0,
-            low_back: 0.0,
-            low_lean: 0.0,
-            low_hands: 0.0,
-            low_spring: 0.0,
-            low_wind: 0.0,
-            wide: false,
-            wide_out: 0.0,
-            wide_down: 0.0,
-            wide_fwd: 0.0,
-            wide_lead: 0.0,
-            wide_by: 0.0,
-            wide_pole: [0.0; 3],
-            heft: false,
-            heft_twist: 0.0,
-            heft_swing: 0.0,
-            heft_side: 0.0,
-            heft_lean: 0.0,
-            heft_dip: 0.0,
-            heft_surge: 0.0,
-            heft_out: 0.0,
-            heft_down: 0.0,
-            heft_fwd: 0.0,
-            heft_lead: 0.0,
-            heft_pole: [0.0; 3],
-            orbit: false,
-            orbit_k: 0.0,
-            orbit_edge: 0.0,
-            orbit_snap: 0.0,
-            low_begin_m: 0.0,
-            low_out_m: 0.0,
-        }
-    }
-}
-impl Default for StalkK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:56 OVERHEAR, src/game/devices.ts:56)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OverhearK {
     pub path_m: f64,
     pub carry: f64,
 }
-impl OverhearK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OverhearK {
-            path_m: 0.0,
-            carry: 0.0,
-        }
-    }
-}
-impl Default for OverhearK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:351 SCORE, src/game/chronicle.ts:351)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ScoreK {
     pub seen: f64,
     pub seen_up: f64,
@@ -3190,57 +1412,14 @@ pub struct ScoreK {
     pub per_min: f64,
     pub time_cap: f64,
 }
-impl ScoreK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScoreK {
-            seen: 0.0,
-            seen_up: 0.0,
-            alarm: 0.0,
-            heightened: 0.0,
-            lockdown: 0.0,
-            body: 0.0,
-            kill: 0.0,
-            ko: 0.0,
-            shot_near: 0.0,
-            shot_near_cap: 0.0,
-            light: 0.0,
-            light_cap: 0.0,
-            hit: 0.0,
-            down: 0.0,
-            load: 0.0,
-            civ_reported: 0.0,
-            civ_ko: 0.0,
-            civ_killed: 0.0,
-            device: 0.0,
-            device_cap: 0.0,
-            par_secs: 0.0,
-            per_min: 0.0,
-            time_cap: 0.0,
-        }
-    }
-}
-impl Default for ScoreK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:402 BADGE, src/game/chronicle.ts:402)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BadgeK {
     pub lights_out_n: f64,
     pub speedrun_secs: f64,
 }
-impl BadgeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BadgeK {
-            lights_out_n: 0.0,
-            speedrun_secs: 0.0,
-        }
-    }
-}
-impl Default for BadgeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:319 CKPT, src/game/savestate.ts:319)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CkptK {
     pub quiet_secs: f64,
     pub aware_max: f64,
@@ -3253,27 +1432,8 @@ pub struct CkptK {
     pub flash_secs: f64,
     pub regret_secs: f64,
 }
-impl CkptK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CkptK {
-            quiet_secs: 0.0,
-            aware_max: 0.0,
-            debounce_secs: 0.0,
-            min_gap_secs: 0.0,
-            pending_secs: 0.0,
-            body_hide_m: 0.0,
-            auto_slots: 0.0,
-            path_keep: 0.0,
-            flash_secs: 0.0,
-            regret_secs: 0.0,
-        }
-    }
-}
-impl Default for CkptK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:137 FOG, src/game/fogofwar.ts:137)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogK {
     pub dim: f64,
     pub desat: f64,
@@ -3318,59 +1478,8 @@ pub struct FogK {
     pub lit_cut: f64,
     pub last_seen: f64,
 }
-impl FogK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogK {
-            dim: 0.0,
-            desat: 0.0,
-            fov_deg: 0.0,
-            near_m: 0.0,
-            cone: false,
-            cone_deg: 0.0,
-            cone_near_m: 0.0,
-            cone_soft_deg: 0.0,
-            cone_near_soft_m: 0.0,
-            own: false,
-            calls: false,
-            call_secs: 0.0,
-            call_gap: 0.0,
-            call_known: 0.0,
-            smoke: 0.0,
-            linger: 0.0,
-            top_pad: 0.0,
-            doors: false,
-            squad_doors: false,
-            squad_doors_m: 0.0,
-            squad_fire: false,
-            squad_fire_secs: 0.0,
-            lasers: false,
-            things: false,
-            flat: 0.0,
-            lit: 0.0,
-            full: false,
-            air: false,
-            thin: false,
-            eyes: 0.0,
-            kept: false,
-            filed: false,
-            tracks: false,
-            mates: false,
-            ours: false,
-            full_fill: 0.0,
-            edge: 0.0,
-            lit_fill: 0.0,
-            lit_ao: 0.0,
-            lit_ao_m: 0.0,
-            lit_cut: 0.0,
-            last_seen: 0.0,
-        }
-    }
-}
-impl Default for FogK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:734 MOVES, src/game/character.ts:734)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MovesK {
     pub on: f64,
     pub recoil: f64,
@@ -3390,34 +1499,8 @@ pub struct MovesK {
     pub steady: f64,
     pub steady_run: f64,
 }
-impl MovesK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MovesK {
-            on: 0.0,
-            recoil: 0.0,
-            toss: 0.0,
-            dazzle: 0.0,
-            flinch: 0.0,
-            gait: 0.0,
-            fall: 0.0,
-            squeeze: 0.0,
-            reload: 0.0,
-            bound: 0.0,
-            clutch: 0.0,
-            entry: 0.0,
-            entry_eyes: 0.0,
-            fold: 0.0,
-            snap: 0.0,
-            steady: 0.0,
-            steady_run: 0.0,
-        }
-    }
-}
-impl Default for MovesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:915 MV, src/game/character.ts:915)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MvK {
     pub recoil: crate::knobs::MvKRecoil,
     pub flinch: crate::knobs::MvKFlinch,
@@ -3427,24 +1510,8 @@ pub struct MvK {
     pub snap: crate::knobs::MvKSnap,
     pub steady: crate::knobs::MvKSteady,
 }
-impl MvK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvK {
-            recoil: crate::knobs::MvKRecoil::zeroed(),
-            flinch: crate::knobs::MvKFlinch::zeroed(),
-            hit: crate::knobs::MvKHit::zeroed(),
-            dazzle: crate::knobs::MvKDazzle::zeroed(),
-            gait: crate::knobs::MvKGait::zeroed(),
-            snap: crate::knobs::MvKSnap::zeroed(),
-            steady: crate::knobs::MvKSteady::zeroed(),
-        }
-    }
-}
-impl Default for MvK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:916 MvK.recoil, src/game/character.ts:916)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKRecoil {
     pub back: [f64; 2],
     pub back_tau: [f64; 2],
@@ -3456,26 +1523,8 @@ pub struct MvKRecoil {
     pub rock_tau: [f64; 2],
     pub head: [f64; 2],
 }
-impl MvKRecoil {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKRecoil {
-            back: [0.0; 2],
-            back_tau: [0.0; 2],
-            climb: [0.0; 2],
-            climb_tau: [0.0; 2],
-            yaw: [0.0; 2],
-            rock: [0.0; 2],
-            shoulder: [0.0; 2],
-            rock_tau: [0.0; 2],
-            head: [0.0; 2],
-        }
-    }
-}
-impl Default for MvKRecoil { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:927 MvK.flinch, src/game/character.ts:927)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKFlinch {
     pub amp: [f64; 2],
     pub dur: [f64; 2],
@@ -3485,24 +1534,8 @@ pub struct MvKFlinch {
     pub drop: f64,
     pub side: f64,
 }
-impl MvKFlinch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKFlinch {
-            amp: [0.0; 2],
-            dur: [0.0; 2],
-            pitch: 0.0,
-            head: 0.0,
-            away: 0.0,
-            drop: 0.0,
-            side: 0.0,
-        }
-    }
-}
-impl Default for MvKFlinch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:928 MvK.hit, src/game/character.ts:928)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKHit {
     pub dur: f64,
     pub pitch: f64,
@@ -3511,23 +1544,8 @@ pub struct MvKHit {
     pub shove: f64,
     pub drop: f64,
 }
-impl MvKHit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKHit {
-            dur: 0.0,
-            pitch: 0.0,
-            yaw: 0.0,
-            roll: 0.0,
-            shove: 0.0,
-            drop: 0.0,
-        }
-    }
-}
-impl Default for MvKHit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:929 MvK.dazzle, src/game/character.ts:929)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKDazzle {
     pub amp: [f64; 2],
     pub hunch: f64,
@@ -3547,34 +1565,8 @@ pub struct MvKDazzle {
     pub hand_roll: f64,
     pub hand_pole: V3,
 }
-impl MvKDazzle {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKDazzle {
-            amp: [0.0; 2],
-            hunch: 0.0,
-            away: 0.0,
-            roll: 0.0,
-            head: 0.0,
-            head_away: 0.0,
-            drop: 0.0,
-            back: 0.0,
-            sway_x: 0.0,
-            sway_z: 0.0,
-            rate_in: 0.0,
-            rate_out: 0.0,
-            hand_drop: 0.0,
-            hand_out: 0.0,
-            hand_tilt: 0.0,
-            hand_roll: 0.0,
-            hand_pole: [0.0; 3],
-        }
-    }
-}
-impl Default for MvKDazzle { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:931 MvK.gait, src/game/character.ts:931)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKGait {
     pub drop: f64,
     pub aim_drop: f64,
@@ -3588,49 +1580,16 @@ pub struct MvKGait {
     pub chin: f64,
     pub wing: f64,
 }
-impl MvKGait {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKGait {
-            drop: 0.0,
-            aim_drop: 0.0,
-            bob: 0.0,
-            lean: 0.0,
-            aim_lean: 0.0,
-            elbow_in: 0.0,
-            slouch_sway: 0.0,
-            slouch_roll: 0.0,
-            back: 0.0,
-            chin: 0.0,
-            wing: 0.0,
-        }
-    }
-}
-impl Default for MvKGait { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:943 MvK.snap, src/game/character.ts:943)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MvKSnap {
     pub in_: f64,
     pub ease: f64,
     pub cover: [f64; 2],
     pub under: f64,
 }
-impl MvKSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKSnap {
-            in_: 0.0,
-            ease: 0.0,
-            cover: [0.0; 2],
-            under: 0.0,
-        }
-    }
-}
-impl Default for MvKSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:955 MvK.steady, src/game/character.ts:955)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MvKSteady {
     pub roll: f64,
     pub sway: f64,
@@ -3643,27 +1602,8 @@ pub struct MvKSteady {
     pub reach: f64,
     pub rise_rate: f64,
 }
-impl MvKSteady {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MvKSteady {
-            roll: 0.0,
-            sway: 0.0,
-            feet: 0.0,
-            knee: 0.0,
-            knee_low: 0.0,
-            deep: Vec::new(),
-            knee_out: 0.0,
-            rise: 0.0,
-            reach: 0.0,
-            rise_rate: 0.0,
-        }
-    }
-}
-impl Default for MvKSteady { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:886 TURN, src/game/character.ts:886)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TurnK {
     pub body_share: f64,
     pub green: f64,
@@ -3676,27 +1616,8 @@ pub struct TurnK {
     pub body_acc: f64,
     pub on: f64,
 }
-impl TurnK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TurnK {
-            body_share: 0.0,
-            green: 0.0,
-            lead: 0.0,
-            lead_rate: 0.0,
-            jump: 0.0,
-            aim: 0.0,
-            aim_acc: 0.0,
-            body: 0.0,
-            body_acc: 0.0,
-            on: 0.0,
-        }
-    }
-}
-impl Default for TurnK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorpath.ts:37 DOORPATH, src/game/doorpath.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorpathK {
     pub on: bool,
     pub at: f64,
@@ -3714,32 +1635,8 @@ pub struct DoorpathK {
     pub body_off: f64,
     pub body_move: f64,
 }
-impl DoorpathK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorpathK {
-            on: false,
-            at: 0.0,
-            out_m: 0.0,
-            in_m: 0.0,
-            look: 0.0,
-            leaf_clear: 0.0,
-            tip_m: 0.0,
-            gap_m: 0.0,
-            short_m: 0.0,
-            cap: 0.0,
-            move_m: 0.0,
-            apart_m: 0.0,
-            body_m: 0.0,
-            body_off: 0.0,
-            body_move: 0.0,
-        }
-    }
-}
-impl Default for DoorpathK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:61 WALLS, src/game/wallbreak.ts:61)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallsK {
     pub wall_max_thick: f64,
     pub wall_min_top: f64,
@@ -3761,36 +1658,8 @@ pub struct WallsK {
     pub falls_per_change: f64,
     pub hung: crate::knobs::WallsKHung,
 }
-impl WallsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallsK {
-            wall_max_thick: 0.0,
-            wall_min_top: 0.0,
-            wall_min_len: 0.0,
-            col: 0.0,
-            sill: 0.0,
-            tough: JsMap::new(),
-            sill_k: 0.0,
-            pistol_k: 0.0,
-            cover_min_top: 0.0,
-            cover_min_len: 0.0,
-            cover_max_cells: 0.0,
-            blast: crate::knobs::WallsKBlast::zeroed(),
-            max_pieces: 0.0,
-            max_changes: 0.0,
-            chunks_per_cell: 0.0,
-            chunks_per_blast: 0.0,
-            fall_max_vol: 0.0,
-            falls_per_change: 0.0,
-            hung: crate::knobs::WallsKHung::zeroed(),
-        }
-    }
-}
-impl Default for WallsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:75 WallsK.blast, src/game/wallbreak.ts:75)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallsKBlast {
     pub radius: f64,
     pub hole_k: f64,
@@ -3800,43 +1669,15 @@ pub struct WallsKBlast {
     pub min_hole: f64,
     pub contact_m: f64,
 }
-impl WallsKBlast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallsKBlast {
-            radius: 0.0,
-            hole_k: 0.0,
-            port_k: 0.0,
-            cover_k: 0.0,
-            door_k: 0.0,
-            min_hole: 0.0,
-            contact_m: 0.0,
-        }
-    }
-}
-impl Default for WallsKBlast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:79 WallsK.hung, src/game/wallbreak.ts:79)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallsKHung {
     pub deep: f64,
     pub long: f64,
     pub tall: f64,
 }
-impl WallsKHung {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallsKHung {
-            deep: 0.0,
-            long: 0.0,
-            tall: 0.0,
-        }
-    }
-}
-impl Default for WallsKHung { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:79 WALLCHARGE, src/game/wallcharge.ts:79)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallchargeK {
     pub on: bool,
     pub menu: crate::knobs::WallchargeKMenu,
@@ -3901,81 +1742,10 @@ pub struct WallchargeK {
     pub sam_secs: [f64; 2],
     pub sam_sup: f64,
 }
-impl WallchargeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallchargeK {
-            on: false,
-            menu: crate::knobs::WallchargeKMenu::Page,
-            pick_m: 0.0,
-            height: 0.0,
-            end_m: 0.0,
-            slide: Vec::new(),
-            set_off: 0.0,
-            set_near: 0.0,
-            sam_reach: 0.0,
-            sam_shift: 0.0,
-            sam_marker_m: 0.0,
-            standoff: Vec::new(),
-            post_off: 0.0,
-            file_gap: 0.0,
-            back_m: Vec::new(),
-            clear_m: 0.0,
-            brace: false,
-            mate_m: 0.0,
-            after_blow: 0.0,
-            enter_cap: 0.0,
-            sweep_secs: 0.0,
-            mouth_in: 0.0,
-            lane: 0.0,
-            lane_watch: 0.0,
-            pods: Vec::new(),
-            hole: false,
-            doors: false,
-            cost: 0.0,
-            carried: None,
-            hold_secs: 0.0,
-            mate_line: 0.0,
-            off_frame: 0.0,
-            off_frame_pod: 0.0,
-            off_holes: false,
-            outer: false,
-            outer_thick: 0.0,
-            outer_min_len: 0.0,
-            outer_yard: false,
-            far_furn: false,
-            far_slack: 0.0,
-            far_reach: 0.0,
-            far_mouth: false,
-            safe: false,
-            hung: false,
-            hung_m: 0.0,
-            safe_standoff: [0.0; 2],
-            safe_reach: [0.0; 2],
-            safe_secs: [0.0; 2],
-            safe_hide_m: 0.0,
-            safe_walk_m: 0.0,
-            safe_back: false,
-            safe_back_m: 0.0,
-            out_of_fire: false,
-            fire_known_s: 0.0,
-            fire_m: 0.0,
-            fire_step: 0.0,
-            fire_grain: 0.0,
-            men_clear: false,
-            men_clear_in: 0.0,
-            men_clear_s: 0.0,
-            sam_secs: [0.0; 2],
-            sam_sup: 0.0,
-        }
-    }
-}
-impl Default for WallchargeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WallchargeKMenu {
-    Page,
+    #[default] Page,
     Direct,
 }
 impl WallchargeKMenu {
@@ -3987,8 +1757,7 @@ impl WallchargeKMenu {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:225 WALLSHOT, src/game/wallcharge.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallshotK {
     pub on: bool,
     pub pall: f64,
@@ -3997,40 +1766,14 @@ pub struct WallshotK {
     pub room_m: f64,
     pub ours_secs: f64,
 }
-impl WallshotK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallshotK {
-            on: false,
-            pall: 0.0,
-            stagger_secs: 0.0,
-            stun_secs: [0.0; 2],
-            room_m: 0.0,
-            ours_secs: 0.0,
-        }
-    }
-}
-impl Default for WallshotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:240 WALLKILL, src/game/wallcharge.ts:240)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallkillK {
     pub on: bool,
     pub near_m: f64,
 }
-impl WallkillK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallkillK {
-            on: false,
-            near_m: 0.0,
-        }
-    }
-}
-impl Default for WallkillK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:403 HARDBREATH, src/game/character.ts:403)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HardbreathK {
     pub on: bool,
     pub chest_amp: f64,
@@ -4046,30 +1789,8 @@ pub struct HardbreathK {
     pub up: f64,
     pub down: f64,
 }
-impl HardbreathK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HardbreathK {
-            on: false,
-            chest_amp: 0.0,
-            chest_rate: 0.0,
-            chest_up: 0.0,
-            chest_down: 0.0,
-            every: 0.0,
-            puffs: 0.0,
-            count: 0.0,
-            jet: 0.0,
-            size: 0.0,
-            carry: 0.0,
-            up: 0.0,
-            down: 0.0,
-        }
-    }
-}
-impl Default for HardbreathK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/props.ts:40 CASTOR, src/game/props.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CastorK {
     pub on: bool,
     pub decel: f64,
@@ -4078,23 +1799,8 @@ pub struct CastorK {
     pub start_v: f64,
     pub stop_v: f64,
 }
-impl CastorK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CastorK {
-            on: false,
-            decel: 0.0,
-            visc: 0.0,
-            spin: 0.0,
-            start_v: 0.0,
-            stop_v: 0.0,
-        }
-    }
-}
-impl Default for CastorK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallreact.ts:52 WALLREACT, src/game/wallreact.ts:52)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallreactK {
     pub on: bool,
     pub see_m: f64,
@@ -4125,45 +1831,8 @@ pub struct WallreactK {
     pub watch_m: f64,
     pub say: bool,
 }
-impl WallreactK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallreactK {
-            on: false,
-            see_m: 0.0,
-            fov_deg: 0.0,
-            hear_blast_m: 0.0,
-            hear_fire_m: 0.0,
-            hear_fall_m: 0.0,
-            tell_m: 0.0,
-            tell_secs: 0.0,
-            near_m: 0.0,
-            retry_secs: 0.0,
-            every_gone: false,
-            gone_max: 0.0,
-            blast_flood: false,
-            step_m: 0.0,
-            run_m: 0.0,
-            beyond_m: 0.0,
-            ev_open: 0.0,
-            ev_seen: 0.0,
-            ev_fire: 0.0,
-            forget: 0.0,
-            hole_base: 0.0,
-            port_base: 0.0,
-            crowd: 0.0,
-            sticky: 0.0,
-            fresh_secs: 0.0,
-            fresh: 0.0,
-            watch_m: 0.0,
-            say: false,
-        }
-    }
-}
-impl Default for WallreactK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/coverfire.ts:52 COVERFIRE, src/game/coverfire.ts:52)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CoverfireK {
     pub on: bool,
     pub stale_secs: f64,
@@ -4192,58 +1861,13 @@ pub struct CoverfireK {
     pub line: String,
     pub say_secs: f64,
 }
-impl CoverfireK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverfireK {
-            on: false,
-            stale_secs: 0.0,
-            call_secs: 0.0,
-            call_m: 0.0,
-            behind_m: JsMap::new(),
-            max_layers: 0.0,
-            max_rounds: 0.0,
-            max_m: 0.0,
-            min_m: 0.0,
-            near_m: 0.0,
-            slack_k: 0.0,
-            slack: 0.0,
-            give_secs: 0.0,
-            lane: 0.0,
-            cone_k: 0.0,
-            past_m: 0.0,
-            same_m: 0.0,
-            linger_secs: 0.0,
-            lead_secs: 0.0,
-            lead_m: 0.0,
-            low_y: 0.0,
-            round_secs: 0.0,
-            walk_pace: 0.0,
-            walk_ask_secs: 0.0,
-            line: String::new(),
-            say_secs: 0.0,
-        }
-    }
-}
-impl Default for CoverfireK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destructionSwitch.ts:8 FURNBLAST, src/game/destructionSwitch.ts:8)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FurnblastK {
     pub on: bool,
 }
-impl FurnblastK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnblastK {
-            on: false,
-        }
-    }
-}
-impl Default for FurnblastK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:31 DOORWAY, src/game/doors.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorwayK {
     pub one_way: bool,
     pub exits_out: bool,
@@ -4253,24 +1877,8 @@ pub struct DoorwayK {
     pub solid: bool,
     pub leaf_way: bool,
 }
-impl DoorwayK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorwayK {
-            one_way: false,
-            exits_out: false,
-            frame_holds: false,
-            side_kick: false,
-            kick_glass: false,
-            solid: false,
-            leaf_way: false,
-        }
-    }
-}
-impl Default for DoorwayK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorblast.ts:43 DOORBLAST, src/game/doorblast.ts:43)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorblastK {
     pub on: bool,
     pub tear_m: crate::knobs::DoorblastKTearM,
@@ -4287,48 +1895,14 @@ pub struct DoorblastK {
     pub room: f64,
     pub land_level: f64,
 }
-impl DoorblastK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorblastK {
-            on: false,
-            tear_m: crate::knobs::DoorblastKTearM::zeroed(),
-            charge_k: 0.0,
-            charge_r: 0.0,
-            speed: [0.0; 2],
-            up: 0.0,
-            tip: 0.0,
-            spin: 0.0,
-            scrape: 0.0,
-            slam: 0.0,
-            slide: 0.0,
-            bounce: 0.0,
-            room: 0.0,
-            land_level: 0.0,
-        }
-    }
-}
-impl Default for DoorblastK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorblast.ts:50 DoorblastK.tearM, src/game/doorblast.ts:50)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorblastKTearM {
     pub stun: f64,
     pub frag: f64,
 }
-impl DoorblastKTearM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorblastKTearM {
-            stun: 0.0,
-            frag: 0.0,
-        }
-    }
-}
-impl Default for DoorblastKTearM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorblast.ts:90 DOORSHOT, src/game/doorblast.ts:90)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorshotK {
     pub on: bool,
     pub toll: f64,
@@ -4349,35 +1923,8 @@ pub struct DoorshotK {
     pub slivers: Vec<f64>,
     pub level: f64,
 }
-impl DoorshotK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorshotK {
-            on: false,
-            toll: 0.0,
-            flat: false,
-            strips: 0.0,
-            lengths: 0.0,
-            uneven: 0.0,
-            chunks: 0.0,
-            fly: Vec::new(),
-            side: 0.0,
-            up: Vec::new(),
-            spin: 0.0,
-            tilt: Vec::new(),
-            topple: Vec::new(),
-            chips: Vec::new(),
-            chip_v: Vec::new(),
-            shed: 0.0,
-            slivers: Vec::new(),
-            level: 0.0,
-        }
-    }
-}
-impl Default for DoorshotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:175 DOORTHROW, src/game/doors.ts:175)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorthrowK {
     pub on: bool,
     pub push_secs: f64,
@@ -4393,30 +1940,8 @@ pub struct DoorthrowK {
     pub again: f64,
     pub aware: f64,
 }
-impl DoorthrowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorthrowK {
-            on: false,
-            push_secs: 0.0,
-            kick_secs: 0.0,
-            startle: 0.0,
-            wary: 0.0,
-            soft: false,
-            min_speed: 0.0,
-            hand_rate: 0.0,
-            floor_rad: 0.0,
-            rate: 0.0,
-            slide: 0.0,
-            again: 0.0,
-            aware: 0.0,
-        }
-    }
-}
-impl Default for DoorthrowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/winbars.ts:42 WINBARS, src/game/winbars.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WinbarsK {
     pub on: bool,
     pub per_round: f64,
@@ -4431,63 +1956,20 @@ pub struct WinbarsK {
     pub chip_v: f64,
     pub blast_k: f64,
 }
-impl WinbarsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WinbarsK {
-            on: false,
-            per_round: 0.0,
-            pieces: 0.0,
-            uneven: 0.0,
-            fly: [0.0; 2],
-            rest_k: 0.0,
-            up: [0.0; 2],
-            side: 0.0,
-            spin: 0.0,
-            chips: 0.0,
-            chip_v: 0.0,
-            blast_k: 0.0,
-        }
-    }
-}
-impl Default for WinbarsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/opening.ts:21 OPENING, src/game/opening.ts:21)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OpeningK {
     pub on: bool,
     pub clear_m: f64,
     pub step_m: f64,
 }
-impl OpeningK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpeningK {
-            on: false,
-            clear_m: 0.0,
-            step_m: 0.0,
-        }
-    }
-}
-impl Default for OpeningK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:147 DOORSTAY, src/game/doors.ts:147)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorstayK {
     pub on: bool,
 }
-impl DoorstayK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorstayK {
-            on: false,
-        }
-    }
-}
-impl Default for DoorstayK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/handleside.ts:32 HANDLE, src/game/handleside.ts:32)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HandleK {
     pub on: bool,
     pub tools: bool,
@@ -4517,44 +1999,8 @@ pub struct HandleK {
     pub go_cap: f64,
     pub rest: f64,
 }
-impl HandleK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HandleK {
-            on: false,
-            tools: false,
-            look: 0.0,
-            ajar: 0.0,
-            reach: 0.0,
-            handle_in: 0.0,
-            far_reach: 0.0,
-            push_in: 0.0,
-            push_off: 0.0,
-            push_thru: 0.0,
-            stand_in: 0.0,
-            stand_off: 0.0,
-            thru_at: 0.0,
-            thru_off: 0.0,
-            body: 0.0,
-            slack: 0.0,
-            near: 0.0,
-            turn: 0.0,
-            clear: 0.0,
-            wait: 0.0,
-            press: 0.0,
-            tool_post: 0.0,
-            tool_near: false,
-            near_body: 0.0,
-            near_post: 0.0,
-            go_cap: 0.0,
-            rest: 0.0,
-        }
-    }
-}
-impl Default for HandleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorway.ts:36 DOORMANNERS, src/game/doorway.ts:36)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoormannersK {
     pub on: bool,
     pub stand: bool,
@@ -4620,80 +2066,8 @@ pub struct DoormannersK {
     pub off_furniture: bool,
     pub back_on: bool,
 }
-impl DoormannersK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoormannersK {
-            on: false,
-            stand: false,
-            fight: false,
-            reach: 0.0,
-            half: 0.0,
-            throat: 0.0,
-            gap: 0.0,
-            gap_min: 0.0,
-            brake: 0.0,
-            patience: 0.0,
-            rest: 0.0,
-            beyond: 0.0,
-            aside: 0.0,
-            jamb_out: 0.0,
-            jamb_past: 0.0,
-            file_gap: 0.0,
-            apart: 0.0,
-            step: 0.0,
-            round: 0.0,
-            round_out: 0.0,
-            own_m: 0.0,
-            own_end_m: 0.0,
-            leaf_round: false,
-            leaf_stall: false,
-            leaf_stall_m: 0.0,
-            leaf_stall_secs: 0.0,
-            leaf_stall_reach: 0.0,
-            leaf_stall_ahead: 0.0,
-            leaf_stall_push: 0.0,
-            sweep: 0.0,
-            lane: false,
-            lane_ajar: 0.0,
-            lane_m: 0.0,
-            lane_out: 0.0,
-            lane_flare: 0.0,
-            lane_clear: 0.0,
-            lane_apart: 0.0,
-            lane_leaf: false,
-            watch: false,
-            stack_cover: false,
-            cover_m: 0.0,
-            cover_deep: 0.0,
-            cover_look: 0.0,
-            cover_quiet: 0.0,
-            cover_cap: 0.0,
-            lane_walk: false,
-            lane_dear: 0.0,
-            lane_strip: 0.0,
-            lane_long: 0.0,
-            funnel: 0.0,
-            funnel_rest: 0.0,
-            through: 0.0,
-            past: 0.0,
-            plane_deg: 0.0,
-            rest_secs: 0.0,
-            mark_clear: false,
-            pod_clear: false,
-            clear_m: 0.0,
-            held_cap: 0.0,
-            own_leaf: false,
-            own_mark: false,
-            off_furniture: false,
-            back_on: false,
-        }
-    }
-}
-impl Default for DoormannersK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:93 BREAKS, src/game/breakTable.ts:93)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksK {
     pub share: crate::knobs::BreaksKShare,
     pub refuse_chips: [f64; 2],
@@ -4715,89 +2089,27 @@ pub struct BreaksK {
     pub steel: crate::knobs::BreaksKSteel,
     pub stud: crate::knobs::BreaksKStud,
 }
-impl BreaksK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksK {
-            share: crate::knobs::BreaksKShare::zeroed(),
-            refuse_chips: [0.0; 2],
-            crumble_chips: [0.0; 2],
-            sized_chips: [0.0; 2],
-            sized_span: [0.0; 2],
-            china_land: 0.0,
-            china_max: 0.0,
-            core_tint: 0.0,
-            chip_tint: 0.0,
-            heap: crate::knobs::BreaksKHeap::zeroed(),
-            max_standing_planes: 0.0,
-            across_deg: [0.0; 2],
-            look_edges: false,
-            look_heap: false,
-            loose_min: 0.0,
-            kink: crate::knobs::BreaksKKink::zeroed(),
-            head: crate::knobs::BreaksKHead::zeroed(),
-            steel: crate::knobs::BreaksKSteel::zeroed(),
-            stud: crate::knobs::BreaksKStud::zeroed(),
-        }
-    }
-}
-impl Default for BreaksK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:94 BreaksK.share, src/game/breakTable.ts:94)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKShare {
     pub big: crate::knobs::BreaksKShareBig,
 }
-impl BreaksKShare {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKShare {
-            big: crate::knobs::BreaksKShareBig::zeroed(),
-        }
-    }
-}
-impl Default for BreaksKShare { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:94 BreaksKShare.big, src/game/breakTable.ts:94)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKShareBig {
     pub thrown: f64,
     pub heap: f64,
     pub furniture: f64,
 }
-impl BreaksKShareBig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKShareBig {
-            thrown: 0.0,
-            heap: 0.0,
-            furniture: 0.0,
-        }
-    }
-}
-impl Default for BreaksKShareBig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:107 BreaksK.heap, src/game/breakTable.ts:107)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKHeap {
     pub span: [f64; 2],
     pub out: [f64; 2],
     pub tip: [f64; 2],
 }
-impl BreaksKHeap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKHeap {
-            span: [0.0; 2],
-            out: [0.0; 2],
-            tip: [0.0; 2],
-        }
-    }
-}
-impl Default for BreaksKHeap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:119 BreaksK.kink, src/game/breakTable.ts:119)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKKink {
     pub deg: [f64; 2],
     pub skew: f64,
@@ -4805,22 +2117,8 @@ pub struct BreaksKKink {
     pub min_long: f64,
     pub gap_secs: f64,
 }
-impl BreaksKKink {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKKink {
-            deg: [0.0; 2],
-            skew: 0.0,
-            off: 0.0,
-            min_long: 0.0,
-            gap_secs: 0.0,
-        }
-    }
-}
-impl Default for BreaksKKink { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:124 BreaksK.head, src/game/breakTable.ts:124)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKHead {
     pub on: bool,
     pub from: f64,
@@ -4830,24 +2128,8 @@ pub struct BreaksKHead {
     pub min_room: f64,
     pub most_of_width: f64,
 }
-impl BreaksKHead {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKHead {
-            on: false,
-            from: 0.0,
-            deep: [0.0; 2],
-            planes: 0.0,
-            across: [0.0; 2],
-            min_room: 0.0,
-            most_of_width: 0.0,
-        }
-    }
-}
-impl Default for BreaksKHead { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:129 BreaksK.steel, src/game/breakTable.ts:129)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKSteel {
     pub sheet: f64,
     pub kink: [f64; 2],
@@ -4858,25 +2140,8 @@ pub struct BreaksKSteel {
     pub lip: f64,
     pub inside: f64,
 }
-impl BreaksKSteel {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKSteel {
-            sheet: 0.0,
-            kink: [0.0; 2],
-            dents: [0.0; 2],
-            dent: [0.0; 2],
-            dent_most: 0.0,
-            rim: 0.0,
-            lip: 0.0,
-            inside: 0.0,
-        }
-    }
-}
-impl Default for BreaksKSteel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:132 BreaksK.stud, src/game/breakTable.ts:132)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksKStud {
     pub half: f64,
     pub depth_k: f64,
@@ -4886,24 +2151,8 @@ pub struct BreaksKStud {
     pub metal: bool,
     pub does: crate::scene_materials::DoesWord,
 }
-impl BreaksKStud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKStud {
-            half: 0.0,
-            depth_k: 0.0,
-            foot: 0.0,
-            albedo: [0.0; 3],
-            rough: 0.0,
-            metal: false,
-            does: crate::scene_materials::DoesWord::Snow,
-        }
-    }
-}
-impl Default for BreaksKStud { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/furnblast.ts:56 FURN, src/game/furnblast.ts:56)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FurnK {
     pub k: JsMap<crate::furnblast::BlastSource, f64>,
     pub fling: JsMap<crate::furnblast::BlastSource, f64>,
@@ -4922,33 +2171,8 @@ pub struct FurnK {
     pub touch: f64,
     pub row_m: f64,
 }
-impl FurnK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnK {
-            k: JsMap::new(),
-            fling: JsMap::new(),
-            shatter_m: 0.0,
-            apart_m: 0.0,
-            throw_m: 0.0,
-            throw_v: 0.0,
-            prop_break_m: 0.0,
-            chunks_per_blast: 0.0,
-            mouth_m: 0.0,
-            merge_m: 0.0,
-            mouth: crate::knobs::FurnKMouth::zeroed(),
-            hung: crate::knobs::FurnKHung::zeroed(),
-            root: crate::knobs::FurnKRoot::zeroed(),
-            rider: crate::knobs::FurnKRider::zeroed(),
-            touch: 0.0,
-            row_m: 0.0,
-        }
-    }
-}
-impl Default for FurnK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/furnblast.ts:83 FurnK.mouth, src/game/furnblast.ts:83)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FurnKMouth {
     pub on: bool,
     pub depth: f64,
@@ -4959,25 +2183,8 @@ pub struct FurnKMouth {
     pub base: bool,
     pub base_thick: f64,
 }
-impl FurnKMouth {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnKMouth {
-            on: false,
-            depth: 0.0,
-            top: 0.0,
-            vol: 0.0,
-            chunks: 0.0,
-            snow: false,
-            base: false,
-            base_thick: 0.0,
-        }
-    }
-}
-impl Default for FurnKMouth { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/furnblast.ts:88 FurnK.hung, src/game/furnblast.ts:88)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FurnKHung {
     pub len: f64,
     pub max: f64,
@@ -4993,30 +2200,8 @@ pub struct FurnKHung {
     pub chip_v: Vec<f64>,
     pub hole_m: f64,
 }
-impl FurnKHung {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnKHung {
-            len: 0.0,
-            max: 0.0,
-            strips: 0.0,
-            under_m: 0.0,
-            through: Vec::new(),
-            back: Vec::new(),
-            side: 0.0,
-            up: Vec::new(),
-            spin: 0.0,
-            chunks: 0.0,
-            chips: Vec::new(),
-            chip_v: Vec::new(),
-            hole_m: 0.0,
-        }
-    }
-}
-impl Default for FurnKHung { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/furnblast.ts:90 FurnK.root, src/game/furnblast.ts:90)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FurnKRoot {
     pub min_top: f64,
     pub max_top: f64,
@@ -5024,39 +2209,14 @@ pub struct FurnKRoot {
     pub max_vol: f64,
     pub apart_max_vol: f64,
 }
-impl FurnKRoot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnKRoot {
-            min_top: 0.0,
-            max_top: 0.0,
-            max_long: 0.0,
-            max_vol: 0.0,
-            apart_max_vol: 0.0,
-        }
-    }
-}
-impl Default for FurnKRoot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/furnblast.ts:92 FurnK.rider, src/game/furnblast.ts:92)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FurnKRider {
     pub max_top: f64,
     pub max_vol: f64,
 }
-impl FurnKRider {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnKRider {
-            max_top: 0.0,
-            max_vol: 0.0,
-        }
-    }
-}
-impl Default for FurnKRider { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBog.ts:20 SNOWBOG, src/game/snowBog.ts:20)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SnowbogK {
     pub on: bool,
     pub dead: f64,
@@ -5068,26 +2228,8 @@ pub struct SnowbogK {
     pub bank_m: f64,
     pub run: f64,
 }
-impl SnowbogK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnowbogK {
-            on: false,
-            dead: 0.0,
-            grip: 0.0,
-            stick: 0.0,
-            packed: 0.0,
-            old: 0.0,
-            top: 0.0,
-            bank_m: 0.0,
-            run: 0.0,
-        }
-    }
-}
-impl Default for SnowbogK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destructionSwitch.ts:19 RUBBLE, src/game/destructionSwitch.ts:19)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RubbleK {
     pub on: bool,
     pub radius: f64,
@@ -5110,86 +2252,25 @@ pub struct RubbleK {
     pub give_up_secs: f64,
     pub scuff: f64,
 }
-impl RubbleK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RubbleK {
-            on: false,
-            radius: 0.0,
-            reach: 0.0,
-            lead: 0.0,
-            inside: 0.0,
-            floor: 0.0,
-            heavy: 0.0,
-            walk: 0.0,
-            base: 0.0,
-            gain: 0.0,
-            aside: 0.0,
-            v_max: 0.0,
-            off: 0.0,
-            slide: 0.0,
-            spin: 0.0,
-            per_frame: 0.0,
-            cooldown: 0.0,
-            give_up: 0.0,
-            give_up_secs: 0.0,
-            scuff: 0.0,
-        }
-    }
-}
-impl Default for RubbleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destructionSwitch.ts:38 EVICT, src/game/destructionSwitch.ts:38)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EvictK {
     pub on: bool,
 }
-impl EvictK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EvictK {
-            on: false,
-        }
-    }
-}
-impl Default for EvictK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destructionSwitch.ts:29 DEBRIS, src/game/destructionSwitch.ts:29)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DebrisK {
     pub dress: bool,
     pub min_speed: f64,
 }
-impl DebrisK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DebrisK {
-            dress: false,
-            min_speed: 0.0,
-        }
-    }
-}
-impl Default for DebrisK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lighting.ts:30 LIGHTWALL, src/game/lighting.ts:30)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LightwallK {
     pub on: bool,
     pub gap: f64,
 }
-impl LightwallK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LightwallK {
-            on: false,
-            gap: 0.0,
-        }
-    }
-}
-impl Default for LightwallK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/airDust.ts:37 AIRDUST, src/game/airDust.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AirdustK {
     pub on: bool,
     pub diffuse: f64,
@@ -5197,22 +2278,8 @@ pub struct AirdustK {
     pub step: f64,
     pub recheck_secs: f64,
 }
-impl AirdustK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirdustK {
-            on: false,
-            diffuse: 0.0,
-            settle: 0.0,
-            step: 0.0,
-            recheck_secs: 0.0,
-        }
-    }
-}
-impl Default for AirdustK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallsnap.ts:27 WALLSNAP, src/game/wallsnap.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallsnapK {
     pub on: bool,
     pub take_base: f64,
@@ -5281,83 +2348,8 @@ pub struct WallsnapK {
     pub slow_in: f64,
     pub slow_out: f64,
 }
-impl WallsnapK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallsnapK {
-            on: false,
-            take_base: 0.0,
-            take_per_m: 0.0,
-            take_per_turn: 0.0,
-            take_min: 0.0,
-            take_max: 0.0,
-            ease_pow: 0.0,
-            yaw_pow: 0.0,
-            reach_moving: 0.0,
-            heading_min: 0.0,
-            heading_bonus: 0.0,
-            buffer: 0.0,
-            dip: 0.0,
-            nod: 0.0,
-            hit_peak: 0.0,
-            scuff: 0.0,
-            step_lift: 0.0,
-            step_trail: 0.0,
-            pose: false,
-            cam_room: 0.0,
-            cam_side: 0.0,
-            along_deg: 0.0,
-            away_secs: 0.0,
-            away_diag: 0.0,
-            off_push: 0.0,
-            out_rate: 0.0,
-            stack_draw: false,
-            up_secs: 0.0,
-            up_rise: 0.0,
-            bore: 0.0,
-            lean_along: 0.0,
-            lean_out: 0.0,
-            lean_back: 0.0,
-            lean_on_deg: 0.0,
-            lean_off_deg: 0.0,
-            lean_min_dist: 0.0,
-            lean_max_deg: 0.0,
-            lean_keep_deg: 0.0,
-            lean_keep_dist: 0.0,
-            lean_over_y: 0.0,
-            lean_clear_m: 0.0,
-            lean_gun: 0.0,
-            lean_gun_step: 0.0,
-            dwell_out: 0.0,
-            dwell_back: 0.0,
-            min_out: 0.0,
-            after_shot: 0.0,
-            press: false,
-            press_secs: 0.0,
-            press_flow: 0.0,
-            press_near: 0.0,
-            press_deg: 0.0,
-            press_touch: 0.0,
-            press_thing: 0.0,
-            press_thing_at: 0.0,
-            press_turn: 0.0,
-            press_again: 0.0,
-            press_after_shot: 0.0,
-            press_run: false,
-            voice: false,
-            voice_on: 0.0,
-            voice_off: 0.0,
-            slow: false,
-            slow_take: 0.0,
-            slow_in: 0.0,
-            slow_out: 0.0,
-        }
-    }
-}
-impl Default for WallsnapK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:45 GUNWALL, src/game/gunwall.ts:45)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunwallK {
     pub on: bool,
     pub down_m: f64,
@@ -5369,26 +2361,8 @@ pub struct GunwallK {
     pub fight_s: f64,
     pub mark: bool,
 }
-impl GunwallK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunwallK {
-            on: false,
-            down_m: 0.0,
-            up_m: 0.0,
-            lead_s: 0.0,
-            at_m: 0.0,
-            tuck_m: 0.0,
-            tuck_lead_s: 0.0,
-            fight_s: 0.0,
-            mark: false,
-        }
-    }
-}
-impl Default for GunwallK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/close.ts:41 CLOSE, src/game/close.ts:41)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CloseK {
     pub on: bool,
     pub ready: bool,
@@ -5421,47 +2395,8 @@ pub struct CloseK {
     pub noise: crate::knobs::CloseKNoise,
     pub alert_noise: f64,
 }
-impl CloseK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CloseK {
-            on: false,
-            ready: false,
-            dark: false,
-            marks: false,
-            side: false,
-            front: false,
-            seat: false,
-            alert_strike: false,
-            held_clicks: false,
-            reach_up: false,
-            no_knife: false,
-            rmb_hold: false,
-            rmb_tap_secs: 0.0,
-            rmb_loud: 0.0,
-            rmb_wait_secs: 0.0,
-            hands_low_neck_m: 0.0,
-            mode_m: 0.0,
-            mode_out_m: 0.0,
-            dark_at: 0.0,
-            lit_at: 0.0,
-            touch_m: 0.0,
-            fade_m: 0.0,
-            reach: crate::knobs::CloseKReach::zeroed(),
-            side_from_deg: 0.0,
-            inner: 0.0,
-            step_deg: 0.0,
-            strike_dist: 0.0,
-            seat_dist: 0.0,
-            noise: crate::knobs::CloseKNoise::zeroed(),
-            alert_noise: 0.0,
-        }
-    }
-}
-impl Default for CloseK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/close.ts:103 CloseK.reach, src/game/close.ts:103)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CloseKReach {
     pub behind: f64,
     pub side: f64,
@@ -5469,43 +2404,16 @@ pub struct CloseKReach {
     pub seat: f64,
     pub seat_front: f64,
 }
-impl CloseKReach {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CloseKReach {
-            behind: 0.0,
-            side: 0.0,
-            front: 0.0,
-            seat: 0.0,
-            seat_front: 0.0,
-        }
-    }
-}
-impl Default for CloseKReach { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/close.ts:113 CloseK.noise, src/game/close.ts:113)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CloseKNoise {
     pub behind: f64,
     pub side: f64,
     pub front: f64,
     pub seat: f64,
 }
-impl CloseKNoise {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CloseKNoise {
-            behind: 0.0,
-            side: 0.0,
-            front: 0.0,
-            seat: 0.0,
-        }
-    }
-}
-impl Default for CloseKNoise { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/floorplan.ts:60 PLAN, src/game/floorplan.ts:60)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlanK {
     pub on: bool,
     pub paths: bool,
@@ -5528,148 +2436,46 @@ pub struct PlanK {
     pub pair_bar_m: f64,
     pub others: f64,
 }
-impl PlanK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanK {
-            on: false,
-            paths: false,
-            marks: false,
-            sectors: false,
-            who: false,
-            word: false,
-            throws: false,
-            menu_only: false,
-            key_lit: false,
-            thr_told: false,
-            fresh_secs: 0.0,
-            walk_dim: 0.0,
-            rest_dim: 0.0,
-            ring_m: 0.0,
-            sector_m: 0.0,
-            sector_deg: 0.0,
-            sight_m: 0.0,
-            reask_secs: 0.0,
-            pair_bar_m: 0.0,
-            others: 0.0,
-        }
-    }
-}
-impl Default for PlanK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gear.ts:24 GEAR, src/game/gear.ts:24)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GearK {
     pub on: bool,
 }
-impl GearK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GearK {
-            on: false,
-        }
-    }
-}
-impl Default for GearK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/startfile.ts:20 START, src/game/startfile.ts:20)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StartK {
     pub fall_in: bool,
 }
-impl StartK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StartK {
-            fall_in: false,
-        }
-    }
-}
-impl Default for StartK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/samestart.ts:21 SAMESTART, src/game/samestart.ts:21)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SamestartK {
     pub on: bool,
 }
-impl SamestartK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamestartK {
-            on: false,
-        }
-    }
-}
-impl Default for SamestartK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/takecheck.ts:15 TAKE, src/game/takecheck.ts:15)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TakeK {
     pub wired: bool,
 }
-impl TakeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TakeK {
-            wired: false,
-        }
-    }
-}
-impl Default for TakeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/autoreload.ts:23 RELOAD, src/game/autoreload.ts:23)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ReloadK {
     pub delay: f64,
 }
-impl ReloadK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReloadK {
-            delay: 0.0,
-        }
-    }
-}
-impl Default for ReloadK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quickthrow.ts:10 QUICKTHROW, src/game/quickthrow.ts:10)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuickthrowK {
     pub on: bool,
 }
-impl QuickthrowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuickthrowK {
-            on: false,
-        }
-    }
-}
-impl Default for QuickthrowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/samstun.ts:23 SAMSTUN, src/game/samstun.ts:23)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SamstunK {
     pub on: bool,
     pub blind_roots: bool,
     pub fade: f64,
     pub own_seen: bool,
 }
-impl SamstunK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamstunK {
-            on: false,
-            blind_roots: false,
-            fade: 0.0,
-            own_seen: false,
-        }
-    }
-}
-impl Default for SamstunK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/deathrecap.ts:29 RECAP, src/game/deathrecap.ts:29)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RecapK {
     pub on: bool,
     pub secs: f64,
@@ -5685,30 +2491,8 @@ pub struct RecapK {
     pub live_side_m: f64,
     pub live_mark_secs: f64,
 }
-impl RecapK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RecapK {
-            on: false,
-            secs: 0.0,
-            after: 0.0,
-            hz: 0.0,
-            keep: 0.0,
-            live: false,
-            live_arrows: false,
-            live_see_m: 0.0,
-            live_saw_secs: 0.0,
-            live_hear_m: 0.0,
-            live_beat: 0.0,
-            live_side_m: 0.0,
-            live_mark_secs: 0.0,
-        }
-    }
-}
-impl Default for RecapK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aimweight.ts:20 AIMWEIGHT, src/game/aimweight.ts:20)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimweightK {
     pub on: bool,
     pub rate: f64,
@@ -5719,25 +2503,8 @@ pub struct AimweightK {
     pub reach: f64,
     pub launch_wait: f64,
 }
-impl AimweightK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimweightK {
-            on: false,
-            rate: 0.0,
-            smooth: 0.0,
-            heft: 0.0,
-            bare: 0.0,
-            on_m: 0.0,
-            reach: 0.0,
-            launch_wait: 0.0,
-        }
-    }
-}
-impl Default for AimweightK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aimcost.ts:40 AIMCOST, src/game/aimcost.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimcostK {
     pub lamp: bool,
     pub move_: bool,
@@ -5753,30 +2520,8 @@ pub struct AimcostK {
     pub flank_at: f64,
     pub ring_px: f64,
 }
-impl AimcostK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimcostK {
-            lamp: false,
-            move_: false,
-            bare: 0.0,
-            pad: 0.0,
-            slack: 0.0,
-            move_k: 0.0,
-            stop_tau: 0.0,
-            stop_bleed: 0.0,
-            brace_feet: 0.0,
-            bare_device: 0.0,
-            plant_at: 0.0,
-            flank_at: 0.0,
-            ring_px: 0.0,
-        }
-    }
-}
-impl Default for AimcostK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/friends.ts:27 FRIENDS, src/game/friends.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FriendsK {
     pub no_snap: bool,
     pub low_ready: bool,
@@ -5788,41 +2533,13 @@ pub struct FriendsK {
     pub up_secs: f64,
     pub quiet_s: f64,
 }
-impl FriendsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FriendsK {
-            no_snap: false,
-            low_ready: false,
-            reach_m: 0.0,
-            past_m: 0.0,
-            clear_m: 0.0,
-            lead_s: 0.0,
-            lead_max_m: 0.0,
-            up_secs: 0.0,
-            quiet_s: 0.0,
-        }
-    }
-}
-impl Default for FriendsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/teamtally.ts:17 TEAMTALLY, src/game/teamtally.ts:17)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeamtallyK {
     pub on: bool,
 }
-impl TeamtallyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeamtallyK {
-            on: false,
-        }
-    }
-}
-impl Default for TeamtallyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/friendlyfire.ts:37 FRIENDLYFIRE, src/game/friendlyfire.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FriendlyfireK {
     pub on: bool,
     pub cone_k: f64,
@@ -5832,24 +2549,8 @@ pub struct FriendlyfireK {
     pub words: bool,
     pub near_m: f64,
 }
-impl FriendlyfireK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FriendlyfireK {
-            on: false,
-            cone_k: 0.0,
-            body_m: 0.0,
-            sure_m: 0.0,
-            care: false,
-            words: false,
-            near_m: 0.0,
-        }
-    }
-}
-impl Default for FriendlyfireK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lightswitch.ts:52 LIGHTSWITCH, src/game/lightswitch.ts:52)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LightswitchK {
     pub on: bool,
     pub reach: f64,
@@ -5863,28 +2564,8 @@ pub struct LightswitchK {
     pub guard_secs: f64,
     pub hand_secs: f64,
 }
-impl LightswitchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LightswitchK {
-            on: false,
-            reach: 0.0,
-            height: 0.0,
-            beside: Vec::new(),
-            stand_m: 0.0,
-            per_room: 0.0,
-            apart_m: 0.0,
-            scan_m: 0.0,
-            guards: false,
-            guard_secs: 0.0,
-            hand_secs: 0.0,
-        }
-    }
-}
-impl Default for LightswitchK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/carlamps.ts:29 CARLAMPS, src/game/carlamps.ts:29)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CarlampsK {
     pub on: bool,
     pub dark: V3,
@@ -5892,131 +2573,45 @@ pub struct CarlampsK {
     pub tone: f64,
     pub twin: f64,
 }
-impl CarlampsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CarlampsK {
-            on: false,
-            dark: [0.0; 3],
-            fit: 0.0,
-            tone: 0.0,
-            twin: 0.0,
-        }
-    }
-}
-impl Default for CarlampsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:92 HITSTUFF, src/game/particleFx.ts:92)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HitstuffK {
     pub on: bool,
 }
-impl HitstuffK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HitstuffK {
-            on: false,
-        }
-    }
-}
-impl Default for HitstuffK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/decals.ts:121 MARKCUT, src/render/decals.ts:121)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MarkcutK {
     pub on: bool,
 }
-impl MarkcutK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarkcutK {
-            on: false,
-        }
-    }
-}
-impl Default for MarkcutK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/decals.ts:129 MARKSIT, src/render/decals.ts:129)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MarksitK {
 }
-impl MarksitK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarksitK {
-        }
-    }
-}
-impl Default for MarksitK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/planPace.ts:10 PLAN_PACE, src/render/planPace.ts:10)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlanPaceK {
 }
-impl PlanPaceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanPaceK {
-        }
-    }
-}
-impl Default for PlanPaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:222 REACH_PACE, src/render/reach.ts:222)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ReachPaceK {
     pub steps: f64,
     pub whole: bool,
     pub whole_cells: f64,
 }
-impl ReachPaceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachPaceK {
-            steps: 0.0,
-            whole: false,
-            whole_cells: 0.0,
-        }
-    }
-}
-impl Default for ReachPaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/stuff.ts:241 COATFINISH, src/scene/stuff.ts:241)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CoatfinishK {
     pub on: bool,
 }
-impl CoatfinishK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoatfinishK {
-            on: false,
-        }
-    }
-}
-impl Default for CoatfinishK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/stuff.ts:260 SOLIDGLASS, src/scene/stuff.ts:260)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SolidglassK {
     pub on: bool,
     pub lum: f64,
     pub rough: f64,
 }
-impl SolidglassK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SolidglassK {
-            on: false,
-            lum: 0.0,
-            rough: 0.0,
-        }
-    }
-}
-impl Default for SolidglassK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallskin.ts:53 WALLSKIN, src/game/wallskin.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallskinK {
     pub on: bool,
     pub thick: f64,
@@ -6025,40 +2620,14 @@ pub struct WallskinK {
     pub max_pieces: f64,
     pub box_slack: f64,
 }
-impl WallskinK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallskinK {
-            on: false,
-            thick: 0.0,
-            off: 0.0,
-            per_skin: 0.0,
-            max_pieces: 0.0,
-            box_slack: 0.0,
-        }
-    }
-}
-impl Default for WallskinK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cleanrestart.ts:28 CLEANRESTART, src/game/cleanrestart.ts:28)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CleanrestartK {
     pub on: bool,
     pub picture: bool,
 }
-impl CleanrestartK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CleanrestartK {
-            on: false,
-            picture: false,
-        }
-    }
-}
-impl Default for CleanrestartK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fireline.ts:44 FIRELINE, src/game/fireline.ts:44)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FirelineK {
     pub on: bool,
     pub fire_s: f64,
@@ -6080,36 +2649,8 @@ pub struct FirelineK {
     pub edge_m: f64,
     pub reach_m: f64,
 }
-impl FirelineK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FirelineK {
-            on: false,
-            fire_s: 0.0,
-            reload_s: 0.0,
-            pace_s: 0.0,
-            pace_k: 0.0,
-            lapse_s: 0.0,
-            spread: 0.0,
-            clear_m: 0.0,
-            short_m: 0.0,
-            keep_m: 0.0,
-            gap_m: 0.0,
-            look_m: 0.0,
-            cue_s: 0.0,
-            max_s: 0.0,
-            again_s: 0.0,
-            way_more_m: 0.0,
-            berth_m: 0.0,
-            edge_m: 0.0,
-            reach_m: 0.0,
-        }
-    }
-}
-impl Default for FirelineK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:344 SAVETIMELINE, src/game/savestate.ts:344)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SavetimelineK {
     pub on: bool,
     pub manual: f64,
@@ -6121,41 +2662,13 @@ pub struct SavetimelineK {
     pub pic_px: f64,
     pub pic_q: f64,
 }
-impl SavetimelineK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SavetimelineK {
-            on: false,
-            manual: 0.0,
-            auto: 0.0,
-            holds: false,
-            turn: false,
-            since: false,
-            base: false,
-            pic_px: 0.0,
-            pic_q: 0.0,
-        }
-    }
-}
-impl Default for SavetimelineK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/handslot.ts:14 HANDSLOT, src/game/handslot.ts:14)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HandslotK {
     pub on: bool,
 }
-impl HandslotK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HandslotK {
-            on: false,
-        }
-    }
-}
-impl Default for HandslotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/handring.ts:27 HANDRING, src/game/handring.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HandringK {
     pub on: bool,
     pub hold_secs: f64,
@@ -6168,61 +2681,20 @@ pub struct HandringK {
     pub turn_max: f64,
     pub corner: bool,
 }
-impl HandringK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HandringK {
-            on: false,
-            hold_secs: 0.0,
-            empty: false,
-            near: false,
-            lone: false,
-            lone_wrap: false,
-            bare: false,
-            turn: false,
-            turn_max: 0.0,
-            corner: false,
-        }
-    }
-}
-impl Default for HandringK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwback.ts:14 THROWBACK, src/game/throwback.ts:14)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ThrowbackK {
     pub on: bool,
     pub rest_mark: bool,
     pub reach: bool,
 }
-impl ThrowbackK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowbackK {
-            on: false,
-            rest_mark: false,
-            reach: false,
-        }
-    }
-}
-impl Default for ThrowbackK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/ownblow.ts:28 OWNBLOW, src/game/ownblow.ts:28)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OwnblowK {
     pub on: bool,
 }
-impl OwnblowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnblowK {
-            on: false,
-        }
-    }
-}
-impl Default for OwnblowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sprintdoor.ts:32 SPRINTDOOR, src/game/sprintdoor.ts:32)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SprintdoorK {
     pub on: bool,
     pub keep: f64,
@@ -6237,29 +2709,8 @@ pub struct SprintdoorK {
     pub kick_into: f64,
     pub kick_free: f64,
 }
-impl SprintdoorK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SprintdoorK {
-            on: false,
-            keep: 0.0,
-            bash_vel: 0.0,
-            lean: 0.0,
-            lean_secs: 0.0,
-            rip_pace: 0.0,
-            rip_secs: 0.0,
-            rip_vel: 0.0,
-            rip_level: 0.0,
-            kick_k: 0.0,
-            kick_into: 0.0,
-            kick_free: 0.0,
-        }
-    }
-}
-impl Default for SprintdoorK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/teampace.ts:43 TEAMPACE, src/game/teampace.ts:43)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeampaceK {
     pub on: bool,
     pub k: f64,
@@ -6284,60 +2735,16 @@ pub struct TeampaceK {
     pub step: f64,
     pub gap: f64,
 }
-impl TeampaceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeampaceK {
-            on: false,
-            k: 0.0,
-            follow_k: 0.0,
-            behind_m: 0.0,
-            fight_secs: 0.0,
-            back_secs: 0.0,
-            own: false,
-            dash_m: 0.0,
-            dash_seen: 0.0,
-            dash_every: 0.0,
-            dash_hot: 0.0,
-            door_brisk: false,
-            pacing: false,
-            pace_near: 0.0,
-            pace_gap: 0.0,
-            pace_cos: 0.0,
-            walk_aim_off: 0.0,
-            walk_aim_on: 0.0,
-            run_at: 0.0,
-            accel: 0.0,
-            step: 0.0,
-            gap: 0.0,
-        }
-    }
-}
-impl Default for TeampaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/noshove.ts:28 NOSHOVE, src/game/noshove.ts:28)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NoshoveK {
     pub on: bool,
     pub round: bool,
     pub ring: f64,
     pub back: f64,
 }
-impl NoshoveK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NoshoveK {
-            on: false,
-            round: false,
-            ring: 0.0,
-            back: 0.0,
-        }
-    }
-}
-impl Default for NoshoveK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:47 RAILS, src/game/rails.ts:47)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsK {
     pub on: bool,
     pub pan_speed: f64,
@@ -6363,55 +2770,13 @@ pub struct RailsK {
     pub flat_ring: bool,
     pub spare_secs: f64,
 }
-impl RailsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsK {
-            on: false,
-            pan_speed: 0.0,
-            pan_reach: 0.0,
-            snap_px: 0.0,
-            keep: 0.0,
-            keep_speed: 0.0,
-            keep_deep: 0.0,
-            keep_up: 0.0,
-            way_m: 0.0,
-            way_run: false,
-            after_secs: 0.0,
-            after_max: 0.0,
-            line_clear: false,
-            mark_clear: false,
-            eye_first: false,
-            eye_view: false,
-            card_beat: false,
-            card_beat_secs: 0.0,
-            card_quiet: 0.0,
-            card_max: 0.0,
-            spare_down: false,
-            flat_ring: false,
-            spare_secs: 0.0,
-        }
-    }
-}
-impl Default for RailsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/belief.ts:12 BELIEF, src/game/belief.ts:12)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BeliefK {
     pub on: bool,
 }
-impl BeliefK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BeliefK {
-            on: false,
-        }
-    }
-}
-impl Default for BeliefK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:62 DOORFORCE, src/game/doorforce.ts:62)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorforceK {
     pub on: bool,
     pub post_ends: bool,
@@ -6439,42 +2804,8 @@ pub struct DoorforceK {
     pub walk_secs: f64,
     pub rest_secs: f64,
 }
-impl DoorforceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorforceK {
-            on: false,
-            post_ends: false,
-            sure: 0.0,
-            keep: 0.0,
-            fade_secs: 0.0,
-            stale_secs: 0.0,
-            gain: 0.0,
-            hear_min: 0.0,
-            shot: 0.0,
-            handle: 0.0,
-            seen: 0.0,
-            shut_carry: 0.0,
-            behind_m: 0.0,
-            reach_m: 0.0,
-            seen_secs: 0.0,
-            heard_err_m: 0.0,
-            chest_y: 0.0,
-            near_leaf_m: 0.0,
-            past_leaf_m: 0.0,
-            rounds: 0.0,
-            gap_secs: 0.0,
-            kick_secs: 0.0,
-            kick_secs_no_shot: 0.0,
-            walk_secs: 0.0,
-            rest_secs: 0.0,
-        }
-    }
-}
-impl Default for DoorforceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/slotsetup.ts:47 SLOTSETUP, src/game/slotsetup.ts:47)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SlotsetupK {
     pub on: bool,
     pub pop: bool,
@@ -6483,23 +2814,8 @@ pub struct SlotsetupK {
     pub settle: f64,
     pub mags: bool,
 }
-impl SlotsetupK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotsetupK {
-            on: false,
-            pop: false,
-            secs: 0.0,
-            draw: false,
-            settle: 0.0,
-            mags: false,
-        }
-    }
-}
-impl Default for SlotsetupK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:116 GLASSREAL, src/game/glassbreak.ts:116)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassrealK {
     pub drop: bool,
     pub place: bool,
@@ -6509,45 +2825,16 @@ pub struct GlassrealK {
     pub door_m: f64,
     pub door_foot_m: f64,
 }
-impl GlassrealK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassrealK {
-            drop: false,
-            place: false,
-            hang: 0.0,
-            blocks: 0.0,
-            low_m: 0.0,
-            door_m: 0.0,
-            door_foot_m: 0.0,
-        }
-    }
-}
-impl Default for GlassrealK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quietfog.ts:44 QUIETFOG, src/game/quietfog.ts:44)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuietfogK {
     pub on: bool,
     pub def: crate::quietfog::QuietRung,
     pub wand: bool,
     pub solo: bool,
 }
-impl QuietfogK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietfogK {
-            on: false,
-            def: crate::quietfog::QuietRung::Team,
-            wand: false,
-            solo: false,
-        }
-    }
-}
-impl Default for QuietfogK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/told.ts:33 TOLD, src/game/told.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ToldK {
     pub on: bool,
     pub rung: crate::told::ToldRung,
@@ -6555,43 +2842,16 @@ pub struct ToldK {
     pub standard: f64,
     pub fog_off: bool,
 }
-impl ToldK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ToldK {
-            on: false,
-            rung: crate::told::ToldRung::Bare,
-            guided: 0.0,
-            standard: 0.0,
-            fog_off: false,
-        }
-    }
-}
-impl Default for ToldK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/words.ts:27 WORDS, src/game/words.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WordsK {
     pub on: bool,
     pub doors: bool,
     pub radio_home: bool,
     pub guide: bool,
 }
-impl WordsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WordsK {
-            on: false,
-            doors: false,
-            radio_home: false,
-            guide: false,
-        }
-    }
-}
-impl Default for WordsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kitanim.ts:45 KITANIM, src/game/kitanim.ts:45)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitanimK {
     pub on: bool,
     pub equip: bool,
@@ -6608,90 +2868,30 @@ pub struct KitanimK {
     pub beats: crate::knobs::KitanimKBeats,
     pub close_near: f64,
 }
-impl KitanimK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitanimK {
-            on: false,
-            equip: false,
-            reload: false,
-            close: false,
-            grips: false,
-            sling: 0.0,
-            sling_up: 0.0,
-            sling_down: 0.0,
-            early: 0.0,
-            click_keep: 0.0,
-            throw_keep: 0.0,
-            plain_lock: 0.0,
-            beats: crate::knobs::KitanimKBeats::zeroed(),
-            close_near: 0.0,
-        }
-    }
-}
-impl Default for KitanimK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kitanim.ts:76 KitanimK.beats, src/game/kitanim.ts:76)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitanimKBeats {
     pub pistol: crate::knobs::KitanimKBeatsPistol,
     pub rifle: crate::knobs::KitanimKBeatsRifle,
 }
-impl KitanimKBeats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitanimKBeats {
-            pistol: crate::knobs::KitanimKBeatsPistol::zeroed(),
-            rifle: crate::knobs::KitanimKBeatsRifle::zeroed(),
-        }
-    }
-}
-impl Default for KitanimKBeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kitanim.ts:77 KitanimKBeats.pistol, src/game/kitanim.ts:77)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitanimKBeatsPistol {
     pub ref_: f64,
     pub empty: crate::kitanim::BeatRow,
     pub dry: crate::kitanim::BeatRow,
     pub tactical: crate::kitanim::BeatRow,
 }
-impl KitanimKBeatsPistol {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitanimKBeatsPistol {
-            ref_: 0.0,
-            empty: crate::kitanim::BeatRow::zeroed(),
-            dry: crate::kitanim::BeatRow::zeroed(),
-            tactical: crate::kitanim::BeatRow::zeroed(),
-        }
-    }
-}
-impl Default for KitanimKBeatsPistol { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kitanim.ts:78 KitanimKBeats.rifle, src/game/kitanim.ts:78)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitanimKBeatsRifle {
     pub ref_: f64,
     pub empty: crate::kitanim::BeatRow,
     pub dry: crate::kitanim::BeatRow,
     pub tactical: crate::kitanim::BeatRow,
 }
-impl KitanimKBeatsRifle {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitanimKBeatsRifle {
-            ref_: 0.0,
-            empty: crate::kitanim::BeatRow::zeroed(),
-            dry: crate::kitanim::BeatRow::zeroed(),
-            tactical: crate::kitanim::BeatRow::zeroed(),
-        }
-    }
-}
-impl Default for KitanimKBeatsRifle { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1223 KIT, src/game/character.ts:1223)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitK {
     pub stow: JsMap<crate::character::KitItem, f64>,
     pub reach: JsMap<crate::character::KitItem, f64>,
@@ -6725,107 +2925,30 @@ pub struct KitK {
     pub mag: crate::knobs::KitKMag,
     pub close: crate::knobs::KitKClose,
 }
-impl KitK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitK {
-            stow: JsMap::new(),
-            reach: JsMap::new(),
-            draw: JsMap::new(),
-            away: 0.0,
-            swap_k: 0.0,
-            far: 0.0,
-            apex_at: 0.0,
-            sling_at: 0.0,
-            join: 0.0,
-            let_go: 0.0,
-            apex: crate::knobs::KitKApex::zeroed(),
-            elbow_min: 0.0,
-            wrist_knee: 0.0,
-            wrist_max: 0.0,
-            roll_in: 0.0,
-            over: [0.0; 3],
-            up: [0.0; 3],
-            top: crate::knobs::KitKTop::zeroed(),
-            trunk: 0.0,
-            belt: crate::knobs::KitKBelt::zeroed(),
-            holster_pole: [0.0; 3],
-            sheath_pole: 0.0,
-            rest: [0.0; 3],
-            arc: JsMap::new(),
-            cross: [0.0; 3],
-            front: crate::knobs::KitKFront::zeroed(),
-            nv: crate::knobs::KitKNv::zeroed(),
-            fist: Vec::new(),
-            open: Vec::new(),
-            mag: crate::knobs::KitKMag::zeroed(),
-            close: crate::knobs::KitKClose::zeroed(),
-        }
-    }
-}
-impl Default for KitK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1228 KitK.apex, src/game/character.ts:1228)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKApex {
     pub at: V3,
     pub fing: V3,
     pub back: V3,
     pub pole: V3,
 }
-impl KitKApex {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKApex {
-            at: [0.0; 3],
-            fing: [0.0; 3],
-            back: [0.0; 3],
-            pole: [0.0; 3],
-        }
-    }
-}
-impl Default for KitKApex { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1235 KitK.top, src/game/character.ts:1235)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKTop {
     pub fing: V3,
     pub back: V3,
 }
-impl KitKTop {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKTop {
-            fing: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for KitKTop { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1236 KitK.belt, src/game/character.ts:1236)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKBelt {
     pub at: V3,
     pub fing: V3,
     pub back: V3,
     pub pole: V3,
 }
-impl KitKBelt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKBelt {
-            at: [0.0; 3],
-            fing: [0.0; 3],
-            back: [0.0; 3],
-            pole: [0.0; 3],
-        }
-    }
-}
-impl Default for KitKBelt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1244 KitK.front, src/game/character.ts:1244)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKFront {
     pub stow: f64,
     pub reach: f64,
@@ -6835,41 +2958,14 @@ pub struct KitKFront {
     pub arc: V3,
     pub pole: V3,
 }
-impl KitKFront {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKFront {
-            stow: 0.0,
-            reach: 0.0,
-            draw: 0.0,
-            hand_at: 0.0,
-            sling_at: 0.0,
-            arc: [0.0; 3],
-            pole: [0.0; 3],
-        }
-    }
-}
-impl Default for KitKFront { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1253 KitK.nv, src/game/character.ts:1253)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKNv {
     pub hand: crate::knobs::KitKNvHand,
     pub nod: crate::knobs::KitKNvNod,
 }
-impl KitKNv {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKNv {
-            hand: crate::knobs::KitKNvHand::zeroed(),
-            nod: crate::knobs::KitKNvNod::zeroed(),
-        }
-    }
-}
-impl Default for KitKNv { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1254 KitKNv.hand, src/game/character.ts:1254)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKNvHand {
     pub dur: f64,
     pub reach: f64,
@@ -6887,32 +2983,8 @@ pub struct KitKNvHand {
     pub away: f64,
     pub clear: f64,
 }
-impl KitKNvHand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKNvHand {
-            dur: 0.0,
-            reach: 0.0,
-            out: 0.0,
-            flip: [0.0; 2],
-            up: [0.0; 3],
-            down: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-            pole: [0.0; 3],
-            shrug: 0.0,
-            curl: [0.0; 4],
-            thumb: 0.0,
-            rate: 0.0,
-            away: 0.0,
-            clear: 0.0,
-        }
-    }
-}
-impl Default for KitKNvHand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1256 KitKNv.nod, src/game/character.ts:1256)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKNvNod {
     pub dur: f64,
     pub pre: f64,
@@ -6922,24 +2994,8 @@ pub struct KitKNvNod {
     pub off: [f64; 2],
     pub carry: f64,
 }
-impl KitKNvNod {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKNvNod {
-            dur: 0.0,
-            pre: 0.0,
-            peak: 0.0,
-            flip: [0.0; 2],
-            on: [0.0; 2],
-            off: [0.0; 2],
-            carry: 0.0,
-        }
-    }
-}
-impl Default for KitKNvNod { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1263 KitK.mag, src/game/character.ts:1263)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKMag {
     pub well: V3,
     pub strip: V3,
@@ -6955,30 +3011,8 @@ pub struct KitKMag {
     pub sf: V3,
     pub sb: V3,
 }
-impl KitKMag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKMag {
-            well: [0.0; 3],
-            strip: [0.0; 3],
-            slide: [0.0; 3],
-            pull: [0.0; 3],
-            pouch: [0.0; 3],
-            dump: [0.0; 3],
-            via: [0.0; 3],
-            pole: [0.0; 3],
-            pole_w: 0.0,
-            wf: [0.0; 3],
-            wb: [0.0; 3],
-            sf: [0.0; 3],
-            sb: [0.0; 3],
-        }
-    }
-}
-impl Default for KitKMag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1274 KitK.close, src/game/character.ts:1274)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitKClose {
     pub far: f64,
     pub hover: f64,
@@ -6995,31 +3029,8 @@ pub struct KitKClose {
     pub regrip: f64,
     pub curl: f64,
 }
-impl KitKClose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitKClose {
-            far: 0.0,
-            hover: 0.0,
-            bow: [0.0; 3],
-            lead: [0.0; 3],
-            left: 0.0,
-            left_at: 0.0,
-            left_in: 0.0,
-            left_out: 0.0,
-            rate: 0.0,
-            flex: 0.0,
-            flex_amp: 0.0,
-            drift: 0.0,
-            regrip: 0.0,
-            curl: 0.0,
-        }
-    }
-}
-impl Default for KitKClose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:1335 THROW_BY, src/game/character.ts:1335)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ThrowByK {
     pub on: bool,
     pub toss: f64,
@@ -7035,30 +3046,8 @@ pub struct ThrowByK {
     pub sit: f64,
     pub pivot: V3,
 }
-impl ThrowByK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowByK {
-            on: false,
-            toss: 0.0,
-            toss_fast: 0.0,
-            toss_in: 0.0,
-            toss_min: 0.0,
-            through: 0.0,
-            toss_pivot: [0.0; 3],
-            full: 0.0,
-            turn_min: 0.0,
-            arm_min: 0.0,
-            off_min: 0.0,
-            sit: 0.0,
-            pivot: [0.0; 3],
-        }
-    }
-}
-impl Default for ThrowByK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hands.ts:46 HANDS, src/game/hands.ts:46)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HandsK {
     pub on: bool,
     pub body: bool,
@@ -7105,61 +3094,8 @@ pub struct HandsK {
     pub team_pace: f64,
     pub team_vel: f64,
 }
-impl HandsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HandsK {
-            on: false,
-            body: false,
-            door: false,
-            reach_secs: 0.0,
-            lift_secs: 0.0,
-            set_secs: 0.0,
-            grip_m: 0.0,
-            step_secs: 0.0,
-            head_bias: 0.0,
-            ahead: 0.0,
-            ahead_head: 0.0,
-            carry_feet: 0.0,
-            carry_head: 0.0,
-            slack_m: 0.0,
-            carry: false,
-            hoist_secs: 0.0,
-            lower_secs: 0.0,
-            carry_step_secs: 0.0,
-            carry_near_m: 0.0,
-            carry_side: 0.0,
-            carry_fwd: 0.0,
-            carry_up: 0.0,
-            carry_back: 0.0,
-            carry_legs: 0.0,
-            carry_pace: 0.0,
-            carry_turn: 0.0,
-            carry_ride: 0.0,
-            lay_ahead: 0.0,
-            door_reach: 0.0,
-            hand_secs: 0.0,
-            door_rate: 0.0,
-            open_to: 0.0,
-            clear_m: 0.0,
-            step_m: 0.0,
-            round_m: 0.0,
-            hand_m: 0.0,
-            in_m: 0.0,
-            stall_secs: 0.0,
-            aim_arc: 0.0,
-            team: false,
-            team_pre_m: 0.0,
-            team_reach_m: 0.0,
-            team_pace: 0.0,
-            team_vel: 0.0,
-        }
-    }
-}
-impl Default for HandsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:52 WORK, src/game/workthings.ts:52)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WorkK {
     pub on: bool,
     pub pick_m: f64,
@@ -7177,32 +3113,8 @@ pub struct WorkK {
     pub walk_m: f64,
     pub sam_face: bool,
 }
-impl WorkK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkK {
-            on: false,
-            pick_m: 0.0,
-            pick_wide_m: 0.0,
-            behind_m: 0.0,
-            behind_panel_m: 0.0,
-            stand_m: 0.0,
-            buddy_m: 0.0,
-            hand_secs: 0.0,
-            breaker_secs: 0.0,
-            fade_secs: 0.0,
-            hand_m: 0.0,
-            posted: false,
-            own_face: false,
-            walk_m: 0.0,
-            sam_face: false,
-        }
-    }
-}
-impl Default for WorkK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wand.ts:35 WAND, src/game/wand.ts:35)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WandK {
     pub on: bool,
     pub feed_secs: f64,
@@ -7223,35 +3135,8 @@ pub struct WandK {
     pub quick_secs: f64,
     pub quick_down: f64,
 }
-impl WandK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WandK {
-            on: false,
-            feed_secs: 0.0,
-            stow_secs: 0.0,
-            fov_deg: 0.0,
-            blind_deg: 0.0,
-            pan_rate: 0.0,
-            eye_y: 0.0,
-            past_m: 0.0,
-            mark_secs: 0.0,
-            shut_rad: 0.0,
-            give_up_secs: 0.0,
-            nv: false,
-            mate: false,
-            order_key: String::new(),
-            sweep_secs: 0.0,
-            quick: false,
-            quick_secs: 0.0,
-            quick_down: 0.0,
-        }
-    }
-}
-impl Default for WandK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stickycam.ts:43 STICKY, src/game/stickycam.ts:43)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StickyK {
     pub on: bool,
     pub carry: f64,
@@ -7277,76 +3162,21 @@ pub struct StickyK {
     pub take_noise: f64,
     pub mark: bool,
 }
-impl StickyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StickyK {
-            on: false,
-            carry: 0.0,
-            max: 0.0,
-            live: 0.0,
-            issue: 0.0,
-            speed: 0.0,
-            gravity: 0.0,
-            drag: 0.0,
-            radius: 0.0,
-            life: 0.0,
-            substeps: 0.0,
-            solve_iters: 0.0,
-            cd: 0.0,
-            aim_y: 0.0,
-            fov_deg: 0.0,
-            off: 0.0,
-            flat_y: 0.0,
-            launch_noise: 0.0,
-            stick_noise: 0.0,
-            take: false,
-            take_reach: 0.0,
-            take_noise: 0.0,
-            mark: false,
-        }
-    }
-}
-impl Default for StickyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/peeksight.ts:32 PEEKSIGHT, src/game/peeksight.ts:32)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PeeksightK {
     pub on: bool,
     pub out: f64,
     pub off: f64,
     pub turn_deg: f64,
 }
-impl PeeksightK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PeeksightK {
-            on: false,
-            out: 0.0,
-            off: 0.0,
-            turn_deg: 0.0,
-        }
-    }
-}
-impl Default for PeeksightK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/owncharge.ts:21 OWNCHARGE, src/game/owncharge.ts:21)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OwnchargeK {
     pub on: bool,
 }
-impl OwnchargeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnchargeK {
-            on: false,
-        }
-    }
-}
-impl Default for OwnchargeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunslots.ts:16 GUNSLOTS, src/game/gunslots.ts:16)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunslotsK {
     pub on: bool,
     pub near: f64,
@@ -7355,40 +3185,14 @@ pub struct GunslotsK {
     pub back: f64,
     pub bare: bool,
 }
-impl GunslotsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunslotsK {
-            on: false,
-            near: 0.0,
-            out: 0.0,
-            lull: 0.0,
-            back: 0.0,
-            bare: false,
-        }
-    }
-}
-impl Default for GunslotsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:16 GUNLOOK, src/game/gunlook.ts:16)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunlookK {
     pub on: bool,
     pub shells: bool,
 }
-impl GunlookK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunlookK {
-            on: false,
-            shells: false,
-        }
-    }
-}
-impl Default for GunlookK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunroles.ts:41 GUNROLES, src/game/gunroles.ts:41)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunrolesK {
     pub on: bool,
     pub deal: bool,
@@ -7407,52 +3211,15 @@ pub struct GunrolesK {
     pub lane_k: f64,
     pub file_cost: f64,
 }
-impl GunrolesK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunrolesK {
-            on: false,
-            deal: false,
-            akms: 0.0,
-            belt_lane: 0.0,
-            belt_min: 0.0,
-            belt_squad: 0.0,
-            line_max: 0.0,
-            pistol_near: 0.0,
-            pistol_share: 0.0,
-            pistol_max: 0.0,
-            captor: false,
-            use_: false,
-            entry: false,
-            post: false,
-            lane_k: 0.0,
-            file_cost: 0.0,
-        }
-    }
-}
-impl Default for GunrolesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kittree.ts:20 KITTREE, src/game/kittree.ts:20)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KittreeK {
     pub on: bool,
     pub rings: f64,
     pub lend: f64,
 }
-impl KittreeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KittreeK {
-            on: false,
-            rings: 0.0,
-            lend: 0.0,
-        }
-    }
-}
-impl Default for KittreeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squadthrow.ts:74 SQUADTHROW, src/game/squadthrow.ts:74)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadthrowK {
     pub on: bool,
     pub frag_roll_k: f64,
@@ -7490,52 +3257,8 @@ pub struct SquadthrowK {
     pub duck_apart_m: f64,
     pub duck_min_m: f64,
 }
-impl SquadthrowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadthrowK {
-            on: false,
-            frag_roll_k: 0.0,
-            again_secs: 0.0,
-            shown_secs: 0.0,
-            slack_m: 0.0,
-            walk: false,
-            walk_m: 0.0,
-            min_m: 0.0,
-            max_m: 0.0,
-            tries: 0.0,
-            keep_secs: 0.0,
-            walk_secs: 0.0,
-            turn_secs: 0.0,
-            toss_secs: 0.0,
-            lob: false,
-            lob_paces: Vec::new(),
-            lob_bank_paces: Vec::new(),
-            lob_speed: 0.0,
-            lob_near_m: 0.0,
-            lob_up_m: 0.0,
-            lob_walls: 0.0,
-            lob_wall_m: 0.0,
-            lob_wall_h: 0.0,
-            lob_sims: 0.0,
-            lob_cells: 0.0,
-            lob_keep_secs: 0.0,
-            settle_secs: 0.0,
-            lob_steps: Vec::new(),
-            sam_call: false,
-            duck: false,
-            duck_secs: 0.0,
-            duck_throw_secs: 0.0,
-            duck_cells: 0.0,
-            duck_apart_m: 0.0,
-            duck_min_m: 0.0,
-        }
-    }
-}
-impl Default for SquadthrowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad40.ts:53 SQUAD40, src/game/squad40.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Squad40K {
     pub on: bool,
     pub near_m: f64,
@@ -7550,29 +3273,8 @@ pub struct Squad40K {
     pub after_secs: f64,
     pub shown_secs: f64,
 }
-impl Squad40K {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Squad40K {
-            on: false,
-            near_m: 0.0,
-            arm_slack: 0.0,
-            reach_slack: 0.0,
-            muzzle_ahead: 0.0,
-            muzzle_up: 0.0,
-            head_drop: 0.0,
-            aim_rad: 0.0,
-            aim_secs: 0.0,
-            raise_secs: 0.0,
-            after_secs: 0.0,
-            shown_secs: 0.0,
-        }
-    }
-}
-impl Default for Squad40K { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/autopilot.ts:42 AUTOPILOT, src/game/autopilot.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AutopilotK {
     pub on: bool,
     pub show_secs: f64,
@@ -7582,24 +3284,8 @@ pub struct AutopilotK {
     pub plain: bool,
     pub restack: bool,
 }
-impl AutopilotK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AutopilotK {
-            on: false,
-            show_secs: 0.0,
-            keep_bangs: 0.0,
-            contact_m: 0.0,
-            replan: false,
-            plain: false,
-            restack: false,
-        }
-    }
-}
-impl Default for AutopilotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cmdring.ts:50 CMDRING, src/game/cmdring.ts:50)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CmdringK {
     pub on: bool,
     pub key: String,
@@ -7634,49 +3320,8 @@ pub struct CmdringK {
     pub hint_spot_m: f64,
     pub hint_man_m: f64,
 }
-impl CmdringK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CmdringK {
-            on: false,
-            key: String::new(),
-            wedges: 0.0,
-            flick_px: 0.0,
-            hold_secs: 0.0,
-            stay: false,
-            stay_hold_secs: 0.0,
-            stay_digit: false,
-            pin: false,
-            tap_now: false,
-            tap_secs: 0.0,
-            edge_x: 0.0,
-            edge_y: 0.0,
-            man_px: 0.0,
-            ref_: [0.0; 2],
-            hint: false,
-            hands: false,
-            flat: false,
-            plain_hint: false,
-            bare_hint: false,
-            wheel_idle: false,
-            whole_squad: false,
-            goals: false,
-            goal_ring: false,
-            goal_half: false,
-            twice: false,
-            twice_secs: 0.0,
-            twice_px: 0.0,
-            only: false,
-            hint_wall_m: 0.0,
-            hint_spot_m: 0.0,
-            hint_man_m: 0.0,
-        }
-    }
-}
-impl Default for CmdringK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/calmtorch.ts:37 TORCH, src/game/calmtorch.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TorchK {
     pub calm_off: bool,
     pub lit_at: f64,
@@ -7696,114 +3341,33 @@ pub struct TorchK {
     pub low_tan: f64,
     pub low_rate: f64,
 }
-impl TorchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TorchK {
-            calm_off: false,
-            lit_at: 0.0,
-            off_k: 0.0,
-            spill_m: 0.0,
-            day_m: 0.0,
-            ahead_m: 0.0,
-            on_secs: 0.0,
-            off_secs: 0.0,
-            hold_secs: 0.0,
-            ask_secs: 0.0,
-            calm_aw: 0.0,
-            wall_low: false,
-            wall_dark: false,
-            wall_m: 0.0,
-            wall_back_m: 0.0,
-            low_tan: 0.0,
-            low_rate: 0.0,
-        }
-    }
-}
-impl Default for TorchK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/backkey.ts:14 BACKKEY, src/game/backkey.ts:14)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BackkeyK {
     pub tab: bool,
 }
-impl BackkeyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BackkeyK {
-            tab: false,
-        }
-    }
-}
-impl Default for BackkeyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/loop.ts:131 FIXEDSTEP, src/host/loop.ts:131)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FixedstepK {
 }
-impl FixedstepK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixedstepK {
-        }
-    }
-}
-impl Default for FixedstepK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/tween.ts:37 TWEEN, src/host/tween.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TweenK {
 }
-impl TweenK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TweenK {
-        }
-    }
-}
-impl Default for TweenK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/savepic.ts:8 SAVEPIC, src/host/savepic.ts:8)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SavepicK {
 }
-impl SavepicK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SavepicK {
-        }
-    }
-}
-impl Default for SavepicK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/pace.ts:71 EVENPACE, src/host/pace.ts:71)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EvenpaceK {
 }
-impl EvenpaceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EvenpaceK {
-        }
-    }
-}
-impl Default for EvenpaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/findme.ts:69 FINDTUNED, src/host/findme.ts:69)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FindtunedK {
 }
-impl FindtunedK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FindtunedK {
-        }
-    }
-}
-impl Default for FindtunedK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/morale.ts:90 MORALE, src/game/morale.ts:90)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MoraleK {
     pub on: bool,
     pub half_life: f64,
@@ -7856,88 +3420,17 @@ pub struct MoraleK {
     pub nerve_k: crate::knobs::MoraleKNerveK,
     pub dark_read: crate::knobs::MoraleKDarkRead,
 }
-impl MoraleK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleK {
-            on: false,
-            half_life: 0.0,
-            ask_secs: 0.0,
-            alone: 0.0,
-            alone_m: 0.0,
-            dark: 0.0,
-            lit_asks: 0.0,
-            blast: 0.0,
-            shock_cap: 0.0,
-            blast_m: 0.0,
-            near_m: 0.0,
-            far_k: 0.0,
-            jumpy: 0.0,
-            broken: 0.0,
-            hyst: 0.0,
-            duck_secs: 0.0,
-            down_secs: 0.0,
-            back_until: 0.0,
-            back_m: 0.0,
-            back_speed: 0.0,
-            burst_rounds: 0.0,
-            burst_every: 0.0,
-            spread: 0.0,
-            call2_secs: 0.0,
-            bait_m: 0.0,
-            bait_short: 0.0,
-            bait_every: 0.0,
-            reload_secs: 0.0,
-            bark_secs: 0.0,
-            fan_deg: 0.0,
-            fan_step: 0.0,
-            straight_m: 0.0,
-            training: crate::morale::Training::None,
-            green_broken: 0.0,
-            leader_down: 0.0,
-            leader_shock: 0.0,
-            flinch_secs: 0.0,
-            shout_gap: 0.0,
-            order_m: 0.0,
-            order_beat: 0.0,
-            order_secs: 0.0,
-            order_gap: 0.0,
-            stand_secs: 0.0,
-            side_m: 0.0,
-            steady_duck: 0.0,
-            hold_shock: 0.0,
-            hold_max: 0.0,
-            nerve: crate::morale::Nerve::Steady,
-            nerve_k: crate::knobs::MoraleKNerveK::zeroed(),
-            dark_read: crate::knobs::MoraleKDarkRead::Place,
-        }
-    }
-}
-impl Default for MoraleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/morale.ts:94 MoraleK.nerveK, src/game/morale.ts:94)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MoraleKNerveK {
     pub brittle: f64,
     pub normal: f64,
     pub steady: f64,
 }
-impl MoraleKNerveK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleKNerveK {
-            brittle: 0.0,
-            normal: 0.0,
-            steady: 0.0,
-        }
-    }
-}
-impl Default for MoraleKNerveK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MoraleKDarkRead {
-    Place,
+    #[default] Place,
     Watch,
 }
 impl MoraleKDarkRead {
@@ -7949,8 +3442,7 @@ impl MoraleKDarkRead {
     }
 }
 
-/// (TypeScript: inline at src/game/condition.ts:26 CONDITION, src/game/condition.ts:26)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ConditionK {
     pub on: bool,
     pub hurt_pace: f64,
@@ -7958,22 +3450,8 @@ pub struct ConditionK {
     pub hurt_secs: f64,
     pub own_calm: bool,
 }
-impl ConditionK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ConditionK {
-            on: false,
-            hurt_pace: 0.0,
-            hurt_sup: 0.0,
-            hurt_secs: 0.0,
-            own_calm: false,
-        }
-    }
-}
-impl Default for ConditionK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/inhand.ts:73 INHAND, src/game/inhand.ts:73)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct InhandK {
     pub on: bool,
     pub from: f64,
@@ -7987,28 +3465,8 @@ pub struct InhandK {
     pub holster_out: f64,
     pub belt: bool,
 }
-impl InhandK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        InhandK {
-            on: false,
-            from: 0.0,
-            to: 0.0,
-            wrist: 0.0,
-            both: 0.0,
-            rate: 0.0,
-            fit: false,
-            torch: false,
-            long: false,
-            holster_out: 0.0,
-            belt: false,
-        }
-    }
-}
-impl Default for InhandK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/packside.ts:39 PACKSIDE, src/game/packside.ts:39)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PacksideK {
     pub on: bool,
     pub ram: bool,
@@ -8022,49 +3480,16 @@ pub struct PacksideK {
     pub pitch0: f64,
     pub pitch1: f64,
 }
-impl PacksideK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PacksideK {
-            on: false,
-            ram: false,
-            gap: 0.0,
-            handle: 0.0,
-            gun: 0.0,
-            over: 0.0,
-            head_min: 0.0,
-            butt: 0.0,
-            rest: 0.0,
-            pitch0: 0.0,
-            pitch1: 0.0,
-        }
-    }
-}
-impl Default for PacksideK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunhand.ts:15 GUNHAND, src/game/gunhand.ts:15)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunhandK {
     pub on: bool,
     pub whistle: bool,
     pub throw_free: bool,
     pub long_reload: bool,
 }
-impl GunhandK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunhandK {
-            on: false,
-            whistle: false,
-            throw_free: false,
-            long_reload: false,
-        }
-    }
-}
-impl Default for GunhandK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:88 RUNNER, src/game/runner.ts:88)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RunnerK {
     pub on: bool,
     pub close_m: f64,
@@ -8091,41 +3516,8 @@ pub struct RunnerK {
     pub anyway: bool,
     pub nobody: bool,
 }
-impl RunnerK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunnerK {
-            on: false,
-            close_m: 0.0,
-            out_secs: 0.0,
-            beat_secs: 0.0,
-            tell_m: 0.0,
-            told_m: 0.0,
-            tell_beat: 0.0,
-            tell_aware: 0.0,
-            shy_m: 0.0,
-            mate_m: 0.0,
-            mate_secs: 0.0,
-            clear_m: 0.0,
-            edge_m: 0.0,
-            corner_m: 0.0,
-            gone_secs: 0.0,
-            stall_secs: 0.0,
-            retry_secs: 0.0,
-            retries: 0.0,
-            replan_secs: 0.0,
-            ahead_m: 0.0,
-            ask_cells: 0.0,
-            ask_wide: 0.0,
-            anyway: false,
-            nobody: false,
-        }
-    }
-}
-impl Default for RunnerK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/startle.ts:40 STARTLE, src/game/startle.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StartleK {
     pub beat: f64,
     pub draw: f64,
@@ -8138,42 +3530,13 @@ pub struct StartleK {
     pub stuck_secs: f64,
     pub stuck_m: f64,
 }
-impl StartleK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StartleK {
-            beat: 0.0,
-            draw: 0.0,
-            fresh: 0.0,
-            late: 0.0,
-            run_m: 0.0,
-            near_m: 0.0,
-            clear_secs: 0.0,
-            run_secs: 0.0,
-            stuck_secs: 0.0,
-            stuck_m: 0.0,
-        }
-    }
-}
-impl Default for StartleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rowset.ts:27 ROWSET, src/game/rowset.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RowsetK {
     pub on: bool,
 }
-impl RowsetK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RowsetK {
-            on: false,
-        }
-    }
-}
-impl Default for RowsetK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/smokebreak.ts:26 SMOKEBREAK, src/game/smokebreak.ts:26)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokebreakK {
     pub on: bool,
     pub light_secs: f64,
@@ -8200,41 +3563,8 @@ pub struct SmokebreakK {
     pub mouth_ahead: f64,
     pub mouth_down: f64,
 }
-impl SmokebreakK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokebreakK {
-            on: false,
-            light_secs: 0.0,
-            light_up: [0.0; 2],
-            flame_at: 0.0,
-            flame: 0.0,
-            every: 0.0,
-            draw: 0.0,
-            out_after: 0.0,
-            out: 0.0,
-            flame_color: [0.0; 3],
-            flame_k: 0.0,
-            flame_range: 0.0,
-            ember_color: [0.0; 3],
-            ember_k: 0.0,
-            ember_draw_k: 0.0,
-            ember_range: 0.0,
-            ember_every: 0.0,
-            tip_out: 0.0,
-            tip_up: 0.0,
-            thread: crate::knobs::SmokebreakKThread::zeroed(),
-            breath: crate::knobs::SmokebreakKBreath::zeroed(),
-            color: [0.0; 3],
-            mouth_ahead: 0.0,
-            mouth_down: 0.0,
-        }
-    }
-}
-impl Default for SmokebreakK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/smokebreak.ts:38 SmokebreakK.thread, src/game/smokebreak.ts:38)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokebreakKThread {
     pub radius: f64,
     pub cells: f64,
@@ -8244,24 +3574,8 @@ pub struct SmokebreakKThread {
     pub push: f64,
     pub jitter: f64,
 }
-impl SmokebreakKThread {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokebreakKThread {
-            radius: 0.0,
-            cells: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            push: 0.0,
-            jitter: 0.0,
-        }
-    }
-}
-impl Default for SmokebreakKThread { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/smokebreak.ts:42 SmokebreakK.breath, src/game/smokebreak.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokebreakKBreath {
     pub radius: f64,
     pub cells: f64,
@@ -8274,27 +3588,8 @@ pub struct SmokebreakKBreath {
     pub jitter: f64,
     pub down: f64,
 }
-impl SmokebreakKBreath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokebreakKBreath {
-            radius: 0.0,
-            cells: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            push: 0.0,
-            expand: 0.0,
-            attack: 0.0,
-            jitter: 0.0,
-            down: 0.0,
-        }
-    }
-}
-impl Default for SmokebreakKBreath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/showwhy.ts:53 SHOWWHY, src/game/showwhy.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShowwhyK {
     pub on: bool,
     pub stack: bool,
@@ -8324,44 +3619,8 @@ pub struct ShowwhyK {
     pub keep_every: f64,
     pub owed_for: f64,
 }
-impl ShowwhyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShowwhyK {
-            on: false,
-            stack: false,
-            hurt: false,
-            keep: false,
-            line_after: 0.0,
-            line_gap: 0.0,
-            wave_every: 0.0,
-            wave_later: 0.0,
-            line_min: 0.0,
-            line_say_gap: 0.0,
-            mate_half: 0.0,
-            squeeze_gap: 0.0,
-            squeeze_reach: 0.0,
-            fist_after: 0.0,
-            hold_every: 0.0,
-            hold_max: 0.0,
-            door_after: 0.0,
-            door_every: 0.0,
-            after_you_gap: 0.0,
-            hurt_late: 0.0,
-            lag_m: 0.0,
-            lag_every: 0.0,
-            lag_max: 0.0,
-            keep_after: 0.0,
-            keep_gap: 0.0,
-            keep_every: 0.0,
-            owed_for: 0.0,
-        }
-    }
-}
-impl Default for ShowwhyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:53 FIRE, src/game/fire.ts:53)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FireK {
     pub on: bool,
     pub names: Vec<String>,
@@ -8405,58 +3664,8 @@ pub struct FireK {
     pub draw_r: f64,
     pub wind_max: f64,
 }
-impl FireK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireK {
-            on: false,
-            names: Vec::new(),
-            height: 0.0,
-            mouth: 0.0,
-            coals: 0.0,
-            coal_swing: 0.0,
-            bed_r: 0.0,
-            depth: 0.0,
-            rates: Vec::new(),
-            weights: Vec::new(),
-            least: 0.0,
-            most: 0.0,
-            wander: 0.0,
-            wander_up: 0.0,
-            lift: 0.0,
-            kick: 0.0,
-            kick_secs: 0.0,
-            bright: 0.0,
-            warm: Vec::new(),
-            reach: 0.0,
-            hardy: false,
-            stir_gap: 0.0,
-            size: 0.0,
-            pop_rate: 0.0,
-            pop_slot: 0.0,
-            embers: 0.0,
-            ember_life: 0.0,
-            ember_speed: 0.0,
-            ember_size: 0.0,
-            ember_gain: 0.0,
-            ember_crack: 0.0,
-            ember_r: 0.0,
-            look: crate::knobs::FireKLook::zeroed(),
-            smoke: crate::knobs::FireKSmoke::zeroed(),
-            bed: 0.0,
-            crack: 0.0,
-            bed_secs: 0.0,
-            fog: false,
-            max: 0.0,
-            draw_r: 0.0,
-            wind_max: 0.0,
-        }
-    }
-}
-impl Default for FireK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:110 FireK.look, src/game/fire.ts:110)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FireKLook {
     pub gain: f64,
     pub core: f64,
@@ -8472,30 +3681,8 @@ pub struct FireKLook {
     pub lean: f64,
     pub steps: f64,
 }
-impl FireKLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireKLook {
-            gain: 0.0,
-            core: 0.0,
-            sigma: 0.0,
-            speed: 0.0,
-            tall: 0.0,
-            torn: 0.0,
-            plume: 0.0,
-            shimmer: 0.0,
-            soot: 0.0,
-            breathe: 0.0,
-            react: 0.0,
-            lean: 0.0,
-            steps: 0.0,
-        }
-    }
-}
-impl Default for FireKLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:124 FireK.smoke, src/game/fire.ts:124)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FireKSmoke {
     pub on: bool,
     pub up: f64,
@@ -8510,29 +3697,8 @@ pub struct FireKSmoke {
     pub view_r: f64,
     pub lean: f64,
 }
-impl FireKSmoke {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireKSmoke {
-            on: false,
-            up: 0.0,
-            radius: 0.0,
-            cells: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            push: 0.0,
-            jitter: 0.0,
-            every: 0.0,
-            view_r: 0.0,
-            lean: 0.0,
-        }
-    }
-}
-impl Default for FireKSmoke { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/flinch.ts:45 FLINCH, src/game/flinch.ts:45)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FlinchK {
     pub on: bool,
     pub least: f64,
@@ -8547,29 +3713,8 @@ pub struct FlinchK {
     pub ease_k: f64,
     pub ask_secs: f64,
 }
-impl FlinchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlinchK {
-            on: false,
-            least: 0.0,
-            full: 0.0,
-            far: 0.0,
-            min_travel: 0.0,
-            steady_k: 0.0,
-            friendly: false,
-            run: false,
-            break_secs: 0.0,
-            hot_secs: 0.0,
-            ease_k: 0.0,
-            ask_secs: 0.0,
-        }
-    }
-}
-impl Default for FlinchK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:59 DARKDOOR, src/game/darkdoor.ts:59)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DarkdoorK {
     pub on: bool,
     pub who: crate::knobs::DarkdoorKWho,
@@ -8603,50 +3748,10 @@ pub struct DarkdoorK {
     pub nerve_secs: f64,
     pub slow_k: f64,
 }
-impl DarkdoorK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkdoorK {
-            on: false,
-            who: crate::knobs::DarkdoorKWho::None,
-            stop_m: 0.0,
-            pair_m: 0.0,
-            dark_at: 0.0,
-            dark_share: 0.0,
-            lit_by: 0.0,
-            samples: 0.0,
-            ask_secs: 0.0,
-            open_rad: 0.0,
-            arm_secs: 0.0,
-            stand_m: 0.0,
-            side_m: 0.0,
-            sweep_secs: 0.0,
-            ear_m: 0.0,
-            mate_m: 0.0,
-            mate_try: 0.0,
-            call_secs: 0.0,
-            copy_secs: 0.0,
-            lag_secs: 0.0,
-            with_secs: 0.0,
-            keep_aw: 0.0,
-            keep_secs: 0.0,
-            resume_secs: 0.0,
-            seen_secs: 0.0,
-            wait_secs: 0.0,
-            again_secs: 0.0,
-            fed_up_secs: 0.0,
-            fed_up_n: 0.0,
-            nerve_secs: 0.0,
-            slow_k: 0.0,
-        }
-    }
-}
-impl Default for DarkdoorK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DarkdoorKWho {
-    None,
+    #[default] None,
     All,
     Rest,
 }
@@ -8660,8 +3765,7 @@ impl DarkdoorKWho {
     }
 }
 
-/// (TypeScript: inline at src/game/darkfoe.ts:55 DARKFOE, src/game/darkfoe.ts:55)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DarkfoeK {
     pub on: bool,
     pub carry: f64,
@@ -8688,41 +3792,8 @@ pub struct DarkfoeK {
     pub calm_secs: f64,
     pub roam: bool,
 }
-impl DarkfoeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkfoeK {
-            on: false,
-            carry: 0.0,
-            lit_at: 0.0,
-            look_m: 0.0,
-            step_m: 0.0,
-            fan_rad: 0.0,
-            see_share: 0.0,
-            ask_secs: 0.0,
-            on_secs: 0.0,
-            on_jitter: 0.0,
-            off_secs: 0.0,
-            off_jitter: 0.0,
-            hold_secs: 0.0,
-            lamp_m: 0.0,
-            blind_secs: 0.0,
-            seek_m: 0.0,
-            walk_m: 0.0,
-            edge_m: 0.0,
-            stumble_k: 0.0,
-            again_secs: 0.0,
-            moves: 0.0,
-            quiet_secs: 0.0,
-            calm_secs: 0.0,
-            roam: false,
-        }
-    }
-}
-impl Default for DarkfoeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:68 POWEROUT, src/game/powerout.ts:68)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PoweroutK {
     pub on: bool,
     pub see_m: f64,
@@ -8745,75 +3816,22 @@ pub struct PoweroutK {
     pub ask: f64,
     pub cover_m: [f64; 2],
 }
-impl PoweroutK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PoweroutK {
-            on: false,
-            see_m: 0.0,
-            think: [0.0; 2],
-            beat: 0.0,
-            look_m: 0.0,
-            about_m: 0.0,
-            step_m: 0.0,
-            fan_rad: 0.0,
-            lit_at: 0.0,
-            drop_k: 0.0,
-            dark_after: 0.0,
-            men: 0.0,
-            max_m: 0.0,
-            parties: 0.0,
-            look_secs: 0.0,
-            tries: 0.0,
-            lever_secs: 0.0,
-            overdue: 0.0,
-            ask: 0.0,
-            cover_m: [0.0; 2],
-        }
-    }
-}
-impl Default for PoweroutK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squaddeal.ts:28 SQUADDEAL, src/game/squaddeal.ts:28)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquaddealK {
     pub on: bool,
     pub one: f64,
     pub two: f64,
     pub names: Vec<String>,
 }
-impl SquaddealK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquaddealK {
-            on: false,
-            one: 0.0,
-            two: 0.0,
-            names: Vec::new(),
-        }
-    }
-}
-impl Default for SquaddealK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stayask.ts:26 STAYASK, src/game/stayask.ts:26)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StayaskK {
     pub on: bool,
     pub men: f64,
 }
-impl StayaskK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StayaskK {
-            on: false,
-            men: 0.0,
-        }
-    }
-}
-impl Default for StayaskK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:56 RESCUECHECK, src/game/rescuecheck.ts:56)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescuecheckK {
     pub on: bool,
     pub first: [f64; 2],
@@ -8825,26 +3843,8 @@ pub struct RescuecheckK {
     pub feet_m: f64,
     pub word_secs: f64,
 }
-impl RescuecheckK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescuecheckK {
-            on: false,
-            first: [0.0; 2],
-            every: [0.0; 2],
-            ask_secs: 0.0,
-            go_secs: 0.0,
-            wait_secs: 0.0,
-            tries: 0.0,
-            feet_m: 0.0,
-            word_secs: 0.0,
-        }
-    }
-}
-impl Default for RescuecheckK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kitload.ts:52 KITLOAD, src/game/kitload.ts:52)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitloadK {
     pub on: bool,
     pub gun_kg: f64,
@@ -8857,27 +3857,8 @@ pub struct KitloadK {
     pub sprint: f64,
     pub pace_top: f64,
 }
-impl KitloadK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitloadK {
-            on: false,
-            gun_kg: 0.0,
-            gun_bulk: [0.0; 2],
-            small: JsMap::new(),
-            big: JsMap::new(),
-            pace: 0.0,
-            seen: 0.0,
-            heard: 0.0,
-            sprint: 0.0,
-            pace_top: 0.0,
-        }
-    }
-}
-impl Default for KitloadK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueend.ts:27 RESCUEEND, src/game/rescueend.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueendK {
     pub on: bool,
     pub out_m: f64,
@@ -8887,24 +3868,8 @@ pub struct RescueendK {
     pub gap_m: f64,
     pub gap_step_m: f64,
 }
-impl RescueendK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueendK {
-            on: false,
-            out_m: 0.0,
-            clear_secs: 0.0,
-            marker_m: 0.0,
-            reach_m: 0.0,
-            gap_m: 0.0,
-            gap_step_m: 0.0,
-        }
-    }
-}
-impl Default for RescueendK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflush.ts:40 RESCUEFLUSH, src/game/rescueflush.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueflushK {
     pub on: bool,
     pub after_secs: f64,
@@ -8916,73 +3881,24 @@ pub struct RescueflushK {
     pub smoke_k: f64,
     pub at_door_m: f64,
 }
-impl RescueflushK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueflushK {
-            on: false,
-            after_secs: 0.0,
-            gap_secs: 0.0,
-            again_secs: 0.0,
-            reach_m: 0.0,
-            kill_secs: 0.0,
-            busy_secs: 0.0,
-            smoke_k: 0.0,
-            at_door_m: 0.0,
-        }
-    }
-}
-impl Default for RescueflushK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/anim/skeleton.ts:289 POSEMATH, src/anim/skeleton.ts:289)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PosemathK {
     pub singles: bool,
 }
-impl PosemathK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PosemathK {
-            singles: false,
-        }
-    }
-}
-impl Default for PosemathK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sense.ts:33 SENSE, src/game/sense.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SenseK {
     pub glow: crate::knobs::SenseKGlow,
     pub smoke: crate::knobs::SenseKSmoke,
 }
-impl SenseK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SenseK {
-            glow: crate::knobs::SenseKGlow::zeroed(),
-            smoke: crate::knobs::SenseKSmoke::zeroed(),
-        }
-    }
-}
-impl Default for SenseK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sense.ts:64 SenseK.glow, src/game/sense.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SenseKGlow {
     pub sweep: f64,
 }
-impl SenseKGlow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SenseKGlow {
-            sweep: 0.0,
-        }
-    }
-}
-impl Default for SenseKGlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sense.ts:65 SenseK.smoke, src/game/sense.ts:65)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SenseKSmoke {
     pub sigma: f64,
     pub decay: f64,
@@ -8994,26 +3910,8 @@ pub struct SenseKSmoke {
     pub gone: f64,
     pub reserve: f64,
 }
-impl SenseKSmoke {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SenseKSmoke {
-            sigma: 0.0,
-            decay: 0.0,
-            spread: 0.0,
-            rise: 0.0,
-            rise_rate: 0.0,
-            in_wind: 0.0,
-            least: 0.0,
-            gone: 0.0,
-            reserve: 0.0,
-        }
-    }
-}
-impl Default for SenseKSmoke { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cmd.ts:70 CMDCHECK, src/game/cmd.ts:70)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CmdcheckK {
     pub on: bool,
     pub keys: f64,
@@ -9030,50 +3928,15 @@ pub struct CmdcheckK {
     pub reach: f64,
     pub steep: f64,
 }
-impl CmdcheckK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CmdcheckK {
-            on: false,
-            keys: 0.0,
-            key_len: 0.0,
-            span: 0.0,
-            wheel: 0.0,
-            far: 0.0,
-            dist_min: 0.0,
-            dist_max: 0.0,
-            fov_min: 0.0,
-            fov_max: 0.0,
-            aspect_min: 0.0,
-            aspect_max: 0.0,
-            reach: 0.0,
-            steep: 0.0,
-        }
-    }
-}
-impl Default for CmdcheckK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/seats.ts:31 SEATS, src/game/seats.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SeatsK {
     pub max: f64,
     pub apart: f64,
     pub keep: f64,
 }
-impl SeatsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SeatsK {
-            max: 0.0,
-            apart: 0.0,
-            keep: 0.0,
-        }
-    }
-}
-impl Default for SeatsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doze.ts:69 DOZE, src/game/doze.ts:69)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DozeK {
     pub on: bool,
     pub min_wait: f64,
@@ -9100,41 +3963,8 @@ pub struct DozeK {
     pub say_every: Vec<f64>,
     pub idle_secs: f64,
 }
-impl DozeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DozeK {
-            on: false,
-            min_wait: 0.0,
-            max_wait: 0.0,
-            chair_m: 0.0,
-            nod_secs: 0.0,
-            rise_secs: 0.0,
-            hear_k: 0.0,
-            light_at: 0.0,
-            light_secs: 0.0,
-            ask_secs: 0.0,
-            wake_aw: 0.0,
-            bump_aw: 0.0,
-            stir_secs: 0.0,
-            breath_secs: 0.0,
-            screen: false,
-            screen_m: 0.0,
-            pull_m: 0.0,
-            nap_wait: 0.0,
-            settle_secs: 0.0,
-            ears: 0.0,
-            noises: 0.0,
-            say_first: Vec::new(),
-            say_every: Vec::new(),
-            idle_secs: 0.0,
-        }
-    }
-}
-impl Default for DozeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:82 NETQUIET, src/game/netquiet.ts:82)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NetquietK {
     pub on: bool,
     pub unanswered: f64,
@@ -9173,53 +4003,8 @@ pub struct NetquietK {
     pub eye_m: f64,
     pub stay_m: f64,
 }
-impl NetquietK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetquietK {
-            on: false,
-            unanswered: 0.0,
-            heard_it: 0.0,
-            body: 0.0,
-            body_told: 0.0,
-            fall_seen: 0.0,
-            fall_unseen: 0.0,
-            steady_k: 0.0,
-            ask_beat: 0.0,
-            body_beat: 0.0,
-            bark_secs: 0.0,
-            say_hold: 0.0,
-            shooter_secs: 0.0,
-            body_m: 0.0,
-            whip_shift: 0.0,
-            whip_secs: 0.0,
-            whip_hold: 0.0,
-            whip_turn: 0.0,
-            whip_turn_broken: 0.0,
-            whip_m: 0.0,
-            whip_near_m: 0.0,
-            last_beat: 0.0,
-            calm_secs: 0.0,
-            alert_secs: 0.0,
-            give_up: 0.0,
-            mate_m: 0.0,
-            arc_deg: 0.0,
-            eye_deg: 0.0,
-            eye_slack: 0.0,
-            crouch: 0.0,
-            wary: 0.0,
-            back_speed: 0.0,
-            max_m: 0.0,
-            door_m: 0.0,
-            eye_m: 0.0,
-            stay_m: 0.0,
-        }
-    }
-}
-impl Default for NetquietK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:42 ATTENTION, src/game/attention.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AttentionK {
     pub on: bool,
     pub focus_deg: f64,
@@ -9246,41 +4031,8 @@ pub struct AttentionK {
     pub way: bool,
     pub way_reask: f64,
 }
-impl AttentionK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AttentionK {
-            on: false,
-            focus_deg: 0.0,
-            side_k: 0.0,
-            ear_k: 0.0,
-            break_gain: 0.0,
-            calm_aw: 0.0,
-            draw_aw: 0.0,
-            floor: 0.0,
-            whistle_secs: 0.0,
-            noise_secs: 0.0,
-            door_secs: 0.0,
-            light_secs: 0.0,
-            tell_secs: 0.0,
-            dwell_sweep: 0.0,
-            walk_cap: 0.0,
-            wear_k: 0.0,
-            memory_secs: 0.0,
-            spent: 0.0,
-            same_secs: 0.0,
-            lent_back_secs: 0.0,
-            marks: false,
-            ring_m: 0.0,
-            way: false,
-            way_reask: 0.0,
-        }
-    }
-}
-impl Default for AttentionK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/picture.ts:30 PICTURE, src/game/picture.ts:30)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PictureK {
     pub on: bool,
     pub look_secs: f64,
@@ -9325,61 +4077,10 @@ pub struct PictureK {
     pub show: crate::knobs::PictureKShow,
     pub show_m: f64,
 }
-impl PictureK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PictureK {
-            on: false,
-            look_secs: 0.0,
-            glimpse: 0.0,
-            tell_secs: 0.0,
-            shout_m: 0.0,
-            pop_m: 0.0,
-            made_out: 0.0,
-            made_out_m: 0.0,
-            fresh_secs: 0.0,
-            stale_secs: 0.0,
-            stale_k: 0.0,
-            forget_secs: 0.0,
-            lost_k: 0.0,
-            walk_mps: 0.0,
-            walk_max: 0.0,
-            heard_m: 0.0,
-            maybe_k: 0.0,
-            reach_m: 0.0,
-            eye_h: 0.0,
-            chest_h: 0.0,
-            low_h: 0.0,
-            head_up: 0.0,
-            standoff: false,
-            cover: false,
-            wall: false,
-            flee: false,
-            flee_cost: 0.0,
-            fallback: false,
-            stack: false,
-            stack_k: 0.0,
-            step: false,
-            step_at: 0.0,
-            step_free: 0.0,
-            step_m: 0.0,
-            step_after: 0.0,
-            step_rest: 0.0,
-            step_secs: 0.0,
-            shot: false,
-            run: false,
-            cover_hard: false,
-            show: crate::knobs::PictureKShow::All,
-            show_m: 0.0,
-        }
-    }
-}
-impl Default for PictureK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PictureKShow {
-    All,
+    #[default] All,
     Off,
     Cursor,
 }
@@ -9393,8 +4094,7 @@ impl PictureKShow {
     }
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:98 RESPONSE, src/game/qrf.ts:98)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ResponseK {
     pub on: bool,
     pub deal: bool,
@@ -9405,25 +4105,8 @@ pub struct ResponseK {
     pub raid: bool,
     pub call_secs: f64,
 }
-impl ResponseK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseK {
-            on: false,
-            deal: false,
-            net: false,
-            clear_m: 0.0,
-            eta_step: 0.0,
-            word_secs: 0.0,
-            raid: false,
-            call_secs: 0.0,
-        }
-    }
-}
-impl Default for ResponseK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/handwork.ts:36 HANDWORK, src/game/handwork.ts:36)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HandworkK {
     pub on: bool,
     pub work: bool,
@@ -9441,32 +4124,8 @@ pub struct HandworkK {
     pub radio_min: f64,
     pub radio_max: f64,
 }
-impl HandworkK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HandworkK {
-            on: false,
-            work: false,
-            radio: false,
-            swap: false,
-            stand_m: 0.0,
-            step_rate: 0.0,
-            step_pace: 0.0,
-            stand_side: 0.0,
-            wait_secs: 0.0,
-            lever_secs: 0.0,
-            lever_at: 0.0,
-            stow_secs: 0.0,
-            radio_k: 0.0,
-            radio_min: 0.0,
-            radio_max: 0.0,
-        }
-    }
-}
-impl Default for HandworkK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workstow.ts:26 WORKSTOW, src/game/workstow.ts:26)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WorkstowK {
     pub on: bool,
     pub mate_down: f64,
@@ -9476,24 +4135,8 @@ pub struct WorkstowK {
     pub sam_up: f64,
     pub fight_cap: f64,
 }
-impl WorkstowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkstowK {
-            on: false,
-            mate_down: 0.0,
-            mate_up: 0.0,
-            show: 0.0,
-            down_max: 0.0,
-            sam_up: 0.0,
-            fight_cap: 0.0,
-        }
-    }
-}
-impl Default for WorkstowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squadnet.ts:39 SQUADNET, src/game/squadnet.ts:39)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadnetK {
     pub on: bool,
     pub why: bool,
@@ -9508,29 +4151,8 @@ pub struct SquadnetK {
     pub down_rate: f64,
     pub down_secs: f64,
 }
-impl SquadnetK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadnetK {
-            on: false,
-            why: false,
-            clear: false,
-            end_call: false,
-            near: 0.0,
-            edge: false,
-            edge_in: 0.0,
-            click: 0.0,
-            click_rate: 0.0,
-            down_gain: 0.0,
-            down_rate: 0.0,
-            down_secs: 0.0,
-        }
-    }
-}
-impl Default for SquadnetK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/takedown.ts:37 TAKEDOWN, src/game/takedown.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TakedownK {
     pub on: bool,
     pub blow: bool,
@@ -9548,32 +4170,8 @@ pub struct TakedownK {
     pub breath_rise: f64,
     pub breath_in: f64,
 }
-impl TakedownK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TakedownK {
-            on: false,
-            blow: false,
-            victim: false,
-            fall: false,
-            partner: false,
-            breathe: false,
-            kill: false,
-            choke_beats: false,
-            haul: false,
-            lower: false,
-            partner_hit: 0.0,
-            partner_end: 0.0,
-            breath_hz: 0.0,
-            breath_rise: 0.0,
-            breath_in: 0.0,
-        }
-    }
-}
-impl Default for TakedownK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stealthpose.ts:27 STEALTHPOSE, src/game/stealthpose.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StealthposeK {
     pub on: bool,
     pub nod: bool,
@@ -9585,118 +4183,39 @@ pub struct StealthposeK {
     pub cable_bow: f64,
     pub cable_step: f64,
 }
-impl StealthposeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StealthposeK {
-            on: false,
-            nod: false,
-            sway_secs: 0.0,
-            sway_m: 0.0,
-            drift_m: 0.0,
-            rise_secs: 0.0,
-            cable_in: 0.0,
-            cable_bow: 0.0,
-            cable_step: 0.0,
-        }
-    }
-}
-impl Default for StealthposeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/look.ts:10 LOOK, src/scene/look.ts:10)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LookK {
     pub on: bool,
     pub suit: bool,
 }
-impl LookK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LookK {
-            on: false,
-            suit: false,
-        }
-    }
-}
-impl Default for LookK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/audio/pieces.ts:27 MUSIC, src/audio/pieces.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MusicK {
 }
-impl MusicK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MusicK {
-        }
-    }
-}
-impl Default for MusicK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/lived.ts:11 LIVED, src/scene/lived.ts:11)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LivedK {
     pub on: bool,
 }
-impl LivedK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LivedK {
-            on: false,
-        }
-    }
-}
-impl Default for LivedK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:86 UNDERFOOT, src/scene/collision.ts:86)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct UnderfootK {
     pub on: bool,
 }
-impl UnderfootK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnderfootK {
-            on: false,
-        }
-    }
-}
-impl Default for UnderfootK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/env.ts:21 ENV, src/game/env.ts:21)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EnvK {
     pub exposure: f64,
     pub tube_gain: f64,
 }
-impl EnvK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EnvK {
-            exposure: 0.0,
-            tube_gain: 0.0,
-        }
-    }
-}
-impl Default for EnvK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/shapes.ts:67 SHAPES, src/scene/shapes.ts:67)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShapesK {
     pub on: bool,
 }
-impl ShapesK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShapesK {
-            on: false,
-        }
-    }
-}
-impl Default for ShapesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:678 FLASH, src/game/combat.ts:678)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FlashK {
     pub on: bool,
     pub secs: [f64; 2],
@@ -9708,26 +4227,8 @@ pub struct FlashK {
     pub own_secs: f64,
     pub fuse: f64,
 }
-impl FlashK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlashK {
-            on: false,
-            secs: [0.0; 2],
-            stagger: [0.0; 2],
-            lift: 0.0,
-            concuss_m: 0.0,
-            concuss_k: 0.0,
-            own_m: 0.0,
-            own_secs: 0.0,
-            fuse: 0.0,
-        }
-    }
-}
-impl Default for FlashK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1502 PACE, src/game/guards.ts:1502)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PaceK {
     pub on: bool,
     pub max: f64,
@@ -9735,22 +4236,8 @@ pub struct PaceK {
     pub turn: f64,
     pub swing: f64,
 }
-impl PaceK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaceK {
-            on: false,
-            max: 0.0,
-            accel: 0.0,
-            turn: 0.0,
-            swing: 0.0,
-        }
-    }
-}
-impl Default for PaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1514 LIGHTS, src/game/guards.ts:1514)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LightsK {
     pub on: bool,
     pub after_secs: f64,
@@ -9773,37 +4260,8 @@ pub struct LightsK {
     pub wall_back_m: f64,
     pub wall_secs: f64,
 }
-impl LightsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LightsK {
-            on: false,
-            after_secs: 0.0,
-            hot_secs: 0.0,
-            step_secs: 0.0,
-            tail: 0.0,
-            on_m: 0.0,
-            alone_m: 0.0,
-            look_dark: false,
-            look_lit: 0.0,
-            look_below: 0.0,
-            look_m: 0.0,
-            lit_off: false,
-            lit_at: 0.0,
-            lit_m: 0.0,
-            lit_mark_m: 0.0,
-            lit_man: false,
-            wall_off: false,
-            wall_m: 0.0,
-            wall_back_m: 0.0,
-            wall_secs: 0.0,
-        }
-    }
-}
-impl Default for LightsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nvg.ts:42 NVG, src/game/nvg.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NvgK {
     pub on: bool,
     pub quiet_secs: f64,
@@ -9818,50 +4276,16 @@ pub struct NvgK {
     pub up_secs: f64,
     pub call_gap: f64,
 }
-impl NvgK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NvgK {
-            on: false,
-            quiet_secs: 0.0,
-            lead_tail: 0.0,
-            dark_at: 0.0,
-            black_at: 0.0,
-            black_reads: 0.0,
-            clear_reads: 0.0,
-            albedo: 0.0,
-            noise: 0.0,
-            down_secs: 0.0,
-            up_secs: 0.0,
-            call_gap: 0.0,
-        }
-    }
-}
-impl Default for NvgK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/irlaser.ts:49 IR, src/game/irlaser.ts:49)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct IrK {
     pub on: bool,
     pub sam: bool,
     pub carry: bool,
     pub team_off: bool,
 }
-impl IrK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IrK {
-            on: false,
-            sam: false,
-            carry: false,
-            team_off: false,
-        }
-    }
-}
-impl Default for IrK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/irlight.ts:64 IRLIGHT, src/game/irlight.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct IrlightK {
     pub on: bool,
     pub team: bool,
@@ -9880,33 +4304,8 @@ pub struct IrlightK {
     pub near_up: f64,
     pub near_down: f64,
 }
-impl IrlightK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IrlightK {
-            on: false,
-            team: false,
-            auto: false,
-            meter: false,
-            show: 0.0,
-            hold: 0.0,
-            power: 0.0,
-            reach: 0.0,
-            cone: 0.0,
-            core: 0.0,
-            dip: 0.0,
-            near: false,
-            near_m: 0.0,
-            near_min: 0.0,
-            near_up: 0.0,
-            near_down: 0.0,
-        }
-    }
-}
-impl Default for IrlightK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallpen.ts:61 WALLPEN, src/game/wallpen.ts:61)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallpenK {
     pub on: bool,
     pub base: JsMap<crate::wallpen::ThinStuff, f64>,
@@ -9921,44 +4320,13 @@ pub struct WallpenK {
     pub thru_rounds: f64,
     pub thru_rest_secs: f64,
 }
-impl WallpenK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallpenK {
-            on: false,
-            base: JsMap::new(),
-            per_m: JsMap::new(),
-            thin_max: JsMap::new(),
-            max_thru: JsMap::new(),
-            min_energy: 0.0,
-            max_things: 0.0,
-            deflect_deg: 0.0,
-            men: false,
-            behind_m: 0.0,
-            thru_rounds: 0.0,
-            thru_rest_secs: 0.0,
-        }
-    }
-}
-impl Default for WallpenK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:579 LASER, src/game/combat.ts:579)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LaserK {
     pub enemy: bool,
 }
-impl LaserK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LaserK {
-            enemy: false,
-        }
-    }
-}
-impl Default for LaserK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:116 DOORTOOLS, src/game/doortools.ts:116)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoortoolsK {
     pub charges: f64,
     pub bangs: f64,
@@ -10124,180 +4492,8 @@ pub struct DoortoolsK {
     pub thr_last_m: f64,
     pub thr_last_fresh: f64,
 }
-impl DoortoolsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoortoolsK {
-            charges: 0.0,
-            bangs: 0.0,
-            blow_key: String::new(),
-            word_on_key: false,
-            word_tap: 0.0,
-            thr_hold_first: false,
-            thr_bang_first: false,
-            thr_outside_row: false,
-            thr_leave_fall_in: false,
-            thr_hands_off: false,
-            thr_held_all: false,
-            thr_menu_word: false,
-            stack_cap: 0.0,
-            still_secs: 0.0,
-            kick_cap: 0.0,
-            in_cap: 0.0,
-            shove: 0.0,
-            hold_open: 0.0,
-            toss_after_open: 0.0,
-            bang_in: 0.0,
-            fuse_after_land: 0.0,
-            air_in: 0.0,
-            air_h: 0.0,
-            toss_cap: 0.0,
-            toss_after_kick: 0.0,
-            throw_reach: 0.0,
-            toss_turn: 0.0,
-            frag_way: false,
-            frag_way_wait: 0.0,
-            frag_way_open: 0.0,
-            frag_way_ajar: 0.0,
-            open_hand: false,
-            gate_hand: false,
-            last_out: false,
-            last_out_m: 0.0,
-            after_bang: 0.0,
-            quiet: 0.0,
-            entry_cap: 0.0,
-            second: 0.0,
-            sweep_rad: 0.0,
-            sweep_secs: 0.0,
-            corner_secs: 0.0,
-            corner_rad: 0.0,
-            corner_cap: 0.0,
-            corner_owed: false,
-            lead_seen: false,
-            lead_seen_min: 0.0,
-            lead_seen_secs: 0.0,
-            lead_seen_m: 0.0,
-            sector_secs: 0.0,
-            search: false,
-            scan_rate: 0.0,
-            look_rad: 0.0,
-            look_m: 0.0,
-            dead_cells: 0.0,
-            search_moves: 0.0,
-            search_cap: 0.0,
-            search_cells: 0.0,
-            tuck: 0.0,
-            edge_out: 0.0,
-            bang_file: 0.0,
-            set_secs: 0.0,
-            standoff: Vec::new(),
-            knock_m: 0.0,
-            stun_m: 0.0,
-            stun_secs: Vec::new(),
-            stagger_secs: 0.0,
-            backblast_m: 0.0,
-            backblast_secs: 0.0,
-            blow_vel: 0.0,
-            slice_back: 0.0,
-            slice_look: 0.0,
-            slice_edge: 0.0,
-            slice_deep: 0.0,
-            slice_pace: 0.0,
-            word_stack: 0.0,
-            word_in: 0.0,
-            room_back: Vec::new(),
-            pod_apart: 0.0,
-            thr_pull: false,
-            thr_pull_at: Vec::new(),
-            thr_still: Vec::new(),
-            thr_arc: Vec::new(),
-            thr_min: 0.0,
-            thr_quiet: 0.0,
-            thr_cap: 0.0,
-            thr_bangs: 0.0,
-            thr_pocket: 0.0,
-            thr_shot_m: 0.0,
-            thr_throw_m: 0.0,
-            thr_flash_m: 0.0,
-            thr_turn: 0.0,
-            thr_next: 0.0,
-            thr_cover: false,
-            thr_slice: false,
-            thr_light: 0.0,
-            thr_in: 0.0,
-            thr_pie: false,
-            thr_pie_arc: Vec::new(),
-            thr_pie_apart: 0.0,
-            thr_lean: false,
-            thr_lean_m: 0.0,
-            thr_knee_in: 0.0,
-            thr_pie_one: false,
-            thr_lean_look: 0.0,
-            thr_doors_m: 0.0,
-            thr_doors_walk: 0.0,
-            thr_doors_stay: 0.0,
-            other_door_m: 0.0,
-            own_can: false,
-            buddy: false,
-            buddy_m: 0.0,
-            buddy_pair_m: 0.0,
-            buddy_left_m: 0.0,
-            flow_on: false,
-            flow_cells: 0.0,
-            flow_moves: 0.0,
-            flow_reach: 0.0,
-            flow_deep: 0.0,
-            flow_bound: 0.0,
-            flow_secs: 0.0,
-            flow_fight: 0.0,
-            open_air: false,
-            flow_max: 0.0,
-            test_door: false,
-            outside_plain: false,
-            word_no_can: false,
-            word_cuts: false,
-            word_cuts_cap: 0.0,
-            word_small: false,
-            bang_into: false,
-            bang_into_min: 0.0,
-            bang_into_lit: 0.0,
-            bang_into_deep: 0.0,
-            bang_into_wide: 0.0,
-            bang_hand_m: 0.0,
-            bang_pass_v: 0.0,
-            halt_back: false,
-            behind_sam: false,
-            charge_answer: false,
-            pod_frames: false,
-            pod_frame_m: 0.0,
-            thr_hand: false,
-            thr_hand_wait: 0.0,
-            thr_hand_every: 0.0,
-            thr_frag_hold: false,
-            frag_hold: false,
-            frag_hold_cap: 0.0,
-            threat_first: false,
-            threat_secs: 0.0,
-            threat_cap: 0.0,
-            threat_near_m: 0.0,
-            threat_stuck: 0.0,
-            thr_set_secs: 0.0,
-            thr_dark: false,
-            thr_first: 0.0,
-            thr_first_min: 0.0,
-            thr_first_stale: 0.0,
-            thr_first_in: 0.0,
-            thr_first_only: false,
-            thr_last: false,
-            thr_last_m: 0.0,
-            thr_last_fresh: 0.0,
-        }
-    }
-}
-impl Default for DoortoolsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/roomfight.ts:91 ROOMFIGHT, src/game/roomfight.ts:91)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RoomfightK {
     pub on: bool,
     pub evidence_secs: f64,
@@ -10331,48 +4527,8 @@ pub struct RoomfightK {
     pub lamp: f64,
     pub preaim_deg: f64,
 }
-impl RoomfightK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomfightK {
-            on: false,
-            evidence_secs: 0.0,
-            sticky: 0.0,
-            crowd: 0.0,
-            fear_min: 0.0,
-            fall_back: false,
-            fall_back_in: false,
-            close_m: 0.0,
-            no_shot: 0.0,
-            close_lane: false,
-            point_blank: 0.0,
-            sam_behind: false,
-            sam_beside: false,
-            sam_travel: false,
-            no_shot_go: 0.0,
-            no_shot_pass: 0.0,
-            rally_k: 0.0,
-            arc_half_deg: 0.0,
-            cover_half_deg: 0.0,
-            cover_near_m: 0.0,
-            team_hot: 0.0,
-            let_go: 0.0,
-            step_look_secs: 0.0,
-            door_ears: false,
-            door_look_secs: 0.0,
-            door_shots: false,
-            door_shot_m: 0.0,
-            hold_short_secs: 0.0,
-            move_engage_m: 0.0,
-            lamp: 0.0,
-            preaim_deg: 0.0,
-        }
-    }
-}
-impl Default for RoomfightK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/orders.ts:126 ORDERS, src/game/orders.ts:126)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct OrdersK {
     pub key: String,
     pub mouse_opens: bool,
@@ -10456,98 +4612,8 @@ pub struct OrdersK {
     pub trail_reach_m: f64,
     pub trail_long: f64,
 }
-impl OrdersK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OrdersK {
-            key: String::new(),
-            mouse_opens: false,
-            click_gives: false,
-            who_key: String::new(),
-            quick_key: String::new(),
-            wheel_element: false,
-            wait_key: String::new(),
-            wait_alt: String::new(),
-            refresh_secs: 0.0,
-            door_pick_m: 0.0,
-            self_m: 0.0,
-            man_m: 0.0,
-            door_ray: false,
-            door_ray_pad: 0.0,
-            door_ray_reach_m: 0.0,
-            floor_snap_m: 0.0,
-            jamb_out: 0.0,
-            jamb_past: 0.0,
-            file_gap: 0.0,
-            seam_m: 0.0,
-            second_floor: false,
-            work_out: false,
-            work_seen_m: 0.0,
-            hall_file: false,
-            follow_back: Vec::new(),
-            crumb: 0.0,
-            trail_m: 0.0,
-            run: 0.0,
-            walk: 0.0,
-            gain: 0.0,
-            near_m: 0.0,
-            band_m: 0.0,
-            word_far_m: 0.0,
-            word_hold_s: 0.0,
-            file_hold: false,
-            file_spread: false,
-            file_apart: 0.0,
-            file_tight: 0.0,
-            off_door: 0.0,
-            back_end: false,
-            in_way: false,
-            retake_goal: false,
-            walk_tries: false,
-            aside_m: 0.0,
-            aside_lane: 0.0,
-            aside_off: 0.0,
-            aside_clear: false,
-            file_queue: false,
-            file_queue_gap: 0.0,
-            file_queue_cost: 0.0,
-            prop_round: false,
-            prop_round_pad: 0.0,
-            prop_round_cost: 0.0,
-            prop_round_more: 0.0,
-            prop_round_door: 0.0,
-            aside_hold: 0.0,
-            brisk: 0.0,
-            brisk_in: 0.0,
-            onto: 0.0,
-            entry: 0.0,
-            move_spread: 0.0,
-            cold_secs: 0.0,
-            lane_in: 0.0,
-            lane_out: 0.0,
-            hold_stride: 0.0,
-            stuck_secs: 0.0,
-            hold_group_m: 0.0,
-            hold_door_m: 0.0,
-            cleared: false,
-            cleared_dear: 0.0,
-            known_face: false,
-            own_door: false,
-            round_cap: 0.0,
-            round_own: false,
-            same_way: false,
-            same_near_m: 0.0,
-            same_apart_m: 0.0,
-            same_long: 0.0,
-            trail_doors: false,
-            trail_reach_m: 0.0,
-            trail_long: 0.0,
-        }
-    }
-}
-impl Default for OrdersK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cover.ts:62 COVER, src/game/cover.ts:62)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CoverK {
     pub on: bool,
     pub stacked: bool,
@@ -10603,70 +4669,8 @@ pub struct CoverK {
     pub step_secs: f64,
     pub step_place_m: f64,
 }
-impl CoverK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverK {
-            on: false,
-            stacked: false,
-            in_room: false,
-            rear_read: false,
-            rear_read_in: 0.0,
-            rear_read_m: 0.0,
-            rear_read_deg: 0.0,
-            rear_read_secs: 0.0,
-            rear_read_sticky: 0.0,
-            rear_look: 0.0,
-            rear_walk_m: 0.0,
-            leaf: false,
-            edge: false,
-            reach: 0.0,
-            deal_secs: 0.0,
-            gap_cells: 0.0,
-            through_rows: 0.0,
-            alcove_rows: 0.0,
-            bridge: 0.0,
-            in_m: 0.0,
-            lane: 0.0,
-            lane_keep: 0.0,
-            lane_secs: 0.0,
-            sam_deg: 0.0,
-            sam_k: 0.0,
-            held_k: 0.0,
-            shut_k: 0.0,
-            rear_k: 0.0,
-            near_m: 0.0,
-            contact_secs: 0.0,
-            rear_m: 0.0,
-            rear_from: 0.0,
-            rear_deg: 0.0,
-            sticky: 0.0,
-            keep_secs: 0.0,
-            rear_keep: 0.0,
-            behind_k: 0.0,
-            twist: 0.0,
-            back_in: 0.0,
-            back_out: 0.0,
-            back_keep: false,
-            back_body: 0.0,
-            back_turn: false,
-            back_turn_body: 0.0,
-            back_turn_secs: 0.0,
-            swing: 0.0,
-            step: false,
-            step_m: 0.0,
-            step_after: 0.0,
-            step_off_m: 0.0,
-            step_reach: 0.0,
-            step_secs: 0.0,
-            step_place_m: 0.0,
-        }
-    }
-}
-impl Default for CoverK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/roomfit.ts:38 ROOMFIT, src/game/roomfit.ts:38)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RoomfitK {
     pub on: bool,
     pub spread0: f64,
@@ -10711,59 +4715,8 @@ pub struct RoomfitK {
     pub again_secs: f64,
     pub sticky: f64,
 }
-impl RoomfitK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomfitK {
-            on: false,
-            spread0: 0.0,
-            spread_per: 0.0,
-            apart: 0.0,
-            loose: 0.0,
-            loose_k: 0.0,
-            near_k: 0.0,
-            near_free: 0.0,
-            wall_k: 0.0,
-            corner_k: 0.0,
-            funnel_m: 0.0,
-            funnel_pad: 0.0,
-            funnel_flare: 0.0,
-            funnel_k: 0.0,
-            own_k: 0.0,
-            known_funnel_k: 0.0,
-            shut_funnel_k: 0.0,
-            ang_k: 0.0,
-            ang_lo: 0.0,
-            ang_hi: 0.0,
-            ang_max: 0.0,
-            close_m: 0.0,
-            close_k: 0.0,
-            lane_m: 0.0,
-            lane_k: 0.0,
-            reach: 0.0,
-            near_m: 0.0,
-            known_k: 0.0,
-            shut_k: 0.0,
-            locked_k: 0.0,
-            front_k: 0.0,
-            second_k: 0.0,
-            sector_m: 0.0,
-            sector_k: 0.0,
-            sector_deg: 0.0,
-            sector_across: 0.0,
-            sector_look: 0.0,
-            sector_far_m: 0.0,
-            sector_far_k: 0.0,
-            watch_in_m: 0.0,
-            again_secs: 0.0,
-            sticky: 0.0,
-        }
-    }
-}
-impl Default for RoomfitK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/entrypoints.ts:36 ENTRY, src/game/entrypoints.ts:36)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EntryK {
     pub off_openings: bool,
     pub move_: bool,
@@ -10777,45 +4730,14 @@ pub struct EntryK {
     pub off_mouth: bool,
     pub mouth_m: f64,
 }
-impl EntryK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EntryK {
-            off_openings: false,
-            move_: false,
-            watch: false,
-            near_m: 0.0,
-            line_deg: 0.0,
-            gaps: false,
-            known_m: 0.0,
-            move_m: 0.0,
-            apart: 0.0,
-            off_mouth: false,
-            mouth_m: 0.0,
-        }
-    }
-}
-impl Default for EntryK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cover.ts:171 REAR, src/game/cover.ts:171)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RearK {
     pub settle: bool,
     pub secs: f64,
 }
-impl RearK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RearK {
-            settle: false,
-            secs: 0.0,
-        }
-    }
-}
-impl Default for RearK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/silent.ts:69 SILENT, src/game/silent.ts:69)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentK {
     pub on: bool,
     pub start: bool,
@@ -10833,32 +4755,8 @@ pub struct SilentK {
     pub tools_loud: bool,
     pub stack_set: bool,
 }
-impl SilentK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SilentK {
-            on: false,
-            start: false,
-            pace: 0.0,
-            step: 0.0,
-            lights: false,
-            hush: false,
-            doors: false,
-            kicks: false,
-            picks: false,
-            boot_wedged: false,
-            cans: false,
-            noticed: 0.0,
-            glass: false,
-            tools_loud: false,
-            stack_set: false,
-        }
-    }
-}
-impl Default for SilentK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:44 PAIR, src/game/pairorders.ts:44)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairK {
     pub on: bool,
     pub max_squad: f64,
@@ -10892,48 +4790,8 @@ pub struct PairK {
     pub lit_secs: f64,
     pub lit_every: f64,
 }
-impl PairK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairK {
-            on: false,
-            max_squad: 0.0,
-            pick_m: 0.0,
-            stage_m: 0.0,
-            reach: 0.0,
-            secs: 0.0,
-            scuffle: 0.0,
-            grip: false,
-            pace: 0.0,
-            go_pace: 0.0,
-            stalk_every: 0.0,
-            stalk_wait: 0.0,
-            sweep: false,
-            ring_m: 0.0,
-            steady_face_secs: 0.0,
-            front_m: 0.0,
-            cone_m: 0.0,
-            cone_lit: 0.0,
-            watched: false,
-            watch_secs: 0.0,
-            watch_aw: 0.0,
-            look_back: false,
-            heel_ring: 0.0,
-            heel_fresh: 0.0,
-            heel_wait: 0.0,
-            take_secs: 0.0,
-            dark_vis: 0.0,
-            dark_m: 0.0,
-            dark_h: 0.0,
-            lit_secs: 0.0,
-            lit_every: 0.0,
-        }
-    }
-}
-impl Default for PairK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:83 RESCUE, src/game/rescue.ts:83)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueK {
     pub start: crate::knobs::RescueKStart,
     pub clock: bool,
@@ -10967,50 +4825,10 @@ pub struct RescueK {
     pub sam_yaw: f64,
     pub ops_at: [V3; 2],
 }
-impl RescueK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueK {
-            start: crate::knobs::RescueKStart::Quiet,
-            clock: false,
-            resolve_secs: 0.0,
-            resolve_spread: 0.0,
-            second_hostage_secs: 0.0,
-            aim_secs: 0.0,
-            set_secs: 0.0,
-            unset_react: 0.0,
-            captor_set: false,
-            hold_secs: 0.0,
-            door_man: crate::knobs::RescueKDoorMan::Inside,
-            roamers: 0.0,
-            seed_roamers: false,
-            stun: false,
-            trained: false,
-            blind_fire: false,
-            def_lights: false,
-            room_lights: false,
-            flow: false,
-            marks: false,
-            two_door: false,
-            side_pair: false,
-            crew_door: false,
-            crew_cross: false,
-            crew_behind: false,
-            crew_call_secs: 0.0,
-            clock_as_seconds: false,
-            squad: 0.0,
-            sam_at: [0.0; 3],
-            sam_yaw: 0.0,
-            ops_at: [[0.0; 3]; 2],
-        }
-    }
-}
-impl Default for RescueK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueKStart {
-    Quiet,
+    #[default] Quiet,
     Hot,
 }
 impl RescueKStart {
@@ -11022,10 +4840,9 @@ impl RescueKStart {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueKDoorMan {
-    Inside,
+    #[default] Inside,
     Corridor,
 }
 impl RescueKDoorMan {
@@ -11037,8 +4854,7 @@ impl RescueKDoorMan {
     }
 }
 
-/// (TypeScript: inline at src/game/digin.ts:54 DIGIN, src/game/digin.ts:54)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiginK {
     pub on: bool,
     pub stay: bool,
@@ -11073,64 +4889,13 @@ pub struct DiginK {
     pub redig_secs: f64,
     pub lane_secs: f64,
 }
-impl DiginK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DiginK {
-            on: false,
-            stay: false,
-            reach_m: 0.0,
-            keeper: false,
-            cover: false,
-            brace_in_room: false,
-            noticed_secs: 0.0,
-            shut_open: false,
-            shut_secs: 0.0,
-            shut_home_rad: 0.0,
-            shut_doors: 0.0,
-            gather: false,
-            gather_m: 0.0,
-            gather_shy_m: 0.0,
-            think: [0.0; 2],
-            wedge_secs: [0.0; 2],
-            wedges: 0.0,
-            caught: [0.0; 2],
-            try_secs: 0.0,
-            pace: 0.0,
-            close_m: 0.0,
-            prop_m: 0.0,
-            haul_speed: 0.0,
-            scrape_level: 0.0,
-            scrape_every: 0.0,
-            shout_m: 0.0,
-            alt_m: 0.0,
-            better: 0.0,
-            fear: 0.0,
-            hold_secs: 0.0,
-            redig_secs: 0.0,
-            lane_secs: 0.0,
-        }
-    }
-}
-impl Default for DiginK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:171 HAULHOME, src/game/digin.ts:171)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HaulhomeK {
     pub on: bool,
 }
-impl HaulhomeK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HaulhomeK {
-            on: false,
-        }
-    }
-}
-impl Default for HaulhomeK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:66 PRESSURE, src/game/pressure.ts:66)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PressureK {
     pub on: bool,
     pub press: bool,
@@ -11173,57 +4938,8 @@ pub struct PressureK {
     pub sweep_beat: f64,
     pub sweep_pair_m: f64,
 }
-impl PressureK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PressureK {
-            on: false,
-            press: false,
-            flank: false,
-            squad_drill: false,
-            second: false,
-            max_men: 0.0,
-            memory_secs: 0.0,
-            organise_k: 0.0,
-            warned: false,
-            stand_press: false,
-            report_secs: 0.0,
-            stand_secs: 0.0,
-            stand_grace: 0.0,
-            again_secs: 0.0,
-            stuns: 0.0,
-            stun_know_secs: 0.0,
-            stun_moved_secs: 0.0,
-            last_holds: false,
-            picket: false,
-            by_way: false,
-            rescue_crew: false,
-            drilled: false,
-            flank_max_m: 0.0,
-            flank_k: 0.0,
-            flank_slack_m: 0.0,
-            last_man_secs: [0.0; 2],
-            loud_secs: 0.0,
-            out_secs: [0.0; 2],
-            gather_secs: 0.0,
-            flank_secs: 0.0,
-            siege_secs: 0.0,
-            word_secs: 0.0,
-            way_out: false,
-            way_out_m: 0.0,
-            way_out_secs: 0.0,
-            sweep: false,
-            sweep_secs: 0.0,
-            sweep_men: 0.0,
-            sweep_beat: 0.0,
-            sweep_pair_m: 0.0,
-        }
-    }
-}
-impl Default for PressureK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:64 LANES, src/game/lanes.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LanesK {
     pub on: bool,
     pub secs: f64,
@@ -11291,82 +5007,8 @@ pub struct LanesK {
     pub frag_step_m: f64,
     pub max: f64,
 }
-impl LanesK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LanesK {
-            on: false,
-            secs: 0.0,
-            reach_m: 0.0,
-            half_deg: 0.0,
-            width_m: 0.0,
-            field_m: 0.0,
-            own_m: 0.0,
-            min_m: 0.0,
-            round_k: 0.0,
-            near_m: 0.0,
-            react_secs: 0.0,
-            call_secs: 0.0,
-            see_m: 0.0,
-            body_m: 0.0,
-            dear: 0.0,
-            ahead_m: 0.0,
-            close_m: 0.0,
-            hot_secs: 0.0,
-            round_men: 0.0,
-            think_secs: 0.0,
-            round_max_m: 0.0,
-            round_gap: 0.0,
-            round_side_deg: 0.0,
-            round_show_m: 0.0,
-            shift_m: 0.0,
-            stun_m: 0.0,
-            bang_m: 0.0,
-            push_secs: 0.0,
-            push_m: 0.0,
-            push_fast: 0.0,
-            stun_gap: 0.0,
-            moved_m: 0.0,
-            moved_secs: 0.0,
-            peek: false,
-            peek_quiet: 0.0,
-            peek_gap: 0.0,
-            peek_max: 0.0,
-            peek_lost: 0.0,
-            peek_reach_m: 0.0,
-            peek_near_m: 0.0,
-            peek_look: 0.0,
-            peek_sure: 0.0,
-            peek_keep: 0.0,
-            peek_pace: 0.0,
-            peek_lean: 0.0,
-            pin_rounds: 0.0,
-            pin_every: 0.0,
-            pin_snap: 0.0,
-            pin_gap: 0.0,
-            pin_max: 0.0,
-            pin_rest: 0.0,
-            pin_spread: 0.0,
-            pin_aim_deg: 0.0,
-            pin_pace: 0.0,
-            pin_show_m: 0.0,
-            pin_min_m: 0.0,
-            glass: false,
-            look_m: 0.0,
-            roused: false,
-            frag: false,
-            frag_think: 0.0,
-            frag_gap: 0.0,
-            frag_look: 0.0,
-            frag_step_m: 0.0,
-            max: 0.0,
-        }
-    }
-}
-impl Default for LanesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunhold.ts:46 GUNHOLD, src/game/gunhold.ts:46)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunholdK {
     pub on: bool,
     pub cover_m: f64,
@@ -11382,30 +5024,8 @@ pub struct GunholdK {
     pub flank_max_m: f64,
     pub react: [f64; 2],
 }
-impl GunholdK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunholdK {
-            on: false,
-            cover_m: 0.0,
-            near_m: 0.0,
-            rear_deg: 0.0,
-            keep_secs: 0.0,
-            peek_every: 0.0,
-            peek_secs: 0.0,
-            show_m: 0.0,
-            shy_s: 0.0,
-            dash_m: 0.0,
-            face_deg: 0.0,
-            flank_max_m: 0.0,
-            react: [0.0; 2],
-        }
-    }
-}
-impl Default for GunholdK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:43 HARD, src/game/difficulty.ts:43)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HardK {
     pub reach_m: f64,
     pub keeper_digs: bool,
@@ -11420,60 +5040,26 @@ pub struct HardK {
     pub cone: bool,
     pub sweep: bool,
 }
-impl HardK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HardK {
-            reach_m: 0.0,
-            keeper_digs: false,
-            warned: false,
-            second: false,
-            picket: false,
-            by_way: false,
-            rescue_crew: false,
-            way_out: false,
-            stuns: 0.0,
-            drilled: false,
-            cone: false,
-            sweep: false,
-        }
-    }
-}
-impl Default for HardK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:92 HARD_AT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
 #[derive(Clone, Debug, ToBytes)]
 pub struct HardAtK {
     /// INVENTED: HARD_AT's rows by structure name, written order, each row's optional stuns (difficulty.ts:92). A row with no stuns reads as no row at all (:150, :167, :352, :354)
     pub rows: JsMap<String, Option<f64>>,
 }
-impl HardAtK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for HardAtK {
+    fn default() -> Self {
         HardAtK {
             rows: { let mut t = JsMap::new(); t.set(String::from("the block"), Some(1.0)); t },
         }
     }
 }
-impl Default for HardAtK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/roomfight.ts:284 DRILLED, src/game/roomfight.ts:284)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DrilledK {
     pub shaken: f64,
 }
-impl DrilledK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DrilledK {
-            shaken: 0.0,
-        }
-    }
-}
-impl Default for DrilledK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:75 SQUADS, src/game/enemysquads.ts:75)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadsK {
     pub on: bool,
     pub think: [f64; 2],
@@ -11539,96 +5125,21 @@ pub struct SquadsK {
     pub net_stops: f64,
     pub net_cut_alarm: bool,
 }
-impl SquadsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadsK {
-            on: false,
-            think: [0.0; 2],
-            net_lag: 0.0,
-            help_men: 0.0,
-            flank_men: 0.0,
-            again_secs: 0.0,
-            settle_secs: 0.0,
-            quiet_secs: 0.0,
-            recall_secs: 0.0,
-            reinforce: [0.0; 2],
-            open_pair: false,
-            ready_beat: 0.0,
-            go_round: false,
-            fire_m: 0.0,
-            rear_m: 0.0,
-            soft_m: 0.0,
-            mouth_m: 0.0,
-            hold_lost: false,
-            hold_back_m: 0.0,
-            hold_secs: 0.0,
-            drill_net: false,
-            net_k: 0.0,
-            reinforce_k: 0.0,
-            drill_angles: false,
-            drill_react: false,
-            react_k: 0.0,
-            drill_nerve: false,
-            nerve_k: 0.0,
-            drill_follow: false,
-            follow_m: 0.0,
-            drill_own: false,
-            own_up: 0.0,
-            drill_back: false,
-            back_beat: 0.0,
-            drill_look: false,
-            sweep_secs: 0.0,
-            sweep_men: 0.0,
-            sweep_beat: 0.0,
-            sweep_stayers: false,
-            drill_by_map: false,
-            way: false,
-            radio_check: false,
-            check_every: 0.0,
-            check_jitter: 0.0,
-            check_alert_k: 0.0,
-            check_ask: 0.0,
-            check_send: 0.0,
-            check_heard: [0.0; 2],
-            check_hear_m: 0.0,
-            look_men: 0.0,
-            heard_knows: false,
-            heard_asks: false,
-            noticed_eyes: false,
-            call_beat: false,
-            call_secs: [0.0; 2],
-            call_body: false,
-            call_cut_ask: [0.0; 2],
-            net_ask: false,
-            net_every: 0.0,
-            net_beat: [0.0; 2],
-            net_look_men: 0.0,
-            net_stops: 0.0,
-            net_cut_alarm: false,
-        }
-    }
-}
-impl Default for SquadsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:290 DRILL_AT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
 #[derive(Clone, Debug, ToBytes)]
 pub struct DrillAtK {
     /// INVENTED: DRILL_AT's rows by structure name, in written order (enemysquads.ts:287-300). A map with no row reads the drill's table as it stands (:305)
     pub rows: JsMap<String, crate::enemysquads::DrillAtRow>,
 }
-impl DrillAtK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for DrillAtK {
+    fn default() -> Self {
         DrillAtK {
             rows: { let mut t = JsMap::new(); t.set(String::from("the block, three squads"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(true), net_k: Some(2.0), reinforce_k: Some(2.0), drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the warehouse"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the block"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the compound"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(true), net_k: Some(1.0), reinforce_k: Some(0.75), drill_own: Some(true), own_up: Some(1.0), drill_back: Some(false), back_beat: None }); t.set(String::from("the barracks"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(true), back_beat: Some(3.0) }); t },
         }
     }
 }
-impl Default for DrillAtK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:57 CUES, src/game/cues.ts:57)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesK {
     pub on: bool,
     pub rows: f64,
@@ -11646,32 +5157,8 @@ pub struct CuesK {
     pub overheard: bool,
     pub overheard_gap: f64,
 }
-impl CuesK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesK {
-            on: false,
-            rows: 0.0,
-            secs: 0.0,
-            min_show: 0.0,
-            per_class: 0.0,
-            dup_secs: 0.0,
-            gaps: Vec::new(),
-            squelch: 0.0,
-            man_secs: 0.0,
-            again_secs: 0.0,
-            still_secs: 0.0,
-            still_quiet: 0.0,
-            stay_secs: 0.0,
-            overheard: false,
-            overheard_gap: 0.0,
-        }
-    }
-}
-impl Default for CuesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:58 WX_SIM, src/game/weather.ts:58)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WxSimK {
     pub rain_k: f64,
     pub thunder_k: f64,
@@ -11680,55 +5167,19 @@ pub struct WxSimK {
     pub roof_bed: f64,
     pub loud_dry: bool,
 }
-impl WxSimK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WxSimK {
-            rain_k: 0.0,
-            thunder_k: 0.0,
-            thunder_secs: 0.0,
-            thunder_loud: 0.0,
-            roof_bed: 0.0,
-            loud_dry: false,
-        }
-    }
-}
-impl Default for WxSimK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:171 WX_OWN, src/game/weatherKinds.ts:171)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WxOwnK {
     pub roofs: bool,
     pub wind: bool,
 }
-impl WxOwnK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WxOwnK {
-            roofs: false,
-            wind: false,
-        }
-    }
-}
-impl Default for WxOwnK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:60 SNOW, src/game/weatherKinds.ts:60)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SnowK {
     pub on: bool,
 }
-impl SnowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnowK {
-            on: false,
-        }
-    }
-}
-impl Default for SnowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:107 SNOW_LOOK, src/game/weatherKinds.ts:107)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SnowLookK {
     pub on: bool,
     pub wisps: bool,
@@ -11744,30 +5195,8 @@ pub struct SnowLookK {
     pub past: bool,
     pub under: bool,
 }
-impl SnowLookK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnowLookK {
-            on: false,
-            wisps: false,
-            tracks: false,
-            glow: false,
-            sparkle: false,
-            breath: false,
-            steam: false,
-            grains: false,
-            blast: false,
-            one_air: false,
-            marks: false,
-            past: false,
-            under: false,
-        }
-    }
-}
-impl Default for SnowLookK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/airSim.ts:33 AIR_SIM, src/game/airSim.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AirSimK {
     pub on: bool,
     pub ground: f64,
@@ -11784,31 +5213,8 @@ pub struct AirSimK {
     pub puff_rate: f64,
     pub settle: f64,
 }
-impl AirSimK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirSimK {
-            on: false,
-            ground: 0.0,
-            min_top: 0.0,
-            max_foot: 0.0,
-            roof_share: 0.0,
-            glass_open: 0.0,
-            leaf_step: 0.0,
-            vent_out: 0.0,
-            gust_k: 0.0,
-            rate: 0.0,
-            sigma_min: 0.0,
-            sigma_max: 0.0,
-            puff_rate: 0.0,
-            settle: 0.0,
-        }
-    }
-}
-impl Default for AirSimK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:59 LASTSTAND, src/game/laststand.ts:59)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LaststandK {
     pub call_out: bool,
     pub places: bool,
@@ -11832,38 +5238,8 @@ pub struct LaststandK {
     pub thump: [f64; 2],
     pub thump_level: f64,
 }
-impl LaststandK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LaststandK {
-            call_out: false,
-            places: false,
-            moved_secs: 0.0,
-            still_secs: 0.0,
-            moved_gap: 0.0,
-            few: 0.0,
-            quiet: 0.0,
-            first: [0.0; 2],
-            every: 0.0,
-            again: 0.0,
-            answer: [0.0; 2],
-            between: [0.0; 2],
-            listen: [0.0; 2],
-            max_m: 0.0,
-            clear_m: 0.0,
-            known_secs: 0.0,
-            go: [0.0; 2],
-            legs: 0.0,
-            dig: [0.0; 2],
-            thump: [0.0; 2],
-            thump_level: 0.0,
-        }
-    }
-}
-impl Default for LaststandK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stackroom.ts:48 STACKROOM, src/game/stackroom.ts:48)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StackroomK {
     pub on: bool,
     pub apart: f64,
@@ -11888,39 +5264,8 @@ pub struct StackroomK {
     pub view_men: f64,
     pub view_wall: f64,
 }
-impl StackroomK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StackroomK {
-            on: false,
-            apart: 0.0,
-            squeeze: 0.0,
-            round_m: 0.0,
-            round_k: 0.0,
-            walk_m: 0.0,
-            next_walk_m: 0.0,
-            next_m: 0.0,
-            lane_back: 0.0,
-            view: false,
-            view_hand: false,
-            view_ajar: 0.0,
-            view_cells: 0.0,
-            view_far: 0.0,
-            view_eye: 0.0,
-            view_step: 0.0,
-            view_past: 0.0,
-            view_off: 0.0,
-            view_apart: 0.0,
-            view_out: 0.0,
-            view_men: 0.0,
-            view_wall: 0.0,
-        }
-    }
-}
-impl Default for StackroomK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rearwatch.ts:61 REARWATCH, src/game/rearwatch.ts:61)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RearwatchK {
     pub on: bool,
     pub through: bool,
@@ -11933,27 +5278,8 @@ pub struct RearwatchK {
     pub room_secs: f64,
     pub room_m: f64,
 }
-impl RearwatchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RearwatchK {
-            on: false,
-            through: false,
-            hold: false,
-            reach: 0.0,
-            ajar: 0.0,
-            grace: 0.0,
-            short: 0.0,
-            room: false,
-            room_secs: 0.0,
-            room_m: 0.0,
-        }
-    }
-}
-impl Default for RearwatchK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stackline.ts:31 STACKLINE, src/game/stackline.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StacklineK {
     pub on: bool,
     pub ajar: f64,
@@ -11962,23 +5288,8 @@ pub struct StacklineK {
     pub inset: f64,
     pub on_mark: f64,
 }
-impl StacklineK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StacklineK {
-            on: false,
-            ajar: 0.0,
-            bins: 0.0,
-            eye: 0.0,
-            inset: 0.0,
-            on_mark: 0.0,
-        }
-    }
-}
-impl Default for StacklineK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sneak.ts:64 SNEAK, src/game/sneak.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SneakK {
     pub on: bool,
     pub crouch: bool,
@@ -12016,52 +5327,8 @@ pub struct SneakK {
     pub plan_secs: f64,
     pub skill: f64,
 }
-impl SneakK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SneakK {
-            on: false,
-            crouch: false,
-            min_pace: 0.0,
-            low_pace: 0.0,
-            cross_pace: 0.0,
-            step: 0.0,
-            trail_m: 0.0,
-            back: 0.0,
-            ahead_m: 0.0,
-            lit_at: 0.0,
-            seen_rate: 0.0,
-            ambient: false,
-            cone_deg: 0.0,
-            near_m: 0.0,
-            cross_m: 0.0,
-            patience: 0.0,
-            cross_secs: 0.0,
-            budget: 0.0,
-            margin: 0.0,
-            memory: 0.0,
-            nag_secs: 0.0,
-            cue_gap: 0.0,
-            stand_m: 0.0,
-            stand_near: 0.0,
-            side_m: 0.0,
-            side_stop: 0.0,
-            door: false,
-            door_m: 0.0,
-            door_pad: 0.0,
-            door_settle: 0.0,
-            hide_gap: 0.0,
-            noise_walk: false,
-            noise_walk_m: 0.0,
-            plan_secs: 0.0,
-            skill: 0.0,
-        }
-    }
-}
-impl Default for SneakK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairup.ts:51 PAIRUP, src/game/pairup.ts:51)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairupK {
     pub on: bool,
     pub one_eye: bool,
@@ -12069,22 +5336,8 @@ pub struct PairupK {
     pub word: bool,
     pub hands: bool,
 }
-impl PairupK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairupK {
-            on: false,
-            one_eye: false,
-            stay: false,
-            word: false,
-            hands: false,
-        }
-    }
-}
-impl Default for PairupK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/spotted.ts:63 SPOTTED, src/game/spotted.ts:63)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SpottedK {
     pub on: bool,
     pub leash_m: f64,
@@ -12107,37 +5360,8 @@ pub struct SpottedK {
     pub face_deg: f64,
     pub close_m: f64,
 }
-impl SpottedK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SpottedK {
-            on: false,
-            leash_m: 0.0,
-            slip_m: 0.0,
-            lit_at: 0.0,
-            slip_wait: 0.0,
-            wary_m: 0.0,
-            ear_m: 0.0,
-            linger_secs: 0.0,
-            brace_secs: 0.0,
-            brace_m: 0.0,
-            take_m: 0.0,
-            take_reach: 0.0,
-            take_secs: 0.0,
-            fresh_secs: 0.0,
-            caught_m: 0.0,
-            last_secs: 0.0,
-            step: false,
-            step_m: 0.0,
-            face_deg: 0.0,
-            close_m: 0.0,
-        }
-    }
-}
-impl Default for SpottedK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nightbreach.ts:61 NIGHTBREACH, src/game/nightbreach.ts:61)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NightbreachK {
     pub room_lights: bool,
     pub op_lights: bool,
@@ -12149,26 +5373,8 @@ pub struct NightbreachK {
     pub sam_yaw: f64,
     pub squad: f64,
 }
-impl NightbreachK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightbreachK {
-            room_lights: false,
-            op_lights: false,
-            def_lights: false,
-            stun: false,
-            blind_fire: false,
-            loud_boot: false,
-            sam_at: [0.0; 3],
-            sam_yaw: 0.0,
-            squad: 0.0,
-        }
-    }
-}
-impl Default for NightbreachK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/roomclear.ts:52 ROOMCLEAR, src/game/roomclear.ts:52)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RoomclearK {
     pub seed: f64,
     pub reroll: bool,
@@ -12176,77 +5382,28 @@ pub struct RoomclearK {
     pub fresh: bool,
     pub way: f64,
 }
-impl RoomclearK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomclearK {
-            seed: 0.0,
-            reroll: false,
-            announce: false,
-            fresh: false,
-            way: 0.0,
-        }
-    }
-}
-impl Default for RoomclearK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lesson.ts:87 LESSON, src/game/lesson.ts:87)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LessonK {
     pub on: bool,
 }
-impl LessonK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonK {
-            on: false,
-        }
-    }
-}
-impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct IssueK {
     pub on: bool,
     pub whole: bool,
     pub picked: bool,
 }
-impl IssueK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IssueK {
-            on: false,
-            whole: false,
-            picked: false,
-        }
-    }
-}
-impl Default for IssueK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:34 VERDICT, src/game/verdict.ts:34)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct VerdictK {
     pub on: bool,
     pub loud_card: bool,
     pub win_secs: f64,
     pub loss_secs: f64,
 }
-impl VerdictK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictK {
-            on: false,
-            loud_card: false,
-            win_secs: 0.0,
-            loss_secs: 0.0,
-        }
-    }
-}
-impl Default for VerdictK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/unseen.ts:57 UNSEEN, src/game/unseen.ts:57)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct UnseenK {
     pub on: bool,
     pub pace_at: f64,
@@ -12270,38 +5427,8 @@ pub struct UnseenK {
     pub wall_beat: bool,
     pub wall_secs: f64,
 }
-impl UnseenK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnseenK {
-            on: false,
-            pace_at: 0.0,
-            linger: 0.0,
-            min_pace: 0.0,
-            low_pace: 0.0,
-            gain: 0.0,
-            cap: 0.0,
-            wall_off: 0.0,
-            wall_out: 0.0,
-            wall_cross: 0.0,
-            wall_end: 0.0,
-            low_step: 0.0,
-            walk_step: 0.0,
-            lights: false,
-            hush: false,
-            doors: false,
-            hold: false,
-            cue: false,
-            cue_gap: 0.0,
-            wall_beat: false,
-            wall_secs: 0.0,
-        }
-    }
-}
-impl Default for UnseenK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/seenwalk.ts:33 SEENWALK, src/game/seenwalk.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SeenwalkK {
     pub on: bool,
     pub lit_at: f64,
@@ -12312,82 +5439,29 @@ pub struct SeenwalkK {
     pub eye_y: f64,
     pub margin: f64,
 }
-impl SeenwalkK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SeenwalkK {
-            on: false,
-            lit_at: 0.0,
-            dear: 0.0,
-            long: 0.0,
-            less: 0.0,
-            eye_step: 0.0,
-            eye_y: 0.0,
-            margin: 0.0,
-        }
-    }
-}
-impl Default for SeenwalkK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/holdfire.ts:45 HOLDFIRE, src/game/holdfire.ts:45)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldfireK {
     pub on: bool,
     pub lift_secs: f64,
     pub loud: bool,
     pub stack_set: bool,
 }
-impl HoldfireK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldfireK {
-            on: false,
-            lift_secs: 0.0,
-            loud: false,
-            stack_set: false,
-        }
-    }
-}
-impl Default for HoldfireK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:292 SLOTS, src/game/kit.ts:292)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SlotsK {
     pub on: bool,
     pub ok: bool,
     pub why: String,
     pub table: crate::kit::SlotTable,
 }
-impl SlotsK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotsK {
-            on: false,
-            ok: false,
-            why: String::new(),
-            table: crate::kit::SlotTable::zeroed(),
-        }
-    }
-}
-impl Default for SlotsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/destructionSwitch.ts:5 DESTRUCTION, src/game/destructionSwitch.ts:5)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DestructionK {
     pub on: bool,
 }
-impl DestructionK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DestructionK {
-            on: false,
-        }
-    }
-}
-impl Default for DestructionK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:313 BIGSLOT, src/game/kit.ts:313)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BigslotK {
     pub on: bool,
     pub swings: f64,
@@ -12409,67 +5483,18 @@ pub struct BigslotK {
     pub stow_w: f64,
     pub flow: f64,
 }
-impl BigslotK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BigslotK {
-            on: false,
-            swings: 0.0,
-            swing: 0.0,
-            windup: 0.0,
-            draw: 0.0,
-            shells: 0.0,
-            shut: false,
-            beside: false,
-            moves: false,
-            snug: false,
-            weight: false,
-            equip: 0.0,
-            stow: 0.0,
-            reach: 0.0,
-            heft: 0.0,
-            equip_w: 0.0,
-            draw_w: 0.0,
-            stow_w: 0.0,
-            flow: 0.0,
-        }
-    }
-}
-impl Default for BigslotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:377 KITDEAL, src/game/kit.ts:377)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitdealK {
     pub on: bool,
     pub more: bool,
     pub stealth: bool,
 }
-impl KitdealK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitdealK {
-            on: false,
-            more: false,
-            stealth: false,
-        }
-    }
-}
-impl Default for KitdealK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/cut.ts:31 CUT, src/scene/cut.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CutK {
     pub on: bool,
 }
-impl CutK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CutK {
-            on: false,
-        }
-    }
-}
-impl Default for CutK { fn default() -> Self { Self::zeroed() } }
 
 pub fn page_aim() -> AimK {
     crate::knobs::AimK { guard: crate::knobs::AimKGuard { settle_secs: 1.3, range_ref: 8.0, near_k: 0.25, acquire_min: 0.55, unsettled_k: 3.0, on_deg: 18.0, lose_rate: 3.0, mem_secs: 0.6, jump_deg: 25.0, target_move_k: 0.36, target_move_cap: 0.26, rate_tau: 0.15, shooter_move_k: 0.1, feet_tau: 0.5, steady_pace: 1.3, stop_to_shoot: 1.2, moving_track_cap: 0.5, shoot_band: 14.0, brake_lead: 0.45 }, player: crate::knobs::AimKPlayer { settle_secs: 0.8, range_ref: 8.0, near_k: 0.25, unsettled_k: 2.2, lose_rate: 3.0, base_stand: 0.012, base_crouch: 0.008, target_move_k: 0.2, target_move_cap: 0.16, rate_tau: 0.15, jump_deg: 25.0, shooter_move_k: 0.08, feet_tau: 0.6, steady_pace: 1.7, sprint_cap: 0.3, walk_cap: 0.7, moving_above: 0.3, crouch_k: 1.15, light_snap_px: 14.0, level: 1.0, low: 1.0 } }
@@ -13111,7 +6136,6 @@ pub fn page_rescueflush() -> RescueflushK {
     crate::knobs::RescueflushK { on: true, after_secs: 4.0, gap_secs: 2.5, again_secs: 8.0, reach_m: 10.0, kill_secs: 3.0, busy_secs: 2.0, smoke_k: 0.3, at_door_m: 1.8 }
 }
 
-
 pub fn page_posemath() -> PosemathK {
     crate::knobs::PosemathK { singles: true }
 }
@@ -13367,7 +6391,6 @@ pub fn page_roomclear() -> RoomclearK {
 pub fn page_lesson() -> LessonK {
     crate::knobs::LessonK { on: true }
 }
-
 
 pub fn page_issue() -> IssueK {
     crate::knobs::IssueK { on: true, whole: true, picked: true }

@@ -147,7 +147,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         hot_key: Some(squadsmoke().order_key),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     crate::orders::squad_orders_row(g, def)
 }
@@ -223,7 +223,7 @@ mod tests {
     use super::*;
 
     fn sol(v0: V3, land: V3) -> crate::throwables::ThrowSolution {
-        crate::throwables::ThrowSolution { v0, land, ..crate::throwables::ThrowSolution::zeroed() }
+        crate::throwables::ThrowSolution { v0, land, ..crate::throwables::ThrowSolution::default() }
     }
 
     #[test]

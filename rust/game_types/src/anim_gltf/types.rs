@@ -1,10 +1,9 @@
-//! The types of `anim_gltf`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `anim_gltf`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: GltfNode, src/anim/gltf.ts:5)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct GltfNode {
     pub name: String,
     pub parent: f64,
@@ -13,23 +12,8 @@ pub struct GltfNode {
     pub r: Quat,
     pub s: V3,
 }
-impl GltfNode {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GltfNode {
-            name: String::new(),
-            parent: 0.0,
-            children: Vec::new(),
-            t: [0.0; 3],
-            r: [0.0; 4],
-            s: [0.0; 3],
-        }
-    }
-}
-impl Default for GltfNode { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Track, src/anim/gltf.ts:6)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Track {
     pub node: f64,
     pub path: f64,
@@ -37,57 +21,20 @@ pub struct Track {
     pub values: Vec<f32>,
     pub step: bool,
 }
-impl Track {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Track {
-            node: 0.0,
-            path: 0.0,
-            times: Vec::new(),
-            values: Vec::new(),
-            step: false,
-        }
-    }
-}
-impl Default for Track { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Clip, src/anim/gltf.ts:10)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Clip {
     pub name: String,
     pub duration: f64,
     pub tracks: Vec<crate::anim_gltf::Track>,
 }
-impl Clip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Clip {
-            name: String::new(),
-            duration: 0.0,
-            tracks: Vec::new(),
-        }
-    }
-}
-impl Default for Clip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SkinData, src/anim/gltf.ts:11)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SkinData {
     pub joints: Vec<f64>,
     pub inverse_bind: Vec<f32>,
 }
-impl SkinData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SkinData {
-            joints: Vec::new(),
-            inverse_bind: Vec::new(),
-        }
-    }
-}
-impl Default for SkinData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MeshData, src/anim/gltf.ts:12)
 #[derive(Clone, Debug, ToBytes)]
 pub struct MeshData {
     pub positions: Vec<f32>,
@@ -104,9 +51,8 @@ pub struct MeshData {
     pub mat_index: Option<Vec<u8>>,
     pub material_names: Option<Vec<String>>,
 }
-impl MeshData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for MeshData {
+    fn default() -> Self {
         MeshData {
             positions: Vec::new(),
             normals: Vec::new(),
@@ -124,17 +70,14 @@ impl MeshData {
         }
     }
 }
-impl Default for MeshData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug, ToBytes)]
 pub enum MeshDataJoints {
     Uint16Array(Vec<u16>),
     Uint8Array(Vec<u8>),
 }
 
-/// (TypeScript: CastVariant, src/anim/gltf.ts:23)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CastVariant {
     pub name: String,
     pub side: crate::anim_gltf::CastSide,
@@ -142,24 +85,10 @@ pub struct CastVariant {
     pub mask: f64,
     pub tris: f64,
 }
-impl CastVariant {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CastVariant {
-            name: String::new(),
-            side: crate::anim_gltf::CastSide::Civilian,
-            parts: Vec::new(),
-            mask: 0.0,
-            tris: 0.0,
-        }
-    }
-}
-impl Default for CastVariant { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum CastSide {
-    Civilian,
+    #[default] Civilian,
     Operator,
     Defender,
     Responder,
@@ -175,27 +104,14 @@ impl CastSide {
     }
 }
 
-/// (TypeScript: CastInfo, src/anim/gltf.ts:25)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CastInfo {
     pub parts: Vec<String>,
     pub part_tris: Vec<f64>,
     pub variants: Vec<AnimGltfCastVariantId>,
 }
-impl CastInfo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CastInfo {
-            parts: Vec::new(),
-            part_tris: Vec::new(),
-            variants: Vec::new(),
-        }
-    }
-}
-impl Default for CastInfo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GltfCharacter, src/anim/gltf.ts:26)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct GltfCharacter {
     pub nodes: Vec<crate::anim_gltf::GltfNode>,
     pub order: Vec<f64>,
@@ -206,39 +122,12 @@ pub struct GltfCharacter {
     pub node_by_name: JsMap<String, f64>,
     pub cast: Option<AnimGltfCastInfoId>,
 }
-impl GltfCharacter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GltfCharacter {
-            nodes: Vec::new(),
-            order: Vec::new(),
-            roots: Vec::new(),
-            skin: crate::anim_gltf::SkinData::zeroed(),
-            mesh: AnimGltfMeshDataId(0),
-            clips: JsMap::new(),
-            node_by_name: JsMap::new(),
-            cast: None,
-        }
-    }
-}
-impl Default for GltfCharacter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/anim/gltf.ts:33 nvgBits, src/anim/gltf.ts:33)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimGltfModNvgBitsValue {
     pub up: f64,
     pub down: f64,
 }
-impl AnimGltfModNvgBitsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimGltfModNvgBitsValue {
-            up: 0.0,
-            down: 0.0,
-        }
-    }
-}
-impl Default for AnimGltfModNvgBitsValue { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

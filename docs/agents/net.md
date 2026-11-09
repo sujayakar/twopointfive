@@ -20,9 +20,9 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   scripted client writes every part's word after each word tick (the alarm's own as `block.<part>`), `mpclient-page --words DIR` the page's, and
   `bun run tools/mp/words-diff.ts <files of ONE game>` names the parts and the machines. A READ BETWEEN TWO TICKS WRITES NOTHING OF THE BLOCK (a page's read
   that kept a memo in it parted the alarm with everything equal, 2026-11-08). What a machine LOOKS AT parts nothing (`rust/game_start/tests/coop.rs
-  where_a_machine_looks…`, `a_look_ahead_is_where_the_game_then_has_him`). FOUND 2026-11-08, red in `mpclient-page --seats 2`: on the
-  SECOND player's page `weather` (its `cam_yaw`, the shown seat's, which pans a thunder) and `tab.frame_boxes` (a tracer's and a beam's width in the shown
-  view's pixels) are not the server's, the state word holding throughout. Both are a host's own in the game's record.
+  where_a_machine_looks…`, `a_look_ahead_is_where_the_game_then_has_him`). What a machine SHOWS is no number of the game's either:
+  which ear a thunder is in is asked of the shown seat's camera as it sounds, and a thin line (a beam, a tracer, a charge's firing line) is as thick in the game as it is, widened by the
+  drawer for the shown seat's view (`game_shown_px`; `each_players_view_is_his_own_pictures_alone`).
 - **src/net knows no game**: nothing in it imports `src/game`; hosts are handed WIRE records.
 - **The server's authority over input is one rule** (`src/net/timeline.ts SeatLine.take`, asked once a seat a tick): the seat's own record for that tick if
   it came in time; else the newest record the seat is known by with its one-tick edges off (keys and buttons stay held, the view stays); a record that came
@@ -197,11 +197,8 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   `plan-check` as before on both stands), and a game of two has no off word of its own (`seats=2`). `PLAN.others` is a key of a registered table.
   The rims and the plans are the page's picture and write nothing of the game's; the names and tones are in the verdict's tracks, so a game of two's
   STATE WORD is not the one the build before gave it (every machine of a game is one build: the server turns another away).
-  THE CHECK: `bun run tools/qa/teams-check.ts` on both stands (lines `rims`, `both`, `down`, `plans`, `faint` — on what the overlay itself writes, on a
-  page stood in for — `once`, `names`, `fog` (a flash by either seat's own man is the team's under the fog of war: what a wall charge's blast hands the
-  fog is its seat's man; the afterglow light, `BLAST.glow`, is off in every build, so no charge is blown to light one), `one`, `pure`); `TEAMS_BREAK=1` (two seats stood, every seat given the first seat's tone, another's plan put to
-  none, the page handed no names, the fog's row left off) fails `rims`, `both`, `plans`, `faint`, `once`, `names`, `picked` and `fog`. RUN 2026-11-03 on the cloud box, one seed: every line PASS on both stands, the
-  break word fails those six. NOBODY HAS SEEN IT: never on a GPU, never by two players; the purple was picked by number, and so was how faint the
+  THE CHECKS, native: `rust/game_start/tests/players.rs a_mans_hue_is_the_same_on_both_screens`, `rings.rs in_a_game_of_two_the_plan…`, `debrief.rs
+  two_seats_read_one_run…`. How faint another's plan is drawn is held by nobody. NOBODY HAS SEEN IT: never on a GPU, never by two players; the purple was picked by number, and so was how faint the
   other plan is; a frag ordered by the other player's squad was not thrown in any check.
 - **A player's own name** (2026-11-03; `src/host/names.ts`, `src/net/wire.ts cleanName` / `Hello.name` / `State.names`, the field in `src/ui/coop.ts
   coopRows`). The maintainer: "or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". WHERE HE TYPES IT: the title's
@@ -219,9 +216,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   the bit and the page writes the picked name over them. Not carried: the control plane knows no name (the lobby's rows have none), a watcher says none,
   the copied summary and a kept replay say the number. NO SWITCH of its own: `?coop=0` takes the field away with the rest of the Co-op page, and a
   page that was told no name reads as it did. THE CHECKS: `mpserver-check`'s `names` line (two scripted clients each say a name, one a dirty
-  one; both hear both, as cleaned; under `MPSERVER_BREAK=1` the first says none and the line fails) and `teams-check`'s `picked` (the cleaning, by the server too from a hello written by hand; a name handed to the
-  page is what `shownName` says, the other player keeps his number, a teammate his callsign, the verdict's own row and the state word do not move;
-  under `TEAMS_BREAK=1` the page is handed none). RUN 2026-11-03 on the cloud box: both on both stands. NOBODY HAS SEEN IT: the field was never looked
+  one; both hear both, as cleaned; under `MPSERVER_BREAK=1` the first says none and the line fails), the server's own cleaning of a hello written by hand too), and `net-check`'s `a card calls a player what he picked`. NOBODY HAS SEEN IT: the field was never looked
   at by eye or on a GPU, two people have not typed two names, and `lobby-check` and `lobby-page` were NOT run with it (this box cannot install the
   backend's packages; `lobby-page` reads the column by `data-coop` words, and the field sits above 'Host a game').
 - **The process** (`tools/mp/server.ts`, bun; one process, one game, stood by `tools/mp/stand.ts`). It knows nothing of where it runs. TO A CONTROL PLANE `ended`
@@ -255,7 +250,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   so there is no second copy to fall out of step and nothing new for a snapshot or a save to carry; hours.ts and lighting.ts tell the picture as they
   always did and are otherwise untouched. Both rows are the WORLD's (`hours.states`, `lighting.dayStates`: math/side.ts `GameSideMap`), so a seat's view
   of a game of two asks the Game's: the day's was a plain table until the evening of 11-05, and under a seat's view the show's day answered the night's
-  (seats-check's `tables` line was red on it from this bullet's own step; settings-check's `hour` line now asks both seats' views).
+  (settings-check's `hour` line asks both seats' views).
   NO SWITCH, a call for the merge to weigh: with nobody touching Brightness every number is the one it was (the
   42 play-through digests on seed 1, both stands, equal to step 1515's); with it turned, the build before is the bug (a run that turns on the slider),
   and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
@@ -279,54 +274,12 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
   run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
   looked at a picture: no GPU, no page was opened for this.
-- **`seats-check`'s fights stage their meeting** (2026-11-08). The scripted hands walk straight at the nearest enemy, walls or no, so `hurt > 0` rode the
-  seed (seeds 1, 2, 3, 5, 7 read 0, 0, 0, 4, 0 men down after the keyed dice). A second in, each player is set down over open floor three to six metres
-  from an enemy of his own, in both plays of the twin alike; the line wants both set down besides. Seeds 1, 2, 3, 5, 7, 9: 7 to 9 men down on the office
-  floor, 3 to 5 on the night breach, 2 to 5 of them the other side's.
-- **The two-seat checks on the Rust game** (2026-11-07; the check went 2026-11-08: the gate's `seats` rows and `rust/game_start/tests/two_seats.rs`, `coop.rs`). `tools/qa/seats-check.ts` was restated: every tick is `stepSeats(dt, [record, record])`,
-  the word a line holds a game to is the game's own (the die and the block: `stateWords`), a moment is kept and put back through `savestate.ts SNAPS`
-  (the Rust game kept), and each fight runs in a process of its own (`--fight`: a game stood after another in one process does not start as the first
-  did; the modules holdfire, nvg, kit and guards carry something over, found with `tools/mp/words-diff.ts`). The count of asks of the Game for "the
-  player" went with the TypeScript tick. 18 lines pass; `down` is RED: a rule a tool calls with a seat's view crosses to the Rust game as the seat that
-  stands on the Game, so the hit meant for the second player's man lands on the first's (the call surface's to mend). `SEATS_BREAK=1` (the second seat
-  runs on the first seat's record) fails `walk`, `orders` and `ahead`. `ahead` holds BOTH looks, the Rust rule a tool's call crosses to and the
-  TypeScript body the page runs: each lands to the bit over 46 records (a walk, a sprint, a crouch walk, a coast) in a game with no teammates on the
-  floor; with the four there a teammate steps into his way and both looks are 7 cm out, which is the correction the look ahead allows. The three kinds
-  of fault below are mended in the Rust game (a seat's tools keep to its men; budgets count the seats); `rust/game_start/tests/coop.rs` holds them (`cargo
-  test --test coop` there): each player's pair through a locked door, shown red with the mend taken out; no more men than the picture draws; a burst and
-  one player's goggles part no two machines.
-- **A game of two that is still read as a game of one: THE KNOWN SEAT FAULTS** (2026-11-05; found when `seats-check`'s `fight` threw on the page's
-  stand at step 1557, the belief rule; NONE MENDED: `src/game` is frozen until the Rust swap, and each is a line of the port's notes,
-  rebuild/rust-sim/port/blitz/after-swap.md). Three classes, all old (10-16 to 11-02).
-  (1) BARE ASKS: world code asks the Game for a seat's own field (`g.player`, `g.orders`, `g.act`). Inside a tick the page answers the FIRST seat's
-  and counts a miss (`seats.ts SEAT_ASKS`; only a check's `strict` throws), so the second player is read as the first. The places, by the function
-  that is handed the bare Game, with what each wants: `tools/qa/seats-check.ts KNOWN_ASKS` (seventeen rows: morale.ts seenBy and drive, runner.ts
-  closeFoe and foes, roomfight.ts tickMove, doorpath.ts own and drop, wallreact.ts beyond, coverfire.ts charOf, lanes.ts closeFight, doorblast.ts
-  splinter, frag.ts samCue, qrf.ts clearOfFoes, dialogue.ts radioLive, snowBreath.ts and snowTracks.ts, snatch.ts tick). Found by twenty fights of
-  150 s over ten floors on the page's stand: a floor of what there is. Measured for one: doorpath's wrong order book changed no answer in 1,070
-  asks on the page's floor (an entry from a stack has no corners left on its order), and seat 1's pair stacked and entered as seat 0's did. ON THE
-  BARRACKS IT DOES (2026-11-06, the two-seat fight on die 3): at tick 5499 a man of seat 1 is sent through a door with two corners left on his
-  order, the first seat's book has no order of his, and he does not take the way round. The Rust game parts from the TypeScript at that tick: its
-  door walk is stepped as his seat and finds his own order. The first place the port is right where the TypeScript is not.
-  (2) A SEAT'S OWN MODULE SWEEPING ALL THE WORLD'S MEN: each seat has its own `DoorTools`, and `doortools.ts slingTick` walks every man of the floor
-  and puts away a breaching shotgun that is not on one of ITS doors, so seat 1's net slings seat 0's gun every tick. The first player's pair
-  spends 8.40 s on a locked door (2.03 s for the same men in a game of one; seat 1's pair 1.67 s), then boots it. By reading, the hammer's net
-  (`hammerOutTick`'s call) has the same shape. `strict` cannot see this class.
-  (3) A BUDGET COUNTED WITH ONE PLAYER: the skinned buffer is 16 (`anim/characters.ts MAX_CHARS`) and `guards.ts spawnUnit`, `qrf.ts roomFor` and
-  `levelfit.ts`'s `men` row count one player. A full floor in a game of two is 17, and `game.ts drawMen` throws a RangeError the moment the fog
-  has let all 17 be drawn: barracks, dice 3 and 5, at 112 s and 123 s (on die 5 with every enemy down). 17 as stood up on barracks, block-squads, compound,
-  warehouse and tut-squad. NOT RUN in a page or a server process (by reading both draw through the same function).
-  THE CHECK IS LOOSER FOR IT, ON PURPOSE: `seats-check`'s fights ran under `strict` and claimed "a firefight asks the Game for no 'the player'",
-  which 40 s and 30 s on one die never tested. They now run with strict off and every ask counted by place; a place no row of KNOWN_ASKS names
-  FAILS (`fight`, and two `long` lines of 150 s), the fights run to their end so `twin` holds a whole fight, and `SEATS_ASK_BREAK=1` (one more
-  bare ask in every tick of a fight) must fail them. Classes (2) and (3) have no line yet: a line for each (a locked door in under 4 s for
-  each seat's pair; the barracks fight to its end) is red today and waits on the Rust co-op check: the maintainer will not play co-op before the swap
-  (2026-11-05), so none of the three is mended in TypeScript.
-  A TWO-SEAT FIGHT AS RECORDS, for the port's two-seat bring-up (2026-11-06; `tools/qa/seats-run.ts`): no playthrough mission stands two seats, so
-  this stands one (`standTwo`), drives both seats with seats-check's scripted hands and steps every tick by `stepSeats(dt, [record, record])`
-  alone; `--record f` / `--replay f` write and play a recording (the stand's word at the start, both records a tick as text, the state's word
-  a second: about 5 MB for 40 s, not kept in the tree). Its own check: a recording played again in a fresh game is the same game, and the same
-  call makes the same file to the byte; `SEATSRUN_BREAK=1` (each seat handed the other's records) must fail `replay`.
+- **The two-seat rules are held natively** (2026-11-09; `seats-check` and `teams-check`, which stood the TypeScript copy, are gone). `rust/game_start/tests`:
+  `players.rs` (each player his own man, hands, pair and order; the team's eyes; a man's hue on both screens; a fight of two one fight on both machines, their
+  views unlike; a rescue refuses two), `coop.rs` (what a machine draws, looks at and shows parts nothing; each pair through a locked door; the look ahead),
+  `two_seats.rs`, `hosts_agree.rs`, `seats.rs`, and a two-seat line in many a file beside. The old faults of a game of two read as a game of one (bare asks for
+  "the player", a seat's module sweeping all the world's men, a budget counted with one player) are the Rust game's, mended there. A fight of two as its
+  records: the gate's `seats` rows.
 - **What nobody has seen or measured**: two PEOPLE in two seats; two machines; a real network; Host and Join through the hosted service; a client through a
   sandbox's tunnel; the look ahead and a correction by eye on a GPU; a mission ENDING on a server over the wire; the run's memory on a long game (its text is
   kept for joiners: about 20 KB a second with two seats sending every tick); a real socket backing up.

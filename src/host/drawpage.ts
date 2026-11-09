@@ -173,7 +173,8 @@ async function main(): Promise<void> {
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), asked0 = Number(q.get('seed') ?? NaN), seed = Number.isFinite(asked0) ? asked0 >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0], sid = sessionId(); let built = '';
   const unkept = kitPicture || !!tape || !!coop || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
-  const play = tape ? new DrawPlay(game, tape) : null;
+  const named = q.get(PLAYTAPE) ?? '', beside = tape && keptName(named) ? await keptBeside(named) : null;   // (a file says of no module that it was played on it)
+  const play = tape ? new DrawPlay(game, tape, !!beside && !beside.other) : null;
   const net = coop ? new DrawNet(coop.door, coop.start, game, () => deaf()) : null; let deaf = (): void => { /* nothing sounds yet */ };
   if (play) play.start({ mannequin, mannequinBin, cast, castLook });
   else if (net) net.start({ level, mannequin, mannequinBin, cast, castLook });
@@ -455,7 +456,7 @@ async function main(): Promise<void> {
     turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; afresh(); } });
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
-  if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), { notes, other } = mine ? await keptBeside(named) : { notes: [], other: false };
+  if (play && freeCam) { const mine = !!beside, { notes, other } = beside ?? { notes: [], other: false };
     const map = new TapeMap({ floor: () => game.floor(), now: () => game.map(), view: () => freeCam.view(), notes, to: (x, z) => freeCam.to([x, freeCam.view().look[1], z]), at: () => played.at });
     const sees: Sees = { get fog() { return watched.fog; }, get tube() { return watched.tube; }, get fogged() { return D.u[D.at[Section.fog] + Fog.on] !== 0; }, get runs() { return D.f[view() + View.night] > 0.5; }, get lit() { return watched.tube ?? this.runs; }, set: seesAs };
     bar = new TapeBar({ played, sees, map, other, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,

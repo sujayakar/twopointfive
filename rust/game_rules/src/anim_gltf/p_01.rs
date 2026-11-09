@@ -89,13 +89,13 @@ mod tests {
     use super::*;
 
     fn make_cast(g: &mut Game, parts: &[&str]) -> AnimGltfCastInfoId {
-        let mut c = CastInfo::zeroed();
+        let mut c = CastInfo::default();
         c.parts = parts.iter().map(|p| String::from(*p)).collect();
         g.tab.anim_gltf_cast_info.push(c)
     }
 
     fn make_variant(g: &mut Game, cast: AnimGltfCastInfoId, name: &str, side: CastSide) -> AnimGltfCastVariantId {
-        let mut v = CastVariant::zeroed();
+        let mut v = CastVariant::default();
         v.name = String::from(name);
         v.side = side;
         let id = g.tab.anim_gltf_cast_variant.push(v);

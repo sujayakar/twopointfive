@@ -105,7 +105,7 @@ fn a_line_the_blast_takes_as_open_is_open_once_the_glass_has_fallen() {
     let who = 1.0;
     let judged: Vec<bool> = {
         p.run(0.2);
-        game::glassbreak::glass_break_blast(&mut p.g, [burst[0], 0.05 + lift, burst[1]], Some(game::glassbreak::GlassBlastOpts { radius: Some(power.0), power: Some(power.1), who: Some(who), ..game::glassbreak::GlassBlastOpts::zeroed() }));
+        game::glassbreak::glass_break_blast(&mut p.g, [burst[0], 0.05 + lift, burst[1]], Some(game::glassbreak::GlassBlastOpts { radius: Some(power.0), power: Some(power.1), who: Some(who), ..game::glassbreak::GlassBlastOpts::default() }));
         pts.iter().map(|&q| p.burst_line_open(burst, q, GlassView::Blown)).collect()
     };
     p.run(2.5);

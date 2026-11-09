@@ -1,9 +1,8 @@
-//! The types of `rollback`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rollback`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Typed, src/game/rollback.ts:33)
 #[derive(Clone, Copy, Debug)]
 pub struct Typed {
     pub bytes_per_element: f64,
@@ -13,9 +12,8 @@ pub struct Typed {
     pub length: f64,
     pub ___to_string_tag_599: crate::rollback::TypedToStringTag599,
 }
-impl Typed {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Typed {
+    fn default() -> Self {
         Typed {
             bytes_per_element: 0.0,
             buffer: crate::rollback::ArrayBufferLike::ArrayBuffer(crate::Opaque),
@@ -26,16 +24,13 @@ impl Typed {
         }
     }
 }
-impl Default for Typed { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum ArrayBufferLike {
     ArrayBuffer(crate::Opaque),
     SharedArrayBuffer(crate::Opaque),
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TypedToStringTag599 {
     Float32Array,
@@ -48,15 +43,13 @@ impl TypedToStringTag599 {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum Table {
     SideMap(JsMap<crate::ObjKey, crate::Opaque>),
     SideSet(JsSet<crate::ObjKey>),
 }
 
-/// (TypeScript: Chain, src/game/rollback.ts:64)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Chain {
     pub index: JsMap<crate::ObjKey, f64>,
     pub kinds: Vec<f64>,
@@ -71,56 +64,16 @@ pub struct Chain {
     pub stack: Vec<f64>,
     pub busy: bool,
 }
-impl Chain {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Chain {
-            index: JsMap::new(),
-            kinds: Vec::new(),
-            views: Vec::new(),
-            base: crate::rollback::ChainBase::zeroed(),
-            stamp: Vec::new(),
-            met: Vec::new(),
-            fresh: Vec::new(),
-            epoch: 0.0,
-            last: Vec::new(),
-            last_shape: Vec::new(),
-            stack: Vec::new(),
-            busy: false,
-        }
-    }
-}
-impl Default for Chain { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rollback.ts:67 Chain.base, src/game/rollback.ts:67)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChainBase {
     pub n: f64,
 }
-impl ChainBase {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChainBase {
-            n: 0.0,
-        }
-    }
-}
-impl Default for ChainBase { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Shape, src/game/rollback.ts:254)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Shape {
     pub keys: Vec<String>,
 }
-impl Shape {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Shape {
-            keys: Vec::new(),
-        }
-    }
-}
-impl Default for Shape { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

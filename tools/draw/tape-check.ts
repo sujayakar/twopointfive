@@ -65,7 +65,7 @@ for (const m of ALL_MISSIONS as { id: string }[]) { if (only.length && !only.inc
       const b = T.whole(), w = stand(), P = new DrawPlay(w, b), feed = w.feed.bind(w); if (BREAK) w.feed = (row, seen) => { if (row.kind !== 'step' || row.tick !== 600) feed(row, seen); else w.ticks++; };
       P.start({ mannequin, mannequinBin, cast, castLook }); const t0 = performance.now();
       while (P.tick(false) && !P.parted) at = `the walk's tick ${P.at}`;
-      const ms = performance.now() - t0, last = w.mark(true), bad = P.parted ? [`at tick ${P.parted.tick}: ${JSON.stringify(P.parted.mine)}, on the tape ${JSON.stringify(P.parted.said)}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
+      const ms = performance.now() - t0, last = w.mark(true), bad = P.parted ? [`at tick ${P.parted.tick}: ${P.parted.why}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
       const gz = gzipSync(b).length - gzipSync(S.level).length, wrong = bad.length || g.lost || w.lost || P.at !== SECS * 60 || (how === 'anything' && SECS > 25 && !P.tries.includes(1500) && !P.tries.includes(1499));
       if (wrong) fails++;
       console.log(`- ${wrong ? 'FAIL' : 'PASS'} — ${m.id}, ${how}: ${P.at} ticks walked in ${(ms / 1000).toFixed(1)} s, ${(gz / 1024 / SECS * 60).toFixed(0)} KB a minute packed, ${done.manual} saved by hand, ${done.autosaves} by itself, ${done.loads} loaded, ${P.tries.length} begun again${bad.length ? `\n    ${bad.slice(0, 3).join(' · ')}` : ''}`);

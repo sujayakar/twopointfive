@@ -14,7 +14,7 @@ pub fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
 
 /// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.   (director.ts manifestOf)
 pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
-    let mut manifest = Manifest::zeroed();
+    let mut manifest = Manifest::default();
     seam_script_define(script, &mut manifest)?;
     Ok(manifest)
 }
@@ -51,18 +51,18 @@ pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate
 /// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
 pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
     if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
-    let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::zeroed), beats: JsMap::new(), triggers: Vec::new() };
+    let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::default), beats: JsMap::new(), triggers: Vec::new() };
     body(&mut program)?;
     m.programs.set(name.into(), program);
     Ok(())
 }
 /// P.onStart.   (director.ts:308)
 pub fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
-    p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::zeroed() });
+    p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::default() });
 }
 /// P.onSignal.   (director.ts:311)
 pub fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
-    p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::zeroed() });
+    p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::default() });
 }
 /// P.beat: `script` is whose match holds this beat's code. Err = declared twice.   (director.ts:314)
 pub fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
@@ -264,25 +264,25 @@ mod tests {
     fn d_light_group(manifest: &mut Manifest, id: &str) { manifest.groups.add(id.into()); }
     fn d_variant(manifest: &mut Manifest, id: VariantRefId) { manifest.variants.add(id.as_str().into()); }
     fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), beats: Some(beats.to_vec()), ..ManifestExpectsItem::zeroed() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), beats: Some(beats.to_vec()), ..ManifestExpectsItem::default() });
     }
     fn d_expect_within(manifest: &mut Manifest, program: &str, a: &str, b: &str, max: f64) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), a: Some(a.into()), b: Some(b.into()), max: Some(max), ..ManifestExpectsItem::zeroed() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), a: Some(a.into()), b: Some(b.into()), max: Some(max), ..ManifestExpectsItem::default() });
     }
     fn d_expect_never(manifest: &mut Manifest, what: &str) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, what: Some(what.into()), ..ManifestExpectsItem::zeroed() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, what: Some(what.into()), ..ManifestExpectsItem::default() });
     }
     fn p_after(program: &mut ProgramDef, secs: f64, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::zeroed() });
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::default() });
     }
     fn p_on_event(program: &mut ProgramDef, event: EventKind, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::zeroed() });
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::default() });
     }
     fn p_on_enter(program: &mut ProgramDef, v: &VolumeRef, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), once: Some(true), ..TriggerDef::zeroed() });
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), once: Some(true), ..TriggerDef::default() });
     }
     fn p_when(program: &mut ProgramDef, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some("when".into()), ..TriggerDef::zeroed() });
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some("when".into()), ..TriggerDef::default() });
     }
 
     /// the TypeScript's own bits: UTIL through manifestOf's D.util, under bun with EXACT.on
@@ -299,7 +299,7 @@ mod tests {
     /// a mark named again with no position keeps the one it has, and the yaw it has
     #[test]
     fn a_mark_named_again_keeps_its_place() {
-        let mut manifest = Manifest::zeroed();
+        let mut manifest = Manifest::default();
         manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
         manifest_mark(&mut manifest, "m1", None, None);
         manifest_mark(&mut manifest, "m2", None, None);
@@ -314,7 +314,7 @@ mod tests {
     /// a program's body records into its row, and the row lands under its name after the body
     #[test]
     fn a_program_is_recorded() {
-        let mut manifest = Manifest::zeroed();
+        let mut manifest = Manifest::default();
         let script = crate::scene_level::LevelScriptFn::TutTeam;
         manifest_program(&mut manifest, "tutorial", &mut |p| { program_on_start(p, "go"); program_on_signal(p, "lesson:a", "go"); program_beat(p, "go", &script, None) }, None).unwrap();
         let row = manifest.programs.get("tutorial".into()).unwrap();
@@ -327,7 +327,7 @@ mod tests {
     /// the define pass's two throws, in the TypeScript's words (director.ts:305, :314); a body that fails leaves no row
     #[test]
     fn a_name_declared_twice_is_the_err() {
-        let mut manifest = Manifest::zeroed();
+        let mut manifest = Manifest::default();
         let script = crate::scene_level::LevelScriptFn::TutTeam;
         let got = manifest_program(&mut manifest, "p", &mut |p| { program_beat(p, "b", &script, None)?; program_beat(p, "b", &script, None) }, None);
         assert_eq!(got, Err(String::from("script: beat 'b' declared twice in program 'p'")));
@@ -340,7 +340,7 @@ mod tests {
     /// the same script and level given to the TypeScript's lintManifest under bun: the same rows in the same order
     #[test]
     fn the_lint_says_what_the_typescript_says() {
-        let mut manifest = Manifest::zeroed();
+        let mut manifest = Manifest::default();
         for id in ["a", "b"] { manifest_door(&mut manifest, id); }
         for id in ["kp", "zz"] { d_device(&mut manifest, id); }
         d_route(&mut manifest, "r");
@@ -350,12 +350,12 @@ mod tests {
         manifest_mark(&mut manifest, "m1", None, None);
         manifest_mark(&mut manifest, "m2", None, None);
         manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), god: Some(true), ..LoadoutSpec::zeroed() });
-        manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::zeroed() });
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), god: Some(true), ..LoadoutSpec::default() });
+        manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::default() });
         for id in ["ceil", "security", "gone"] { d_light_group(&mut manifest, id); }
         d_variant(&mut manifest, VariantRefId::Daylight);
-        manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::zeroed() });
-        let mut p = ProgramDef { name: "p".into(), opts: ProgramOpts { end_veil: Some(0.0), end_hold: Some(-1.0), ..ProgramOpts::zeroed() }, ..ProgramDef::zeroed() };
+        manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::default() });
+        let mut p = ProgramDef { name: "p".into(), opts: ProgramOpts { end_veil: Some(0.0), end_hold: Some(-1.0), ..ProgramOpts::default() }, ..ProgramDef::default() };
         program_on_start(&mut p, "x");
         p_after(&mut p, -1.0, "x");
         p_after(&mut p, 1.5, "nobeat");
@@ -370,20 +370,20 @@ mod tests {
         d_expect_within(&mut manifest, "p", "x", "x", 0.0);
         d_expect_never(&mut manifest, "samHit");
 
-        let door = |name: &str| crate::scene_level::LevelDoorDef { name: name.into(), ..crate::scene_level::LevelDoorDef::zeroed() };
-        let mut level = LintManifestLevel::zeroed();
+        let door = |name: &str| crate::scene_level::LevelDoorDef { name: name.into(), ..crate::scene_level::LevelDoorDef::default() };
+        let mut level = LintManifestLevel::default();
         level.doors = vec![door("a"), door("c")];
-        level.lights = vec![crate::scene_level::LightDef { group: "ceil".into(), ..crate::scene_level::LightDef::zeroed() }];
-        level.switchables = vec![crate::scene_level::LevelSwitchablesItem { group: "desk".into(), ..crate::scene_level::LevelSwitchablesItem::zeroed() }];
-        level.clear_plans = Some(vec![crate::scene_level::RoomClearPlan { door: "room1".into(), ..crate::scene_level::RoomClearPlan::zeroed() }]);
-        let mut breach = crate::scene_level::BreachPlan::zeroed();
+        level.lights = vec![crate::scene_level::LightDef { group: "ceil".into(), ..crate::scene_level::LightDef::default() }];
+        level.switchables = vec![crate::scene_level::LevelSwitchablesItem { group: "desk".into(), ..crate::scene_level::LevelSwitchablesItem::default() }];
+        level.clear_plans = Some(vec![crate::scene_level::RoomClearPlan { door: "room1".into(), ..crate::scene_level::RoomClearPlan::default() }]);
+        let mut breach = crate::scene_level::BreachPlan::default();
         breach.door = "a".into();
         breach.next.door = "z".into();
         level.breach = Some(breach);
         level.volumes = Some(Vec::new());
         level.devices = Some(vec![
-            crate::scene_level::DeviceDef::Keypad(crate::devices::KeypadDef2 { name: "kp".into(), ..crate::devices::KeypadDef2::zeroed() }),
-            crate::scene_level::DeviceDef::Camera(crate::devices::CameraDef2 { name: "cam".into(), group: Some("yard".into()), ..crate::devices::CameraDef2::zeroed() }),
+            crate::scene_level::DeviceDef::Keypad(crate::devices::KeypadDef2 { name: "kp".into(), ..crate::devices::KeypadDef2::default() }),
+            crate::scene_level::DeviceDef::Camera(crate::devices::CameraDef2 { name: "cam".into(), group: Some("yard".into()), ..crate::devices::CameraDef2::default() }),
         ]);
 
         let want: &[(LintProblemLevel, &str)] = &[
@@ -424,11 +424,11 @@ mod tests {
     #[test]
     fn a_route_is_found_by_its_row_name() {
         let mut g = crate::game::Game::blank();
-        let r = g.tab.route.push(crate::scene_level::PatrolRoute { name: "yard".into(), ..crate::scene_level::PatrolRoute::zeroed() });
-        let mut manifest = Manifest::zeroed();
+        let r = g.tab.route.push(crate::scene_level::PatrolRoute { name: "yard".into(), ..crate::scene_level::PatrolRoute::default() });
+        let mut manifest = Manifest::default();
         d_route(&mut manifest, "yard");
         d_route(&mut manifest, "gone");
-        let mut level = LintManifestLevel::zeroed();
+        let mut level = LintManifestLevel::default();
         level.routes = vec![r];
         let got = lint_manifest(&mut g, &manifest, &level);
         let got: Vec<&str> = got.iter().map(|p| p.what.as_str()).collect();

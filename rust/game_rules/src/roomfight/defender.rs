@@ -672,7 +672,7 @@ mod tests {
     }
     fn post(g: &mut Game, pt: V3) -> (GuardId, RoomfightDefId) {
         let gd = g.gd.push(crate::game::Guard::blank());
-        let mut row = Def::zeroed(); row.gd = gd; row.pt = pt;
+        let mut row = Def::default(); row.gd = gd; row.pt = pt;
         (gd, g.tab.roomfight_def.push(row))
     }
     #[test]

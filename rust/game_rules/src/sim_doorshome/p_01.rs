@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn an_index_is_an_address_over_eight_exactly() {
-        let io = ask_io(crate::sim_sim::SimExports::zeroed());
+        let io = ask_io(crate::sim_sim::SimExports::default());
         assert_eq!((io.par * 8.0) as usize, ::sim::doors::addr(4));
         assert_eq!((io.def * 8.0) as usize, ::sim::doors::addr(0));
         assert_eq!(io.max_contacts as usize, ::sim::doors::MAXC);

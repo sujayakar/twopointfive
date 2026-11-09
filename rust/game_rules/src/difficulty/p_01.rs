@@ -879,7 +879,7 @@ mod tests {
         for l in now.iter() {
             for r in &l.rungs {
                 assert!(is_rung(&mut g, l.key, Some(r.id.as_str())));
-                let mut s = DifficultyModSET::zeroed();
+                let mut s = DifficultyModSET::default();
                 set_put(&mut s, l.key, &r.id);
                 assert_eq!(set_word(&s, l.key), Some(r.id.as_str()));
             }

@@ -19,7 +19,7 @@ pub fn row_of(g: &Game, q: &Query) -> Option<ScenarioEntry> {
 
 /// The row's own hour and weather WRITTEN ONTO a query, over whatever it carried; answers what was put on. (rowset.ts rowSettings)
 pub fn row_settings(g: &Game, q: &mut Query) -> RowSettings {
-    let mut put = RowSettings::zeroed();
+    let mut put = RowSettings::default();
     let Some(e) = row_of(g, q) else { return put; };
     if let Some(hour) = e.hour { q.set("hour", hour.as_str()); put.hour = Some(hour); }
     if let Some(weather) = e.weather {

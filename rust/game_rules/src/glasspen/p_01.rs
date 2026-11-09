@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn a_path_is_walked_by_its_legs() {
-        let mut p = RoundPath::zeroed();
+        let mut p = RoundPath::default();
         p.segs = vec![seg([0.0, 0.0, 0.0], 0.0, 2.0), seg([3.0, 0.0, 0.0], 3.0, 4.0)];
         // a T inside a pane's thickness belongs to the leg before it, and stops at that leg's end
         assert_eq!(seg_at(&p, 2.5).t0, 0.0);

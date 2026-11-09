@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// Where each column starts for columns `cap` rows long. (propshome.ts propCols)
 pub fn prop_cols(cap: f64) -> crate::sim_propshome::PropCols {
     // colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap): walked here, as `ColsOf2` has no field for a column's start
-    let mut o = crate::sim_propshome::PropCols::zeroed();
+    let mut o = crate::sim_propshome::PropCols::default();
     let mut at = PROP_HEAD;
     for k in [&mut o.x, &mut o.z, &mut o.yaw, &mut o.vx, &mut o.vz, &mut o.w, &mut o.cs, &mut o.sn, &mut o.idle, &mut o.push_t, &mut o.noise_t] {
         *k = at / 8.0;

@@ -322,7 +322,7 @@ fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3,
         peak_intensity,
         broad,
         mark_ref,
-        ..crate::render_lights::RtLight::zeroed()
+        ..crate::render_lights::RtLight::default()
     });
     crate::render_lights::light_set_add(g, l)
 }
@@ -460,13 +460,13 @@ mod tests {
     use super::*;
 
     fn def(name: &str, mains: Option<bool>) -> crate::scene_level::LightDef {
-        crate::scene_level::LightDef { name: String::from(name), mains, ..crate::scene_level::LightDef::zeroed() }
+        crate::scene_level::LightDef { name: String::from(name), mains, ..crate::scene_level::LightDef::default() }
     }
 
     /// `new Map(level.lights.map(d => [d.name, d]))`: the last of a name wins, and a light with no def or no word is on the mains.
     #[test]
     fn a_lights_mains_is_the_last_def_of_its_name() {
-        let mut level = crate::scene_level::Level::zeroed();
+        let mut level = crate::scene_level::Level::default();
         level.lights = vec![def("a", Some(false)), def("b", Some(false)), def("a", None)];
         assert!(light_def_mains(&level, "a"));
         assert!(!light_def_mains(&level, "b"));

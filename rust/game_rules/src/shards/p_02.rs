@@ -542,7 +542,7 @@ pub fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
         shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
-        aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
+        aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::default()
     });
 }
 
@@ -641,7 +641,7 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
         if p.heard {
             g.stats.shards.events += 1;
             let serial = g.serial();
-            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [p.pos[0], 0.0, p.pos[2]], time: now, loud: false, level: Some(p.level), who: Some(p.who), serial, ..crate::game::GameEvent::zeroed() });
+            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [p.pos[0], 0.0, p.pos[2]], time: now, loud: false, level: Some(p.level), who: Some(p.who), serial, ..crate::game::GameEvent::default() });
         }
     }
     g.shards.recs_this_frame = 0.0;

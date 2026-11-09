@@ -53,26 +53,13 @@ taskers! {
     NEEDS: "a need of his own", ["off for a coffee, a smoke, some water or a stretch"];
 }
 
-/// (TypeScript: inline at src/game/owner.ts:108 WITNESSES, src/game/owner.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OwnerModWITNESSESItem {
     pub rule: f64,
     pub name: String,
     pub says: crate::FnField,
     pub at_read: bool,
 }
-impl OwnerModWITNESSESItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnerModWITNESSESItem {
-            rule: 0.0,
-            name: String::new(),
-            says: crate::FnField,
-            at_read: false,
-        }
-    }
-}
-impl Default for OwnerModWITNESSESItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

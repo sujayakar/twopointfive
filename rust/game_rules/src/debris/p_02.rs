@@ -79,7 +79,7 @@ mod tests {
 
     /// Expected bits are the TypeScript's own layFlat, run under bun with EXACT on.
     fn check(h: V3, yaw: f64, rot: Option<Quat>, n: V3, k: f64, want_rot: Option<[u64; 4]>, want_yaw: u64) {
-        let mut row = crate::scene_boxes::Box::zeroed();
+        let mut row = crate::scene_boxes::Box::default();
         row.h = h;
         row.yaw = yaw;
         row.rot = rot;

@@ -1,10 +1,9 @@
-//! The types of `powerout`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `powerout`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Calm, src/game/powerout.ts:93)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Calm {
     pub awareness: f64,
     pub hold: bool,
@@ -17,29 +16,10 @@ pub struct Calm {
     pub want: f64,
     pub pt: V3,
 }
-impl Calm {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Calm {
-            awareness: 0.0,
-            hold: false,
-            pinned: false,
-            station: [0.0; 3],
-            home: [0.0; 3],
-            room: None,
-            ev: Vec::new(),
-            watch: 0.0,
-            want: 0.0,
-            pt: [0.0; 3],
-        }
-    }
-}
-impl Default for Calm { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Out,
+    #[default] Out,
     Back,
     Wait,
     There,
@@ -55,8 +35,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Man, src/game/powerout.ts:95)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Man {
     pub gd: GuardId,
     pub role: crate::powerout::ManRole,
@@ -70,30 +49,10 @@ pub struct Man {
     pub there_t: f64,
     pub calm: Option<crate::powerout::Calm>,
 }
-impl Man {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Man {
-            gd: GuardId(0),
-            role: crate::powerout::ManRole::Cover,
-            phase: crate::powerout::Phase::Out,
-            goal: [0.0; 3],
-            from: [0.0; 3],
-            watch: None,
-            tries: 0.0,
-            step_t: 0.0,
-            heard0: 0.0,
-            there_t: 0.0,
-            calm: None,
-        }
-    }
-}
-impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum ManRole {
-    Cover,
+    #[default] Cover,
     Lever,
 }
 impl ManRole {
@@ -105,31 +64,17 @@ impl ManRole {
     }
 }
 
-/// (TypeScript: PowerOutEvent, src/game/powerout.ts:96)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PowerOutEvent {
     pub t: f64,
     pub what: crate::powerout::PowerOutEventWhat,
     pub who: String,
     pub why: String,
 }
-impl PowerOutEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PowerOutEvent {
-            t: 0.0,
-            what: crate::powerout::PowerOutEventWhat::Stay,
-            who: String::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for PowerOutEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PowerOutEventWhat {
-    Stay,
+    #[default] Stay,
     Lost,
     Home,
     Go,
@@ -161,8 +106,7 @@ impl PowerOutEventWhat {
     }
 }
 
-/// (TypeScript: State, src/game/powerout.ts:97)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub since: f64,
     pub decide_at: f64,
@@ -179,48 +123,14 @@ pub struct State {
     pub lost: bool,
     pub events: Vec<crate::powerout::PowerOutEvent>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            since: 0.0,
-            decide_at: 0.0,
-            go_at: 0.0,
-            way_m: 0.0,
-            overdue_at: 0.0,
-            fell: None,
-            seen: Vec::new(),
-            look_at: 0.0,
-            men: Vec::new(),
-            decided: false,
-            word: false,
-            parties: 0.0,
-            lost: false,
-            events: Vec::new(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:105 State.seen, src/game/powerout.ts:105)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateSeenItem {
     pub i: f64,
     pub lit: f64,
 }
-impl StateSeenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateSeenItem {
-            i: 0.0,
-            lit: 0.0,
-        }
-    }
-}
-impl Default for StateSeenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CalmSnap, src/game/powerout.ts:221)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CalmSnap {
     pub hold: bool,
     pub home: V3,
@@ -233,27 +143,8 @@ pub struct CalmSnap {
     pub want: f64,
     pub room: f64,
 }
-impl CalmSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CalmSnap {
-            hold: false,
-            home: [0.0; 3],
-            watch: 0.0,
-            pt: [0.0; 3],
-            pinned: false,
-            awareness: 0.0,
-            station: [0.0; 3],
-            ev: Vec::new(),
-            want: 0.0,
-            room: 0.0,
-        }
-    }
-}
-impl Default for CalmSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PowerOutSnap, src/game/powerout.ts:405)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PowerOutSnap {
     pub since: f64,
     pub decide_at: f64,
@@ -269,47 +160,14 @@ pub struct PowerOutSnap {
     pub lost: bool,
     pub men: Vec<crate::powerout::PowerOutSnapMenItem>,
 }
-impl PowerOutSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PowerOutSnap {
-            since: 0.0,
-            decide_at: 0.0,
-            go_at: 0.0,
-            way_m: 0.0,
-            overdue_at: 0.0,
-            fell: None,
-            seen: Vec::new(),
-            look_at: 0.0,
-            decided: false,
-            word: false,
-            parties: 0.0,
-            lost: false,
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for PowerOutSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:405 PowerOutSnap.seen, src/game/powerout.ts:405)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PowerOutSnapSeenItem {
     pub i: f64,
     pub lit: f64,
 }
-impl PowerOutSnapSeenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PowerOutSnapSeenItem {
-            i: 0.0,
-            lit: 0.0,
-        }
-    }
-}
-impl Default for PowerOutSnapSeenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:406 PowerOutSnap.men, src/game/powerout.ts:406)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PowerOutSnapMenItem {
     pub i: f64,
     pub role: crate::powerout::ManRole,
@@ -323,27 +181,7 @@ pub struct PowerOutSnapMenItem {
     pub there_t: f64,
     pub calm: Option<crate::powerout::CalmSnap>,
 }
-impl PowerOutSnapMenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PowerOutSnapMenItem {
-            i: 0.0,
-            role: crate::powerout::ManRole::Cover,
-            phase: crate::powerout::Phase::Out,
-            goal: [0.0; 3],
-            from: [0.0; 3],
-            watch: None,
-            tries: 0.0,
-            step_t: 0.0,
-            heard0: 0.0,
-            there_t: 0.0,
-            calm: None,
-        }
-    }
-}
-impl Default for PowerOutSnapMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PowerOutSnapMenItemRole {
     Cover,
@@ -358,7 +196,6 @@ impl PowerOutSnapMenItemRole {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EventWhat {
     Stay,
@@ -393,39 +230,17 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/powerout.ts:182 wayTo ->, src/game/powerout.ts:182)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WayTo {
     pub path: Vec<V3>,
     pub l: f64,
 }
-impl WayTo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WayTo {
-            path: Vec::new(),
-            l: 0.0,
-        }
-    }
-}
-impl Default for WayTo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:189 coverSpot ->, src/game/powerout.ts:189)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CoverSpot {
     pub spot: V3,
     pub watch: V3,
 }
-impl CoverSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverSpot {
-            spot: [0.0; 3],
-            watch: [0.0; 3],
-        }
-    }
-}
-impl Default for CoverSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

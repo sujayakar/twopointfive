@@ -588,7 +588,7 @@ mod tests {
     /// One door of the oracle's scene.
     fn door(g: &mut Game, name: &str, hinge: [f64; 2], max_auth: f64, min_auth: f64, set: fn(&mut crate::doors::DoorDef)) {
         let mut row = crate::doors::Door::blank();
-        row.def = crate::doors::DoorDef::zeroed();
+        row.def = crate::doors::DoorDef::default();
         row.def.name = String::from(name);
         row.def.hinge = hinge;
         row.def.closed_dir = m::PI / 2.0;
@@ -601,17 +601,17 @@ mod tests {
         g.doors.list.push(id);
     }
     fn room(id: &str, name: &str, x0: f64, x1: f64, z0: f64, z1: f64, door: &str) -> crate::scene_scenarios::StructureRoom {
-        let mut r = crate::scene_scenarios::StructureRoom::zeroed();
+        let mut r = crate::scene_scenarios::StructureRoom::default();
         r.id = String::from(id);
         r.name = String::from(name);
         r.bounds = crate::scene_scenarios::Rect { x0, x1, z0, z1 };
-        let mut x = crate::scene_scenarios::StructureDoor::zeroed();
+        let mut x = crate::scene_scenarios::StructureDoor::default();
         x.id = String::from(door);
         r.doors.push(x);
         r
     }
     fn clear_plan(door: &str, fling: f64, room: Option<&str>, bounds: Option<crate::scene_level::BreachPlanBounds>) -> crate::scene_level::RoomClearPlan {
-        let mut p = crate::scene_level::RoomClearPlan::zeroed();
+        let mut p = crate::scene_level::RoomClearPlan::default();
         p.door = String::from(door);
         p.fling = fling;
         p.room = room.map(String::from);
@@ -645,7 +645,7 @@ mod tests {
         }
         (g.col.nav.w, g.col.nav.h, g.col.nav.cell, g.col.nav.blocked) = (40.0, 40.0, 0.5, blocked);
         let roofs: [BoxNumbers; 3] = [([8.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 0.0), ([12.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 2.0), ([12.0, 1.0, 4.5], [2.0, 0.2, 3.0], 0.3, 0.0)];
-        let mut breach = crate::scene_level::BreachPlan::zeroed();
+        let mut breach = crate::scene_level::BreachPlan::default();
         breach.door = String::from("plan");
         breach.fling = -3.0;
         breach.room = Some(String::from("vault"));
@@ -658,14 +658,14 @@ mod tests {
         ]);
         g.level.mission.entry_door = String::from("entry");
         (g.level.mission.server_room.x0, g.level.mission.server_room.x1, g.level.mission.server_room.z0, g.level.mission.server_room.z1) = (2.0, 4.0, 15.0, 18.0);
-        let mut sc = crate::scene_scenarios::LevelScenarios::zeroed();
-        let mut rc = crate::scene_scenarios::StructureData::zeroed();
+        let mut sc = crate::scene_scenarios::LevelScenarios::default();
+        let mut rc = crate::scene_scenarios::StructureData::default();
         rc.rooms = vec![room("b", "big", 11.0, 19.0, 8.0, 16.0, "room"), room("a", "small", 7.0, 9.0, 11.0, 14.0, "room")];
         sc.room_clear = Some(rc);
-        let mut rs = crate::scene_scenarios::RescueData::zeroed();
+        let mut rs = crate::scene_scenarios::RescueData::default();
         rs.room.name = String::from("cell");
         rs.room.door = String::from("hostages");
-        let mut side = crate::scene_scenarios::RescueDataSide::zeroed();
+        let mut side = crate::scene_scenarios::RescueDataSide::default();
         side.door = String::from("nobody");
         rs.side = Some(side);
         sc.rescue = Some(rs);

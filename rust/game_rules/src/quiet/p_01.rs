@@ -376,7 +376,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             name: Some(String::from("Blue One")),
             light: Some(false),
             pair: Some(crate::game::PairId::Blue),
-            ..crate::guards::UnitOpts::zeroed()
+            ..crate::guards::UnitOpts::default()
         })?;
         crate::mind::set_state(g, man, crate::game::GuardState::Patrol, "quiet");
         crate::mind::set(g, man, 0.0, "quiet");
@@ -391,7 +391,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             aim_at: Some(None),
             light: Some(Some(false)),
             crouch: Some(Some(false)),
-            ..crate::squad::OrderPatch::zeroed()
+            ..crate::squad::OrderPatch::default()
         });
         g.quiet.ops.push(man);
         g.quiet.fall_in = true;
@@ -653,7 +653,7 @@ mod tests {
     use crate::scene_scenarios::QuietExit;
 
     fn exit() -> QuietExit {
-        QuietExit { x: 1.5, z: -2.25, out: [0.6, 0.8], ..QuietExit::zeroed() }
+        QuietExit { x: 1.5, z: -2.25, out: [0.6, 0.8], ..QuietExit::default() }
     }
 
     /// a cut must be seen by Seat.takeCut, which watches the serial, and leaves the two on one point

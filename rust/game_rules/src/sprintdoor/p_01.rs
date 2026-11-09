@@ -192,8 +192,8 @@ mod tests {
     }
 
     fn contact(d: DoorId, ripped: bool) -> crate::doors::DoorContact {
-        let mut own = crate::doors::DoorContact::zeroed();
-        own.run = Some(crate::doors::DoorContactRun::zeroed());
+        let mut own = crate::doors::DoorContact::default();
+        own.run = Some(crate::doors::DoorContactRun::default());
         own.bashed = Some(d);
         own.bashed_at = Some(0.3);
         own.ripped = if ripped { Some(d) } else { None };

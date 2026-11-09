@@ -1,12 +1,11 @@
-//! The types of `cues`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `cues`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum CueKind {
-    Stay,
+    #[default] Stay,
     Calm,
     Cover,
     Flinch,
@@ -50,8 +49,7 @@ impl CueKind {
     }
 }
 
-/// (TypeScript: CueRow, src/game/cues.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CueRow {
     pub t: f64,
     pub text: String,
@@ -59,43 +57,16 @@ pub struct CueRow {
     pub rank: f64,
     pub who: String,
 }
-impl CueRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CueRow {
-            t: 0.0,
-            text: String::new(),
-            cls: 0.0,
-            rank: 0.0,
-            who: String::new(),
-        }
-    }
-}
-impl Default for CueRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Bubble, src/game/cues.ts:137)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Bubble {
     pub text: String,
     pub t: f64,
     pub dur: f64,
     pub radio: bool,
 }
-impl Bubble {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Bubble {
-            text: String::new(),
-            t: 0.0,
-            dur: 0.0,
-            radio: false,
-        }
-    }
-}
-impl Default for Bubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Man, src/game/cues.ts:138)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Man {
     pub state: crate::game::GuardState,
     pub alert_t: f64,
@@ -109,27 +80,7 @@ pub struct Man {
     pub rally_at: f64,
     pub covered: bool,
 }
-impl Man {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Man {
-            state: crate::game::GuardState::Patrol,
-            alert_t: 0.0,
-            said_t: 0.0,
-            again_t: 0.0,
-            stood_t: 0.0,
-            moved: None,
-            from: String::new(),
-            noise_t: 0.0,
-            ep: 0.0,
-            rally_at: 0.0,
-            covered: false,
-        }
-    }
-}
-impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ManMoved {
     Cover,
@@ -144,7 +95,6 @@ impl ManMoved {
     }
 }
 
-/// (TypeScript: Cues, src/game/cues.ts:144)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Cues {
     pub rows: Vec<crate::cues::CueRow>,
@@ -167,7 +117,7 @@ pub struct Cues {
     pub shout_t: Option<f64>,
 }
 impl Cues {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Cues {
             rows: Vec::new(),
@@ -193,8 +143,7 @@ impl Cues {
 }
 impl Default for Cues { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/cues.ts:147 Cues.stats, src/game/cues.ts:139)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesStats {
     pub heard: f64,
     pub heard_drawn: f64,
@@ -211,31 +160,8 @@ pub struct CuesStats {
     pub filed: Vec<f64>,
     pub drawn: Vec<f64>,
 }
-impl CuesStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesStats {
-            heard: 0.0,
-            heard_drawn: 0.0,
-            shouts: 0.0,
-            shouts_drawn: 0.0,
-            cues: 0.0,
-            cue_net: 0.0,
-            cue_drawn: 0.0,
-            dup: 0.0,
-            gap: 0.0,
-            full: 0.0,
-            bumped: 0.0,
-            bumped_young: 0.0,
-            filed: Vec::new(),
-            drawn: Vec::new(),
-        }
-    }
-}
-impl Default for CuesStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:149 Cues.kinds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CuesKinds {
     pub stay: Option<f64>,
     pub calm: Option<f64>,
@@ -256,35 +182,8 @@ pub struct CuesKinds {
     pub squad_quiet: Option<f64>,
     pub surprised: Option<f64>,
 }
-impl CuesKinds {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesKinds {
-            stay: None,
-            calm: None,
-            cover: None,
-            flinch: None,
-            still: None,
-            help: None,
-            stay_ours: None,
-            hunt_over: None,
-            fell_back: None,
-            planted: None,
-            pinned_in: None,
-            squad_hears: None,
-            squad_copies: None,
-            squad_waits: None,
-            squad_copies_waits: None,
-            squad_stays: None,
-            squad_quiet: None,
-            surprised: None,
-        }
-    }
-}
-impl Default for CuesKinds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:150 Cues.log, src/game/cues.ts:150)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesLogItem {
     pub t: f64,
     pub who: String,
@@ -294,26 +193,10 @@ pub struct CuesLogItem {
     pub drawn: bool,
     pub why: String,
 }
-impl CuesLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesLogItem {
-            t: 0.0,
-            who: String::new(),
-            text: String::new(),
-            cls: 0.0,
-            kind: crate::cues::CuesLogItemKind::Heard,
-            drawn: false,
-            why: String::new(),
-        }
-    }
-}
-impl Default for CuesLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CuesLogItemKind {
-    Heard,
+    #[default] Heard,
     Stay,
     Calm,
     Cover,
@@ -363,8 +246,7 @@ impl CuesLogItemKind {
     }
 }
 
-/// (TypeScript: inline at src/game/cues.ts:153 Cues.kindT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CuesKindT {
     pub stay: Option<f64>,
     pub calm: Option<f64>,
@@ -385,94 +267,30 @@ pub struct CuesKindT {
     pub squad_quiet: Option<f64>,
     pub surprised: Option<f64>,
 }
-impl CuesKindT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesKindT {
-            stay: None,
-            calm: None,
-            cover: None,
-            flinch: None,
-            still: None,
-            help: None,
-            stay_ours: None,
-            hunt_over: None,
-            fell_back: None,
-            planted: None,
-            pinned_in: None,
-            squad_hears: None,
-            squad_copies: None,
-            squad_waits: None,
-            squad_copies_waits: None,
-            squad_stays: None,
-            squad_quiet: None,
-            surprised: None,
-        }
-    }
-}
-impl Default for CuesKindT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:155 Cues.heardRow, src/game/cues.ts:155)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesHeardRow {
     pub t: f64,
     pub text: String,
 }
-impl CuesHeardRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesHeardRow {
-            t: 0.0,
-            text: String::new(),
-        }
-    }
-}
-impl Default for CuesHeardRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:157 Cues.heardLog, src/game/cues.ts:157)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesHeardLogItem {
     pub t: f64,
     pub text: String,
     pub drawn: bool,
     pub why: String,
 }
-impl CuesHeardLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesHeardLogItem {
-            t: 0.0,
-            text: String::new(),
-            drawn: false,
-            why: String::new(),
-        }
-    }
-}
-impl Default for CuesHeardLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:104 LINES, src/game/cues.ts:104)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub cls: f64,
     pub say: Vec<String>,
     pub now: Option<Vec<String>>,
     pub guide: Option<Vec<String>>,
 }
-impl LINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINESValue {
-            cls: 0.0,
-            say: Vec::new(),
-            now: None,
-            guide: None,
-        }
-    }
-}
-impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:127 KIND_GAP, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KINDGAP {
     pub stay: Option<f64>,
     pub calm: Option<f64>,
@@ -493,53 +311,14 @@ pub struct KINDGAP {
     pub squad_quiet: Option<f64>,
     pub surprised: Option<f64>,
 }
-impl KINDGAP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KINDGAP {
-            stay: None,
-            calm: None,
-            cover: None,
-            flinch: None,
-            still: None,
-            help: None,
-            stay_ours: None,
-            hunt_over: None,
-            fell_back: None,
-            planted: None,
-            pinned_in: None,
-            squad_hears: None,
-            squad_copies: None,
-            squad_waits: None,
-            squad_copies_waits: None,
-            squad_stays: None,
-            squad_quiet: None,
-            surprised: None,
-        }
-    }
-}
-impl Default for KINDGAP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:129 cueLines ->, src/game/cues.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CueLinesItem {
     pub kind: crate::cues::CueKind,
     pub cls: f64,
     pub text: String,
 }
-impl CueLinesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CueLinesItem {
-            kind: crate::cues::CueKind::Stay,
-            cls: 0.0,
-            text: String::new(),
-        }
-    }
-}
-impl Default for CueLinesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CuesFileKind {
     Heard,
@@ -592,39 +371,17 @@ impl CuesFileKind {
     }
 }
 
-/// (TypeScript: inline at src/game/cues.ts:252 adopt(msgs), src/game/cues.ts:252)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CuesAdoptMsgsItem {
     pub text: String,
     pub t: f64,
 }
-impl CuesAdoptMsgsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesAdoptMsgsItem {
-            text: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for CuesAdoptMsgsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:262 at ->, src/game/cues.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CuesAt {
     pub the: String,
     pub at: String,
 }
-impl CuesAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CuesAt {
-            the: String::new(),
-            at: String::new(),
-        }
-    }
-}
-impl Default for CuesAt { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/cues.ts:80 CUES_DEFAULTS: a table nothing writes)
 pub fn cues_defaults() -> crate::knobs::CuesK { crate::knobs::page_cues() }

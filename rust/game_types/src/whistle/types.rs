@@ -1,10 +1,9 @@
-//! The types of `whistle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `whistle`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WhistleMem, src/game/whistle.ts:76)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WhistleMem {
     pub responded_at: f64,
     pub responses: f64,
@@ -18,106 +17,37 @@ pub struct WhistleMem {
     pub last_look: f64,
     pub last_twice: f64,
 }
-impl WhistleMem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WhistleMem {
-            responded_at: 0.0,
-            responses: 0.0,
-            searches: 0.0,
-            cues: 0.0,
-            glances: 0.0,
-            glance_until: 0.0,
-            glance_at: None,
-            soft: false,
-            soft_at: 0.0,
-            last_look: 0.0,
-            last_twice: 0.0,
-        }
-    }
-}
-impl Default for WhistleMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Blower, src/game/whistle.ts:100)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Blower {
     pub ready_at: f64,
     pub blown: f64,
     pub last_at: f64,
 }
-impl Blower {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Blower {
-            ready_at: 0.0,
-            blown: 0.0,
-            last_at: 0.0,
-        }
-    }
-}
-impl Default for Blower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Heard, src/game/whistle.ts:128)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Heard {
     pub d: f64,
     pub at: V3,
     pub direct: bool,
     pub carry: f64,
 }
-impl Heard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Heard {
-            d: 0.0,
-            at: [0.0; 3],
-            direct: false,
-            carry: 0.0,
-        }
-    }
-}
-impl Default for Heard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Resolution, src/game/whistle.ts:129)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Resolution {
     pub hearers: JsMap<GuardId, crate::whistle::Heard>,
     pub responder: Option<GuardId>,
     pub answered_by: Option<GuardId>,
     pub t: f64,
 }
-impl Resolution {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Resolution {
-            hearers: JsMap::new(),
-            responder: None,
-            answered_by: None,
-            t: 0.0,
-        }
-    }
-}
-impl Default for Resolution { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WhistleSnap, src/game/whistle.ts:245)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WhistleSnap {
     pub blower: crate::whistle::Blower,
     pub men: Vec<Option<crate::whistle::WhistleMem>>,
 }
-impl WhistleSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WhistleSnap {
-            blower: crate::whistle::Blower::zeroed(),
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for WhistleSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/whistle.ts:132 WHISTLE_LOG, src/game/whistle.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WhistleModWHISTLELOGItem {
     pub t: f64,
     pub pos: V3,
@@ -126,22 +56,7 @@ pub struct WhistleModWHISTLELOGItem {
     pub answered: Option<String>,
     pub search: bool,
 }
-impl WhistleModWHISTLELOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WhistleModWHISTLELOGItem {
-            t: 0.0,
-            pos: [0.0; 3],
-            hearers: Vec::new(),
-            responder: None,
-            answered: None,
-            search: false,
-        }
-    }
-}
-impl Default for WhistleModWHISTLELOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WhistleLinesKind {
     All,
@@ -158,8 +73,7 @@ impl WhistleLinesKind {
     }
 }
 
-/// (TypeScript: inline at quiet whistleMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WhistleMem2 {
     pub responded_at: f64,
     pub responses: f64,
@@ -173,27 +87,7 @@ pub struct WhistleMem2 {
     pub last_look: f64,
     pub last_twice: f64,
 }
-impl WhistleMem2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WhistleMem2 {
-            responded_at: 0.0,
-            responses: 0.0,
-            searches: 0.0,
-            cues: 0.0,
-            glances: 0.0,
-            glance_until: 0.0,
-            glance_at: None,
-            soft: false,
-            soft_at: 0.0,
-            last_look: 0.0,
-            last_twice: 0.0,
-        }
-    }
-}
-impl Default for WhistleMem2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PickKey {
     LastLook,

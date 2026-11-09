@@ -311,7 +311,7 @@ mod tests {
     /// the weights against the TypeScript's own bits (`1.4 * 1.6 * 1.5 * 2.5` under bun: 0x4020cccccccccccc, not 8.4)
     #[test]
     fn weights_multiply_in_the_typescript_order() {
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());
         l.needs = Some(Vec::new());
         assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());   // an empty list is falsy by its length
@@ -325,7 +325,7 @@ mod tests {
     }
 
     fn pool(weights: &[f64]) -> Vec<Eligible> {
-        weights.iter().map(|w| (SamLine::zeroed(), String::new(), *w)).collect()
+        weights.iter().map(|w| (SamLine::default(), String::new(), *w)).collect()
     }
 
     #[test]
@@ -341,11 +341,11 @@ mod tests {
 
     #[test]
     fn a_line_named_for_a_man_fits_only_him() {
-        let mut ctx = crate::dialogue::DialogueCtx::zeroed();
+        let mut ctx = crate::dialogue::DialogueCtx::default();
         ctx.t = Temperament::Hard;
         ctx.k = Knowledge::Saw;
         let facts = JsMap::new();
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         assert!(sam_line_fits(&l, &ctx, &facts));
         l.t = Some(Temperament::Nervy);
         assert!(!sam_line_fits(&l, &ctx, &facts));
@@ -357,11 +357,11 @@ mod tests {
 
     #[test]
     fn a_line_with_needs_wants_every_fact_on() {
-        let ctx = crate::dialogue::DialogueCtx::zeroed();
+        let ctx = crate::dialogue::DialogueCtx::default();
         let mut facts = JsMap::new();
         facts.set(SamNeed::Gun, true);
         facts.set(SamNeed::Alarm, false);
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         l.needs = Some(vec![SamNeed::Gun]);
         assert!(sam_line_fits(&l, &ctx, &facts));
         l.needs = Some(vec![SamNeed::Gun, SamNeed::Alarm]);
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn sams_facts_read_the_floor_and_the_hold_and_the_knife_is_gone() {
         let mut g = Game::blank();
-        let mut ctx = crate::dialogue::DialogueCtx::zeroed();
+        let mut ctx = crate::dialogue::DialogueCtx::default();
         let f = sam_facts(&mut g, &ctx, crate::character::HoldVariant::Arm);
         assert_eq!(f.get(SamNeed::Arm), Some(&true));
         assert_eq!(f.get(SamNeed::Gun), Some(&false));
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn the_token_map_keys_are_the_words_a_line_is_looked_up_by() {
-        let mut t = crate::dialogue::DialogueCtxTokens::zeroed();
+        let mut t = crate::dialogue::DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the vault"));
         let m = tokens_map(&t);
         assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));

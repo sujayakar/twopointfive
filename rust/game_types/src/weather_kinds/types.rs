@@ -1,9 +1,8 @@
-//! The types of `weather_kinds`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `weather_kinds`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum WeatherKind {
     Clear,
@@ -28,8 +27,7 @@ impl WeatherKind {
     }
 }
 
-/// (TypeScript: FogSpec, src/game/weatherKinds.ts:21)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogSpec {
     pub sigma: f64,
     pub h: f64,
@@ -37,22 +35,8 @@ pub struct FogSpec {
     pub tint: V3,
     pub gain: f64,
 }
-impl FogSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogSpec {
-            sigma: 0.0,
-            h: 0.0,
-            leak: 0.0,
-            tint: [0.0; 3],
-            gain: 0.0,
-        }
-    }
-}
-impl Default for FogSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WeatherPreset, src/game/weatherKinds.ts:27)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeatherPreset {
     pub title: String,
     pub words: String,
@@ -63,22 +47,6 @@ pub struct WeatherPreset {
     pub fog: Option<crate::weather_kinds::FogSpec>,
     pub snow: Option<f64>,
 }
-impl WeatherPreset {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherPreset {
-            title: String::new(),
-            words: String::new(),
-            storm: 0.0,
-            rain: 0.0,
-            wind: [0.0; 2],
-            cloud: 0.0,
-            fog: None,
-            snow: None,
-        }
-    }
-}
-impl Default for WeatherPreset { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

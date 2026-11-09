@@ -19,7 +19,7 @@ macro_rules! row { ($g:expr, $o:expr) => { match $o { None => &mut st!($g).sam, 
 fn ensure_pic(s: &mut State, gd: GuardId, now: f64, look_secs: f64) {
     if !s.men.has(gd) {
         let look_t = now + (s.men.len() % 8) as f64 * look_secs / 8.0;
-        s.men.set(gd, Pic { owner: Some(gd), look_t, ..Pic::zeroed() });
+        s.men.set(gd, Pic { owner: Some(gd), look_t, ..Pic::default() });
     }
 }
 /// a man's ideas, copied in their order; None = he has no picture
@@ -33,7 +33,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::Sta
     if g.m.picture.states.is_none() {
         g.m.picture.states = Some(State {
             men: JsMap::new(),
-            sam: Pic { owner: None, look_t: -1e9, ..Pic::zeroed() },
+            sam: Pic { owner: None, look_t: -1e9, ..Pic::default() },
             tell_t: -1e9,
             done: JsSet::new(),
             view: None,
@@ -1192,7 +1192,7 @@ mod tests {
     use super::*;
 
     fn knobs() -> crate::knobs::PictureK {
-        let mut k = crate::knobs::PictureK::zeroed();
+        let mut k = crate::knobs::PictureK::default();
         k.fresh_secs = 2.0;
         k.stale_secs = 20.0;
         k.stale_k = 0.4;
@@ -1228,7 +1228,7 @@ mod tests {
 
     #[test]
     fn learning_again_keeps_since_and_takes_him_off_the_downs() {
-        let mut p = Pic::zeroed();
+        let mut p = Pic::default();
         p.downs.set(Who::Player, 1.0);
         learn_now(5.0, &mut p, Who::Player, [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
         assert!(!p.downs.has(Who::Player));
@@ -1314,14 +1314,14 @@ mod tests {
     #[test]
     fn safest_sets_keeps_the_order_with_nothing_known() {
         let mut g = Game::blank();
-        let one = vec![crate::orders::StackPost::zeroed()];
+        let one = vec![crate::orders::StackPost::default()];
         assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone()]), vec![0]);
         assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone(), one.clone(), one]), vec![0, 1, 2]);
     }
 
     #[test]
     fn a_new_picture_takes_its_turn_by_the_table_size() {
-        let mut s = State::zeroed();
+        let mut s = State::default();
         for n in 0..9 {
             ensure_pic(&mut s, GuardId(n), 10.0, 0.2);
         }

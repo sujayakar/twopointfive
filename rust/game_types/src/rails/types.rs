@@ -1,9 +1,8 @@
-//! The types of `rails`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rails`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Rails, src/game/rails.ts:215)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Rails {
     pub run: Option<u32>,
@@ -26,7 +25,7 @@ pub struct Rails {
     pub fresh: f64,
 }
 impl Rails {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Rails {
             run: None,
@@ -52,21 +51,11 @@ impl Rails {
 }
 impl Default for Rails { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at quiet Rails.run, quiet Rails.run)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RailsRun {
 }
-impl RailsRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsRun {
-        }
-    }
-}
-impl Default for RailsRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:225 Rails.sky, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsSky {
     pub off: V3,
     pub mid: Option<V3>,
@@ -76,213 +65,75 @@ pub struct RailsSky {
     pub view: Option<crate::rails::RailsSkyView>,
     pub again: bool,
 }
-impl RailsSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSky {
-            off: [0.0; 3],
-            mid: None,
-            mid_t: 0.0,
-            parked: false,
-            was: None,
-            view: None,
-            again: false,
-        }
-    }
-}
-impl Default for RailsSky { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:225 RailsSky.was, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsSkyWas {
     pub invisible: bool,
 }
-impl RailsSkyWas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSkyWas {
-            invisible: false,
-        }
-    }
-}
-impl Default for RailsSkyWas { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:225 RailsSky.view, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsSkyView {
     pub yaw: f64,
     pub pitch: f64,
     pub dist: f64,
 }
-impl RailsSkyView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSkyView {
-            yaw: 0.0,
-            pitch: 0.0,
-            dist: 0.0,
-        }
-    }
-}
-impl Default for RailsSkyView { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:411 Rails.stepLook, src/game/rails.ts:411)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsStepLook {
     pub i: f64,
     pub eye: crate::fogofwar::FogEye,
 }
-impl RailsStepLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsStepLook {
-            i: 0.0,
-            eye: crate::fogofwar::FogEye::zeroed(),
-        }
-    }
-}
-impl Default for RailsStepLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Act, src/game/rails.ts:128)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Act {
     pub keys: Option<Vec<String>>,
     pub buttons: Option<f64>,
     pub wheel: Option<bool>,
 }
-impl Act {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Act {
-            keys: None,
-            buttons: None,
-            wheel: None,
-        }
-    }
-}
-impl Default for Act { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:166 said(A), src/game/rails.ts:166)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaidA {
     pub line: Option<String>,
     pub word: Option<String>,
 }
-impl SaidA {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaidA {
-            line: None,
-            word: None,
-        }
-    }
-}
-impl Default for SaidA { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:169 lookoutEye(e), src/game/rails.ts:169)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LookoutEyeE {
     pub at: V3,
     pub yaw: f64,
     pub fov: Option<f64>,
 }
-impl LookoutEyeE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LookoutEyeE {
-            at: [0.0; 3],
-            yaw: 0.0,
-            fov: None,
-        }
-    }
-}
-impl Default for LookoutEyeE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:256 lesson ->, src/game/rails.ts:256)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsLesson {
     pub l: crate::scene_scenarios::LessonData,
     pub i: f64,
 }
-impl RailsLesson {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsLesson {
-            l: crate::scene_scenarios::LessonData::zeroed(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for RailsLesson { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:286 card ->, src/game/rails.ts:286)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsCard {
     pub title: Option<String>,
     pub text: String,
 }
-impl RailsCard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsCard {
-            title: None,
-            text: String::new(),
-        }
-    }
-}
-impl Default for RailsCard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:325 onWay(S), src/game/rails.ts:325)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsOnWayS {
     pub l: crate::scene_scenarios::LessonData,
     pub i: f64,
 }
-impl RailsOnWayS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsOnWayS {
-            l: crate::scene_scenarios::LessonData::zeroed(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for RailsOnWayS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:394 orderRows(rows), src/game/rails.ts:394)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsOrderRowsRowsItem {
     pub id: String,
 }
-impl RailsOrderRowsRowsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsOrderRowsRowsItem {
-            id: String::new(),
-        }
-    }
-}
-impl Default for RailsOrderRowsRowsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:448 answer(S), src/game/rails.ts:448)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsAnswerS {
     pub l: crate::scene_scenarios::LessonData,
     pub i: f64,
 }
-impl RailsAnswerS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsAnswerS {
-            l: crate::scene_scenarios::LessonData::zeroed(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for RailsAnswerS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:476 prompt ->, src/game/rails.ts:476)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsPrompt {
     pub line: String,
     pub n: f64,
@@ -290,85 +141,29 @@ pub struct RailsPrompt {
     pub note: Option<String>,
     pub watch: Option<bool>,
 }
-impl RailsPrompt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsPrompt {
-            line: String::new(),
-            n: 0.0,
-            of: 0.0,
-            note: None,
-            watch: None,
-        }
-    }
-}
-impl Default for RailsPrompt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:519 lineMen ->, src/game/rails.ts:519)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RailsLineMenItem {
     pub pos: V3,
     pub bones: crate::rails::RailsLineMenItemBones,
 }
-impl RailsLineMenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsLineMenItem {
-            pos: [0.0; 3],
-            bones: crate::rails::RailsLineMenItemBones::zeroed(),
-        }
-    }
-}
-impl Default for RailsLineMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:519 RailsLineMenItem.bones, src/game/rails.ts:519)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RailsLineMenItemBones {
     pub head: Option<V3>,
 }
-impl RailsLineMenItemBones {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsLineMenItemBones {
-            head: None,
-        }
-    }
-}
-impl Default for RailsLineMenItemBones { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:537 waiting(S), src/game/rails.ts:537)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsWaitingS {
     pub l: crate::scene_scenarios::LessonData,
     pub i: f64,
 }
-impl RailsWaitingS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsWaitingS {
-            l: crate::scene_scenarios::LessonData::zeroed(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for RailsWaitingS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:544 holdWaiting(S), src/game/rails.ts:544)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RailsHoldWaitingS {
     pub l: crate::scene_scenarios::LessonData,
     pub i: f64,
 }
-impl RailsHoldWaitingS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsHoldWaitingS {
-            l: crate::scene_scenarios::LessonData::zeroed(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for RailsHoldWaitingS { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

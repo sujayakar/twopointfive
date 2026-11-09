@@ -1,4 +1,4 @@
-//! The types of `anim_skeleton`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `anim_skeleton`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -59,22 +59,11 @@ pub enum ColsTable {
     Turn,
 }
 
-/// (TypeScript: ColsOf, src/anim/skeleton.ts:99)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ColsOf {
     pub n: f64,
 }
-impl ColsOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ColsOf {
-            n: 0.0,
-        }
-    }
-}
-impl Default for ColsOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PoseSet, src/anim/skeleton.ts:160)
 #[derive(Clone, Debug, ToBytes)]
 pub struct PoseSet {
     pub list: Vec<crate::anim_skeleton::Pose>,
@@ -83,7 +72,7 @@ pub struct PoseSet {
     pub stray: f64,
 }
 impl PoseSet {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PoseSet {
             list: Vec::new(),
@@ -95,63 +84,27 @@ impl PoseSet {
 }
 impl Default for PoseSet { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: ClipSide, src/anim/skeleton.ts:236)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ClipSide {
     pub lines: Vec<u8>,
     /// what the clip store (rust/sim/src/clips.rs) knows this clip by: folded from the clip alone, so the same on every host. On no wire and in no file: it is worked out again where it is 0.
     pub word: u32,
     pub need: f64,
 }
-impl ClipSide {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ClipSide {
-            lines: Vec::new(),
-            word: 0,
-            need: 0.0,
-        }
-    }
-}
-impl Default for ClipSide { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TwistSpec, src/anim/skeleton.ts:394)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TwistSpec {
     pub node: f64,
     pub yaw: f64,
     pub pitch: f64,
 }
-impl TwistSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TwistSpec {
-            node: 0.0,
-            yaw: 0.0,
-            pitch: 0.0,
-        }
-    }
-}
-impl Default for TwistSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NodeOverride, src/anim/skeleton.ts:397)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NodeOverride {
     pub rot: Quat,
     pub pos: Option<V3>,
 }
-impl NodeOverride {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NodeOverride {
-            rot: [0.0; 4],
-            pos: None,
-        }
-    }
-}
-impl Default for NodeOverride { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PoseFK, src/anim/skeleton.ts:494)
 #[derive(Clone, Debug, ToBytes)]
 pub struct PoseFK {
     pub rot: Vec<Quat>,
@@ -159,7 +112,7 @@ pub struct PoseFK {
     pub rig: RigId,
 }
 impl PoseFK {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PoseFK {
             rot: Vec::new(),
@@ -170,100 +123,40 @@ impl PoseFK {
 }
 impl Default for PoseFK { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/anim/skeleton.ts:21 POSE_BENCH, src/anim/skeleton.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSkeletonModPOSEBENCH {
     pub rig: Option<RigId>,
     pub asked: f64,
     pub in_place: f64,
     pub owed: f64,
 }
-impl AnimSkeletonModPOSEBENCH {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimSkeletonModPOSEBENCH {
-            rig: None,
-            asked: 0.0,
-            in_place: 0.0,
-            owed: 0.0,
-        }
-    }
-}
-impl Default for AnimSkeletonModPOSEBENCH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/anim/skeleton.ts:33 LAYERS, src/anim/skeleton.ts:33)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AnimSkeletonModLAYERS {
     pub ran: f64,
     pub roles: Option<RigId>,
     pub names: Option<crate::anim_skeleton::AnimSkeletonModLAYERSNames>,
     pub lists: Vec<Vec<i32>>,
 }
-impl AnimSkeletonModLAYERS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimSkeletonModLAYERS {
-            ran: 0.0,
-            roles: None,
-            names: None,
-            lists: Vec::new(),
-        }
-    }
-}
-impl Default for AnimSkeletonModLAYERS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/anim/skeleton.ts:33 AnimSkeletonModLAYERS.names, src/anim/skeleton.ts:33)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AnimSkeletonModLAYERSNames {
     pub roles: Vec<String>,
     pub lists: Vec<String>,
     pub nums: Vec<String>,
 }
-impl AnimSkeletonModLAYERSNames {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimSkeletonModLAYERSNames {
-            roles: Vec::new(),
-            lists: Vec::new(),
-            nums: Vec::new(),
-        }
-    }
-}
-impl Default for AnimSkeletonModLAYERSNames { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LayerCols, src/anim/skeleton.ts:95)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LayerCols {
     pub n: f64,
 }
-impl LayerCols {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LayerCols {
-            n: 0.0,
-        }
-    }
-}
-impl Default for LayerCols { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/anim/skeleton.ts:480 buildMask(entries), src/anim/skeleton.ts:480)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BuildMaskEntriesItem {
     pub name: String,
     pub w: f64,
     pub subtree: bool,
 }
-impl BuildMaskEntriesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BuildMaskEntriesItem {
-            name: String::new(),
-            w: 0.0,
-            subtree: false,
-        }
-    }
-}
-impl Default for BuildMaskEntriesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

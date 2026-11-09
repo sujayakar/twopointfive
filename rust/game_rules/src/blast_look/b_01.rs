@@ -16,7 +16,7 @@ fn charge_look() -> CHARGELOOK {
         lamp: 0.04, blink_every: 1.1, blink_on: 0.35, lamp_on: [70.0, 5.0, 2.5], lamp_off: [0.008, 0.0008, 0.0005],
         lamp_spill: 0.0025, led_spill: 0.02,
         tape: 0.07, wire_tape: 0.04,
-        wire: 0.018, wire_px: 1.4, wire_max: 0.05, run: [0.4, 0.2, 0.6], short: 0.36, wire_albedo: [0.85, 0.36, 0.05],
+        wire: 0.018, wire_px: 1.4, run: [0.4, 0.2, 0.6], short: 0.36, wire_albedo: [0.85, 0.36, 0.05],
         reel: [0.05, 0.035, 0.08], reel_albedo: [0.1, 0.11, 0.08],
         led: 0.013, led_on: [7.0, 3.6, 0.4],
     }
@@ -116,6 +116,11 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), emissive: Some(emissive), flags: Some(flags), ..Default::default() });
         out.push(b.into());
     }
+    /// a piece of the firing line: never thinner than is seen
+    fn wire(g: &mut Game, out: &mut Vec<AnyBoxId>, k: &CHARGELOOK, yaw: f64, flags: f64, c: V3, h: V3, emissive: V3) {
+        bx(g, out, yaw, flags, c, h, k.wire_albedo, emissive);
+        crate::thinline::thin_note(g, out[out.len() - 1], k.wire / 2.0, k.wire_px / 2.0, emissive[0], emissive[1], emissive[2]);
+    }
     let spill = |albedo: V3, lamp: V3, kk: f64| -> V3 { [albedo[0] * lamp[0] * kk, albedo[1] * lamp[1] * kk, albedo[2] * lamp[2] * kk] };
     // the lamp on the slab's head: dark, and lit for blinkOn of every blinkEvery since it was set
     let lit = ((g.time - s.t0) % k.blink_every + k.blink_every) % k.blink_every < k.blink_on;
@@ -132,17 +137,17 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
     let c = wp(g, 0.0, 0.05, h + 0.075);
     bx(g, out, yaw, flags, c, [k.lamp, k.lamp, 0.012], [0.5, 0.06, 0.04], if lit { k.lamp_on } else { k.lamp_off });
     // the firing line: down the wall from the slab, out across the floor with one jog, to the reel and its lamp
-    let ww = m::min(k.wire_max, m::max(k.wire, k.wire_px * g.m_per_px)) / 2.0;
+    let ww = k.wire / 2.0;
     let drop = h - 0.11;
     let r0 = k.run[0] * s.run;
     let jog = k.run[1] * s.run;
     let r1 = k.run[2] * s.run;
     let a0 = 0.035;
     let amber = spill(k.wire_albedo, k.led_on, k.led_spill);
-    let c = wp(g, a0, 0.008, drop / 2.0); bx(g, out, yaw, flags, c, [ww, drop / 2.0, 0.008], k.wire_albedo, glow(k.wire_albedo, k.wire_tape, k.lamp_spill / 2.0));
-    let c = wp(g, a0, r0 / 2.0, 0.008); bx(g, out, yaw, flags, c, [ww, 0.008, r0 / 2.0], k.wire_albedo, line);
-    let c = wp(g, a0 + jog / 2.0, r0, 0.008); bx(g, out, yaw, flags, c, [jog / 2.0 + ww, 0.008, ww], k.wire_albedo, line);
-    let c = wp(g, a0 + jog, r0 + r1 / 2.0, 0.008); bx(g, out, yaw, flags, c, [ww, 0.008, r1 / 2.0], k.wire_albedo, v3::add(line, amber));
+    let c = wp(g, a0, 0.008, drop / 2.0); wire(g, out, &k, yaw, flags, c, [ww, drop / 2.0, 0.008], glow(k.wire_albedo, k.wire_tape, k.lamp_spill / 2.0));
+    let c = wp(g, a0, r0 / 2.0, 0.008); wire(g, out, &k, yaw, flags, c, [ww, 0.008, r0 / 2.0], line);
+    let c = wp(g, a0 + jog / 2.0, r0, 0.008); wire(g, out, &k, yaw, flags, c, [jog / 2.0 + ww, 0.008, ww], line);
+    let c = wp(g, a0 + jog, r0 + r1 / 2.0, 0.008); wire(g, out, &k, yaw, flags, c, [ww, 0.008, r1 / 2.0], v3::add(line, amber));
     let c = wp(g, a0 + jog, r0 + r1 + k.reel[2], k.reel[1]); bx(g, out, yaw, flags, c, k.reel, k.reel_albedo, spill(k.reel_albedo, k.led_on, k.led_spill));
     let c = wp(g, a0 + jog, r0 + r1 + k.reel[2], 2.0 * k.reel[1] + k.led); bx(g, out, yaw, flags, c, [k.led, k.led, k.led], [0.4, 0.3, 0.1], k.led_on);
 }

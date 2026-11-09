@@ -1,4 +1,4 @@
-//! The types of `render_particles`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_particles`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -13,10 +13,9 @@ pub enum EmitShape {
     RainDisc,
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub enum PKind {
-    Rain,
+    #[default] Rain,
     Dust,
     Casing,
     Sheet,
@@ -38,8 +37,7 @@ impl PKind {
     }
 }
 
-/// (TypeScript: RainLook, src/render/particles.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainLook {
     pub iso: f64,
     pub fwd_k: f64,
@@ -68,43 +66,8 @@ pub struct RainLook {
     pub band_off_x: f64,
     pub band_off_z: f64,
 }
-impl RainLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainLook {
-            iso: 0.0,
-            fwd_k: 0.0,
-            fwd_g: 0.0,
-            glint_k: 0.0,
-            glint_rough: 0.0,
-            glint_cap: 0.0,
-            gain: 0.0,
-            tail_keep: 0.0,
-            refract: 0.0,
-            refract_reach_m: 0.0,
-            refract_taps: 0.0,
-            refract_clamp: 0.0,
-            refract_depth: 0.0,
-            refract_paint: 0.0,
-            len_jit: 0.0,
-            bright_jit: 0.0,
-            min_px: 0.0,
-            max_px: 0.0,
-            boost_cap: 0.0,
-            near_fade_m: 0.0,
-            bead_amp: 0.0,
-            wind_k: 0.0,
-            sheet_amp: 0.0,
-            sheet_len: 0.0,
-            band_off_x: 0.0,
-            band_off_z: 0.0,
-        }
-    }
-}
-impl Default for RainLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KindParams, src/render/particles.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KindParams {
     pub gravity: f64,
     pub drag: f64,
@@ -115,25 +78,8 @@ pub struct KindParams {
     pub shutter_or_growth: f64,
     pub bright_or_opacity: f64,
 }
-impl KindParams {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KindParams {
-            gravity: 0.0,
-            drag: 0.0,
-            restitution: 0.0,
-            keep: 0.0,
-            sleep_v: 0.0,
-            hold_or_fade: 0.0,
-            shutter_or_growth: 0.0,
-            bright_or_opacity: 0.0,
-        }
-    }
-}
-impl Default for KindParams { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EmitOpts, src/render/particles.ts:104)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct EmitOpts {
     pub shape: Option<crate::render_particles::EmitShape>,
     pub speed: f64,
@@ -157,38 +103,8 @@ pub struct EmitOpts {
     pub steam: Option<f64>,
     pub ember: Option<f64>,
 }
-impl EmitOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EmitOpts {
-            shape: None,
-            speed: 0.0,
-            spread: None,
-            life: 0.0,
-            size: 0.0,
-            speed_jit: None,
-            life_jit: None,
-            size_jit: None,
-            lift: None,
-            radius: None,
-            pos_jit: None,
-            vadd: None,
-            owner: None,
-            color: None,
-            top: None,
-            aspect: None,
-            tumble: None,
-            nrm_jit: None,
-            seed: None,
-            steam: None,
-            ember: None,
-        }
-    }
-}
-impl Default for EmitOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EmitRec, src/render/particles.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct EmitRec {
     pub kind: crate::render_particles::PKind,
     pub pos: V3,
@@ -199,25 +115,8 @@ pub struct EmitRec {
     pub ours: bool,
     pub waited: f64,
 }
-impl EmitRec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EmitRec {
-            kind: crate::render_particles::PKind::Rain,
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            count: 0.0,
-            o: crate::render_particles::EmitOpts::zeroed(),
-            seed: 0.0,
-            ours: false,
-            waited: 0.0,
-        }
-    }
-}
-impl Default for EmitRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ImpulseOpts, src/render/particles.ts:115)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ImpulseOpts {
     pub up: Option<f64>,
     pub bias: Option<V3>,
@@ -226,23 +125,8 @@ pub struct ImpulseOpts {
     pub eye: Option<V3>,
     pub seed: Option<f64>,
 }
-impl ImpulseOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ImpulseOpts {
-            up: None,
-            bias: None,
-            kinds: None,
-            occlude: None,
-            eye: None,
-            seed: None,
-        }
-    }
-}
-impl Default for ImpulseOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ImpRec, src/render/particles.ts:117)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ImpRec {
     pub pos: V3,
     pub radius: f64,
@@ -254,26 +138,8 @@ pub struct ImpRec {
     pub flags: f64,
     pub seed: f64,
 }
-impl ImpRec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ImpRec {
-            pos: [0.0; 3],
-            radius: 0.0,
-            strength: 0.0,
-            up: 0.0,
-            bias: [0.0; 3],
-            eye: [0.0; 3],
-            kinds: 0.0,
-            flags: 0.0,
-            seed: 0.0,
-        }
-    }
-}
-impl Default for ImpRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ParticleStats, src/render/particles.ts:133)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ParticleStats {
     pub alive: f64,
     pub asleep: f64,
@@ -297,38 +163,8 @@ pub struct ParticleStats {
     pub imp_idle: f64,
     pub imp_refused: f64,
 }
-impl ParticleStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticleStats {
-            alive: 0.0,
-            asleep: 0.0,
-            bounces: 0.0,
-            killed_inside: 0.0,
-            kicked: 0.0,
-            wind_woken: 0.0,
-            live: [0.0; 2],
-            born: 0.0,
-            records: 0.0,
-            impulses: 0.0,
-            winds: 0.0,
-            emitted: 0.0,
-            per_sec: 0.0,
-            dropped_recs: 0.0,
-            dropped_births: 0.0,
-            imp_queued: 0.0,
-            imp_merged: 0.0,
-            imp_dropped: 0.0,
-            imp_frames: 0.0,
-            imp_idle: 0.0,
-            imp_refused: 0.0,
-        }
-    }
-}
-impl Default for ParticleStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RainStats, src/render/particles.ts:145)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainStats {
     pub live: f64,
     pub born: f64,
@@ -337,22 +173,7 @@ pub struct RainStats {
     pub dropped_births: f64,
     pub emitted: f64,
 }
-impl RainStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStats {
-            live: 0.0,
-            born: 0.0,
-            records: 0.0,
-            dropped_recs: 0.0,
-            dropped_births: 0.0,
-            emitted: 0.0,
-        }
-    }
-}
-impl Default for RainStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Particles, src/render/particles.ts:154)
 #[derive(Clone, Debug)]
 pub struct Particles {
     pub params: JsMap<crate::render_particles::PKind, crate::render_particles::KindParams>,
@@ -400,7 +221,7 @@ pub struct Particles {
     pub heat: Vec<crate::smoke_types::WindGpuSource>,
 }
 impl Particles {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Particles {
             params: { let mut t = JsMap::new(); t.set(crate::render_particles::PKind::Spark, crate::render_particles::KindParams { gravity: 16.0, drag: 1.6, restitution: 0.25, keep: 0.7, sleep_v: 0.0, hold_or_fade: 0.15, shutter_or_growth: 0.017, bright_or_opacity: 2.6 }); t.set(crate::render_particles::PKind::Debris, crate::render_particles::KindParams { gravity: 9.8, drag: 0.9, restitution: 0.3, keep: 0.55, sleep_v: 0.35, hold_or_fade: 3.0, shutter_or_growth: 0.008, bright_or_opacity: 1.0 }); t.set(crate::render_particles::PKind::Dust, crate::render_particles::KindParams { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0, sleep_v: 0.05, hold_or_fade: 1.3, shutter_or_growth: 0.6, bright_or_opacity: 0.3 }); t.set(crate::render_particles::PKind::Casing, crate::render_particles::KindParams { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleep_v: 0.4, hold_or_fade: 4.0, shutter_or_growth: 0.008, bright_or_opacity: 1.0 }); t.set(crate::render_particles::PKind::Sheet, crate::render_particles::KindParams { gravity: 9.8, drag: 0.5, restitution: 1.5, keep: 9.0, sleep_v: 0.28, hold_or_fade: 4.0, shutter_or_growth: 25.0, bright_or_opacity: 0.3 }); t.set(crate::render_particles::PKind::Rain, crate::render_particles::KindParams { gravity: 9.8, drag: 1.088888888888889, restitution: 6.0, keep: 0.06, sleep_v: 0.2, hold_or_fade: 0.09, shutter_or_growth: 0.03333333333333333, bright_or_opacity: 1.0 }); t.set(crate::render_particles::PKind::Shard, crate::render_particles::KindParams { gravity: 9.8, drag: 0.5, restitution: 0.4, keep: 0.78, sleep_v: 0.3, hold_or_fade: 5.0, shutter_or_growth: 0.07, bright_or_opacity: 0.1 }); t },
@@ -425,7 +246,7 @@ impl Particles {
             rain_fifo: Vec::new(),
             rain_win: [16384.0, 16384.0, 0.0, 0.0],
             rain_stats: crate::render_particles::RainStats { live: 0.0, born: 0.0, records: 0.0, dropped_recs: 0.0, dropped_births: 0.0, emitted: 0.0 },
-            rain_look: crate::render_particles::RainLook::zeroed(),
+            rain_look: crate::render_particles::RainLook::default(),
             rain_scene_copy: crate::render_particles::ParticlesRainSceneCopy::None,
             scene_dummy: crate::Opaque,
             scene_dummy_view: crate::Opaque,
@@ -451,41 +272,18 @@ impl Particles {
 }
 impl Default for Particles { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/render/particles.ts:193 Particles.fifo, src/render/particles.ts:193)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ParticlesFifoItemItem {
     pub expire: f64,
     pub end: f64,
 }
-impl ParticlesFifoItemItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticlesFifoItemItem {
-            expire: 0.0,
-            end: 0.0,
-        }
-    }
-}
-impl Default for ParticlesFifoItemItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/particles.ts:195 Particles.rainFifo, src/render/particles.ts:195)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ParticlesRainFifoItem {
     pub expire: f64,
     pub end: f64,
 }
-impl ParticlesRainFifoItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticlesRainFifoItem {
-            expire: 0.0,
-            end: 0.0,
-        }
-    }
-}
-impl Default for ParticlesRainFifoItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ParticlesRainSceneCopy {
     None,
@@ -502,25 +300,13 @@ impl ParticlesRainSceneCopy {
     }
 }
 
-/// (TypeScript: inline at src/render/particles.ts:47 RAIN_RING, src/render/particles.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RAINRING {
     pub start: f64,
     pub size: f64,
 }
-impl RAINRING {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RAINRING {
-            start: 0.0,
-            size: 0.0,
-        }
-    }
-}
-impl Default for RAINRING { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/particles.ts:74 RAIN_LOOK_DEFAULTS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RAINLOOKDEFAULTS {
     pub iso: f64,
     pub fwd_k: f64,
@@ -549,40 +335,6 @@ pub struct RAINLOOKDEFAULTS {
     pub band_off_x: f64,
     pub band_off_z: f64,
 }
-impl RAINLOOKDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RAINLOOKDEFAULTS {
-            iso: 0.0,
-            fwd_k: 0.0,
-            fwd_g: 0.0,
-            glint_k: 0.0,
-            glint_rough: 0.0,
-            glint_cap: 0.0,
-            gain: 0.0,
-            tail_keep: 0.0,
-            refract: 0.0,
-            refract_reach_m: 0.0,
-            refract_taps: 0.0,
-            refract_clamp: 0.0,
-            refract_depth: 0.0,
-            refract_paint: 0.0,
-            len_jit: 0.0,
-            bright_jit: 0.0,
-            min_px: 0.0,
-            max_px: 0.0,
-            boost_cap: 0.0,
-            near_fade_m: 0.0,
-            bead_amp: 0.0,
-            wind_k: 0.0,
-            sheet_amp: 0.0,
-            sheet_len: 0.0,
-            band_off_x: 0.0,
-            band_off_z: 0.0,
-        }
-    }
-}
-impl Default for RAINLOOKDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
 /// (src/render/particles.ts:29 particlesSrc: a table nothing writes)
 pub fn particles_src() -> String { todo!() }

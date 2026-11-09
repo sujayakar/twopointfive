@@ -1,10 +1,9 @@
-//! The types of `scene_box_mirror`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_box_mirror`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PaneSite, src/scene/boxMirror.ts:72)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneSite {
     pub u: f64,
     pub v: f64,
@@ -15,25 +14,8 @@ pub struct PaneSite {
     pub rz: f64,
     pub merge: f64,
 }
-impl PaneSite {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneSite {
-            u: 0.0,
-            v: 0.0,
-            rot: 0.0,
-            n: 0.0,
-            seed: 0.0,
-            rho: Vec::new(),
-            rz: 0.0,
-            merge: 0.0,
-        }
-    }
-}
-impl Default for PaneSite { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneDice, src/scene/boxMirror.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneDice {
     pub u: f64,
     pub v: f64,
@@ -46,44 +28,14 @@ pub struct PaneDice {
     pub out: Vec<u8>,
     pub clumps: Vec<crate::scene_box_mirror::PaneDiceClumpsItem>,
 }
-impl PaneDice {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneDice {
-            u: 0.0,
-            v: 0.0,
-            cols: 0.0,
-            rows: 0.0,
-            seed: 0.0,
-            hu: 0.0,
-            hv: 0.0,
-            next: 0.0,
-            out: Vec::new(),
-            clumps: Vec::new(),
-        }
-    }
-}
-impl Default for PaneDice { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:74 PaneDice.clumps, src/scene/boxMirror.ts:74)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneDiceClumpsItem {
     pub k: f64,
     pub key: f64,
 }
-impl PaneDiceClumpsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneDiceClumpsItem {
-            k: 0.0,
-            key: 0.0,
-        }
-    }
-}
-impl Default for PaneDiceClumpsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneRow, src/scene/boxMirror.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneRow {
     pub bi: f64,
     pub gone: bool,
@@ -93,76 +45,26 @@ pub struct PaneRow {
     pub pending: Vec<crate::scene_box_mirror::PaneRowPendingItem>,
     pub dice: Option<crate::scene_box_mirror::PaneDice>,
 }
-impl PaneRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneRow {
-            bi: 0.0,
-            gone: false,
-            run: false,
-            sites: Vec::new(),
-            open: Vec::new(),
-            pending: Vec::new(),
-            dice: None,
-        }
-    }
-}
-impl Default for PaneRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:75 PaneRow.pending, src/scene/boxMirror.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneRowPendingItem {
     pub fid: f64,
 }
-impl PaneRowPendingItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneRowPendingItem {
-            fid: 0.0,
-        }
-    }
-}
-impl Default for PaneRowPendingItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneView, src/scene/boxMirror.ts:85)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneView {
     pub kind: f64,
     pub bi: Vec<f64>,
     pub at: Vec<f64>,
 }
-impl PaneView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneView {
-            kind: 0.0,
-            bi: Vec::new(),
-            at: Vec::new(),
-        }
-    }
-}
-impl Default for PaneView { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneSource, src/scene/boxMirror.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneSource {
     pub view: Option<crate::scene_box_mirror::PaneView>,
     pub home: Option<crate::Opaque>,
     pub sheets: Option<Vec<f64>>,
 }
-impl PaneSource {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneSource {
-            view: None,
-            home: None,
-            sheets: None,
-        }
-    }
-}
-impl Default for PaneSource { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BoxMirror, src/scene/boxMirror.ts:143)
 #[derive(Clone, Debug)]
 pub struct BoxMirror {
     pub x: crate::sim_sim::SimExports,
@@ -220,10 +122,10 @@ pub struct BoxMirror {
     pub stood: u32,
 }
 impl BoxMirror {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         BoxMirror {
-            x: crate::sim_sim::SimExports::zeroed(),
+            x: crate::sim_sim::SimExports::default(),
             slot: -1.0,
             live: false,
             lines: false,
@@ -280,8 +182,7 @@ impl BoxMirror {
 }
 impl Default for BoxMirror { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:188 BoxMirror.gridOf, src/scene/boxMirror.ts:188)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxMirrorGridOf {
     pub cells: Vec<Vec<f64>>,
     pub tilted_at: Vec<f64>,
@@ -289,22 +190,8 @@ pub struct BoxMirrorGridOf {
     pub h: f64,
     pub cs: f64,
 }
-impl BoxMirrorGridOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxMirrorGridOf {
-            cells: Vec::new(),
-            tilted_at: Vec::new(),
-            w: 0.0,
-            h: 0.0,
-            cs: 0.0,
-        }
-    }
-}
-impl Default for BoxMirrorGridOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:190 BoxMirror.caps, src/scene/boxMirror.ts:190)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxMirrorCaps {
     pub boxes: f64,
     pub leaves: f64,
@@ -317,106 +204,35 @@ pub struct BoxMirrorCaps {
     pub glass: f64,
     pub view: f64,
 }
-impl BoxMirrorCaps {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxMirrorCaps {
-            boxes: 0.0,
-            leaves: 0.0,
-            cuts: 0.0,
-            panes: 0.0,
-            cells: 0.0,
-            items: 0.0,
-            tilted: 0.0,
-            things: 0.0,
-            glass: 0.0,
-            view: 0.0,
-        }
-    }
-}
-impl Default for BoxMirrorCaps { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:55 CLOCK, src/scene/boxMirror.ts:55)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneBoxMirrorModCLOCK {
     pub n: f64,
 }
-impl SceneBoxMirrorModCLOCK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneBoxMirrorModCLOCK {
-            n: 0.0,
-        }
-    }
-}
-impl Default for SceneBoxMirrorModCLOCK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:57 COPIES, src/scene/boxMirror.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneBoxMirrorModCOPIES {
     pub n: f64,
 }
-impl SceneBoxMirrorModCOPIES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneBoxMirrorModCOPIES {
-            n: 0.0,
-        }
-    }
-}
-impl Default for SceneBoxMirrorModCOPIES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:59 LEAVES, src/scene/boxMirror.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneBoxMirrorModLEAVES {
     pub n: f64,
 }
-impl SceneBoxMirrorModLEAVES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneBoxMirrorModLEAVES {
-            n: 0.0,
-        }
-    }
-}
-impl Default for SceneBoxMirrorModLEAVES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:65 THINGS, src/scene/boxMirror.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneBoxMirrorModTHINGS {
     pub n: f64,
 }
-impl SceneBoxMirrorModTHINGS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneBoxMirrorModTHINGS {
-            n: 0.0,
-        }
-    }
-}
-impl Default for SceneBoxMirrorModTHINGS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:108 NAV, src/scene/boxMirror.ts:108)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NAV {
     pub no_way: f64,
     pub ask_host: f64,
     pub need: f64,
 }
-impl NAV {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NAV {
-            no_way: 0.0,
-            ask_host: 0.0,
-            need: 0.0,
-        }
-    }
-}
-impl Default for NAV { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:109 FACE, src/scene/boxMirror.ts:109)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FACE {
     pub lamp: f64,
     pub max_lamps: f64,
@@ -436,31 +252,6 @@ pub struct FACE {
     pub a_visible: f64,
     pub a_in_cone: f64,
 }
-impl FACE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FACE {
-            lamp: 0.0,
-            max_lamps: 0.0,
-            blob: 0.0,
-            max_blobs: 0.0,
-            graze_a: 0.0,
-            graze_b: 0.0,
-            over: 0.0,
-            far: 0.0,
-            walled: 0.0,
-            sealed: 0.0,
-            routed: 0.0,
-            routed_door: 0.0,
-            q_lens: 0.0,
-            q_unseen: 0.0,
-            q_smoked: 0.0,
-            a_visible: 0.0,
-            a_in_cone: 0.0,
-        }
-    }
-}
-impl Default for FACE { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

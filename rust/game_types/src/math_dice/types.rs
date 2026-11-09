@@ -1,41 +1,19 @@
-//! The types of `math_dice`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `math_dice`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Die, src/math/dice.ts:11)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Die {
     pub dice: f64,
 }
-impl Die {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Die {
-            dice: 0.0,
-        }
-    }
-}
-impl Default for Die { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DiceHome, src/math/dice.ts:38)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiceHome {
     pub s: f64,
     pub n: f64,
 }
-impl DiceHome {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DiceHome {
-            s: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for DiceHome { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SimDice, src/math/dice.ts:39)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SimDice {
     pub home: Option<crate::math_dice::DiceHome>,
@@ -44,7 +22,7 @@ pub struct SimDice {
     pub seed: f64,
 }
 impl SimDice {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         SimDice {
             home: None,

@@ -1,9 +1,8 @@
-//! The types of `pairup`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `pairup`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PairUpRule {
     Stay,
@@ -26,8 +25,7 @@ impl PairUpRule {
     }
 }
 
-/// (TypeScript: inline at src/game/pairup.ts:62 PAIRUP_DEFAULTS, src/game/pairup.ts:62)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PAIRUPDEFAULTS {
     pub on: bool,
     pub one_eye: bool,
@@ -37,36 +35,11 @@ pub struct PAIRUPDEFAULTS {
     pub word: bool,
     pub hands: bool,
 }
-impl PAIRUPDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PAIRUPDEFAULTS {
-            on: false,
-            one_eye: false,
-            hunted: false,
-            rejoin: false,
-            stay: false,
-            word: false,
-            hands: false,
-        }
-    }
-}
-impl Default for PAIRUPDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairup.ts:72 PAIR_HELD, src/game/pairup.ts:72)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairupModPAIRHELD {
     pub row: Option<bool>,
 }
-impl PairupModPAIRHELD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairupModPAIRHELD {
-            row: None,
-        }
-    }
-}
-impl Default for PairupModPAIRHELD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

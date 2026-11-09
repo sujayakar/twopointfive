@@ -1,12 +1,11 @@
-//! The types of `silent`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `silent`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum By {
-    Start,
+    #[default] Start,
     Order,
     Tool,
     Api,
@@ -22,8 +21,7 @@ impl By {
     }
 }
 
-/// (TypeScript: State, src/game/silent.ts:109)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub cast: Vec<GuardId>,
     pub silent: bool,
@@ -32,44 +30,17 @@ pub struct State {
     pub was: Option<bool>,
     pub booted: Option<JsSet<DoorId>>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            cast: Vec::new(),
-            silent: false,
-            since: 0.0,
-            hot: false,
-            was: None,
-            booted: None,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/silent.ts:112 SILENT_LOG, src/game/silent.ts:112)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSILENTLOGItem {
     pub t: f64,
     pub to: crate::silent::SilentModSILENTLOGItemTo,
     pub by: crate::silent::By,
 }
-impl SilentModSILENTLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SilentModSILENTLOGItem {
-            t: 0.0,
-            to: crate::silent::SilentModSILENTLOGItemTo::Silent,
-            by: crate::silent::By::Start,
-        }
-    }
-}
-impl Default for SilentModSILENTLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SilentModSILENTLOGItemTo {
-    Silent,
+    #[default] Silent,
     Loud,
 }
 impl SilentModSILENTLOGItemTo {
@@ -81,24 +52,12 @@ impl SilentModSILENTLOGItemTo {
     }
 }
 
-/// (TypeScript: inline at src/game/silent.ts:233 seats, src/game/silent.ts:233)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSeatsValue {
     pub on: bool,
     pub go_digit: bool,
 }
-impl SilentModSeatsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SilentModSeatsValue {
-            on: false,
-            go_digit: false,
-        }
-    }
-}
-impl Default for SilentModSeatsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SilentBoot {
     First,

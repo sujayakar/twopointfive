@@ -878,12 +878,12 @@ mod tests {
     use super::*;
 
     fn room(id: &str, garrison: f64, marks: usize) -> crate::scene_scenarios::StructureRoom {
-        let mut r = crate::scene_scenarios::StructureRoom::zeroed();
+        let mut r = crate::scene_scenarios::StructureRoom::default();
         r.id = String::from(id);
         r.name = String::from(id);
         r.garrison = garrison;
         for i in 0..marks {
-            let mut mk = crate::scene_scenarios::StructureMark::zeroed();
+            let mut mk = crate::scene_scenarios::StructureMark::default();
             mk.pos = [i as f64 + 0.5, 0.0, i as f64 * 2.0 + 0.25];
             mk.aim_at = [i as f64, 1.1, -(i as f64)];
             mk.watch = format!("d{}", i);

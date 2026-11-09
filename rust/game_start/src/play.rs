@@ -358,7 +358,7 @@ impl Play {
     /// A ROUND FROM A MAN by combat's own call (`fire_weapon`, steady and with no spread) at a point of the floor, chest high.
     pub fn man_fires_at(&mut self, gd: GuardId, at: [f64; 2]) {
         let c = self.g.gd[gd].ch;
-        let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::zeroed() };
+        let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
         game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], false, Some(&o));
     }
     /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).

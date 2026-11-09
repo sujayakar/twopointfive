@@ -158,7 +158,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
-    if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::zeroed(); }
+    if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
     game::io::set_slot(&mut g, o.slot);   // (the slot is held twice: the game's own word and the box mirror's, which the world's lookups read)

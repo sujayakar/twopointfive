@@ -1,47 +1,22 @@
-//! The types of `quiet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `quiet`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: QuietSnap, src/game/quiet.ts:49)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct QuietSnap {
     pub deal: crate::quiet::QuietDeal,
     pub pin: Option<f64>,
     pub squad: f64,
 }
-impl QuietSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietSnap {
-            deal: crate::quiet::QuietDeal::zeroed(),
-            pin: None,
-            squad: 0.0,
-        }
-    }
-}
-impl Default for QuietSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietDeal, src/game/quiet.ts:47)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuietDeal {
     pub start: f64,
     pub spot: f64,
     pub patrol: f64,
 }
-impl QuietDeal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietDeal {
-            start: 0.0,
-            spot: 0.0,
-            patrol: 0.0,
-        }
-    }
-}
-impl Default for QuietDeal { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietMission, src/game/quiet.ts:73)
 #[derive(Clone, Debug, ToBytes)]
 pub struct QuietMission {
     pub active: bool,
@@ -62,7 +37,7 @@ pub struct QuietMission {
     pub failure: Option<String>,
 }
 impl QuietMission {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         QuietMission {
             active: false,
@@ -86,25 +61,13 @@ impl QuietMission {
 }
 impl Default for QuietMission { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/quiet.ts:85 QuietMission.authored, src/game/quiet.ts:85)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthored {
     pub spawn: V3,
     pub mission: crate::quiet::QuietMissionAuthoredMission,
 }
-impl QuietMissionAuthored {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietMissionAuthored {
-            spawn: [0.0; 3],
-            mission: crate::quiet::QuietMissionAuthoredMission::zeroed(),
-        }
-    }
-}
-impl Default for QuietMissionAuthored { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quiet.ts:85 QuietMissionAuthored.mission, src/scene/level.ts:197)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthoredMission {
     pub server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom,
     pub entry_door: String,
@@ -114,64 +77,23 @@ pub struct QuietMissionAuthoredMission {
     pub exfil_z: f64,
     pub exfil_out: Option<[f64; 2]>,
 }
-impl QuietMissionAuthoredMission {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietMissionAuthoredMission {
-            server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom::zeroed(),
-            entry_door: String::new(),
-            rack: crate::quiet::QuietMissionAuthoredMissionRack::zeroed(),
-            exfil_door: String::new(),
-            exfil_x: 0.0,
-            exfil_z: 0.0,
-            exfil_out: None,
-        }
-    }
-}
-impl Default for QuietMissionAuthoredMission { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/level.ts:197 QuietMissionAuthoredMission.serverRoom, src/scene/level.ts:197)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthoredMissionServerRoom {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl QuietMissionAuthoredMissionServerRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietMissionAuthoredMissionServerRoom {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for QuietMissionAuthoredMissionServerRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/level.ts:197 QuietMissionAuthoredMission.rack, src/scene/level.ts:197)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthoredMissionRack {
     pub index: f64,
     pub front: V3,
     pub half_w: f64,
 }
-impl QuietMissionAuthoredMissionRack {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietMissionAuthoredMissionRack {
-            index: 0.0,
-            front: [0.0; 3],
-            half_w: 0.0,
-        }
-    }
-}
-impl Default for QuietMissionAuthoredMissionRack { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Held, src/game/quiet.ts:61)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Held {
     pub pairup: bool,
     pub pair: bool,
@@ -180,65 +102,24 @@ pub struct Held {
     pub silent: bool,
     pub silent_start: bool,
 }
-impl Held {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Held {
-            pairup: false,
-            pair: false,
-            sneak: false,
-            spotted: false,
-            silent: false,
-            silent_start: false,
-        }
-    }
-}
-impl Default for Held { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quiet.ts:287 holderStand(area), src/game/quiet.ts:287)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HolderStandArea {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl HolderStandArea {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HolderStandArea {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for HolderStandArea { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quiet.ts:287 holderStand ->, src/game/quiet.ts:287)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HolderStand {
     pub pos: Option<V3>,
     pub ok: bool,
     pub clear: bool,
     pub inside: bool,
 }
-impl HolderStand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HolderStand {
-            pos: None,
-            ok: false,
-            clear: false,
-            inside: false,
-        }
-    }
-}
-impl Default for HolderStand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quiet.ts:302 quietWords ->, src/game/quiet.ts:306)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct QuietWords {
     pub place: String,
     pub holder: String,
@@ -246,19 +127,6 @@ pub struct QuietWords {
     pub outs: String,
     pub bare: String,
 }
-impl QuietWords {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietWords {
-            place: String::new(),
-            holder: String::new(),
-            thing: String::new(),
-            outs: String::new(),
-            bare: String::new(),
-        }
-    }
-}
-impl Default for QuietWords { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

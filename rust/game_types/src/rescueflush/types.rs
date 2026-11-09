@@ -1,9 +1,8 @@
-//! The types of `rescueflush`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rescueflush`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RescueFlush, src/game/rescueflush.ts:62)
 #[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlush {
     pub fell_at: f64,
@@ -14,7 +13,7 @@ pub struct RescueFlush {
     pub barred: JsSet<GuardId>,
 }
 impl RescueFlush {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         RescueFlush {
             fell_at: f64::NAN,
@@ -28,31 +27,17 @@ impl RescueFlush {
 }
 impl Default for RescueFlush { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Sent, src/game/rescueflush.ts:59)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Sent {
     pub at: f64,
     pub n: f64,
     pub goal: crate::rescueflush::Goal,
     pub via: Vec<V3>,
 }
-impl Sent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sent {
-            at: 0.0,
-            n: 0.0,
-            goal: crate::rescueflush::Goal::Out,
-            via: Vec::new(),
-        }
-    }
-}
-impl Default for Sent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Goal {
-    Out,
+    #[default] Out,
     Side,
     Noise,
     Room,
@@ -68,8 +53,7 @@ impl Goal {
     }
 }
 
-/// (TypeScript: RescueFlushSnap, src/game/rescueflush.ts:60)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueFlushSnap {
     pub fell_at: f64,
     pub next_at: f64,
@@ -78,23 +62,8 @@ pub struct RescueFlushSnap {
     pub sent: Vec<crate::rescueflush::RescueFlushSnapSentItem>,
     pub barred: Vec<f64>,
 }
-impl RescueFlushSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlushSnap {
-            fell_at: 0.0,
-            next_at: 0.0,
-            gone_at: 0.0,
-            count: 0.0,
-            sent: Vec::new(),
-            barred: Vec::new(),
-        }
-    }
-}
-impl Default for RescueFlushSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflush.ts:60 RescueFlushSnap.sent, src/game/rescueflush.ts:60)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueFlushSnapSentItem {
     pub id: f64,
     pub at: f64,
@@ -102,16 +71,3 @@ pub struct RescueFlushSnapSentItem {
     pub goal: crate::rescueflush::Goal,
     pub via: Vec<Vec<f64>>,
 }
-impl RescueFlushSnapSentItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlushSnapSentItem {
-            id: 0.0,
-            at: 0.0,
-            n: 0.0,
-            goal: crate::rescueflush::Goal::Out,
-            via: Vec::new(),
-        }
-    }
-}
-impl Default for RescueFlushSnapSentItem { fn default() -> Self { Self::zeroed() } }

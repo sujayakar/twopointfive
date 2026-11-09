@@ -221,7 +221,7 @@ fn a_tracer_that_stops_in_something_solid_throws_its_ember() {
         assert!(want_sparks > 0.0, "the table asks for no ember");
         game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [1.0, 0.0, 0.0], 6.0, impact, [1.0, 0.6, 0.3], 0.0);
         let mut out = Vec::new();
-        for _ in 0..4 { game::tracers::tracers_update(&mut p.g, 0.1, &mut out, None); }
+        for _ in 0..4 { game::tracers::tracers_update(&mut p.g, 0.1, &mut out); }
         let mut d = Drawn::default();
         d.take(&p.g, want::events);
         let spark = game::render_particles::PKind::Spark as u32;

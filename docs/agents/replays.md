@@ -81,7 +81,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera (`attach`, called by `update`): showcases lock real keys and pin the real camera. Between ticks `orders.hostView` / `g.viewProj` point at the host's live objects again,
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
-  field, `mPerPx`, a blast's kick. 
+  field, a blast's kick. 
 - **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
   networked; when it went in nothing called it, and the 21 scripted play-throughs' digests on both stands were the ones from before it. ONE CALLER IN PLAY SINCE: a save
   kept in memory with a team on the floor, `savestate.ts` under `SAVETIMELINE`, `docs/agents/qa.md`). Beside the
@@ -588,29 +588,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own point, not to the man or lamp the reticle would snap to (`updateAim`'s snap writes the reticle; near a snap his predicted facing is a little off the
   game's); a shot fired inside the records does not raise his gun. THIN: `legsOwn` is a list kept by hand beside `updatePlayer`'s early returns (a beat
   added there and not to the list is walked through, and no check would say so). COST on the cloud box under load: forty six records 3 to 6 ms, eight
-  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). CHECK: `bun run tools/qa/seats-check.ts` on both stands
-  (`TPS_PROFILE=shipped` in front for the page's), 17 lines: one seat is plain, two men stand apart, each walks from his own record, each orders his own
-  pair onto his own door, the fog is the team's, a two-seat game rolls back to the bit, a look ahead of forty six records from a seat marked remote (a walk, a sprint, C and a crouch walk back, Shift in the crouch, a coast; the
-  mark changes a record only where the record check is on, the page's stand), and the last twenty six again from the middle of the sprint,
-  land where the whole game puts the man TO THE BIT on both stands (his place at every tick, his speed, aim, hips and stance: the line fails on any
-  difference at all) and leaves the game's word, the seat and the records as they were, the host's seat, one down plays on and both down ends it (and a look ahead answers the downed man
-  where he lies), two playings of the same records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and
-  shooting, with every world ask of `g.player` a throw), each played AGAIN with a look ahead of the last eight records for both seats before every tick and
-  the state's word the same every second (`twin`: the line the first cut would have failed), the tables, the address word, the kinds refused. (NOT MENDED, worked round in the check: `coverfire.ts` keeps where the process-wide `WALL_STATS` tally stood when a game began INSIDE the game's
-  state, so two games with the same records have different state words wherever their processes' tallies differ; the check zeroes the tally before each
-  fight. The mend is that module's: the report's base out of the hashed state.)
-  `SEATS_BREAK=1` (world code asks the first seat's again) fails it on both stands. MEASURED: one seat against the build before, by run digest, `PT_DIGEST=1
-  tools/qa/playthrough.ts --seeds 1,2` (42 runs a stand): 42 of 42 the same on both stands. The solo page opened and walked in the same browser as before.
-  `rollback-check.ts --static`, `knobs-check`, `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a civilian and a camera keep ONE player in
-  mind at a time (the nearer or the last seen: `facedMan`), so a guard's picture of "the player" is shared; the message log, the "you" kit card and the
-  recap are one; the ear ring, the IR meter and the fire focus follow `hostMan` (the shown seat's, the first on a server); pair orders and the solo modes
-  are the first seat's; `lesson.ts` and `doorforce.ts` still say `PLAYER_ID` (tutorials take one player); the replay tape keeps the first seat's record
-  only; a seat with no record this tick steps from a still copy of the host's (`Seat.handed`: a server hands every seat its own); `viewOfBody` is a search
-  of the guards a sight test in a game of two; a table that no swept mission asks is unclassified until one does (the check goes red then). ON A PAGE, once:
-  `?roomclear&squad4&seats=2&paused` in headless Chromium on the software adapter came ready with two seats and the mission live, a pair a seat; the keys
-  walked the first man while the second stood, and with `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point
-  went to him; no page error. NOBODY HAS PLAYED IT: there is no second set of keys and no second picture (a page shows and drives one seat, the first unless
-  `localSeat` is set by hand), nothing here was seen on a GPU, and no two people have sat at it.
+  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). CHECK, native: `rust/game_start/tests/coop.rs`, `players.rs` (`net.md`).
 - **A run's tape plays in the game again, and holds nothing of the picture's** (2026-11-08; `game/runtape.ts`, `tape/format.ts TAPE_VERSION` 2, `tapewalk.ts`).
   The game senses for itself (`rust.md`, ONE WAY OF SENSING), so the tape's record of what it read off the GPU (`sens`, `f32`, the wrapped `Sensors.read`, the walk's
   `read` and its count of reads the tape never made) is out, and the word that kept every road on the map viewer (`GAME_PAGE.playsTapes`, `tapeMapUrl`) with it: the
@@ -668,3 +646,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A replay of an older version says so** (2026-11-09; `src/tape/module.ts`). A kept run says the module it was played on (the module file's ETag, `host/face.ts`; the dev server gives one). Played on another,
   the same hands may go another way: the title's list greys it with the reason, and the bar says it from the first frame, then from when the run is no longer what happened. A run kept before it said so is
   older too. A replay that cannot be played at all (another hand, other characters, gone) is a plain card with its words and a way back (`refused.ts`): no stack, no fatal card, no report.
+  WHERE IT PARTS (`host/drawplay.ts`, `handtape.ts figuresPart`): a tape has, once a second, the state's hashes and FIGURES: who stands where, who is down, the rounds the player has fired. On the
+  module that played it any of them is the run's end. On another (and for a file, which says no module) the hashes are of another layout and say nothing: only the rolls of the die and the figures,
+  a man a hand's breadth (0.1 m) off his place at most. A tape from before it had figures is held to its die. MEASURED: a run of the module before this one, recorded with figures (compound and block, 77 s, two
+  pairs), is the run to its end with its hashes off from the first second; a mark costs 0.11 ms more a second of play, a tape 1 % more. `walk.ts` asks the play alone and says where the hashes part.

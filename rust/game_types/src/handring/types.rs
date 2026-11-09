@@ -1,28 +1,15 @@
-//! The types of `handring`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `handring`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/game/handring.ts:96 EMPTY_WHY, src/game/handring.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct EMPTYWHY {
     pub far: String,
     pub run: String,
     pub held: String,
     pub no: String,
 }
-impl EMPTYWHY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EMPTYWHY {
-            far: String::new(),
-            run: String::new(),
-            held: String::new(),
-            no: String::new(),
-        }
-    }
-}
-impl Default for EMPTYWHY { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/handring.ts:89 EMPTY_WORD)
 pub const EMPTY_WORD: &str = "nothing in reach";

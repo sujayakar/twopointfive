@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
-/// A new man's row: the literal of attention.ts mem (`Mem::zeroed()` has the wrong clocks).
+/// A new man's row: the literal of attention.ts mem (`Mem::default()` has the wrong clocks).
 fn fresh() -> Mem {
     Mem { hold: None, cand: None, lent: None, takes: Vec::new(), tick: -1e9, told_at: -1e9, line: -1, heard_t: -1e9, lent_off: -1e9, owed: -1e9, series: false }
 }
@@ -505,14 +505,14 @@ mod tests {
     #[test]
     fn the_angle_at_his_eye() {
         let (mut g, gd) = game();
-        let h = Hold { at: [0.0, 0.0, 10.0], ..Hold::zeroed() };
+        let h = Hold { at: [0.0, 0.0, 10.0], ..Hold::default() };
         assert_eq!(off_cos(&mut g, gd, h, [0.0, 0.0, 3.0]), 1.0);
         assert_eq!(off_cos(&mut g, gd, h, [3.0, 0.0, 0.0]), 0.0);
         assert_eq!(off_cos(&mut g, gd, h, [0.0, 0.0, 1e-4]), 1.0);   // a man on his own eye
         assert!(outside(&mut g, gd, h, [3.0, 0.0, 0.0]));
         assert!(!outside(&mut g, gd, h, [0.0, 0.0, 3.0]));
         // the thing under his feet: the way he faced it, not the line to it
-        let under = Hold { at: [0.0, 0.0, 0.5], yaw: Some(0.0), ..Hold::zeroed() };
+        let under = Hold { at: [0.0, 0.0, 0.5], yaw: Some(0.0), ..Hold::default() };
         assert_eq!(off_cos(&mut g, gd, under, [0.0, 0.0, -2.0]), -1.0);
     }
 
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn a_small_thing_is_flat_on_the_floor_and_a_step_or_a_loud_one_is_none() {
         let (mut g, gd) = game();
-        let mut e = crate::game::GameEvent::zeroed();
+        let mut e = crate::game::GameEvent::default();
         e.kind = crate::director::EventKind::LightOut;
         attention_heard(&mut g, gd, e.clone(), [1.0, 2.0, 3.0]);
         let c = g.m.attention.mem_of.get(gd).unwrap().cand.unwrap();
@@ -648,7 +648,7 @@ mod tests {
         g.gd[gd].callsign = String::from("Novak");
         g.guards.push(gd);
         g.m.attention.mem_of.get_or_insert_with(gd, fresh).tick = 100.0;
-        g.m.attention.mem_of.get_mut(gd).unwrap().hold = Some(Hold { kind: DrawKind::Noise, mode: HoldMode::Go, until: 103.2, nth: 2, ..Hold::zeroed() });
+        g.m.attention.mem_of.get_mut(gd).unwrap().hold = Some(Hold { kind: DrawKind::Noise, mode: HoldMode::Go, until: 103.2, nth: 2, ..Hold::default() });
         g.stats.attention.taken = 4;
         assert_eq!(attention_summary(&mut g), "attention ▸ Novak on a noise (go, 3.2 s left, taking 2) · 4 taken, 0 looks, 0 let go, 0 broken, 0 spent");
         assert_eq!(attention_lines().len(), 12);

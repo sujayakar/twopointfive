@@ -355,10 +355,7 @@ preferences, etc." No accounts; nothing multiplayer.
   such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
   reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
   `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where a kept visit's write answered false
-  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/tape/shelf.ts`, by its owner's word): the catches that come
-  after a good open are real failures and report as warnings, each handing on what it handed on before, `replay.shelf.put` (null),
-  `replay.shelf.notes` (false), `replay.shelf.list` (an empty list, both lists) and `replay.shelf.get` (null); a browser with no
-  IndexedDB returns before them and stays silent, as do the open's own catch, the close and the last tidy-up. STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
+  (neither call ever rejects). STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
   five lines headed "page reports", both stands; `CLOUD_BREAK=1` turns the first red (a browser that has not read the notice sends).
   On the real viewer page (a stand-in backend, a scratch script): no request with nothing to say, then one visit record marked
   `replay` with the build and four reports (a console.warn, a console.error, an error and a rejection nothing caught), and nothing at
@@ -480,6 +477,8 @@ preferences, etc." No accounts; nothing multiplayer.
   NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
   (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
   a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
+  (2026-11-09: THE F7 SHELF IS OUT, `tape/shelf.ts` with it: nothing had written it since the new page. Kept visits' notes are what goes up; lines of kind `f7` already on a
+  backend are still read back. Its database in a browser is left as it stands.)
   `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game: the replay viewer calls it after each save of a note
   (`replay/viewer.ts` `flush`), so a note typed, changed or emptied there is on the backend within the second, with no game page
   open. Rounds run one at a time with at most one more waiting (two saves a moment apart must not both send the line). Held on the
@@ -488,7 +487,7 @@ preferences, etc." No accounts; nothing multiplayer.
   appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
   a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
   read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
-  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `tape/shelf.ts`'s own).
+  the real service.
 - **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
   `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
   `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as

@@ -372,7 +372,7 @@ pub fn boots(g: &mut crate::game::Game, gd: GuardId, last: f64) -> f64 {
     let ev = crate::game::GameEvent {
         kind: crate::director::EventKind::Step, pos: g.ch[c].pos, time: g.time, loud: false,
         level: Some(if speed > 2.0 { 0.8 } else { 0.4 }), who: Some(g.ch[c].id), serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     };
     g.events.push(ev);
     g.time

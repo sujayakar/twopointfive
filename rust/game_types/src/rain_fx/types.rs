@@ -1,10 +1,9 @@
-//! The types of `rain_fx`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rain_fx`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RainState, src/game/rainFx.ts:116)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RainState {
     pub seed: f64,
     pub birth_acc: f64,
@@ -27,56 +26,15 @@ pub struct RainState {
     pub shear_init: bool,
     pub aside: crate::scene_collision::AsideOwn,
 }
-impl RainState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainState {
-            seed: 0.0,
-            birth_acc: 0.0,
-            drip_acc: 0.0,
-            was_active: false,
-            edges: None,
-            edge_boxes: 0.0,
-            job: None,
-            kind: None,
-            stats: crate::rain_fx::RainStatsCpu::zeroed(),
-            serial: 0.0,
-            pop: 0.0,
-            pop_log: Vec::new(),
-            clock: 0.0,
-            last_c: None,
-            drip_life_max: 0.0,
-            shear: [0.0; 2],
-            band_off: [0.0; 2],
-            air: [0.0; 2],
-            shear_init: false,
-            aside: crate::scene_collision::AsideOwn::zeroed(),
-        }
-    }
-}
-impl Default for RainState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DripPoint, src/game/rainFx.ts:110)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DripPoint {
     pub pos: V3,
     pub fall: f64,
     pub box_: f64,
 }
-impl DripPoint {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DripPoint {
-            pos: [0.0; 3],
-            fall: 0.0,
-            box_: 0.0,
-        }
-    }
-}
-impl Default for DripPoint { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DripJob, src/game/rainFx.ts:114)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DripJob {
     pub boxes: f64,
     pub serial: f64,
@@ -88,26 +46,8 @@ pub struct DripJob {
     pub paid: bool,
     pub out: Vec<crate::rain_fx::DripPoint>,
 }
-impl DripJob {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DripJob {
-            boxes: 0.0,
-            serial: 0.0,
-            left: 0.0,
-            hold: 0.0,
-            bi: 0.0,
-            ei: 0.0,
-            k: 0.0,
-            paid: false,
-            out: Vec::new(),
-        }
-    }
-}
-impl Default for DripJob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RainStatsCpu, src/game/rainFx.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RainStatsCpu {
     pub active: bool,
     pub why: String,
@@ -128,97 +68,29 @@ pub struct RainStatsCpu {
     pub total_births: f64,
     pub total_drips: f64,
 }
-impl RainStatsCpu {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStatsCpu {
-            active: false,
-            why: String::new(),
-            radius: 0.0,
-            centre: [0.0; 2],
-            area_out: 0.0,
-            lattice_per_m2: 0.0,
-            target: 0.0,
-            capped: false,
-            keep: 0.0,
-            fill: 0.0,
-            births_per_sec: 0.0,
-            births: 0.0,
-            drips: 0.0,
-            edges_active: 0.0,
-            edges_total: 0.0,
-            frames: 0.0,
-            total_births: 0.0,
-            total_drips: 0.0,
-        }
-    }
-}
-impl Default for RainStatsCpu { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rainFx.ts:121 RainState.popLog, src/game/rainFx.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainStatePopLogItem {
     pub t: f64,
     pub dt: f64,
     pub n: f64,
 }
-impl RainStatePopLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStatePopLogItem {
-            t: 0.0,
-            dt: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for RainStatePopLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet RainState.aside, src/game/rainFx.ts:127)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainStateAside {
     pub s: Option<crate::rain_fx::RainStateAsideS>,
     pub q: Option<crate::rain_fx::RainStateAsideQ>,
 }
-impl RainStateAside {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStateAside {
-            s: None,
-            q: None,
-        }
-    }
-}
-impl Default for RainStateAside { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rainFx.ts:127 RainStateAside.s, src/game/rainFx.ts:127 RainStateAside.s)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainStateAsideS {
 }
-impl RainStateAsideS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStateAsideS {
-        }
-    }
-}
-impl Default for RainStateAsideS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rainFx.ts:127 RainStateAside.q, src/game/rainFx.ts:127 RainStateAside.q)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainStateAsideQ {
 }
-impl RainStateAsideQ {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainStateAsideQ {
-        }
-    }
-}
-impl Default for RainStateAsideQ { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rainFx.ts:42 PRAIN, src/game/rainFx.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RainFxModPRAIN {
     pub iso: f64,
     pub fwd_k: f64,
@@ -247,43 +119,8 @@ pub struct RainFxModPRAIN {
     pub sheet_len: f64,
     pub sheet_drift: f64,
 }
-impl RainFxModPRAIN {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RainFxModPRAIN {
-            iso: 0.0,
-            fwd_k: 0.0,
-            fwd_g: 0.0,
-            glint_k: 0.0,
-            glint_rough: 0.0,
-            glint_cap: 0.0,
-            gain: 0.0,
-            tail_keep: 0.0,
-            refract: 0.0,
-            refract_reach_m: 0.0,
-            refract_taps: 0.0,
-            refract_clamp: 0.0,
-            refract_depth: 0.0,
-            refract_paint: 0.0,
-            len_jit: 0.0,
-            bright_jit: 0.0,
-            min_px: 0.0,
-            max_px: 0.0,
-            boost_cap: 0.0,
-            near_fade_m: 0.0,
-            bead_amp: 0.0,
-            wind_k: 0.0,
-            lattice_lean: 0.0,
-            sheet_amp: 0.0,
-            sheet_len: 0.0,
-            sheet_drift: 0.0,
-        }
-    }
-}
-impl Default for RainFxModPRAIN { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rainFx.ts:91 RAIN_FX, src/game/rainFx.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RAINFX {
     pub lattice_cell: f64,
     pub lattice_period: f64,
@@ -306,34 +143,6 @@ pub struct RAINFX {
     pub edge_min_area: f64,
     pub edge_min_fall: f64,
 }
-impl RAINFX {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RAINFX {
-            lattice_cell: 0.0,
-            lattice_period: 0.0,
-            fall_v: 0.0,
-            radius_k: 0.0,
-            radius_min: 0.0,
-            radius_max: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            top_jit: 0.0,
-            speed_jit: 0.0,
-            splash_secs: 0.0,
-            drip_per_point_sec: 0.0,
-            drip_size: 0.0,
-            drip_speed: 0.0,
-            drip_max_per_frame: 0.0,
-            edge_step: 0.0,
-            edge_min_top: 0.0,
-            edge_max_top: 0.0,
-            edge_min_area: 0.0,
-            edge_min_fall: 0.0,
-        }
-    }
-}
-impl Default for RAINFX { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// What a new row holds: next is -1, which AmbientState::zeroed() is not. (dialogue.ts:2002)
+/// What a new row holds: next is -1, which AmbientState::default() is not. (dialogue.ts:2002)
 fn ambient_fresh() -> AmbientState {
     AmbientState { next: -1.0, run: None, played: JsMap::new(), count: 0.0 }
 }

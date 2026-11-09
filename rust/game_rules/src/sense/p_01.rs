@@ -117,7 +117,7 @@ pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> 
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {
             let p = crate::combat::smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 });
-            let e = crate::smoke_types::SmokeEmitter { pos: at(xs), dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::zeroed() };
+            let e = crate::smoke_types::SmokeEmitter { pos: at(xs), dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
             crate::smoke_types::smoke_system_like_emit(g, &e);
             crate::out_events::push_smoke_system_like_emit(g, &e);
             Vec::new()

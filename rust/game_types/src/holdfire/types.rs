@@ -1,12 +1,11 @@
-//! The types of `holdfire`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `holdfire`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum LiftWhy {
-    Shot,
+    #[default] Shot,
     Order,
     Drill,
 }
@@ -20,8 +19,7 @@ impl LiftWhy {
     }
 }
 
-/// (TypeScript: State, src/game/holdfire.ts:72)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub lift_t: f64,
     pub why: Option<crate::holdfire::LiftWhy>,
@@ -29,41 +27,15 @@ pub struct State {
     pub by: Option<PlayerId>,
     pub loud_t: f64,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            lift_t: 0.0,
-            why: None,
-            cast: Vec::new(),
-            by: None,
-            loud_t: 0.0,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/holdfire.ts:70 HOLDFIRE_LOG, src/game/holdfire.ts:70)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldfireModHOLDFIRELOGItem {
     pub t: f64,
     pub why: crate::holdfire::LiftWhy,
     pub what: String,
 }
-impl HoldfireModHOLDFIRELOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldfireModHOLDFIRELOGItem {
-            t: 0.0,
-            why: crate::holdfire::LiftWhy::Shot,
-            what: String::new(),
-        }
-    }
-}
-impl Default for HoldfireModHOLDFIRELOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/holdfire.ts:126 holdFireOrder(o), src/game/holdfire.ts:126)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HoldFireOrderO {
     pub waits: Option<bool>,
     pub blown: Option<bool>,
@@ -71,19 +43,6 @@ pub struct HoldFireOrderO {
     pub by: Option<PlayerId>,
     pub silent: Option<bool>,
 }
-impl HoldFireOrderO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldFireOrderO {
-            waits: None,
-            blown: None,
-            why: None,
-            by: None,
-            silent: None,
-        }
-    }
-}
-impl Default for HoldFireOrderO { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

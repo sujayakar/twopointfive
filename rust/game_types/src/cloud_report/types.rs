@@ -1,12 +1,11 @@
-//! The types of `cloud_report`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `cloud_report`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ReportLevel {
-    Error,
+    #[default] Error,
     Warning,
 }
 impl ReportLevel {
@@ -18,8 +17,7 @@ impl ReportLevel {
     }
 }
 
-/// (TypeScript: Report, src/cloud/report.ts:23)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Report {
     pub where_: String,
     pub message: String,
@@ -27,22 +25,8 @@ pub struct Report {
     pub level: crate::cloud_report::ReportLevel,
     pub data: Option<JsMap<String, crate::Opaque>>,
 }
-impl Report {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Report {
-            where_: String::new(),
-            message: String::new(),
-            stack: Vec::new(),
-            level: crate::cloud_report::ReportLevel::Error,
-            data: None,
-        }
-    }
-}
-impl Default for Report { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/cloud/report.ts:26 REPORT, src/cloud/report.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct REPORT {
     pub held: f64,
     pub held_warnings: f64,
@@ -51,37 +35,12 @@ pub struct REPORT {
     pub keys: f64,
     pub makes: f64,
 }
-impl REPORT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        REPORT {
-            held: 0.0,
-            held_warnings: 0.0,
-            stack: 0.0,
-            message: 0.0,
-            keys: 0.0,
-            makes: 0.0,
-        }
-    }
-}
-impl Default for REPORT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/cloud/report.ts:44 plain, src/cloud/report.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CloudReportModPlain {
     pub error: Option<crate::FnField>,
     pub warn: Option<crate::FnField>,
 }
-impl CloudReportModPlain {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CloudReportModPlain {
-            error: None,
-            warn: None,
-        }
-    }
-}
-impl Default for CloudReportModPlain { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

@@ -1,10 +1,9 @@
-//! The types of `wet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `wet`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WetMem, src/game/wet.ts:52)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WetMem {
     pub sky_t: f64,
     pub open: bool,
@@ -12,55 +11,19 @@ pub struct WetMem {
     pub last_out_wet_t: f64,
     pub drip_acc: f64,
 }
-impl WetMem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WetMem {
-            sky_t: 0.0,
-            open: false,
-            prints_left: 0.0,
-            last_out_wet_t: 0.0,
-            drip_acc: 0.0,
-        }
-    }
-}
-impl Default for WetMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PrintRec, src/game/wet.ts:56)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PrintRec {
     pub d: crate::render_decals::Decal,
     pub t0: f64,
     pub k0: f64,
 }
-impl PrintRec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PrintRec {
-            d: crate::render_decals::Decal::zeroed(),
-            t0: 0.0,
-            k0: 0.0,
-        }
-    }
-}
-impl Default for PrintRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wet.ts:57 prints, src/game/wet.ts:57)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WetModPrintsValue {
     pub list: Vec<crate::wet::PrintRec>,
     pub age_t: f64,
 }
-impl WetModPrintsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WetModPrintsValue {
-            list: Vec::new(),
-            age_t: 0.0,
-        }
-    }
-}
-impl Default for WetModPrintsValue { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

@@ -1,12 +1,11 @@
-//! The types of `glasspen`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `glasspen`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum PaneType {
-    Annealed,
+    #[default] Annealed,
     Laminated,
     Tempered,
 }
@@ -20,25 +19,13 @@ impl PaneType {
     }
 }
 
-/// (TypeScript: PenState, src/game/glasspen.ts:151)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PenState {
     pub log: Vec<String>,
     pub rev: f64,
 }
-impl PenState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PenState {
-            log: Vec::new(),
-            rev: 0.0,
-        }
-    }
-}
-impl Default for PenState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneToll, src/game/glasspen.ts:179)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneToll {
     pub type_: crate::glasspen::PaneType,
     pub n: V3,
@@ -47,23 +34,8 @@ pub struct PaneToll {
     pub e_out: f64,
     pub hole: bool,
 }
-impl PaneToll {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneToll {
-            type_: crate::glasspen::PaneType::Annealed,
-            n: [0.0; 3],
-            cos: 0.0,
-            take: 0.0,
-            e_out: 0.0,
-            hole: false,
-        }
-    }
-}
-impl Default for PaneToll { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneCross, src/game/glasspen.ts:194)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneCross {
     pub bi: f64,
     pub t: f64,
@@ -82,33 +54,8 @@ pub struct PaneCross {
     pub e_out: f64,
     pub hole: bool,
 }
-impl PaneCross {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneCross {
-            bi: 0.0,
-            t: 0.0,
-            at: [0.0; 3],
-            exit: [0.0; 3],
-            dir_in: [0.0; 3],
-            dir_out: [0.0; 3],
-            e_in: 0.0,
-            turn_deg: 0.0,
-            thru: 0.0,
-            into: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            n: [0.0; 3],
-            cos: 0.0,
-            take: 0.0,
-            e_out: 0.0,
-            hole: false,
-        }
-    }
-}
-impl Default for PaneCross { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundSeg, src/game/glasspen.ts:213)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RoundSeg {
     pub o: V3,
     pub d: V3,
@@ -116,95 +63,34 @@ pub struct RoundSeg {
     pub len: f64,
     pub e: f64,
 }
-impl RoundSeg {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoundSeg {
-            o: [0.0; 3],
-            d: [0.0; 3],
-            t0: 0.0,
-            len: 0.0,
-            e: 0.0,
-        }
-    }
-}
-impl Default for RoundSeg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundPath, src/game/glasspen.ts:214)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RoundPath {
     pub segs: Vec<crate::glasspen::RoundSeg>,
     pub cross: Vec<crate::glasspen::PaneCross>,
     pub st: Option<crate::glasspen::RoundPathSt>,
     pub len: f64,
 }
-impl RoundPath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoundPath {
-            segs: Vec::new(),
-            cross: Vec::new(),
-            st: None,
-            len: 0.0,
-        }
-    }
-}
-impl Default for RoundPath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:217 RoundPath.st, src/game/glasspen.ts:217)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RoundPathSt {
     pub t: f64,
     pub index: f64,
     pub n: V3,
 }
-impl RoundPathSt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoundPathSt {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RoundPathSt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:221 StaticHit, src/game/glasspen.ts:221)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StaticHit2 {
     pub t: f64,
     pub index: f64,
     pub n: V3,
 }
-impl StaticHit2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StaticHit2 {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for StaticHit2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ShellGlass, src/game/glasspen.ts:251)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ShellGlass {
     pub glass: JsMap<crate::Num, Vec<f64>>,
 }
-impl ShellGlass {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShellGlass {
-            glass: JsMap::new(),
-        }
-    }
-}
-impl Default for ShellGlass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ShellMark {
     Join,
@@ -221,39 +107,17 @@ impl ShellMark {
     }
 }
 
-/// (TypeScript: inline at src/game/glasspen.ts:296 armThroughGlass ->, src/game/glasspen.ts:296)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ArmThroughGlass {
     pub e: f64,
     pub panes: f64,
 }
-impl ArmThroughGlass {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ArmThroughGlass {
-            e: 0.0,
-            panes: 0.0,
-        }
-    }
-}
-impl Default for ArmThroughGlass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:308 shotPasses(panes), src/game/glasspen.ts:308)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ShotPassesPanesItem {
     pub bi: f64,
     pub t: f64,
 }
-impl ShotPassesPanesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShotPassesPanesItem {
-            bi: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for ShotPassesPanesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

@@ -1,10 +1,9 @@
-//! The types of `sim_state`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_state`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Layout, src/sim/state.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Layout {
     pub words: f64,
     pub games: f64,
@@ -13,69 +12,23 @@ pub struct Layout {
     pub len: Vec<f64>,
     pub pool: Vec<bool>,
 }
-impl Layout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Layout {
-            words: 0.0,
-            games: 0.0,
-            word: 0.0,
-            off: Vec::new(),
-            len: Vec::new(),
-            pool: Vec::new(),
-        }
-    }
-}
-impl Default for Layout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SimTenant, src/sim/state.ts:84)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SimTenant {
     pub name: String,
     pub bit: f64,
 }
-impl SimTenant {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimTenant {
-            name: String::new(),
-            bit: 0.0,
-        }
-    }
-}
-impl Default for SimTenant { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/state.ts:109 CLOCK, src/sim/state.ts:109)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SimStateModCLOCK {
     pub n: f64,
 }
-impl SimStateModCLOCK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimStateModCLOCK {
-            n: 0.0,
-        }
-    }
-}
-impl Default for SimStateModCLOCK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/state.ts:111 SIM_STATE_TALLY, src/sim/state.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SimStateModSIMSTATETALLY {
     pub parked: f64,
     pub bound: f64,
 }
-impl SimStateModSIMSTATETALLY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimStateModSIMSTATETALLY {
-            parked: 0.0,
-            bound: 0.0,
-        }
-    }
-}
-impl Default for SimStateModSIMSTATETALLY { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

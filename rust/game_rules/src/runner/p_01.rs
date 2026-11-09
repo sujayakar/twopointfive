@@ -167,7 +167,7 @@ pub fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     crate::lanes::lane_say(g, gd);   // (a man who has run holds no lane)
     g.m.runner.state_of.set(gd, Run {
         phase: RunPhase::Say, t: 0.0, from: [from[0], 0.0, from[2]], goal: None, mate: None, told: 0.0, unseen: 0.0, at, stall: 0.0, is_out: false,
-        tries: 0.0, plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::zeroed(),
+        tries: 0.0, plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::default(),
     });
     crate::morale::morale_release(g, gd);
     g.gd[gd].reload_t = -1.0;
