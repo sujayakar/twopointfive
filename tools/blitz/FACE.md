@@ -26,7 +26,7 @@ All C ABI; a pointer and a length are `usize`, a handle a `u32`. The head of `ru
 |---|---|
 | memory | `face_alloc(n) -> p` · `face_free(p, n)` · `face_out_ptr()` `face_out_len()` (what the last call answered: bytes or a log line) |
 | a panic | `face_panic_ptr()` `face_panic_len()` `face_panic_clear()`: the last panic's words with file and line. The module aborts on a panic, so the host catches a trap and reads the words; the game of that call is gone, the others stand |
-| a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_blank() -> h` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
+| a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
 | the host's half | `face_host(h, p, n, first)` (one `h<k>.bin`) · `face_give(h, k, line)` · `face_hostwrite(h, k, line)` · `face_meter(h, v)` |
 | the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 4 the host's view of a level on rails (a flash's envelope is the tick's own last line). One call a tick for a host that plays · by name: `face_view(h)` `face_checkpoint(h, label, n)` |
 | reading back | `face_export(h)` (`io::export` at `face_out`) · `face_die_n(h)` · `face_time(h)` · `face_rows(h)` · `face_parts()` `face_part_name(i)` `face_part(name, n) -> i` `face_part_addr(slot, i)` `face_part_len(i)` `face_part_hashes(slot) -> p` |
