@@ -5,7 +5,7 @@
 //               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;
 //   · DECALS    appended LAST under the group 'look': NoShadow boxes only, EVERY ONE FROM THE FLOOR UP (rugs, patches and wear on the ground, the damp foot
 //               of an outside wall and the strip of ground along it, a painted dado indoors) — drawn and lit, invisible to every ray and every collision
-//               query (tools/qa/look-check.ts also asks the three destruction indexes, which find things by shape, whether they list the same boxes in
+//               query (the old look-check also asked the three destruction indexes, which find things by shape, whether they list the same boxes in
 //               both files). From the floor up, because a drawn-only thing OFF the floor is something game/wallbreak.ts judges when what it touches breaks
 //               (it falls: debris, a sound) — a decal that starts at the floor is never asked. A decal on a wall's face goes with its wall when the wall
 //               is holed: scene/lookTidy.ts, picture only;
