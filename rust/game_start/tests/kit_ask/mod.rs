@@ -560,7 +560,7 @@ impl KitAsk for Play {
     fn last_bang(&self) -> Option<[f64; 3]> { self.g.events.iter().rev().find(|e| e.kind == game::director::EventKind::Bang).map(|e| e.pos) }
     fn sam_speed(&self) -> f64 { let v = self.g.ch[self.g.pl[self.g.player].ch].vel; v[0].hypot(v[2]) }
     fn any_blind(&self, men: &[GuardId]) -> bool { men.iter().any(|&m| self.blind(m)) }
-    fn card_pace(&self, gd: GuardId) -> f64 { game::kitload::load_pace_on(&self.g, &game::seats::here(&self.g), game::kitload::LoadPaceOnWho::Guard(gd)) }
+    fn card_pace(&self, gd: GuardId) -> f64 { game::kitload::load_pace_on(&self.g, self.g.gd[gd].ch) }
     fn closing_pace(&self) -> f64 { self.g.tune.player_walk * self.g.k.teampace.follow_k }
     fn walks(&self) -> (f64, f64) { (self.g.tune.player_walk, game::teampace::team_walk(&self.g)) }
     fn at_a_run(&mut self, gd: GuardId) -> Option<game::teampace::RunWhy> { game::teampace::run_why(&mut self.g, gd) }
