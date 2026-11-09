@@ -32,6 +32,8 @@ export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: num
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
+/** what a file calls its errand's room, thing, holder and way out: only what it says */
+const namesOf = (n: NonNullable<Level['mission']['names']>): { names?: typeof n } => { const said = Object.fromEntries(Object.entries(n).filter(([, v]) => v !== undefined)) as typeof n; return Object.keys(said).length ? { names: said } : {}; };
 /** Build the runtime Level from level data, which is a level (judge.ts says where it is none). Every vector is copied: the caller may mutate its Level and two loads never share state. */
 export function loadLevel(data: LevelData): Level {
   const mats = new Map(Object.entries(data.materials));   // (own keys only: 'constructor' & co. are no material's names)
@@ -125,7 +127,7 @@ export function loadLevel(data: LevelData): Level {
     ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/missions/director onEnter) — written iff authored, so a level with none loads key for key as before
     ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/missions/director) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
-    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
+    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}), ...namesOf({ place: reach.name, thing: drive.name, holder: drive.holder, out: exfil.name }) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
     ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
@@ -273,9 +275,9 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     ...(level.hums ? { hums: level.hums.map((h): HumData => ({ id: h.name, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     connectors: [],
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
-      { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
-      { id: 'pull_drive', kind: 'drive', rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },
-      { id: 'exfil', kind: 'exfil', door: M.exfilDoor, x: M.exfilX, z: M.exfilZ, ...(M.exfilOut ? { out: [M.exfilOut[0], M.exfilOut[1]] as [number, number] } : {}) },
+      { id: 'reach_room', kind: 'reach', ...(M.names?.place !== undefined ? { name: M.names.place } : {}), area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
+      { id: 'pull_drive', kind: 'drive', ...(M.names?.thing !== undefined ? { name: M.names.thing } : {}), ...(M.names?.holder !== undefined ? { holder: M.names.holder } : {}), rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },
+      { id: 'exfil', kind: 'exfil', ...(M.names?.out !== undefined ? { name: M.names.out } : {}), door: M.exfilDoor, x: M.exfilX, z: M.exfilZ, ...(M.exfilOut ? { out: [M.exfilOut[0], M.exfilOut[1]] as [number, number] } : {}) },
     ] },
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),

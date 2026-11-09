@@ -148,7 +148,7 @@ fn office_rooms(g: &crate::game::Game) -> (Vec<Rect>, Rect) {
         if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
     }
     if !level.own_places() && !rooms.iter().any(|r| r.name.contains("server")) {
-        let s = &level.mission.server_room;
+        let s = &level.errand.area;
         rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
     }
     rooms.extend(office_areas());
@@ -393,7 +393,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(g, IntelKind::Routes, t, k), live: partner.is_some(), known: true });
     intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(g, IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });
     let drive_text = if office { intel_text(g, IntelKind::Drive, t, k) } else { drive_away_text(g, t) };
-    let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && crate::takecheck::take_told(g);
+    let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && g.level.errand.told;
     intel.push(IntelItem { kind: IntelKind::Drive, text: drive_text, live: drive_live, known: true });
     if !shift { for it in intel.iter_mut() { it.live = false; } }
     let recent = g.m.dialogue.recent_by_game.get_or_insert_with(JsMap::new).clone();

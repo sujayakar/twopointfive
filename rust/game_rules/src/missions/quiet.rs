@@ -49,24 +49,6 @@ fn quiet_mission_start_(g: &crate::game::Game) -> Option<crate::scene_scenarios:
     g.quiet.data.as_ref().and_then(|q| q.starts.get(at).cloned())
 }
 
-/// the spot dealt
-pub fn quiet_mission_spot(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietSpot> {
-    if !crate::quiet::quiet_of(g) { return None; }
-    let at = g.quiet.deal.spot as usize;
-    g.quiet.data.as_ref().and_then(|q| q.spots.get(at).cloned())
-}
-
-/// the ways out
-pub fn quiet_mission_exits(g: &crate::game::Game) -> Vec<crate::scene_scenarios::QuietExit> {
-    if !crate::quiet::quiet_of(g) { return Vec::new(); }
-    match g.quiet.data.as_ref() { Some(q) => q.exits.clone(), None => Vec::new() }
-}
-
-/// what is to be taken
-fn quiet_mission_thing(g: &crate::game::Game) -> String {
-    match g.quiet.data.as_ref().and_then(|q| q.thing.as_ref()) { Some(t) => t.clone(), None => String::from("the drive") }
-}
-
 /// the routes manned on this run, by name
 fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
     if !crate::quiet::quiet_of(g) { return Vec::new(); }
@@ -108,7 +90,7 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
     g.quiet.failure = None;
     g.quiet.staged = 0.0;
     g.quiet.log.clear();
-    g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, mission: g.level.mission.clone() });
+    g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, errand: g.level.errand.clone() });
     quiet_mission_current(g);
     if js::truthy(squad) {
         g.quiet.was = Some(held_now(g));
@@ -144,7 +126,7 @@ fn quiet_mission_put_back(g: &mut crate::game::Game) {
     quiet_mission_unbench(g);
     if let Some(a) = g.quiet.authored.take() {
         g.level.player_spawn = a.spawn;
-        g.level.mission = a.mission;
+        g.level.errand = a.errand;
     }
     quiet_mission_rack(g);
 }
@@ -199,16 +181,11 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     g.stats.quiet.deals += 1;
     let s = &q.starts[g.quiet.deal.start as usize];
     let p = &q.spots[g.quiet.deal.spot as usize];
-    let x = &q.exits[0];
     g.level.player_spawn = [s.sam[0], 0.0, s.sam[2]];
-    g.level.mission = crate::quiet::QuietMissionAuthoredMission {
-        server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom { x0: p.area.x0, x1: p.area.x1, z0: p.area.z0, z1: p.area.z1 },
-        entry_door: p.door.clone(),
-        rack: crate::quiet::QuietMissionAuthoredMissionRack { index: p.rack_index, front: p.front, half_w: p.half_w },
-        exfil_door: x.door.clone(),
-        exfil_x: x.x,
-        exfil_z: x.z,
-        exfil_out: Some([x.out[0], x.out[1]]),
+    g.level.errand = crate::mission::Errand {
+        place: p.place.clone(), area: p.area, door: p.door.clone(),
+        thing: q.thing.clone().unwrap_or_else(|| String::from("the drive")), holder: p.holder.clone(), index: p.rack_index, front: p.front, half_w: p.half_w, told: p.wired.unwrap_or(false),
+        exits: q.exits.clone(),
     };
     quiet_mission_rack(g);
     // the routes this run does not man: off the guard list, their torches out of the light set
@@ -269,8 +246,7 @@ fn quiet_mission_summary(g: &crate::game::Game) -> String {
         return String::from(if carries { "off · this level carries one" } else { "off · this level carries none" });
     }
     let s = quiet_mission_start_(g).unwrap();
-    let p = quiet_mission_spot(g).unwrap();
-    let thing = quiet_mission_thing(g);
+    let e = &g.level.errand;
     let patrol = quiet_mission_patrol(g).join(", ");
     let q = g.quiet.data.as_ref().unwrap();
     let d = g.quiet.deal;
@@ -287,7 +263,7 @@ fn quiet_mission_summary(g: &crate::game::Game) -> String {
     };
     format!(
         "on · {} · start {}/{}{} · {} in {}, {} ({}/{}) · patrol {}: {} · {} way{} out · {}",
-        pinned, js::num_str(d.start + 1.0), q.starts.len(), name, thing, p.holder, p.place, js::num_str(d.spot + 1.0), q.spots.len(), sets, who, q.exits.len(), plural, partner
+        pinned, js::num_str(d.start + 1.0), q.starts.len(), name, e.thing, e.holder, e.place, js::num_str(d.spot + 1.0), q.spots.len(), sets, who, q.exits.len(), plural, partner
     )
 }
 
@@ -339,7 +315,7 @@ fn quiet_mission_unbench(g: &mut crate::game::Game) {
 
 /// what goes dark when the thing comes out: the switchables named for the mission's holder
 fn quiet_mission_rack(g: &mut crate::game::Game) {
-    let n = js::num_str(g.level.mission.rack.index);
+    let n = js::num_str(g.level.errand.index);
     let leds = format!("rack{}_leds", n);
     let glow = format!("rack{}_glow", n);
     g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.sim_lightshome_fixture[t].name; *name == leds || *name == glow }).collect();
@@ -443,61 +419,6 @@ pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::qu
 /// the quiet mission that is up on this game
 pub fn quiet_of(g: &crate::game::Game) -> bool {
     g.staged.up == Some(crate::scene_scenarios::MissionKind::Quiet)
-}
-
-/// `thing.replace(/^(the|a|an) /i, '')`
-fn bare_of(thing: &str) -> &str {
-    for lead in ["the ", "a ", "an "] {
-        if let Some(head) = thing.get(..lead.len()) {
-            if head.eq_ignore_ascii_case(lead) { return &thing[lead.len()..]; }
-        }
-    }
-    thing
-}
-
-/// THE WORDS, off the level's data
-pub fn quiet_words(g: &crate::game::Game) -> Option<crate::quiet::QuietWords> {
-    if !crate::quiet::quiet_of(g) { return None; }
-    let p = quiet_mission_spot(g).unwrap();
-    let thing = quiet_mission_thing(g);
-    let exits = quiet_mission_exits(g);
-    let n = exits.len();
-    let outs = if n == 1 {
-        exits[0].name.clone()
-    } else if n == 2 {
-        format!("{} or {}", exits[0].name, exits[1].name)
-    } else {
-        let head: Vec<&str> = exits[..n - 1].iter().map(|x| x.name.as_str()).collect();
-        format!("{} or {}", head.join(", "), exits[n - 1].name)
-    };
-    let bare = String::from(bare_of(&thing));
-    Some(crate::quiet::QuietWords { place: p.place, holder: p.holder, thing, outs, bare })
-}
-
-/// the exit Sam went out by (the nearest whose line he is past)
-pub(super) fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
-    if !crate::quiet::quiet_of(g) { return None; }
-    let mut best = None;
-    let mut bd = m::INF;
-    for x in quiet_mission_exits(g) {
-        if out_through(&x, p) {
-            let d = m::hyp2(p[0] - x.x, p[2] - x.z);
-            if d < bd { bd = d; best = Some(x); }
-        }
-    }
-    best
-}
-
-/// the way out nearest `p` on foot-less distance
-pub(super) fn nearest_exit(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
-    if !crate::quiet::quiet_of(g) { return None; }
-    let mut best = None;
-    let mut bd = m::INF;
-    for x in quiet_mission_exits(g) {
-        let d = m::hyp2(p[0] - x.x, p[2] - x.z);
-        if d < bd { bd = d; best = Some(x); }
-    }
-    best
 }
 
 /// a point as a fault line writes it
@@ -695,15 +616,5 @@ mod tests {
         let out = released(was_on, ran, moved);
         assert!(!out.pairup, "the hand's word stands over what stood before the run");
         assert!(!out.silent);
-    }
-
-    #[test]
-    fn the_bare_word_loses_only_a_leading_article() {
-        assert_eq!(bare_of("the drive"), "drive");
-        assert_eq!(bare_of("The Drive"), "Drive");
-        assert_eq!(bare_of("An envelope"), "envelope");
-        assert_eq!(bare_of("a key"), "key");
-        assert_eq!(bare_of("another key"), "another key");
-        assert_eq!(bare_of("theatre"), "theatre");
     }
 }

@@ -113,9 +113,9 @@ export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; sp
 export interface HumData { id: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; floor?: string; pos: Vec3; level: number; radius: number; mains?: boolean; notes?: string; }
 /** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/missions/mission.rs) maps onto: v1 wants exactly one of each kind. */
 export type ObjectiveData =
-  | { id: string; kind: 'reach'; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
-  | { id: string; kind: 'drive'; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
-  | { id: string; kind: 'exfil'; door: string; /** past this x you are out */ x: number; z: number; /** the way out through it, a unit (dx, dz); absent = east: past x */ out?: [number, number] };
+  | { id: string; kind: 'reach'; /** what the room is called */ name?: string; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
+  | { id: string; kind: 'drive'; /** what the thing is called */ name?: string; /** …and what it is in */ holder?: string; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
+  | { id: string; kind: 'exfil'; /** what the way out is called */ name?: string; door: string; /** past this point, going `out`, you are out */ x: number; z: number; /** the way out through it, a unit (dx, dz); absent = east: past x */ out?: [number, number] };
 export interface MissionData { playerSpawn: Vec3; objectives: ObjectiveData[]; }
 
 export interface SkyData { zenith: Vec3; horizon: Vec3; }
@@ -183,7 +183,7 @@ export const KEYS = {
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
-  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
+  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'name', 'area', 'door'], drive: ['id', 'kind', 'name', 'holder', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'name', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)

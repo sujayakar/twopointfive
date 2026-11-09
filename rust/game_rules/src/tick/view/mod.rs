@@ -49,7 +49,6 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         empty: empty_view(g, seat),
         plan: plan_view(g, seat),
         live: crate::mission::mission_live(g),
-        quiet: crate::quiet::quiet_words(g).map(|q| QuietView { place: q.place, holder: q.holder, thing: q.thing, outs: q.outs, bare: q.bare }),
         interact: crate::interact::interact_view(g, seat),
         alarm: crate::guards::alarm_view(g),
         stage: stage_word(g.mission.stage),
