@@ -15,12 +15,12 @@ import { RainPicture, Roofs } from './rain';
 import { SnowPicture } from './snow/snow';
 import { skyFrom } from '../draw/sky';
 
-const LEVEL = 1, SMOKE = 2, CANS = 32;
+const SMOKE = 1, CANS = 2;
 
 export class WeatherPicture {
   readonly winds: DrawWinds; readonly air: AirPicture; readonly fire: FirePicture; readonly rain: RainPicture; readonly roofs: Roofs; readonly snow: SnowPicture | null;
   private said = -1;
-  constructor(private E: Engine, private D: Drawn, world: DrawWorld, private P: Particles | null, private smoke: SmokeSystem) {
+  constructor(private E: Engine, private D: Drawn, world: DrawWorld, P: Particles | null, private smoke: SmokeSystem) {
     this.winds = new DrawWinds(D, P, smoke); this.roofs = new Roofs(D);
     this.air = new AirPicture(E, D, world.statics, this.winds);
     this.fire = new FirePicture(E, D, smoke, P);
@@ -35,10 +35,9 @@ export class WeatherPicture {
   told(): void {
     const D = this.D;
     if (D.n[Section.resets]) { const o = D.at[Section.resets], id = D.u[o + Reset.tick]; if (id !== this.said) { const w = D.u[o + Reset.what];
-      if (w & LEVEL) { this.E.restartPicture('level restarted'); this.P?.clear(); this.cut(); }
       if (w & SMOKE) this.smoke.anew();
       if (w & CANS) this.smoke.shutCans();
-      this.snow?.reset(w); this.said = id; } }
+      this.said = id; } }
   }
   /** a tick has run, the camera that follows it stepped */
   tick(dt: number, cam: FollowCamera): void {
