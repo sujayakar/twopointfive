@@ -72,7 +72,6 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and the box world and the copy of it FACES was asked of (the host\'s numbers; where one differs the tables are made again)',
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
   'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
-  'sim/src/weather.rs ROOF_LIST': 'SCRATCH · a level\'s roofs as its boxes are handed over, read back at the end of that one question',
   'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
