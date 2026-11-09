@@ -38,7 +38,7 @@ let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
 let gapMax = 0, gapAt = 0, stalledOnce = false;
-const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standStart(client.welcome.start).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) { s.show(client.seat); client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
+const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standStart(client.welcome.start).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat > 0) VIEW = { yaw: 1.7, pitch: 0.9, distance: 33, fov: 0.6, w: 1920, h: 1080 }; if (client.seat >= 0) { s.show(client.seat); client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
 ws.onopen = () => client.hello();
 ws.onmessage = (ev: { data: unknown }) => take(String(ev.data));
 ws.onclose = () => down(() => { closed = true; });
@@ -50,8 +50,9 @@ ws.onerror = () => down(() => { closed = true; });
 const WAYS: [string[], number, number][] = [[['KeyW'], 1, 0], [['KeyS'], -1, 0], [['KeyD'], 0, 1], [['KeyA'], 0, -1], [['KeyW', 'KeyD'], 1, 1], [['KeyW', 'KeyA'], 1, -1], [['KeyS', 'KeyD'], -1, 1], [['KeyS', 'KeyA'], -1, -1]];
 /** the seat whose man this client plays, or whom a watcher watches */
 const seatN = (): number => Math.max(0, client.seat);
-/** ITS CAMERA: on its man where he is drawn, looking one way. What a look ahead, a walk key and the cursor are read through is this, as a page's is the player's */
-const VIEW = { yaw: 0.4, pitch: 0.96, distance: 21, fov: 0.6, w: 1280, h: 720 };
+/** ITS CAMERA: on its man where he is drawn, looking one way. What a look ahead, a walk key and the cursor are read through is this, as a page's is the player's. (A second
+ *  player's is turned another way, further off, in another window: what a machine shows is no number of the game's) */
+let VIEW = { yaw: 0.4, pitch: 0.96, distance: 21, fov: 0.6, w: 1280, h: 720 };
 let target: ArrayLike<number> | null = null;
 function offWall(S: Stood): string[] | null {
   const w = S.ahead(seatN(), []).wall; if (!w) return null;

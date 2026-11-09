@@ -751,9 +751,6 @@ pub struct Game {
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub puppet: Option<crate::game::GamePuppet>,
-    /// (a machine's own: in no bytes)
-    #[bytes(skip)]
-    pub m_per_px: f64,
     pub tmp_v: V3,
     pub called_in: bool,
     pub stood_down: bool,
@@ -976,7 +973,6 @@ impl Game {
             aim_snap: None,
             act: None,
             puppet: None,
-            m_per_px: 0.01,
             tmp_v: [0.0, 0.0, 0.0],
             called_in: false,
             stood_down: false,
@@ -2970,38 +2966,6 @@ impl GameLightEventCause {
         }
     }
 }
-
-/// (TypeScript: inline at src/game/game.ts:1861 viewPx(cam), src/game/game.ts:1861)
-#[derive(Clone, Copy, Debug)]
-pub struct GameViewPxCam {
-    pub distance: f64,
-    pub fov: f64,
-}
-impl GameViewPxCam {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameViewPxCam {
-            distance: 0.0,
-            fov: 0.0,
-        }
-    }
-}
-impl Default for GameViewPxCam { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:1861 viewPx(canvas), src/game/game.ts:1861)
-#[derive(Clone, Copy, Debug)]
-pub struct GameViewPxCanvas {
-    pub height: f64,
-}
-impl GameViewPxCanvas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameViewPxCanvas {
-            height: 0.0,
-        }
-    }
-}
-impl Default for GameViewPxCanvas { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

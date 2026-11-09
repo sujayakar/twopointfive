@@ -25,7 +25,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glimpse Sam in a flash), intensity = a two-return-stroke envelope integrated over each frame, gone at `FLASH_SECS`; THUNDER queued for distKm × 1000/343 s
   (`sfx thunderNear/thunderFar`, `audio.play` opts lowpass / pan / wet) — ambience, no GameEvent; the WET LOT darkens the asphalt slab (found by shape) and
   flags it Gloss, switching `settings.gloss` on for the duration (`wetGloss`); its own `mulberry32` dice (`seed(n)`), never Math.random; day (the breach)
-  suspends it. `engine.weather: WeatherFrame` written by `Weather.update(dt, camYaw)` from game.ts after updateDevices. Tab ▸ Weather (storm, intensity,
+  suspends it. `engine.weather: WeatherFrame` written by the tick (`weather_update`) after the devices. Tab ▸ Weather (storm, intensity,
   rain rate, wind, wet-gloss, strike buttons), `?noweather`, `__weather` (.strike({bearing, elevDeg, distKm, peak}), .storm, .rainRate, .wind, .setEnabled,
   .summary()). QA: `probes.ts weather` (scheduler / flash / thunder / smoke / off / daylight). **RAIN IS NOT LIT THROUGH A
   SHUT DOOR OR A WALL** (the maintainer, 10-11, the glasshouse: "looks like some light leakage for the low res rain"): the reach masks count every door as open and carried

@@ -455,8 +455,7 @@ pub fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>
 }
 
 /// Once a frame from Game.update: the clock, the strokes, the flash lamp, the thunder due. The frame's numbers are the picture's (notes). (weather.ts Weather.update)
-pub fn weather_update(g: &mut crate::game::Game, dt: f64, cam_yaw: Option<f64>) {
-    g.weather.cam_yaw = cam_yaw.unwrap_or(0.0);
+pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
     weather_sync_roofs(g, None);
     // THE FRAME'S NUMBERS (weather.ts:350, :351, :356, :373-381). The part left them out as the picture's, but skeleton 5.2's bridge carries `g.engine.weather`
     // as a thing the tick reads (wet.ts rainNow reads `.rain` to say who is rained on), so the tick writes it as the TypeScript does.
@@ -560,8 +559,9 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
     let gain = (if near { 1.0 } else { 0.85 }) * th.loud * (0.6 + 0.4 * weather_storm(g));
     let lowpass = v3::clamp(9000.0 * m::exp(-th.dist_km * 0.75), 500.0, 9000.0);
     let rate = v3::clamp(1.02 - th.dist_km * 0.06, 0.78, 1.02) * (0.96 + 0.08 * dice[3]);
-    let cy = m::cos(g.weather.cam_yaw);
-    let sy = m::sin(g.weather.cam_yaw);
+    // (which ear it is in: the shown seat's, and no number of the game's)
+    let yaw = g.tab.camera[g.tab.cmd_seat[crate::game::game_host_seat(g)].cam].yaw;
+    let (cy, sy) = (m::cos(yaw), m::sin(yaw));
     let bx = m::sin(th.bearing);
     let bz = -m::cos(th.bearing);
     let right = bx * cy - bz * sy;
