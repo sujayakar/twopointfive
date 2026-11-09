@@ -130,7 +130,7 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['F5'], 'Save'],
     [['Enter'], 'Go back to the last checkpoint when you\'re down'],
     [['Shift', 'Enter'], 'Restart the mission'],
-    [['F7'], 'Keep a replay of the last five minutes'],
+    [['F7'], 'Keep a replay of this run'],
     [['`'], 'The debugger', 'every knob in the build'],
   ] },
 ];
