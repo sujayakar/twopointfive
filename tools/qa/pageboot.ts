@@ -1,5 +1,5 @@
 // THE PAGE'S BOOT OVER A RECORDING STAND-IN DEVICE: every shader text the page hands the browser, and every pipeline it asks for, with no browser. One boot for
-// every tool that reads the page's shader texts (shaderinline-check sizes them, shaderfold-check reads the fold off them, wgsl-dump writes them out for a
+// every tool that reads the page's shader texts (shaders-check inline sizes them, shaders-check fold reads the fold off them, wgsl-dump writes them out for a
 // browser's compiler), so the three cannot come to boot different pages.
 // The boot is drawpage.ts's own order: the Engine's pipelines, the smoke solver's, the particles, the men's mesh and its tree, the programs asked for ahead of
 // their first use (engine.ts warmFirstUse). No game is stood. In front of it, what the page writes before it builds the Engine: cut boxes on, the glass fracture, the dust's own look.

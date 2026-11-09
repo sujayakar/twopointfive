@@ -16,7 +16,7 @@ const ROWS: readonly Row[] = [
   ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['sharpcap-check.ts', 'picture'], ['smokeline-check.ts', 'picture'],
   ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
   ['sweep-ir-check.ts', 'picture'],
-  ['dust-look-check.ts', 'shaders'], ['levelset-check.ts', 'shaders'], ['parse-check.ts', 'shaders'], ['shaderfold-check.ts', 'shaders'], ['shaderinline-check.ts', 'shaders'], ['shaderrows-check.ts', 'shaders'], ['shadertrim-check.ts', 'shaders'],
+  ['dust-look-check.ts', 'shaders'], ['shaders-check.ts', 'shaders', 'parse'], ['shaders-check.ts', 'shaders', 'trim'], ['shaders-check.ts', 'shaders', 'fold'], ['shaders-check.ts', 'shaders', 'inline'], ['shaders-check.ts', 'shaders', 'levelset'], ['shaders-check.ts', 'shaders', 'rows'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
@@ -31,7 +31,7 @@ const BY_HAND: Readonly<Record<string, string>> = {
     'zfight-check.ts': 'the level skill',
 };
 
-const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '');
+const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '') + (r[2] && !r[2].startsWith('--') ? `-${r[2]}` : '');   // (a file of sections has a row for each: shaders-fold)
 const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS;
 { const strange = words.filter(w => !ROWS.some(r => r[1] === w || name(r) === w || r[0] === w)); if (strange.length) { console.error(`checks: no check or group ${strange.join(', ')}`); process.exit(2); } }
 if (argv.includes('--list')) { for (const r of picked) console.log(`${r[1].padEnd(8)} ${name(r)}`); process.exit(0); }
