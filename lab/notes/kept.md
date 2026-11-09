@@ -23,7 +23,7 @@ What to take, in order of worth (src/caches/patch*.wgsl, `patch cell=0.64 coarse
 Key and size: an entry that is the mean of its patch may be 0.64 m; one with a fixed point 0.32 m. Levels picked by the ray's width: no gain, more memory (a place is asked from near and far, so its fine level is found anyway).
 Direct light inside: asking costs 2.3 to 4.6 ms and gains nothing at 0.64 m or finer.
 `joined` is 0.2 to 0.7 ms and is what keeps the dark dark (without it dark rooms read 1.5 to 2.3 times too bright).
-After a lamp: what is slow is the memory of 96 samples. 24 settles three to four times sooner for half a point at rest.
+After a lamp: what is slow is the memory of 96 samples. 24 settles twice as soon (48 frames to within 6 % for 98) for half a point at rest, and stirs five times as much.
 A lamp's formula with a ray beside it (`lamp=1`) instead of a drawn point: better in rooms, 2 % dark on the street (long lamps half hidden). Not taken.
 The picture: halving the kept light's error moves the finished picture by 0.5 (day, street) to 1.5 points (dark); by night it goes 0.1 to 0.6 the wrong way. The rest is elsewhere.
 
