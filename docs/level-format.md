@@ -9,7 +9,7 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 | where | what it does |
 |---|---|
 | `tools/levels/lib/levelData.ts` | the schema: `KEYS`, `validateLevelData`, `serializeLevelData`. The export refuses a file it faults |
-| `src/scene/levelRows.ts`, `src/scene/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
+| `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
 | `tools/levels/lib/levelLoad.ts` | `levelToData` writes a file from a generator's `Level`; `loadLevel` reads it back for the tools |
 | `rust/game_start/src/level.rs` | the game's reader, `load`: boxes, props, lights, doors, routes and the small records |
 | `rust/game_start/src/records.rs` | a line for each record the game keeps as its own type (`scenarios`, `surfaces`, `plans`, `devices` and others) |
@@ -511,7 +511,7 @@ mark, a route's first point, a room's id or name, a place, or `spawn`.
 
 ## How to add a member
 
-1. Its type in `tools/levels/lib/levelData.ts` (or `src/scene/levelRows.ts`, `src/scene/scenarios.ts`), its name in `KEYS` or in the block's own list in `validateLevelData`, and its limits there.
+1. Its type in `tools/levels/lib/levelData.ts` (or `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts`), its name in `KEYS` or in the block's own list in `validateLevelData`, and its limits there.
 2. Both directions in `tools/levels/lib/levelLoad.ts`, where the record is not carried as written.
 3. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs` or `level.rs`. A member with no line stops the start.
 4. Its reader in the rules, its line on this page, then `bun run tools/levels/export.ts <name>` for each level and `bun run tools/qa/level-needs.ts <name> --run`.

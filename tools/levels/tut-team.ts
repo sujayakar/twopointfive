@@ -16,7 +16,7 @@
 //   the last room the same two keys on the bunkhouse's door; then he calls them to him once more and walks them back to the trucks.
 // Nobody of the squad is lost (rails.respawn). He can be: a checkpoint stands at each beat's first step.
 import type { Vec3 } from '../../src/math/vec';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, STATION_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tunnel-station';
 
 export const NAME = 'tut-team';

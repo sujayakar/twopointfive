@@ -21,7 +21,7 @@
 // Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes: flat colours, boxes only; no second look file.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
@@ -51,7 +51,7 @@ const LOT_W: Vec3 = [15.2, 1.1, 22.0], LOT_E: Vec3 = [24.8, 1.1, 22.0], LOT_LAB:
 const LAB_S: Vec3 = [22.75, 1.1, 13.1], LAB_N: Vec3 = [22.75, 1.1, 12.9], STORE_E: Vec3 = [18.1, 1.1, 8.75];
 const OFFICE_E: Vec3 = [24.1, 1.1, 11.25], BACK_IN: Vec3 = [14.25, 1.1, 8.2], RACK_END: Vec3 = [15.85, 1.1, 12.2];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData). Seven men: glasshouse 3, lab 2, office 1, store 1.
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData). Seven men: glasshouse 3, lab 2, office 1, store 1.
  *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: men in the dark watch a floodlit forecourt through glass that stops no round.
  *  (The answers: come in through a wall that is not glass — the back door, or a hole of your own in the blank end wall — or put the light out.)
@@ -111,7 +111,7 @@ export const GLASSHOUSE_STRUCTURE: StructureData = {
     { id: 'back', name: 'Back', rooms: ['lab', 'office', 'store'], rally: [19.5, 0, 11.4] },                                // the dark rooms and the store: four in three rooms. The store apart as a squad of one that stays was tried: its man, dug in behind the racks, shot 13 of 48 teammates as the last room
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the station's own walls, nothing built for
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the station's own walls, nothing built for
  *  the picture. WAY 1 was a span of the blank end wall, the hole the mission issues its one wall charge for — and a picture on a blank wall had nothing for the
  *  kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle; the gun only scanned). It is the FRONT
  *  door now, seen from the forecourt (`ref`: the team's own start is round the corner, on the building's other side of that wall's line), the stack along the

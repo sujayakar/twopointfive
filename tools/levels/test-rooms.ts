@@ -1,7 +1,7 @@
 // TEST-ROOMS: the tiny level the scenario probes run on (levels stands) — NOT a level to play for its own sake. Three rooms off one short
 // hall and a lobby the team starts in, built from the office's own kit (lib/officeGen.ts officeKit: its walls, doors, furniture, lights and palette —
 // no new art), 20 × 14 m inside the 40 × 28 m world. It exists to prove that the room clear (pair and four) and the hostage rescue stage, are walked and
-// finish on a level that is not the office, with everything they need coming from this file's `scenarios` block (src/scene/scenarios.ts).
+// finish on a level that is not the office, with everything they need coming from this file's `scenarios` block (lib/scenarios.ts).
 //
 //        x 10        17  19            30
 //   z 8  ┌────────────────┬─────────────┐
@@ -16,7 +16,7 @@
 // levels/<name>.json from it and refuses a file that does not load back to the same level. (docs/agents/levels.md is the how-to.)
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';

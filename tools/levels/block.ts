@@ -91,7 +91,7 @@
 // in the dado's paint. Drum rings in the store. No letters, no numbers, no lines, no bays, no tiles.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewWay, LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { KitViewWay, LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import * as MD from './lib/markingDefaults';
@@ -106,7 +106,7 @@ import { lookMarks } from './lookMarks';
 
 const PLAIN_NOTES = 'The block: a loading hall, a 3 m hall and four held rooms off it, two men to a room. Every held room turns a corner and its men are round it; the notch of each is a small room nobody holds, with the room\'s other door in it. For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts block';
 
-/** The scenario's spaces. A held room is an L; its rectangle here is the L's BOUNDING BOX (scene/scenarios.ts takes one rectangle a room), so it also covers
+/** The scenario's spaces. A held room is an L; its rectangle here is the L's BOUNDING BOX (lib/scenarios.ts takes one rectangle a room), so it also covers
  *  the notch room in its corner. The ONE place these are typed. */
 export const BLOCK_ROOMS: Record<'staging' | 'hall' | 'mess' | 'comms' | 'shop' | 'store' | 'battery' | 'switchroom', Rect> = {
   staging: { x0: 4.12, x1: 10.94, z0: 4.12, z1: 23.88 },
@@ -614,9 +614,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       squads: BLOCK_SQUADS_HOLD(),   // the eight hold their rooms: nobody walks out, no door is wedged
     },
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it). The four notch rooms are not here: an
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it). The four notch rooms are not here: an
   // area may not overlap a room's rectangle, and a held room's rectangle is its L's bounding box.
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways in show the block's own kitchen door off the hall —
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways in show the block's own kitchen door off the hall —
   // indoors, under the hall's own lamps (no porch lamp, no fill: `roomLights` 1 is said outright, the door being the level's own), the stack on the hinge's side.
   { const way: KitViewWay = { door: 'kitchen_to_hall', side: -1, roomLights: 1, pane: false, light: { porch: { intensity: 0 }, fill: { intensity: 0 } } }; scenarios.kitView = { ways: [way, { ...way }] }; }
   scenarios.places = { areas: [{ name: 'staging area', bounds: { ...R.staging } }, { name: 'hall', bounds: { ...R.hall } },
