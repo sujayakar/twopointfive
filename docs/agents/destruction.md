@@ -97,7 +97,8 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 
 **Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and `fall_store_schedule` keeps the landing in the game's
 falls. `debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
-piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down.
+piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
+one he and a wall pin slides along it (`off_along_wall`).
 
 **Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
