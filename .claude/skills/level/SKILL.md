@@ -418,8 +418,8 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   `cargo test -p game_run --test desk` (in `rust/`).
 - **Its music**: two pieces in `src/audio/setlist.ts`. The maintainer: "we should curate the music for each level, not do
   it randomly". **check** `music`.
-- **Its picture**: `public/assets/menu/<row>.jpg` and `stills.json`, from a recipe in `tools/menu-shots/recipes.cjs` (a
-  frame of real play; no two in a group share a moment, an hour and a camera) or `tools/menu-art.ts`. **check** `picture`
+- **Its picture**: `public/assets/menu/<row>.jpg` and `stills.json`, from `tools/menu-art.ts` (no two in a group
+  share a moment, an hour and a camera). **check** `picture`
   (that it is there; whether it looks like play is **by eye**).
 - **Its look**: built on the look's kit (or the plain kit with `tools/levels/gwotSkin.ts` over it, box for box, other paint), with its row in
   `src/scene/look.ts LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**

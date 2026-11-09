@@ -3,9 +3,9 @@
 // The maintainer, 10-11: "our art style is also AWESOME so if we could highlight it (maybe with prerendered level screenshots or something)"; and, 10-12, of the
 // first set (composed pictures of men stood on their start): "they look somewhat staged and repetitive" · "our actual gameplay looks a lot cooler!"
 //
-// The pictures are FILES beside the page (public/assets/menu/<mission id>.jpg + stills.json, which lists them), taken ahead of time by tools/menu-shots: the
-// mission booted from its own link, played to a moment by a scripted player on the keys and the order menu, and that frame of the real renderer drawn from a
-// camera pinned for the still (its head comments say how; a mission with no recipe there keeps a picture composed by tools/menu-art.ts). Nothing here draws the
+// The pictures are FILES beside the page (public/assets/menu/<mission id>.jpg + stills.json, which lists them). Most were taken ahead of time from the real
+// renderer, the mission played to a moment by a scripted player and the frame drawn from a camera pinned for the still, with a tool that drove a page now gone;
+// the rest, and any picture made today, are composed by tools/menu-art.ts. Nothing here draws the
 // game. A picture is one run's moment, not the visit's deal — who stands where differs — so the menu marks nothing on it (the way in is marked on the map sheet
 // beside the list).
 // WHERE THE FILES DID NOT COME (a mission added since the pictures were made) every call answers null and the caller draws what it drew
