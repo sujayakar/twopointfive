@@ -120,6 +120,7 @@ pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms 
 pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     crate::seenwalk::seen_reset(g);
     g.cleared.known_room.fill(0);
+    g.cleared.looked.clear();
     g.cleared.known = 0.0;
     g.cleared.last = -1.0;
     g.cleared.stats = crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 };
@@ -233,6 +234,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
             cleared_rooms_mark(g, p);
         }
     }
+    look_over(g);
 }
 
 /// A walk's price list for nav.findPath: every cell of a room nobody of the team has been in is `dear`, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them. None: nothing on this floor is dear for this walk.   (cleared.ts ClearedRooms.dearFor)

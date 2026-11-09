@@ -9,6 +9,8 @@ pub enum OpeningKind {
     Mouth,
     Gap,
     Rear,
+    /// floor of the room he is in that nobody has looked over
+    Floor,
 }
 impl OpeningKind {
     pub const fn as_str(self) -> &'static str {
@@ -17,6 +19,7 @@ impl OpeningKind {
             OpeningKind::Mouth => "mouth",
             OpeningKind::Gap => "gap",
             OpeningKind::Rear => "rear",
+            OpeningKind::Floor => "floor",
         }
     }
 }
@@ -91,6 +94,7 @@ pub struct Cover {
     pub heading: JsMap<GuardId, f64>,
     pub rear: Option<CoverOpeningId>,
     pub rears: JsMap<GuardId, CoverOpeningId>,
+    pub floors: JsMap<GuardId, CoverOpeningId>,
     pub reads: JsMap<OrdersAssignmentId, crate::cover::CoverReadsValue>,
     pub kept: JsMap<GuardId, crate::cover::CoverKeptValue>,
     pub outs: JsMap<GuardId, crate::cover::CoverOutsValue>,
@@ -115,6 +119,7 @@ impl Cover {
             heading: JsMap::new(),
             rear: None,
             rears: JsMap::new(),
+            floors: JsMap::new(),
             reads: JsMap::new(),
             kept: JsMap::new(),
             outs: JsMap::new(),
