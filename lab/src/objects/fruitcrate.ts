@@ -5,7 +5,7 @@ import { M } from '../scene/materials';
 import type { Piece } from '../scene/world';
 import type { Made, ObjectKind, Put } from './object';
 const X = 0.25, Z = 0.165, RIM = 0.188, POST = 0.206, THICK = 0.0042;
-const WOOD: V3 = [0.90, 0.765, 0.59], GRAIN: V3 = [0.80, 0.625, 0.44], PEEL: V3 = [0.835, 0.492, 0.112], PAPER: V3 = [1.0, 0.985, 0.94], STICK: V3 = [0.78, 0.62, 0.36], LEAF: V3 = [0.30, 0.50, 0.17], CALYX: V3 = [0.47, 0.56, 0.25];
+const WOOD: V3 = [0.90, 0.765, 0.59], GRAIN: V3 = [0.80, 0.625, 0.44], PEEL: V3 = [0.905, 0.532, 0.122], PAPER: V3 = [1.0, 0.985, 0.94], STICK: V3 = [0.78, 0.62, 0.36], LEAF: V3 = [0.30, 0.50, 0.17], CALYX: V3 = [0.47, 0.56, 0.25];
 /** (what is printed comes out paler than it was drawn) */
 const INK: V3 = [0.86, 0.84, 0.81];
 const tone = (c: V3, k: number): V3 => [c[0] * k, c[1] * k, c[2] * k];
@@ -38,8 +38,8 @@ function price(p: Put, fine: boolean) {
   p.add({ at: CARD, rot: TURN, half: [CW, CH, 0.0011], mat: M.print!, tint: PAPER, marks: [{ face: 5, at: [0, 0], size: [2 * CW - 0.012, 2 * CH - 0.012], art: 'tag0', color: INK }] });
   p.bar(on([0, CH + 0.012, -0.0052]), on([0, -0.215, -0.0052]), 0.0042, 0.0038, M.print!, STICK);
   if (!fine) return;
-  for (const s of [-1, 1]) p.add({ at: on([0, CH - 0.004, s * 0.0055 - 0.0035]), rot: compose(TURN, rotX(s * 0.10)), half: [0.0058, 0.021, 0.0026], mat: M.print!, tint: [0.86, 0.17, 0.13] });
-  p.bar(on([-0.0075, CH + 0.001, -0.0035]), on([0.0075, CH + 0.001, -0.0035]), 0.0044, 0.0043, M.steel!, [1, 1, 1]);
+  for (const s of [-1, 1]) p.add({ at: on([0, CH + 0.008, s * 0.0055 - 0.0035]), rot: compose(TURN, rotX(s * 0.10)), half: [0.0058, 0.021, 0.0026], mat: M.print!, tint: [0.86, 0.17, 0.13] });
+  p.bar(on([-0.0075, CH + 0.010, -0.0035]), on([0.0075, CH + 0.010, -0.0035]), 0.0044, 0.0043, M.steel!, [1, 1, 1]);
 }
 /** the wood's figure, as wide bands of a wave far larger than the board */
 const grain = (face: number, q: () => number, tint: V3): Piece['marks'] => [{ face, at: [(q() - 0.5) * 0.3, (q() - 0.5) * 0.04], size: [1.1 + 0.6 * q(), 0.10 + 0.04 * q()], art: 'wave', color: [GRAIN[0] * tint[0] / WOOD[0], GRAIN[1] * tint[1] / WOOD[1], GRAIN[2] * tint[2] / WOOD[2]] }];
@@ -58,9 +58,9 @@ function wood(p: Put, fine: boolean) {
 }
 /** a side from far off: its boards, and what is dark between them */
 const SIDE: V3 = [0.810, 0.690, 0.531];
-const heapTint = (k: number): V3 => tone([0.823, 0.500, 0.128], k);
+const heapTint = (k: number): V3 => tone([0.892, 0.541, 0.139], k);
 export const fruitcrate: ObjectKind = { name: 'fruitcrate', title: 'Fruit crate', make: (): Made => ({
-  name: 'fruitcrate', title: 'Fruit crate', size: [0.503, 0.43, 0.334], on: 'floor', close: { at: [0.06, 0.20, 0.04], far: 1.9 }, read: 2.6, moves: { kind: 'loose', dense: 480, rough: 0.6, floats: true }, crowd: 64,
+  name: 'fruitcrate', title: 'Fruit crate', size: [0.503, 0.44, 0.334], on: 'floor', close: { at: [0.06, 0.20, 0.04], far: 1.9 }, read: 2.6, moves: { kind: 'loose', dense: 480, rough: 0.6, floats: true }, crowd: 64,
   levels: [
     { shape: 'pieces', error: 0, less: '', put(p) {
       wood(p, true); price(p, true); const fs = fruits(p.seed), q = rng(p.seed * 71 + 3);
@@ -72,8 +72,8 @@ export const fruitcrate: ObjectKind = { name: 'fruitcrate', title: 'Fruit crate'
     { shape: 'pieces', error: 0.022, less: 'fruit: the heap is lumps; slats: a board a side', put(p) {
       for (const s of [-1, 1]) { p.box([0, 0.105, s * (Z - THICK)], [X, 0.083, THICK], M['lamp shade']!, SIDE); p.box([s * (X - 0.0115), 0.105, 0], [0.0065, 0.081, Z - 2 * THICK - 0.001], M['lamp shade']!, tone(WOOD, 0.935), { marks: [label(s, -0.030)] }); }
       p.box([0, 0.082, 0], [X - 0.019, 0.080, Z - 2 * THICK - 0.002], M.print!, heapTint(0.78)); price(p, false);
-      const q = rng(p.seed * 37 + 1); for (let i = 0; i < 5; i++) for (let k = 0; k < 3; k++) { const u = (i - 2) / 2, v = k - 1; p.ball([u * 0.180, 0.212 - 0.042 * u * u - 0.028 * v * v, v * 0.094], [0.056, 0.048, 0.060], M.print!, heapTint(0.885 + 0.08 * q())); }
+      const q = rng(p.seed * 37 + 1); for (let i = 0; i < 5; i++) for (let k = 0; k < 3; k++) { const u = (i - 2) / 2, v = k - 1; p.ball([u * 0.180, 0.212 - 0.042 * u * u - 0.028 * v * v, v * 0.094], [0.056, 0.048, 0.060], M.print!, heapTint(0.91 + 0.08 * q())); }
     } },
-    { shape: 'pieces', error: 0.040, less: 'all but a box, a dome and the price', put(p) { p.box([0, 0.091, 0], [X - 0.010, 0.089, Z - 0.008], M['lamp shade']!, tone(SIDE, 1.0)); p.add({ at: [0, 0.16, 0], half: [X - 0.026, 0.122, Z - 0.027], mat: M.print!, tint: heapTint(0.835), quad: [1 / 0.34 ** 2, 1 / 0.122 ** 2, 1 / 0.225 ** 2, 0] }); p.add({ at: [CARD[0], 0.28, CARD[2] + 0.012], half: [0.004, 0.035, 0.004], mat: M.print!, tint: STICK }); p.add({ at: CARD, rot: TURN, half: [CW, CH, 0.0011], mat: M.print!, tint: PAPER, marks: [{ face: 5, at: [0, 0], size: [2 * CW - 0.012, 2 * CH - 0.012], art: 'tag0', color: INK }] }); } },
+    { shape: 'pieces', error: 0.040, less: 'all but a box, a dome and the price', put(p) { p.box([0, 0.091, 0], [X - 0.010, 0.089, Z - 0.008], M['lamp shade']!, [0.806, 0.679, 0.517]); p.add({ at: [0, 0.16, 0], half: [X - 0.026, 0.122, Z - 0.027], mat: M.print!, tint: [0.800, 0.463, 0.116], quad: [1 / 0.34 ** 2, 1 / 0.122 ** 2, 1 / 0.225 ** 2, 0] }); p.add({ at: [CARD[0], 0.28, CARD[2] + 0.012], half: [0.004, 0.035, 0.004], mat: M.print!, tint: STICK }); p.add({ at: CARD, rot: TURN, half: [CW, CH, 0.0011], mat: M.print!, tint: PAPER, marks: [{ face: 5, at: [0, 0], size: [2 * CW - 0.012, 2 * CH - 0.012], art: 'tag0', color: INK }] }); } },
   ],
 }) };

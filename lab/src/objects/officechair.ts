@@ -14,18 +14,14 @@ function along(l: YZ[], s: number): { at: V3; t: V3 } { let i = 0, left = s; for
 const long = (l: YZ[]) => l.reduce((n, p, i) => i ? n + Math.hypot(p[0] - l[i - 1]![0], p[1] - l[i - 1]![1]) : 0, 0);
 const frame = (t: V3): Rot => [[1, 0, 0], t, cross([1, 0, 0], t)];
 /** how round a channel is, across */
-const SEWN = 0.070;
-/** sewn channels along a line: each a bar, a lens across (a tube as thin would be lost to rounding far off) */
-function channels(p: Put, l: YZ[], n: number) { const L = long(l), step = L / n, h = step / 2 + 0.0018; for (let i = 0; i < n; i++) { const c = along(l, (i + 0.5) * step), a = along(l, (i + 0.12) * step).at, b = along(l, (i + 0.88) * step).at, t = norm(sub(b, a)), k = 0.985 + 0.03 * ((i * 7) % 5) / 4; p.add({ at: add(mul(add(a, b), 0.35), mul(c.at, 0.30)), half: [W + 0.0016 * (i % 2), h, 0.0205], rot: frame(t), mat: M.canvas!, tint: tone(CLOTH, k), curves: [1, -1].map(e => ({ at: [0, 0, e * (0.0205 - SEWN)] as V3, r: [0, SEWN, SEWN] as V3 })) }); } }
+const SEWN = 0.052;
+/** sewn channels along a line: each a bar, a lens across; wider where the line bends, so that none gape */
+function channels(p: Put, l: YZ[], n: number) { const L = long(l), step = L / n; for (let i = 0; i < n; i++) { const c = along(l, (i + 0.5) * step), a = along(l, (i + 0.12) * step).at, b = along(l, (i + 0.88) * step).at, t = norm(sub(b, a)), u = along(l, Math.max(0, i - 0.5) * step).t, v = along(l, Math.min(n - 0.1, i + 1.5) * step).t, h = step / 2 + 0.0018 + 0.006 * Math.hypot(...sub(v, u)), k = 0.985 + 0.03 * ((i * 7) % 5) / 4; p.add({ at: add(mul(add(a, b), 0.35), mul(c.at, 0.30)), half: [W + 0.0016 * (i % 2), h, 0.0205], rot: frame(t), mat: M.canvas!, tint: tone(CLOTH, k), curves: [1, -1].map(e => ({ at: [0, 0, e * (0.0205 - SEWN)] as V3, r: [0, SEWN, SEWN] as V3 })) }); } }
 /** the same as slabs: between such places on the line */
 function slabs(p: Put, l: YZ[], cuts: [number, number][], thick: number) { for (const [a, b] of cuts) { const u = along(l, a).at, v = along(l, b).at, t = norm(sub(v, u)); p.add({ at: mul(add(u, v), 0.5), half: [W, Math.hypot(...sub(v, u)) / 2, thick], rot: frame(t), mat: M.canvas!, tint: CLOTH }); } }
-/** a bar with broken edges, from a to b, so wide at each: planes hold from afar where a thin tube does not */
-function rod(p: Put, a: V3, b: V3, ra: number, rb: number, mat: number, tint: V3, roll = 0) {
-  const d = sub(b, a), l = Math.hypot(...d), y = norm(d), x0 = cross(y, [0, 0, 1]), x1 = norm(Math.hypot(...x0) < 1e-3 ? cross(y, [1, 0, 0]) : x0), x = add(mul(x1, Math.cos(roll)), mul(cross(x1, y), Math.sin(roll))), m = (rb - ra) / l, r = (ra + rb) / 2, n = Math.hypot(1, m);
-  const side = (u: number, v: number, w: number): [V3, number] => [[u / n, -m / n, v / n], w / n];
-  p.add({ at: mul(add(a, b), 0.5), half: [Math.max(ra, rb) * 0.96, l / 2, Math.max(ra, rb) * 0.96], rot: [x, y, cross(x, y)], mat, tint, planes: [...[1, -1].flatMap(u => [1, -1].map(v => side(u * Math.SQRT1_2, v * Math.SQRT1_2, r * 0.98))), ...(Math.abs(ra - rb) > 3e-4 ? [side(1, 0, r * 0.95), side(-1, 0, r * 0.95), side(0, 1, r * 0.95), side(0, -1, r * 0.95)] : [])] });
-}
-function rails(p: Put, l: YZ[], at: number[], r: number, mat = M.steel!, tint = ALLOY, from = 0) { const pts = at.map(i => l[i]!); for (const s of [-1, 1]) for (let i = from; i + 1 < pts.length; i++) { const a: V3 = [s * X, ...pts[i]!], b: V3 = [s * X, ...pts[i + 1]!], d = mul(norm(sub(b, a)), i + 2 < pts.length ? 0.0022 : 0); rod(p, a, add(b, d), r, r, mat, tint, (i % 2) * Math.PI / 8); } }
+/** a round bar, so wide at its ends */
+const rod = (p: Put, a: V3, b: V3, ra: number, rb: number, mat: number, tint: V3) => p.bar(a, b, ra, rb * 0.9985, mat, tint);
+function rails(p: Put, l: YZ[], at: number[], r: number, mat = M.steel!, tint = ALLOY, from = 0) { const pts = at.map(i => l[i]!); for (const s of [-1, 1]) for (let i = from; i + 1 < pts.length; i++) { const a: V3 = [s * X, ...pts[i]!], b: V3 = [s * X, ...pts[i + 1]!], d = mul(norm(sub(b, a)), i + 2 < pts.length ? 0.0022 : 0); rod(p, a, add(b, d), r, r, mat, tint); } }
 /** one arm of the star: high and wide at the hub, its upper edges broken */
 const arm = (i: number): { out: V3; yaw: number } => { const a = i * Math.PI * 0.4 + Math.PI / 2 + 0.16; return { out: [Math.cos(a), 0, Math.sin(a)], yaw: a }; }, TIP = 0.292;
 function star(p: Put, fine: boolean) {
@@ -78,8 +74,8 @@ export const officechair: ObjectKind = { name: 'officechair', title: 'Office cha
         channels(p, SEAT, 10); rails(p, [...SEAT, HINGE], [0, 2, 4, 8], RAIL); rod(p, [-X, ...SEAT[0]!], [X, ...SEAT[0]!], 0.0105, 0.0105, M.steel!, ALLOY); for (const s of [-1, 1]) rest(p, s, false);
       }, () => { channels(p, BACK, 10); rails(p, [HINGE, ...BACK], [0, 3, 5, 8], RAIL); rod(p, [-X, ...BACK[7]!], [X, ...BACK[7]!], 0.0115, 0.0115, M.steel!, ALLOY); rod(p, [-X, BACK[0]![0] - 0.004, BACK[0]![1] - 0.012], [X, BACK[0]![0] - 0.004, BACK[0]![1] - 0.012], 0.0085, 0.0085, M.steel!, ALLOY); });
     } },
-    { shape: 'pieces', error: 0.022, less: 'channels are slabs; castors are boxes', put(p) {
-      for (let i = 0; i < 5; i++) { const { out } = arm(i); rod(p, [0, 0.104, 0], add(mul(out, TIP), [0, 0.072, 0]), 0.026, 0.0185, M.steel!, ALLOY); p.add({ at: add(mul(out, TIP), [0, 0.028, 0]), half: [0.024, 0.0275, 0.024], mat: M.plastic!, tint: BLACK }); }
+    { shape: 'pieces', error: 0.022, less: 'channels are slabs; castors are balls', put(p) {
+      for (let i = 0; i < 5; i++) { const { out } = arm(i); rod(p, [0, 0.104, 0], add(mul(out, TIP), [0, 0.072, 0]), 0.026, 0.0185, M.steel!, ALLOY); p.ball(add(mul(out, TIP), [0, 0.029, 0]), [0.029, 0.029, 0.029], M.plastic!, BLACK); }
       rod(p, [0, 0.08, 0], [0, 0.38, 0], 0.0265, 0.0265, M.plastic!, tone(BLACK, 1.15));
       return turns(p, () => { p.box([0, 0.402, -0.008], [0.056, 0.0265, 0.092], M.plastic!, BLACK); slabs(p, SEAT, [[0.004, 0.062], [0.062, 0.436]], 0.0185); rails(p, [...SEAT, HINGE], [1, 8], 0.0135); rod(p, [-X, ...SEAT[0]!], [X, ...SEAT[0]!], 0.0105, 0.0105, M.steel!, ALLOY); for (const s of [-1, 1]) rest(p, s, false); },
         () => { slabs(p, BACK, [[0, 0.22], [0.22, 0.40], [0.40, 0.517]], 0.0185); rails(p, [HINGE, ...BACK], [0, 8], 0.0135); });
