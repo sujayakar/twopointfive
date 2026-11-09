@@ -1,7 +1,7 @@
 // Write a level file from its generator: tools/levels/<name>.ts exports build() → { level, scenarios?, groups, surfaces? } (a Level made with lib/officeGen.ts
 // officeKit or lib/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, PALETTE and finish.
 // Here the doors are fitted (doorSize.ts), the loud levels dressed (dress.ts) after the lived-in tail, the floor's flats put in order (flatLayers.ts) and the
-// skin run (finish); then Level → level data → validate → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
+// skin run (finish); then Level → level data → its faults (judge.ts; not with --check or --floor) → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
 // nothing is written.
 //   bun run tools/levels/export.ts <name>            write levels/<name>.json (prints counts, size, digest)
 //   bun run tools/levels/export.ts <name> --check    write nothing; exit 1 if levels/<name>.json is missing or differs from what the generator gives now
@@ -15,7 +15,8 @@ const { rowWord, rowDoes: nameDoes } = await import(`${ROOT}/src/scene/stuff.ts`
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
 const { DOES_DEFAULT } = await import(`${ROOT}/src/scene/materials.ts`);
-const { levelFaults, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 
 const argv = process.argv.slice(2), floorAt = argv.indexOf('--floor'), FLOOR_TO = floorAt >= 0 ? argv[floorAt + 1] : null, name = argv.find((a, i) => !a.startsWith('--') && (floorAt < 0 || i !== floorAt + 1)), CHECK = argv.includes('--check');
@@ -94,12 +95,12 @@ if (gen.PALETTE) { const { dropUnworn } = await import('./wornRows.ts'), P = gen
   const clash = Object.keys(P).filter(m => Object.hasOwn(materials, m) && materials[m].albedo.join(',') !== P[m].albedo.join(','));
   if (clash.length) { console.error(`export ${name}: PALETTE names ${clash.length} row(s) the file already has in other numbers: ${clash.join(', ')}`); process.exit(1); }
   dropUnworn(data, P); }
-const errs = levelFaults(data);
+const errs = CHECK || FLOOR_TO ? [] : levelFaults(data);   // (a file that is there, which --check holds this to byte for byte, is judged by `gate`; a floor without its skin is a check's)
 if (errs.length) { console.error(`${data.name}: ${errs.length} fault(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
 const text = serializeLevelData(data);
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = [], levelDiffs: string[] = [];
-const nData = structuralDiff(data, parsed, dataDiffs), nLevel = structuralDiff(level, loadLevel(parsed, { validate: false }), levelDiffs);
+const nData = structuralDiff(data, parsed, dataDiffs), nLevel = structuralDiff(level, loadLevel(parsed), levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);
   for (const d of [...levelDiffs, ...dataDiffs].slice(0, 20)) console.error('  ' + d);

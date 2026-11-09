@@ -14,7 +14,7 @@ const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfNam
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
-const { parseLevelData, serializeLevelData, levelFaults, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { parseLevelData, serializeLevelData, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -84,12 +84,12 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '6 the page makes the look\'s word from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',
     `wired ${wired} · look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')} · an old cut: ${said(own)}, with a core of slab ${said(other)}, of plain ${said(none)}`); }
 
-// 7. a box says its own word: over its row's, through the level file and back, on a loose prop's part too; a row may say one; what cannot be said is refused
+// 7. a box says its own word: over its row's, through the level file and back, on a loose prop's part too; a row may say one (what cannot be said is refused: rust/game_start/tests/level_faults.rs)
 { const D = dataOf('library-hall.json') as any, bi = D.boxes.findIndex((b: any) => b.material === 'concrete' && b.stuff === undefined), wi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.flags === undefined && b.stuff === undefined), fi = D.boxes.findIndex((b: any) => b.material !== undefined && b.flags !== undefined && b.stuff === undefined), pi = D.props.findIndex((p: any) => p.kind === 'chair'), ii = D.boxes.findIndex((b: any) => b.albedo !== undefined && b.stuff === undefined);
   if (bi < 0 || wi < 0 || fi < 0 || pi < 0 || ii < 0) check(false, '7 a box says its own word', `the showroom has no concrete box, wooden box, flagged box, inline box or chair to ask (${bi}, ${wi}, ${fi}, ${ii}, ${pi})`);
   else {
     D.boxes[bi].stuff = 'paint'; D.boxes[wi].stuff = 'plain'; D.boxes[fi].stuff = 'slab'; D.props[pi].parts[0].stuff = 'plaster'; D.boxes[ii].stuff = 'enamel';
-    const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = levelFaults(back), L = loadLevel(back) as any;   // (every box of the file: the lived rooms and the dressing too)
+    const text = serializeLevelData(D), back = parseLevelData(text) as any, L = loadLevel(back) as any;   // (every box of the file: the lived rooms and the dressing too)
     const car = cls(L.boxes[bi]), desk = cls(L.boxes[wi]), inl = cls(L.boxes[ii]);
     // back to a file: a word is written only where the box is another thing than its row says; 'plain' is written over a row that says something
     const again = levelToData(L, { materials: back.materials }) as any, same = again.boxes.every((b: any, i: number) => b.stuff === back.boxes[i].stuff) && again.props.every((p: any, i: number) => p.parts.every((q: any, j: number) => q.stuff === back.props[i].parts[j].stuff));
@@ -97,17 +97,11 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     // where it is written: after the finish, before the flags, on a box that has flags; and in the format's own key lists, a material row's too
     const line = text.split('\n').find((l: string) => l.includes(`"id": "${D.boxes[fi].id}"`) || l.includes(`"id":"${D.boxes[fi].id}"`)) ?? '', kb = KEYS.box.indexOf('stuff'), kp = KEYS.part.indexOf('stuff'), km = KEYS.material.indexOf('stuff');
     const placed = /"stuff":\s*"slab".*"flags"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line) && KEYS.box[kb - 1] === 'metal' && KEYS.box[kb + 1] === 'does' && KEYS.box[kb + 2] === 'flags' && KEYS.part[kp - 1] === 'albedo' && KEYS.material[km - 1] === 'metal' && KEYS.material[km + 1] === 'does' && KEYS.material[km + 2] === 'notes';   // (`does`, what a box is to the rules, is written straight after `stuff`: scene/materials.ts)
-    // refused: on a box, on a prop's part, on a material row, and on a box of a gear screen's set (a picture's box is the format's own record)
-    const KV = FILES.find(f => Object.values((dataOf(f) as any).scenarios?.kitView?.sets ?? {}).some((x: any) => x.boxes?.length));
-    const refuse = (w: string, where: 'box' | 'part' | 'set' | 'row' = 'box') => { const X = dataOf(where === 'set' ? KV! : 'library-hall.json') as any;
-      if (where === 'box') X.boxes[0].stuff = w; else if (where === 'part') X.props[0].parts[0].stuff = w; else if (where === 'row') X.materials.wood.stuff = w; else (Object.values(X.scenarios.kitView.sets).find((x: any) => x.boxes?.length) as any).boxes[0].stuff = w;
-      return levelFaults(X).some((e: string) => e.includes('stuff')); };
     const masonry = (LOOK_NAMES as readonly string[]).slice(LOOK_PAINTED).join(', ');
-    check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && L.props[pi].parts[0].stuff === 'plaster' && same && kept && placed
-      && refuse('mixed') && refuse('banana') && !refuse('waits') && !refuse('veneer') && refuse('banana', 'part') && !refuse('fabric', 'part') && refuse('banana', 'row') && !refuse('veneer', 'row') && refuse('mud brick', 'row') && !!KV && refuse('banana', 'set') && !refuse('steel', 'set')
-      && BOX_STUFFS.length === LOOK_PAINTED + 4 && !refuse('glass') && !refuse('rubber') && masonry === 'field stone, mud brick' && refuse('mud brick') && refuse('field stone') && lookStuffOf('mud brick') === 0,
-      '7 a box says its own word: a concrete box that says paint is paint; a wooden box that says plain is plain; a box written as numbers that says enamel is enamel; a chair\'s part says its own; the words go through the level file and back, written only where the box is another thing than its row says, after the finish and before the flags; a word the look has no material for is refused when the file is read, on a box, a part, a material row and a gear screen\'s box, the stone and brick under a mud wall among them (glass and rubber, which the picture of a hit reads, are words a box may say)',
-      `the concrete box ${said(car)} · the wooden box ${said(desk)} · the inline box ${said(inl)} · the chair's part ${L.props[pi].parts[0].stuff} · through the file and back the same ${same}, kept ${kept} · placed ${placed} · refused: mixed ${refuse('mixed')}, banana ${refuse('banana')}, mud brick ${refuse('mud brick')}, a part's ${refuse('banana', 'part')}, a row's ${refuse('banana', 'row')}, a set's ${KV ? refuse('banana', 'set') : 'no file'} (${KV}); waits ${refuse('waits')} · ${errs.length} errors reading it back${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); } }
+    check(car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && L.props[pi].parts[0].stuff === 'plaster' && same && kept && placed
+      && BOX_STUFFS.length === LOOK_PAINTED + 4 && masonry === 'field stone, mud brick' && lookStuffOf('mud brick') === 0,
+      '7 a box says its own word: a concrete box that says paint is paint; a wooden box that says plain is plain; a box written as numbers that says enamel is enamel; a chair\'s part says its own; the words go through the level file and back, written only where the box is another thing than its row says, after the finish and before the flags',
+      `the concrete box ${said(car)} · the wooden box ${said(desk)} · the inline box ${said(inl)} · the chair's part ${L.props[pi].parts[0].stuff} · through the file and back the same ${same}, kept ${kept} · placed ${placed}`); } }
 
 // 8. a word belongs to the paint it was said with: a piece says it for its own paints, a kit's add gives a box its paint's, and whoever repaints a box does not keep the old
 { const k = newKit(), n0 = k.boxes.length; KD.desk(k, 2, 2, 1.6, 0.8); const own = k.boxes.slice(n0), n1 = k.boxes.length; KD.desk(k, 6, 2, 1.6, 0.8, 0, KIT_PALETTE.woodDark); const dark = k.boxes.slice(n1), n2 = k.boxes.length;
@@ -159,19 +153,18 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 // (13, 'the editor keeps a paint's word', went with the level editor.)
 
 // 14. A SHAPE'S PIECE SAYS ITS WORD AS A BOX DOES (scene/shapes.ts, a box's `shape.with`): its own, else its paint's row's, else nothing; the box stood up for
-//     it carries the word; the file keeps only a word that is another thing than the row's, and a word that is no stuff is refused
+//     it carries the word; the file keeps only a word that is another thing than the row's
 { const { shapeLevel } = await import(`${ROOT}/src/scene/shapes.ts`);
   const D = dataOf('office.json') as any, M = D.materials, bi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.rot === undefined && b.markings === undefined && b.shape === undefined && !(b.flags ?? []).includes('Glass')), b = D.boxes[bi];
   const up = b.h[1] + 0.02;
   b.shape = { with: [{ off: [0, up, 0], h: [0.05, 0.02, 0.05], material: 'metal' }, { off: [0.12, up, 0], h: [0.05, 0.02, 0.05], material: 'metal', stuff: 'plastic' }, { off: [-0.12, up, 0], h: [0.05, 0.02, 0.05], albedo: [0.31, 0.27, 0.4] }, { off: [0, up, 0.12], h: [0.05, 0.02, 0.05], material: 'wood', stuff: 'plain' }] };
-  const errs = levelFaults(D), L = loadLevel(D) as any, said = (L.boxes[bi].shape.with as any[]).map(w => w.stuff ?? 'nothing');
+  const L = loadLevel(D) as any, said = (L.boxes[bi].shape.with as any[]).map(w => w.stuff ?? 'nothing');
   shapeLevel(L.boxes, true); const stood = (L.boxes as any[]).filter(x => x.piece === true && x.of === bi).map(x => x.stuff ?? 'nothing'); shapeLevel(L.boxes, false);
   const back = (levelToData(L, { materials: M }) as any).boxes[bi].shape.with.map((w: any) => w.stuff ?? 'nothing');
-  const bad = JSON.parse(JSON.stringify(D)); bad.boxes[bi].shape.with[0].stuff = 'banana'; const refused = levelFaults(bad).some((e: string) => e.includes('banana'));
   const row: string = M.metal?.stuff ?? 'nothing';   // (what the file's own row says the kit's metal is made of)
-  check(errs.length === 0 && row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join() && refused,
-    '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s; a word that is no stuff is refused',
-    `the row: ${row} · loaded: ${said.join(', ')} · stood up: ${stood.join(', ')} · written back: ${back.join(', ')} · banana refused ${refused} · ${errs.length} errors${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); }
+  check(row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join(),
+    '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s',
+    `the row: ${row} · loaded: ${said.join(', ')} · stood up: ${stood.join(', ')} · written back: ${back.join(', ')}`); }
 
 // 15. NO WALL AND NO DOOR FRAME IS CLOTH BY A BORROWED PAINT: a generator or a skin that paints a wall or a frame in a cloth's paint for its COLOUR gets the
 //     cloth with it (the depot's hut walls in the tan partition paint, the consulate's frames in a blanket's brown: drawn as weave, and a round knocked tufts

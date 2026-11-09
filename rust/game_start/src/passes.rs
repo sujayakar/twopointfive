@@ -3,12 +3,12 @@
 //! (`src/scene/bars.ts`), and each box that says a shape given its record and its pieces of trim (`src/scene/shapes.ts`). Line for line from the
 //! TypeScript. A level is stood ONCE here, on boxes fresh from its file, so the passes' "put back what an earlier stand-up gave" halves
 //! (plainLevel, thinClear, barClear) have nothing to do and are not written.
-use alloc::{format, string::String, vec::Vec};
+use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 use game::m;
 use game::scene_boxes::{box_flag, Box};
-use game::scene_cut::{cut_plane, cut_record, cut_to_world, CutPlane, MAX_CUT_PLANES};
+use game::scene_cut::{cut_plane, cut_record, cut_to_world, CutPlane};
 use game::scene_level::LevelDoorDef;
 use game::scene_shapes::ShapeFormArc;
 use game::V3;
@@ -134,7 +134,7 @@ pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
 }
 
 // ---- shapes.ts
-const ARC_PLANES: usize = 5;
+pub const ARC_PLANES: usize = 5;
 fn arc_facets(n_cut: usize) -> f64 { if n_cut <= 1 { 6.0 } else if n_cut <= 3 { 4.0 } else { 2.0 } }
 /// the eight planes that, with the box's own faces, make a box a twelve-sided prism of radius r about its own x (1) or z (3)
 fn ring_planes(r: f64, axis: f64) -> Vec<CutPlane> {
@@ -156,9 +156,9 @@ fn arc_planes(h: V3, axis: f64, rise: f64, n: f64) -> Vec<CutPlane> {
     out
 }
 /// a shape's form, as a box's shape and a piece of trim both carry it
-struct Form<'a> { round: Option<f64>, arc: Option<ShapeFormArc>, cut: Option<&'a [[f64; 4]]>, old: Option<bool> }
+pub struct Form<'a> { pub round: Option<f64>, pub arc: Option<ShapeFormArc>, pub cut: Option<&'a [[f64; 4]]>, pub old: Option<bool> }
 /// a form's planes over a box of half size h (shapes.ts planesOf)
-fn planes_of(h: V3, f: &Form) -> Vec<CutPlane> {
+pub fn planes_of(h: V3, f: &Form) -> Vec<CutPlane> {
     let more: Vec<CutPlane> = f.cut.unwrap_or(&[]).iter().map(|p| cut_plane([p[0], p[1], p[2]], p[3])).collect();
     if let Some(round) = f.round { if round != 0.0 { return ring_planes(m::min(h[1], if round == 1.0 { h[2] } else { h[0] }), round); } }
     if let Some(arc) = f.arc {
@@ -168,40 +168,6 @@ fn planes_of(h: V3, f: &Form) -> Vec<CutPlane> {
         return out;
     }
     more
-}
-/// WHAT IS WRONG WITH A FORM said of a box of half size h (a box's shape, or a piece of trim's): nothing = none. A plane is judged against the box alone: whether it still bites beside an arc's own
-/// facets is not asked.
-pub fn form_faults(h: V3, round: Option<f64>, arc: Option<ShapeFormArc>, cut: Option<&[[f64; 4]]>, old: Option<bool>) -> Vec<String> {
-    let mut out = Vec::new();
-    let cuts = cut.map_or(0, <[_]>::len);
-    let mut formed = true;
-    if old == Some(false) { out.push(String::from("old is true, or left out")); }
-    if round.is_some() && arc.is_some() { out.push(String::from("says one of round and arc")); }
-    if cut.is_some_and(|c| c.is_empty() || c.iter().any(|p| m::sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]) <= 1e-9)) { out.push(String::from("cut: planes, each a way it faces and how far out")); formed = false; }
-    if let Some(axis) = round {
-        if axis != 1.0 && axis != 3.0 { out.push(String::from("round is the axis 1 (x) or 3 (z): a cylinder on its end is a round thing of the kit")); formed = false; }
-        else {
-            let a = if axis == 1.0 { h[2] } else { h[0] };
-            if m::abs(h[1] - a) > 0.15 * m::min(h[1], a) + 1e-9 { out.push(format!("round {axis}: the box is square across that axis, or within 15 hundredths of it ({} by {a})", h[1])); }
-        }
-        if cuts > 0 { out.push(String::from("round takes every plane of the record: no cut beside it")); }
-    } else if let Some(a) = arc {
-        if a.axis != 1.0 && a.axis != 3.0 || a.rise <= 0.0 { out.push(String::from("arc: the axis 1 or 3, and a rise over 0")); formed = false; }
-        else {
-            let w = if a.axis == 1.0 { h[2] } else { h[0] };
-            if a.rise > 2.0 * h[1] + 1e-6 { out.push(format!("arc: a rise of {} in a box {} high", a.rise, 2.0 * h[1])); }
-            if a.rise > w + 1e-6 { out.push(format!("arc: a rise of {} over a half width of {w} (a half circle is the most)", a.rise)); }
-        }
-        if cuts > ARC_PLANES { out.push(format!("an arc leaves room for {ARC_PLANES} planes ({cuts})")); }
-    } else if cuts as f64 > MAX_CUT_PLANES { out.push(format!("at most {MAX_CUT_PLANES} planes ({cuts})")); }
-    if !formed || !out.is_empty() { return out; }
-    for (i, q) in cut.into_iter().flatten().enumerate() {
-        let r = cut_record(h, &[cut_plane([q[0], q[1], q[2]], q[3])]);
-        if r.empty { out.push(format!("cut[{i}] leaves nothing of the box")); }
-        else if r.cut.map_or(true, |c| c.is_empty()) { out.push(format!("cut[{i}] cuts nothing of the box")); }
-    }
-    if out.is_empty() && (cuts > 0 || arc.is_some() || round.is_some()) && cut_record(h, &planes_of(h, &Form { round, arc, cut, old })).empty { out.push(String::from("the form leaves nothing of the box")); }
-    out
 }
 /// give `b` a shape's form: its record, and the picture's words of it (shapes.ts formBox)
 fn form_box(b: &mut Box, f: &Form) {

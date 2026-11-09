@@ -63,9 +63,9 @@ process a binary. Ask a rule there first; a page script is for what crosses to t
 It plays every mission's start and a few runs,
 each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 a row failed, 64 a wrong word.
 
-- `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par`. `gate save` runs the rows whose name starts with that word.
+- `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par` and `level file`. `gate save` runs the rows whose name starts with that word.
 - `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player), `lesson` (the tutorials by a man at the keys)
-  and `level` (each question of `levels`).
+  and `level` (each other question of `levels`).
 - A pin is the figures' word (`game_start::figures`, what play is in plain numbers). Figures moved is play moved, and red; only the parts moved passes and says so.
 - `gate pin [ROW…]` records the pins again and says which moved. `gate breaks` plants each check's fault: the row must pass unbroken, then fail in its check's own words.
 

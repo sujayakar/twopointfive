@@ -13,12 +13,12 @@
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
 //   E. THE WORD `laid` is the loader's and a file may not write it; a broken block refuses a level.
 // Lines are `- PASS — …` / `- FAIL — …`. The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
-// unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts).
+// unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts). A file's faults are the native program's (judge.ts: cargo).
 // KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
-import { parseLevelData, levelFaults } from '../levels/lib/levelData';
+import { levelFaults } from '../levels/lib/judge';
 import { missionRows } from '../desk.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -167,7 +167,7 @@ function theWords() {
   const L = levelOf(name), Y = L.data.scenarios.kitView.ways[0], errs: string[] = levelFaults(JSON.parse(withWay(L.data, 0, { ...Y, add: { boxes: [], laid: true } }))).filter((e: string) => e.includes('.add'));
   row(errs.length > 0, `a file that writes \`add.laid\` is refused: it is the loader's word, and said in a file it would pass any box off as an added piece — ${errs[0] ?? 'NOT REFUSED'}`);
   const broken = withWay(L.data, 0, { ...Y, door: 7 });
-  let refused = false; try { parseLevelData(broken); } catch { refused = true; }
+  const refused = levelFaults(JSON.parse(broken)).length > 0;
   row(refused, `a broken block refuses a level (${refused ? 'refused' : 'NOT REFUSED'})`);
 }
 
