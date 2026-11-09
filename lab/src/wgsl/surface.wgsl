@@ -199,7 +199,7 @@ fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   return (*l).radiance * ((*l).on * 0.5 * quadE(&q) * win);
 }
 /** how much of a lamp's image in a coat is the formula's (with a ray to see if it is there); the rest is for mirror rays to find. Rough coats would only find a small lamp by luck */
-fn byFormula(rough: f32) -> f32 { return smoothstep(0.12, 0.24, rough); }
+fn byFormula(rough: f32) -> f32 { return smoothstep(0.10, 0.16, rough); }
 /** a point of a lamp to ask for what a coat shows of it: where the mirrored ray meets it, as widely about that as the coat is rough */
 fn aimCoat(i: u32, s: Surf, V: vec3f, u: vec2f) -> vec4f {
   let l = &lamps[i]; if ((*l).kind != 0u) { let a = aimLamp(i, s.x, u); return vec4f(a.dir, a.dist); } let R = reflect(-V, s.n); let den = dot(R, (*l).n); var c = vec2f(0.0); var w = vec2f(2.0); let hu = dot((*l).u, (*l).u); let hv = dot((*l).v, (*l).v);
