@@ -8,17 +8,19 @@ const SEEDS: [u32; 3] = [1, 2, 3];
 
 /// The office's room clear with Red One's card carrying the wand, and the man behind the server door.
 fn carried(s: u32) -> (Play, GuardId, GuardId) {
+    use game::kit::{KitField, KitValue};
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+    game::kit::kit_own(&mut p.g, Some(true));
+    if !game::kit::kit_set(&mut p.g, 1.0, KitField::Wand, &KitValue::Bool(true)) {
+        let bangs = p.g.m.kit.kit.members[1].bangs;
+        assert!(game::kit::kit_set(&mut p.g, 1.0, KitField::Bangs, &KitValue::Num((bangs - 1.0).max(0.0))) && game::kit::kit_set(&mut p.g, 1.0, KitField::Wand, &KitValue::Bool(true)));
+    }
+    assert!(game::savestate::control::restart(&mut p.g, None));
     p.sam_unhurt();
     p.g.k.fog.own = false;
     p.g.k.fog.last_seen = 0.0;
-    p.run(0.5);
-    // (the man's card is written here. The card row's own call took the wand on Red One's card, but a second start of this mission did not put it on him, and that path is not what this asks)
+    p.run(0.6);
     let him = p.mates()[0];
-    let mut worn = p.g.m.kit.man_of.get(him).cloned().expect("his card");
-    worn.kit.wand = true;
-    p.g.m.kit.man_of.set(him, worn);
-    p.run(0.1);
     assert!(game::wandorder::carries(&p.g, him), "seed {s}: he does not carry it");
     p.g.ai_enabled = false;
     let door = p.door_at("server");
