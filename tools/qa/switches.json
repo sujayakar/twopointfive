@@ -751,7 +751,6 @@
     {"row":"LESSON.on","page":true,"kind":"settled"},
     {"row":"ISSUE.on","page":true,"kind":"settled"},
     {"row":"ISSUE.whole","page":true,"kind":"settled"},
-    {"row":"ISSUE.picked","page":true,"kind":"settled"},
     {"row":"VERDICT.on","page":true,"kind":"settled"},
     {"row":"VERDICT.loudCard","page":true,"kind":"settled"},
     {"row":"UNSEEN.on","page":true,"kind":"settled"},

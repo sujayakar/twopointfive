@@ -51,29 +51,11 @@ pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCa
 /// A page that plays the kit as issued.   (kit.ts kitIssuedPage)
 pub fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
 
-/// This row's lesson is packed for by the player.   (kit.ts kitPacks)
-pub fn kit_packs(g: &crate::game::Game, e: Option<crate::kit::KitPacksE>) -> bool { e.map_or(false, |e| e.packs.is_some()) }
-
-/// The page of a lesson says which row it is.   (kit.ts kitLessonPage)
-pub fn kit_lesson_page(g: &mut crate::game::Game, row: Option<crate::kit::KitLessonPageRow>) {
-    g.m.kit.lesson_row = row.map(|r| KitModLessonRow { packs: r.packs.map(|p| KitModLessonRowPacks { frags: p.frags }) });
-}
-
-/// `kitPacks(lessonRow)`, for a row that is there
-fn lesson_packs(g: &Game, row: KitModLessonRow) -> bool { kit_packs(g, Some(KitPacksE { packs: row.packs })) }
+/// The page of a lesson says so: its stagings wear the issue.   (kit.ts kitLessonPage)
+pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_row = if on { Some(KitModLessonRow::default()) } else { None }; }
 
 /// Every staging on this page wears the issue cards.   (kit.ts pageIssued)
-pub fn page_issued(g: &crate::game::Game) -> bool {
-    if g.m.kit.issued_page { return true; }
-    let Some(row) = g.m.kit.lesson_row else { return false; };
-    !lesson_packs(g, row)
-}
-
-/// The least frags he carries on this page (0: no such page).   (kit.ts pageFrags)
-pub fn page_frags(g: &crate::game::Game) -> f64 {
-    let Some(row) = g.m.kit.lesson_row else { return 0.0; };
-    if lesson_packs(g, row) { row.packs.and_then(|p| p.frags).unwrap_or(0.0) } else { 0.0 }
-}
+pub fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_row.is_some() }
 
 /// The level's block names a card for you: nothing is handed over it.   (kit.ts kitIssueWhole)
 pub fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
@@ -312,10 +294,6 @@ pub fn kit_player(g: &mut crate::game::Game) {
     let c = g.pl[pl].ch;
     if m.suit != SuitId::Issued { g.ch[c].tint = suit_tint(m.suit); }
     if m.trim != TrimId::Issued { g.ch[c].tint2 = trim_tint(m.trim); }
-    if !issuing_on(g) {
-        let least = page_frags(g);
-        if g.pl[pl].frags < least { g.pl[pl].frags = page_frags(g); }
-    }
     let worn = if issuing_on(g) { None } else { Some(&m) };
     crate::kitload::load_wear(g, worn);
     kit_alone(g);
@@ -535,25 +513,16 @@ pub fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
 mod tests {
     use super::*;
 
-    fn row(frags: Option<f64>, packed: bool) -> KitModLessonRow {
-        KitModLessonRow { packs: if packed { Some(KitModLessonRowPacks { frags }) } else { None } }
-    }
-
-    /// kitIssuedPage and kitLessonPage decide what every staging wears, and the least frags of a lesson he packs for.
+    /// kitIssuedPage and kitLessonPage decide what every staging wears.
     #[test]
     fn what_the_page_stages() {
         let mut g = Box::new(Game::blank());
         assert!(!page_issued(&mut g));
-        assert_eq!(page_frags(&mut g), 0.0);
-        g.m.kit.lesson_row = Some(row(None, false));   // a lesson not packed for: the issue
+        kit_lesson_page(&mut g, true);   // a lesson's page: the issue
         assert!(page_issued(&mut g));
-        assert_eq!(page_frags(&mut g), 0.0);
-        g.m.kit.lesson_row = Some(row(Some(2.0), true));   // packed for: the kept cards, and the least he carries
+        kit_lesson_page(&mut g, false);
         assert!(!page_issued(&mut g));
-        assert_eq!(page_frags(&mut g), 2.0);
-        g.m.kit.lesson_row = Some(row(None, true));
-        assert_eq!(page_frags(&mut g), 0.0);
-        kit_issued_page(&mut g, None);   // a tool raising it beats the row
+        kit_issued_page(&mut g, None);   // a tool raising it stands alone
         assert!(page_issued(&mut g));
     }
 

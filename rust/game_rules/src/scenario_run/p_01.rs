@@ -157,8 +157,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
     crate::rowset::row_settings(g, q);
     // (a Training level's stagings wear what its lesson asks: kit.ts kitLessonPage)
-    let lesson = lesson_of_address(q).map(|e| crate::kit::KitLessonPageRow { packs: e.packs.map(|p| crate::kit::KitLessonPageRowPacks { frags: p.frags }) });
-    crate::kit::kit_lesson_page(g, lesson);
+    crate::kit::kit_lesson_page(g, lesson_of_address(q).is_some());
     // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
     let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
