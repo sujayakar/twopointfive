@@ -465,6 +465,7 @@ impl Play {
         let h = &mut self.g.gd[gd];
         (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
+        self.g.cond[c].down = state == GuardState::Dead;
     }
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {
