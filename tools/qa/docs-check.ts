@@ -15,7 +15,7 @@ const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK =
 const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 16_000, WIDE = 200;
 /** the other documents people work from, and the most each may be */
 const OTHER: Readonly<Record<string, number>> = { 'CLAUDE.md': 12_000, 'README.md': 8_000, 'STYLE.md': 18_000, 'docs/level-format.md': 42_000, '.claude/skills/verify/SKILL.md': 11_000, '.claude/skills/level/SKILL.md': 20_000,
-  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/fold/README.md': 12_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
+  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
 
 const read = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 const files: string[] = (execFileSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 }) as string).split('\n').filter(f => f && existsSync(resolve(ROOT, f)));

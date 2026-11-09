@@ -56,7 +56,7 @@ const cutTexts = new Map<string, string>();
 const cut = async (code: string): Promise<string> => { let t = cutTexts.get(code); if (t === undefined) { const { trimWgsl } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim'); cutTexts.set(code, t = trimWgsl(code, true)); } return t; };
 
 // ======== parse: EVERY TypeScript FILE UNDER tools/ PARSES. `tsconfig.json` covers src/ and tools/qa/tsconfig.json covers tools/qa; tools/blitz, tools/wire, tools/mp,
-// tools/fold and the rest are in neither, so a file there that no gate tool happens to import can be broken and nobody is told (a name imported twice
+// the rest are in neither, so a file there that no gate tool happens to import can be broken and nobody is told (a name imported twice
 // stopped tools/blitz/mission.ts once, and every kept run with it). This reads each such file through the transpiler, which refuses what the runtime
 // would refuse at import: a syntax error, a name declared twice, an import of a name twice. It checks no types.
 function parseSection(): void {
