@@ -943,6 +943,8 @@ pub struct StartRow {
     /// it is played with the kit as issued
     pub as_issued: bool,
     pub lesson: bool,
+    /// two can play it
+    pub two: bool,
     /// the levels' ways in, by name (none: it has one)
     pub ways: Vec<String>,
     /// the short list's row of it, and its one line (empty: not on the short list)
@@ -966,6 +968,49 @@ pub struct StartView {
     pub playing: bool,
     /// the row a visit that names none and has started none opens on: the short list's first
     pub first: String,
+}
+
+/// a mission as its row of the table has it, for who reads the rows themselves and draws no card. What a row does not say is empty
+#[derive(Clone, Debug, Default, ToBytes)]
+pub struct MissionRow {
+    pub id: String,
+    pub title: String,
+    /// "solo" for the plain solo night, else its scenario's kind
+    pub kind: String,
+    pub squad: f64,
+    /// the group it is under
+    pub group: String,
+    /// its level's file
+    pub level: String,
+    /// the hour it is always started in
+    pub hour: String,
+    pub place: String,
+    pub blurb: String,
+    /// a lesson's: where we are and why, and what it teaches
+    pub scene: String,
+    pub teaches: Vec<String>,
+    /// it deploys at its own size and no other: what the other sizes say
+    pub only: String,
+    /// how many hold it
+    pub defenders: f64,
+    /// they are in squads
+    pub squads: bool,
+    /// its level's ways in, by name (none: it has one)
+    pub ways: Vec<String>,
+    /// nobody has balanced it
+    pub untuned: bool,
+    /// cut from the lists
+    pub off_list: bool,
+    /// the short list's one line of it
+    pub line: String,
+    /// the address that is this row
+    pub link: String,
+}
+
+/// every mission there is: the plain solo night, then the tables in their order
+#[derive(Clone, Debug, Default, ToBytes)]
+pub struct MissionsView {
+    pub rows: Vec<crate::view::MissionRow>,
 }
 
 /// a mission's sheet

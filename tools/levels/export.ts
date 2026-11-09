@@ -114,11 +114,11 @@ if (CHECK) {
   console.log(`--check: ${OUT} is up to date`);
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
 // WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/bin/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
-// wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one), so a
+// wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of the mission list that is not a quiet one), so a
 // red answer fails the export of such a level and is a note on any other. A DEFENDER SEES WHAT HE WATCHES: a red answer fails the export (something was stood in a man's view, or the level
 // has no count file yet: `levels sight <name> --write`). LEVELASK=0 in front skips both for a level still in the making.
 if (!CHECK && !FLOOR_TO && process.env.LEVELASK !== '0') {
-  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every list: a lesson's yard is played too)
+  const { missionRows } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts'), played = ((): boolean => { try { return missionRows().some(e => e.kind !== 'quiet' && e.level === basename(OUT)); } catch (e) { console.log(`  who plays it: NOT ASKED (${(e as Error).message}), so it is held to a played level's`); return true; } })();   // (every list: a lesson's yard is played too)
   const ask = (question: string): { code: number; text: string } => { try { const p = Bun.spawnSync(['cargo', 'run', '--release', '--quiet', '--bin', 'levels', '--', question, basename(OUT)], { cwd: `${ROOT}/rust/game_start`, stdout: 'pipe', stderr: 'pipe' }); return { code: p.exitCode, text: `${p.stdout}${p.exitCode ? p.stderr : ''}`.trim() }; } catch (e) { return { code: -1, text: String((e as Error).message) }; } };
   const asked = (question: string, what: string, fails: boolean): void => { const a = ask(question);
     if (a.code === 0) console.log(`  ${what}: yes`); else if (a.code !== 1 || !a.text.includes('FAIL')) console.log(`  ${what}: NOT ASKED (${a.text.split('\n').pop() || 'the tool did not run'})`);

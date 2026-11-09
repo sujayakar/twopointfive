@@ -31,9 +31,10 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
 
-The table of missions is `scenarios`, `quiet_missions`, `tutorial_missions` and `lesson_missions` in `rust/game_types/src/scene_scenario_list/types.rs`. **The page holds a
-second copy:** `src/scene/scenarioList.ts` and `src/scene/picks.ts`, which co-op and the tools read. A level's mission data is its file's `scenarios`
-block (`LevelScenarios`). Page half: `src/ui/missions.ts`, `startpage.ts`, `verdictCard.ts`, `parBest.ts`, `railcard.ts`. The tutorials' scripted players: `rust/game_start/src/lessons/`.
+The table of missions is `scenarios`, `quiet_missions` and `tutorial_missions` in `rust/game_types/src/scene_scenario_list/rows.rs`, and there is no other: the page asks the desk
+(`missions` every row, `kind` what an address starts, `pick` where a short-list name alone goes, `leave`, `brief`), and a tool asks the same desk through `tools/desk.ts`. A level's
+mission data is its file's `scenarios` block (`LevelScenarios`). Page half: `src/ui/missions.ts`, `startpage.ts`, `verdictCard.ts`, `parBest.ts`, `railcard.ts`. The tutorials'
+scripted players: `rust/game_start/src/lessons/`.
 
 ## How it works
 
@@ -114,10 +115,10 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/` (`roomclear.rs`, `rescue.rs`, `rescueend.rs`, `rails.rs`, `squaddeal.rs`), or `?knob.rescue.resolve_secs=40`. Medal times: the level.
-- **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row **in both tables**, by hand, as
-  nothing compares them, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
-- **Cut one:** `offList` in both tables. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS` (both sides), `start_scenario`, `active_scenario`, `quit_scenario`, an arm in `ended` and in `objective`,
+- **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
+  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
+- **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
+- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, `quit_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
@@ -148,5 +149,4 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
   first way whatever the player picks. `kit_stage.rs` can't tell. Nobody has run this in a browser.
 - **Left over:** `fresh_seed_of`, `fresh_way_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. The Director's show path (`director_enter_show`) has no script. `set_daylight` is
   only ever called to turn daylight off, so `level.daylight` is never seen.
-- **The two tables** agree today, by nothing but care.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

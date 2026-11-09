@@ -129,8 +129,8 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 - **A level:** its generator, `bun run tools/levels/export.ts <name>` (office: `bun run tools/level-export.ts`), commit both, then
   `bun run tools/qa/level-needs.ts <name> --run`.
 - **A new level:** `.claude/skills/level/SKILL.md` has the long order, each need with what went wrong when it was missed. In short: generator; export;
-  counts (`levels sight <name> --write`, also `walked` and `charges`, in `rust/game_start` by `cargo run --release --bin levels --`); a row in both
-  `src/scene/scenarioList.ts` and `rust/game_types/src/scene_scenario_list/types.rs`; `src/audio/setlist.ts`; its picture from `tools/menu-art.ts`;
+  counts (`levels sight <name> --write`, also `walked` and `charges`, in `rust/game_start` by `cargo run --release --bin levels --`); a row in
+  `rust/game_types/src/scene_scenario_list/rows.rs` and the module made; `src/audio/setlist.ts`; its picture from `tools/menu-art.ts`;
   `scenarios.kitView` and `tools/qa/kitview-plan.ts`.
 - **A count moved:** find out why first. `--write` keeps a new one; a line starting `#` in a count file says what was given up.
 - **A new member of the file:** its type and `KEYS` in `levelData.ts`, both directions in `levelLoad.ts`, the field under `rust/game_types/src/`, its

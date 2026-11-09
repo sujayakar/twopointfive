@@ -1,18 +1,12 @@
-//! src/scene/scenarioList.ts lines 1 to 278
-use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+//! WHAT AN ADDRESS ASKS FOR: the kind, the team, the level's file and the seed, read as the page starts it.
+use super::*;
+use crate::js;
 use crate::m;
 use crate::query::Query;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-/// How many teammates, in the picker's words: 'you + the pair', 'solo' … (scenarioList.ts teamWords)
-pub fn team_words(e: crate::scene_scenario_list::TeamWordsE) -> String { crate::loadout::size_words(e.squad) }
+use alloc::string::String;
 
 /// What a query asks for, read as the page starts it: which scenario, how many teammates, which level file and seed; None when it names none.
-/// What every reader in the game that holds an address's words asks. (scenarioList.ts specOfQuery, of words already read)
+/// What every reader in the game that holds an address's words asks.
 pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     let kind = kind_of(q)?;
     // a quiet mission is alone unless `squad=1`; any bigger size it is asked for is the one partner
@@ -24,7 +18,6 @@ pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     let (level, seed) = place_of(kind, q);
     Some(ScenarioSpec { kind, squad, level, seed })
 }
-
 
 /// `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
 fn kind_of(q: &Query) -> Option<ScenarioSpecKind> {
@@ -72,8 +65,7 @@ mod tests {
     use super::*;
     use ScenarioSpecKind as K;
 
-    // The TypeScript's own answers: src/scene/scenarioList.ts specOfQuery run on each query under bun and node (they agree): kind, level, seed's bits.
-    // squad is not here: it is loadout's answer, a stub in this crate.
+    // Each address with its kind, its level and its seed's bits, a number read as the language of a page reads one (answered by bun and node, which agree).
     const CASES: &[(&str, Option<K>, Option<&str>, Option<u64>)] = &[
     ("?quiet=12.7", Some(K::Quiet), None, Some(0x4028000000000000)),
     ("?quiet=-3.5", Some(K::Quiet), None, Some(0xc010000000000000)),
@@ -183,7 +175,7 @@ mod tests {
     ];
 
     #[test]
-    fn reads_every_query_as_the_typescript_does() {
+    fn reads_every_address_as_a_page_does() {
         for &(text, kind, level, seed) in CASES {
             let q = Query::parse(text);
             let got = kind_of(&q);

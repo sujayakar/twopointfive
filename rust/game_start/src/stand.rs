@@ -42,7 +42,7 @@ pub struct StartOpts {
     pub slot: usize,
     /// the mission to start on the stood level by the game's own `startScenario`, none = the level as its file has it
     pub scenario: Option<game::scene_scenario_list::ScenarioSpec>,
-    /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`: scenarios.ts scenarioQuery), started by
+    /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`), started by
     /// the game's own `start_from_query` AS THE PAGE STARTS A MISSION: the row's own hour and weather, the fog of war, a quiet mission's rung and
     /// cameras, then the mission. The level file is the caller's to read (the page reads the file the link names, in the look that is on).
     /// Wins over `scenario`

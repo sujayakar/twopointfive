@@ -14,7 +14,6 @@
 // reads: a game is the server's start whatever this says.
 import type { Wire } from '../cloud/wire';
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
-import { bare } from '../scene/scenarioList';
 
 export const COOP = {
   on: typeof window !== 'undefined' && typeof window.addEventListener === 'function',
@@ -42,7 +41,7 @@ export function coopScenario(search: string, kept: [string, string][] = []): str
   for (const k of ['squad4', 'loadout', 'pick', NET_JOIN, NETPLAY, NET_GAME, NET_KEY]) q.delete(k);
   q.set('squad', String(COOP.squad)); q.set('seats', String(COOP.seats));
   for (const [k, v] of kept) if (!q.has(k)) q.set(k, v);
-  return bare(q);   // (bare flags left bare: `?roomclear`, as the starting page writes them)
+  return '?' + [...q].map(([k, v]) => v === '' ? encodeURIComponent(k) : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');   // (bare flags left bare: `?roomclear`, as the starting page writes them)
 }
 /** THE DOOR'S ADDRESS, and the link to send: this page's own address with the code and nothing else of this visit's */
 export const joinLink = (origin: string, path: string, code: string): string => `${origin}${path}?${NET_JOIN}=${code}`;

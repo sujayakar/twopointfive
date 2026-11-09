@@ -4,7 +4,7 @@
 // them (scenarios.roomClear.squads, the format of rebuild/enemy-squads/squad-format.md) — the enemy SQUADS: each squad's rooms and marks in its colour, its
 // rally point, the doors it would wedge, where a late squad comes in, and a legend under the plan.
 //   bun run tools/qa/map-plan.ts <name> [--out file.svg] [--png] [--scale 36]
-//     <name>   a level's name (levels/<name>.json), its file, or a scenario id from src/scene/scenarioList.ts
+//     <name>   a level's name (levels/<name>.json), its file, or a mission's id
 //     --out    where the SVG goes (default levels/<name>.plan.svg — next to the file; not read by anything)
 //     --png    also a PNG beside it, through whichever rasteriser this machine has (rsvg-convert, ImageMagick, macOS qlmanage, Playwright's Chromium);
 //              the SVG opens in any browser when none does
@@ -16,14 +16,13 @@ import { planSvg, type PlanPen } from './level-plan.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
-const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { missionRows } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts');
 
 /** `block` · `levels/block.json` · `block.json` · `block-four` (a row's id) → the level's name, or null. A PATH must be this checkout's own levels/<name>.json:
  *  the tools read the level from there and nowhere else, so another tree's file of the same name is refused, not quietly swapped for ours. */
 export function mapName(arg: string): string | null {
-  const row = SCENARIOS.find((e: any) => e.id === arg); if (row) return row.level ? row.level.replace(/\.json$/, '') : 'office';
   const n = arg.replace(/^.*\//, '').replace(/\.json$/, ''), file = resolve(ROOT, 'levels', `${n}.json`);
-  if (!/^[\w-]+$/.test(n) || !existsSync(file)) return null;
+  if (!/^[\w-]+$/.test(n) || !existsSync(file)) return missionRows().find(e => e.id === arg)?.level.replace(/\.json$/, '') ?? null;
   return arg.includes('/') && resolve(process.cwd(), arg) !== file ? null : n;
 }
 /** the level as the game loads it (an office-family file gets the office's script and scenarios) */
@@ -120,7 +119,7 @@ if (import.meta.main) {
   const KNOWN = ['--out', '--png', '--scale']; for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
   const arg = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--scale'].includes(argv[i - 1])));
   const name = arg ? mapName(arg) : null;
-  if (!name) { console.error(`usage: bun run tools/qa/map-plan.ts <name> [--out file.svg] [--png] [--scale px-per-metre]${arg ? `\nno map '${arg}' — levels/<name>.json, or a scenario id (${SCENARIOS.map((e: any) => e.id).join(', ')})` : ''}`); process.exit(2); }
+  if (!name) { console.error(`usage: bun run tools/qa/map-plan.ts <name> [--out file.svg] [--png] [--scale px-per-metre]${arg ? `\nno map '${arg}' — levels/<name>.json, or a scenario id (${missionRows().map(e => e.id).join(', ')})` : ''}`); process.exit(2); }
   const out = resolve(process.cwd(), opt('--out') ?? resolve(ROOT, 'levels', `${name}.plan.svg`));
   const { svg, words } = mapPlanSvg(name, Number(opt('--scale') ?? 36));
   writeFileSync(out, svg); console.log(words); console.log(`wrote ${out}`);

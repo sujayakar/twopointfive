@@ -2,10 +2,10 @@
 // like we should just unify everything in the starting page'): what to play, how it is set and what the team carries are ONE page, and one button starts it.
 // Nothing here is a new screen: it is the mission list (ui/missions.ts — the rows, the sheet, Defenders / Hour / Weather) with the loadout screen
 // (ui/loadout.ts — the team's size, the squad kit row, the five slots, the picked member's kit card, Deploy) mounted INSIDE its sheet for the highlighted
-// mission. THE ROWS ARE IN THE LIST'S GROUPS (scene/scenarios.ts MISSION_GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
+// mission. THE ROWS ARE IN THE LIST'S GROUPS (rust/game_rules/src/start_list GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
 // groups?'), every mission under exactly one heading and listed once: all the headings are always drawn, each with how many it holds, and only the one the
 // cursor is in shows its rows (ui/missions.ts `fold`) — W S walk every row, crossing a heading opens it, a click on a heading is its first row. Inside a
-// group the short list's missions (scene/picks.ts PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
+// group the short list's missions (rust/game_rules/src/scene_scenario_list PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
 // first. No way in skips another: there is
 // no straight-in row, no separate Missions button and no separate Start.
 //

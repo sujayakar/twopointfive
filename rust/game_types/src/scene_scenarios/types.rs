@@ -746,28 +746,45 @@ pub struct LevelScenariosDoorNamesItem {
     pub name: String,
 }
 
+/// One row of the mission list: which kind, how many teammates, on which level file (the rows: scene_scenario_list). Types and words: the address that is a row is `scenario_query`.
 #[derive(Clone, Debug, Default)]
 pub struct ScenarioEntry {
     pub id: String,
     pub title: String,
     pub kind: crate::scene_scenarios::ScenarioEntryKind,
+    /// teammates: the pair or the four (the rescue is the pair's as built); a quiet mission's is nobody or one partner
     pub squad: f64,
+    /// which heading of the list it is under (none: by what it is)
     pub group: Option<crate::scene_scenarios::MissionGroup>,
+    /// it deploys at its own size and no other: the line every other size shows greyed. A design call, not an inability: the level still stages any size from an address
     pub only: Option<String>,
+    /// a lesson the player packs for: its Team & kit step shows the cards and its page stages what the machine keeps, not the plain issue every other lesson is played with. `frags`: the least of
+    /// them he carries there whatever he packs
     pub packs: Option<crate::scene_scenarios::ScenarioEntryPacks>,
+    /// a file under levels/ (none: the office)
     pub level: Option<String>,
+    /// the hour and the weather a visit to it is always started in: they win over the address's, and the sheet draws no row for them. None: the visitor's pick, else the level's own. A weather is one a
+    /// level can be started in, never snow (a level built for snow keeps its own)
     pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::scene_scenarios::ScenarioEntryWeather>,
+    /// the room clear's placement seed, a quiet mission's deal pinned (none: dealt on every start)
     pub seed: Option<f64>,
+    /// the one line under the title: the premise
     pub blurb: Option<String>,
+    /// a lesson's opening card: where we are and why, and what it teaches, a short line a thing, five at most (the things, not their keys)
     pub scene: Option<String>,
     pub teaches: Option<Vec<String>>,
+    /// it runs, and nobody has balanced it
     pub untuned: Option<bool>,
+    /// cut from the list: the row stays in its table, so its id, its address, its level file and every check that names it hold; no list draws it, and a cut lesson is nobody's next
     pub off_list: Option<bool>,
+    /// said of it and read by no rule: where it is, which way it leans, how many hold it as it is staged
     pub place: Option<String>,
     pub lean: Option<crate::ui_missions::Lean>,
     pub defenders: Option<f64>,
+    /// the ways in, named: the level's own team start first, then each of its `scenarios.roomClear.starts` in the file's order (none: one way in)
     pub ways: Option<Vec<String>>,
+    /// the level's file names defender squads, so Hard is worded as theirs (none: one pool)
     pub squads: Option<bool>,
 }
 
@@ -838,5 +855,5 @@ impl ScenarioEntryWeather {
     }
 }
 
-/// (src/scene/scenarios.ts:88 SQUAD_MAX_MEN)
+/// the most men a room clear stages in squads
 pub const SQUAD_MAX_MEN: f64 = 11.0;
