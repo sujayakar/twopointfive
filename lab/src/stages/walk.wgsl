@@ -22,7 +22,7 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
 /** where a ray first meets smoke: its color there if it glows, and how far (0: it gets through). The section hides what it hides, for the eye's own ray */
 fn smokeMeets(ro: vec3f, rd: vec3f, t1: f32, cut: f32) -> vec4f {
   let s = smokeSpan(ro, rd, t1); var t = s.x; let most = 13.0;
-  for (var i = 0u; i < 400u; i++) { if (t >= s.y) { break; } let x = ro + rd * t; let p = smokeSlot(x); if (p == 0u || (cut < 1e8 && x.y > cut && overCut(x, cut))) { let c = floor((x - SM_AT) / SM_BRICK); let e = (SM_AT + (c + select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0))) * SM_BRICK - ro) * safeInv(rd); t = max(min3(e), t) + 0.003; continue; }
+  for (var i = 0u; i < 400u; i++) { if (t >= s.y) { break; } let x = ro + rd * t; let p = smokeSlot(x); if (p == 0u || (cut < 1e8 && x.y > select(cut + 1.75, cut, overCut(x, cut)))) { let c = floor((x - SM_AT) / SM_BRICK); let e = (SM_AT + (c + select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0))) * SM_BRICK - ro) * safeInv(rd); t = max(min3(e), t) + 0.003; continue; }
     t += -log(1.0 - rnd()) / most; if (t >= s.y) { break; } let y = ro + rd * t; let q = smokeSlot(y); if (q == 0u) { continue; } let v = smokeIn(q, y); if (rnd() * most < v.w) { return vec4f(select(vec3f(0.0), v.rgb, max3(v.rgb) > 24.0), t); } }
   return vec4f(0.0);
 }
@@ -51,10 +51,10 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & WATER) != 0u && h.code == 3u) {
       water = true; let x = ro + rd * h.t; s.x = x; s.n = poolNormal(x.xz, frame.misc.x); s.ng = vec3f(0.0, 1.0, 0.0); s.rough = 0.11; s.f0 = 0.02; s.kind = 8u;
     } else { s = wetFilm(surfaceAt(ro, rd, h, select(1.0, fp, clear || fp < 0.2)), fp); }
-    let V = -rd; if (dot(s.n, V) < 0.02) { s.n = normalize(s.n + V * (0.04 - dot(s.n, V))); }
+    var V = -rd; if (s.kind != 63u && dot(s.n, V) < 0.02) { s.n = normalize(s.n + V * (0.04 - dot(s.n, V))); }
     let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u;
     if (any(s.glow > vec3f(0.0)) && (clear || !own)) { gained = thr * s.glow; L += gained; }
-    if (s.kind == 63u) { let side = select(-1.0, 1.0, rnd() < 0.5); s.n *= side; s.ng = s.n; s.x += s.n * (s.rough + 0.003); s.rough = 1.0; s.f0 = 0.0; s.kind = 0u; clear = false; fp = 1.0; }
+    if (s.kind == 63u) { let side = select(-1.0, 1.0, rnd() < 0.5); s.n *= side; s.ng = s.n; s.x += s.n * (s.rough + 0.003); s.rough = 1.0; s.f0 = 0.0; s.kind = 0u; V = s.n; clear = false; fp = 1.0; }
     let glossy = s.rough < 0.25;
     gained = thr * lampsAt(s, V, glossy); L += gained;
     if (water) {

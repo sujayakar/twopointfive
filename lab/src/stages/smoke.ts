@@ -4,7 +4,7 @@ import type { Graph, Stage } from '../graph';
 import type { V3 } from '../math';
 import head from './smoke.wgsl' with { type: 'text' };
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
-export const SMOKE = { slots: 3072, pages: [75, 24, 60] as const, pairs: 6, atlas: [160, 160, 120] as const };
+export const SMOKE = { slots: 3072, pages: [75, 24, 60] as const, pairs: 4, atlas: [160, 160, 120] as const };
 const CELLS = SMOKE.slots * 512, PG = 108000, WORDS = PG + 36 * 3072 + 16;
 const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, brickRows, 1] };
 /** rows of 64 bricks to ask for: in a run all of them; in the page as many as were lately live, with room to grow (an idle group is not free) */

@@ -2,8 +2,8 @@
 /** detail finer than the smoke's cells, carried along by the air: two lots that take turns, each let go before it has gone far */
 fn carried(x: vec3f, v: vec3f, k: f32, part2: f32) -> f32 { let c = frame.misc.x / 0.7; let a = fract(c); let b = fract(c + 0.5); let w = abs(2.0 * a - 1.0); let p = (x - v * (a * 0.7)) * k + floor(c) * vec3f(3.7, 1.9, 5.3); let q = (x - v * (b * 0.7)) * k + floor(c + 0.5) * vec3f(3.7, 1.9, 5.3) + 17.0; let n = mix((1.0 - part2) * vn3(p) + part2 * vn3(p * 2.7 + 5.0), (1.0 - part2) * vn3(q) + part2 * vn3(q * 2.7 + 5.0), w); return 0.5 + (n - 0.5) / sqrt(w * w + (1.0 - w) * (1.0 - w)); }
 fn vn3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (3.0 - 2.0 * f); let z = f32(i.z) * 37.0; return mix(vnoise(p.xy + z), vnoise(p.xy + z + 37.0), w.z); }
-/** 1 where the section leaves the air to be seen, 0 over the rooms it hides, softly */
-fn cutShows(x: vec3f) -> f32 { if (frame.misc.y > 1e8) { return 1.0; } return select(1.0, smoothstep(0.0, 0.35, frame.misc.y - x.y), overCut(x, frame.misc.y)); }
+/** 1 where the section leaves the air to be seen, 0 over the rooms it hides and well above it out of doors, softly */
+fn cutShows(x: vec3f) -> f32 { if (frame.misc.y > 1e8) { return 1.0; } let over = x.y - frame.misc.y; return select(1.0 - smoothstep(1.0, 2.5, over), smoothstep(0.0, 0.35, -over), overCut(x, frame.misc.y)); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let t1 = min(bitcast<f32>(textureLoad(surf, full, 0).x), 260.0); let ro = frame.camPos.xyz; 
