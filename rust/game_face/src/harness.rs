@@ -2,7 +2,6 @@
 //! things the host's TypeScript does between two ticks that the Rust game has to do too. Exports only: every rule is the crate `game`'s, every
 //! host step `game_run`'s.
 //!
-//!   face_follow(h)               the host's camera asked the game where to look (`game_run::follow`): after a tick, for every seat
 //!   face_view_live(h)            after the host's half is taken: the view's matrix is the host camera's as the host left it (`game_run::view_live`), so a
 //!                                call made between two ticks (an order: on-screen-or-not) reads the camera of now, not the record of the tick before
 //!   face_look(h) -> p                six numbers: where the seat's camera is to follow, and the seat's aim point (a host stepping without an apply)
@@ -10,10 +9,6 @@
 //!                                flooded one (the list of rooms grew)
 //!   face_kit_plan(p, n, way) -> 1 | 0   a read for tools, of no game: `p`, `n` are a level file's text, `way` a way of its kit picture's block; 1: the plan as JSON at face_out
 //!                                (`game_start::kit_stage::plan_of_file`, tools/qa/kitview-plan.ts); 0: why not, in words, at face_out
-#[no_mangle]
-pub extern "C" fn face_follow(h: u32) {
-    super::with(h, |x| game_run::follow(&mut x.g));
-}
 #[no_mangle]
 pub extern "C" fn face_view_live(h: u32) {
     super::with(h, |x| game_run::view_live(&mut x.g));

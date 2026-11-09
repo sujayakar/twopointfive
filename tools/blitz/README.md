@@ -219,7 +219,6 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | the scripted player's ask before every step (`between.txt`: `call frag_step_off`) | `BLITZ_NO_BETWEEN=frag_step_off` leaves it out | the driver asks where a player who read a grenade's cue would go (`fragStepOff`); the ask makes the flee's guess of the grenade's rest and fills the memo of walls its burst opens, which the next tick's flee reads |
 | a mission player's meter (`meter.txt`, every mission) | (always) | the scripted player writes `player.visibility` before every tick |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
-| `game_follow_pos` for each seat after each tick | `follow` | the host's camera asks the game where to look; on a tutorial's sky seat the ask eases and stamps the view's centre (rails.ts look) |
 | a checkpoint PUT BACK (`hostwrites.txt chron_load`, the state in `L<k>.bin`) | (always) | the host's save controller replaces the whole game between two ticks; the runner takes the TypeScript's state as the next tick opens as a new start, and says so |
 
 The Rust game writes a man's row of the block itself (`sim_men_store`), and the bridge carries the level's name, the dress table and the floats of a pose

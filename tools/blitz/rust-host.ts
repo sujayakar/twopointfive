@@ -804,9 +804,6 @@ export class RustHost {
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
     if (process.env.RH_HALF?.split(',').includes(String(k))) halfSay(B, g, cmds, k);
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hw, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
-    // ---- the host's step after a tick, on the Rust side: the camera's ask
-    t = now(); X.face_follow?.(this.h);
-    this.T.after += now() - t;
     // ---- A QUIET STEP (`quietBegin`): the tool that asked for this run of steps has said none of its code runs between them, so nothing of the state
     // goes to the puppet until the run ends. The host's own camera needs two things of the game after every tick: asked for by `face_look`.
     this.lastDt = dt;

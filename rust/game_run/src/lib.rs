@@ -339,12 +339,6 @@ pub fn view_live(g: &mut game::game::Game) {
     }
 }
 
-/// HOST STEP AFTER THE TICK (the headless host's `cam.update(dt, view.followPos(), …)`, for each seat a host shows): the host's camera asks the game where
-/// to look. The ask changes nothing now.
-pub fn follow(g: &mut game::game::Game) {
-    for s in g.seats.clone() { game::seats::with_seat(g, s, &mut |g| { let _ = game::game::game_follow_pos(g, None); }); }
-}
-
 /// the tick, a record a seat (a game of one seat: `game_step`, which is `stepSeats(dt, [record])`)
 pub fn step_seats(g: &mut game::game::Game, dt: f64, cmds: &[game::cmd::PlayerCmd]) {
     if cmds.len() == 1 { game::game::game_step(g, dt, &cmds[0]); } else { game::game::game_step_seats(g, dt, cmds); }

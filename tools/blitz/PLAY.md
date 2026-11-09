@@ -69,7 +69,6 @@ as a call when it is made:
 | the autosave takes a checkpoint (the dress step's `saves.tick`) | `face_checkpoint` |
 | a question floods a room (`fight.roomAt`) | `face_room_at`, asked of the Rust game FIRST; where it flooded, the puppet takes the whole state and the TypeScript's own ask floods nothing |
 | the host lists the box world (`engine.world.upload`) | the TypeScript's own listing, for the picture (the list of every box and the ray grid are the TypeScript's own on the filtered path); the Rust game lists its own as a tick ends |
-| the host's camera asks the game where to look | `face_follow` after every step |
 | a checkpoint put back, a restart (the TypeScript puts another game in the puppet's place) | A NEW START: the puppet exported whole once, a new Rust game made from it |
 
 Memos a driver's read fills on the puppet (`Cover.openings`, `DialogueMod.room_rects`, `WorkThings.cache`, frag.ts's `walls_for`) are NOT handed over.
@@ -108,7 +107,7 @@ says NOTHING COMPARED and exits 3. Exit: 0 equal to the end and ended the same w
 
 1. The scripted player presses its keys and steps its world (`headless.ts W.step` → `Game.update`); its own lines run, the step is `RustHost.step`.
 2. The light meter, if the lesson's player wrote it. The check's hook (the driver's calls and the host's half held to the reference).
-3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_follow`. (A flash's envelope is the tick's own last line.)
+3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). (A flash's envelope is the tick's own last line.)
 4. `face_puppet(0)` → the filtered apply; the block copied; `asks.after()` (a row or a posture the apply made gets the closures that ask the Rust game).
 5. A whole apply if one is owed. The out events dispatched (`out-dispatch.ts`) on the puppet's host objects, in the order the rules made them.
 6. The dress step: `Verdict.tick` (in a `try`: it is the debrief's; the par clock is the Rust tick's), the autosave (`saves.tick`), whose checkpoint is made on the
