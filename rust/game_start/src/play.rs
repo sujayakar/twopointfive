@@ -181,6 +181,35 @@ impl Play {
         self.g.out.clear();
         self.frames += 1;
     }
+    /// what a host does round a step with hands on its seats: each seat's camera after its man, the end of its input's frame
+    pub fn lens_and_keys(&mut self) {
+        for s in self.g.seats.clone() {
+            let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
+            let (follow, aim) = game::seats::with_seat(&mut self.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+            game::camera::follow_camera_update(&mut self.g, cam, DT, follow, Some(aim));
+            game::input::input_end_frame(&mut self.g, input);
+        }
+    }
+    /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
+    /// with the box world's copy standing for his questions, the game stepped on them, the cameras after their men.
+    pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
+        let [yaw, zoom] = script.lens();
+        let cam = self.g.tab.cmd_seat[self.g.seats[0]].cam;
+        if yaw != 0.0 { game::camera::follow_camera_rotate(&mut self.g, cam, yaw); }
+        if zoom != 0.0 { game::camera::follow_camera_zoom(&mut self.g, cam, zoom); }
+        let mut cmds = self.net_sample();
+        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
+        game::scene_box_mirror::box_mirror_things(&mut self.g);
+        script.hand(&self.g, &mut cmds[0], DT);
+        self.net_step(&cmds, 0);
+        self.hear();
+        self.lens_and_keys();
+    }
+    /// … until he has nothing more to do, for at most `secs`: did he get there
+    pub fn played_out(&mut self, script: &mut dyn crate::player::Script, secs: f64) -> bool {
+        for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
+        script.over()
+    }
     /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
