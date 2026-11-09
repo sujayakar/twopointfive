@@ -99,7 +99,7 @@ import { lookMarks } from './lookMarks';
 
 const PLAIN_NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
 
-/** the men in each held room: eleven, the most a room clear stages (lib/scenarios.ts SQUAD_MAX_MEN) */
+/** the men in each held room: eleven, the most a room clear stages (rust/game_types/src/scene_scenarios SQUAD_MAX_MEN) */
 export const GARRISON: Record<string, number> = {
   shed: 4, garage: 1, hut: 1,        // YARD: the shed 4 + the garage 1 (the guard room and the bait). The hut's one man is a squad of his own, GATE: he stays
   kitchen: 1, sala: 1,               // WEST: 2, one a room, nobody to spare

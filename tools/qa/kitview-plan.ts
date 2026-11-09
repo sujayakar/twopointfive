@@ -4,21 +4,21 @@
 // sunk for the camera taken off the floor). That the game stands on it is rust/game_start/tests/kit_levels.rs; what the men do there is tests/kit_stage.rs and kit_acts.rs.
 //   B. THE RECORDS OFFICE, both ways: the plan asked of the file with the way's `side` and `slots` taken out agrees with what is written (the side, the hand, each place, the wall, the lamps); with its
 //      `hide` out too, the parked car is among what stands in the camera's way on the front way, and nothing on the west.
-//   C. EVERY LEVEL WITH A BLOCK, every way: the block passes the level validator; the plan has no problems; no piece of the building is sunk for the camera; five places on free floor and apart; the
+//   C. EVERY LEVEL WITH A BLOCK, every way: the block has no fault; the plan has no problems; no piece of the building is sunk for the camera; five places on free floor and apart; the
 //      anchor is a door of the level in a wall, and not steel (a row that works a leaf has none on a span and is refused by steel); where the level's missions start in more than one place the way writes
-//      its `ref`; what a set or an `add` lays passes the validator; a man walks from Sam's place through the opening on the nav grid's cells.
+//      its `ref`; what a set or an `add` lays has no fault; a man walks from Sam's place through the opening on the nav grid's cells.
 //      NEVER A FAILURE: `- WARNING —` where a way names a box by its generated id (`box_NNNN`, its place in the file) · `note —` where a written `hide` takes a box in no line of the camera's, or leaves one
 //      standing in them, or where a lamp behind the anchor goes out with the room lights.
 //   C3. EVERY CARD OPEN, EVERY SQUAD SIZE: no two men within a body of each other, the fourth man's acting place on free floor.
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
-//   E. THE WORD `laid` is the loader's and a file may not write it; a broken block does not refuse a level to play (parseLevelData `kitView: 'drop'`), and is refused everywhere else.
+//   E. THE WORD `laid` is the loader's and a file may not write it; a broken block refuses a level.
 // Lines are `- PASS — …` / `- FAIL — …`. The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
 // unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts).
 // KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
-import { parseLevelData, validateLevelData } from '../levels/lib/levelData';
+import { parseLevelData, levelFaults } from '../levels/lib/levelData';
 import { missionRows } from '../desk.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -116,12 +116,12 @@ function walkable(A: Data): { asked: boolean; hit: boolean; deep: number } {
 }
 const answers = new Map<string, Data>();
 function every(name: string, f: (Y: Data, k: number, A: Data, data: Data) => void) { const L = levelOf(name); (L.data.scenarios.kitView.ways as Data[]).forEach((Y, k) => { const key = `${name} ${k}`; let A = answers.get(key); if (!A) { A = ask(L.text, k); answers.set(key, A); } f(Y, k, A, L.data); }); }
-/** what the picture would load, for the validator: the block is said of the file, and what the loader laid is the level's by then */
-const laidErrs = (A: Data, none: string): string[] => A.level ? validateLevelData({ ...A.level, scenarios: { ...A.level.scenarios, kitView: undefined } }) : [none];
+/** what the picture would load, for the judge of a file: the block is said of the file, and what the loader laid is the level's by then */
+const laidErrs = (A: Data, none: string): string[] => A.level ? levelFaults({ ...A.level, scenarios: { ...A.level.scenarios, kitView: undefined } }) : [none];
 function generic() {
   say('\n=== C. every level with a block');
   for (const name of withBlock) {
-    { const L = levelOf(name), errs: string[] = validateLevelData(L.data).filter((e: string) => e.includes('kitView')); row(errs.length === 0, `${name}: the block passes the level validator${errs.length ? ' — ' + errs.slice(0, 3).join('; ') : ''}`); }
+    { const L = levelOf(name), errs: string[] = levelFaults(L.data); row(errs.length === 0, `${name}: the level has no fault${errs.length ? ' — ' + errs.slice(0, 3).join('; ') : ''}`); }
     every(name, (Y, k, A0, data) => { const w = said(name, Y, k), S = data.scenarios;
       const A = BREAK && Y.slots?.[1] ? ask(withWay(data, k, { ...Y, slots: Y.slots.map((p: number[] | null, i: number) => i === 1 && p ? onLine(data, Y, p) : p) }), k) : A0, P = A.plan, inWay = (P.problems as string[]).filter(p => p.startsWith(IN_WAY));
       row(P.problems.length === 0, `${w}: the plan has no problems${P.problems.length ? ' — ' + P.problems.join(' · ') : ''}`);
@@ -162,14 +162,13 @@ function quietWays() {
 
 // ---- E
 function theWords() {
-  say('\n=== E. the block\'s own rules at the validator');
+  say('\n=== E. the block\'s own rules');
   const name = withBlock.find(n => levelOf(n).data.scenarios.kitView.ways[0].set === undefined); if (!name) return;
-  const L = levelOf(name), Y = L.data.scenarios.kitView.ways[0], errs: string[] = validateLevelData(JSON.parse(withWay(L.data, 0, { ...Y, add: { boxes: [], laid: true } }))).filter((e: string) => e.includes('.add'));
+  const L = levelOf(name), Y = L.data.scenarios.kitView.ways[0], errs: string[] = levelFaults(JSON.parse(withWay(L.data, 0, { ...Y, add: { boxes: [], laid: true } }))).filter((e: string) => e.includes('.add'));
   row(errs.length > 0, `a file that writes \`add.laid\` is refused: it is the loader's word, and said in a file it would pass any box off as an added piece — ${errs[0] ?? 'NOT REFUSED'}`);
   const broken = withWay(L.data, 0, { ...Y, door: 7 });
   let refused = false; try { parseLevelData(broken); } catch { refused = true; }
-  const warn = console.warn; console.warn = () => { /* (the line the page says) */ }; let played: Data = null; try { played = parseLevelData(broken, { kitView: 'drop' }); } catch { /* */ } console.warn = warn;
-  row(refused && !!played && played.scenarios?.kitView === undefined, `a broken block refuses a level everywhere (${refused ? 'refused' : 'NOT REFUSED'}) but where it is loaded to play, where the block is left out (${played ? 'left out' : 'THE LEVEL WAS REFUSED'})`);
+  row(refused, `a broken block refuses a level (${refused ? 'refused' : 'NOT REFUSED'})`);
 }
 
 console.log(`levels with a kitView block (${withBlock.length}${asked.length ? ' of those asked about' : ''}): ${withBlock.join(', ') || 'none'}`);

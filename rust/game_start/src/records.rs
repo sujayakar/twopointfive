@@ -1,11 +1,9 @@
-//! THE RECORDS OF A LEVEL FILE THAT THE GAME KEEPS AS ITS OWN TYPES, each type with the member of the file each of its fields is (`read.rs`
-//! reads them). First written from the names the state bridge keeps for every field (tools/blitz/schema.json); it is source like any other from
-//! here: a type that gains a field does not compile until its line here names the member, and a member of the file no line names is found by
-//! the file's own tree (`json.rs unread`).
+//! THE RECORDS OF A LEVEL FILE THAT THE GAME KEEPS AS ITS OWN TYPES, each type with the member of the file each of its fields is (`read.rs` reads them). A type that gains a field does not compile
+//! until its line here names the member, and a member of the file no line names is found by the file's own tree (`json.rs unread`).
 #![allow(clippy::all)]
-use crate::read::{field, record, FromJson};
+use crate::read::{field, record, At, FromJson};
 use crate::json::Json;
-use alloc::string::String;
+use alloc::{format, string::String};
 use crate::{json_struct, json_words};
 
 json_struct!(game::scene_scenarios::TeamStart { sam: "sam", sam_yaw: "samYaw", ops: "ops", ops_yaw: "opsYaw" });
@@ -25,10 +23,10 @@ json_struct!(game::scene_scenarios::RescueDataHostagesItem { pos: "pos", face: "
 json_struct!(game::scene_scenarios::ScenarioMark { pos: "pos", aim_at: "aimAt" });
 json_struct!(game::scene_scenarios::RescueDataDoorMan { inside: "inside", outside: "outside" });
 json_struct!(game::scene_scenarios::RescueDataCast { roamers: "roamers" });
-json_struct!(game::scene_scenarios::RescueFlowDataRegionsItem { id: "id", door: "door", rect: "rect" });
+json_struct!(game::scene_scenarios::RescueFlowDataRegionsItem { id: "id", rect: "rect" } nulls { door: "door" });
 json_words!(game::scene_scenarios::RouteOpeningKind { Door: "door", Glass: "glass", Doorway: "doorway" });
 json_words!(game::scene_scenarios::RouteOpeningSide { Left: "left", Right: "right" });
-json_struct!(game::scene_scenarios::RouteOpening { id: "id", name: "name", short: "short", region: "region", kind: "kind", door: "door", at: "at", mark: "mark", watch: "watch", half: "half", north: "north", call: "call", side: "side", look: "look" });
+json_struct!(game::scene_scenarios::RouteOpening { id: "id", name: "name", short: "short", region: "region", kind: "kind", at: "at", mark: "mark", watch: "watch", half: "half", north: "north", call: "call", side: "side", look: "look" } nulls { door: "door" });
 json_struct!(game::scene_scenarios::RescueFlowDataHold { ahead: "ahead", x_max: "xMax", z: "z" });
 json_struct!(game::scene_scenarios::RescueFlowData { corridor: "corridor", regions: "regions", route: "route", hold: "hold" });
 json_struct!(game::scene_scenarios::RescueData { team: "team", room: "room", side: "side", hostages: "hostages", captor: "captor", door_man: "doorMan", roamers: "roamers", guards: "guards", cast: "cast", flow: "flow" });
@@ -95,60 +93,64 @@ json_words!(game::floor::FloorMat { Carpet: "carpet", Lino: "lino", Stone: "ston
 json_struct!(game::scene_level_data::SurfacesDataZonesItem { id: "id", mat: "mat", x0: "x0", z0: "z0", x1: "x1", z1: "z1", notes: "notes" });
 json_struct!(game::scene_level_data::SurfacesData { building: "building", grass_edge: "grassEdge", inside: "inside", outside: "outside", verge: "verge", zones: "zones" });
 
-/// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is, and a word this build has no test for is kept as the word.
+/// what a test says that is true or left out
+fn said(j: &Json, key: &str, at: &At) -> Option<bool> { field::<Option<bool>>(j, key, at).map(|b| b.unwrap_or(false)) }
+
+/// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is.
 impl FromJson for game::scene_scenarios::LessonTestKind {
-    fn from_json(j: &Json, at: &str) -> Self {
+    fn from_json(j: &Json, at: &At) -> Option<Self> {
         use game::scene_scenarios::LessonTestKind as K;
-        let is = j.get("is").str().unwrap_or_else(|| panic!("level: {} is a lesson's test and says no `is`: {:?}", at, j));
-        match is {
-            "in" => { K::In { area: field(j, "area", at) } }
-            "near" => { K::Near { at: field(j, "at", at), r: field(j, "r", at) } }
-            "flag" => { K::Flag { flag: field(j, "flag", at), value: field(j, "value", at) } }
-            "slot" => { K::Slot { slot: field(j, "slot", at), drawn: field(j, "drawn", at) } }
-            "pace" => { K::Pace { below: field(j, "below", at), above: field(j, "above", at) } }
-            "meter" => { K::Meter { which: field(j, "which", at), below: field(j, "below", at), above: field(j, "above", at) } }
-            "stage" => { K::Stage { stage: field(j, "stage", at) } }
-            "door" => { K::Door { door: field(j, "door", at), state: field(j, "state", at) } }
-            "target" => { K::Target { name: field(j, "name", at), on: field(j, "on", at) } }
-            "men" => { K::Men { down: field(j, "down", at) } }
-            "did" => { K::Did { what: field(j, "what", at), on: field(j, "on", at), n: field(j, "n", at) } }
-            "downed" => { K::Downed { how: field(j, "how", at), n: field(j, "n", at) } }
-            "body" => { K::Body { area: field(j, "area", at) } }
-            "calm" => { K::Calm { route: field(j, "route", at) } }
-            "loaded" => { K::Loaded }
-            "reload" => { K::Reload }
-            "launcher" => { K::Launcher { on: field(j, "on", at), fired: field(j, "fired", at) } }
-            "burst" => { K::Burst { n: field(j, "n", at) } }
-            "threw" => { K::Threw { kind: field(j, "kind", at), quick: field(j, "quick", at), area: field(j, "area", at) } }
-            "orderTo" => { K::OrderTo { who: field(j, "who", at) } }
-            "stackOn" => { K::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: field(j, "set", at) } }
-            "pairsOn" => { K::PairsOn { doors: field(j, "doors", at) } }
-            "word" => { K::Word { doors: field(j, "doors", at) } }
-            "taken" => { K::Taken { room: field(j, "room", at) } }
-            "following" => { K::Following }
-            "mate" => { K::Mate { area: field(j, "area", at), at: field(j, "at", at), r: field(j, "r", at), by: field(j, "by", at), away: field(j, "away", at) } }
-            "pair" => { K::Pair { what: field(j, "what", at), n: field(j, "n", at) } }
-            "cue" => { K::Cue { name: field(j, "name", at) } }
-            "view" => { K::View { turned: field(j, "turned", at), zoomed: field(j, "zoomed", at), panned: field(j, "panned", at) } }
-            "squad" => { K::Squad { area: field(j, "area", at), n: field(j, "n", at) } }
-            "stacks" => { K::Stacks { doors: field(j, "doors", at), n: field(j, "n", at), set: field(j, "set", at) } }
-            "watching" => { K::Watching { at: field(j, "at", at), r: field(j, "r", at), n: field(j, "n", at) } }
-            "all" => { K::All { of: field(j, "of", at) } }
-            "any" => { K::Any { of: field(j, "of", at) } }
-            w => K::Unknown { is: alloc::string::String::from(w) },
-        }
+        record(j, at)?;
+        let Some(is) = field::<String>(j, "is", at) else { j.skip_all(); return None };
+        Some(match is.as_str() {
+            "in" => K::In { area: field(j, "area", at)? },
+            "near" => { let (at_, r) = (field(j, "at", at), field(j, "r", at)); K::Near { at: at_?, r: r? } }
+            "flag" => { let (flag, value) = (field(j, "flag", at), field(j, "value", at)); K::Flag { flag: flag?, value: value? } }
+            "slot" => { let (slot, drawn) = (field(j, "slot", at), field(j, "drawn", at)); K::Slot { slot: slot?, drawn: drawn? } }
+            "pace" => { let (below, above) = (field(j, "below", at), field(j, "above", at)); K::Pace { below: below?, above: above? } }
+            "meter" => { let (which, below, above) = (field(j, "which", at), field(j, "below", at), field(j, "above", at)); K::Meter { which: which?, below: below?, above: above? } }
+            "stage" => K::Stage { stage: field(j, "stage", at)? },
+            "door" => { let (door, state) = (field(j, "door", at), field(j, "state", at)); K::Door { door: door?, state: state? } }
+            "target" => { let (name, on) = (field(j, "name", at), field(j, "on", at)); K::Target { name: name?, on: on? } }
+            "men" => K::Men { down: field(j, "down", at)? },
+            "did" => { let (what, on, n) = (field(j, "what", at), field(j, "on", at), field(j, "n", at)); K::Did { what: what?, on: on?, n: n? } }
+            "downed" => { let (how, n) = (field(j, "how", at), field(j, "n", at)); K::Downed { how: how?, n: n? } }
+            "body" => K::Body { area: field(j, "area", at)? },
+            "calm" => K::Calm { route: field(j, "route", at)? },
+            "loaded" => K::Loaded,
+            "reload" => K::Reload,
+            "launcher" => { let (on, fired) = (field(j, "on", at), said(j, "fired", at)); K::Launcher { on: on?, fired: fired? } }
+            "burst" => K::Burst { n: field(j, "n", at)? },
+            "threw" => { let (kind, quick, area) = (field(j, "kind", at), said(j, "quick", at), field(j, "area", at)); K::Threw { kind: kind?, quick: quick?, area: area? } }
+            "orderTo" => K::OrderTo { who: field(j, "who", at)? },
+            "stackOn" => { let (door, who, set) = (field(j, "door", at), field(j, "who", at), said(j, "set", at)); K::StackOn { door: door?, who: who?, set: set? } }
+            "pairsOn" => K::PairsOn { doors: field(j, "doors", at)? },
+            "word" => K::Word { doors: field(j, "doors", at)? },
+            "taken" => K::Taken { room: field(j, "room", at)? },
+            "following" => K::Following,
+            "mate" => { let (area, at_, r, by, away) = (field(j, "area", at), field(j, "at", at), field(j, "r", at), field(j, "by", at), field(j, "away", at)); K::Mate { area: area?, at: at_?, r: r?, by: by?, away: away? } }
+            "pair" => { let (what, n) = (field(j, "what", at), field(j, "n", at)); K::Pair { what: what?, n: n? } }
+            "cue" => K::Cue { name: field(j, "name", at)? },
+            "view" => { let (turned, zoomed, panned) = (field(j, "turned", at), field(j, "zoomed", at), field(j, "panned", at)); K::View { turned: turned?, zoomed: zoomed?, panned: panned? } }
+            "squad" => { let (area, n) = (field(j, "area", at), field(j, "n", at)); K::Squad { area: area?, n: n? } }
+            "stacks" => { let (doors, n, set) = (field(j, "doors", at), field(j, "n", at), said(j, "set", at)); K::Stacks { doors: doors?, n: n?, set: set? } }
+            "watching" => { let (at_, r, n) = (field(j, "at", at), field(j, "r", at), field(j, "n", at)); K::Watching { at: at_?, r: r?, n: n? } }
+            "all" => K::All { of: field(j, "of", at)? },
+            "any" => K::Any { of: field(j, "of", at)? },
+            w => { j.skip_all(); at.fault(format!("no lesson's test is called '{w}'")); return None; }
+        })
     }
 }
 
 /// A kit view way's pane: `true`, or the pane's own record.
 impl FromJson for game::scene_scenarios::KitViewWayPane {
-    fn from_json(j: &Json, at: &str) -> Self {
-        match j { Json::Bool(b) => game::scene_scenarios::KitViewWayPane::Bool(*b), _ => game::scene_scenarios::KitViewWayPane::Arm1(FromJson::from_json(j, at)) }
+    fn from_json(j: &Json, at: &At) -> Option<Self> {
+        use game::scene_scenarios::KitViewWayPane as P;
+        match j { Json::Bool(b) => Some(P::Bool(*b)), _ => FromJson::from_json(j, at).map(P::Arm1) }
     }
 }
 
-// ---- the level's own records that the TypeScript loader reads member for member (levelLoad.ts): a device, a vent and a light say `id` where the
-// game's type says `name`; a plan is the file's record without its id
+// ---- the level's own records: a device, a vent and a light say `id` where the game's type says `name`; a plan is the file's record without its id (file.rs keeps it)
 json_words!(game::scene_level::CivilianDefKind { Cleaner: "cleaner", Worker: "worker" });
 json_words!(game::scene_level::CivilianTask { Bin: "bin", Stand: "stand", Wipe: "wipe", Sit: "sit", Cooler: "cooler", Printer: "printer", Shelf: "shelf" });
 json_struct!(game::scene_level::VentDef { name: "id", pos: "pos", dir: "dir", speed: "speed", spread: "spread", reach: "reach", size: "size", period: "period", duty: "duty", phase: "phase", mains: "mains" } drops ["floor", "notes"]);
@@ -173,24 +175,27 @@ json_struct!(game::devices::KeypadDef2 { kind: "kind", name: "id", pos: "pos", y
 json_words!(game::devices::LaserDef2Kind { Laser: "laser" });
 json_words!(game::devices::LaserDef2Alarm { Alarm: "alarm", Suspicion: "suspicion" });
 json_struct!(game::devices::LaserDef2 { kind: "kind", name: "id", from: "from", to: "to", group: "group", mains: "mains", alarm: "alarm" } drops ["floor", "notes"]);
-/// a civilian: named by its `name`, else its id (levelLoad.ts)
+/// a civilian: named by its `name`, else its id
 impl FromJson for game::scene_level::CivilianDef {
-    fn from_json(j: &Json, at: &str) -> Self {
-        record(j, at);
-        j.skip(&["id", "floor", "notes"]);
-        let name: Option<String> = field(j, "name", at);
-        game::scene_level::CivilianDef { name: name.unwrap_or_else(|| field(j, "id", at)), kind: field(j, "kind", at), tint: field(j, "tint", at), tint2: field(j, "tint2", at), points: field(j, "points", at), wait: field(j, "wait", at), tasks: field(j, "tasks", at), face: field(j, "face", at) }
+    fn from_json(j: &Json, at: &At) -> Option<Self> {
+        record(j, at)?;
+        j.skip(&["floor", "notes"]);
+        let (id, name): (Option<String>, Option<Option<String>>) = (field(j, "id", at), field(j, "name", at));
+        let (kind, tint, tint2, points) = (field(j, "kind", at), field(j, "tint", at), field(j, "tint2", at), field(j, "points", at));
+        let (wait, tasks, face) = (field(j, "wait", at), field(j, "tasks", at), field(j, "face", at));
+        Some(game::scene_level::CivilianDef { name: name?.unwrap_or(id?), kind: kind?, tint: tint?, tint2: tint2?, points: points?, wait: wait?, tasks: tasks?, face: face? })
     }
 }
-/// a device is one of three records, by its `kind` (levelLoad.ts deviceOf)
+/// a device is one of three records, by its `kind`
 impl FromJson for game::scene_level::DeviceDef {
-    fn from_json(j: &Json, at: &str) -> Self {
+    fn from_json(j: &Json, at: &At) -> Option<Self> {
         use game::scene_level::DeviceDef as D;
+        record(j, at)?;
         match j.get("kind").str() {
-            Some("camera") => D::Camera(FromJson::from_json(j, at)),
-            Some("keypad") => D::Keypad(FromJson::from_json(j, at)),
-            Some("laser") => D::Laser(FromJson::from_json(j, at)),
-            _ => panic!("level: {}.kind should be 'camera', 'keypad' or 'laser', and the file has {:?}", at, j.get("kind")),
+            Some("camera") => FromJson::from_json(j, at).map(D::Camera),
+            Some("keypad") => FromJson::from_json(j, at).map(D::Keypad),
+            Some("laser") => FromJson::from_json(j, at).map(D::Laser),
+            _ => { j.skip_all(); at.key("kind").wants("one of camera, keypad, laser", j.get("kind")) }
         }
     }
 }

@@ -11,7 +11,7 @@ Paths such as "Tab ▸ X" and numbers are as of the date each bullet was written
   `MarkingDef { face ±x/±y/±z, res 'fine'|'base'|'coarse' (= 1.25 / 2.5 / 5 cm cells: `MARKING_TEXEL` × ½ / 1 / 2, nesting), at [U0,V0] (integer lattice coords of the
   bottom-left cell from the FACE CENTRE along `FACE_AXES`: u right / v up seen from outside, +y: u = +x v = −z), size [W,H] ≤ 32×32, pal ≤ 3 MATERIAL entries { albedo |
   mul, rough?, emit? }, cells: H strings top-first of '.abc' }`, ≤ `MAX_MARKS_PER_BOX` 4 per box on `Box.marks` / `PropPart.marks`; in the level file as `BoxData.markings` /
-  `PropPartData.markings` (KEYS marking / markpal, `markingErrors` = the validator incl. 'inside the face' at the file's `meta.markTexel`, `canonMarking`, both load
+  `PropPartData.markings` (KEYS marking / markpal, `faults.rs` holds the rules incl. 'inside the face' at the file's `meta.markTexel`, `canonMarking`, both load
   directions; the identity probe compares them). ART RULES (the maintainer's): flat colour per cell, ≤ 3 entries, NO gradients, NO baked lighting (entries are materials —
   impossible by construction), everything on the ONE world lattice, AA only at cell edges; never demote a free-standing object (papers keep their boxes and get bars ON
   them) — only face relief (pull strips, LED nubs, screen sheets, gap strips) becomes markings. Authoring = GENERATORS (`GEN.grid / seams / lines / scribble / dots / window /

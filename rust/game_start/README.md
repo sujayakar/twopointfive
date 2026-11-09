@@ -132,20 +132,14 @@ NOT MADE, because no rule of the tick reads them: the character renderer, the me
 
 ### What the start reads of a level file, and what it does not
 
-Every file under `levels/` is read whole. `stand` REFUSES a file with anything the reader does not carry, and names it: a level stood without part
-of itself is another level.
+Every file under `levels/` is read whole. `stand` REFUSES a file with any fault of the reading, and names them all: a level stood without part of itself is another level.
 
-- **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read,
-  whatever nobody asked for is named by its place (`doors[0].auto`, `elevators`): a record the reader has no line for, a member a record gained
-  since. There is no second list of a record's members to keep beside its reader. What the loader leaves behind by rule, as the TypeScript
-  loader does (a floor, an author's notes, the editor's block), it passes by in so many words (`skip`).
-- **A record the game keeps as its own type is read by that type** (`records.rs`): one line says which member of the file each field is, so a type
-  that gains a field does not compile until its line names the member. A box, a light and a door are read as the file's own record types
-  (`BoxData`, `LightData`, `DoorData`) and then laid as the loader lays them. Props, switchables, routes, volumes and the mission's objectives have
-  no record type in the game crate and are still read member by member.
-- NOT READ: `connectors` (a stair or a ladder between floors: the TypeScript loader passes them by too, and no file has one).
-- NOT CHECKED: the file's own rules (`validateLevelData`). A file is taken as one the TypeScript validator has passed; a wrong value stops the
-  reader with its place in the file, a wrong level does not.
+- **The format is `file.rs`**, a line a record: which member of the file each field is. A record the game keeps as its own type is read by that type (`records.rs`), so a type that gains a field does
+  not compile until its line names the member. A value that is not what its place wants is said by its place and the reading goes on (`read.rs`), so a file is told everything at once.
+- **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read, whatever nobody asked for is named by its place
+  (`doors[0].auto`, `elevators`). What is left behind by rule (a floor, an author's notes) says so in so many words (`drops`).
+- **The rules beside the reading are `faults.rs`**: ids of one thing each, names that point at something, numbers in their range, lists that go together. `levels file` asks them of every file, and the
+  level tools ask them through the module (the desk's `faults`). A start does not.
 
 Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
 

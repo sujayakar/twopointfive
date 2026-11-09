@@ -1793,7 +1793,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - A LEVEL TOO BIG FOR A POOL DOES NOT LOAD (`rust/game_rules/src/levelfit level_over`, the first statement of `Game`'s constructor). A level of more than 64
     doors, 128 loose things of furniture (or 256 boxes of them), or 256 sheets of glass was stepped, or judged, in TypeScript without a word. It is
     said now before anything of the level is built, the stores refuse more rows than they have (`doorshome.ts`, `slabshome.ts`, `propshome.ts`),
-    and the level validator says the same of the document whole (`levelData.ts`: doors, things, the things' boxes). THE COUNT IS ONE SOURCE:
+    and `faults.rs` says the same of the file whole (doors, things, the things' boxes). THE COUNT IS ONE SOURCE:
     `levelfit.ts fitRows` is every count of a stood game against what holds it, the pools and every table of the box world's copy (`BoxMirror.tables`),
     and the pieces a broken level may stand up against its room for them (below: "a box world the copy cannot hold"); `copyfit-check` is that function over every level and is red when the copy
     has a table no row of it is held by. It reads: doors 27 of 64, things 61 of 128, sheets of glass 22 of 256, and THE FURNITURE'S BOXES 220 OF 512: they were

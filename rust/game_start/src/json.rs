@@ -38,6 +38,8 @@ impl Json {
     pub fn get(&self, k: &str) -> &Json {
         match self { Json::Obj(m, asked) => match m.iter().position(|(n, _)| n == k) { Some(i) => { asked.mark(i); &m[i].1 } None => &NULL }, _ => &NULL }
     }
+    /// the member `k` as a look at it: not asked for, as far as `unread` goes
+    pub fn peek(&self, k: &str) -> Option<&Json> { match self { Json::Obj(m, _) => m.iter().find(|(n, _)| n == k).map(|e| &e.1), _ => None } }
     /// the item `i` of an array; `Null` past its end or where this is no array
     pub fn at(&self, i: usize) -> &Json {
         match self { Json::Arr(a) => a.get(i).unwrap_or(&NULL), _ => &NULL }
@@ -96,7 +98,7 @@ impl Json {
 
 /// The text as a value. A text that is not JSON is refused with where it stopped.
 pub fn parse(text: &str) -> Result<Json, String> {
-    let mut p = P { b: text.as_bytes(), i: 0 };
+    let mut p = P { b: text.as_bytes(), i: 0, deep: 0 };
     p.ws();
     let v = p.value()?;
     p.ws();
@@ -104,13 +106,22 @@ pub fn parse(text: &str) -> Result<Json, String> {
     Ok(v)
 }
 
-struct P<'a> { b: &'a [u8], i: usize }
+/// how deep a value may stand in others: no file of the game's comes near, and a text of brackets is told so
+const DEEPEST: usize = 256;
+struct P<'a> { b: &'a [u8], i: usize, deep: usize }
 
 impl<'a> P<'a> {
     fn err(&self, what: &str) -> String { alloc::format!("json: {} at byte {}", what, self.i) }
     fn ws(&mut self) { while self.i < self.b.len() && matches!(self.b[self.i], b' ' | b'\t' | b'\n' | b'\r') { self.i += 1; } }
     fn eat(&mut self, w: &[u8]) -> bool { if self.b[self.i..].starts_with(w) { self.i += w.len(); true } else { false } }
     fn value(&mut self) -> Result<Json, String> {
+        if self.deep == DEEPEST { return Err(self.err("too deep")); }
+        self.deep += 1;
+        let v = self.one_value();
+        self.deep -= 1;
+        v
+    }
+    fn one_value(&mut self) -> Result<Json, String> {
         match self.b.get(self.i).copied() {
             None => Err(self.err("the text ends where a value should stand")),
             Some(b'{') => {
