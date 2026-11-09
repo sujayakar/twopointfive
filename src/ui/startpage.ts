@@ -248,7 +248,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-ico { height: 22px; }
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-label { font-size: 9px; letter-spacing: 0.14em; }
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-val { font-size: 13px; }
-#missions.one #loadout .lo-kit .kc-tree .kc-row.none:not(.lent) .kc-val { color: var(--m-dim); }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.none .kc-val { color: var(--m-dim); }
 #missions.one #loadout .lo-kit .kc-tree .kc-row.fixed .kc-val { color: var(--m-soft); }
 @media (max-width: 1480px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] .kc-kids { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* (three across cuts '40 MM GRENADES' short under about 1400) */
 @media (max-width: 1180px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row, #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 2; } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1; } #missions.one #loadout .lo-kit .kc-tree .kc-kids { margin-left: 6px; padding-left: 6px; } #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex-basis: 64px; } }
