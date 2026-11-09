@@ -201,7 +201,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
   if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
   return h;
 }
-/** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, leaves let a little by */
+/** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, a leaf stops it */
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
   var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
   for (var s = 0u; s < 4u; s++) {
@@ -238,7 +238,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
           walked += 1u; let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, lmax)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { T *= vec3f(0.1, 0.16, 0.03); if (T.y < 0.02) { return vec3f(0.0); } } }
+          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { return vec3f(0.0); } }     /* (what a leaf lets by is scattered by it, and found by paths that go through it: not counted here as well) */
           q++;
         }
       }
