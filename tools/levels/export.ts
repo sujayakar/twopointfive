@@ -113,7 +113,7 @@ if (CHECK) {
   if (cur !== text) { console.error(`--check: ${OUT} ${cur === null ? 'does not exist' : 'is STALE'} — run bun run tools/levels/export.ts ${name}`); process.exit(1); }
   console.log(`--check: ${OUT} is up to date`);
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
-// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/bin/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
+// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
 // wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of the mission list that is not a quiet one), so a
 // red answer fails the export of such a level and is a note on any other. A DEFENDER SEES WHAT HE WATCHES: a red answer fails the export (something was stood in a man's view, or the level
 // has no count file yet: `levels sight <name> --write`). LEVELASK=0 in front skips both for a level still in the making.

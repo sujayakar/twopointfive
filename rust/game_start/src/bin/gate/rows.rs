@@ -11,7 +11,7 @@ use game_start::hands_off::{HandsOff, Plan};
 use game_start::moment::Moment;
 use game_start::parts;
 use game_start::play::{Opts, Play};
-use game_start::{files, json};
+use game_start::{files, json, levels};
 use std::collections::BTreeMap;
 use std::time::Instant;
 
@@ -57,10 +57,10 @@ impl Flags {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Job { Start(String, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64) }
+pub enum Job { Start(String, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64), Level(&'static str) }
 impl Job {
     /// which is started first, the longest kinds before the others: the lower, the sooner
-    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) => 2, Job::Start(..) => 3 } }
+    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) | Job::Level(_) => 2, Job::Start(..) => 3 } }
 }
 
 #[derive(Clone)]
@@ -96,6 +96,7 @@ pub fn long() -> Vec<Row> {
     for id in played::his_missions() { out.push(Row { name: format!("played {}", id), job: Job::Played(id) }); }
     for id in played::lessons() { out.push(Row { name: format!("lesson {}", id), job: Job::Lesson(id.to_string(), 0.0) }); }
     for id in played::lessons() { out.push(Row { name: format!("lesson {}, reading each line", id), job: Job::Lesson(id.to_string(), played::READS) }); }
+    for q in levels::QUESTIONS { out.push(Row { name: format!("level {}", q), job: Job::Level(q) }); }
     out
 }
 /// every row, of both kinds
@@ -123,6 +124,7 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (par.clone(), "moves", "the clock moved"), (par, "noclock", "the staging"),
         (format!("played {}", SEATS[0]), "deaf", "moved from second"), (format!("played {}", SEATS[0]), "wall", "inside a static box"),
         (String::from("lesson tut-road"), "third", "steps went by on their deeds"),
+        (String::from("level file"), "spoiled", "reads a member of this name"),
     ]
 }
 
@@ -138,6 +140,7 @@ pub fn one(names: &[String], f: Flags) {
         Job::Par(id) => par_row(&mine[0].name, id, f),
         Job::Played(id) => played::played_row(&mine[0].name, id, &pins, f),
         Job::Lesson(id, pace) => played::lesson_row(&mine[0].name, id, *pace, f),
+        Job::Level(q) => level_row(&mine[0].name, q, f),
     }
 }
 
@@ -199,6 +202,18 @@ pub fn held(name: &str, track: &Track, end: &[u32], line: Option<&str>, pins: &P
     }
     let words = match pins.starts.get(&end_column(name)) { Some(Start::Parts(m)) => moved_parts(m, &by_name(end)), _ => String::from("none kept") };
     (Vec::new(), if words.is_empty() { String::new() } else { format!("only the words moved ({})", words) })
+}
+
+// ---- level
+
+/// WHAT EVERY LEVEL OWES WHOEVER PLAYS IT, one question of `levels` a row, asked of every level (or mission) it is about.
+/// BREAK: `spoiled` the question's own red path.
+fn level_row(name: &str, question: &str, f: Flags) {
+    if f.breaks("spoiled") { std::env::set_var("LEVELS_BREAK", "1"); }
+    let t = Instant::now();
+    let v = levels::ask(question, &[], &[]);
+    let fail: Vec<String> = v.fails().iter().map(|(what, detail)| format!("{what}: {}", detail.split_whitespace().collect::<Vec<_>>().join(" "))).collect();
+    say(name, t.elapsed().as_secs_f64(), &fail, &format!("{} lines", v.checks()));
 }
 
 // ---- start
