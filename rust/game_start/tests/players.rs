@@ -130,6 +130,63 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
     }
 }
 
+/// THE RULE: the flash of a gun of anybody on the team, either player's or a teammate's, is the team's and lights the picture whoever sees it; a defender's lights only what the team sees.
+#[test]
+fn a_flash_of_either_player_is_the_teams() {
+    for seed in SEEDS {
+        let mut p = Play::scene(&store(seed), &Opts { seed, seats: 2, ..Default::default() });
+        p.g.fog_of_war.on = true;
+        for _ in 0..10 { frame(&mut p, 0); }
+        let foe = p.hostiles()[0];
+        let (first, second) = (p.g.seats[0], p.g.seats[1]);
+        // (who fires, in whose seat, the class wanted; each at the sky, so that nobody holds his fire for a friend in the line)
+        let mut men = vec![(body(&p, 0), first, true, 0.0), (body(&p, 1), second, true, 0.0)];
+        for m in p.mates() { men.push((p.g.gd[m].ch, first, false, 0.0)); }
+        men.push((p.g.gd[foe].ch, first, false, 1.0));
+        for (c, seat, player, class) in men {
+            let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
+            let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::zeroed() };
+            game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], player, Some(&o)));
+            let of: Vec<f64> = p.g.engine.lights.lights.iter().filter(|l| !had.contains(l) && p.g.tab.light[**l].owner == id).map(|&l| game::render_lights::light_set_fog_class(&p.g, l)).collect();
+            assert!(!of.is_empty() && of.iter().all(|&k| k == class), "seed {seed}: the flashes of #{id} are {of:?}, not all {class}");
+        }
+    }
+}
+
+/// THE RULE: a moment of a fight of two is put back whole: the words are the moment's, and the same hands play the same ticks from it, in every part.
+#[test]
+fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
+    for seed in SEEDS {
+        let mut p = Play::scene(&store(seed), &Opts { seed, seats: 2, dress: true, ..Default::default() });
+        p.sam_unhurt();
+        for (seat, z) in [(0, 12.5), (1, 9.5)] { p.seat_stands(seat, [11.5, z]); }
+        let play = |p: &mut Play, from: usize, n: usize| -> Vec<Vec<u32>> {
+            (from..from + n).map(|k| {
+                for seat in 0..2 {
+                    let a = at(p, seat);
+                    let foe = p.hostiles_by([a[0], a[2]]).first().map(|&h| { let q = p.g.ch[p.g.gd[h].ch].pos; [q[0], 1.2, q[2]] });
+                    hands(p, seat, &[["KeyW", "KeyD", "KeyS", "KeyA"][(k + seat * 37) / 40 % 4]], foe, (k + seat * 11) % 40 > 20);
+                    if k == 0 { let i = p.g.tab.cmd_seat[p.g.seats[seat]].input; p.g.tab.input[i].pressed.add(String::from("Digit2")); }
+                }
+                frame(p, 0);
+                p.words()
+            }).collect()
+        };
+        play(&mut p, 0, 100);
+        let there = p.words();
+        let (kept, block) = (p.g.clone(), unsafe { std::slice::from_raw_parts(sim::state::addr(p.g.sim) as *const u8, std::mem::size_of::<sim::state::State>()).to_vec() });
+        let once = play(&mut p, 100, 90);
+        assert!(once[89] != there && p.g.fx_seed > kept.fx_seed, "seed {seed}: the staging: nobody fired");
+        unsafe { std::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(kept.sim) as *mut u8, block.len()); }
+        p.g = kept;
+        game::scene_collision::unstand(&mut p.g);
+        game::scene_collision::stands(&mut p.g);
+        assert_eq!(p.words(), there, "seed {seed}: the moment put back is the moment");
+        let again = play(&mut p, 100, 90);
+        if let Some((k, parts)) = parting(&once, &again) { panic!("seed {seed}: from the moment put back the same hands part in {parts} at tick {k}"); }
+    }
+}
+
 /// THE RULE: a mission written round one commander refuses a game of two, in words.
 #[test]
 fn a_rescue_refuses_two_players() {
