@@ -1,5 +1,5 @@
 // A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
-// Ray-traced reflections + the analytic highlights of the ONE BRDF (renderer v3 phase 4; docs/internal/p4-materials.md). One thread per texel of the
+// Ray-traced reflections + the analytic highlights of the ONE BRDF (renderer v3 phase 4; docs/agents/render-light.md, "Reflections"). One thread per texel of the
 // reflection target (internal res ÷ frame.rtCfg.w). For the surface under the pixel (characters keep their own wet coat, composite.wgsl wetCoatSpec):
 // read its material from the g-buffer (gMat: GGX roughness + metalness after the detail layer; the box's anisotropy bit from boxFinish), skip it if rougher
 // than rtCfg.x, else

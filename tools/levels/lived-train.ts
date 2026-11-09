@@ -6,7 +6,7 @@
 //   motor pool = the engine hoist · kitchen court = the row of cauldrons · generator yard = the cable spools · the range = the red flag
 //   · quarters = the wash bench · the white house = the pigeon loft · the well court = the water cart.
 //
-// The contract (lib/lived.ts, rebuild/play-style-levels/rooms/read-first.md): every box is in a group
+// The contract (lib/lived.ts): every box is in a group
 // `lived.<place>`, every prop is named `lived.<place>.<kind><n>`, all of it the TAIL of the generator's lists — so a furnish step runs
 // AFTER `T.finish()` — and NO LIGHT is added on any of the seven (lesson 3 is about the lights; the quiet lessons' dark ways are measured).
 // Boxes only, flat colours off the GWOT kit's palette, no dice: the same file every run.

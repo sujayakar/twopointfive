@@ -388,7 +388,7 @@ export class GBuffer {
     return p;
   }
 
-  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT (docs/internal/sharp-direct.md), the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
+  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT, the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
    *  (albedo … mat, at w × h) are the internal VIEW of an output-size raster set (albedoO … matO), filled by encodeDown; sharp off = one set at w × h exactly as before (the O views alias it). */
   resize(w: number, h: number, ow = w, oh = h, sharp = false) {
     if (!sharp) { ow = w; oh = h; }

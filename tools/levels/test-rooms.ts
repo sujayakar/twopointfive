@@ -13,7 +13,7 @@
 //   z 22 └─────────┴────────────────────┘
 //
 // A LEVEL TASK COPIES THIS FILE: `build()` returns the Level, the scenarios block and the editor groups; `bun run tools/levels/export.ts <name>` writes
-// levels/<name>.json from it and refuses a file that does not load back to the same level. (rebuild/scenario-levels/contract.md is the how-to.)
+// levels/<name>.json from it and refuses a file that does not load back to the same level. (docs/agents/levels.md is the how-to.)
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';

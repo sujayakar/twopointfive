@@ -219,7 +219,7 @@ struct FOut { @location(0) color: vec4f, @location(1) react: vec4f };
   var tp = 1.0; var insc = vec3f(0.0);
   if ((em.flags & 4u) != 0u) {
     let vdiv = max(1, i32(frame.lossyCfg.y)); let vd = vec2i(textureDimensions(volTex));
-    var pv = pix / vdiv; if (frame.sharpCfg.z > 0.0) { pv = vec2i((vec2f(pix) + 0.5) * (frame.sharpCfg.xy / frame.screen) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT, docs/internal/sharp-direct.md: this splat runs at the OUTPUT size then, the volumetric grid is a fraction of the internal raster)
+    var pv = pix / vdiv; if (frame.sharpCfg.z > 0.0) { pv = vec2i((vec2f(pix) + 0.5) * (frame.sharpCfg.xy / frame.screen) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT: this splat runs at the OUTPUT size then, the volumetric grid is a fraction of the internal raster)
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let fr = clamp(zp / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), fr); insc = vol.rgb * fr;

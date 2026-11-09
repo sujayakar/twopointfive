@@ -137,7 +137,7 @@ export interface FrameParams {
   /** MARKINGS (scene/markings.ts, shaders/markings.wgsl): [base texel in metres — 0 = markings off everywhere (the frame as it was), contrast 0‥1, × the emission of emissive markings,
    *  1 = markings are evaluated at reflection hits too] */
   markCfg: [number, number, number, number];
-  /** SHARP DIRECT (renderer v3 follow-up, docs/internal/sharp-direct.md): [internal width, height, OUTPUT width, height] while the decoupled-resolution path is live this frame —
+  /** SHARP DIRECT (renderer v3 follow-up): [internal width, height, OUTPUT width, height] while the decoupled-resolution path is live this frame —
    *  the g-buffer, the direct light's unshadowed term, the composite and the TAA run at the output size, everything stochastic stays internal and is joint-bilateral upsampled. z = 0 = off:
    *  every pass exactly as it was (composite / taau / particles_draw read the same statements they always did). Both frame uniforms (internal-screen and output-screen) carry the same four. */
   sharpCfg: [number, number, number, number];
@@ -244,7 +244,7 @@ export const reachBinding = { storage: true };
  *  constructor turns it off on adapters whose per-stage budget cannot take scene 6 + reach 1 + mesh 1 + the cascade trace's / probe's 2 = 10 (Chrome on
  *  Metal offers exactly 10); the prelude then declares a stub meshLoad() and the setting is inert (engine.meshShadowsAvailable says which). */
 export const meshBinding = { enabled: true };
-/** GLASS BREAKING (rust/game_rules/src/glassbreak, docs/internal/glassbreak.md): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
+/** GLASS BREAKING (rust/game_rules/src/glassbreak): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
  *  glassTransmit passing fallen cells in common.wgsl, the crack network in composite.wgsl). host/drawpage.ts raises it at BOOT from the persisted `tune.glassBreak` before the Engine
  *  builds a pipeline; false = every such statement is dead code the compiler drops — the modules as they were (flag-off identity is hash-proven against main). A page
  *  reload applies a change of the switch to the GPU side. */

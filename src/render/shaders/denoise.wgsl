@@ -63,7 +63,7 @@ const JUMP_REL_FLOOR: f32 = 0.2;   // shTemporal: the jump's yardstick is the be
 const JUMP_CAP: f32 = 1.0;    // shTemporal, a light-jump frame: the current ratio's bright outliers capped at the 5×5 mean + this many σ …
 const JUMP_LEAN_SHARP: f32 = 0.25;   // … and the value leant this far onto that mean, per class (0 = the capped sample as it is, 1 = the box mean): the SHARP class's shadows are hard-edged (torches, the
 const JUMP_LEAN_BROAD: f32 = 0.75;   // lightning's mullions) and a box mean would soften them for the frame; the BROAD class's are penumbra anyway — 0 / 0.5 / 0.75 measured under the strobing tube 08-11
-                                     // (docs/internal/tjank.md §A): per-level noise 2.5 / 2.0 / 2.0 (rug), 4.8 / 3.8 / 3.6 (chair), 6.6 / 4.5 / 3.8 (desk) 8-bit steps, levels within a step of each other
+                                     // — per-level noise 2.5 / 2.0 / 2.0 (rug), 4.8 / 3.8 / 3.6 (chair), 6.6 / 4.5 / 3.8 (desk) 8-bit steps, levels within a step of each other
 const DNF_VEL: u32 = 1u; const DNF_TEMPORAL: u32 = 2u; const DNF_LITALIKE: u32 = 4u; const DNF_SH_TEMPORAL: u32 = 8u; const DNF_SH_PRIOR: u32 = 16u; const DNF_CUE_UV: u32 = 32u; const DNF_SH_OCCL: u32 = 64u;   // (CUE_UV: the U textures' alpha carries the BELIEVED-VISIBLE unshadowed luminance per class — restir.wgsl — the yardstick the shadow client's light-JUMP is measured against; the cues' memory is the whole U)
 
 // ============================================================== shared core ==============================================================
@@ -391,7 +391,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   // level (jmp, below) — the visibility noise of the pixel did not change with the light's intensity, whereas West's update would book the level step itself as
   // variance, (l − m₁)² for 1/α frames, and the à-trous, guided by that σ, opened its luminance edge-stop and blurred every shadow the light casts into its lit
   // surround for a dozen frames after each stroke: shadows that filled in and emptied with the flicker (the low strokes 16–24 % bright in the umbra tiles, the lit
-  // ones 6–9 % dark — the 'pumping' of docs/internal/tjank.md §A, present under either estimator). The history LENGTH is left alone (no young-history fallback to the
+  // ones 6–9 % dark — the 'pumping', present under either estimator). The history LENGTH is left alone (no young-history fallback to the
   // neighbourhood's variance, which is just as wide at a shadow edge). A torch drifting over the pixel changes U by far less per frame and keeps the moving history above.
   // The jump is the SAME exact change of U, measured against what the pixel believes reaches it (a fluorescent's stroke is 85 % of the light on the desk under it and a
   // fifth of U there; a far lamp switching behind three lit panels is not a jump for this desk) — floored at JUMP_REL_FLOOR of U so a pixel that believes next to nothing

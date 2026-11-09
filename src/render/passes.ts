@@ -5,7 +5,7 @@ import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, later
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
-import sharpSrc from './shaders/sharp_direct.wgsl' with { type: 'text' };   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio (docs/internal/sharp-direct.md)
+import sharpSrc from './shaders/sharp_direct.wgsl' with { type: 'text' };   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio
 import { GBuffer } from './gbuffer';
 import { RadianceCascades } from './rc';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -77,7 +77,7 @@ export class LightingPasses {
   /** engine.settings.taau, mirrored by the engine every frame BEFORE resize (setTaau): the resolve runs, its history pair exists, bloom / post read the resolved picture, the final blit sharpens
    *  instead of FXAA. Off = the chain exactly as it was. */
   taauOn = false;
-  /** SHARP DIRECT (docs/internal/sharp-direct.md; engine mirrors it before resize — setSharp): the g-buffer is rasterised and the composite + TAA run at the OUTPUT size (cw × ch = ow × oh)
+  /** SHARP DIRECT (engine mirrors it before resize — setSharp): the g-buffer is rasterised and the composite + TAA run at the OUTPUT size (cw × ch = ow × oh)
    *  — U (unshadowed direct), albedo, emissive, glass, decals native — while every stochastic term keeps its INTERNAL grid and is joint-bilateral upsampled: sharp_direct.wgsl writes the output-size
    *  shadowed direct pair `sharpE` (U(out) × the internal S∕U per class), composite.wgsl's compute twin (SHARP = true) reads it with the output-size g-buffer, taau.wgsl resolves 1 : 1. Off: cw × ch =
    *  the internal size and the fragment composite / the upsampling resolve exactly as they were. Needs TAAU (the output-size history) — the engine only raises it then. */
@@ -151,7 +151,7 @@ export class LightingPasses {
    *  knownDark = the lights the tile's own rays found dark leave the fresh draw (restir.wgsl BELIEFS; false = the unbiased first-cut draw, A/B), audit = the share of lanes
    *  spending one extra ray a frame re-testing those lights. */
   restirRays = 4; restirSpatial = 3; restirHistory = 20; restirRadius = 16; restirGradient = true; restirGradK = 3.5; restirYoung = 8; restirSpatialAll = false; restirAudit = 0.25; restirKnownDark = true; restirPenRays = false;
-  /** the HYBRID estimator (direct-quality lane, docs/internal/direct-quality.md): K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
+  /** the HYBRID estimator: K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
   heldRays = 6; restirHueSplit = true;   // (+ the hue split: ru.cfg.w & 128 — restir.wgsl HUE SPLIT; false = the belief hue as it was)
   /** THE LIGHTING TRADES (restir.wgsl TRADES; engine mirrors settings.heldAdaptive / restirStableRetrace / restirDimClass — all off by default = the estimator's program and uniform
    *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
@@ -166,7 +166,7 @@ export class LightingPasses {
     }
     return this.restirTrade;
   }
-  /** MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
+  /** MOTION (restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
    *  4 = spatial reuse wherever the pixel moves; 0 = none of them. V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
    *  under which the history keeps full confidence — the cut ramps to Min (fraction of the M cap) by 1.6 × V, Px = the motion (px a frame at 1000 rows, scaled alike) past which (4) opens the spatial pass. Engine mirrors settings.restirMotion*. */
   restirMotionLive = false;   // this frame's uniform carries the motion bits: restirMotion ≠ 0 AND the camera moved — engine decides; a still camera's frame carries none

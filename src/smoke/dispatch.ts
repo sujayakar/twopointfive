@@ -10,7 +10,7 @@
 // thirty times slower (0.2 s against 5 s); it is the adapter of the cloud's page tools, and a player's only where the browser has no card to give. It
 // changes nothing a real card computes. What would remove it: a solver whose step list is capped by a count the page hands it, so that a direct dispatch
 // can be in proportion to the smoke (a count the page merely GUESSES was tried and thrown out the same day: a blast makes hundreds of bricks in one step,
-// the read-back is frames old, and the bricks past the count are listed and never linked). docs/agents/render.md, 'A COST NO STAMP SEES'.
+// the read-back is frames old, and the bricks past the count are listed and never linked).
 
 /** this step's per-brick kernels go by the GPU-written count (else: directly over the whole pool) */
 export const byGpuCount = (k: { indirect: boolean; directAt: number }, stepped: number, cap: number): boolean => k.indirect && stepped < k.directAt * cap;

@@ -46,8 +46,8 @@ pub struct PressureK {
     #[k(5.0)] pub stand_grace: f64,
     /// s before a man who has been in a press joins another
     #[k(14.0)] pub again_secs: f64,
-    /// A CHARGE EACH (0 = none: f6cf9316's press run for run; on under hard on The block only — difficulty.ts HARD_AT; record
-    ///  rebuild/hard-everywhere/round2-block.md): every defender carries this many stun charges, the team's own kind, and a man of a press let
+    /// A CHARGE EACH (0 = none: f6cf9316's press run for run; on under hard on The block only — difficulty.ts HARD_AT):
+    ///  every defender carries this many stun charges, the team's own kind, and a man of a press let
     ///  go at the fight takes the door he was put down for as a DRILL instead of walking in (tactics.ts's kill-zone doorway, built for the night staff's response
     ///  team and never yet handed a charge): on the jamb out of the opening, the call on their net ('they're in there — … stack on me, charge first'), his second
     ///  fetched or the wait run out, the leaf shoved, 'bang out', the can in round the jamb and heard on the floor before it goes, 'going in'. All of that is what
@@ -68,7 +68,7 @@ pub struct PressureK {
     ///  nobody left on it, and off alone at four rifles; the 10-13 tapes have it five times, each stopped short by a covered lane a moment later). With it on
     ///  he neither starts a press nor walks off on the stock rally: his room, his doors, and the rules for a room's last man (fall back, dig in) as they are.
     #[k(true)] pub last_holds: bool,
-    /// THE PICKET (off: every staging as it was; off under hard too — difficulty.ts HARD.picket, built and measured, not shipped; record rebuild/hard-everywhere/depot-and-pairs.md):
+    /// THE PICKET (off: every staging as it was; off under hard too — difficulty.ts HARD.picket, built and measured, not shipped):
     ///  NEVER TWO MEN IN ONE FLASH, in the room the team comes to first. Its men are the ones no rule above reaches: no fight comes before theirs, so they hear
     ///  nothing, go nowhere, and one can through one door folds the pair of them where they stand (measured: worth next to nothing, at standard and hard alike).
     ///  Where that room has a second door, one of the pair stands OUTSIDE it instead — beyond the door farthest on foot from the team's start, off its line, his gun
@@ -110,7 +110,7 @@ pub struct PressureK {
     #[k(25.0)] pub siege_secs: f64,
     /// s between the word and the move: the cue's own length
     #[k(0.9)] pub word_secs: f64,
-    /// THE WAY OUT (off: every level as it was; ON under hard — difficulty.ts HARD.wayOut; record rebuild/hard-everywhere/round2-records-pair.md).
+    /// THE WAY OUT (off: every level as it was; ON under hard — difficulty.ts HARD.wayOut).
     ///  Only on a floor whose structure asks for it (scene/scenarios.ts StructureData.wayOut — levels/records.json: a pair's building, one man in the first room,
     ///  every hunter's way in through the one door two rifles are already on). There the men a lost room draws do not walk into it one at a time: they FORM UP
     ///  on ONE door of it — the nearest to the first of them (the `gather` road above, whatever that row says) — and hold it from back off it: `wayOutM` past

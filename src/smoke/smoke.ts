@@ -1,4 +1,4 @@
-// The GPU smoke simulation (smoke.wgsl has the design; docs/internal/sparse-smoke.md the record): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
+// The GPU smoke simulation (smoke.wgsl has the design): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
 // smoke is, out of one pool. Nothing is placed, refused, recycled, migrated or retired on the CPU — an emitter is handed to the GPU in world coordinates and the GPU makes the bricks it
 // needs. Exposes a SmokeBinding for the renderer. (Until 2026-10 this file was eight 64³ boxes placed by the CPU: git history has them.)
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
