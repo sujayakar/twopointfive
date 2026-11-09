@@ -175,7 +175,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         w.all.push(s);
     }
     if crate::weather::weather_level_roofs(g) {
-        let roofs = crate::weather::weather_roofs(g);
+        let roofs = g.weather.roof_rects.clone();
         let own = crate::weather::weather_own_storm(g);
         let before = core::mem::replace(&mut g.wind, w);
         wind_reroof(g, Some(&roofs), Some(own));
@@ -382,10 +382,10 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
 
 /// Does the weather blow at all.
 fn wind_blows(g: &crate::game::Game) -> bool {
-    if !crate::weather::weather_enabled(g) {
+    if !g.weather.on {
         return false;
     }
-    crate::weather::weather_kind(g).is_some() || crate::weather::weather_rain_rate(g) > 0.001 || crate::weather::weather_storm(g) > 0.01
+    g.weather.kind_now.is_some() || g.weather.rain_rate > 0.001 || g.weather.storm > 0.01
 }
 
 /// The storm's wind vector when it should be felt, none otherwise.
@@ -444,7 +444,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 if !due {
                     target = 0.0;
                 }
-                if mains && crate::sim_lightshome::mains_active(g) {
+                if mains && g.light_home.mains.active {
                     target = 0.0;
                 }
                 let s = &mut g.tab.wind_wind_source[id];

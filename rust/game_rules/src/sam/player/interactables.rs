@@ -149,15 +149,15 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
     while ti < g.targets.len() {
         let t = g.targets[ti];
         ti += 1;
-        if crate::sim_lightshome::fixture_broken(g, t) || !g.tab.sim_lightshome_fixture[t].interactive { continue; }
-        let (name, pos) = (g.tab.sim_lightshome_fixture[t].name.clone(), g.tab.sim_lightshome_fixture[t].pos);
+        if g.tab.fixture[t].broken || !g.tab.fixture[t].interactive { continue; }
+        let (name, pos) = (g.tab.fixture[t].name.clone(), g.tab.fixture[t].pos);
         if crate::carlamps::dead_lamp(g, t) {
             let mut it = mark(crate::game::InteractableKind::Light, pos, name, String::from("click  shoot"), true, true);
             it.target = Some(t);
             list.push(it);
             continue;
         }
-        let factor = crate::sim_lightshome::fixture_factor(g, t);
+        let factor = g.tab.fixture[t].factor;
         let mut it = mark(crate::game::InteractableKind::Light, pos, format!("{}{}", name, if factor > 0.0 { "" } else { " (off)" }), String::from("right-click  OCP (the pistol's)  ·  click  shoot"), true, factor <= 0.0);
         it.target = Some(t);
         list.push(it);
@@ -529,18 +529,15 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         let drive_t = g.mission.drive_t;
         if g.mission.stage == crate::game::MissionStage::Drive {
             let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown.is_none();
-            let qw = crate::quiet::quiet_words(g);
-            let line1 = match &qw {
-                Some(q) => format!("{} · {}", q.holder, q.thing),
-                None => format!("rack {} · the drive", js::num_str(g.level.mission.rack.index + 1.0)),
-            };
-            let mut it = mark(crate::game::InteractableKind::Objective, g.level.mission.rack.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
+            let (holder, thing) = (g.level.errand.holder.clone(), g.level.errand.thing.clone());
+            let line1 = format!("{} · {}", holder, thing);
+            let mut it = mark(crate::game::InteractableKind::Objective, g.level.errand.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
             it.progress = if drive_t >= 0.0 { Some(m::min(1.0, drive_t / crate::consts::DRIVE_SECS)) } else { None };
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
             if drive_t >= 0.0 {
-                it.line2 = format!("{}… {}%  ·  stay on it", if qw.is_some() { "taking" } else { "pulling" }, pct(drive_t / crate::consts::DRIVE_SECS));
+                it.line2 = format!("taking… {}%  ·  stay on it", pct(drive_t / crate::consts::DRIVE_SECS));
             } else if reach && !busy {
-                let text = match &qw { Some(q) => format!("take {} — stay on it", q.thing), None => String::from("pull the drive — stay on it") };
+                let text = format!("take {} — stay on it", thing);
                 verbs.push(row(&it, crate::game::Verb::Drive, &text, ""));
             }
             offer(&mut list, &mut things, it, verbs);
@@ -550,8 +547,8 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             let bp = g.level.breaker.pos;
             let face: V3 = [bp[0], bp[1], bp[2] - 0.18];
             let eye: V3 = [p[0], if crouch { 0.9 } else { 1.3 }, p[2]];
-            let active = crate::sim_lightshome::mains_active(g);
-            let gone_for_good = active && crate::sim_lightshome::mains_permanent(g);
+            let active = g.light_home.mains.active;
+            let gone_for_good = active && g.light_home.mains.permanent;
             if !gone_for_good && v3::dist_xz(bp, p) < NEARBY_M && (!crate::scene_collision::solid_blocked(g, eye, face, None) || match crate::workthings::sam_panel_point(g, p) { Some(at) => !crate::scene_collision::solid_blocked(g, eye, at, None), None => false }) {
                 let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting && g.pl[pl].takedown.is_none() && g.pl[pl].holding.is_none();
                 let it = mark(crate::game::InteractableKind::Breaker, [bp[0], bp[1] + 0.35, bp[2]], String::from(if active { "breaker · thrown" } else { "breaker · power on" }), String::from(if reach { "" } else { "step closer" }), reach, active);

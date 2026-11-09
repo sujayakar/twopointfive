@@ -16,7 +16,7 @@ use crate::scene_materials::{BreakClass, Does, Surf};
 use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, WallBreakNoteC};
 
 // ---------------------------------------------------------------- the one seam left (notes.md, ## Skeleton)
-/// A box's row, `seam_box(g, id)` as index/properties.txt has it: this skeleton has no table of Box rows (`StaticCollision.boxes` is `Vec<BoxId>`)
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- small readers
@@ -97,13 +97,13 @@ fn ensure_index(g: &mut Game) {
     let (r_min_top, r_max_top, r_max_long, r_max_vol) = (g.k.furn.root.min_top, g.k.furn.root.max_top, g.k.furn.root.max_long, g.k.furn.root.max_vol);
     let (rd_max_top, rd_max_vol) = (g.k.furn.rider.max_top, g.k.furn.rider.max_vol);
     let mut fixture: JsSet<Num> = JsSet::new();
-    for ti in 0..g.targets.len() { let t = g.targets[ti]; for &bi in &g.tab.sim_lightshome_fixture[t].boxes { fixture.add(Num(bi)); } }
+    for ti in 0..g.targets.len() { let t = g.targets[ti]; for &bi in &g.tab.fixture[t].boxes { fixture.add(Num(bi)); } }
     for l in &g.level.lights { if let Some(fb) = l.fixture_box { if fb >= 0.0 { fixture.add(Num(fb)); } } }
     let mut kept = fixture.clone();
     for &bi in &g.level.breaker.boxes { kept.add(Num(bi)); }
     g.destr.furn.kept = kept;
-    // (Level.mission is always there: every level is built with one, so its front is always a truthy Vec3)
-    let mut fronts: Vec<V3> = vec![g.level.mission.rack.front];
+    // (Level.errand is always there: every level is built with one, so its front is always a truthy Vec3)
+    let mut fronts: Vec<V3> = vec![g.level.errand.front];
     for sp in g.level.spots() { fronts.push(sp.front); }
     g.destr.furn.fronts = fronts;
     let w = crate::scene_world::world();

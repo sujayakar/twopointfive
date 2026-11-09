@@ -434,7 +434,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
     let aim: V3 = match to { Some(x) => x, None => [b.at[0], pos[1] + kf.chest_y, b.at[2]] };
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 6.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
-    g.arms[g.gd[gd].ch].fire_cd -= dt;
+    g.gd[gd].fire_cd -= dt;
     let held = DoorForce { aim, move_: 0.0 };
     if crate::control::man::changing_magazine(g, gd) { return Some(held); }
     if to.is_none() { return Some(held); }
@@ -459,16 +459,16 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
     let had = crate::weapons::firearm_rounds_ready(g, w);
     let def = g.fa[w].def;
     if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
-        let tr = g.arms[g.gd[gd].ch].aim.track;
-        g.arms[g.gd[gd].ch].aim.track = lay;   // (his lay on the SPOT for the burst's own cone, and for nothing else: his track on the man is put back)
+        let tr = g.gd[gd].aim.track;
+        g.gd[gd].aim.track = lay;   // (his lay on the SPOT for the burst's own cone, and for nothing else: his track on the man is put back)
         crate::guards::burst_trigger(g, gd, dt, aim, ok && armed, ok, None);
-        g.arms[g.gd[gd].ch].aim.track = tr;
-    } else if ok && armed && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && !crate::guards::round_past_colleague(g, gd, aim, None, None) && crate::weapons::firearm_fire(g, w) {
+        g.gd[gd].aim.track = tr;
+    } else if ok && armed && g.gd[gd].fire_cd <= 0.0 && !crate::guards::round_past_colleague(g, gd, aim, None, None) && crate::weapons::firearm_fire(g, w) {
         let mo = crate::suppression::guard_fire_mods(g, gd);
         let row = g.m.weapons.weapons.get(def).unwrap();
         let (r, cd, jitter) = (row.ai_spread, row.cd, row.cd_jitter);
         let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
-        g.arms[g.gd[gd].ch].fire_cd = (cd + die * jitter) * mo.gap;
+        g.gd[gd].fire_cd = (cd + die * jitter) * mo.gap;
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * (match g.gd[gd].skill { Some(sk) => sk.spread_k, None => 1.0 });
         let opts = if g.tune.aim_model {
             crate::combat::FireOpts { steady: Some(true), spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) + mo.spread), ..Default::default() }

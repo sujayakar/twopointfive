@@ -46,7 +46,7 @@ pub(super) fn rifle_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
     let gun = g.pl[pl].rifle;
     let def = g.fa[gun].def;
     let h = g.m.weapons.weapons.get(def).and_then(|d| d.hands);
-    let feet = m::max(speed, g.arms[g.pl[pl].ch].aim.move_sm);
+    let feet = m::max(speed, g.pl[pl].aim.move_sm);
     let braced = crate::game::player_braced(g, pl);
     let (still, moving, move_at, crouch_k, brace_k) = (g.k.rifle_spread.still, g.k.rifle_spread.moving, g.k.rifle_spread.move_at, g.k.rifle_spread.crouch_k, g.k.rifle_spread.brace_k);
     let h_moving = match h { Some(r) => r.moving, None => 1.0 };

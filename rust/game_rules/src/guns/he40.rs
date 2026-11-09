@@ -141,7 +141,7 @@ pub fn shell_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from
         return v3::mad(chest, [vel[0], 0.0, vel[2]], tof);
     }
     if let Some(t) = seat.aim_target {
-        return v3::copy(g.tab.sim_lightshome_fixture[t].pos);
+        return v3::copy(g.tab.fixture[t].pos);
     }
     let ap = seat.aim_point;
     [ap[0], ap[1] + 0.03, ap[2]]
@@ -506,15 +506,21 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::boxed::Box;
 
+    fn arc(points: Vec<V3>) -> crate::throwables::ThrowSolution {
+        crate::throwables::ThrowSolution { v0: [0.0; 3], t: 0.0, points, land: [0.0; 3] }
+    }
+
+    /// The round arms by the length of the arc it flew, its bends counted: a shot closer than that is a dud.
     #[test]
-    fn arc_length_matches_the_typescript_bits() {
-        let sol = crate::throwables::ThrowSolution {
-            v0: [0.0; 3],
-            t: 0.0,
-            points: vec![[0.1, 1.5, -2.25], [3.3, 1.2, -7.1], [9.7, 0.4, -11.9]],
-            land: [0.0; 3],
-        };
-        assert_eq!(arc_length(&sol).to_bits(), 0x402bb764c2ed4dde);
+    fn a_round_is_armed_by_the_length_of_its_arc() {
+        assert_eq!(arc_length(&arc(vec![[0.0, 0.0, 0.0], [3.0, 4.0, 0.0], [3.0, 4.0, 12.0]])), 17.0);
+        assert_eq!(arc_length(&arc(vec![[1.0, 2.0, 3.0]])), 0.0);
+        let g = Box::new(Game::blank());
+        let arm = g.k.he40.arm_m;
+        assert!(arc_armed(&g, &arc(vec![[0.0; 3], [arm, 0.0, 0.0]])));
+        assert!(!arc_armed(&g, &arc(vec![[0.0; 3], [arm - 0.01, 0.0, 0.0]])));
+        assert!(arc_armed(&g, &arc(vec![[0.0; 3], [arm * 0.6, 0.0, 0.0], [arm * 0.6, 0.0, arm * 0.6]])), "bent, it is flown further");
     }
 }

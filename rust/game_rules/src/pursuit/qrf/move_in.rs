@@ -630,7 +630,7 @@ fn man_down(g: &mut crate::game::Game) {
     let down = crate::seats::all_down(g);
     if down && !g.qrf.sam_was_down && !g.qrf.got_sam {
         for &o in &theirs {
-            if let Some(ls) = g.arms[g.gd[o].ch].aim.last_shot.as_ref() {
+            if let Some(ls) = g.gd[o].aim.last_shot.as_ref() {
                 if m::abs(ls.t - g.time) < 1e-6 {
                     g.qrf.got_sam = true;
                     let what = format!("got-sam:{}", g.gd[o].callsign);

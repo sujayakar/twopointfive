@@ -123,7 +123,7 @@ pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from:
         let vel = g.ch[c].vel;
         return v3::mad(head, [vel[0], 0.0, vel[2]], tof);
     }
-    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.fixture[t].pos); }
     let ap = seat.aim_point;
     [ap[0], ap[1] + 0.03, ap[2]]
 }
@@ -340,7 +340,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let (stagger, fire_cd, aware, back_m, hit_noise) = (g.k.ring.stagger, g.k.ring.stagger_fire_cd, g.k.ring.stagger_aware, g.k.ring.stagger_back, g.k.ring.hit_noise);
     crate::condition::fold(g, c, stagger);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, stagger);
-    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, fire_cd);
+    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, fire_cd);
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;
     crate::condition::stopped_dead(g, gd);
@@ -389,20 +389,48 @@ mod tests {
 
     const R: Ballistics = Ballistics { speed: 30.0, gravity: 9.81, drag: 0.4, radius: 0.04, life: 1.5, substeps: 4.0, solve_iters: 2.0 };
 
-    fn same(from: V3, target: V3, r: Ballistics, bits: [u64; 3]) {
-        let v = launch_vel(from, target, r);
-        assert_eq!([v[0].to_bits(), v[1].to_bits(), v[2].to_bits()], bits, "{:?} to {:?}", from, target);
+    /// The height of a round fired at `v0` where it has come `range` across the floor, None if its life ends first.
+    fn height_at(from: V3, v0: V3, range: f64, r: Ballistics) -> Option<f64> {
+        let (mut p, mut v) = (from, v0);
+        let h = 1.0 / 240.0;
+        let mut t = 0.0;
+        while t < r.life {
+            let k = m::exp(-r.drag * h);
+            v = [v[0] * k, v[1] * k - r.gravity * h, v[2] * k];
+            let np = v3::mad(p, v, h);
+            if m::hyp2(np[0] - from[0], np[2] - from[2]) >= range { return Some(np[1]); }
+            p = np;
+            t += h;
+        }
+        None
     }
 
-    /// launchVel against the TypeScript's own bits (bun, EXACT.on): a plain shot, a long downhill one, one past the ring's life, one under the millimetre, straight up, a table of its own.
+    /// The round leaves at the row's speed, on the target's bearing, raised so that it comes down at the target's height, where the dead-on shot falls short.
     #[test]
-    fn launch_vel_is_the_typescripts() {
-        same([0.0, 1.5, 0.0], [10.0, 1.6, 7.0], R, [0x40387db5187982bb, 0x40040cc55c3628b9, 0x403124cb9121db84]);
-        same([3.25, 1.2, -8.5], [-14.75, 0.3, 22.125], R, [0xc02e649b97715293, 0xbfe8507c79277542, 0x4039daeb78d4d8e9]);
-        same([0.0, 2.0, 0.0], [80.0, 1.7, 3.0], R, [0x403dfa8d42f4c8e6, 0xbfbcc791d9e0c0de, 0x3ff1fcbb282c788a]);
-        same([1.0, 1.0, 1.0], [1.0, 1.0, 1.0005], R, [0x0000000000000000, 0x0000000000000000, 0x403e000000000000]);
-        same([0.0, 1.0, 0.0], [0.0, 6.0, 0.0], R, [0x0000000000000000, 0x403e000000000000, 0x0000000000000000]);
-        same([0.5, 1.4, 0.25], [20.0, 3.0, -15.0], Ballistics { speed: 76.0, drag: 0.12, solve_iters: 3.0, ..R }, [0x404dd24d263a8c2f, 0x401a3fdaaad96f33, 0xc047526a48903faf]);
+    fn a_shot_is_raised_to_land_on_the_target() {
+        for (from, target, r) in [
+            ([0.0, 1.5, 0.0], [10.0, 1.6, 7.0], R),
+            ([3.25, 1.2, -8.5], [-8.75, 0.3, 7.125], R),
+            ([0.5, 1.4, 0.25], [20.0, 3.0, -15.0], Ballistics { speed: 76.0, drag: 0.12, solve_iters: 3.0, ..R }),
+        ] {
+            let v = launch_vel(from, target, r);
+            let range = m::hyp2(target[0] - from[0], target[2] - from[2]);
+            assert!((v3::len(v) - r.speed).abs() < 1e-9, "speed {}", v3::len(v));
+            assert!((v[0] * (target[2] - from[2]) - v[2] * (target[0] - from[0])).abs() < 1e-6 && v[0] * (target[0] - from[0]) + v[2] * (target[2] - from[2]) > 0.0, "off its bearing: {:?}", v);
+            let there = height_at(from, v, range, r).unwrap();
+            assert!((there - target[1]).abs() < 0.05, "{:?} to {:?}: at {} over {}", from, target, there, target[1]);
+            let dead_on = v3::scale(v3::normalize(v3::sub(target, from)), r.speed);
+            assert!(height_at(from, dead_on, range, r).unwrap() < target[1] - 0.05, "the dead-on shot would have done as well");
+        }
     }
 
+    /// With nothing to work out it goes straight at the target: past what the round can fly, straight up, or with no way to tell where the target is (then along the world's +z).
+    #[test]
+    fn a_shot_with_nothing_to_solve_goes_straight() {
+        let far = launch_vel([0.0, 2.0, 0.0], [80.0, 1.7, 3.0], R);
+        let dead_on = v3::scale(v3::normalize([80.0, -0.3, 3.0]), R.speed);
+        assert!(v3::dist(far, dead_on) < 1e-9, "{:?}", far);
+        assert_eq!(launch_vel([0.0, 1.0, 0.0], [0.0, 6.0, 0.0], R), [0.0, R.speed, 0.0]);
+        assert_eq!(launch_vel([1.0, 1.0, 1.0], [1.0, 1.0, 1.0005], R), [0.0, 0.0, R.speed]);
+    }
 }

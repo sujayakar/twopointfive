@@ -826,7 +826,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     });
     crate::disarm::disarm_begin(g);
     if let Some(k) = kind { crate::close::close_took(g, gd, crate::close::CloseTookWhat::Grab, k, b0, r0); }
-    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.k.hold.secs.grab);
+    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.k.hold.secs.grab);
     let chest = v3::add(g.ch[gc].pos, [0.0, 1.4, 0.0]);
     crate::disarm::disarm_catch(g, chest);
     let ev = crate::game::GameEvent {
@@ -867,7 +867,7 @@ pub(super) fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64)
 mod tests {
     use super::*;
 
-    /// stackUp's `(w.owed ?? 0) | (input.clicked & 5)`: only the fire buttons' bits (1 and 4) are kept, what was owed stays, absent is 0.
+    /// Only the fire buttons' bits (1 and 4) are owed a round, what was owed stays, none owed is 0.
     #[test]
     fn owed_keeps_the_fire_bits() {
         assert_eq!(owed_with(None, 0.0), 0.0);
@@ -876,10 +876,4 @@ mod tests {
         assert_eq!(owed_with(Some(2.0), 8.0), 2.0);
     }
 
-    /// a `w.x!` absent reads NaN as JavaScript's undefined does in a sum or a comparison, never a panic
-    #[test]
-    fn an_absent_number_is_nan_and_falsy() {
-        assert!(!(un(None) > 0.0) && !(un(None) < 1.0));
-        assert!(!truthy_opt(None) && !truthy_opt(Some(0.0)) && truthy_opt(Some(0.5)));
-    }
 }

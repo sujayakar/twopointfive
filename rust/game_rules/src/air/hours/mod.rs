@@ -179,8 +179,8 @@ fn cloud_total(d: &crate::hours::HourDef, c_2: f64) -> f64 {
 fn under_weather(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let (d, was_off, sun) = (st.def.clone(), st.was_off, st.sun);
-    let kind = crate::weather::weather_kind(g).is_some();
-    if !kind && crate::weather::weather_enabled(g) {
+    let kind = g.weather.kind_now.is_some();
+    if !kind && g.weather.on {
         if was_off {
             crate::weather::weather_set_enabled_2(g, false);
         } else if g.stood.dry {
@@ -250,11 +250,11 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
 /// The moon out, the hour's sun in at the moon's place, the weather over it, the photocell.
 fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
-    let kind = crate::weather::weather_kind(g).is_some();
+    let kind = g.weather.kind_now.is_some();
     let stood = g.stood;
     let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(stood.sun, 0.0, 1.0) };
     let given = match from { Some(f) => f.given, None => stood.sun_given || stood.sun != 1.0 };
-    let was_off = if kind { match from { Some(f) => f.was_off, None => false } } else { !crate::weather::weather_enabled(g) };
+    let was_off = if kind { match from { Some(f) => f.was_off, None => false } } else { !g.weather.on };
     let storm = if kind { from.and_then(|f| f.storm.clone()) } else { None };
     // the moon out (every steady directional light of the level), the sun in where the moon stood
     let mut moons: Vec<LightId> = Vec::new();
@@ -295,16 +295,15 @@ fn take_out(g: &mut crate::game::Game) {
     let lamps: Vec<(FixtureId, bool)> = st.lamps.iter().map(|(t, was)| (t, *was)).collect();
     let moons = st.moons.clone();
     let sun = st.sun;
-    let on = crate::sim_lightshome::light_in().on;
     for (t, was) in lamps {
-        if !crate::sim_lightshome::fixture_on(g, t) { crate::sim_lightshome::light_home_in(g, on, Some(t), Some(if was { 1.0 } else { 0.0 }), None, None, None); }
+        if !g.tab.fixture[t].on { g.tab.fixture[t].on = was; }
     }
     for l in moons { g.tab.light[l].enabled = true; }
     crate::render_lights::light_set_remove(g, sun);
     let storm = g.m.hours.states.take().and_then(|st| st.storm);
     g.weather.fog_glow = 1.0;
     if let Some(storm) = &storm {
-        if !crate::weather::weather_enabled(g) {
+        if !g.weather.on {
             crate::weather::weather_set_enabled_2(g, true);
             crate::weather::weather_restore(g, storm);
         }
@@ -315,16 +314,15 @@ fn take_out(g: &mut crate::game::Game) {
 fn lamps_out(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     if st.def.lamps { return; }
-    let off = crate::sim_lightshome::light_in().on;
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
         i += 1;
-        let row = &g.tab.sim_lightshome_fixture[t];
-        if row.group == "exterior" && row.kind != crate::sim_lightshome::FixtureKind::Breaker {
-            let on = crate::sim_lightshome::fixture_on(g, t);
+        let row = &g.tab.fixture[t];
+        if row.group == "exterior" && row.kind != crate::fixtures::FixtureKind::Breaker {
+            let on = g.tab.fixture[t].on;
             hour_row(g).lamps.set(t, on);
-            crate::sim_lightshome::light_home_in(g, off, Some(t), Some(0.0), None, None, None);
+            g.tab.fixture[t].on = false;
         }
     }
 }

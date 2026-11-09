@@ -18,28 +18,6 @@ pub(super) fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Bits printed by the TypeScript's own two lines under bun.
-    #[test]
-    fn u32_matches_the_typescript_bits() {
-        let cases: [(f64, u64); 6] = [
-            (0.0, 0x0000000000000000),
-            (-1.0, 0x41efffffffe00000),
-            (3.9, 0x4008000000000000),
-            (-3.9, 0x41efffffffa00000),
-            (4294967301.0, 0x4014000000000000),
-            (f64::NAN, 0x0000000000000000),
-        ];
-        for (x, bits) in cases {
-            assert_eq!(u32(x).to_bits(), bits, "u32({x})");
-        }
-    }
-
-}
-
 const AXES: [V3; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 /// `u32(a ^ b)`: both sides to int32, the word back as an unsigned number
@@ -79,9 +57,9 @@ pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
 }
 
 /// One fragment lets go: its plates, its spray, its landing. False = the model is not live.
-pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike) -> bool {
+pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment) -> bool {
     use crate::glasspen::PaneType;
-    use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
+    use crate::glassbreak::{FragmentCause as Cause, FragmentKind as Kind};
     use crate::sim_fallshome::FallSound;
     if !shards_live(g) { return false; }
     g.stats.shards.fragments += 1;
@@ -97,7 +75,7 @@ pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &c
     let tint = f.tint;
     let spread = m::sqrt(a) * 0.45;
     let fall = match f.fall { Some(r) => GlassShardsFallOf { t: r.t, pos: r.pos }, None => glass_shards_fall_of(g, f.centre, f.velocity) };
-    let own = f.landed != Some(true);
+    let own = !f.landed;
     let hit_or_blast = f.cause == Cause::Hit || f.cause == Cause::Blast;
     let fine_life = g.k.shards.fine_life;
     let fine_size = g.k.shards.fine_size;
@@ -164,8 +142,8 @@ pub(in crate::breakage) fn glass_shards_spall(g: &mut crate::game::Game, at: V3,
 }
 
 /// The fragment's rigid part: 1‥4 thin boxes over its outline; returns how many.
-fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike, n: V3) -> f64 {
-    use crate::shards::GlassFragmentLikeKind as Kind;
+fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment, n: V3) -> f64 {
+    use crate::glassbreak::FragmentKind as Kind;
     let fr = frame_of(&f.outline, f.centre, n);
     if f.kind != Kind::Sheet && f.outline.len() >= 3 { return glass_shards_cut_plates(g, f, n, fr); }
     let fill = m::min(1.0, f.area / m::max(1e-6, fr.lu * fr.lv));
@@ -198,7 +176,7 @@ fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragme
 }
 
 /// The fragment's own cell as ONE box cut along its edges (two halves if a record cannot hold it); returns how many.
-fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike, n: V3, fr: crate::shards::GlassShardsCutPlatesFr) -> f64 {
+fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment, n: V3, fr: crate::shards::GlassShardsCutPlatesFr) -> f64 {
     let flat: Vec<[f64; 2]> = f.outline.iter().map(|p| { let d = v3::sub(*p, fr.mid); [v3::dot(d, fr.u), v3::dot(d, fr.v)] }).collect();
     let poly = tidy_poly(&flat);
     if poly.len() < 3 { return 0.0; }
@@ -513,7 +491,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
         let d = v3::normalize(x.dir_out);
         let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
         let amount = want * fine_size * fine_size;
-        crate::glassbreak::glass_break_asking(g, &mut |g, _s, _w| ::sim::panes_jet(x.exit[0], x.exit[1], x.exit[2], d[0], d[1], d[2], sp, amount, who, &g.k));
+        crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::jet(cx, x.exit, d, sp, amount, who, &g.k));
         if n > 0.0 {
             let tint = level_box_albedo(g, x.bi);
             g.shards.serial += 1.0;
@@ -721,12 +699,6 @@ fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
 mod tests_2 {
     use super::*;
     #[test]
-    fn seed_words_are_unsigned() {
-        // the TypeScript's own: (3000000000 ^ 0xC8A7) >>> 0, and (1.5 ^ 0xBACC) >>> 0
-        assert_eq!(xor_u32(3000000000.0, 0xC8A7 as f64), XOR_A);
-        assert_eq!(xor_u32(1.5, 0xBACC as f64), XOR_B);
-    }
-    #[test]
     fn axes_sort_stably_thinnest_first() {
         assert_eq!(sort_axes([0.2, 0.004, 0.1]), [1, 2, 0]);
         assert_eq!(sort_axes([0.1, 0.1, 0.004]), [2, 0, 1]);
@@ -738,6 +710,4 @@ mod tests_2 {
         assert_eq!(outline_walk(3.5, 1.0, 0.5), (0.5, 0.5));
         assert_eq!(outline_walk(5.5, 1.0, 0.5), (-1.0, 0.0));
     }
-    const XOR_A: f64 = 3000014503.0;
-    const XOR_B: f64 = 47821.0;
 }

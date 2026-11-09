@@ -403,12 +403,12 @@ impl KitAsk for Play {
         let sam = self.sam_at();
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
+        (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
             (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(Foe::Player));
         m.path.clear();
         m.path_goal = None;
     }
-    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.arms[self.g.gd[gd].ch].fire_cd = 0.0; }
+    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.gd[gd].fire_cd = 0.0; }
     fn leaf_left_at(&mut self, d: DoorId, angle: f64) {
         use game::doors::*;
         door_set_angle(&mut self.g, d, angle);
@@ -748,9 +748,9 @@ impl KitAsk for Play {
     fn beat_on(&self, gd: GuardId) -> f64 { self.g.gd[gd].react_t.max(game::startle::startle_left(&self.g, gd)) }
     fn ring_cone(&self) -> Option<f64> { self.view().aim.ring.and_then(|r| r.cone).map(|c| c.spread) }
     fn lamp_at(&self, at: [f64; 2]) -> (FixtureId, [f64; 3]) {
-        let d = |t: FixtureId| { let p = self.g.tab.sim_lightshome_fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
+        let d = |t: FixtureId| { let p = self.g.tab.fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
         let t = self.g.targets.iter().copied().min_by(|a, b| d(*a).partial_cmp(&d(*b)).unwrap()).expect("a lamp on the level");
-        (t, self.g.tab.sim_lightshome_fixture[t].pos)
+        (t, self.g.tab.fixture[t].pos)
     }
-    fn lamp_out(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_broken(&self.g, t) }
+    fn lamp_out(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].broken }
 }

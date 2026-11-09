@@ -43,7 +43,7 @@ fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt
     let own = g.gd[gd].script.take();
     g.gd[gd].script = Some(lent);
     g.gd[gd].pieing = None;
-    crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+    crate::aim::aim_state_clear(&mut g.gd[gd].aim);
     crate::squad::run_guard_script(g, gd, dt);
     core::mem::replace(&mut g.gd[gd].script, own)
 }
@@ -99,7 +99,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         m.muzzle_down = false; m.pieing = None; m.search_plan = None; m.held = None; m.standoff = None; m.speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.ch[c].anim.speed = 0.0;
-        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         crate::character::character_update(g, c, dt);
         crate::game::game_body_thud(g, c);
         attach_flashlight(g, gd, Some(dt));
@@ -113,7 +113,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         }
         clear_path(g, gd);
         g.gd[gd].stall_ref = None;
-        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         crate::character::character_update(g, c, dt);
         attach_flashlight(g, gd, Some(dt));
         let prev_phase = g.gd[gd].step_phase;
@@ -158,7 +158,7 @@ fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
-            crate::aim::aim_state_clear(&mut g.arms[m.ch].aim);
+            crate::aim::aim_state_clear(&mut m.aim);
             let s = m.script.as_ref().unwrap();
             let drawn = s.over.is_some() || s.upper.clone().unwrap_or(UpperMode::Aim) == UpperMode::Aim;
             m.drawn = drawn;
@@ -179,7 +179,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         reset_chase(g, gd);
         crate::mind::set_state(g, gd, St::Alert, "guards");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.35);
-        g.arms[g.gd[gd].ch].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
+        g.gd[gd].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
         let now = g.time;
         let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 1.0, None => false };
         if g.gd[gd].standoff.is_none() && !radio_recent {

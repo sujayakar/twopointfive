@@ -25,7 +25,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
 | `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
 | `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
-| `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
+| `quiet.rs`, `quietfog.rs` | a quiet mission's deal and partner, its fog lever |
 | `mission.rs` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, end; a rule asks it and never the kind), the stealth stages, `objective` |
 | `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
 | `lesson.rs`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
@@ -66,9 +66,9 @@ held again. **Taken:** nobody holds and `response_up` is false. **Wiped:** every
 learns of the assault. F is the entry on the hostage room (`rescue_order_door`). The room held is only "secured". **Won** (`rescue_end_won`): nobody of theirs left for `clear_secs`, or every
 living hostage within `out_m` of the team's start, having been led (`rescue_end_word`). **Lost** (`rescue_outcome`): all hostages dead, one hit by your own fire, or Sam down.
 
-**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_before_restart` writes the deal into `g.level.mission` and benches the routes not manned. The stages run
+**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_before_restart` writes the deal into `g.level.errand` and benches the routes not manned. The stages run
 in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; walking off, sprinting or hauling a body lets go), Exfil, Done past any exit (`out_now`). Every player down is
-Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
+Failed. Where the spot is `wired` (`Errand` `told`), a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
 
 **How it ended** (`ended` in `verdict.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.

@@ -716,11 +716,9 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
 mod tests {
     use super::*;
 
-    /// bits from breach.ts's own flat, under bun with EXACT on
     #[test]
-    fn flat_bits() {
-        assert_eq!(flat([1.3, 0.0, -2.7], [4.1, 9.0, 0.37]).to_bits(), 0x40109ed3ec0bed7b);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 0.0, 0.7]).to_bits(), 0x3fe13b86ea20ae5c);
+    fn a_distance_on_the_floor_ignores_height() {
+        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
     }
 
     #[test]

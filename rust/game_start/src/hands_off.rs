@@ -216,7 +216,7 @@ impl Me {
     }
     /// the breaker thrown by a teammate: the quick key on its panel, then the wait for the dark
     async fn breaker(&self) {
-        let dark = || self.ask(|g| game::sim_lightshome::mains_active(g));
+        let dark = || self.ask(|g| g.light_home.mains.active);
         if dark() || self.up().is_empty() { return; }
         let p = self.ask(|g| g.level.breaker.pos);
         if p == [0.0; 3] { return; }

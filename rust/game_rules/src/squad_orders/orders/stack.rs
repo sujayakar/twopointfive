@@ -824,9 +824,9 @@ fn squad_orders_stack_places(g: &mut crate::game::Game, over: &Over, d: DoorId, 
 mod tests {
     use super::*;
 
-    /// one cell whichever way a place rounds to nought: JavaScript's `${-0}` is "0"
+    /// A place near a stack is kept by the tenth of a metre: one cell, whichever side of nought it rounds from.
     #[test]
-    fn glass_key_reads_minus_nought_as_nought() {
+    fn a_place_is_one_key_either_side_of_nought() {
         assert_eq!(glass_key(3, -1.0, [-0.04, 0.0, 0.04]), "3:-1:0:0");
         assert_eq!(glass_key(0, 1.0, [1.26, 0.0, -2.51]), "0:1:13:-25");
     }

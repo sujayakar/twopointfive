@@ -169,7 +169,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(look_at[0] - pos[0], look_at[2] - pos[2]), 4.0 * dt);
     }
     // --- the round ---
-    g.arms[g.gd[gd].ch].fire_cd -= dt;
+    g.gd[gd].fire_cd -= dt;
     let gun_yaw = crate::character::character_gun_yaw(g, c);
     let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - gun_yaw));
     let w = g.gd[gd].weapon;
@@ -178,7 +178,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         && !(gh.is_some() && crate::gunhold::gun_hold_phase(g, gd) == Some(crate::gunhold::Phase::Line) && crate::gunhold::gun_hold_free(g, p));
     if g.gd[gd].reload_t >= 0.0 {
         tick_reload_beat(g, gd, dt);
-    } else if !held && fs.ok && !backing && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && facing_err < 0.12 && !g.gd[gd].muzzle_down
+    } else if !held && fs.ok && !backing && g.gd[gd].fire_cd <= 0.0 && facing_err < 0.12 && !g.gd[gd].muzzle_down
         && !crate::combat::arm_through(g, c)
         && !round_past_colleague(g, gd, aim, Some(p.held), None)
         && crate::aim::aim_ready(g, gd)
@@ -186,14 +186,14 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         && crate::weapons::firearm_fire(g, w)
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
-        g.arms[g.gd[gd].ch].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
+        g.gd[gd].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
         let o = crate::aim::guard_round(g, gd, mods.spread, None);
         crate::combat::fire_weapon(g, c, aim, Some(&o));
         g.tab.guards_standoff[s].shots += 1.0;
         let w = g.gd[gd].weapon;
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
     }
-    if held { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
+    if held { g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
     // --- the talking ---
     if gh.map_or(false, |h| h.quiet) {
         // on his way round, or running: nothing to say to Sam
@@ -248,15 +248,15 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
                 standoff_bark(g, gd, crate::guards::StandoffMoment::Dropped, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(b));
             }
         }
-        g.arms[g.gd[gd].ch].fire_cd = if g.tune.muzzle_discipline {
+        g.gd[gd].fire_cd = if g.tune.muzzle_discipline {
             SHIELD_RELEASE_BEAT_MIN + crate::dice::draw_of(g, "guards::standoff_upkeep#1", gd) * SHIELD_RELEASE_BEAT_JITTER
         } else {
-            let cd = g.arms[g.gd[gd].ch].fire_cd;
+            let cd = g.gd[gd].fire_cd;
             m::min(cd, 0.15 + crate::dice::draw_of(g, "guards::standoff_upkeep#2", gd) * 0.3)
         };
     } else if why == "free" && watched {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Freed, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
-        g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
+        g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, 0.4);
     } else if why == "lost" {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Lost, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, seen_t);

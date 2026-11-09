@@ -476,31 +476,28 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
 mod tests {
     use super::*;
 
-    // the bits below are the TypeScript's own: bun with EXACT.on, roomfit.ts's offLine and compass, and roomfit.ts's exported fitGroups
+    /// A body takes the score off a watch that looks through him. A failure means a man is put off a good spot by a mate behind the watcher, or past what he watches.
     #[test]
-    fn off_line_has_the_typescripts_bits() {
-        let cases: [(V3, V3, V3, u64); 5] = [
-            ([1.3, 0.0, 2.7], [0.1, 1.5, 0.2], [5.5, 1.1, 6.25], 0x3fe89f8d72349371),
-            ([3.1, 0.0, -1.9], [-2.2, 0.0, 4.4], [7.75, 0.0, -6.6], 0x3fd2ebaee522c0a9),
-            ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0x7ff0000000000000),
-            ([9.0, 0.0, 9.0], [0.0, 0.0, 0.0], [1.0, 0.0, 1.0], 0x7ff0000000000000),
-            ([-0.01, 0.0, 0.13], [-1.1, 0.0, -1.3], [0.7, 0.0, 1.9], 0x3fcfdd63a3dd9dfb),
-        ];
-        for (p, a, b, bits) in cases {
-            assert_eq!(off_line(p, a, b).to_bits(), bits);
-        }
+    fn a_body_is_on_a_lane_only_between_the_watcher_s_first_step_and_what_he_watches() {
+        let (a, b): (V3, V3) = ([0.0, 0.0, 0.0], [10.0, 0.0, 0.0]);
+        assert_eq!(off_line([5.0, 0.0, 0.5], a, b), 0.5);
+        assert_eq!(off_line([1.0, 0.0, 1.0], a, b), 1.0);        // just past his own feet
+        assert_eq!(off_line([0.5, 0.0, 0.1], a, b), m::INF);     // at his own shoulder
+        assert_eq!(off_line([-1.0, 0.0, 0.0], a, b), m::INF);    // behind him
+        assert_eq!(off_line([11.0, 0.0, 0.0], a, b), m::INF);    // past what he watches
+        assert_eq!(off_line([0.0, 0.0, 0.0], a, a), m::INF);     // no lane
     }
 
+    /// Who on a dealt set of spots is one pair's: the two nearest one another, and of four the split with the least between them.
     #[test]
-    fn fit_groups_pairs_as_the_typescript_does() {
+    fn the_spots_nearest_one_another_are_a_pair() {
         let fits = |l: &[[f64; 2]]| -> Vec<crate::roomfit::Fit> {
             l.iter().map(|p| { let mut f = crate::roomfit::Fit::default(); f.pos = [p[0], 0.0, p[1]]; f }).collect()
         };
-        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [1.0, 1.0]])), [0.0, 0.0]);
+        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [1.0, 1.0]])), [0.0, 0.0]);    // two are one pair however far
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [1.0, 0.0]])), [0.0, 1.0, 0.0]);
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [1.0, 0.0], [6.0, 0.0]])), [0.0, 1.0, 0.0, 1.0]);
-        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [1.0, 0.0], [5.0, 0.0], [6.0, 0.0]])), [0.0, 0.0, 1.0, 1.0]);
-        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [6.0, 0.0], [1.0, 0.0], [9.0, 9.0]])), [0.0, 1.0, 1.0, 0.0, 1.0]);
-        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [3.0, 0.0], [0.0, 4.0], [3.0, 4.0]])), [0.0, 0.0, 1.0, 1.0]);
+        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [3.0, 0.0], [0.0, 4.0], [3.0, 4.0]])), [0.0, 0.0, 1.0, 1.0]);    // the short sides of a room
+        assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [6.0, 0.0], [1.0, 0.0], [9.0, 9.0]])), [0.0, 1.0, 1.0, 0.0, 1.0]);    // five: the nearest two, then the rest
     }
 }

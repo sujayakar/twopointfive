@@ -11,7 +11,6 @@ pub mod fixture_break;
 pub mod floormess;
 pub mod furnblast;
 pub mod glass;
-pub mod glass_pattern;
 pub mod glassbreak;
 pub mod marks;
 pub mod particle_fx;

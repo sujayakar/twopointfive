@@ -44,8 +44,7 @@ fn glass(g: &Game) -> BTreeMap<u32, String> {
 }
 /// a lamp, by its number in the level: its switch, shot or not, out because the mains are, and what it burns at this tick
 fn lamp(g: &Game, id: FixtureId) -> String {
-    use game::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, mains_active};
-    format!("{} {} {} {}", fixture_on(g, id), fixture_broken(g, id), g.tab.sim_lightshome_fixture[id].mains && mains_active(g), bits(fixture_factor(g, id)))
+    format!("{} {} {} {}", g.tab.fixture[id].on, g.tab.fixture[id].broken, g.tab.fixture[id].mains && g.light_home.mains.active, bits(g.tab.fixture[id].factor))
 }
 /// the smoke: how many emitters are letting it out, then each brick of the grid that holds any, by its place in plan, with all it holds. Sorted by place, because which slot a brick has is how the grid keeps it.
 fn smoke(g: &Game) -> String {
@@ -108,7 +107,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
         out.push((format!("door {}", g.dr[d].i), format!("{} {} {} {} {}", bits(game::doors::door_angle(g, d)), game::doors::door_latched(g, d), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d))));
     }
     for (bi, said) in glass(g) { out.push((format!("glass {}", bi), said)); }
-    for (id, f) in g.tab.sim_lightshome_fixture.iter() { out.push((format!("lamp {}", f.i), lamp(g, id))); }
+    for id in g.tab.fixture.ids() { out.push((format!("lamp {}", id.0 as f64), lamp(g, id))); }
     out.push((String::from("smoke"), smoke(g)));
     out.push((String::from("destroyed"), destroyed(g)));
     out.push((String::from("alarm"), format!("{} {} {} {} {}", g.mission.alarm_on, g.alarm.episode, bits(g.alarm.raised_at), g.escalation, bits(g.escalation_t))));

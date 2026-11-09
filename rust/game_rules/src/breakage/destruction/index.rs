@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A box's row (`Box.*`). Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+/// a box's row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A word of a box's flags against a mask.
@@ -139,7 +139,7 @@ fn destruction_index(g: &mut crate::game::Game) {
     let no_shadow = js::to_i32(bf.no_shadow);
     g.destr.target_of_box.clear();
     for t in g.targets.clone() {
-        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() {
+        for bi in g.tab.fixture[t].boxes.clone() {
             g.destr.target_of_box.set(crate::Num(bi), t);
         }
     }
@@ -554,7 +554,7 @@ pub fn destruction_reset(g: &mut crate::game::Game) {
     rate_cap_reset(&mut g.destr.caps.decal);
     g.destr.free_knocks = 0.0;
     for t in g.destr.broke.keys() {
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().mend, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = false;
     }
     g.destr.broke.clear();
     g.destr.fixture_count = 0.0;

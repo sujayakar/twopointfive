@@ -192,7 +192,7 @@ fn draw(g: &mut Game, pl: PlayerId) {
 /// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.
 fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
     let mut target_y = ap[1] + 0.03;
-    if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
+    if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.fixture[t].pos[1], 0.3, 2.95); }
     else if let Some(gd) = seat.aim_guard {
         target_y = man_aim(g, seat, gd, 1.2)[1];
     }
@@ -207,7 +207,7 @@ fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     if let Some(t) = pt {
         if !crate::condition::down(g, g.gd[t].ch) { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
     }
-    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
         return man_aim(g, seat, gd, 1.25);
     }
@@ -648,16 +648,16 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     // slot actions
     if g.pl[pl].wall.is_some() && g.k.wallsnap.on { wall_snap_pose(g, dt, aiming); }
     else if g.pl[pl].wall.map_or(false, |w| w.take_t.is_some()) { g.ch[c].anim.wall_take = -1.0; g.ch[c].anim.wall_hit = 0.0; g.ch[c].anim.stack_press = 0.0; g.ch[c].anim.stance_in = 0.0; }
-    g.arms[g.pl[pl].ch].fire_cd -= dt;
+    g.pl[pl].fire_cd -= dt;
     let gun_def = g.fa[gun].def;
     if def_auto(g, gun_def).is_some() { let trigger = gun_up && input_lmb(g, input); crate::weapons::firearm_auto_idle(g, gun, dt, trigger); }
     if gun_up && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() {
         let auto = firearm_automatic(g, gun);
         let pull = if auto { input_lmb(g, input) || input_lmb_hit(g, input) } else { input_lmb_hit(g, input) };
-        if pull && !walled && g.arms[g.pl[pl].ch].fire_cd <= (if auto { 1e-4 } else { 0.0 }) && g.pl[pl].equip_t <= 0.0 {
+        if pull && !walled && g.pl[pl].fire_cd <= (if auto { 1e-4 } else { 0.0 }) && g.pl[pl].equip_t <= 0.0 {
             let grow = crate::weapons::firearm_auto_spread(g, gun);
             if crate::weapons::firearm_fire(g, gun) {
-                g.arms[g.pl[pl].ch].fire_cd = if firearm_automatic(g, gun) { def_auto(g, gun_def).unwrap() } else { def_row(g, gun_def).cd };
+                g.pl[pl].fire_cd = if firearm_automatic(g, gun) { def_auto(g, gun_def).unwrap() } else { def_row(g, gun_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 if def_auto(g, gun_def).is_some() { crate::weapons::firearm_auto_fired(g, gun); }
                 let tgt = shot_target(g, &crate::seats::here(g));
@@ -665,7 +665,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let spread = grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
-                g.arms[g.pl[pl].ch].fire_cd = 0.25;
+                g.pl[pl].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);
             }
         }
@@ -680,13 +680,13 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     { let trigger = rifle_up && input_lmb(g, input); crate::weapons::firearm_auto_idle(g, rifle, dt, trigger); }
     if rifle_up && !g.pl[pl].sprinting {
         let pull = if firearm_automatic(g, rifle) { input_lmb(g, input) || input_lmb_hit(g, input) } else { input_lmb_hit(g, input) };
-        if pull && !walled && g.arms[g.pl[pl].ch].fire_cd <= 1e-4 && g.pl[pl].equip_t <= 0.0 {
+        if pull && !walled && g.pl[pl].fire_cd <= 1e-4 && g.pl[pl].equip_t <= 0.0 {
             let grow = crate::weapons::firearm_auto_spread(g, rifle);
             let broke = if input_lmb_hit(g, input) { shell_break(g) } else { None };
             let rifle_def = g.fa[rifle].def;
-            if broke == Some(crate::player::ShellBreak::Bolt) { g.arms[g.pl[pl].ch].fire_cd = 0.1; }
+            if broke == Some(crate::player::ShellBreak::Bolt) { g.pl[pl].fire_cd = 0.1; }
             else if crate::weapons::firearm_fire(g, rifle) {
-                g.arms[g.pl[pl].ch].fire_cd = if firearm_automatic(g, rifle) { def_auto(g, rifle_def).unwrap() } else { def_row(g, rifle_def).cd };
+                g.pl[pl].fire_cd = if firearm_automatic(g, rifle) { def_auto(g, rifle_def).unwrap() } else { def_row(g, rifle_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 crate::weapons::firearm_auto_fired(g, rifle);
                 let tgt = shot_target(g, &crate::seats::here(g));
@@ -694,7 +694,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let spread = rifle_spread(g, &crate::seats::here(g), speed) + grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { weapon: Some(def_row(g, rifle_def).clone()), spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
-                g.arms[g.pl[pl].ch].fire_cd = 0.25;
+                g.pl[pl].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);
             }
         }
@@ -738,7 +738,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                         crate::launcher::fire_ring(g, c, from, at);
                         if !g.infinite_ammo { g.fa[rifle].rings -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.launcher.cd;
-                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.3);
+                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.3);
                     }
                     RifleAttachment::Cam => {
                         crate::stickycam::fire_cam(g, pl, from, at);
@@ -747,14 +747,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                         crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Thrown, Some(&data), None);
                         if !g.infinite_ammo { g.fa[rifle].cams -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.sticky.cd;
-                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.3);
+                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.3);
                     }
                     RifleAttachment::He40 => {
                         crate::he40::fire_shell(g, c, from, at);
                         crate::chronicle::chron_thrown(g, "he40");
                         if !g.infinite_ammo { g.fa[rifle].shells -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.launcher40.cd;
-                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
+                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
                     }
                 }
                 g.pl[pl].last_fire_t = g.time;
@@ -791,7 +791,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             Some(Some(crate::character::KitItem::Can)) => g.pl[pl].kit_can == slot_kind,
             Some(_) => false,
         };
-        if input_lmb_hit(g, input) && g.arms[g.pl[pl].ch].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.arms[g.pl[pl].ch].fire_cd = 0.6; }
+        if input_lmb_hit(g, input) && g.pl[pl].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.pl[pl].fire_cd = 0.6; }
     }
     if g.pl[pl].throw_held && !g.pl[pl].sprinting && !stunned {
         let sol = match g.pl[pl].throw_preview.clone() { Some(s) => Some(s), None => prev_preview };
@@ -854,39 +854,77 @@ mod tests {
         m
     }
 
-    /// the TypeScript's own bits (bun, EXACT.on), hipsTurn on each branch: walking, backing up, into a leaf, by hand, standing
+    const LONG: f64 = 1.0;   // a frame long enough that his hips get where they are going
+
+    /// Walking on his own, hips go the way he walks and lean toward the aim, further with the gun up.
     #[test]
-    fn hips_turn_matches_the_typescripts_bits() {
-        let d60 = 1.0 / 60.0;
-        let rows: [(crate::player::Legs, f64, bool, bool, Option<f64>, bool, f64, u64, bool); 7] = [
-            (legs(0.3, 1.9, 1.2, -0.7, false), 1.4, false, false, None, false, d60, 0x3fdccccccccccccc, false),
-            (legs(-2.1, 1.0, -0.4, 2.2, true), 2.2, true, false, None, false, d60, 0xbfff333333333334, false),
-            (legs(0.5, 2.9, 1.0, 0.1, false), 1.0, false, true, Some(0.8), false, d60, 0x3fe6666666666666, false),
-            (legs(0.5, 2.9, 1.0, 0.1, false), 1.0, false, false, Some(-1.3), true, d60, 0x3fd3333333333333, true),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.0, false, false, None, false, d60, 0x3fcbbbbbbbbbbbbc, false),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.0, true, false, None, false, 1.0 / 30.0, 0x3fd5555555555556, false),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.1, false, false, Some(2.0), true, d60, 0x3fd3333333333334, false),
-        ];
-        for (i, (m0, speed, aiming, orbit, into, by_hand, dt, bits, back)) in rows.into_iter().enumerate() {
-            let mut m = m0;
-            hips_turn(&mut m, speed, aiming, orbit, into, by_hand, dt);
-            assert_eq!(m.char.body_yaw.to_bits(), bits, "row {}", i);
-            assert_eq!(m.backpedal, back, "row {}", i);
-        }
+    fn walking_his_hips_follow_his_way_and_lean_to_his_aim() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let at = |aim: f64, aiming: bool| { let mut m = legs(0.0, aim, 0.0, 1.5, false); hips_turn(&mut m, 1.5, aiming, false, None, false, LONG); m.char.body_yaw };
+        near(at(0.5, false), 0.3);
+        near(at(0.5, true), 0.5);
+        near(at(1.5, true), 0.8);     // no further round than the waist goes
+        let mut m = legs(0.0, 0.5, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, true, false, None, false, 0.01);
+        near(m.char.body_yaw, 0.09);  // and at a rate, not at once
+    }
+
+    /// A failure means he flickers between walking forward and backing up as the cursor crosses his flank: it takes a clear look behind to start backing up, and a clear look ahead to stop.
+    #[test]
+    fn he_backs_up_with_his_aim_behind_him_and_does_not_flicker() {
+        let after = |aim: f64, back: bool| { let mut m = legs(0.0, aim, 0.0, 1.5, back); hips_turn(&mut m, 1.5, true, false, None, false, LONG); (m.backpedal, m.char.body_yaw) };
+        let (back, body) = after(m::PI, false);
+        assert!(back && (body.abs() - m::PI).abs() < 1e-9, "aim straight behind: back up facing it ({body})");
+        assert!(!after(1.7, false).0, "a little behind the shoulder: still walking forward");
+        assert!(after(1.7, true).0, "...and still backing up");
+        assert!(!after(1.0, true).0, "a clear look ahead ends it");
+    }
+
+    /// A failure means he turns away from the leaf he works: walked open it pulls his hips a little and he never backs up; by hand he faces it, and backs up if he walks away from it.
+    #[test]
+    fn a_leaf_turns_his_hips_more_than_his_aim_does() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, true);
+        hips_turn(&mut m, 1.5, false, true, Some(1.0), false, LONG);
+        assert!(!m.backpedal);
+        near(m.char.body_yaw, 0.35);
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, false, false, Some(1.3), true, LONG);
+        assert!(!m.backpedal);
+        near(m.char.body_yaw, 1.3);
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, false, false, Some(3.0), true, LONG);
+        assert!(m.backpedal);
+    }
+
+    /// Standing, his hips stay until the aim has gone past what the waist takes, less with the gun up; then they come round short of it.
+    #[test]
+    fn standing_his_hips_stay_until_the_aim_passes_the_waist() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let at = |aim: f64, aiming: bool, into: Option<f64>, hand: bool| { let mut m = legs(0.0, aim, 0.0, 0.0, true); hips_turn(&mut m, 0.0, aiming, false, into, hand, LONG); assert!(!m.backpedal); m.char.body_yaw };
+        assert_eq!(at(1.0, false, None, false), 0.0);
+        near(at(1.0, true, None, false), 1.0 - 0.6 * 0.7);
+        near(at(2.0, false, None, false), 2.0 - 1.2 * 0.7);
+        assert_eq!(at(0.0, false, Some(0.2), false), 0.0);
+        near(at(0.0, false, Some(0.4), false), 0.4 - 0.25 * 0.7);
+        near(at(0.0, false, Some(0.4), true), 0.4 - 0.1 * 0.7);
     }
 
     #[test]
-    fn keys_way_matches_the_typescripts_bits() {
-        let way = keys_way([0.6, 0.0, 0.8], [0.8, 0.0, -0.6], true, false, true, false);
-        assert_eq!(way[0].to_bits(), 0x3ff6666666666666);
-        assert_eq!(way[1].to_bits(), 0x3fc999999999999c);
+    fn his_keys_add_up_and_opposite_keys_cancel() {
+        let (fwd, right) = ([0.5, 0.0, 0.75], [0.75, 0.0, -0.5]);
+        assert_eq!(keys_way(fwd, right, true, false, true, false), [1.25, 0.25]);
+        assert_eq!(keys_way(fwd, right, false, true, false, true), [-1.25, -0.25]);
+        assert_eq!(keys_way(fwd, right, true, true, true, true), [0.0, 0.0]);
+        assert_eq!(keys_way(fwd, right, false, false, false, false), [0.0, 0.0]);
     }
 
     #[test]
-    fn leaf_facing_turns_only_for_a_leaf_that_pushes() {
-        let dp = crate::player::LeafFacingDp { w: 1.0, n: vec![0.3, 0.0, -0.95] };
-        assert_eq!(leaf_facing(Some(&dp), false).unwrap().to_bits(), 0xbfd39384f94e28a0);
-        assert_eq!(leaf_facing(Some(&dp), true), None);
+    fn a_leaf_turns_him_square_into_it_only_when_it_pushes() {
+        let dp = |w| crate::player::LeafFacingDp { w, n: vec![1.0, 0.0, 0.0] };
+        assert!((leaf_facing(Some(&dp(1.0)), false).unwrap() + m::PI / 2.0).abs() < 1e-12, "a yaw of minus a quarter faces -x, into a face whose normal is +x");
+        assert_eq!(leaf_facing(Some(&dp(0.5)), false), None);    // it merely rests on him
+        assert_eq!(leaf_facing(Some(&dp(1.0)), true), None);     // the gun is up
         assert_eq!(leaf_facing(None, false), None);
     }
 }

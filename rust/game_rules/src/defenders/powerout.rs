@@ -25,15 +25,15 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 {
 }
 /// `bo.active`: a getter over the mains' columns, read live every time as the TypeScript's `bo` is
 fn bo_active(g: &Game) -> bool {
-    crate::sim_lightshome::mains_active(g)
+    g.light_home.mains.active
 }
 /// `bo.since`, read live
 fn bo_since(g: &Game) -> f64 {
-    crate::sim_lightshome::mains_since(g)
+    g.light_home.mains.since
 }
 /// `bo.permanent`, read live
 fn bo_permanent(g: &Game) -> bool {
-    crate::sim_lightshome::mains_permanent(g)
+    g.light_home.mains.permanent
 }
 /// `g.guards[i]` for an index kept in `seen` (−1 or off the end of the list: nobody)
 fn guard_at(g: &Game, i: f64) -> Option<GuardId> {
@@ -129,16 +129,16 @@ fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.targets.len() {
         let t = g.targets[i];
         i += 1;
-        if !g.tab.sim_lightshome_fixture[t].mains
-            || !crate::sim_lightshome::fixture_on(g, t)
-            || crate::sim_lightshome::fixture_broken(g, t)
-            || !(crate::sim_lightshome::fixture_factor(g, t) > 0.3)
-            || g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker
-            || g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Device
+        if !g.tab.fixture[t].mains
+            || !g.tab.fixture[t].on
+            || g.tab.fixture[t].broken
+            || !(g.tab.fixture[t].factor > 0.3)
+            || g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker
+            || g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Device
         {
             continue;
         }
-        let tp = g.tab.sim_lightshome_fixture[t].pos;
+        let tp = g.tab.fixture[t].pos;
         if flat(tp, pos_of(g, gd)) > g.k.powerout.see_m {
             continue;
         }

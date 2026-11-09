@@ -447,7 +447,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
-    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
+    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
     later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::default() });
     to_cower(g, gd, true);
     let pos = g.ch[c].pos;
@@ -726,7 +726,7 @@ pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
 /// passing pleasantries, one a floor at a time
 pub(super) fn greetings(g: &mut crate::game::Game) {
     if escalation_of(g) != 0.0 || g.alarm.episode { return; }
-    if crate::sim_lightshome::mains_active(g) { return; }
+    if g.light_home.mains.active { return; }
     let players = crate::seats::men(g);
     if players.iter().any(|p| g.pl[*p].holding.is_some()) { return; }
     let floor_greet_at = floor_of(g).greet_at;

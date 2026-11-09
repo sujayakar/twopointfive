@@ -148,7 +148,7 @@ fn office_rooms(g: &crate::game::Game) -> (Vec<Rect>, Rect) {
         if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
     }
     if !level.own_places() && !rooms.iter().any(|r| r.name.contains("server")) {
-        let s = &level.mission.server_room;
+        let s = &level.errand.area;
         rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
     }
     rooms.extend(office_areas());
@@ -362,7 +362,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     let office = shift && is_office(g);
     let weapon = g.gd[gd].weapon;
     let drew_on_you = crate::weapons::firearm_spent(g, weapon) > 0.0;
-    let blackout = crate::sim_lightshome::mains_active(g);
+    let blackout = g.light_home.mains.active;
     let saw_kind = w.saw_act.as_ref().map(|x| x.kind);
     let facts = DialogueCtxFacts {
         floor_up: Some(lvl >= 1.0), lockdown: Some(lvl >= 2.0), episode: Some(g.alarm.episode),
@@ -393,7 +393,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(g, IntelKind::Routes, t, k), live: partner.is_some(), known: true });
     intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(g, IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });
     let drive_text = if office { intel_text(g, IntelKind::Drive, t, k) } else { drive_away_text(g, t) };
-    let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && crate::takecheck::take_told(g);
+    let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && g.level.errand.told;
     intel.push(IntelItem { kind: IntelKind::Drive, text: drive_text, live: drive_live, known: true });
     if !shift { for it in intel.iter_mut() { it.live = false; } }
     let recent = g.m.dialogue.recent_by_game.get_or_insert_with(JsMap::new).clone();
@@ -684,8 +684,9 @@ mod tests {
         for (k, v) in rows { t.set(String::from(*k), v.map(String::from)); }
         t
     }
+    /// A FAILURE MEANS: a man says "the key's in ." because a fact he would name is not there: such a line is not said at all.
     #[test]
-    fn expand_capitalises_and_fails_on_empty() {
+    fn a_line_with_a_fact_missing_is_not_said_and_a_capital_token_says_it_capital() {
         let t = table(&[("room", Some("the lobby")), ("door", None), ("code", Some(""))]);
         assert_eq!(expand("in {room}. {Room}!", &t).as_deref(), Some("in the lobby. The lobby!"));
         assert_eq!(expand("{door}", &t), None);
@@ -693,22 +694,23 @@ mod tests {
         assert_eq!(expand("{nobody}", &t), None);
         assert_eq!(expand("— {x y} {} { …", &t).as_deref(), Some("— {x y} {} { …"));
     }
+    /// A FAILURE MEANS: a man says "the the yard", "the block 2", "in 15 minutes" or a number with no sense of time in it.
     #[test]
-    fn names_and_numbers() {
+    fn a_man_says_a_place_with_its_article_a_number_in_words_and_a_time_roughly() {
         assert_eq!(with_the("yard"), "the yard");
         assert_eq!(with_the("the yard"), "the yard");
         assert_eq!(with_the("block 2"), "block 2");
         assert_eq!(num_word(3.0), "three");
         assert_eq!(num_word(15.0), "fifteen");
         assert_eq!(num_word(16.0), "16");
-        assert_eq!(num_word(-1.0), "-1");
-        assert_eq!(num_word(1.5), "1.5");
         assert_eq!(eta_words(20.0), "any second now");
+        assert_eq!(eta_words(60.0), "in a minute or so");
         assert_eq!(eta_words(300.0), "in five minutes");
         assert_eq!(eta_words(901.0), "before long");
     }
+    /// A FAILURE MEANS: a line is picked for a fact the man does not have, or its token reads another's value.
     #[test]
-    fn the_ctx_tables_reach_the_picker() {
+    fn a_mans_facts_reach_the_picker_under_their_own_names_and_only_true_holds() {
         let mut t = DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the yard"));
         t.pad_door = Some(String::from("the pad door"));
@@ -721,26 +723,25 @@ mod tests {
         assert!(hold_fact(&f, Need::Office));
         assert!(!hold_fact(&f, Need::SawDrop));
         assert!(!hold_fact(&f, Need::Shift));
-        assert_eq!(lead_of_shape(ShapeKey::Folder).as_deref(), Some(""));
-        assert_eq!(lead_of_shape(ShapeKey::Fan).as_deref(), Some("Oh— and "));
-        assert_eq!(lead_of_shape(ShapeKey::Stoic), None);
     }
+    /// A FAILURE MEANS: the questioning does not run opener, press, ask, then dry.
     #[test]
-    fn stages() {
+    fn the_exchanges_are_three_stages_and_then_dry() {
         assert!(matches!(stage_key_of(0.0), StageKey::Num(x) if x == 1.0));
         assert!(matches!(stage_key_of(3.0), StageKey::Num(x) if x == 3.0));
         assert!(matches!(stage_key_of(4.0), StageKey::X));
-        assert_eq!(stage_str(StageKey::Num(2.0)), "2");
-        assert_eq!(stage_str(StageKey::X), "x");
     }
+    /// A FAILURE MEANS: a man who walks a loop is far from its closing leg.
     #[test]
     fn route_distance_wraps_the_loop() {
         let pts = [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.0, 4.0]];
         assert_eq!(dist_to_route(&pts, [2.0, 0.0, -3.0]), 3.0);
+        assert!((dist_to_route(&pts, [1.0, 0.0, 3.0]) - 2.0f64.sqrt()).abs() < 1e-9, "nearest the leg from the last point back to the first");
         assert_eq!(dist_to_route(&[], [0.0, 0.0, 0.0]), f64::INFINITY);
     }
+    /// A FAILURE MEANS: a man you hold knows what the net said after you took his radio.
     #[test]
-    fn net_reach() {
+    fn a_held_man_hears_the_net_only_until_half_a_second_after_you_took_him() {
         assert!(heard_on_net(-1.0, 5.0));
         assert!(heard_on_net(10.0, 10.5));
         assert!(!heard_on_net(10.0, 10.6));

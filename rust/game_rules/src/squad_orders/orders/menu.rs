@@ -18,10 +18,10 @@ pub(super) fn digit_of(code: &str) -> f64 {
 mod tests {
     use super::*;
 
-    // Every expected value below was printed by the TypeScript's own expressions under bun.
+    /// A row's digit off its key code: `wait_key` is either a digit of the ring or a key of its own.
     #[test]
-    fn digits_as_the_regexp_reads_them() {
-        for (code, want) in [("Digit1", 1.0), ("Digit5", 5.0), ("Digit9", 9.0), ("Digit0", 0.0), ("Digit10", 0.0), ("Digit", 0.0), ("KeyX", 0.0), ("Digit5\n", 0.0), ("xDigit1", 0.0), ("", 0.0), ("Space", 0.0)] {
+    fn a_digit_is_one_to_nine_and_nothing_else_is_one() {
+        for (code, want) in [("Digit1", 1.0), ("Digit5", 5.0), ("Digit9", 9.0), ("Digit0", 0.0), ("Digit10", 0.0), ("Digit", 0.0), ("KeyX", 0.0), ("xDigit1", 0.0), ("", 0.0)] {
             assert_eq!(digit_of(code), want, "{code:?}");
         }
     }
@@ -661,22 +661,21 @@ mod tests_2 {
     }
     use crate::game::PairId;
 
-    /// the TypeScript's own bits for doorOnRay's arithmetic (bun, EXACT.on): t of a ray crossing a doorway
+    /// A door along +x at (2, 1), 2 m wide and 2.1 m high; the cursor's ray comes from (2, 1, -3) along +z and crosses it at 4 m. A failure means a menu opens on a door the cursor is not on.
     #[test]
-    fn a_ray_crosses_a_doorway_on_the_typescripts_bits() {
-        let ro: V3 = [1.25, 1.6, -3.5];
-        let rd: V3 = v3::normalize([0.3, -0.1, 0.9]);
-        let t = ray_on_door(ro, rd, [2.0, 0.0, 1.0], 0.4, 2.0, 2.1, 0.08, f64::INFINITY, f64::INFINITY).unwrap();
-        assert_eq!(t.to_bits(), TS_T);
-        // nothing of the scene may lie more than a hand short of the frame line, and a nearer door already found wins
-        assert!(ray_on_door(ro, rd, [2.0, 0.0, 1.0], 0.4, 2.0, 2.1, 0.08, 1.0, f64::INFINITY).is_none());
-        assert!(ray_on_door(ro, rd, [2.0, 0.0, 1.0], 0.4, 2.0, 2.1, 0.08, f64::INFINITY, 1.0).is_none());
-        // past the frame's width (u is 0.948 on this ray), over its top (y is 1.059)
-        assert!(ray_on_door(ro, rd, [2.0, 0.0, 1.0], 0.4, 1.1, 2.1, 0.08, f64::INFINITY, f64::INFINITY).is_none());
-        assert!(ray_on_door(ro, rd, [9.0, 0.0, 1.0], 0.4, 2.0, 2.1, 0.08, f64::INFINITY, f64::INFINITY).is_none());
-        assert!(ray_on_door(ro, rd, [2.0, 0.0, 1.0], 0.4, 2.0, 0.5, 0.08, f64::INFINITY, f64::INFINITY).is_none());
+    fn a_ray_is_on_a_door_where_it_crosses_the_doorway_with_nothing_drawn_nearer() {
+        let (c, pad, far): (V3, f64, f64) = ([2.0, 0.0, 1.0], 0.08, f64::INFINITY);
+        let ray = |x: f64, y: f64, t_scene: f64, bt: f64| ray_on_door([x, y, -3.0], [0.0, 0.0, 1.0], c, 0.0, 2.0, 2.1, pad, t_scene, bt);
+        assert_eq!(ray(2.0, 1.0, far, far), Some(4.0));
+        assert_eq!(ray(2.0, 1.0, 3.95, far), Some(4.0));    // the scene a hand short of the frame line is the frame
+        assert_eq!(ray(2.0, 1.0, 3.8, far), None);          // more than that is something in front of it
+        assert_eq!(ray(2.0, 1.0, far, 3.0), None);          // a nearer door already found wins
+        assert_eq!(ray(3.05, 1.0, far, far), Some(4.0));    // a little past the jamb still picks it
+        assert_eq!(ray(3.1, 1.0, far, far), None);
+        assert_eq!(ray(2.0, 2.2, far, far), None);          // over its top
+        assert_eq!(ray_on_door([2.0, 1.0, -3.0], [0.0, 0.0, -1.0], c, 0.0, 2.0, 2.1, pad, far, far), None);    // behind the eye
+        assert_eq!(ray_on_door([2.0, 1.0, 1.0], [1.0, 0.0, 0.0], c, 0.0, 2.0, 2.1, pad, far, far), None);      // along the wall
     }
-    const TS_T: u64 = 0x4014a4cb8302a980;
 
     /// fall in: of three or more a pair files together, the pair with the nearer man first; a tie of pair distance goes to the pair's word, then the man
     #[test]

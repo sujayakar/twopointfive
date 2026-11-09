@@ -322,7 +322,7 @@ pub trait YardAsk {
     /// a place's own light, every carried light left out, by the meter: (bare, with the moon, through a tube)
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64);
     /// how the first camera stands
-    fn camera_state(&self) -> game::sim_lightshome::CameraState;
+    fn camera_state(&self) -> game::fixtures::CameraState;
     /// how much it has seen
     fn camera_seen(&self) -> f64;
     /// how many times the beam has been tripped, by its place in the level's list
@@ -379,9 +379,9 @@ impl YardAsk for Play {
         let (e, m) = (a.0.max(b.0), a.1.max(b.1));
         (game::game::game_visibility_of(&self.g, e), game::game::game_visibility_of(&self.g, m), game::nvg::tube_vis(&self.g, m))
     }
-    fn camera_state(&self) -> game::sim_lightshome::CameraState { game::sim_lightshome::camera_machine_state(&self.g, self.g.devices.cameras[0]) }
-    fn camera_seen(&self) -> f64 { game::sim_lightshome::camera_machine_seen(&self.g, self.g.devices.cameras[0]) }
-    fn beam_trips(&self, k: usize) -> f64 { game::sim_lightshome::laser_machine_trips(&self.g, self.g.devices.lasers[k]) }
+    fn camera_state(&self) -> game::fixtures::CameraState { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].state }
+    fn camera_seen(&self) -> f64 { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].seen }
+    fn beam_trips(&self, k: usize) -> f64 { self.g.tab.devices_laser_rt[self.g.devices.lasers[k]].trips as f64 }
     fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
     fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
@@ -581,8 +581,8 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let g = &p.g;
     let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
     let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
-    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", game::sim_lightshome::fixture_on(g, t), game::sim_lightshome::fixture_broken(g, t))).collect();
-    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", game::sim_lightshome::mains_active(g))), ("statics", statics), ("props", props), ("walk grid", nav),
+    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
+    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
         ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.wall_charge.set.len())), ("glass hits", format!("{hits}"))]
 }
 
@@ -611,10 +611,10 @@ pub trait ReviewAsk {
 }
 
 impl ReviewAsk for Play {
-    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| game::sim_lightshome::fixture_on(&self.g, t) && self.g.tab.sim_lightshome_fixture[t].kind != game::sim_lightshome::FixtureKind::Breaker).expect("a lamp lit") }
+    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
     fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
     fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
-    fn lamp_disabled(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_disabled_until(&self.g, t) > self.g.time }
+    fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
         let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };
         game::throwables::throwables_spawn(&mut self.g, kind, [5.0, 0.5, 5.0], [0.0; 3], Some(o))

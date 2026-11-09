@@ -249,7 +249,7 @@ fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
     if g.tab.roomfight_def[d].pre {
         if g.time - g.gd[gd].last_seen_t > 1.0 { g.tab.roomfight_def[d].pre = false; }
         else if g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].react_t <= 0.0 {
-            g.arms[g.gd[gd].ch].aim.track = m::max(g.arms[g.gd[gd].ch].aim.track, s.preaim); g.arms[g.gd[gd].ch].fire_cd = m::min(g.arms[g.gd[gd].ch].fire_cd, 0.0); g.tab.roomfight_def[d].pre = false;
+            g.gd[gd].aim.track = m::max(g.gd[gd].aim.track, s.preaim); g.gd[gd].fire_cd = m::min(g.gd[gd].fire_cd, 0.0); g.tab.roomfight_def[d].pre = false;
         }
     }
     let (seen, st) = (g.gd[gd].last_seen_t, g.gd[gd].state);
@@ -465,7 +465,7 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
     if let Some(ct) = contact {
         let fc = match ct { crate::game::Foe::Player => { let man = crate::seats::faced_man(g, gd); g.pl[man].ch } crate::game::Foe::Guard(o) => g.gd[o].ch };
         crate::mind::foe(g, gd, Some(ct), "roomfight");
-        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         room_fight_plant(g, d, "contact");
         crate::mind::set(g, gd, 1.0, "roomfight");
         g.gd[gd].react_t = pick(g, crate::dice::Who::Def(d), s.react);

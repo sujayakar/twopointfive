@@ -825,15 +825,19 @@ mod tests {
     const A: Frame = Frame { o: [1.25, -0.5, 3.1], x: [0.8, 0.0, -0.6], y: [0.0, 1.0, 0.0], z: [0.6, 0.0, 0.8] };
     const B: Frame = Frame { o: [-0.7, 2.2, 0.4], x: [0.0, 0.6, 0.8], y: [0.0, 0.8, -0.6], z: [-1.0, 0.0, 0.0] };
 
-    /// the TypeScript's own bits, printed by bun with EXACT on: mixFrame(A, B, 0.37)
+    /// A FAILURE MEANS: a hand on its way between two grips shears or jumps: the frames between are true frames, each as far along as its k, turning the short way.
     #[test]
-    fn mix_frame_matches_the_typescript_bits() {
+    fn a_mix_of_frames_is_a_true_frame_between_the_two() {
         let f = mix_frame(A, B, 0.37);
-        let bits = |v: V3| [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()];
-        assert_eq!(bits(f.o), MID_O);
-        assert_eq!(bits(f.x), MID_X);
-        assert_eq!(bits(f.y), MID_Y);
-        assert_eq!(bits(f.z), MID_Z);
+        for (i, a) in [f.x, f.y, f.z].iter().enumerate() {
+            assert!((v3::len(*a) - 1.0).abs() < 1e-9, "axis {}", i);
+        }
+        assert!(v3::dot(f.x, f.y).abs() < 1e-9 && v3::dot(f.y, f.z).abs() < 1e-9);
+        assert!(v3::len(v3::sub(f.o, v3::lerp3(A.o, B.o, 0.37))) < 1e-9);
+        // the angle gone is its share of the whole way
+        let half = mix_frame(A, B, 0.5);
+        assert!((v3::dot(half.x, A.x) - v3::dot(half.x, B.x)).abs() < 1e-9);
+        assert!(v3::dot(f.x, A.x) > v3::dot(f.x, B.x), "0.37 of the way lies nearer the first");
     }
 
     /// at or past either end it hands back that end untouched
@@ -857,9 +861,4 @@ mod tests {
         let back = mix_adj(Some(a), None, 0.25).unwrap();
         assert_eq!(back.off, [0.75, 1.5, 3.0]);
     }
-
-    const MID_O: [u64; 3] = [0x3fe0e978d4fdf3b6, 0x3fdfef9db22d0e56, 0x4000ced916872b02];
-    const MID_X: [u64; 3] = [0x3fef03932a5d9b0e, 0x3fcb4485f28fb63e, 0x3fbfa97058d4b1af];
-    const MID_Y: [u64; 3] = [0xbfc784c8591cd392, 0x3feeb527da2a8ef6, 0xbfcb4485f28fb63e];
-    const MID_Z: [u64; 3] = [0xbfc50018c3c01cfe, 0x3fc784c8591cd392, 0x3fef03932a5d9b0e];
 }

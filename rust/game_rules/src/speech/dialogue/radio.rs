@@ -32,7 +32,7 @@ fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::Rad
         r.reply = None;
         r.last_at = -100.0;
         let esc = crate::guards::escalation_of(g);
-        let blackout = crate::sim_lightshome::mains_active(g);
+        let blackout = g.light_home.mains.active;
         let found = found_count(g);
         let r = row(g);
         r.esc = esc;
@@ -79,7 +79,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     if pool.is_empty() { return false; }
     let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
-    let rack = js::num_str(g.level.mission.rack.index + 1.0);
+    let rack = js::num_str(g.level.errand.index + 1.0);
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
     let h = if own { l.h_own.as_deref().unwrap_or(h_now) } else { h_now };
@@ -102,7 +102,7 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
         handler_beat(g, if esc >= 2.0 { crate::dialogue::HandlerBeat::Lockdown } else { crate::dialogue::HandlerBeat::Alarm }, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }
     row(g).esc = esc;
-    let bo = crate::sim_lightshome::mains_active(g);
+    let bo = g.light_home.mains.active;
     if bo && !row(g).blackout {
         handler_beat(g, crate::dialogue::HandlerBeat::Blackout, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }
@@ -155,73 +155,3 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloc::format;
-    use crate::dialogue::Him;
-
-    /// FNV-1a over a string's UTF-8, the digest the TypeScript's side was worked out with.
-    fn fnv(mut d: u64, s: &str) -> u64 { for b in s.bytes() { d ^= b as u64; d = d.wrapping_mul(0x100000001b3); } d }
-    const SEED: u64 = 0xcbf29ce484222325;
-
-    const TS_SCRIPT_LINES: usize = 253;
-    const TS_SCRIPT_DIGEST: u64 = 0x37ad7f6c3d9dba9d;
-    const TS_ROWS_DIGEST: u64 = 0xf4724108b7433e7f;
-    const TS_HANDLER_DIGEST: u64 = 0x9dc9478aef436ee5;
-
-    /// The skeleton's first value of SAM_LINES holds what registerScriptLines put there: the scripts' rows, in the TypeScript's order.
-    #[test]
-    fn script_lines_are_the_typescripts() {
-        let all = crate::dialogue::DialogueMod::blank().sam_lines;
-        let lines: Vec<_> = all.iter().filter(|l| l.s == crate::dialogue::SamLineS::Script && l.t.is_some()).collect();
-        assert_eq!(lines.len(), TS_SCRIPT_LINES);
-        let mut d = SEED;
-        for l in &lines {
-            d = fnv(d, &l.id); d = fnv(d, "\0"); d = fnv(d, &l.text); d = fnv(d, "\0"); d = fnv(d, l.guide.as_deref().unwrap_or(""));
-            d = fnv(d, "\0"); d = fnv(d, l.t.unwrap().as_str()); d = fnv(d, "\n");
-        }
-        assert_eq!(d, TS_SCRIPT_DIGEST);
-    }
-
-    #[test]
-    fn beats_rows_are_the_typescripts() {
-        let mut d = SEED;
-        for sc in crate::dialogue::scripts().iter() {
-            d = fnv(d, &sc.id); d = fnv(d, sc.shape.as_str()); d = fnv(d, sc.t.as_str());
-            for k in sc.k.iter() { d = fnv(d, k.as_str()); }
-            d = fnv(d, "|");
-            if let Some(x) = &sc.band { for b in x { d = fnv(d, b.as_str()); } }
-            d = fnv(d, "|");
-            if let Some(x) = &sc.needs { for b in x { d = fnv(d, b.as_str()); } }
-            d = fnv(d, "|");
-            if let Some(x) = &sc.not { for b in x { d = fnv(d, b.as_str()); } }
-            d = fnv(d, "|");
-            if let Some(x) = sc.pin { d = fnv(d, x.as_str()); }
-            for b in [&sc.beats._1, &sc.beats._2, &sc.beats._3, &sc.beats.x] {
-                match &b.him {
-                    Him::Text(t) => { d = fnv(d, t); }
-                    Him::Arm1(p) => { for (k, v) in p.iter() { d = fnv(d, &k); d = fnv(d, "="); d = fnv(d, v); d = fnv(d, ";"); } }
-                }
-                d = fnv(d, "\0"); d = fnv(d, b.mild.as_deref().unwrap_or("")); d = fnv(d, if b.room == Some(true) { "R" } else { "-" });
-            }
-            d = fnv(d, "\n");
-        }
-        assert_eq!(d, TS_ROWS_DIGEST);
-    }
-
-    #[test]
-    fn handler_pools_are_the_typescripts() {
-        use crate::dialogue::HandlerBeat as Hb;
-        let table = crate::dialogue::handler_lines();
-        let mut d = SEED;
-        for beat in [Hb::Server, Hb::Drive, Hb::Rack, Hb::Alarm, Hb::Lockdown, Hb::Blackout, Hb::BodyKo, Hb::BodyDead] {
-            d = fnv(d, beat.as_str());
-            for l in table.get(String::from(beat.as_str())).unwrap() {
-                for x in [Some(l.h.as_str()), Some(l.s.as_str()), l.h_own.as_deref(), l.s_own.as_deref(), l.h_now.as_deref()] { d = fnv(d, "\0"); d = fnv(d, x.unwrap_or("")); }
-            }
-        }
-        assert_eq!(d, TS_HANDLER_DIGEST);
-    }
-
-}

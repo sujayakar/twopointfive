@@ -20,7 +20,7 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     crate::condition::rattle(g, c);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[p].hit_flash = 1.0;
-    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, secs);
+    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, secs);
     fold_cancels(g);
     g.stats.samstun.staggered += 1;
 }
@@ -83,7 +83,7 @@ pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
     let (blind, folded) = crate::condition::stun_pose(g, c, live, at);
     g.pl[p].stun_posed = folded || blind;
     if blind { g.cond[c].sup.v = m::max(g.cond[c].sup.v, man_blind(g, p, None)); }
-    if folded { g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.cond[c].fold_until - g.time); }
+    if folded { g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.cond[c].fold_until - g.time); }
 }
 
 #[cfg(test)]
@@ -101,17 +101,19 @@ mod tests {
         g
     }
 
+    /// A failure means the blind screen drops off at once or never clears: he is wholly blind until the last of it, then it eases to nothing at the end.
     #[test]
-    fn the_fade_keeps_the_typescripts_bits() {
+    fn a_dazzle_is_whole_then_fades_over_its_last_moments() {
         let mut g = game();
         let p = g.player;
         g.cond[g.pl[p].ch].blind_until = 11.0;
-        // bun, EXACT on: clamp((11 - 10.7) / Math.max(0.05, 0.6), 0, 1)
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(10.7)).to_bits(), 0x3fe000000000000b);
-        // (11 - 10.97) / Math.max(0.05, 0.6)
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(10.97)).to_bits(), 0x3fa9999999999900);
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(11.0)), 0.0);
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(1.0)), 1.0);
+        let fade = g.k.samstun.fade;
+        let blind = |g: &Game, now| sam_blind(g, &crate::seats::here(g), Some(now));
+        assert_eq!(blind(&g, 1.0), 1.0);
+        assert_eq!(blind(&g, 11.0 - fade - 0.01), 1.0);
+        assert!((blind(&g, 11.0 - fade / 2.0) - 0.5).abs() < 1e-9);
+        assert!(blind(&g, 10.97) > 0.0 && blind(&g, 10.97) < 0.1);
+        assert_eq!(blind(&g, 11.0), 0.0);
     }
 
     #[test]
@@ -164,8 +166,8 @@ mod tests {
         assert!(g.pl[p].stun_posed);
         assert_eq!(g.ch[c].anim.clutch, 1.0);
         assert!(g.ch[c].anim.dazzle.is_none());
-        assert_eq!(g.arms[g.pl[p].ch].fire_cd, 1.5);
-        // blind as well: no clutch, turned away from the flash; bun, EXACT on: (11 - 10.7) / 0.5, and the fade above
+        assert_eq!(g.pl[p].fire_cd, 1.5);
+        // blind as well: no clutch, turned away from the flash, and his nerve goes with the blindness
         g.time = 10.7;
         g.cond[g.pl[p].ch].blind_until = 11.0;
         g.cond[g.pl[p].ch].blind_from = Some([1.0, 2.0, 3.0]);
@@ -173,8 +175,8 @@ mod tests {
         assert_eq!(g.ch[c].anim.clutch, 0.0);
         let dz = g.ch[c].anim.dazzle.expect("a dazzle");
         assert_eq!(dz.from, [1.0, 2.0, 3.0]);
-        assert_eq!(dz.k.to_bits(), 0x3fe3333333333340);
-        assert_eq!(g.cond[g.pl[p].ch].sup.v.to_bits(), 0x3fe000000000000b);
+        assert!((dz.k - 0.3 / 0.5).abs() < 1e-9, "the turn eases off over the last half second: {}", dz.k);
+        assert!((g.cond[g.pl[p].ch].sup.v - sam_blind(&g, &crate::seats::here(&g), None)).abs() < 1e-12);
         // both run out: all of it comes off
         g.time = 20.0;
         sam_stun_pose(&mut g);

@@ -33,7 +33,7 @@ pub fn smoke_between(g: &crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// Is there anything in the air an eye could lose a man in: smoke anywhere, or a picked weather's fog or dust.
 pub fn hazy(g: &crate::game::Game) -> bool {
-    smoky(g) || crate::weather::weather_fog(g).is_some()
+    smoky(g) || g.weather.fog_spec.is_some()
 }
 
 /// HOW MUCH OF THE LIGHT ALONG a → b THE AIR LETS THROUGH (1 = clear): the smoke and the weather's fog and dust, one over the other. What every eye asks, a

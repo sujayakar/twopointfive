@@ -8,7 +8,7 @@ pub use tick::{audio_iface, camera, cmd, effects, env, game, gpu_device, host_ap
 pub mod world;
 pub use world::{ask, floor, levelfit, scene_box_mirror, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
 pub mod air;
-pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, sim_lightshome, sim_weatherhome, smoke_types, snow_blast, snow_bog, snow_marks, weather, weather_kinds, wet, wet_ground, wind};
+pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, snow_marks, weather, weather_kinds, wet, wet_ground, wind};
 pub mod body;
 pub use body::{anim_characters, anim_gltf, anim_skeleton, character, packside, posehome, ragdoll, stealthfeed};
 pub mod outfit;
@@ -22,9 +22,9 @@ pub use stealth::{close, devices, disarm, fogofwar, lightswitch, peeksight, stal
 pub mod fittings;
 pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, sim_doorshome, sim_propshome, sprintdoor};
 pub mod breakage;
-pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, fixture_break, floormess, furnblast, glass, glass_pattern, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sim_fallshome, sim_slabshome, sparks, wallbreak, wallskin, wallwear, winbars};
+pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sim_fallshome, sim_slabshome, sparks, wallbreak, wallskin, wallwear, winbars};
 pub mod missions;
-pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescuecheck, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, takecheck, teamtally, verdict};
+pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescuecheck, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, teamtally, verdict};
 pub mod speech;
 pub use speech::{chronicle, cues, deathrecap, dialogue, doornames, showwhy, squadnet, told, words};
 pub mod squad_orders;

@@ -19,8 +19,8 @@ fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c,
 fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// the mains' two flags, `bo.active` and `bo.permanent`
 fn mains(g: &Game) -> (bool, bool) {
-    let active = crate::sim_lightshome::mains_active(g);
-    let permanent = crate::sim_lightshome::mains_permanent(g);
+    let active = g.light_home.mains.active;
+    let permanent = g.light_home.mains.permanent;
     (active, permanent)
 }
 /// `t.at`, which every arm of the union has
@@ -146,16 +146,15 @@ pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
     let drive = g.mission.stage == crate::game::MissionStage::Drive && g.puppet.is_none();
-    let w = if drive { crate::quiet::quiet_words(g) } else { None };
     let live = !(active && permanent);
     let bp = g.level.breaker.pos;
-    let rf = g.level.mission.rack.front;
+    let rf = g.level.errand.front;
     let key = format!(
         "{}|{}|{}|{}",
         join_v3(bp),
         live,
         if drive { join_v3(rf) } else { String::new() },
-        match &w { Some(w) => w.holder.as_str(), None => "" },
+        if drive { g.level.errand.holder.as_str() } else { "" },
     );
     if let Some(c) = &g.work.cache {
         if c.key == key && g.time >= c.t && g.time - c.t < 1.0 { return; }
@@ -169,21 +168,21 @@ pub fn work_things_keep(g: &mut crate::game::Game) {
     }
     if drive {
         let y = m::min(1.35, m::max(0.9, js::or(rf[1], 1.1)));
-        let sr = &g.level.mission.server_room;
+        let sr = &g.level.errand.area;
         let (x0, x1, z0, z1) = (sr.x0, sr.x1, sr.z0, sr.z1);
-        let mut stand = if w.is_some() { stand_for(g, rf, None, Some(Area { x0, x1, z0, z1 })) } else { stand_for(g, rf, Some([0.0, 0.0, 1.0]), None) };
-        if stand.is_none() && w.is_some() {
+        let mut stand = stand_for(g, rf, None, Some(Area { x0, x1, z0, z1 }));
+        if stand.is_none() {
             let h = crate::quiet::holder_stand(g, rf, Some(crate::quiet::HolderStandArea { x0, x1, z0, z1 }));
             if let (Some(p), true) = (h.pos, h.clear) {
                 if crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH { stand = Some(p); }
             }
         }
         let mut n: V3 = [0.0, 0.0, 1.0];
-        if let (Some(st), true) = (stand, w.is_some()) {
+        if let Some(st) = stand {
             let d = js::or(flat(st, rf), 1.0);
             n = [(st[0] - rf[0]) / d, 0.0, (st[2] - rf[2]) / d];
         }
-        let name = match &w { Some(w) => w.holder.clone(), None => String::from("the rack") };
+        let name = g.level.errand.holder.clone();
         list.push(WorkThing { kind: WorkThingKind::Objective, face: [rf[0], y, rf[2]], n, stand, name });
     }
     g.work.cache = Some(WorkThingsCache { key, t: g.time, list });
@@ -218,17 +217,14 @@ pub fn work_things_words(g: &crate::game::Game, th: &crate::workthings::WorkThin
     if th.kind == WorkThingKind::Breaker {
         return String::from(if mains(g).0 { "turn the power back on" } else { "throw the breaker" });
     }
-    match crate::quiet::quiet_words(g) {
-        Some(w) => format!("take {}", w.thing),
-        None => String::from("pull the drive"),
-    }
+    format!("take {}", g.level.errand.thing)
 }
 
 /// Why that is not there to be done any more (None: it is): the word the man says.
 pub(super) fn work_things_moot(g: &crate::game::Game, th: &crate::workthings::WorkThing, verb: crate::workthings::WorkVerb) -> Option<String> {
     if th.kind == WorkThingKind::Objective {
         if g.mission.stage == crate::game::MissionStage::Drive { return None; }
-        return Some(String::from(if crate::quiet::quiet_words(g).is_some() { "it's already gone." } else { "it's already out." }));
+        return Some(String::from("it's already gone."));
     }
     let (active, permanent) = mains(g);
     if active && permanent { return Some(String::from("it's scrap.")); }
@@ -455,12 +451,11 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
             g.work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
         }
         if verb == WorkVerb::Drive {
-            let w = crate::quiet::quiet_words(g);
             crate::audio_iface::game_audio_like_play(g, "click", Some(th.face), Some(0.8), None);
             crate::audio_iface::game_audio_like_play(g, "magOut", Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
             if !g.mission.hands_on {
                 g.mission.hands_on = true;
-                let text = match &w { Some(w) => format!("hands on {}", w.thing), None => String::from("hands on the drive") };
+                let text = format!("hands on {}", g.level.errand.thing);
                 crate::chronicle::chron_objective(g, &text, Some(th.face));
             }
         }
@@ -487,10 +482,9 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
         WorkVerb::Drive => {
             // the clunk is the rack's, heard as ever: it is not Sam's own noise
             let n0 = g.pl[pl].noise;
-            let w = crate::quiet::quiet_words(g);
             crate::mission::drive_pulled(g);
             g.pl[pl].noise = n0;
-            line = match &w { Some(w) => format!("got {}.", w.bare), None => String::from("got the drive.") };
+            line = format!("got {}.", g.level.errand.thing);
         }
     }
     g.stats.workthings.done += 1;

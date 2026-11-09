@@ -76,37 +76,30 @@ pub fn find_car_lamps(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::
 }
 
 /// The light targets of a level's vehicle lamps: emissive, off the mains, no stagger, no die drawn.
-pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::sim_lightshome::FixtureDef> {
+pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::fixtures::Fixture> {
     let t = &mut g.stats.carlamps;
     t.found = 0; t.head = 0; t.tail = 0; t.lit = 0;
     let (mut heads, mut tails) = (0, 0);
     let found = find_car_lamps(g, boxes);
-    let mut out: Vec<crate::sim_lightshome::FixtureDef> = Vec::with_capacity(found.len());
+    let mut out: Vec<crate::fixtures::Fixture> = Vec::with_capacity(found.len());
     for l in found {
         let b = boxes[l.box_ as usize];
         g.stats.carlamps.found += 1;
         let n = if l.what == FoundLampWhat::HeadLamp { g.stats.carlamps.head += 1; heads += 1; heads } else { g.stats.carlamps.tail += 1; tails += 1; tails };
         if l.lit { g.stats.carlamps.lit += 1; }
         let (c, emissive, albedo) = { let x = seam_box_row(g, b); (x.c, x.emissive, x.albedo) };
-        out.push(crate::sim_lightshome::FixtureDef {
+        out.push(crate::fixtures::Fixture {
             name: alloc::format!("{} {}", l.what.as_str(), n),
             group: String::from(VEHICLE_GROUP),
-            kind: crate::sim_lightshome::FixtureDefKind::Emissive,
+            kind: crate::fixtures::FixtureKind::Emissive,
             pos: [c[0], c[1], c[2]],
-            light: None,
             boxes: vec![l.box_],
             base_emissive: [emissive[0], emissive[1], emissive[2]],
-            base_intensity: 0.0,
             on: l.lit,
-            broken: false,
-            disabled_until: -1.0,
-            fluorescent_flicker: false,
             factor: if l.lit { 1.0 } else { 0.0 },
-            mains: false,
             interactive: true,
-            stagger: 0.0,
-            area_lights: None,
             lens: Some([albedo[0], albedo[1], albedo[2]]),
+            ..crate::fixtures::Fixture::blank()
         });
     }
     out
@@ -114,21 +107,21 @@ pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate
 
 /// A vehicle's lamp: glass a round breaks whether it burns or not.
 pub fn lamp_glass(g: &crate::game::Game, t: FixtureId) -> bool {
-    g.tab.sim_lightshome_fixture[t].group == VEHICLE_GROUP
+    g.tab.fixture[t].group == VEHICLE_GROUP
 }
 
 /// A vehicle's lamp that was dark already: breaking it puts no light out.
 pub fn dead_lamp(g: &crate::game::Game, t: FixtureId) -> bool {
-    let f = &g.tab.sim_lightshome_fixture[t];
+    let f = &g.tab.fixture[t];
     f.group == VEHICLE_GROUP && !(f.base_emissive[0] > 0.0 || f.base_emissive[1] > 0.0 || f.base_emissive[2] > 0.0)
 }
 
 /// A broken lamp's box painted dark, a whole one as the level has it (`lens`): every frame, from the target's own `broken` bit.
 pub(super) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
-    let f = &g.tab.sim_lightshome_fixture[t];
+    let f = &g.tab.fixture[t];
     let (Some(lens), Some(&i)) = (f.lens, f.boxes.first()) else { return };
     let Some(&b) = g.engine.world.statics.get(i as usize) else { return };
-    let broken = crate::sim_lightshome::fixture_broken(g, t);
+    let broken = g.tab.fixture[t].broken;
     let want = if broken { g.k.carlamps.dark } else { lens };
     let albedo = seam_box_row(g, b).albedo;
     if !near3(&albedo, &want, 0.0) {
@@ -141,10 +134,10 @@ pub(super) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim_lightshome::Fixture;
+    use crate::fixtures::Fixture;
 
     fn fixture(g: &mut Game, group: &str, base_emissive: V3) -> FixtureId {
-        g.tab.sim_lightshome_fixture.push(Fixture { group: String::from(group), base_emissive, ..Fixture::blank() })
+        g.tab.fixture.push(Fixture { group: String::from(group), base_emissive, ..Fixture::blank() })
     }
 
     #[test]

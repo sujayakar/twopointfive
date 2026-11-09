@@ -11,9 +11,9 @@ fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes
 
 /// Is the fixture lit, as it stands.
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
-    let on = crate::sim_lightshome::fixture_on(g, t);
-    let broken = crate::sim_lightshome::fixture_broken(g, t);
-    let until = crate::sim_lightshome::fixture_disabled_until(g, t);
+    let on = g.tab.fixture[t].on;
+    let broken = g.tab.fixture[t].broken;
+    let until = g.tab.fixture[t].blind_until;
     on && !broken && !(until > 0.0 && g.time < until)
 }
 
@@ -426,32 +426,43 @@ mod tests {
 
     fn game() -> alloc::boxed::Box<Game> { alloc::boxed::Box::new(Game::blank()) }
 
-    /// The bits of span's arithmetic, printed by the TypeScript's own formula under EXACT.
-    #[test]
-    fn span_is_the_typescripts_bits() {
-        let cases: [(&[(V3, f64)], u64, u64); 3] = [
-            (&[([1.2, 0.5, 0.3], 0.7), ([0.2, 0.5, 2.05], -1.3)], 0xbffd4acb93ae7660, 0x3fe04390d6282ef4),
-            (&[([0.4, 0.1, 0.45], 2.0)], 0, 0),
-            (&[([0.9, 0.1, 0.2], 1.1)], 0x3fd5c5ca051588cd, 0xbfe56393f9220a6a),
-        ];
-        for (rows, x, z) in cases {
-            let (mut best, mut sx, mut sz) = (0.45, 0.0f64, 0.0f64);
-            for &(h, yaw) in rows {
-                if let Some((l, a, b)) = long_side(h, yaw, best) { best = l; sx = a; sz = b; }
-            }
-            assert_eq!(sx.to_bits(), x);
-            assert_eq!(sz.to_bits(), z);
-        }
+    fn spans(rows: &[(V3, f64)]) -> (f64, f64) {
+        let mut g = game();
+        let list: Vec<AnyBoxId> = rows.iter().map(|&(h, yaw)| {
+            let b = g.tab.boxes.push(crate::scene_boxes::Box { h, yaw, ..crate::scene_boxes::Box::default() });
+            AnyBoxId::from(b)
+        }).collect();
+        fog_of_war_span(&mut g, &list, 0.0, list.len() as f64);
+        (g.fog_of_war.span_x, g.fog_of_war.span_z)
     }
 
-    /// A half-metre square is asked once a frame: the second ask takes no test, and the key is the TypeScript's.
+    /// A long thing is seen from either end of its biggest box's long side, 15 cm in from the ends. One under 0.9 m long is seen by its middle alone.
+    #[test]
+    fn a_long_thing_is_seen_by_its_long_side() {
+        assert_eq!(spans(&[([1.2, 0.5, 0.3], 0.0)]), (1.05, -0.0));
+        assert_eq!(spans(&[([0.3, 0.5, 1.2], 0.0)]), (0.0, 1.05));
+        assert_eq!(spans(&[([0.4, 0.1, 0.45], 2.0)]), (0.0, 0.0));
+        let (x, z) = spans(&[([0.9, 0.1, 0.2], 1.1)]);
+        assert!((m::hyp2(x, z) - 0.75).abs() < 1e-12, "turned with the box, and just as long");
+        assert!(x > 0.0 && z < 0.0);
+        // of two boxes, the longer's, in whichever order they come
+        let (a, b) = (([1.2, 0.5, 0.3], 0.0), ([0.2, 0.5, 2.05], 0.0));
+        assert_eq!(spans(&[a, b]), (0.0, 1.9));
+        assert_eq!(spans(&[b, a]), (0.0, 1.9));
+    }
+
+    /// A half-metre square is asked once a frame: another point of the same square takes no test, and a neighbour in either direction is a square of its own.
     #[test]
     fn a_cell_is_asked_once() {
         let mut g = game();
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.2, 7.6));
         assert_eq!(g.fog_of_war.thing_stats.tests, 1.0);
-        assert!(g.fog_of_war.cell_seen.has(crate::Num(f64::from_bits(0x418ff28078000000))));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.6, 7.9));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 2.0);
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 8.1));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 3.0);
     }
 
     /// The men the fog leaves out are not on the list to draw; the rest keep the order they were given.
@@ -468,7 +479,7 @@ mod tests {
     #[test]
     fn a_lamp_is_first_known_as_it_stands() {
         let mut g = game();
-        let t = g.tab.sim_lightshome_fixture.push(crate::sim_lightshome::Fixture::blank());
+        let t = g.tab.fixture.push(crate::fixtures::Fixture::blank());
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert_eq!(g.fog_of_war.lamp_recs.get(t).copied(), Some(true));

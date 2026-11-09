@@ -859,7 +859,7 @@ fn wall_charge_sam_caught(g: &mut crate::game::Game, pl: PlayerId, k: f64, from:
     crate::character::anim_hit_from(g, c, Some(along));
     g.pl[pl].hit_flash = m::max(g.pl[pl].hit_flash, k);
     let (ss, sup) = (g.k.wallcharge.sam_secs, g.k.wallcharge.sam_sup);
-    g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, v3::lerp(ss[1], ss[0], k));
+    g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, v3::lerp(ss[1], ss[0], k));
     g.cond[g.pl[pl].ch].sup.v = m::max(g.cond[g.pl[pl].ch].sup.v, v3::lerp(sup, 1.0, k));
     g.cond[g.pl[pl].ch].sup.kick = m::max(g.cond[g.pl[pl].ch].sup.kick, k);
 }

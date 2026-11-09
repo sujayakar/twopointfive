@@ -341,19 +341,13 @@ mod tests {
         crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::default() }
     }
 
-    /// bits from the TypeScript's own line under bun with EXACT.on
+    /// A mate on the line of fire from a blown wall. A failure means a man past the end of the line counts as on it.
     #[test]
-    fn near_seg_has_the_typescripts_bits() {
-        let rows: [(V3, V3, V3, u64); 5] = [
-            ([1.3, 0.0, 2.7], [0.1, 0.0, 0.2], [5.9, 0.0, -3.3], 0x40062f4726276cc9),
-            ([-7.25, 1.0, 3.125], [0.1, 0.0, 0.2], [0.1, 0.0, 0.2], 0x401fa47d26daf9af),
-            ([9.1, 0.0, 9.2], [0.0, 0.0, 0.0], [1.1, 0.0, 0.7], 0x40275861532b8544),
-            ([-4.4, 0.0, 0.3], [-3.3, 0.0, 1.7], [2.2, 0.0, -6.6], 0x3ffb0b672582b9e9),
-            ([0.2, 0.0, 0.4], [0.0, 0.0, 0.0], [0.4, 0.0, 0.8], 0x0000000000000000),
-        ];
-        for (q, a, b, bits) in rows {
-            assert_eq!(near_seg(q, a, b).to_bits(), bits);
-        }
+    fn a_point_is_off_a_line_only_as_far_as_the_line_goes() {
+        let (a, b): (V3, V3) = ([0.0, 0.0, 0.0], [4.0, 0.0, 0.0]);
+        assert_eq!(near_seg([2.0, 1.0, 0.5], a, b), 0.5);
+        assert_eq!(near_seg([7.0, 0.0, 4.0], a, b), 5.0);
+        assert_eq!(near_seg([3.0, 0.0, 4.0], a, a), 5.0);
     }
 
     #[test]

@@ -906,7 +906,7 @@ mod tests {
         });
     }
 
-    /// the trail takes a crumb every `crumb` metres, on the floor, and keeps `trailM` metres of them
+    /// the trail takes a crumb every `crumb` metres, on the floor, and keeps `trail_m` metres of them
     #[test]
     fn crumb_spaces_and_trims() {
         run(|g| {
@@ -916,7 +916,7 @@ mod tests {
             squad_orders_crumb(g, [0.3, 1.5, 0.0], &[]);   // short of a crumb: nothing
             assert_eq!(g.orders.trail.len(), 1);
             for i in 1..6 { squad_orders_crumb(g, [0.5 * i as f64, 1.5, 0.0], &[]); }
-            // (the walk back from the newest passes 1 m at the third crumb; splice(0, i - 1) keeps one crumb past it)
+            // (the walk back from the newest passes 1 m at the third crumb, and one crumb past it is kept)
             assert_eq!(g.orders.trail.iter().map(|q| q[0]).collect::<Vec<_>>(), vec![1.0, 1.5, 2.0, 2.5]);
             assert_eq!(g.orders.trail[0][1], 0.0);   // (on the floor, whatever his height)
         });

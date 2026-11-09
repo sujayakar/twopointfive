@@ -223,19 +223,16 @@ mod tests {
         crate::throwables::ThrowSolution { v0, land, ..crate::throwables::ThrowSolution::default() }
     }
 
+    /// A failure means a smoke is judged by where its can lands, where it goes off is further on: a lane is filled that the can never reached.
     #[test]
-    fn rest_has_the_typescripts_bits() {
-        for (from, v0, land, roll, want) in REST {
-            let r = squad_smoke_rest(*from, &sol(*v0, *land), *roll);
-            for i in 0..3 { assert_eq!(r[i].to_bits(), want[i], "{:?} {}", from, i); }
-        }
+    fn a_can_runs_on_past_its_landing_along_its_throw_the_further_the_harder_it_came_down() {
+        let near = |a: V3, b: V3| assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-12), "{a:?} {b:?}");
+        let land: V3 = [6.0, 0.0, 1.0];
+        let came_down = m::sqrt(2.0 * crate::throwables::GRAVITY * 5.0);
+        near(squad_smoke_rest([0.0, 5.0, 0.0], &sol([4.0, 0.0, 0.0], land), Some(0.02)), [6.0 + 4.0 * 0.02 * came_down, 0.0, 1.0]);
+        // thrown up as well as along: the same drop, and more to come down from
+        assert!(squad_smoke_rest([0.0, 5.0, 0.0], &sol([4.0, 3.0, 0.0], land), Some(0.02))[0] > squad_smoke_rest([0.0, 5.0, 0.0], &sol([4.0, 0.0, 0.0], land), Some(0.02))[0]);
+        near(squad_smoke_rest([0.0, 5.0, 0.0], &sol([4.0, 0.0, 3.0], land), Some(0.0)), land);    // no roll: where it landed
+        near(squad_smoke_rest([0.0, 0.0, 0.0], &sol([4.0, 0.0, 0.0], [6.0, 1.0, 1.0]), Some(0.02)), [6.0, 1.0, 1.0]);    // set down on something higher: no run at all
     }
-
-    const REST: &[(V3, V3, V3, Option<f64>, [u64; 3])] = &[
-        ([1.3, 1.6, -2.7], [3.1, 4.2, -5.5], [6.2, 0.02, -9.9], None, [0x401e134658ef2aa8, 0x3f947ae147ae147b, 0xc0287acd44fbcd7a]),
-        ([0.0, 1.3, 0.0], [8.9, 1.1, 0.3], [7.77, 0.0, 0.33], None, [0x402526f89febef44, 0x0000000000000000, 0x3fdb2c73d8560c8e]),
-        ([-4.25, 0.9, 11.1], [-1.7, -6.3, 8.8], [-5.5, 0.1, 12.34], Some(0.04), [0xc0180636b376779e, 0x3fb999999999999a, 0x402deb56c3d7aa74]),
-        ([2.0, 0.5, 2.0], [0.1, -0.2, 0.3], [2.1, 3.0, 2.2], None, [0x4000cccccccccccd, 0x4008000000000000, 0x400199999999999a]),
-        ([10.1, 1.25, 3.3], [2.2, 5.5, -1.1], [13.3, 0.035, 1.9], Some(0.02989), [0x402b91360ee13e27, 0x3fa1eb851eb851ec, 0x3ffa87f49147d430]),
-    ];
 }

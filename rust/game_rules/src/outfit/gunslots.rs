@@ -119,7 +119,7 @@ pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     s.lock = now + out;
     s.shots = shots;
     g.stats.gunslots.out += 1;
-    g.arms[g.gd[gd].ch].fire_cd = 0.0;
+    g.gd[gd].fire_cd = 0.0;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     crate::audio_iface::game_audio_like_play(g, "equip", Some(pos), Some(0.45), None);

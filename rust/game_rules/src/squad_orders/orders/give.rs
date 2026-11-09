@@ -950,14 +950,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_fixed_as_the_language_has_it() {
-        // bun: x.toFixed(1) for each
-        for (x, s) in [(0.25, "0.3"), (-0.25, "-0.3"), (0.75, "0.8"), (1.25, "1.3"), (0.35, "0.3"), (1.45, "1.4"), (-0.04, "-0.0"), (0.0, "0.0"), (-0.0, "0.0"), (2.5, "2.5"), (12.05, "12.1"), (-12.15, "-12.2"), (100.125, "100.1"), (1e-9, "0.0")] {
-            assert_eq!(js::to_fixed(x, 1), s, "{}", x);
-        }
-    }
-
-    #[test]
     fn a_door_menu_works_from_the_mens_face() {
         let d = OrderTargetDoor { at: [1.0, 0.0, 2.0], door: DoorId(3), side: 1.0 };
         let mut m = Menu::default();

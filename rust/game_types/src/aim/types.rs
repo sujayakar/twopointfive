@@ -3,14 +3,6 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// A MAN BEHIND A GUN, whoever he is
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct Arms {
-    pub aim: crate::aim::AimState,
-    /// seconds until he may fire again
-    pub fire_cd: f64,
-}
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AimState {
     pub track: f64,

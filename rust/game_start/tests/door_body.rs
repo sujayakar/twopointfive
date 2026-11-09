@@ -23,7 +23,7 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw);
     let t0 = p.g.time;
     let m = &mut p.g.gd[gd];
-    (m.state, m.awareness, m.react_t, p.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, p.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(game::game::Foe::Player));
+    (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, p.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(game::game::Foe::Player));
     m.path.clear();
     m.path_goal = None;
     let (mut first, mut last_shot, mut opened, mut spell, mut worst) = (None, t0, false, 0.0f64, 0.0f64);

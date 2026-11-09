@@ -151,9 +151,8 @@ fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn
 }
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
-fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let st = crate::sim_lightshome::light_home_block(g);
-    let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
+fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -189,13 +188,13 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
-    crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
+    crate::guards::SteadyLamps::LampRows(rows_of(true, 0.0))
 }
 
 /// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
 fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
     let shade = crate::sense::smoky(g);
-    let rows = rows_of(g, steady_only, leave);
+    let rows = rows_of(steady_only, leave);
     crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
     write_lamps(g, Some(p), skip_owner, steady_only);
     crate::scene_collision::lamps_on(g, acc);
@@ -264,7 +263,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
             }
             mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
-            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             lost_man = true;
         }
     }
@@ -291,7 +290,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
             crate::mind::foe(g, gd, Some(b), "guards");
-            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None); }
             return;
         }
@@ -489,7 +488,7 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
         Some(b) => g.time - b.t,
         None => 0.0,
     };
-    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, cd - since);
+    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, cd - since);
 }
 
 /// The trigger of a row with a BurstSpec, asked once a frame at the alert branch's fire site.
@@ -505,7 +504,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         if g.time - b.t > dt * 1.5 + 1e-6 { burst_end(g, gd, w, BURST_BROKEN_CD); }
     }
     if g.fa[w].burst.is_none() {
-        if !start_ok || g.arms[g.gd[gd].ch].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
+        if !start_ok || g.gd[gd].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
         let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
