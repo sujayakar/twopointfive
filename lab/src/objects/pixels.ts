@@ -17,8 +17,9 @@ export function shown(p: Pic, k: number): Float32Array { const o = new Float32Ar
 export const quantile = (v: ArrayLike<number>, q: number) => { const s = Float32Array.from(v).sort(); return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * q))]! : 0; };
 /** real time against the reference, on the object: the middle pixel's share off, and the stops its mean is off by */
 export function look(rt: Pic, ref: Pic, m: Mask): { off: number; stops: number; map: Float32Array } {
-  const a = soft(rt, m.w, m.h), b = soft(ref, m.w, m.h), n = m.w * m.h, map = new Float32Array(n), v: number[] = []; let mean = 0, A = 0, B = 0; for (let i = 0; i < b.length; i++) mean += b[i]!; const fl = mean / b.length * 0.02 + 1e-5;
-  for (let i = 0; i < n; i++) { const o = i * 3, d = (Math.abs(a[o]! - b[o]!) + Math.abs(a[o + 1]! - b[o + 1]!) + Math.abs(a[o + 2]! - b[o + 2]!)) / (b[o]! + b[o + 1]! + b[o + 2]! + 3 * fl); map[i] = d; if (m.fill[i]! > 0.5) { v.push(d); A += lum(rt, i); B += lum(ref, i); } }
+  const a = soft(rt, m.w, m.h), b = soft(ref, m.w, m.h), n = m.w * m.h, map = new Float32Array(n), v: number[] = [], la: number[] = [], lb: number[] = []; let mean = 0, A = 0, B = 0; for (let i = 0; i < b.length; i++) mean += b[i]!; const fl = mean / b.length * 0.02 + 1e-5;
+  for (let i = 0; i < n; i++) { const o = i * 3, d = (Math.abs(a[o]! - b[o]!) + Math.abs(a[o + 1]! - b[o + 1]!) + Math.abs(a[o + 2]! - b[o + 2]!)) / (b[o]! + b[o + 1]! + b[o + 2]! + 3 * fl); map[i] = d; if (m.fill[i]! > 0.5) { v.push(d); la.push(lum(a, i)); lb.push(lum(b, i)); } }
+  /* (a few sparks of the reference's paths do not speak for the whole) */ const most = 4 * quantile(lb, 0.9); for (let i = 0; i < la.length; i++) { A += Math.min(la[i]!, most); B += Math.min(lb[i]!, most); }
   return { off: 100 * quantile(v, 0.5), stops: Math.log2((A + 1e-9) / (B + 1e-9)), map };
 }
 /** exact distances (pixels of the fine grid) to the nearest 1 */
