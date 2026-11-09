@@ -15,10 +15,10 @@
 // A MAP THREAD COPIES tools/levels/block.ts (a real map) or this file (the smallest that passes): `build()` returns the Level, the scenarios block and the
 // editor groups; `bun run tools/levels/export.ts <name>` writes levels/<name>.json; `levels stands <name>` says whether it holds.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';

@@ -9,8 +9,8 @@
 //   staff room    1 man, lit: a hall door under the hall's one lit panel, and an east door whose stack stands in a street lamp's light in front of a glass
 //                 sidelight. The hall door wants a bang; the back door is worse than it looks until the lamp is dealt with.
 //   the hall      20 × 4 m: three room doors and the fire exit, so a pair on one door has one open flank to cover.
-// Built from the old demo's kit (scene/levelKit.ts: the office's walls, glass, doors, furniture, lights); what stands in the yards with the lived-in rooms on
-// is laid from the look's library (scene/gwotKit.ts) by name. The building stands inside the rectangle the
+// Built from the old demo's kit (lib/levelKit.ts: the office's walls, glass, doors, furniture, lights); what stands in the yards with the lived-in rooms on
+// is laid from the look's library (lib/gwotKit.ts) by name. The building stands inside the rectangle the
 // office's building stood in (x 4‥36, z 4‥24), so the constants that still assume that footprint (weather's INTERIOR, the footstep map) treat it as indoors.
 // Plan, +x east, +z south, metres:
 //
@@ -38,11 +38,11 @@
 // staff's trodden way round the west side to the back door, the back lane's bed and ruts along the north, a drain down the west, damp where the roofs shed.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
+import type { Level } from './lib/level';
 import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
-import * as K from '../../src/scene/levelKit';
-import { gwotKit, gwotOfKit, GWOT_MATERIALS } from '../../src/scene/gwotKit';
-import { feetOn } from '../../src/scene/carShapes';
+import * as K from './lib/levelKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
+import { feetOn } from './lib/carShapes';
 import { livedPieces, INK, h01 } from './livedPieces';
 import { drawnAs, madeOf, KERB_GREY } from '../../src/scene/stuff';
 import { GWOT_PALETTE } from '../../src/scene/gwotPalette';
@@ -256,14 +256,14 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 33.5, 10.0, 'street_lamp_east', [-1, 0, 0]);     // off the east wall: it lights the stack on the staff room's east door, in front of that door's sidelight
   K.moon(k);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A district land office, and its things are the surveyor's: red and white ranging rods, tripods, maps rolled and unrolled, pegs. Each room by what only it has —
   // the front office is the PUBLIC's (the claims ledge, ink, forms: clean), records the PLAN BOOKS (open on a lectern at each end of the island, plan chests under the
   // window), the strong room the DEED VAULT (the steel safe; black deed tins with buff lids), the staff room the FIELD's (the drawing board, the theodolite
   // on its legs, rods on the wall, a map held down with mugs, wet boots). The hall stays bare. Nothing stands on a sight line the look draws (TRAVERSE below)
   // or on its chain round the building; nothing lies on a surface the dressing deals on (tools/levels/dress.ts) but the staff table's maps, laid between its things.
   { const P = livedPieces({ add: b => K.add(k, b), grp: n => K.grp(k, n), prop: (...a) => K.prop(k, ...a) }, C), W = Math.PI / 2, E = -Math.PI / 2, S = Math.PI;
-    const G = gwotKit(gwotOfKit(k, K));   // (the library's pieces, src/scene/gwotKit.ts: what stands in the yards is laid from it by name, in its own paint)
+    const G = gwotKit(gwotOfKit(k, K));   // (the library's pieces, lib/gwotKit.ts: what stands in the yards is laid from it by name, in its own paint)
     // front office — the CLAIMS OFFICE: a plan chest behind the duty desk, the ledge the public write their claims at on the west wall
     P.room('front');
     P.floor(13.5, 19.72, 6.6, 5.2, C.carpetBlue, 0.014, 0.006);                    // the public office's own carpet, wall to wall (under the look's lines)
@@ -391,7 +391,7 @@ const SKIN: Skin = {
   wall: 'paintCream', house: 'paintCream', inner: 'whitewash', frameOut: 'iron', frameIn: 'poplar', dado: 'truckTan',
   // WHAT THE GENERATOR'S OWN COLOURS ARE: car paint and dark glass on the two cars (a grey body cannot wear the white truck paint: a pale grey stands for
   // steel to a blast and the car was not), precast concrete for the kerbs, cloth for the old kit's sofa (its grey sat near enough a darkened slab to be drawn
-  // as concrete), cinders under the burn drum, coir where the readers stand. ([0.07, 0.08, 0.1] is scene/levelKit.ts's own: its car's cabin.)
+  // as concrete), cinders under the burn drum, coir where the readers stand. ([0.07, 0.08, 0.1] is lib/levelKit.ts's own: its car's cabin.)
   own: [[RECORDS_PAINT.carLot, 'truckTan'], [RECORDS_PAINT.carYard, 'truckRed'], [[0.07, 0.08, 0.1], 'glassDark'], [RECORDS_PAINT.kerb, 'tWall'], [RECORDS_PAINT.sofa, 'blanketBrown'],
     [RECORDS_PAINT.ash, 'gravel'], [RECORDS_PAINT.coir, 'coyote']],
   floor: { lino: 'slab', carpet: 'canvas' }, metals: ['olive', 'galv', 'iron'], patches: 0,   // (no patches: one lay over the chain line)

@@ -31,7 +31,7 @@
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
 // bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/floor's, the OFFICE's rectangles in code, whatever level
 // is loaded: the floors below are painted for the picture, a step here sounds as the office's floor at that spot does.
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
 //
 // THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
 // decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
@@ -39,15 +39,15 @@
 // is the public's way (the gallery to the counter and the registrar's door: the fast line), the blue line the clerks' (the serpentine through the stacks to the
 // sorting room: the long one) — the level's one decision, painted on its floor.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
@@ -298,7 +298,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A provincial records office, and its things are the clerk's: open folios, pigeonholes, taped bundles, sacks. Each room by what only it has — the lobby is the
   // PUBLIC's (a writing desk island with trays of pink, yellow and white forms), the reading room the READERS' (green-shaded lamps down the table, a card catalogue
   // with its drawers pulled), the copy room MACHINES (a sorter's comb, a guillotine, white reams banded blue, toner on the floor), the hall the COUNTER's three worn

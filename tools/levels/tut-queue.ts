@@ -32,11 +32,11 @@
 //   bun run tools/qa/pages.ts tut-queue-page                      the page with real keys through every step
 //   page: ?levelFile=tut-queue.json&roomclear=1&squad4
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -276,7 +276,7 @@ export function build() {
 
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE GROUND OUTSIDE THE WALL. The yard was furnished as it was built; the plain round it was one sheet of dust but for the two checkpoints, and the mission
   // opens beside the track gate with about a quarter of its picture on that sheet, in the last light. The track gate gets what the other two gates have, a
   // checkpoint, here one the post has stopped manning: whitewashed stones down both sides of the way in, its two barriers dragged off the track to let

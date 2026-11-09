@@ -47,7 +47,7 @@
 //
 // ITS OWN SHELL (as the compound has): a walled yard, three roofs. Nothing of the office's stair tower or fire exit is here.
 // NO BREACH PLAN: there is no F drill — all four teammates are the order menu's from the first frame (the structure's `team` says where they start).
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
 //
 // THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
 // decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
@@ -56,15 +56,15 @@
 // has no door beside it — C the store), the yard has its parking bays, the stop line at the gate and a keep-clear box at the store's hatch, the bay its
 // inspection pit. No green, no mud.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
@@ -346,7 +346,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['a_s', 'b_n', 'c_n', 'duty', 'battery_to_yard', 'generator_to_park', 'bay_to_yard']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…' — the loader leaves them all out
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…' — the loader leaves them all out
   // with the switch off, and then this is the depot above, box for box). What makes each space ITS place, as the office's rooms are: a motor pool and its signals
   // hut. Rules kept: nothing solid within 1.1 m of a door's line or in a leaf's sweep, nothing solid on the wall a file stacks on beside a jamb, nothing on a
   // mark or a start or over 1.1 m across a mark's line to its door or out of its window, the lanes between doors bare. No light, nothing lit.
@@ -458,7 +458,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (let k = 0; k < 3; k++) L.thing(32.6, 0.05 + k * 0.09, 4.3 + k * 0.08, 2.2, 0.035, 0.035, PALE);           // spare mast sections along the north wall
 
     // ---- OUTSIDE THE WALL — the road past the main gate and the track round the wall: scrub nobody cuts, stones off the track, what was dumped over the
-    // wall. Laid with the look's own kit (src/scene/gwotKit.ts: its paints are the look's materials). Nothing here stands inside the wall, where every
+    // wall. Laid with the look's own kit (lib/gwotKit.ts: its paints are the look's materials). Nothing here stands inside the wall, where every
     // metre of cover is the level's problem; outside it nothing is taller than a crouched man's knee but the scrub, and nothing is on or beside a start.
     L.room('road');
     { const G = gwotKit({ ...gwotOfOffice(K), prop: (...a) => { K.prop(...a); return L.own(a[0] === 'plant' ? 'scrub' : a[0]); } });

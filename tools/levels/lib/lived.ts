@@ -1,6 +1,6 @@
 // LIVED-IN ROOMS (the levels goal; the maintainer, 10-10: "the office level is awesome and it has a lot of personality per room, we should makes sure all levels are
 // like that"): the furniture, clutter, floor pieces, loose props and lamps that make a room of another level ITS room, as the office's rooms are — a bunk room's
-// bunks, a radio room's bench, a tyre store's stacks. They ride in the level FILE under one name and the loader (scene/levelLoad.ts) leaves them out with the switch
+// bunks, a radio room's bench, a tyre store's stacks. They ride in the level FILE under one name and the loader (levelLoad.ts) leaves them out with the switch
 // off, so every other box, prop, light and fixture keeps its index and the level is the one it was before there were any:
 //   a BOX whose editor group is 'lived' or starts 'lived.' ('lived.<room>')   ·   a PROP, LIGHT or SWITCHABLE whose id starts 'lived.'
 // ONE SWITCH. OFF in this module; the PAGE turns it on at boot before the

@@ -59,11 +59,11 @@
 //   · A CAMERA sees only what is lit (rust/game_rules/src/devices): the lamp over the door is what feeds it. Both are on the mains.
 //   · THE WORLD is 40 × 28 m (scene/world.ts): the yard is as big as that leaves a road on either side of it.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, DeviceDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef, DeviceDef } from './lib/level';
 import type { LevelScenarios, LessonData, QuietData, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -336,7 +336,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [id, m] of [['office', TP.door], ['gate_e', TP.gate]] as const) { const d = doors.find(x => x.name === id)!, c = [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2];
     if (Math.hypot(c[0] - m[0], c[1] - m[2]) > 0.03) throw new Error(`tut-pair: door '${id}' is fitted with its middle at ${c[0].toFixed(2)}, ${c[1].toFixed(2)}, and TP has it at ${m[0]}, ${m[2]}`); }
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
   // OUTSIDE THE WALL ONLY. Inside it every piece is the lesson's: a shadow the two work along, a line a man has or has not, a pool of light to walk round
   // (WHY THE PIECES STAND WHERE THEY DO, at the head), so nothing is added there and no lamp anywhere. What was bare is the ground the yard stands on: the
   // road they came by and the strips behind the north and east walls, each one sheet of dust. Decals and walk-over stones, but for the two drums and the

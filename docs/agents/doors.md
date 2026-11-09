@@ -112,7 +112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TPS_CHAIRROLL=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off): a prop of kind `chair` coasts on rolling
   resistance in place of `KIND.chair`'s 1.6 / 0.5, and raises PropEvent sound `'roll'` (`roll: 'start' | 'stop'`, level 0: nobody hears it, nothing plays, `Game.onPropEvent` returns on it).
   `bun run tools/qa/chair-roll-check.ts` (`CHAIRROLL_BREAK=1` must fail; `--doors` = tools/qa/door-chair.ts with the castors on). Never seen moving.
-- **Every door is real size** (`src/scene/doorSize.ts`, `DOOR_SIZE {gap 0.9, head 2.05, slotMax 1.3, cell 0.5, reach 0.1}`; the maintainer: "having it feel realistic here would be
+- **Every door is real size** (`tools/levels/lib/doorSize.ts`, `DOOR_SIZE {gap 0.9, head 2.05, slotMax 1.3, cell 0.5, reach 0.1}`; the maintainer: "having it feel realistic here would be
   good"; page rebuild/doors-real-size/read-first.md). NO SWITCH: the size is in the level files. The generators still draw 1.2 m DOOR SLOTS (`{ a, b: a + 1.2 }`, a
   leaf `width: 1.16`); the kits' wall and frame functions (officeGen.ts officeKit, levelKit.ts) pass every slot through `fitSlot / fitOpening / fitDoorDef / fitDoors`, which hang a
   0.9 m by 2.05 m doorway (leaf 0.86 by 2.01, 0.83 m of air between the stops) INSIDE the slot with its MIDDLE ON A WALK-GRID CELL CENTRE (a cell centre in a frame is free only

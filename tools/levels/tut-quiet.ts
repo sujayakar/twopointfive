@@ -81,11 +81,11 @@
 // every mark the lesson and its scripted player name (TQ). What is new is the place they stand in.
 import type { Vec3 } from '../../src/math/vec';
 import type { IssueData, LessonData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
-import type { DeviceDef, Level, LevelDoorDef } from '../../src/scene/level';
-import type { SurfacesData } from '../../src/scene/levelData';
+import type { DeviceDef, Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import { BoxFlag } from '../../src/scene/boxes';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS, GW_SHELL, type GwotMat, type WallKind } from '../../src/scene/gwotKit';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS, GW_SHELL, type GwotMat, type WallKind } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { livedTail } from './livedKit';
@@ -592,7 +592,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
   // THE TOWN'S EAST SIDE, which was one bare sheet of snow from the neighbour's wash line to the map's corner (level-needs `ground`: 126 m²). Both places are
   // PAST THE YARD'S WALL, which stands 2.47 m and has no gate on that side: no man of the shop has a line to them and no way leads from them into the yard.
   // (A player can walk there, out by the street gate and round the back of the town; no line of the lesson sends him.) No lamp is added. What a guard sees,

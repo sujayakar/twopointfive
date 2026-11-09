@@ -20,7 +20,7 @@
 // strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). A commander that hunts him
 // ended 48 of 48 runs. ON THE BUILD OF 3752969b (10-14) the default is seeds 0,1,2,3 (0 = the level's own marks) and the four
 // takes the floor on all four (seed 2 at 51.8 s, one teammate up); the pair is wiped on 0, 1 and 2 and takes it on 3, which the probe does not ask of it.
-// Built from the kit (scene/levelKit.ts). Plan, +x east, +z south, metres:
+// Built from the kit (lib/levelKit.ts). Plan, +x east, +z south, metres:
 //
 //        x=4     x=9         x=16    x=22      x=27.5 x=31    x=36
 //   z=4  +=======================================================+   the compound wall, 2.6 m
@@ -45,12 +45,12 @@
 // metres the level is about — and it lies the same whichever way the team comes in. No letters or numbers at doors, no bays, no lanes.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
+import type { Level } from './lib/level';
 import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
-import { gwotKit, gwotOfKit, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, madeOf, saidAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
@@ -217,7 +217,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   }
   K.moon(k, undefined, 0.04);                                                       // an overcast night (see the head)
 
-  // ---------------- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A fuel post run by seven men off one generator, and each room is what its men do there: the guard room is where they SLEEP (coats on the wall, boots by
   // the cots, the tea chest and its kettle), the hall is the POST's (fire buckets, the waterproofs by the door they go out of), the radio room has the MAST's
   // spare sections on the wall and the battery crate, the store the SACKS and the bucket, the shed the GENERATOR's (the can crate, a funnel bucket, overalls).
@@ -263,7 +263,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.room('yard');
     P.cone(17.9, 23.5); P.cone(22.1, 23.5);                                         // inside the gate, off its opening
     for (const [n, x, sx] of [['w', 18.38, -1], ['e', 21.62, 1]] as const) lamp(`lived.yard.gate_lamp_${n}`, x, 2.46, 24.16, [0.75 * sx, -0.45, 0.35], 17, 16, 70, [1.0, 0.75, 0.45]);
-    // THE FUEL POST'S OWN THINGS, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round), all of them against a wall or outside it: the open
+    // THE FUEL POST'S OWN THINGS, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round), all of them against a wall or outside it: the open
     // ground between the gate and the door stays open. The EMPTIES are dumped in the dead east end, where the east floodlight rakes them; the pickup's two
     // spares lie by its tail; the generator's own drum stands in the shed, off the door's line and off the place the breaker is thrown from; and the stones
     // turned out of the gateway lie at the foot of the wall either side of it, under the gate lamps.

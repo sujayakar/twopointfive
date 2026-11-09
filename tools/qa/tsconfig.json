@@ -8,6 +8,8 @@
   "include": [
     "./**/*.ts",
     "../mp/**/*.ts",
+    "../levels/**/*.ts",
+    "../level-export.ts",
     "./types/**/*.d.ts",
     "../../types/**/*.d.ts"
   ]

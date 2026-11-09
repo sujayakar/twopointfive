@@ -1254,7 +1254,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   0.1 → 0.21, 0.04 → 0.07‥0.13). So outside the wall there was the sky's even fill and nothing else: no pool, no shadow, wall, ground and men one grey.
   THE MEND keeps the moon and adds light that DIES WITH THE MAINS: a bulkhead lamp on the outer face of each gate post (`lived.yard.gate_lamp_w` / `_e`,
   a spot at 17 thrown out and along the wall away from the gate) and one over the shed's door (`lived.shed.door_lamp`, 30), group 'exterior' like the
-  floodlights, each with a lived fixture box that can be shot out. The first lived LIGHTS in any level (`scene/lived.ts` has always taken them): no new
+  floodlights, each with a lived fixture box that can be shot out. The first lived LIGHTS in any level (`tools/levels/lib/lived.ts` has always taken them): no new
   base in `lived-check` (ALL PASS as it stands), the frozen stand's level is the file it was. THE GATE LAMPS ARE HELD UNDER THE GOGGLES' LINE: at 50 the
   five start marks read 0.29‥0.62 across `NVG.darkAt` 0.5 and the team stood up half goggled; at 17 they read 0.07‥0.40 (0.17‥0.42 with the moon), Sam's
   0.25, and all four stand up goggled as before. Lit by them too, not only the start: the outside of both gate jambs, the walk along the wall, and (the shed's
@@ -1575,7 +1575,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `mousehole-gwot.ts`; no switch of its own: the lived things ride the lived switch, `?lived=0` on the page and off on the frozen stand, and the
   paint is the look twin's). The level had no lived tier. It has one now and it is the clinic's OUTSIDE (`lived.yard`, `lived.side`,
   `lived.lot`): the burn drums, their wood and the washing in the back yard, the generator's fuel and what a clinic throws out on the
-  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `src/scene/gwotKit.ts` laid by name through
+  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `tools/levels/lib/gwotKit.ts` laid by name through
   `gwotOfKit`; nine of them are round things the round rule finds (with the lived switch on; none with it off). THE RULE IT KEEPS, WHICH NO
   CHECK HOLDS: every outer wall of the clinic takes a wall charge wherever it is asked, and the setter's spot and the stand-off posts
   are the ground at the wall's foot, so no lived solid stands within 2 m of an outer wall's face (stones a foot steps over may). The

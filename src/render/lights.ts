@@ -4,7 +4,7 @@ import { makeBuffer } from '../gpu/device';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
 import { lightDayK } from './photometry';
 
-/** a light as a level's own list holds it (scene/level.ts takes it from here) */
+/** a light as a level's own list holds it (tools/levels/lib/level.ts takes it from here) */
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
   pos: Vec3; dir: Vec3;

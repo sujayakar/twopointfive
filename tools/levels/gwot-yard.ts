@@ -1,4 +1,4 @@
-// GWOT-YARD: the GWOT kit's SHOWROOM (src/scene/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
+// GWOT-YARD: the GWOT kit's SHOWROOM (lib/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
 // a two-room guest house, a rendered store, a yard and the road outside, with EVERY piece of the kit stood in it once, so the kit can be exported, linted,
 // looked at once. It has no file of its own now. It is the kit's worked example: a map thread reads this file next to the guide
 // (rebuild/play-style-levels/look/read-first.md) and copies the calls.
@@ -13,17 +13,17 @@
 //   z 22 └───────────────[ the gate ]───────┴──────────────────┘      the vehicle gate (south wall, x 18.5‥21.5): two leaves standing open
 //           stalls ·  hesco      the road: gravel, barriers, a technical
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'gwot-yard';
-export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every piece of src/scene/gwotKit.ts in it once. It has no file: the library asks this generator';
+export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every piece of tools/levels/lib/gwotKit.ts in it once. It has no file: the library asks this generator';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;
 

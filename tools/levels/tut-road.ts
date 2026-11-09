@@ -29,17 +29,17 @@
 //   bun run tools/qa/pages.ts tut-road-page                      the page with real keys through every step to the debrief
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape, pickupLens, coated } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import { glowShape, pickupLens, coated } from './lib/carShapes';
+import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
-import { carLampsIn } from '../../src/scene/carLamps';
+import { carLampsIn } from './lib/carLamps';
 import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from './tutRoadMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
@@ -294,7 +294,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('convoy.tanker');
   // THE TANKER: it took the post's corner and the rail, and stands across the whole road from the hut's wall to over the edge, its cab burning out past the
   // rail. Nobody passes it on the road: the way on is through the hut. A skirt to the ground along its length (nothing is seen or shot under it)
-  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = coated(M.paintCream);   // (a tanker's tank is a vehicle's painted body, not the wall its cream is elsewhere: scene/carShapes.ts)
+  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = coated(M.paintCream);   // (a tanker's tank is a vehicle's painted body, not the wall its cream is elsewhere: lib/carShapes.ts)
     for (const lx of [-3.0, -2.1, 0.7]) for (const s of [-1, 1]) b(lx, s * 0.98, 0, 0.92, 0.44, 0.15, M.rubber);
     b(-1.1, 0, 0.3, 1.0, 2.5, 1.02, { ...M.iron, rough: 0.85 });                                                    // the frame and its lockers
     b(-1.1, 0, 1.0, 2.45, 2.5, 1.15, tank); b(-1.1, 0, 2.45, 2.7, 2.4, 0.7, tank);              // the tank, its crown

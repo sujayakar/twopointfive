@@ -24,10 +24,10 @@
 // NO TWO FACES IN ONE PLANE: under a roof the glass and the posts stop 4 mm short of it (a bowed roof is thin at its edge, and what reached up into it showed
 // through it there: the maintainer's "some z sorting issues on the blue car roof posts"); a hub stands 4 mm proud of its tyre.
 // Nothing here has been seen on a GPU.
-import type { Vec3 } from '../math/vec';
-import { cutFit, cutPlane, cutRecord } from './cut';
-import type { BoxShape, ShapePiece, ShapePlane } from './shapes';
-import { saidAs, madeOf } from './stuff';
+import type { Vec3 } from '../../../src/math/vec';
+import { cutFit, cutPlane, cutRecord } from '../../../src/scene/cut';
+import type { BoxShape, ShapePiece, ShapePlane } from '../../../src/scene/shapes';
+import { saidAs, madeOf } from '../../../src/scene/stuff';
 
 /** A VEHICLE'S BODY SAYS IT IS A CAR'S COAT, whatever paint it is given: the one place the word is said (the kits' vehicles, the plain car, and a vehicle
  *  a level builds by hand). A paint's ROW cannot say it: the truck enamels are cots, lockers and floor lines too, a tanker's cream is a wall's. `coated`
@@ -188,7 +188,7 @@ export interface CarPaints { hub: CarPaint }
 const PICKUP_TUB: Vec3 = [2.45, 0.25, 0.86], pickupCorners = (): ShapePlane[] => corners(PICKUP_TUB, [0.22, 3], [0.1, 1]);
 /** a pickup's head lamp as the kit stands it: its half size, and its centre from the pickup's middle (x toward the nose, z to either side) */
 const PICKUP_HEAD = { h: [0.03, 0.07, 0.16] as Vec3, x: 2.43, z: 0.66 };
-/** A PICKUP, 5.0 × 1.8, nose toward local +x (scene/gwotKit.ts pickup): the shape each box of its stack says */
+/** A PICKUP, 5.0 × 1.8, nose toward local +x (gwotKit.ts pickup): the shape each box of its stack says */
 export function pickupShapes(P: CarPaints) {
   const tubC: Vec3 = [0, 0.55, 0], tubH = PICKUP_TUB, tubCut = pickupCorners();
   const glassC: Vec3 = [0.38, 1.29, 0], glassH: Vec3 = [0.64, 0.21, 0.8], tilt = { f: 30, r: 12, s: 12 }, top = glassTop(glassH, tilt), G = greenhouse(glassH, tilt);
@@ -216,7 +216,7 @@ export function pickupShapes(P: CarPaints) {
 export const pickupLens = (h: Vec3, d: Vec3): BoxShape | undefined => { const s = Math.sign(d[2]) || 1, at: Vec3 = [PICKUP_HEAD.x, 0, s * PICKUP_HEAD.z];
   return glowShape(lensShape(PICKUP_HEAD.h, pickupCorners(), at), PICKUP_HEAD.h, h, [d[0] - at[0], 0, d[2] - at[2]], 0); };
 
-/** A PANEL VAN, 4.9 × 1.8 × 1.95, nose toward local +x, its back doors open (scene/gwotKit.ts van): the shape each box of its stack says. Its roof is one
+/** A PANEL VAN, 4.9 × 1.8 × 1.95, nose toward local +x, its back doors open (gwotKit.ts van): the shape each box of its stack says. Its roof is one
  *  bow of 6 cm from the windscreen to the back doors — the brow, the load box and the strip over the open bay each say the same arc, and the bay's sides
  *  stop under it */
 export function vanShapes(P: CarPaints) {
@@ -243,7 +243,7 @@ export function vanShapes(P: CarPaints) {
   };
 }
 
-/** A CAR, 4.4 × 1.72, nose toward local +x (scene/officeGen.ts and scene/levelKit.ts car): the shape each box of its stack says */
+/** A CAR, 4.4 × 1.72, nose toward local +x (officeGen.ts and levelKit.ts car): the shape each box of its stack says */
 export function carShapes(P: CarPaints) {
   const bodyC: Vec3 = [0, 0.62, 0], bodyH: Vec3 = [2.2, 0.34, 0.86], bodyCut = [...corners(bodyH, [0.24, 2], [0.16, 1]), fallPlane(bodyH, 1, 0.5, 0.16), fallPlane(bodyH, -1, 0.3, 0.1)];
   const glassC: Vec3 = [-0.25, 1.2, 0], glassH: Vec3 = [1.25, 0.27, 0.8], tilt = { f: 38, r: 42, s: 12 }, top = glassTop(glassH, tilt), wheelH: Vec3 = [0.32, 0.3, 0.12];
@@ -260,7 +260,7 @@ export function carShapes(P: CarPaints) {
   };
 }
 
-/** A SMALL MOTORBIKE on its stand, nose toward local +x (scene/gwotKit.ts motorbike): the shape each box of its stack says. Its tank carries the trim: a
+/** A SMALL MOTORBIKE on its stand, nose toward local +x (gwotKit.ts motorbike): the shape each box of its stack says. Its tank carries the trim: a
  *  mudguard over each wheel, in the tank's paint. Its fork stays the square tube it is. */
 export function bikeShapes() {
   const tankC: Vec3 = [0.18, 0.7, 0], tankH: Vec3 = [0.24, 0.14, 0.12];
@@ -286,7 +286,7 @@ const ringY = (r: number): { cut: ShapePlane[]; old: true } => ({ cut: [30, 60, 
 /** trim said from the vehicle's own frame, for a box of it whose centre is `o` there: (lx, lz, y0, y1, hx, hz, paint | null = the box's own, form) */
 const trimFor = (o: Vec3) => (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, p: CarPaint | null, form: Partial<ShapePiece> = {}): ShapePiece =>
   ({ off: sub([lx, (y0 + y1) / 2, lz], o), h: [hx, r6((y1 - y0) / 2), hz], ...(p ? paintOf(p) : {}), ...form });
-/** A TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +x (scene/gwotKit.ts lorry; asked 2026-10-24 of the pass's: "some curved surfaces on the
+/** A TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +x (gwotKit.ts lorry; asked 2026-10-24 of the pass's: "some curved surfaces on the
  *  truck would go a long way", and 10-30, of the first curves: "truck could use some dressing up. but overall the round surfaces look nice"): the shape
  *  each box of its stack says, and the fittings a lorry of its kind carries as trim.
  *  · the canvas tilt is BOWED over its hoops (0.15 m: its eaves stay over a man's head); the cab's roof is an arch from the windscreen back, and the

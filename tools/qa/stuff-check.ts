@@ -1,4 +1,4 @@
-// A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; src/scene/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
+// A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; tools/levels/lib/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
 //                                                    as it stood): lines 2, 3, 4, 7, 14, 15 and 17 must FAIL
@@ -14,11 +14,11 @@ const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfNam
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
-const KD = await import(`${ROOT}/src/scene/levelKit.ts`), { newKit, KIT_PALETTE, KIT_FINISH } = KD;
+const KD = await import(`${ROOT}/tools/levels/lib/levelKit.ts`), { newKit, KIT_PALETTE, KIT_FINISH } = KD;
 
 const BRK = process.env.STUFF_BREAK === '1';
 let red = false;
@@ -68,7 +68,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 // 5. NOTHING ASKS A COLOUR: the same numbers are whatever their box says; a box that says nothing is plain whatever its colour; rain, a tone, a repaint change nothing
 { const mud = [...GWOT_PALETTE.mud], a = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud }), b = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'wood' }), c = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'mud wall' });
   const before = cls(c); c.albedo = [mud[0] * 0.5, mud[1] * 0.5, mud[2] * 0.52]; const wet = cls(c); c.albedo = [0.9, 0.1, 0.9]; const pink = cls(c);
-  const srcs = ['src/render/gbuffer.ts', 'src/scene/levelKit.ts', 'src/scene/officeGen.ts', 'src/scene/levelLoad.ts', 'src/host/drawpage.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
+  const srcs = ['src/render/gbuffer.ts', 'tools/levels/lib/levelKit.ts', 'tools/levels/lib/officeGen.ts', 'tools/levels/lib/levelLoad.ts', 'src/host/drawpage.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
   const wgsl = readdirSync(`${ROOT}/src/render/shaders`).filter(f => f.endsWith('.wgsl')).map(f => readFileSync(`${ROOT}/src/render/shaders/${f}`, 'utf8')).join('\n');
   const gone = ['lookStuff', 'lookNamed', 'lookNeedPaints', 'classWgsl', 'LOOK_OF', 'LOOK_BY_NAME', 'LOOK_MATCH', 'FINISH_BY_ALBEDO', 'surfTryConfig'].filter(n => new RegExp(`\\b${n}\\b`).test(srcs) || (GB as any)[n] !== undefined);
   const shader = ['lookClass', 'surfClass', 'surfaceTry'].filter(n => new RegExp(`\\b${n}\\s*\\(`).test(wgsl)).concat(/\bSURF_TRY\b/.test(wgsl) ? ['SURF_TRY'] : []);
@@ -141,9 +141,9 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '9 a paint is known by the row handed over: a box made with the kit\'s steel takes the steel\'s finish and is steel; a COPY of the same numbers is nobody\'s paint, matte and plain; a finish or a word said on the call wins (plain said aloud is no word); a paint toned keeps its word and not its finish, however dark; a stand-in is the stuff of the row it stands in for; numbers written out say their word beside them; two paints with the same numbers are two paints',
     `kit steel: rough ${B[i0].rough}, metal ${B[i0].metal}, ${B[i0].stuff} · its copy: rough ${B[i1].rough}, ${B[i1].stuff ?? 'no word'} · wood toned 0.6 and again 0.5: ${paintOf(t)?.stuff}, ${paintOf(t2)?.stuff} · slab toned to near black: ${paintOf(far)?.stuff} · a stand-in of mud: ${paintOf(standIn)?.stuff}, of white plastic: ${paintOf(plastic)?.stuff} · two paints, one colour: ${paintOf(two.a)?.stuff}, ${paintOf(two.b)?.stuff}`); }
 
-// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/leafPaint.ts paintLeaves): every outside leaf in the level's accent paint is paint and every inside one in
+// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (tools/levels/lib/leafPaint.ts paintLeaves): every outside leaf in the level's accent paint is paint and every inside one in
 //     the palette's wood is wood, whatever shade the leaf's own name gave it; a level's row of bare numbers says nothing unless it says a word for that side
-{ const { paintLeaves } = await import(`${ROOT}/src/scene/leafPaint.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
+{ const { paintLeaves } = await import(`${ROOT}/tools/levels/lib/leafPaint.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
   const wears = [makeBox({ c: [0, 1, 0], h: [1, 1, 0.1], albedo: GWOT_PALETTE.paintBlue })];
   const leaves = (n: number) => Array.from({ length: n }, (_, i) => ({ def: { name: `door ${i}`, exterior: i % 2 === 0, steel: i === 1 }, box: makeBox({ c: [i, 1, 0], h: [0.45, 1, 0.03], albedo: [0.3, 0.3, 0.3], stuff: 'veneer' }) }));
   const of = (D: ReturnType<typeof leaves>, f: (d: ReturnType<typeof leaves>[number]) => boolean) => [...new Set(D.filter(f).map(d => d.box.stuff ?? 'plain'))].sort().join('/');
@@ -156,7 +156,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '11 a door\'s leaf is made of what its paint is: every outside leaf in the level\'s accent paint is paint whatever its own shade, an inside one in the palette\'s wood is wood and one with old paint faded on it is plain; a steel door is left as it stood; a level\'s row of bare numbers makes its outside leaves plain, a row that says wood for the inside makes those wood, and a row with one word makes every leaf that',
     `no row: outside ${of(own, out)} in ${shades} shades, inside ${of(own, inn)}, the steel door ${own[1].box.stuff} · a row of numbers: outside ${of(bare, out)}, inside ${of(bare, inn)} · the land office's row: outside ${of(sided, out)}, inside ${of(sided, inn)} · the white roof's row: ${of(one, d => !d.def.steel)}`); }
 
-// 12. A HOUSE FRONT'S AND A YARD'S PIECES SAY THEIR WORDS (scene/gwotKit.ts: what is done to a wall's face, and the round things a yard keeps; they were
+// 12. A HOUSE FRONT'S AND A YARD'S PIECES SAY THEIR WORDS (tools/levels/lib/gwotKit.ts: what is done to a wall's face, and the round things a yard keeps; they were
 //     the look page's hand-built trials until 11-05 and are the kit's now, laid by the pass's generator): every box they make in a paint somebody named
 //     says that paint's stuff, and so does every piece of TRIM that wears a named paint of its own (a log's pale end is wood, a pipe's bore metal: a
 //     shape's piece is of its box's stuff unless it says another). Asked of the generator, where a paint is still the row somebody named
@@ -227,7 +227,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 
 // 16. A WORD AND ITS FINISH ARE SAID WITH THE PAINT, NEVER WRITTEN BESIDE IT BY HAND: scene/stuff.ts is the one way a paint says what it is made of
 //     (`madeOf` for a colour written as numbers, `saidAs` for a kit's row that is another thing here, each with the thing's finish where it has its own).
-//     A FINDER OVER THE SOURCE, line by line, of every module under tools/levels that lays boxes, and of the office's generator (scene/officeGen.ts):
+//     A FINDER OVER THE SOURCE, line by line, of every module under tools/levels that lays boxes, and of the office's generator (tools/levels/lib/officeGen.ts):
 //       · a literal that writes `stuff: '<word>'` beside a paint it names (a kit's row, numbers written out, a paint that has said its word), or with no
 //         paint of its own at all (a word kept apart to spread into boxes, or handed in a call's options beside the paint);
 //       · a `rough` or `metal` written beside a paint that has said its word (a helper's call, or one of the paints named once: PANEL_GREY, CHAIR_GREY,
@@ -251,7 +251,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
       if (/\balbedo: §/.test(lit) && /\b(?:rough|metal):/.test(lit)) out.add('a finish beside a paint that has said its word'); }
     return [...out]; };
   const NOT = ['livedKit.ts', 'livedPieces.ts', 'gwotSkin.ts', 'export.ts', 'library.ts', 'libraryDraw.ts', 'paintUsers.ts', 'stuff-bake.ts', 'stuffWas.ts'];
-  const files = [...readdirSync(`${ROOT}/tools/levels`).filter(f => f.endsWith('.ts') && !NOT.includes(f)).sort().map(f => `tools/levels/${f}`), 'src/scene/officeGen.ts'];
+  const files = [...readdirSync(`${ROOT}/tools/levels`).filter(f => f.endsWith('.ts') && !NOT.includes(f)).sort().map(f => `tools/levels/${f}`), 'tools/levels/lib/officeGen.ts'];
   const found: string[] = []; let lines = 0;
   for (const f of files) readFileSync(`${ROOT}/${f}`, 'utf8').split('\n').forEach((l, i) => { lines++; for (const w of byHand(l)) found.push(`${f}:${i + 1} ${w}`); });
   const madeUp = ["  add({ c: [1, 1, 1], h: [1, 1, 1], albedo: C.woodDark, stuff: 'veneer' });", "  const PHONE = { rough: 0.92, stuff: 'metal' } as const;", "  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24]), { rough: 0.35 });",
@@ -322,7 +322,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   const trips: string[] = [], threw: string[] = []; let built = 0, skinned = 0;
   const one = async (f: string, make: () => unknown) => { try { await make(); built++; } catch (e) { (REFUSAL.test(String((e as Error).message)) ? trips : threw).push(`${f}: ${String((e as Error).message).slice(0, 220)}`); } };
   for (const f of gens) await one(f, async () => { const g = await import(`${GEN}/${f}`), made = await g.build(); if (typeof g.finish === 'function') { if (made.scenarios) made.level.scenarios = made.scenarios; g.finish(made.level, made.groups); skinned++; } });
-  await one('officeGen.ts', async () => (await import(`${ROOT}/src/scene/officeGen.ts`)).buildOfficeProcedural({ groups: [] }, { lived: true }));
+  await one('officeGen.ts', async () => (await import(`${ROOT}/tools/levels/lib/officeGen.ts`)).buildOfficeProcedural({ groups: [] }, { lived: true }));
   check(again && other && finish && stays && apart && kits && named && first && does && page && trips.length === 0 && threw.length === 0 && gens.length >= 30 && built === gens.length + 1 && skinned === skins.length && skins.length > 10,
     '18 one array is one paint: a second saying on an array that already is a paint is refused where its stuff, its finish or what it does differs (madeOf, drawnAs, sayPaint, namePaint, namePaints, tonedAs; a kit\'s black cannot be made steel; the metal flag alone is a difference; what a paint does is said once, of numbers written out, never of a kit\'s named row), the same thing said again is nothing and the first saying stands with its name, and saidAs gives the second thing an array of its own; with the refusal as the page has it nothing is thrown, the console is told once and the first saying is kept; and every generator builds in this one process as the exporter hands it over, each look file\'s skin run and the office with its lived tier, with none refused; at least 30 generators',
     `said again ${again} · another stuff refused ${other} · another finish refused ${finish} · the first stands ${stays}, its name ${first} · saidAs apart ${apart} · a kit's paints refused ${kits} · a named row refused ${named} · what it does: said once, another refused, a kit's row refused ${does} · as the page has it ${page} · ${built} of ${gens.length + 1} generators built, ${skinned} of ${skins.length} look files' skins run, ${trips.length} refused${trips.length ? `: ${trips.slice(0, 6).join(' · ')}` : ''}${threw.length ? ` · ${threw.length} THREW OTHERWISE: ${threw.slice(0, 4).join(' · ')}` : ''}`); }

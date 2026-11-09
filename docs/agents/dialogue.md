@@ -152,7 +152,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   with the words switch on); `FROZEN_HOLDS` row, `STAND_ENV` word, the stand's pinned line; it rides the WORDS table in a recording, and one from before the
   key replays with it down (`journal.ts applyKnobs`) — a door's name is said in bubbles and a bubble's text is in the run digest. What the key does NOT hold:
   a name written into a level file LATER changes what a recording made on that level in between replays to, like any other change to a level's scenario
-  data (none of it is in the fingerprint). NAMED SO FAR: the office's two (`levels/office.scenarios.ts`: 'corridor-side break room door', 'cubicles-side
+  data (none of it is in the fingerprint). NAMED SO FAR: the office's two (`tools/levels/lib/officeScenarios.ts`: 'corridor-side break room door', 'cubicles-side
   break room door', by what each is taken from — the same words the rooms rule would make if the office were not left out of it). OWED: 96 doors in 25 level
   files, door for door in `tools/qa/words-probes.ts DOORS_OWED` — the levels' own to write; a door named comes off the list in the same change
   (`DOORNAMES_CENSUS=1` in front of the check prints the list as it now is). Check `bun run tools/qa/probes.ts words-doornames` (6 lines: the lookup on a

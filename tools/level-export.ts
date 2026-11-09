@@ -1,6 +1,6 @@
-// Regenerate levels/office.json from the legacy procedural generator (src/scene/officeGen.ts buildOfficeProcedural): run it ONCE, convert the Level it
-// returns to level data (src/scene/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), validate, and write the file in the
-// canonical one-entity-per-line format (src/scene/levelData.ts serializeLevelData). Then prove the file is the level: parse it back, load it
+// Regenerate levels/office.json from the legacy procedural generator (tools/levels/lib/officeGen.ts buildOfficeProcedural): run it ONCE, convert the Level it
+// returns to level data (tools/levels/lib/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), validate, and write the file in the
+// canonical one-entity-per-line format (tools/levels/lib/levelData.ts serializeLevelData). Then prove the file is the level: parse it back, load it
 // (loadLevel) and diff the result against the generator's Level field by field — the export refuses to write a file that does not reproduce it.
 //   bun run tools/level-export.ts            write levels/office.json (+ print counts, sizes, digest)
 //   bun run tools/level-export.ts --check    write nothing; exit 1 if levels/office.json is missing or differs from what the generator gives now
@@ -10,13 +10,13 @@ import { resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const ROOT = resolve(import.meta.dir, '..');
-const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
+const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/tools/levels/lib/officeGen.ts`);
 const { rowWord, rowDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
-const { levelToData, loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/scene/officeFloor.ts`);
+const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
 
 const argv = process.argv.slice(2);
 const CHECK = argv.includes('--check');

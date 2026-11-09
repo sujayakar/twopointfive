@@ -18,13 +18,13 @@
 //   z 18 +==GGGGGGGGGGG==#=front=#==GGGGGGGGGGG==+  T   G = the glazed front, six panes · # = 1.8 m of block either side of the front door · T = the water tank
 //          * lamp        the forecourt (lit)   * lamp
 //
-// Built from the 2010s kit (src/scene/gwotKit.ts) on the office kit's walls and panes: flat colours, boxes only; no second look file.
+// Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes: flat colours, boxes only; no second look file.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -232,7 +232,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the GLASSHOUSE is benches of seedling trays under the front panes, compost in sacks, a hand cart and
   // the watering drums; the LAB is one long bench with a burner's gas bottle, sample crates and a stool; the OFFICE a desk on a kilim, a chair, the station's
   // tin trunk of ledgers and a wall hanging; the STORE sacks to the roof beams and crates. Nothing stands within 1.1 m of a door's line, on a

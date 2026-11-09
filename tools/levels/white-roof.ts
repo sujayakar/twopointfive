@@ -29,16 +29,16 @@
 //   z 23.5 ───────────────────── parapet ─────────────────────
 //   bun run tools/levels/export.ts white-roof [--check]     → levels/white-roof.json
 //   page: ?look&solo&levelFile=white-roof.json&hour=midday
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { markFromRect, type MarkPal } from '../../src/scene/markings';
-import * as MD from '../../src/scene/markingDefaults';
+import * as MD from './lib/markingDefaults';
 import { madeOf } from '../../src/scene/stuff';
 import type { Vec3 } from '../../src/math/vec';
 
@@ -78,10 +78,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   /** a cast block standing on the deck, its top edged */
   const mass = (x0: number, z0: number, x1: number, z1: number, h: number, p: Paint = PANEL) => { const i = slab(x0, 0, z0, x1, h, z1, p.albedo, { rough: p.rough, stuff: p.stuff }); edged(x0, z0, x1, z1, h); return i; };
-  // paint on what is there: the kit's tools (scene/officeGen.ts: a box by its face, markings added to it, a world place in a face's own metres)
+  // paint on what is there: the kit's tools (lib/officeGen.ts: a box by its face, markings added to it, a world place in a face's own metres)
   const { paintOn: mark, onS, onTop, rectTop } = K;
   /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 (the kit's
-   *  piece, standing: scene/officeGen.ts conduit) */
+   *  piece, standing: tools/levels/lib/officeGen.ts conduit) */
   const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => K.conduit('x', zFace, x0, x1, 1, y, COAT.albedo, STEEL.albedo, drop, 0, true);
   /** a round thing standing up: the kit's pipe, solid: one round box (scene/round.ts), standing */
   const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => K.pipe(x, z, y0, y1, r, p.albedo, [], true);

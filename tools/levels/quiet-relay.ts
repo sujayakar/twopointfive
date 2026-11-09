@@ -75,14 +75,14 @@
 // four ways out (east · west · north · the wicket), all open every run.
 //
 // NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night and pair), one still
-// on the software renderer. Nobody has played it. In the GWOT kit (src/scene/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
+// on the software renderer. Nobody has played it. In the GWOT kit (lib/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
-import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { KitViewData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
@@ -458,7 +458,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
-// What each place of the station is FOR, seen from above (src/scene/lived.ts: every box here is in a group `lived.<place>`, every prop is named
+// What each place of the station is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
 // `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
 // Out of doors nothing stands taller than a man's knee where a flood, the picket or a walker looks: paint, plates in the ground, things against a wall.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.

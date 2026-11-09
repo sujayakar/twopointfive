@@ -20,9 +20,9 @@
 // past the fire door and the east gate, one keeps the cook fire on the south side.
 // The page is rebuild/missions/new/duo.md in the project files.
 import type { KitViewData, QuietData } from '../../src/scene/scenarios';
-import type { DeviceDef } from '../../src/scene/level';
+import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTail } from './livedKit';
@@ -204,7 +204,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The post's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND, and anything that says RELAY POST from
 // above. So, every piece the kit's own by name: the track kept as soldiers keep one (whitewashed stones down both edges, the lorry's ruts between
 // them), the post's dish on its pole in the north-east corner, the fuel's ground at the shed door and in the cage, the tank's overflow, the cook's ash and

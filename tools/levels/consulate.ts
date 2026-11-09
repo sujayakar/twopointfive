@@ -38,7 +38,7 @@
 // LIGHT is the cue and the balance: the lobby, most of the corridor, the records room and the back office are dark (a team in them is hard to see), the rooms that
 // hold a man show him under a panel (visa, kitchen, a dim waiting room, the suite), and the hall's north end — where a stack on the main door stands — is lit.
 // All lit, the scripted four lost more than half their men on the way in; this way round the approach is the team's and the doors are the fight.
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
 //
 // THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
 // decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
@@ -48,15 +48,15 @@
 // carpet comes out as a mat under the consul's SIDE door, and what leads to that one is only the staff's tread, worn into the back office's floor from the hall's door and
 // from the kitchen's — the level's one decision (a pair on each door) read off the ground. A brass sill lies in every opening, as long as the opening is wide.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK } from './livedPieces';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, VARNISH, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
@@ -289,11 +289,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; off = the level as it was) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; off = the level as it was) ----------------
   // A town-house consulate, not an office: flags, rope posts, gilt and round things, the tea service, luggage. Every room low enough to fight across; the consul's two
   // halves and the visa section (read through its glass) lowest of all. Nothing here lights anything; the rooms' light is said with colour.
   {
-    const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE), Q = Math.PI / 4, NS = { flags: BoxFlag.NoShadow };
+    const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE as unknown as Parameters<typeof livedPieces>[1]), Q = Math.PI / 4, NS = { flags: BoxFlag.NoShadow };
     const gilt = INK.brass, wine: Vec3 = INK.oxblood, tea: Vec3 = [0.5, 0.26, 0.08], turq: Vec3 = [0.1, 0.5, 0.5];
     /** a round thing: two squares, one turned an eighth */
     const round = (x: number, y0: number, z: number, s: number, h: number, a: Vec3, extra = {}) => { const L = P.at(x, z, 0); L.box(0, y0, 0, s, h, s, a, 0, extra); L.box(0, y0, 0, s, h - 0.004, s, a, Q, extra); };

@@ -9,8 +9,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts'].map(f => join(ROOT, f));
-const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/scene\/(collision|boxMirror|level|levelData|levelLoad)\.ts$|levels\/.*\.ts$|tools\/)/;
-const BREAK = process.env.BAN_BREAK === '1', PLANT = "\nimport type { Level } from '../scene/level';\nexport type { LevelData } from '../scene/levelData';\ntype Planted = import('../scene/levelLoad').Level;\nvoid import('../../tools/levels/floors');\n", PLANTED = 4;
+const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|tools\/)/;
+const BREAK = process.env.BAN_BREAK === '1', PLANT = "\nimport type { Level } from '../../tools/levels/lib/level';\nexport type { LevelData } from '../../tools/levels/lib/levelData';\ntype Planted = import('../../tools/levels/lib/levelLoad').Level;\nvoid import('../../tools/levels/floors');\n", PLANTED = 4;
 const TS_LIB = process.env.TS_LIB ?? join(ROOT, 'vendor/typescript/lib/typescript.js'), ts: any = existsSync(TS_LIB) ? ((m: any) => m.default ?? m)(await import(TS_LIB)) : null;
 if (!ts) { console.log(`draw ban: no TypeScript at ${TS_LIB}: what the bundle runs is followed, and no type`); if (BREAK) process.exit(2); }
 const scan = new Bun.Transpiler({ loader: 'ts' });

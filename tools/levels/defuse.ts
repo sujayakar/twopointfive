@@ -21,12 +21,12 @@
 // numbers). No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
+import type { Level } from './lib/level';
 import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
-import { gwotKit, gwotOfKit, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
@@ -205,7 +205,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 20.0, 26.6, 'street_lamp', [0, 0, -1], false);   // out: the team forms up in the dark
   K.moon(k);
 
-  // ---------------- lived-in (src/scene/lived.ts: the TAIL of every list) ----------------
+  // ---------------- lived-in (lib/lived.ts: the TAIL of every list) ----------------
   {
     const P = livedPieces({ add: b => K.add(k, b), grp: n => K.grp(k, n), prop: (...a) => K.prop(k, ...a) }, C);
     // the west workshop: where the charges are put together — tins of the stuff on the bench's end, a crate of it by the wall, a stool pulled out
@@ -235,7 +235,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.room('hall');
     P.boots(16.4, 16.6, Math.PI, 3); P.crate(7.0, 13.6, 0.5, 0.2); P.crate(33.1, 13.6, 0.5, -0.2);
     P.floor(20.0, 15.0, 24.0, 1.2, [0.3, 0.17, 0.14], 0.006, 0.006);
-    // THE LOT AND THE BACK, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
+    // THE LOT AND THE BACK, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
     // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood at the far edge of the back strip,
     // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, before a back door,
     // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be: it hugs the front wall, so the

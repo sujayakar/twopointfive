@@ -1,5 +1,5 @@
 // WHAT IS UNDERFOOT IN THE OFFICE, where its walls are: written into its level file's `surfaces` (tools/level-export.ts).
-import type { FloorMat } from '../audio/floors';
+import type { FloorMat } from '../../../src/audio/floors';
 
 /** the building's footprint inside its exterior walls (level.ts: walls on x 4 / 36, z 4 / 24); outside it is ground */
 export const BUILDING = { x0: 4, x1: 36, z0: 4, z1: 24 };

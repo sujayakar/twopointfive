@@ -4,12 +4,12 @@
 // level's boxes; army green where it has none) and an inside one in weathered grey wood (one in four with that paint faded on it), each a shade of its own by its name.
 // Steel doors are left alone. It is the box's own colour and word, so what a breach throws off a leaf and a round's chips take it. No rule asks what colour a leaf is
 // (a round into one is wood whatever its paint: rust/game_rules/src/particle_fx), no dice are drawn, and a level that carries none of the look's paints is not touched.
-import { GWOT_PALETTE, lookPaintOf } from './gwotPalette';
-import { paintOf } from './stuff';
-import type { Box } from './boxes';
-import { LOOK_DOORS, type LookDoorStuff } from './look';
-import type { Vec3 } from '../math/vec';
-import { hashStr } from '../math/dice';
+import { GWOT_PALETTE, lookPaintOf } from '../../../src/scene/gwotPalette';
+import { paintOf } from '../../../src/scene/stuff';
+import type { Box } from '../../../src/scene/boxes';
+import { LOOK_DOORS, type LookDoorStuff } from '../../../src/scene/look';
+import type { Vec3 } from '../../../src/math/vec';
+import { hashStr } from '../../../src/math/dice';
 
 const ACCENTS = ['paintBlue', 'paintGreen', 'paintRust'] as const;
 const near = (a: Vec3, b: Vec3): boolean => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.004 && Math.abs(a[2] - b[2]) < 0.004;   // (a paint, or one of the stand-ins a file written before 2026-11-05 carries: up to 0.0024 off its row)

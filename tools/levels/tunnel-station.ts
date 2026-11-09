@@ -42,12 +42,12 @@
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
-import { pickupLens, coated } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import { pickupLens, coated } from './lib/carShapes';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { rockOf } from './snowRock';
@@ -293,7 +293,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- THE PLOUGH LORRY (KEPT: the yard's one big thing, and what the gate is held from). A two-axle tipper in the roads department's orange, a blade on
   // its nose, grit in its bed. Nose toward local +X ----
   grp('lorry');
-  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw), orange = coated(M.prodOrange);   // (its body says it is a car's coat: scene/carShapes.ts)
+  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw), orange = coated(M.prodOrange);   // (its body says it is a car's coat: lib/carShapes.ts)
   for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
   L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
   L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
@@ -532,7 +532,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it. The TEA ROOM is where the tunnel's men sit out a storm: rugs and floor cushions round the stove, low
   // tables with the tea on them, the samovar's table, a card table by the window. The KITCHEN is the bread oven, a work table, flour, the water cans. The
   // STORE is what a winter needs: sacks to the beams, fuel, crates, road cones' worth of drums under one dim bulb. The BUNKHOUSE is four cots, a trunk, a felt

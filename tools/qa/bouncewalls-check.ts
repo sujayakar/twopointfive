@@ -22,7 +22,7 @@ export async function bounceWallsCheck(): Promise<boolean> {
   const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), flat = (s: string) => s.replace(/\s+/g, ' ').trim();
   const lc = read('lighting_common.wgsl'), fg = read('fgather.wgsl') + read('gather_split.wgsl'), rf = read('reflect.wgsl'), comp = read('composite.wgsl');
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`), { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+  const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
   const CY: number = WORLD.ceilingY, RC0: number[] = WORLD.rcMin, SP = [WORLD.rcSize[0] / defaultRcConfig.nx, WORLD.rcSize[1] / defaultRcConfig.ny, WORLD.rcSize[2] / defaultRcConfig.nz];
 
   // (1) the text

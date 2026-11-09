@@ -63,13 +63,13 @@
 // Every man starts his lap at its first waypoint on the first frame (the game deals no phase): the lane men are on their marks from about the tenth second.
 // REPLAY: three starts (outside the south gate, in the lorry park · outside the east wicket · outside the west wicket, by the tea stall: all south of the
 // road), three places for the thing, three sets, five ways out (north gate · south gate · east wicket · east yard gate · west wicket), all open every run.
-// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
+// In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
-import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
@@ -439,7 +439,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
-// What each place of the crossing is FOR, seen from above (src/scene/lived.ts: every box here is in a group `lived.<place>`, every prop is named
+// What each place of the crossing is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
 // `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
 // Outdoors everything is low or against a wall — the lane is a lit kill zone and the lot is the pair's cover as it was dealt.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.

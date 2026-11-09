@@ -1,14 +1,14 @@
 // THE LEVEL KIT — the office's building blocks (walls, glass, door frames + leaves, furniture, loose props, lamps, the breaker) as plain functions over a `LevelKit`
 // context, for the generators under tools/levels that are not built on officeGen.ts officeKit (mousehole, defuse, floodlit,
-// records): a generator makes a kit (newKit), calls the pieces, and hands the kit's lists to a Level (kitLevel). Doors are sized by scene/doorSize.ts and a prop's
+// records): a generator makes a kit (newKit), calls the pieces, and hands the kit's lists to a Level (kitLevel). Doors are sized by doorSize.ts and a prop's
 // footprint is fitted by levelLoad.ts fitPropFootprint, as officeKit's are; officeGen.ts does not import this file. Units: metres. +X east, +Z south, +Y up. Floor top y = 0.
-import { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, PANEL_GREY, RACK_BLACK, KEY_BLACK, madeOf } from './stuff';
+import { Vec3 } from '../../../src/math/vec';
+import { Box, BoxFlag, makeBox } from '../../../src/scene/boxes';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, PANEL_GREY, RACK_BLACK, KEY_BLACK, madeOf } from '../../../src/scene/stuff';
 import { carShapes, hubPaint, carSays } from './carShapes';
-import { WORLD } from './world';
+import { WORLD } from '../../../src/scene/world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
-import { MarkingDef, MARKING_TEXEL } from './markings';
+import { MarkingDef, MARKING_TEXEL } from '../../../src/scene/markings';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, fitSlot, JAMB_FACE, DOOR_HEAD, LEAF_W, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
@@ -203,7 +203,7 @@ export function bench(k: LevelKit, x: number, z: number, yaw: number): void {
 /** a parked car, 4.4 × 1.7 m, local +X forward. Hands back the shapes its boxes say */
 export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3) {
   const at = frameAt(x, z, yaw);
-  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — scene/carShapes.ts)
+  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — carShapes.ts)
   add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: paint, shape: S.body });
   add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: glass, shape: S.glass });
   add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: paint, shape: S.roof });

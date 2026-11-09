@@ -1,8 +1,8 @@
 // A PARKED VEHICLE'S LAMPS, FOUND: the level files carry no name for one, so by what the generators write (officeGen.ts and levelKit.ts car, gwotKit.ts pickup and van, the pass's lorry): its
 // half size, its paint or its glow, and its twin the same height and yaw across the vehicle's width.
-import type { Vec3 } from '../math/vec';
-import type { Box } from './boxes';
-import { GWOT_PALETTE } from './gwotPalette';
+import type { Vec3 } from '../../../src/math/vec';
+import type { Box } from '../../../src/scene/boxes';
+import { GWOT_PALETTE } from '../../../src/scene/gwotPalette';
 
 /** how far a lamp's half size or its twin's place may sit from what the generators write, in metres, and its paint or glow per channel */
 export interface LampFit { fit: number; tone: number; twin: number }

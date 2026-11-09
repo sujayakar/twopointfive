@@ -2,7 +2,7 @@
 // then moves no file that does not use it. WHO WEARS A PAINT is one list, tools/levels/paintUsers.ts (the boxes, the props' parts, a gear screen's own
 // boxes); a box's shape pieces are asked here beside it, since that list does not visit them. A wearer that names alternatives ("first|second": a gear
 // screen's box, read as the first the file holds) wears every one of them for this purpose: a row some reading of the file would ask for is kept.
-import type { LevelData } from '../../src/scene/levelData';
+import type { LevelData } from './lib/levelData';
 import { paintUsers, type Data } from './paintUsers';
 
 /** every paint name the file's things say they wear (the `materials` table itself is not a wearer) */

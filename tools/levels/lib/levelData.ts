@@ -1,9 +1,9 @@
 // LevelData: the level as DATA — the JSON schema every level file (levels/*.json) is written in, its validator, canonical serializer and digest.
 //
 // What lives here vs elsewhere:
-//   scene/level.ts      the RUNTIME shape the game consumes (Level: Box[] with bit flags and array indices, LightDef[], PropDef[], plans…) + buildLevel()
-//   scene/levelData.ts  (this) the AUTHORED shape: string ids everywhere, flags by name, materials by key, box references by id, nothing derived
-//   scene/levelLoad.ts  the two conversions: loadLevel(LevelData) → Level (what the game boots from) and levelToData(Level, opts) → LevelData (the exporter's
+//   level.ts      the RUNTIME shape the game consumes (Level: Box[] with bit flags and array indices, LightDef[], PropDef[], plans…) + buildLevel()
+//   levelData.ts  (this) the AUTHORED shape: string ids everywhere, flags by name, materials by key, box references by id, nothing derived
+//   levelLoad.ts  the two conversions: loadLevel(LevelData) → Level (what the game boots from) and levelToData(Level, opts) → LevelData (the exporter's
 //                       direction: tools/level-export.ts runs the legacy procedural generator once and writes levels/office.json)
 //
 // Design rules (the in-browser editor — lane G1b — and later lanes G2 floors / G4 devices build on this, and the maintainer hand-edits the JSON):
@@ -19,21 +19,21 @@
 //   - numbers are stored at full double precision (JSON's shortest round-trip form): rounding even to 4 decimals moves wall slabs whose centres are
 //     sums like (x0 + x1) / 2.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
-import type { Vec3 } from '../math/vec';
-import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from './levelRows';
+import type { Vec3 } from '../../../src/math/vec';
+import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from '../../../src/scene/levelRows';
 export { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
 import type { WeaponId } from './weaponIds';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
-import type { LevelScenarios } from './scenarios';
-import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
+import type { LevelScenarios } from '../../../src/scene/scenarios';
+import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from '../../../src/scene/scenarios';
 import { CIVILIAN_TASKS } from './level';
-import { BoxFlag, type Box } from './boxes';
-import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
-import { shapeErrors, formOf, type ShapeForm } from './shapes';
-import { BOX_STUFFS, boxStuffOk } from './stuff';
-import { DOES_WORDS, doesWordOk } from './materials';
+import { BoxFlag, type Box } from '../../../src/scene/boxes';
+import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from '../../../src/scene/markings';
+import { shapeErrors, formOf, type ShapeForm } from '../../../src/scene/shapes';
+import { BOX_STUFFS, boxStuffOk } from '../../../src/scene/stuff';
+import { DOES_WORDS, doesWordOk } from '../../../src/scene/materials';
 import { DOOR_CAP, LIGHT_CAPS, PROP_CAP, PROP_PARTS } from './caps';
-export type { MarkingDef } from './markings';
+export type { MarkingDef } from '../../../src/scene/markings';
 
 export const LEVEL_DATA_VERSION = 2 as const;
 /** what a file of another version is told: version 1 wrote a round thing as four slabs, and one program turns such a file into this version */
@@ -80,13 +80,13 @@ export interface PropData { id: string; kind: PropKindName; /** PropDef.name; ab
 
 /** Emissive fixtures the OCP / panel / blackout can switch: the boxes glow `baseEmissive` when on. */
 export interface SwitchableData { id: string; boxes: string[]; group: string; on: boolean; baseEmissive: Vec3; flicker?: boolean; /** absent = true */ mains?: boolean; }
-/** One man's beat (scene/level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
+/** One man's beat (level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
 export interface RouteData { id: string; name?: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 export interface ChokepointData { id: string; name?: string; floor?: string; pos: Vec3; yaw: number; }
-/** One of the building's night people (scene/level.ts CivilianDef — rust/game_rules/src/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
+/** One of the building's night people (level.ts CivilianDef — rust/game_rules/src/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
-/** A NAMED MARK (scene/level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
+/** A NAMED MARK (level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
  *  way (rust/game_draw/src/traffic.rs) and a level script's place (rust/game_rules/src/director). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
 export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
@@ -112,7 +112,7 @@ export type KeypadData = Extract<DeviceData, { kind: 'keypad' }>;
 export type LaserData = Extract<DeviceData, { kind: 'laser' }>;
 /** the defaults an absent optional device field means (rust/game_rules/src/devices and the editor read them from here) */
 export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPeriod: 9, group: 'security', alarm: 'suspicion' as 'suspicion' | 'alarm', codeRe: /^\d{4}$/ };
-/** An HVAC supply VENT (rust/game_rules/src/wind runs the air; docs/level-format.md 'Vents'; scene/level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
+/** An HVAC supply VENT (rust/game_rules/src/wind runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
  *  just under the ceiling for a ceiling one) blowing along `dir` (need not be unit) at `speed` m/s at the face, a cone of half-angle `spread` DEGREES; the air slows to
  *  half by `reach` m and is gone by 2.5 × reach; a jet aimed down turns along its floor in its last half metre. `size?` = face width (m, absent 0.6), `period?` /
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
@@ -132,10 +132,10 @@ export type ObjectiveData =
 export interface MissionData { playerSpawn: Vec3; objectives: ObjectiveData[]; }
 
 export interface SkyData { zenith: Vec3; horizon: Vec3; }
-/** The daytime variant (scene/level.ts DaylightDef): the sun is a LightData of kind 'dir'. */
+/** The daytime variant (level.ts DaylightDef): the sun is a LightData of kind 'dir'. */
 export interface DaylightData { sun: LightData; sky: SkyData; groupsOn: string[]; groupsOff: string[]; /** LightData.id list */ lightsOff: string[]; haze: number; exposure: number; }
 
-/** The drill plans are the RUNTIME structs verbatim (scene/level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
+/** The drill plans are the RUNTIME structs verbatim (level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
  *  DoorData.id. Deliberately typed BY REFERENCE and handled generically below (canonical order = known keys first, anything else after, alphabetically;
  *  validation = the RoomClearPlan fields rust/game_rules/src/squad indexes blind + 'every leaf finite'), so a lane that re-choreographs the breach and grows BreachPlan
  *  changes level.ts + the generator and re-exports — nothing here drops, reorders unstably or rejects its new fields. */

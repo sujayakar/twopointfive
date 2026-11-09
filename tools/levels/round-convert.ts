@@ -10,8 +10,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const { MARKING_TEXEL } = await import(`${ROOT}/src/scene/markings.ts`);
-const { roundMarks, roundRadius } = await import(`${ROOT}/src/scene/gwotKit.ts`);
-const { LEVEL_DATA_VERSION, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { roundMarks, roundRadius } = await import(`${ROOT}/tools/levels/lib/gwotKit.ts`);
+const { LEVEL_DATA_VERSION, serializeLevelData, validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 
 type Mark = Record<string, unknown>;
 type Slab = { id: string; name?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; shape?: unknown; material?: string; albedo?: number[]; markings?: Mark[]; [k: string]: unknown };

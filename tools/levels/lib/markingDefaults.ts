@@ -5,8 +5,8 @@
 // dots, window); hand-drawn ones are ASCII art below ('.' transparent, 'a' 'b' 'c' the palette). Sizes count in the 2.5 cm base texel unless a recipe says
 // `fine` (carton print, LEDs, clock hands, keypads). Palette entries are materials, never shaded colours: albedo (absolute, or × the box's own), roughness,
 // emitted radiance — no gradient, no painted shadow, by construction.
-import type { Vec3 } from '../math/vec';
-import { MarkingDef, MarkFace, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, GEN, markFromRect, markFromArt, marking, stencilWidth } from './markings';
+import type { Vec3 } from '../../../src/math/vec';
+import { MarkingDef, MarkFace, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, GEN, markFromRect, markFromArt, marking, stencilWidth } from '../../../src/scene/markings';
 
 export const T = MARKING_TEXEL;               // recipes count in it; a level built at another base texel passes its own (tools/level-export.ts --texel)
 const F2 = 0.5;                               // fine = half a base texel

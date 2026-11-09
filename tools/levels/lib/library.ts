@@ -1,11 +1,11 @@
-// THE LIBRARY'S DOOR. Every kit that lays things in a level (scene/gwotKit.ts, scene/officeGen.ts officeKit, tools/levels/livedKit.ts, livedPieces.ts,
+// THE LIBRARY'S DOOR. Every kit that lays things in a level (gwotKit.ts, officeGen.ts officeKit, tools/levels/livedKit.ts, livedPieces.ts,
 // lived-quiet.ts, lived-train.ts) hands its PIECES out through `pieces(kit, fns)`: the things a level asks for by name (a drum, a cot, a yard wall), as against
 // the kit's tools (a raw box, a frame, a paint table), which it returns beside them as it always did. So a kit says which of its functions are pieces in ONE
 // place, its own return, and tools/levels/library.ts can stand a kit up, watch a generator build and write the catalogue (docs/library.md) from what was
 // laid, with no list of pieces typed anywhere else.
 // NOBODY WATCHING (a level being exported, a check, the page): `pieces` returns the object it was given. No wrapper exists, so no level file, digest or
 // frame can differ because this file does.
-// No imports: scene/officeGen.ts is in the page's bundle and takes this with it.
+// No imports: officeGen.ts is in the page's bundle and takes this with it.
 
 export interface PieceWatch {
   /** a kit was stood up: its name and the names of its pieces */

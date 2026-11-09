@@ -23,16 +23,16 @@
 //   bun run tools/qa/pages.ts tut-kit-page                      the page with real keys through every step
 //   page: ?levelFile=tut-kit.json&roomclear=1&squad4&hour=night
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import { glowShape } from './lib/carShapes';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, LessonData, LessonStep, StructureData, Rect, IssueData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import type { GwotMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { carLampsIn } from '../../src/scene/carLamps';
+import { carLampsIn } from './lib/carLamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from './tutKitMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
@@ -351,7 +351,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- a place somebody lives and works in. ADDITIONS ONLY, every one off the mission's line, off each man's mark and out of every door's sweep: none
   //  of it is cover a line asks for, and none of it changes a fight. It is the level's own furniture as built, like the table and the
-  //  crates above: not the lived-in pass (src/scene/lived.ts), which furnishes levels that were recorded bare ----
+  //  crates above: not the lived-in pass (lib/lived.ts), which furnishes levels that were recorded bare ----
   grp('dress.road');     // the roadside: scrub along the verge
   G.bush(1.1, 17.4); G.bush(0.9, 25.6, 0.8); G.tyres(7.6, 19.8, 2);
   grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch

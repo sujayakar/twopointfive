@@ -5,7 +5,7 @@
 //   bun run tools/levels/library.ts --uses FILE     which level lays which piece, as a page (it changes with every generator, so it is no file of the repo)
 //   bun run tools/levels/library.ts --pictures DIR  a PNG of each piece (DIR/<kit>.<piece>.png), drawn from its boxes (libraryDraw.ts)
 //   bun run tools/levels/library.ts --json FILE     everything below as data (a gallery page and the dressing tasks' tables read it)
-// HOW IT KNOWS. A kit hands its pieces out through src/scene/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
+// HOW IT KNOWS. A kit hands its pieces out through lib/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
 //   1. builds EVERY generator under tools/levels with the watcher on (and runs a generator's `finish` on what its `build` built): which piece each
 //      level lays, how often, and with what arguments;
 //   2. takes for each piece the call a SHOWROOM makes (tools/levels/gwot-yard.ts stands the look's kit, levels/library-hall.json the older kits'), else the first
@@ -23,11 +23,11 @@ import { basename, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, BoxWorld, type Box } from '../../src/scene/boxes';
-import type { Level, LightDef, PropDef } from '../../src/scene/level';
-import { watchPieces } from '../../src/scene/library';
-import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from '../../src/scene/officeGen';
-import { KIT_PALETTE } from '../../src/scene/levelKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import type { Level, LightDef, PropDef } from './lib/level';
+import { watchPieces } from './lib/library';
+import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from './lib/officeGen';
+import { KIT_PALETTE } from './lib/levelKit';
+import { gwotKit, gwotOfOffice } from './lib/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
@@ -38,7 +38,7 @@ import { livedQuiet } from './lived-quiet';
 import { livedTrain } from './lived-train';
 import { drawBoxes, type DrawBox } from './libraryDraw';
 import { zfight, type Pair } from '../qa/zfight-check';
-import { bitsToFlags } from '../../src/scene/levelData';
+import { bitsToFlags } from './lib/levelData';
 
 const ROOT = resolve(import.meta.dir, '../..'), HERE = import.meta.dir;
 const SHOWROOMS = ['gwot-yard', 'library-hall'], PAGE = 'docs/library.md';
@@ -50,8 +50,8 @@ const firstLine = (e: unknown) => String((e as Error).message ?? e).split('\n')[
 interface Stood { fns: Record<string, unknown>; boxes: Box[]; props: PropDef[]; lights: LightDef[]; switchables: Level['switchables']; seal?: () => void }
 const listsOf = (K: ReturnType<typeof officeKit>) => ({ boxes: K.boxes, props: K.props, lights: K.lights, switchables: K.switchables });
 const KITS: { name: string; file: string; stand(): Stood }[] = [
-  { name: 'gwotKit', file: 'src/scene/gwotKit.ts', stand() { const K = officeKit({ groups: [] }); return { fns: gwotKit(gwotOfOffice(K)), ...listsOf(K) }; } },
-  { name: 'officeKit', file: 'src/scene/officeGen.ts', stand() { const K = officeKit({ groups: [] }); return { fns: K, ...listsOf(K) }; } },
+  { name: 'gwotKit', file: 'tools/levels/lib/gwotKit.ts', stand() { const K = officeKit({ groups: [] }); return { fns: gwotKit(gwotOfOffice(K)), ...listsOf(K) }; } },
+  { name: 'officeKit', file: 'tools/levels/lib/officeGen.ts', stand() { const K = officeKit({ groups: [] }); return { fns: K, ...listsOf(K) }; } },
   { name: 'livedKit', file: 'tools/levels/livedKit.ts', stand() { const K = officeKit({ groups: [] }), L = livedKit(K); L.room('show'); return { fns: L, ...listsOf(K) }; } },
   { name: 'livedPieces', file: 'tools/levels/livedPieces.ts', stand() {
     const K = officeKit({ groups: [] }), P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE as unknown as Parameters<typeof livedPieces>[1]); P.room('show');
@@ -94,8 +94,8 @@ interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; 
 const PAINT_TABLES: { table: string; file: string; what: string; rows: PaintRow[] }[] = [
   { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: doesOfName(n), surface: GWOT_SURFACE[n] })) },
   { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: doesOfName(n) })) },
-  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
-  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'OFFICE_PALETTE', file: 'tools/levels/lib/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'KIT_PALETTE', file: 'tools/levels/lib/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
   { table: 'LIVED_PAINT', file: 'tools/levels/livedKit.ts', what: 'colours of the older levels\' lived things that the office has no name for', rows: Object.entries(LIVED_PAINT).map(([n, a]) => ({ table: 'LIVED_PAINT', name: n, albedo: a })) },
   { table: 'INK', file: 'tools/levels/livedPieces.ts', what: 'accents of the older levels\' furniture', rows: Object.entries(INK).map(([n, a]) => ({ table: 'INK', name: n, albedo: a })) },
 ];
@@ -399,7 +399,7 @@ function usesPage(): string {
   const L: string[] = [], played = levels.filter(l => !SHOWROOMS.includes(l));
   const kitsOf = (level: string) => KITS.filter(k => catalogue.some(p => p.kit === k.name && level in p.uses)).map(k => k.name);
   L.push('# The library: which level lays which piece', '', 'Written by `bun run tools/levels/library.ts --uses FILE`. A piece laid from inside another piece is counted as the outer one;',
-    'a skinned level counts what its floor lays and what its finish step lays on top. The four levels built on `src/scene/levelKit.ts`',
+    'a skinned level counts what its floor lays and what its finish step lays on top. The four levels built on `tools/levels/lib/levelKit.ts`',
     '(defuse, floodlit, mousehole, records) lay the office\'s pieces through plain functions no kit hands out, so those calls are not counted.', '',
     '## The generators', '', '| Level | On the mission list | Kits it lays from | Pieces laid |', '|---|---|---|---|');
   for (const l of played) L.push(`| ${l} | ${onList.has(l) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);

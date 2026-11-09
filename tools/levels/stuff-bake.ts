@@ -21,7 +21,7 @@ import { fromBefore, paintUsers, rowOf, type Data, type Paints } from './paintUs
 export { fromBefore, paintUsers, rowOf };
 const ROOT = resolve(import.meta.dir, '../..');
 const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 
 /** what each paint user of a file from before WAS drawn as, in paintUsers' order */
 export function wasAll(d: Data): Was[] { const was = wasOf(d.materials); return [...paintUsers(d)].map(({ o }) => { const m = rowOf(d, o); return was(m !== undefined && m !== o.material ? { ...o, material: m } : o); }); }
