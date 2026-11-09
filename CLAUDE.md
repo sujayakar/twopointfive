@@ -2,7 +2,7 @@
 
 **THIS FILE IS AN INDEX. NEW BULLETS GO INTO THE MATCHING `docs/agents/` FILE, NEVER INTO CLAUDE.md. A SESSION READS ONLY THE AREA
 FILES ITS WORK NEEDS** — and inside one, the bullet it needs, not the file: `grep -n '<module or switch>' docs/agents/*.md`, then read
-those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/claude-md-check.ts`
+those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/docs-check.ts`
 fails when it is over 14 KB or 150 lines, or when an area file is missing from the index below.
 
 ## What this is
@@ -80,11 +80,10 @@ notes and before and after pairs from the game's own text: `docs/agents/writing.
 
 ## The area files (`docs/agents/`)
 
-Each is the old CLAUDE.md's bullets for that area, word for word (moved 2026-10-13). The git log is the newest in-repo record of what
-happened when; the live queue is outside the repo.
+One page a system. `overview.md` and `doors.md` are true to the code today, and `docs-check.ts` holds every name in them; the others are still
+the diary they were. The git log is the newest in-repo record of what happened when; the live queue is outside the repo.
 
-- `overview.md` — what the game is, one model for picture and AI, where the module families live, a line per small module, the
-  architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app.
+- `overview.md` — what the game is, the two halves, one tick, where everything stands, how to change it, what holds it.
 - `qa.md` — run / build / check in full, the gates, driving the page headlessly (hooks, URL flags,
   `__stage`, `__ready`), checkpoints + autosave.
 - `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
@@ -102,8 +101,7 @@ happened when; the live queue is outside the repo.
   wall hold, the whistle, the close-in mode, takedowns, stealth poses, the optical wand.
 - `player.md` — guns at walls, small player rules, friends in the line, blasts on the player, the kit and the FN2000 / issue kit, aim
   weight, kit handling, hands, hands at work, the player's own charges.
-- `doors.md` — locks and keys, one-way doors, frames that hold a boot, doors stay where left, rolling chairs, real-size doors, the
-  second-way-in level rule.
+- `doors.md` — doors and furniture: which way one opens, locks, the boot, a leaf's weight, who works one from where, the level rules.
 - `destruction.md` — wall charges (outer walls, furniture, the safety radius), glass (panes, refraction, fracture, rounds through),
   decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
 - `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.

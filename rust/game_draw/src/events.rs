@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
 use game::out_events::OutEvent as E;
-use game::smoke_types::{SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokePushLattice};
+use game::smoke_types::{SmokeEmitter, SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokePushLattice};
 
 /// no number said: the reader's own
 const NONE: f32 = f32::NAN;
@@ -183,10 +183,12 @@ pub struct Events {
     /// what the live sources ride: the anchor's key, the thing, and how long it is asked for
     rides: Vec<(u32, Track, f64)>,
     keys: u32,
+    /// the first tick told since the game was put back
+    since: Option<u32>,
 }
 
 impl Events {
-    pub fn cut(&mut self) { self.rides.clear(); }
+    pub fn cut(&mut self) { self.rides.clear(); self.since = None; }
 
     /// what the tick that has just run told its host
     pub fn take(&mut self, g: &Game) {
@@ -205,6 +207,10 @@ impl Events {
         // (what the marks and the feels threw this tick)
         if let Some(s) = game::render_decals::mark_set(g) { for e in &s.thrown { self.one(tick, g, e); } }
         self.wakes(tick, g);
+        // of a game put back, at its first tick told: what lets smoke out since before it
+        if *self.since.get_or_insert(tick) == tick {
+            for e in game::sense::smoke_sources(g) { if !g.out.iter().any(|o| matches!(o, E::SmokeSystemLikeEmit(n) if n.e.pos == e.pos)) { self.source(tick, g, &e); } }
+        }
         self.anchors.clear();
         let mut rides = core::mem::take(&mut self.rides);
         rides.retain(|(key, t, until)| {
@@ -243,27 +249,28 @@ impl Events {
             E::GameAudioLikeRain(e) => self.rain = e.level as f32,
             E::SmokeSystemLikePush(e) => self.push(tick, &e.p),
             E::SmokeSystemLikeRound(e) => { let serial = self.pushes.len() as u32; self.pushes.push(AirPush { tick, serial, shape: 5, pos: f3(e.from), vel: f3(e.dir), dir: f3(e.dir), radius: 0.0, len: e.len as f32, hard: NONE, expand: NONE, ttl: 0.0, lattice: 0 }); }
-            E::SmokeSystemLikeEmit(e) => {
-                let e = &e.e;
-                let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
-                // what it does to the air
-                let air = e.speed != 0.0 || e.push.is_some() || e.expand.is_some();
-                let push = if air {
-                    let serial = self.pushes.len() as u32;
-                    let burst = matches!(e.mode, Some(SmokeEmitterMode::Burst));
-                    self.pushes.push(AirPush { tick, serial, shape: if burst { 4 } else { 3 }, pos: f3(e.pos), vel: along(e.dir, e.speed), dir: f3(e.dir), radius: e.radius as f32, len: 0.0, hard: opt(e.push), expand: opt(e.expand), ttl: e.ttl as f32, lattice });
-                    serial + 1
-                } else { 0 };
-                let anchor = match &e.track { None => 0, Some(t) => { self.keys += 1; self.rides.push((self.keys, t.clone(), g.time + e.ttl)); self.keys } };
-                let serial = self.sources.len() as u32;
-                self.sources.push(SmokeSource {
-                    tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4 | (e.held == Some(true)) as u32 * 8 | (e.fire == Some(true)) as u32 * 16, lattice,
-                    pos: f3(e.pos), radius: e.radius as f32, density: e.density as f32, heat: e.temperature as f32, ttl: e.ttl as f32, age: e.age as f32,
-                    attack: opt(e.attack), jitter: opt(e.jitter), prio: opt(e.prio), min_cells: opt(e.min_voxels), tint: e.tint.map_or([NONE; 3], f3),
-                });
-            }
+            E::SmokeSystemLikeEmit(e) => self.source(tick, g, &e.e),
             _ => {}
         }
+    }
+
+    /// a source of smoke, and what it does to the air
+    fn source(&mut self, tick: u32, g: &Game, e: &SmokeEmitter) {
+        let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
+        let air = e.speed != 0.0 || e.push.is_some() || e.expand.is_some();
+        let push = if air {
+            let serial = self.pushes.len() as u32;
+            let burst = matches!(e.mode, Some(SmokeEmitterMode::Burst));
+            self.pushes.push(AirPush { tick, serial, shape: if burst { 4 } else { 3 }, pos: f3(e.pos), vel: along(e.dir, e.speed), dir: f3(e.dir), radius: e.radius as f32, len: 0.0, hard: opt(e.push), expand: opt(e.expand), ttl: e.ttl as f32, lattice });
+            serial + 1
+        } else { 0 };
+        let anchor = match &e.track { None => 0, Some(t) => { self.keys += 1; self.rides.push((self.keys, t.clone(), g.time + e.ttl)); self.keys } };
+        let serial = self.sources.len() as u32;
+        self.sources.push(SmokeSource {
+            tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4 | (e.held == Some(true)) as u32 * 8 | (e.fire == Some(true)) as u32 * 16, lattice,
+            pos: f3(e.pos), radius: e.radius as f32, density: e.density as f32, heat: e.temperature as f32, ttl: e.ttl as f32, age: e.age as f32,
+            attack: opt(e.attack), jitter: opt(e.jitter), prio: opt(e.prio), min_cells: opt(e.min_voxels), tint: e.tint.map_or([NONE; 3], f3),
+        });
     }
 
     fn emit(&mut self, tick: u32, e: &game::out_events::OutParticlesEmit) {
