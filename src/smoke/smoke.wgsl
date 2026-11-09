@@ -856,12 +856,12 @@ fn lumps(p: vec3f) -> f32 {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); var f = o * o; if (sp.law > 1.5) { f = abs(o); } if (sp.law > 2.5) { f = max(o * o, 0.3 * abs(o)); }
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); var f = o * o; if (sp.law > 1.5) { f = abs(o); } if (sp.law > 2.5 && sp.law < 3.5) { f = max(o * o, 0.3 * abs(o)); }
   let a = select(1.0 - exp(-sp.bend * f * dt), 1.0, sp.whole > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
-  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; let due = a * d * bare * bare * bare * bare;
+  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; var due = a * d * bare * bare; if (sp.law < 3.5) { due *= bare * bare; }
   if (due < 1e-6) { return was; }
   let q = P * 2.0 + vec3f(0.0, -sp.time * 0.35, sp.time * 0.15);
   return was + due * (0.2 + 1.75 * smoothstep(-0.3, 0.5, lumps(q) + 0.5 * lumps(q * 2.1 + 17.0)));   // (wisps at two sizes, 0.85 in the mean)
