@@ -159,13 +159,6 @@ impl Layout {
     pub fn game_and_users(&self) -> Vec<String> {
         self.crates.iter().filter(|c| self.game.contains(&c.name) || self.below(&c.name).iter().any(|d| self.game.contains(d))).map(|c| c.name.clone()).collect()
     }
-    /// what the body files' paths share from the root on (`rust/game/src/` with one body crate): left off a path in a report
-    pub fn common(&self) -> String {
-        match self.bodies.as_slice() {
-            [one] => format!("rust/{one}/src/"),
-            _ => "rust/".to_string(),
-        }
-    }
     pub fn say(&self) -> String {
         let others: Vec<&str> = self.crates.iter().filter(|c| !self.game.contains(&c.name)).map(|c| c.name.as_str()).collect();
         format!("the game's crates: {}; bodies in {}; the tables are {}; the other crates under rust/: {}", self.game.iter().cloned().collect::<Vec<_>>().join(", "), self.bodies.join(", "), self.knobs.display(), others.join(", "))
@@ -244,8 +237,9 @@ mod tests {
     #[test]
     fn one_crate_is_found_with_its_users() {
         let d = tree("one", &[
-            ("rust/game/Cargo.toml", "[package]\nname = \"game\"\n[dependencies]\nsim = { path = \"../sim\" }\n"),
-            ("rust/game/src/knobs/mod.rs", "pub struct Knobs {}"),
+            ("rust/game_types/Cargo.toml", LIB),
+            ("rust/game_types/src/knobs/mod.rs", "pub struct Knobs {}"),
+            ("rust/game/Cargo.toml", "[package]\nname = \"game\"\n[dependencies]\nsim = { path = \"../sim\" }\ngame_types = { path = \"../game_types\" }\n"),
             ("rust/sim/src/knobs.rs", "pub const GAIT_LEAN: usize = 0;"),
             ("rust/game/src/doors/p_01.rs", ""),
             ("rust/game/src/doors/mod.rs", ""),
@@ -256,13 +250,12 @@ mod tests {
             ("rust/target/x.rs", ""),
         ]);
         let l = find(&d).unwrap();
-        assert_eq!(l.game.iter().cloned().collect::<Vec<_>>(), ["game"]);
+        assert_eq!(l.game.iter().cloned().collect::<Vec<_>>(), ["game", "game_types"]);
         assert_eq!(l.bodies, ["game"]);
         assert_eq!(l.users(), ["game_face", "game_run"]);
         assert_eq!(l.crates.iter().filter(|c| c.page).map(|c| c.name.as_str()).collect::<Vec<_>>(), ["game_face"]);
-        assert_eq!(l.game_and_users(), ["game", "game_face", "game_run"]);
-        assert_eq!(l.knobs, Path::new("rust/game/src/knobs/mod.rs"));
-        assert_eq!(l.common(), "rust/game/src/");
+        assert_eq!(l.game_and_users(), ["game", "game_face", "game_run", "game_types"]);
+        assert_eq!(l.knobs, Path::new("rust/game_types/src/knobs/mod.rs"));
         let _ = std::fs::remove_dir_all(&d);
     }
 
@@ -290,17 +283,17 @@ mod tests {
         assert_eq!(l.bodies, ["game_world", "game_rules"]);
         assert_eq!(l.users(), ["game", "game_start"]);
         assert_eq!(l.knobs, Path::new("rust/game_types/src/knobs/mod.rs"));
-        assert_eq!(l.common(), "rust/");
         let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]
     fn a_module_with_bodies_in_two_crates_is_refused() {
         let d = tree("two", &[
-            ("rust/a/Cargo.toml", LIB),
-            ("rust/a/src/knobs/mod.rs", "pub struct Knobs {}"),
+            ("rust/t/Cargo.toml", LIB),
+            ("rust/t/src/knobs/mod.rs", "pub struct Knobs {}"),
+            ("rust/a/Cargo.toml", "[dependencies]\nt = { path = \"../t\" }\n"),
             ("rust/a/src/doors/p_01.rs", ""),
-            ("rust/b/Cargo.toml", "[dependencies]\na = { path = \"../a\" }\n"),
+            ("rust/b/Cargo.toml", "[dependencies]\nt = { path = \"../t\" }\n"),
             ("rust/b/src/doors/p_02.rs", ""),
         ]);
         assert!(find(&d).is_err());
