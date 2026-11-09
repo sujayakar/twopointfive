@@ -428,7 +428,10 @@ impl Scripted {
 }
 impl Script for Scripted {
     fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) {
-        cmd.keys.retain(|k| !MOVE.contains(&k.as_str()));
+        // (the host's Input keeps what the last hand held: what is held and pressed now is his to say)
+        cmd.keys.clear();
+        cmd.pressed.clear();
+        (cmd.buttons, cmd.clicked, cmd.wheel) = (0.0, 0.0, 0.0);
         let Some(script) = self.script.as_mut() else { return };
         let me = self.me.clone();
         me.open(g, cmd);
