@@ -384,7 +384,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
     let mut men: Vec<GuardId> = Vec::new();
     let free = on(g.tab.orders_order_def[def].free);
     for &gd in &all {
-        let w = if !free && nightbreach_owns(g, gd) { nightbreach_release(g, gd) } else { None };
+        let w = if !free && crate::mission::has(g, gd) { crate::mission::lets_go(g, gd) } else { None };
         match w { Some(w) if !w.is_empty() => why = Some(w), _ => men.push(gd) }
     }
     if men.is_empty() {

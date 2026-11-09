@@ -136,10 +136,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
             crate::wallcharge::wall_charge_input_after(g, input);
         });
     }
-    crate::nightbreach::night_breach_tick(g, dt, input, Some(cam));
-    crate::quiet::quiet_mission_tick(g, Some(cam));
-    crate::roomclear::room_clear_scenario_tick(g, dt);
-    crate::rescue::rescue_tick(g, dt, input, Some(cam));
+    crate::mission::mission_tick(g, dt, input, Some(cam));
     crate::wallreact::wall_react_tick_2(g);
     crate::entrypoints::entry_points_tick(g);
     crate::cleared::cleared_rooms_tick(g);

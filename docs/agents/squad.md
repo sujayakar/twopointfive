@@ -101,7 +101,7 @@ tap on a door they stand stacked on is answered and moves nobody (`squad_orders_
 
 **How it ends.** Another order replaces it, and a job that finishes hands him a plain hold or the file. A man stopped short of his mark for
 `stuck_secs` takes where he stands as his mark. If that is a metre or more off he says "can't get through." and his group calls no "set."
-`squad_orders_drop` lets go of a dead man or one a drill takes (`nightbreach_owns`). In a fight the AI has him, a posted man pinned to his post
+`squad_orders_drop` lets go of a dead man or one a drill takes (`mission::has`). In a fight the AI has him, a posted man pinned to his post
 (`set_pinned`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
 
 ### The file

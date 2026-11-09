@@ -395,9 +395,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
     g.chronicle = crate::chronicle::Chronicle::blank();
     crate::director::director_on_encounter_restart(g);
-    crate::nightbreach::night_breach_on_encounter_restart(g);
-    crate::rescue::rescue_on_encounter_restart(g);
-    crate::quiet::quiet_mission_on_encounter_restart(g);
+    crate::mission::mission_stages(g);
     crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
     crate::fire::update_fire(g, 0.0);
 }

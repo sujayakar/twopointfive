@@ -69,7 +69,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
     taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     let mut out: Vec<Spot> = Vec::new();
-    if game::roomclear::room_clear_scenario_active(g) {
+    if !g.staged.rooms.is_empty() {
         let rooms: Vec<_> = g.staged.rooms.iter().map(|r| r.def.clone()).collect();
         let mut lists: Vec<Vec<Spot>> = Vec::new();
         for r in &rooms {
@@ -125,7 +125,7 @@ fn stand_extra(g: &mut Game, n: f64) {
         let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
-        if game::nightbreach::night_breach_up(g) { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }
+        game::mission::adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) });
         if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;
     }

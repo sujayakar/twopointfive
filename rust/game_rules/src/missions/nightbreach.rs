@@ -661,6 +661,32 @@ pub fn night_breach_ended(g: &crate::game::Game) -> Option<(bool, &'static str, 
     if g.mission.stage == crate::game::MissionStage::Failed { Some((false, "FAILED", String::new())) } else { None }
 }
 
+/// The drill has this man: of four, the first pair alone, from Sam's word until the room is called or lost.
+pub(super) fn drill_has(g: &crate::game::Game, gd: GuardId) -> bool { night_breach_owns_pair(g) && night_breach_drill_ops(g).contains(&gd) }
+
+/// What a man it staged is doing by it, in the menu's words.
+pub(super) fn drill_doing(g: &crate::game::Game, gd: GuardId) -> Option<String> {
+    use crate::nightbreach::NightBreachState as St;
+    if !night_breach_up(g) || !g.staged.team.contains(&gd) { return None; }
+    let state = night_breach_state(g);
+    if !night_breach_drill_ops(g).contains(&gd) { return if state == St::Off { None } else { Some(String::from("standing by")) }; }
+    Some(String::from(match state {
+        St::Staged => "waiting",
+        St::Stacking => "stacking · the breach",
+        St::Set => "set · press F to send them in",
+        St::Going | St::Inside => "breaching",
+        St::Clear => "holding the room",
+        _ => "holding",
+    }))
+}
+
+/// The door its pair is set at, for the second word.
+pub(super) fn drill_waits(g: &crate::game::Game) -> Option<(DoorId, Vec<GuardId>)> {
+    if night_breach_state(g) != NightBreachState::Set { return None; }
+    let d = crate::doors::doors_by_name(g, &g.night_breach.drill.as_ref()?.plan.door)?;
+    Some((d, night_breach_drill_ops(g)))
+}
+
 /// Where the breach stands, in one word.
 pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBreachState {
     if !crate::nightbreach::night_breach_up(g) { return NightBreachState::Off; }

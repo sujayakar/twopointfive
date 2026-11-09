@@ -122,26 +122,13 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let sc = &g.tab.doortools_set_charge[c];
         put(&mut by, sc.door, &charge_men(&sc.by), WaitWhy::Charge, false).set = Some(c);
     }
-    let nb = crate::nightbreach::night_breach_state(g) == crate::nightbreach::NightBreachState::Set;
-    let drill_ops: Vec<GuardId> = crate::nightbreach::night_breach_drill_ops(g);
-    if nb {
-        if let Some(d) = g.night_breach.drill.as_ref().and_then(|x| crate::doors::doors_by_name(g, &x.plan.door)) {
-            let men: Vec<GuardId> = drill_ops.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
-            put(&mut by, d, &men, WaitWhy::Drill, false).drill = true;
-        }
-    }
-    // the rescue's entry on the hostage room, held for the second word
-    if crate::rescue::rescue_up(g) && g.rescue.result.is_none() {
-        if let Some(entry) = &g.rescue.entry {
-            if !g.tab.doortools_door_gate[entry.gate].go {
-                for e in entry.ops.iter() {
-                    if e.ended.is_some() { continue; }
-                    let op = &g.tab.doortools_door_op[e.op];
-                    let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
-                    put(&mut by, op.door, &men, WaitWhy::Stack, false).gate = true;
-                }
-            }
-        }
+    // what of the mission's own waits for the second word: a drill's pair, an entry held at its doors
+    let mut drill_men: Vec<GuardId> = Vec::new();
+    for (door, men, drill) in crate::mission::waits(g) {
+        if drill { drill_men = men.clone(); }
+        let men: Vec<GuardId> = men.into_iter().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
+        let row = put(&mut by, door, &men, if drill { WaitWhy::Drill } else { WaitWhy::Stack }, false);
+        if drill { row.drill = true; } else { row.gate = true; }
     }
     // the quiet pair's mark: the first reader of the key. The key a step ahead of each man who waits, on his gun's line: nothing of the man he waits on. A lesson that still holds the word shut lists no mark
     let marked = crate::pairorders::pair_orders_waiting(g, seat);
@@ -176,7 +163,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             op.thr.as_ref().is_some_and(|th| matches!(th.first, Some(crate::doortools::ThresholdFirst::Can | crate::doortools::ThresholdFirst::Burst))) && op.men.iter().any(|m| addr.contains(m))
         });
         let last = reaches && !any_word && !early && !row_key && !s.menu.as_ref().is_some_and(|m| m.word_row) && t_set.is_empty() && w_set.is_empty();   // … and past them all, to the rescue
-        let drill_now = if any_word { drill_ops.iter().any(|m| addr.contains(m)) } else { t_set.is_empty() && w_set.is_empty() };   // (the drill reads the key after them)
+        let drill_now = if any_word { drill_men.iter().any(|m| addr.contains(m)) } else { t_set.is_empty() && w_set.is_empty() };   // (the drill reads the key after them)
         // (every man of it on his place, his feet there: a gun still coming round does not put the cap out, and none taken off it by a fight)
         let set = |men: &[GuardId]| men.iter().all(|&m| {
             if crate::condition::down(g, g.gd[m].ch) { return true; }
