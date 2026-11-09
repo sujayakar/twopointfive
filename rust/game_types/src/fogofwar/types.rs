@@ -275,7 +275,7 @@ pub struct FogofwarMod {
 impl FogofwarMod {
     pub fn blank() -> Self {
         FogofwarMod {
-            fog_page: { let k = crate::knobs::page_fog(); crate::fogofwar::FogofwarModFOGPAGE { desat: k.desat, edge: k.edge, air: k.air, kept: k.kept } },
+            fog_page: { let k = crate::knobs::FogK::page(); crate::fogofwar::FogofwarModFOGPAGE { desat: k.desat, edge: k.edge, air: k.air, kept: k.kept } },
             thing_pass: { let mut s = JsSet::new(); s.add(crate::Num(1.0)); s.add(crate::Num(4.0)); s.add(crate::Num(5.0)); s },
         }
     }

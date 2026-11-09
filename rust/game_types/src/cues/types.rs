@@ -384,7 +384,7 @@ pub struct CuesAt {
 }
 
 /// (src/game/cues.ts:80 CUES_DEFAULTS: a table nothing writes)
-pub fn cues_defaults() -> crate::knobs::CuesK { crate::knobs::page_cues() }
+pub fn cues_defaults() -> crate::knobs::CuesK { crate::knobs::CuesK::page() }
 
 /// (src/game/cues.ts:81 LS)
 pub const LS: &str = "twopointsix.cues";

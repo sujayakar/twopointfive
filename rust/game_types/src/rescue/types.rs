@@ -392,7 +392,7 @@ impl RescueMod {
     pub fn blank() -> Self {
         RescueMod {
             // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
-            applied: { let k = crate::knobs::page_rescue(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
+            applied: { let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
         }
     }
 }

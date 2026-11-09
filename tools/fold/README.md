@@ -11,7 +11,7 @@ cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv   
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md --drop drop.txt   # every leaf of the tables no body reads; the settled rows among them, one a line
 ```
 
-Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, the game's `knobs.rs` (the tables at page
+Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, the game's `knobs/` (the tables at page
 values: a row's value is taken from there and must agree with the list, or the run stops) and every body file
 `<module>/{p_NN,b_NN}.rs` of the game's crates. It writes only body files, and a module's `mod.rs` where that hands a deleted function
 on by name. It finds files by module folder, not by a list, so it can be run again after files move. A second run on its own output
@@ -21,7 +21,7 @@ changes nothing.
 
 No pass and no script here names a crate. `fold layout` lists `rust/` and says what it found (`src/layout.rs` has the rules):
 
-- the crate whose `src/knobs.rs` declares `struct Knobs` holds the tables;
+- the crate whose `src/knobs/mod.rs` declares `struct Knobs` holds the tables;
 - the game's crates are that one and every plain library that depends on one of them, however far;
 - a crate that builds something to run (a `src/bin`, a `[[bin]]`, a `cdylib`) is a user of the game, and so is every crate that is
   none of the game's: a name one of them spells keeps an item alive, and each is checked after a pass;

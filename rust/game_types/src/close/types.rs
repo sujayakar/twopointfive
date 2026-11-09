@@ -276,7 +276,7 @@ pub struct CloseStats {
 pub const DEGR: f64 = 0.017453292519943295;
 
 /// (src/game/close.ts:115 CLOSE_DEFAULTS: a table nothing writes)
-pub fn close_defaults() -> crate::knobs::CloseK { crate::knobs::page_close() }
+pub fn close_defaults() -> crate::knobs::CloseK { crate::knobs::CloseK::page() }
 
 /// (src/game/close.ts:117 BEHIND_COS)
 pub const BEHIND_COS: f64 = -0.25;

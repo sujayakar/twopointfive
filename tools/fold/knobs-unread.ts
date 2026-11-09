@@ -17,15 +17,15 @@ const lines = new Map<string, string[]>(); const textOf = (p: string): string[] 
 if (!LOGS.length) throw new Error('no logs: with none every row reads as unread');
 for (const crateLog of LOGS) { const [crate, log] = crateLog.split('='); const logText = readFileSync(log, 'utf8'); if (!/warning: use of deprecated field/.test(logText)) throw new Error(`${log} has no warning in the short format`); for (const m of logText.matchAll(/^(\S+?):(\d+):(\d+): warning: use of deprecated field `\S*?knobs::(\w+)::(\w+)`/gm)) {
   const [, path, l, c, table, field] = m, key = `${table}.${field}`; named.add(key);
-  if (/game_types\/src\/knobs\.rs$|game_wire\/|knobs_list\.rs$/.test(path)) continue;
+  if (/game_types\/src\/knobs\/|game_wire\//.test(path)) continue;
   const p = path.startsWith('/') ? path : join(RUST, crate, path), line = textOf(p)[+l - 1], rest = line.slice(+c - 1);
   if (line.includes('rows_same!') || unreadLine(line)) continue;
   if (/^\w+\s*=[^=]/.test(rest) || /^\w+:\s/.test(rest)) continue;   // (a write, or a value in a literal)
   read.add(key);
 } }
-const tables = readFileSync(join(RUST, 'game_types/src/knobs.rs'), 'utf8');
+const tables = readdirSync(join(RUST, 'game_types/src/knobs')).map(n => readFileSync(join(RUST, 'game_types/src/knobs', n), 'utf8')).join('\n');
 const fields = new Map<string, { f: string; ty: string }[]>();
-for (const m of tables.matchAll(/pub struct (\w+) \{\n?(.*?)\n?\}/gs)) fields.set(m[1], [...m[2].matchAll(/pub (\w+): ([^,\n]+),/g)].map(x => ({ f: x[1], ty: x[2].replace(/crate::knobs::/g, '') })));
+for (const m of tables.matchAll(/pub struct (\w+) \{\n?(.*?)\n?^\}/gms)) fields.set(m[1], [...m[2].matchAll(/pub (\w+): ([^,\n]+),/g)].map(x => ({ f: x[1], ty: x[2].replace(/crate::knobs::/g, '') })));
 const dead = new Set<string>(), gone = new Set<string>();
 for (const [t, fs] of fields) if (t !== 'Knobs') for (const { f, ty } of fs) if (!fields.has(ty) && !read.has(`${t}.${f}`)) dead.add(`${t}.${f}`);
 for (let moved = true; moved;) { moved = false;

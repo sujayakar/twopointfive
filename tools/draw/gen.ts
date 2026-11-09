@@ -68,17 +68,7 @@ const ASKS = join(ROOT, 'src/draw/asks.ts'), A: string[] = [], answers = new Set
   A.unshift('// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '', ...(answersWord ? ['/** an answer that is one word: its length, then its bytes */', 'const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));', ''] : []), ...(answersNumber ? ['/** an answer that is one number */', 'const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);', ''] : []),
     '/** what the cards before a game show and press; `answer` is the module\'s, to the bytes of an ask */', 'export class Asks extends Writer {', '  constructor(private readonly answer: (asked: Uint8Array) => Uint8Array) { super(); }', '  /** a press, as it went */', '  protected told(p: Pressed): Pressed { return p; }');
   A.push('}', ''); }
-// ---- every number a person may turn while the game plays, by its name: where it lies in the knobs, from the wire's table (a settled row is the build's own)
-const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
-{ const S = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/schema.json'), 'utf8')), T = S.types as Record<string, { k: string; fields: { rust: string; ty: string }[] }>, settled = new Set<string>(S.knobSettled), rows: string[] = [], typed: string[] = [];
-  const PARTS: Record<string, number> = { f64: 1, bool: 1, V3: 3, '[f64; 2]': 2, '[f64; 3]': 3, '[f64; 4]': 4 };
-  const walk = (path: string, ty: string): void => { const t = T[ty];
-    if (t?.k === 'struct') { for (const f of t.fields) if (!settled.has(`${ty.replace('crate::', '')}.${f.rust}`)) walk(path ? `${path}.${f.rust}` : f.rust, f.ty); return; }
-    const n = PARTS[ty]; if (n) typed.push(`    let _: &${ty === 'V3' ? '[f64; 3]' : ty} = &k.${path};`);
-    if (n) for (let i = 0; i < n; i++) rows.push(`    ("${path}${n > 1 ? `.${i}` : ''}", offset_of!(Knobs, ${path})${i ? ` + ${8 * i}` : ''}, ${ty === 'bool'}),`); };
-  walk('', 'crate::knobs::Knobs');
-  knobText = `//! Written by tools/draw/gen.ts from tools/blitz/schema.json: every number of the knob tables that is not settled, by its name, where it lies, and whether it is a yes or no.\nuse core::mem::offset_of;\nuse game::knobs::Knobs;\n\npub static KNOBS: &[(&str, usize, bool)] = &[\n${rows.join('\n')}\n];\n\n/// each is of the type the list's reader takes it for\nfn typed(k: &Knobs) {\n${typed.join('\n')}\n}\nconst _: fn(&Knobs) = typed;\n`; }
-const files: [string, string][] = [[KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')], [ASKS, A.join('\n')], [join(ROOT, 'src/view/read.ts'), viewReader(ROOT, die)]];
+const files: [string, string][] = [[OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')], [ASKS, A.join('\n')], [join(ROOT, 'src/view/read.ts'), viewReader(ROOT, die)]];
 if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
 for (const [p, t] of files) writeFileSync(p, t);
 console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);

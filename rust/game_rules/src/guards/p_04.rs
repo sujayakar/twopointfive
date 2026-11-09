@@ -682,7 +682,7 @@ mod tests {
     // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
     #[test]
     fn dist_term_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
             (3f64, 0x3ff0000000000000u64),
@@ -702,7 +702,7 @@ mod tests {
 
     #[test]
     fn eye_reach_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),
             (0.39f64, 0x4030000000000000u64),
@@ -720,7 +720,7 @@ mod tests {
 
     #[test]
     fn a_far_glimpse_writes_a_fix_by_his_state() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         // inside `range`: never faint
         assert!(!faint_of(&k, GuardState::Patrol, 0.0, 16.0, 0.0));
         // calm, past `range`: only the frame the sight itself tips him over 0.3

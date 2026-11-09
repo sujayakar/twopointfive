@@ -5,7 +5,6 @@ pub mod command;
 pub mod desk;
 pub mod kept;
 pub mod knobs;
-mod knobs_list;
 pub mod shown;
 pub mod words;
 

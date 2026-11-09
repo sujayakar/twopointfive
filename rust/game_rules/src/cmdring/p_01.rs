@@ -292,7 +292,7 @@ mod tests {
     use super::*;
 
     /// The page's own row of knobs: these tests reach no game.
-    fn page() -> crate::knobs::CmdringK { crate::knobs::page_cmdring() }
+    fn page() -> crate::knobs::CmdringK { crate::knobs::CmdringK::page() }
 
     // Every expected value below is what src/game/cmdring.ts printed under bun, with EXACT on.
     #[test]

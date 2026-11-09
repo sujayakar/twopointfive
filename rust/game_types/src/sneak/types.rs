@@ -254,7 +254,7 @@ pub struct SneakStats {
 }
 
 /// (src/game/sneak.ts:143 SNEAK_DEFAULTS: a table nothing writes)
-pub fn sneak_defaults() -> crate::knobs::SneakK { crate::knobs::page_sneak() }
+pub fn sneak_defaults() -> crate::knobs::SneakK { crate::knobs::SneakK::page() }
 
 /// (src/game/sneak.ts:144 LS)
 pub const LS: &str = "twopointsix.sneak";
