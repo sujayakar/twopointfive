@@ -1,125 +1,159 @@
-# Characters in motion
+# How a man moves and looks
 
-One of the area files CLAUDE.md indexes. Everything below was moved here word for word from CLAUDE.md on 2026-10-13, in its old order;
-"the bullet above / below" in a bullet means its neighbour there (each block says which lines it was), and a bullet named by its bold
-title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
+The skeleton, the clips, the layers that pose a man, how he falls, what he wears, and how he reaches the GPU. Who decides to crouch, aim or
+reload is each rule's page (`player.md`, `squad.md`, `enemies.md`); takedowns and the wall hold are `stealth.md`; how he is lit is `render.md`.
 
-<!-- was CLAUDE.md lines 2407–2485 -->
-- **Character materials = a man shaded per material SLOT** (`render/charMaterials.ts` + `rust/game_rules/src/char_look`; `settings.charMats`, DEFAULT OFF = `fsSkin`'s two tints, the frame as it
-  was — on by itself for a mesh that keeps the contract, `?charmats` dresses the shipped mannequin by joint as a STAND-IN, `?nocharmats` holds it off; Tab ▸ Materials ▸ Characters,
-  `__charmat {on, slots, tables, data(), get(i|'sam'), bump(), reset(), summary()}`). THE CONTRACT WITH THE MESHES is the slot NAMES as glTF material names — `skin cloth_uniform
-  cloth_plain webbing boot helmet metal_dark rubber lens` (+ optional `accent`); case / `M_` / `.001` ignored (`slotOfMaterialName`); a cast of part meshes (MeshData.part + the
-  slot in matSel's low four bits) is read as it is. What rides to the GPU: per VERTEX a second vertex buffer `charSlots` (slot, cavity — the cavity BAKED from the mesh's own
-  curvature at first use, band-passed and scaled by the mesh's own spread: creases darken, ridges wear, never a painted texture), per INSTANCE `CHAR_MAT_ROWS` 24 vec4 rows in
-  the `charMats` storage buffer (g-buffer group 1 binding 7, VERTEX only — the vertex stage's 8th storage buffer; header row 0 `.x` IS the switch per man) = (albedo, lobe
-  roughness) · (lobe gain, soak, grime, wear) per slot. `gbuffer.wgsl vsSkin` picks the row into flat varyings; `fsSkin` applies cavity / ridge wear, the ground's dust by
-  bind-pose height above the sole, and PACKS THE DRY FINISH INTO THE WET COAT'S CHANNEL (`packWet` + id bit 30 → composite's `wetCoatSpec`: a GGX lobe per reaching light under
-  the direct pass's own shadowing + the ambient sheen — no rays, every tier, composite untouched; so bit 30 now means 'this man's pixel carries a coat lobe', wet or dry, the lobe
-  tops out at a dielectric's 4 % (a true metal F0 would need composite), and the rain's darkening goes through each slot's `soak`). `o.mat` stays (1, 0): the RT reflection pass
-  skips men. Secondary hits read ONE colour per shadow proxy = the area-weighted slot mix that proxy carries (`proxyAlbedos` → `BoxWorld.addCharacterCapsules(owner, Vec3[15])`);
-  while mesh hits / the smooth union are live, record 0 (the one colour they read for the whole man) carries all of him. TABLES per SIDE (`CHAR_MATS`: operator · defender ·
-  responder = the staff side's TRAINED element, `Guard.trained` · civilian; `sideOfTeam`): colours from `Character.tint / tint2` (`src`), fixed, or the man's own `pick` by a hash
-  of his id (never Math.random); `{ as: slot }` rows alias; `standIn` remaps apply only on the mannequin. `accent` = whatever a side's ONE odd-coloured thing is, and the cast's
-  meshes put it there so the table decides: the operators' pair marking (helmet band, brassards: `tint2`), the irregulars' pale naturals (the straw hat, the tee under an open
-  jacket), the tucked shirt's tie (a civilian's = his shirt darker; the response team's = its dark half, `{ as: 'cloth_plain' }` there = no tie). The response team is TWO tones
-  off its suit (shirt `tint`, trousers `tint2`, black rig / boots, the cap a shade under the shirt), the operators ONE issue (each suit tint pulled half way to `SUIT`). Not ported natively (the .metal headers say so). QA: `probes.ts charmats`
-  (slots / tables / off / shader / cast), notes rebuild/characters-loud/materials/notes.md in the project files. THE TWO TINTS MEAN, for everybody but an operator, TOP then
-  TROUSERS (level.ts CivilianDef, guards.ts spawnUnit) and the civilians' and irregulars' tables read them so. The cast's placeholder (`?nocharmats`: `slotAlbedo` draws
-  cloth_uniform in the instance's FIRST colour, cloth_plain / accent in its SECOND; webbing and headgear mix some of the first in) is handed, per slot, the tint the man's TABLE
-  reads for it (`charMaterials.ts placeholderTints(side)` off `charLook.ts charSides`, in game.ts's draw block and the viewer; `TINTS_AS_IS` on the mannequin and for operators),
-  so a shirt keeps its level colour when the switch flips (what the placeholder does not follow: `accent` always takes the second colour — off, a tie is the shirt's colour and a straw hat or a tee the top's — and a row's `mix` — off, an operator's suit is his raw tint). On a cast the crease bake welds PER PART (`bakeCavity(m, perPart = true)`: alternative boots / shirts / hands share
-  positions to the bit and no man wears both; the scale stays one mesh-wide percentile); the viewer's staged figure takes the table and tints of the SIDE of an outfit put on by
-  name (`__vrt.wear`, `Runtime.wornSide`).
-- **The movement pass (MOVES) and turn weight (TURN)** (`rust/game_rules/src/character`; both ON in the page, OFF in the harness — `host/standup.ts` / `tools/qa/headless.ts` pin them, `TPS_MOVES=1` /
-  `TPS_TURN=1[,aim=7,…]` (or a setting's name, `TPS_TURN=medium`; a spec it does not understand stops the tool) in front of any headless tool turn them on; URL `?nomoves` / `?moves=0|1`, `?noturn` / `?turn=0|1` / `?turn=light|medium|heavy` (`TURN_FEEL`: three sets of the four rates, read everywhere through `setTurn(spec)`, named back by `turnFeel()`; `light` ships — the one that left the 144-seed tallies where they were; **the turn tallies and `turn-rates.ts` takes recorded before the names existed, at 8b3a5a3 / 7dd40b7 under a plain `TPS_TURN=1`, were `medium`** — reproduce them with `TPS_TURN=medium`), the native host `--nomoves | --moves 0|1` / `--noturn | --turn 0|1|light|medium|heavy` (also through `native:soak`); **off = the animator and the yaws exactly as they were**, held by
-  `probes.ts moves-off` / `turn-off`, the gait numbers and the frozen digests). MOVES = `MOVES` switches + `MV` numbers: `anim.trained` 0‥1 dealt by side in game.ts (operators 1, QRF 0.75,
-  defenders 0.12) scales the carry (trained glide: pelvis down, bob out, elbows in / untrained: shoulder swing, winged elbow), recoil per round (`anim.fire()` → `MV.recoil`: bore shove + trunk rock + climb),
-  `flinchFrom(dir, k, soft)` (a duck off the rounds; `k` = how much of it, eased while one shows, `soft` = it leaves a hand's errand, the work hands and the ready pose alone and is nothing with the pass off — the close-round rule's, `docs/agents/enemies.md`, flinch; `anim.flinchShown` 0‥1) vs `hitFrom(dir)` (knocked along the round) vs `startleFrom(dir)` (the START of a man who has just seen something he did not expect — `MV_STARTLE`: the trunk reared back off the thing, the head snapped round to it, the weight back over planted feet, the arms that are not on a long gun flung out and the near one thrown up more; a long gun keeps both hands and puts more of it into the trunk; a thing BEHIND him brings him round to it; `anim.startleShown` 0‥1; pose strips `startle`, `startle-rifle`, `startle-behind`; `docs/agents/enemies.md`, startle), `anim.dazzle` (the blinded hunch for as long as `Guard.dazzledAt` holds — the trigger hand keeps the gun
-  on its line so a blind burst still leaves; the hand over the eyes sits UNDER a brim / helmet rim: `MV.dazzle.handDrop / handOut / handRoll / handPole`, fitted to the cast's hats with the models part's cast-pose tool), `tossItem()` (the support-hand underhand bang toss; `throwItem()` stays the overhand), signal `'squeeze'` (the stack's set), fall variety at
-  ragdollize. Poses feed the sim (rounds leave the drawn muzzle), so MOVES on is not bit-identical — the door tally (32 seeds) shows no measurable shift. TURN = `TURN` knobs + `WeaponDef.handling`
-  (`weapons.ts handlingOf(def)` = THE one place the weight is read: the row's number, else its class's — pistol 1, carbine 0.82, FN2000 0.8, rifle 0.7 —, else a carbine's) +
-  `Character.turn {on, h, k}` dealt each frame in game.ts (every armed AI man; not Sam, civilians, a held man or a
-  showcase's cast): **between a man's updates `bodyYaw` / `aimYaw` hold the WEIGHED yaws; `c.turnBegin()` (updateGuard's second statement) puts the AI's WISH back so its own easings run wish to
-  wish; `Character.update` → `turnWeigh` steps body and gun toward the wish (acceleration, a top rate × handling, a brake that lands on the point) and writes the weighed yaws back.** So: an easing
-  of his yaw OUTSIDE his own update must start from `c.wantBody` (roomfight.ts applyWatch, dialogue.ts), and a facing / fire gate INSIDE his update must read `c.gunYaw` (guards.ts ×3, aim.ts) —
-  `aimYaw` there is where he wants the gun, not where it is. `anim.turnLead` = the head going to the new point ahead of the gun. Saved in a checkpoint with the turn itself under `SAVETIMELINE.turn` (`turnSnap` / `turnPut` / `bakeLoaded`; `qa.md`, a man caught mid-turn); with that off a load starts from the yaws. QA: `probes.ts moves`
-  (11 probes incl. the `turn` family), `bun run tools/qa/turn-rates.ts` (yaw-rate / swing statistics over whole play-throughs), `tools/qa/pose-strip.ts` + `pose-scenarios.ts` (headless pose
-  strips of any motion as SVG / PNG, `--moves off` = the passes off). `MOVES.snap` (part of MOVES, numbers `MV.snap`; `?snap=0` puts it off alone): the pistol's carry and aim trade without the bare arm showing, and a pitched shot keeps its pitch; `probes.ts moves-snap`. `MOVES.steady` (part of MOVES, numbers `MV.steady`; `?steady=0` off alone, `?steady=2` = the option below; a recording from before the key replays with it off): THE CROUCH WALK CARRIED LEVEL — the maintainer, twice: "the crouch walk animation looks like waddling". Crouch_Fwd_Loop plants the feet 33 cm apart on 17.5 cm of hip and rocks the pelvis 15° and the trunk 15° over each foot in turn, so the head rides 17 cm side to side at 1.8 steps a second (the upright walk: 18 cm, 5°, 6°, 6 cm). `steadyLayer` runs on the bare locomotion right after the crouch blend (the cycle's own sample still in pC; BEFORE the foot lock and every upper-body layer) and takes shares of the cycle's SWING about its own mean out — pelvis roll 70 % at the hips with the same turn handed back at spine3 (hands empty the cycle's spine already keeps the shoulders level: they stay so; a gun's carry replaces that joint and the trunk rides the levelled pelvis), 30 % of the hips' sideways travel, the ankles in to 70 % of the cycle's width with soles as they were and the knees swung in over them — by the crouch walk's share of the pose, so a still crouch, the kneel, every upright gait and the mean carriage are untouched; stride, cadence, ankle heights and the pelvis's height are the cycle's own (head 17 → 7 cm, roll 15° → 4.5°, base 33 → 23 cm). THE NARROWED BASE AND THE SWUNG-IN KNEES ARE THE PLAIN CROUCH WALK'S ONLY: they fade out as the layers after this one sink the pelvis (`MV.steady.deep`: the sneak near a threat — `anim.deliberate` —, the close-in creep) and under a stance that re-plants the legs (stack, highReady) — a rear knee swung in under a pelvis sunk that far went through the floor; the level pelvis stays, and the probe holds the low knee no nearer the floor than with the part off there (the plain walk's comes to 7 cm for 9, clear of it). Setting 2 also rides the pelvis up to `MV.steady.rise` 7 cm higher where both legs can pay it out, eased in and out (rear knee 9 → 14 cm off the floor instead of a kneel every step) — NOT look-only (sight reads his head bone: 7 cm more of him over low cover), so it is the maintainer's call and never the default. What it cannot mend: the cycle's deep lunge-kneel step itself (that is the clip). THE SPRINT WITH THE RIFLE IS LEVELLED UNDER IT (`MOVES.steadyRun`, on; needs `steady`, so `?steady=0` puts both off; a key of its own only so that a recording from before it — `steady` in its MOVES row, no `steadyRun` — replays with it off: journal.ts; no URL flag, no Tab row; the maintainer: "sprint animation still has some waddling"): `longBody`'s run hold (`LONG_STEADY.runYaw`: a figure that steadies its long gun — Sam, and every teammate with the issue rifle: game.ts deals `longSteady` 1 by the rig — has the run clip's shoulder twist taken back out down the spine, so the shoulders stay on the weapon) turned the spine about the model's upright, and a sprinter's trunk is pitched ~25° forward: what was left was the whole trunk rolling ±11° and the head 17 cm side to side, three steps a second (the sprint hands empty: 1.7 cm, 5°; MOVES on or off the same). With the key on the twist is taken out about the trunk's own line (spine1 → between the clavicle roots) and handed back to the neck: head 17 → 4.3 cm, trunk lean 24° → 1.9°, shoulder-line roll 48° → 5°, the shoulders still on the gun (twist 9°), hips / knees / ankles to the bit, the bore the same, the trigger wrist within 1 cm; BY THE SPRINT'S SHARE OF THE POSE ONLY (`lg.sprint`: 0 at and under `BLEND.jogAt` 2.7 m/s, so a teammate's run — they top out at 2.2 — is the old hold to the bit, which the probe holds; part way up, 3.3 m/s, head 17.5 → 10 cm): with a rifle in both hands the sprinter is the player; the sprint with nothing or the pistol in the hands is the clip's own, untouched. `probes.ts moves-steady` (`MOVES_BREAK=1` must fail); mesh sheets (situations `sprint`, `sprint-rifle`) `bun run tools/qa/pose-mesh.ts operator_1 crouch-rifle-walk --at <secs> [--set '{"MOVES":{"steady":0}}']`. Judged from the maintainer's recording, offline mesh renders and numbers only — never seen moving on a GPU.
-- **MOVES, the second pass** (`character.ts MV2` + `mvArms`, after every other layer; `MOVES.reload / bound / clutch` ON with the pass, `MOVES.entry` OFF — `?entry`, native `--entry`,
-  `TPS_MOVES=1,entry=1`): ARM layers the fight does not read — the trunk, the head, a rifleman's trigger hand and the bore come out bit for bit (`probes.ts moves-reload / moves-kept` hold it per
-  frame; the 24 Standard run digests equal with them on). `reload` = the support hand's magazine change on a long gun over the WEAPON's beat (out / in / rack; `MV2.reload.box` = the carbine's
-  marks, `.back` = the bullpup's, in the gun's frame off the trigger wrist — `reloadMarks()`, tied to rigProps' magazine by the probe), on the clock of whoever OWNS the beat: game.ts deals
-  `anim.reloadAt / reloadRow` each frame off `gd.reloadT` (it stands still while he is off his man) or a room-fight teammate's `fight.opOf(gd).reloadUntil` (roomfight.ts plays no clip: the gun
-  stays up, the hand works); Sam and the viewer run on `reload(dur, beat)`'s own clock (`rack: null` = a round still chambered, no handle). Stopped short the arm eases back (`MV2.reload.rate`).
-  `anim.bound` 1 / 2 = wrists behind the back (a rescue hostage, civilians.ts) / hands on the head (the quiet game's comply promise); `anim.clutch` = the support hand to the ribs while
-  `staggerUntil` runs WITHOUT `dazzledUntil` (today only the ring airfoil's stagger). All three step aside for the first pass's own arm work (`mvs.armL`: the forearm over the eyes, the toss —
-  which is posed on the arm it always had, so `bones.handL` at a release is unchanged) and for a hand signal. `anim.dip` (entry) = an operative's muzzle down while `inDipLane` (THE lane rule,
-  game.ts `friendBeforeMuzzle` + the strip) has a friend before it and he has nobody to shoot or in view; only ever DOWN; it moves the bore, so it moves digests (13 of 24 in its first
-  form). TALLIED 10-08 and it STAYS OFF (record rebuild/cast-close-and-hurt/entry/dip/notes.md; page env `TPS_CAST=1 TPS_MOVES=1 TPS_TURN=1`, 144 seeds × the eight
-  shorter missions, paired by seed on 4b510dd): won 955 → 950 of 1152, teammates up 2129 → 2121 of 3168 (−8, 95 % −26 to +10), all of it The block (63 → 57 won, 119 → 106 of 576 up,
-  −29 to +2) with the depot +5; no friendly hit in either arm; and where the dip does move the bore (about 7 % of the lane's frames in the two runs logged — with the dip off the gun is already at the low carriage in 80–85 % of them) it
-  still ends on the friend's body: 99 of those 170 frames with the dip off, 114 with it on, at hip height instead of the chest (−36° from 0.84 m reaches the floor 1.2 m out). What it costs is
-  not pinned down: in the one run traced (block-four seed 2) a quarter second on the first man seen, and the WEAPON LIGHT goes down with the muzzle — a throwaway patch keeping the light level brought
-  the dip-off outcome back in 4 of 9 changed runs tried (not that one), keeping the eyes in 0 of 9.
-  `MOVES.entryEyes` (OFF; `?entry=eyes`, `TPS_MOVES=1,entry=1,entryEyes=1`; nothing without `entry`) = the dipped man keeps his eyes-on-the-sights eye: `longArms` publishes the pitch the
-  dip took off the bore (`anim.sightsLift`) and guards.ts `canSeeChar` adds it back; the light stays down. Measured a no-op in play: 462 of the 463 runs the dip moved come out digest
-  for digest the dip's. It does not cover `gd.muzzleDown` (the low ready leaves the shoulder; `probes.ts roomfight-eyes` asks `canSeeChar` itself about a dipped man, both ways). QA: `probes.ts moves-reload / moves-kept / moves-entry / moves-second / moves-cast` (the last skins every cast variant and holds the hands out
-  of what it wears), strips `reload-operator reload-defender hostage stay-down clutch entry-dip`; `mv2Shown {reload, bound, clutch, dip}` is what the layers show this frame.
-- **A long gun reloads with a move of its own** (`gunhand.ts GUNHAND.longReload`, under `GUNHAND.on`; `character.ts LONG_RELOAD` + `reloadCarry`; the Tab row *gun hand*). Before:
-  through a long gun's magazine change the trigger hand, the trunk and the head played the PISTOL's reload clip — the rifle swung up beside his head in a fist turned for a
-  sidearm (bore 35‥102° off its carriage, the hand 25‥41 cm from where the carriage has it, up to 10° in a frame) while the support arm changed a magazine on a gun that was
-  no longer where a rifle is held. On: the clip is left out of the pose (its CLOCK runs on, so `reloading` and every gate that asks it hear what they heard); the carriage
-  he is in goes to the reload carry by a weight that is up 0.35 s into the beat and down 0.06 s before its end — the trigger hand on the grip at one point off the chest
-  joint, the muzzle 20° up and 12° across for a box ahead of the grip (the carbines, the issue carbine), 12° / 4° for the bullpup (`reloadBack`); the head goes 22° down
-  toward the gun from just before the empty comes out until the fresh one is seated; the trunk keeps the carriage's own blade and lean; then the carriage he came from. The
-  clock is the support hand's own (`mvArms`): the game's beat where it deals one (a guard's `reloadT`, a room-fight teammate's `reloadUntil` — which never played a clip),
-  else `reload()`'s — so the player, teammates, defenders and responders all do it, and `reloadArm` lands the magazine on the well where the gun now is (it works in the
-  trigger hand's frame). A low carriage tucked for a wall (`gunWall`) keeps its tuck: the hands do the change there. A beat that stands still (a guard's counts down only at his fire sites — off his man it waits) puts the gun back on its carriage after a quarter second, and so do hands with other work (a signal, a tell, a throw, a strike, a tool); it comes up again as the change goes on. While the carry is more than half up his eyes are not on his sights (`anim.atWell`: guards.ts `canSeeChar` keeps to his head's eye); the fog cone's gaze (fogofwar.ts `gazeOf`) goes from his aim to his head BY the carry (`rlShown`, eased), so the cone swings over the third of a second the gun takes and does not jump — 1.2° a frame at most over the check's reloads, where a gate on `atWell` turned it 8.9° in one (the fog rules' owner's catch; check line 10c). The gaze stabiliser stands down for the look at the
-  well as it does for the clip. It changes the pose the game reads (the bore, the rail light, the head, the arms' hit capsules) for the length of a reload; durations, when
-  the rounds are in and who may fire are untouched, and the gun is on its carriage on the frame the rounds are in. Tube-fed guns (`reloadMag` false) take the carry with
-  the support hand left on the fore-end; with the movement pass off both hands stay on the gun, nothing changes the magazine and every gun takes the box row (`reloadBack`
-  and the beat are that pass's inputs: `moves-off` holds them nobody's). The pouches on the hip (`MV2.reload.pouch[0]`, `KIT.mag.dump` / `via`) are placed by the hips'
-  own line under the rule, not the shoulders': the clip squared the chest over the belt, the shoulder carriage blades it 36° and carried the dump pouch 6 cm round with
-  it (`kitanim-reload`, the rifle's tactical change, was red on the shipped stand until this). `moves-reload` and `moves-kept` compare a man changing a magazine with
-  one who is not, to the bit: they hold the rule off (`tools/qa/moves-probes.ts gunhandOff`) and this check holds the hand at the well under the carry. Stands: ON in the page (`?gunhand=0`
-  off), OFF in the module and on the frozen stand (`TPS_GUNHAND=1`); the journal carries the table. Check: `tools/qa/gunhand-reload-check.ts` (probe `gunhand-reload`,
-  family `gunhand`; `GUNHAND_BREAK=1` fails eight of its fourteen lines; line 10b is the beat that stands still, 10c the fog cone's gaze), the same bench numbers on both stands: over 19 reloads (the player's bullpup and issue carbine, a
-  room-fight teammate, a defender and a responder with the short carbine; low ready, on the aim, crouched, up a stair, walking, calm patrol, high port; 3264 frames) the
-  palm is 1.0 cm off the drawn grip at worst (rule off 3.0‥3.6), the support wrist 2.0 cm off the magazine's mark at out and seat (rule off 7.1), the fastest frame
-  4.5° (from the calm patrol's muzzle-down carry), the chest joint 0.0 cm off the carriage's (rule off 2.0), bore and trigger hand 0.00° / 0.0 cm off the figure that
-  never reloaded on the reload's last frame; in a game the player's rifle reload ends on the same frame off and on (frame 145 frozen, 166 shipped), 25 →
-  30 rounds, no click through it fires, the carry 0 at the next shot. `rlShown {carry, head}` is what it shows; stills `tools/qa/pose-mesh.ts <variant> reload-mag|reload
-  --inhand --gunhand`. NOT measured: tour / soak tallies with it on (a reloading man's bore, light and head point elsewhere for two seconds — expect the shipped stand's
-  digests to move). First-pass numbers, not through the maintainer's viewer pass; the gun is never canted (it is drawn upright about its bore). NEVER SEEN ON A GPU OR IN
-  PLAY: judged on Blender Workbench sheets of the skinned cast and by the numbers above.
-- **The big slot's tool in the hands** (`character.ts anim.bigTool`, `bigLayer`, table `BIGMOVE`; `rigProps.ts BIGRIG / bigBoxes / hungBoxes / bigBackOf`; switch `kit.ts
-  BIGSLOT.moves` — the rule and its checks: `docs/agents/player.md`, *The big slot's tools are carried, walked to the frame and swung*). The game writes ONE struct a frame ({
-  kind, t, equip, windup, stow, blows, end, at, snug }; `snug` absent = the first-pass shares, `player.md` *stay in a hand on the way*) and the pose is a pure function of it: nothing here keeps a clock, so a load or a replay lands on the same frame. An
-  upper-body layer over whatever the legs do (he walks while it comes out); the trunk squares to `at` and assumes he roughly faces it; `blows` are absolute times on `t`'s
-  clock and the head is solved ONTO `at` at each; the stow runs `end … end + stow` and wants the last blow a rebound before `end` (`bigRebound(kind)`, which the game's clock
-  asks for). Out: `bigK` (0 back … 1 hands, what the drawer carries the prop by) and `hideHeldItem`. Under the HAMMER his own gun's line (`muzzle`, the bore, a falling body's seed) is read off the WHOLE pose under the layer (`handPre = bigBuf`), so the swing does
-  not carry it; the MOVES hand pass keeps no straight trigger finger on the fist round the handle, and the reload arm (`mvArms`) does not play over either tool. `null` = the layer is not run: every other pose is bit for bit the build
-  before's. Look at it with `bun run tools/qa/bigmoves-strip.ts --out <dir>` (front / side / top stick strips with the prop boxes; always pass `--out`). FIRST-PASS numbers,
-  placed headless: never in the viewer, never on a GPU; finger curls pop; his own gun pops to its place.
-- **Wounds (`WOUND.on`) are shelved** (2026-11-07, his list, to pick up later): gone from the game on both sides, with their page word, hook and checks. A round kills or knocks out as before. The commit named "Wounds leave the tree" has what went; its parent still has them. The animator's wound layer left after them, on both sides.
-- **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
-  for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
-  MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean
-  over the side he favours (`lean` 8°, a slow sway standing), and on the move a short heavy stride onto that side — the pelvis dips and goes across,
-  the trunk rolls and turns into it (`step…`; the walk plants the right foot on the positive half of the phase's sine). Every man favours his RIGHT:
-  the hand he has free is his left and the clutch arm takes it across to his right ribs (`mvArms`: `hurt × MV2.hurt.arm`, only while the gun is
-  out of his shoulder and he is not throwing, striking or at a big tool). With the gun in his shoulder he braces: `brace` of the hunch and
-  `headBrace` of the head come out so the bore stays within a few degrees; the lean is about the bore and stays. SHAKEN: by the fire on him
-  (`sup.v` from a tenth under the flinch line to pinned), head down between the shoulders, sunk 10 cm, in fast and out over a second or two.
-  FOLDED: `foldToo` raises the clutch's fold (`foldOn(too)`) for a staggered man with the wounds switch off, and deeper than the wounds' own
-  (`MV2.clutch.fold.pitchToo` 34°). Under the fold and the blinded hunch the hurt and shaken looks give way by those weights (never two folds
-  added). All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
-  keeps the eye line level under a working body and stands aside for a stance or an aim, so with the gun CARRIED it took four fifths of both bows
-  back out through the neck (hurt showed 4° of its 20°, shaken 6° of its 29°): its target elevation now goes down by what the two looks pose
-  (`hurt.pitch + hurt.head`, `shaken.pitch + shaken.head`, each by its spring), so the head is bowed the same whatever the gun is doing (check line g). Measured headless on the bones
-  (`tools/qa/condition-pose-check.ts`, `probes.ts condition-pose`; `CONDITION_BREAK=1` fails a to e): hurt at the low ready the head 7.9 cm
-  forward and 5.0 cm lower, the hand 24 cm from the chest joint; rifle up the bore 3.3° off a sound man's; walking the head rides 8 cm to the
-  favoured side and 8 cm lower; shaken 11 cm lower, bore 2.7° off; folded 17 cm lower; at rest again to the millimetre. Strips `hurt-stand`,
-  `hurt-walk`, `hurt-walk-up`, `hurt-defender`, `shaken`, `fold-operator` (`pose-strip.ts`), looked at as stills by two readers. NEVER SEEN on a
-  GPU or in motion: whether the limp reads as hurt and not comic at game size, and whether hurt with the rifle up tells apart from shaken, are
-  the maintainer's to judge.
+## What the player gets
+
+- Everybody walks, jogs, sprints and crouches on one skeleton, and the feet match the ground's speed.
+- A teammate sinks onto bent knees and leans into the gun. A defender walks upright with his elbow out.
+- An armed AI man's turn has weight. A heavy gun comes round slower, and his head gets to the new point first.
+- A shot kicks, a close round makes a man duck, a surprise makes him start, a hit knocks his trunk, a flash doubles him up.
+- His hands do the work you see: the magazine in the well, the door, the goggles, the radio.
+- Sam carries himself as a sneak when his hands are empty, and bows his head to the floor to look under a door.
+- A man a blast left standing stays hurt: he hunches and limps. A man under fire pulls his head down.
+- The dead have weight. A takedown lays a man down along a path, and a man out cold breathes.
+- Fourteen outfits on four sides, a little difference in height from man to man. Rain soaks them and dust climbs from the boots.
+
+## Where the code is
+
+In `rust/game_rules/src/`, with types and numbers under the same names in `rust/game_types/src/` and its `knobs/`:
+
+| module | what it does |
+|---|---|
+| `character/` | a man: his animator (`Anim`), the order of its layers, his turn, his bones, his falls |
+| `anim_skeleton/`, `posehome/` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
+| `ragdoll/` | the dead body: sixteen weighted points, sticks, floor and walls |
+| `condition/` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
+| `stealthfeed/`, `kitanim/`, `handwork/` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
+| `rig_props/`, `gunlook/` | what he holds and wears as boxes (`rig_boxes`), a gun's grip and muzzle; which models a man has (`gun_look_of`) |
+| `cast/`, `anim_gltf/`, `stature/`, `char_look/` | his outfit and part mask; his drawn height; which side's dress a team wears |
+
+| file | what it does |
+|---|---|
+| `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
+| `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
+| `rust/sim/src/knobs.rs`, `rustknobs/` | the numbers and named nodes a layer reads, and who writes them there |
+| `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
+| `rust/game_draw/src/men.rs` | what the picture is told of a man: sections `Man`, `Inst`, `Bones`, `Cap` |
+| `src/draw/men.ts`, `src/anim/characters.ts`, `src/anim/gltf.ts` | those sections handed to the GPU; the mesh's buffers; the mesh read for the page |
+| `src/render/charMaterials.ts`, `src/render/sdfrig.ts` | a man shaded by material slot; the round cones the rays meet of him |
+| `public/assets/ual/`, `public/assets/chars/` | the mannequin with every clip; `cast.gltf` and `cast-gwot.gltf` |
+| `tools/chars/` | the cast's builder and checks (its `README.md` holds the file's contract), look sheets in `tools/chars/look/` |
+
+`rust/sim/src/falls.rs` is falling glass and litter, not men (`destruction.md`).
+
+## How it works
+
+**The inputs.** A rule poses nobody. It writes the animator's fields (`speed`, `crouch_target`, `stance`, `upper`, `long_gun`, `hold_pose`, `kit`) or calls a
+one-shot (`anim_fire`, `anim_flinch_from`, `anim_startle_from`, `anim_reload`, `anim_throw_item`). `game_deal_weapons` deals what comes from his gun and side
+each frame: the grip, the reload's beat, `anim.trained`, the turn.
+
+**A man's frame.** His own update ends in `character_update`: his turn, `anim_update`, the skeleton, `character_read_bones`, `character_in_hand_pass`. Called with
+no time (a re-bake) it moves no clock, which is how a man moved by something else gets bones where he stands.
+
+**The layers.** `anim_update_standing` is the whole order, and a later layer writes over an earlier one: gaits by speed, the crouch, breath and feet; upper-body
+clips; stance, wall, kick, carry, long gun; lock work, the hold and the held; the door hand; the aim clips; signals, tells, hands at work; creep, watch, stealth
+poses; ready pose, kit errands, reload, throw, blow, hit; the big tool, a lean; the reactions; a whole-body clip (`anim_act_layer`); fingers (`anim_hands_pass`);
+goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stands down, by an eased weight, for whatever else has the arms.
+
+**A layer has two halves.** An `anim_*` function in `character/` puts its numbers and kept springs on the bench's `args` and calls the layer in `layers.rs`, which
+works on the pose where it lies. What a layer keeps stays in `Anim` and crosses as columns (`lean_cols_get`). It reads numbers by `k(NAME)` and nodes by `role(NAME)`.
+
+**A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
+a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
+
+**Poses feed the game.** `character_read_bones` writes `bones`, `gun_dir` and `muzzle`, and rounds leave that muzzle. `character_capsules` is what a round
+(`character_ray_hit`) meets, and the same fifteen capsules are the proxies he casts shadows with. Arm layers that only look (the reload hand, bound wrists, the clutch) keep the
+pose under them (`anim_under_pose`), so the game reads joints with `character_joint_under` and a ragdoll starts from that pose.
+
+**The turn.** Between a man's updates `body_yaw` and `aim_yaw` hold the weighed yaws. `character_turn_begin`, at the head of `update_guard`, puts his AI's wish back. Then
+`character_turn_weigh` steps body and gun toward the wish with acceleration, a top speed and a brake (`k.turn`, `handling_of`, `anim.trained`). It is on for the guards list but
+a held man or a show. Sam and civilians have no turn.
+
+**The long gun.** A set of springs toward one of `LongStance` (`long_targets`). `anim_long_body` sets the trunk and `anim_long_arms` puts both hands on the grip. A pistol's
+reload is its clip. A long gun plays none: `anim_reload_carry` brings the gun and head round and `anim_reload_arm` works the support hand, by `reload_at` where the game deals it.
+
+**Reactions.** `mv_pre`, `mv_post_body`, `anim_mv_arms` and their neighbours: the carry, recoil, flinch, startle, hit, dazzle, fold, hurt and shaken. `k.moves` has a switch
+for each part (`mv_on`); `k.mv` and `mv2` have the numbers.
+
+**How he falls.** `character_ragdollize` seeds the points from his pose and his joints' last speed, capped so that a pop in a clip is not momentum. A loud death shoves him one of
+three ways by his own die (`draw_body`). A quiet one with `fall_as` set follows `character_fall_guide`: pins move along a path for each `FallStyle`, and anything else that pins
+him ends it. `ragdoll_step` runs until the body sleeps. Asleep he costs nothing, unless `breathe` is set (`character_breath_frame`).
+
+**What he wears.** `cast_variant_of` picks an outfit by side, roster place or id. `cast_parts` makes the frame's mask (`cast_suit`, `pack_mask`, `cast_goggles`). The game reads the
+files for skeleton and clips; the page reads them for the mesh (`loadCharacterSet`), and `castFile` picks the look's file. `?mannequin` draws everybody bare.
+
+**To the GPU.** `Men::take` copies each shown man's bones after a tick, and `Men::frame` blends two ticks, snapping past `SNAP`. Stature scales his matrices about his feet here.
+`DrawMen` sends `Inst` and `Bones` as they lie, draws by the mask (`drawRuns`), and works out materials only when what he wears changes. `vsSkin` and `fsSkin` draw him.
+
+**Materials.** A vertex has a slot and a cavity baked from the mesh's curvature (`charSlots`, `bakeCavity`). A man has rows a slot (`writeCharPalette`) from his side's table
+(`CHAR_MATS`, `CHAR_MATS_LOOK`, `SNEAK_SUIT`). `engine.settings.charMats` goes on for a mesh that keeps the slot names. A finish goes through the wet coat's channel (`packWet`,
+`wetCoatSpec`). Bounces read one colour a proxy (`proxyAlbedos`). A wet man's numbers are rows of `Inst`, from `k.wet` (`weather.md`).
+
+**The shadow rig.** `fitRig` fits the fifteen proxies round cones against the mesh, once an outfit, and `applyRig` puts the radii on the frame's list (`render.md`).
+
+## Rules that hold
+
+- **A pose is the game's.** What must not move the game goes under `anim_under_pose`, or stays off the arm and trunk a rule reads.
+- **The turn's two reads.** Inside his own update a fire test reads `character_gun_yaw`, because `aim_yaw` there is where he wants the gun. An easing of his yaw from outside
+  starts from `character_want_body`.
+- **A re-bake takes nothing:** no one-frame flag (`kick_hit`), no carry word (`swap_clock`).
+- **No die but his own.** A fall's die is `draw_body`; an outfit and a height come from his id (`hash01`).
+- **The crouch walk is carried level.** "the crouch walk animation looks like waddling" (`steady_layer`, `k.moves.steady`), by the crouch walk's share of the pose alone. A value
+  over 1.5 also raises the pelvis, which shows more of him over cover, so that is not the default.
+- **The rifle sprint stays on the gun.** "sprint animation still has some waddling" (`k.moves.steady_run`), by the sprint's share alone.
+- **Run arms come in.** "sprint looks dainty when viewed from the back, maybe should have arms closer in?" (`run_arms`, `k.runarms`).
+- **Sam sprints a pistol at low ready.** "sprinting with pistol animation is weird, should keep two hands on it and at low ready, like rifle sprinting animation" (`run_ready`).
+- **A man who has run breathes hard.** "characters should breathe more forcefully when sprinting (e.g. on snow levels)" (`k.hardbreath`). Effort is ground speed: no stamina exists.
+- **The rifle hangs by the mission.** "unequipping rifle should be putting it down in a sling, not over the back, right?" In front on a loud mission, on his back on a quiet
+  one (`kit_sling_front`, `k.kitanim.sling`).
+- **A long gun's reload runs the clip's clock and plays no clip,** so whatever asks `anim_reloading` hears the same.
+- **Everyone favors his right when hurt** (`hurt_side`). Only a blast hurts a man (`condition_hurt`). A round kills or knocks out: there are no wounds.
+- **Off by default:** `k.moves.entry`, a teammate's muzzle dipped past a friend's back. It moves the bore, the rounds and the weapon light.
+- **Stature is looks only.** Bones, capsules and boxes stay where the game has them. A player's man is 1, and two bodies that must meet are both 1 (`paired`).
+- **Slots are the contract with the meshes:** the names of `CHAR_SLOTS`, whose order never changes. Another material name stops the load. No file has a texture.
+- **Limits.** 64 joints a man (`JOINT_STRIDE`), 16 men drawn (`MOST`), 8 with mesh shadows (`MESH_MAX_CHARS`), 32 parts to a cast.
+
+## To change it
+
+- **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
+  `?knob.moves.steady=0` turns one. Tables with no panel are functions in `rust/game_types/src/character/types.rs`: `stances`, `blend`, `sneak`, `creep`, `life`, `mv2`, `long_reload`.
+- **A number for a layer:** a line in `rust/sim/src/knobs.rs` and its `k[…]` line in `rustknobs/base.rs`.
+- **A new layer:** a `pub fn` in `layers.rs`; an `anim_*` and `anim_*_ask` pair (copy `anim_lean_body`); a line in `anim_update_standing` where it should write over what is
+  under it; its kept springs in `Anim`, with columns. Add it to the stand-down lists of what it gives way to.
+- **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.
+- **A new clip:** put the animation in `AnimationLibrary_Godot_Standard.gltf`. `gltf.rs` takes every animation by name. For a whole-body clip a rule sets `anim.act` to an `AnimAct`
+  with its name. In a layer, call `sample_clip` with `clip_of` and blend under a mask. A clip the game cannot do without goes in `need` in `anim_new`, which panics without it.
+  The cast files carry no clips: they use the mannequin's by joint name.
+- **A part or an outfit:** `PARTS` and `VARIANTS` in `tools/chars/build_cast.py`, then `python3 tools/chars/build_cast.py && python3 tools/chars/check_cast.py`, the same with `--look gwot`,
+  then `cast-probes.ts`. Both files keep the same fourteen names on the same sides.
+- **A colour or a finish:** the tables in `charMaterials.ts`; `tools/chars/look/README.md` makes sheets. A new slot goes last in `CHAR_SLOTS`, `SLOT_NAMES` and `tools/chars/kit.py`,
+  and `CHAR_MAT_ROWS` has no row spare.
+- After Rust changes a page needs `bun run tools/blitz/face-build.ts`.
+
+## What holds it
+
+Native tests in `rust/game_start/tests/`:
+
+| file | what it holds |
+|---|---|
+| `clip_store.rs` | forty games hold one set of clips |
+| `eyes.rs` | his pose turns his eyes and does not tip them |
+| `men_under_fire.rs` | the duck at a close round, the start of a surprised man |
+| `hands.rs` | a magazine change goes on whoever has the rest of him |
+| `held_takedown.rs`, `the_grab.rs` | a blow lands inside its takedown, a choke lowers a man to the floor |
+| `kit.rs` | what a player's hands do, which carriage a gun shows |
+| `draw.rs` | drawing changes nothing, and what is drawn between two ticks stands between them |
+
+Unit tests stand beside the code (`swap_clock_beats`, `blend_is_the_typescripts_bits`, `a_blast_leaves_a_man_hurt_and_writes_his_stamp`). `gate`'s pins move when a pose moves what the game reads.
+Rows of `tools/qa/checks.ts`: `cast-probes.ts`, `charmats-probes.ts`, `sdfrig-probes.ts`, `frame-layout.ts`. By hand: `tools/chars/check_cast.py`.
+No script of `tools/qa/pages.ts` is this system's own.
+
+## Not seen
+
+No check looks at a man. A pose is judged by its numbers, by offline renders (`tools/chars/render_cast.py`, the clips and not the layers) or by playing. How the limp reads at
+game size and how the falls look in motion are unseen on a GPU.
+
+Known faults: `k.turn.on` is read by nothing, and `k.moves.on` reaches `layers.rs` but not `mv_on`, so neither switches its whole pass off. The sections of `tools/chars/README.md` after
+its file contract name checks that are gone. On the meshes, the shawl lies close as a yoke, short sleeves have a squared cap, and a shirt's hem does not swing.
