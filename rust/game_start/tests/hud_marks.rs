@@ -73,7 +73,7 @@ fn a_man_who_goes_out_of_sight_leaves_a_mark_where_he_was_last_seen() {
         assert!(p.view().marks.seen.is_empty(), "seed {}: the mark has outlived its seconds", seed);
         drop(p);
         let (mut q, gd) = two_rooms(seed);
-        q.g.k.fog.last_seen = 0.0; q.g.k.told.rung = game::told::ToldRung::Bare; q.g.k.wand.on = false;
+        q.g.k.fog.last_seen = 0.0; q.g.k.told.rung = game::told::ToldRung::Bare;
         fog_up(&mut q);
         q.man_stands(gd, [12.0, 13.0]);
         q.run(0.3);
