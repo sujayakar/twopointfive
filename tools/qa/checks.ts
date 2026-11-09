@@ -23,7 +23,7 @@ const ROWS: readonly Row[] = [
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
   ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
-  ['claude-md-check.ts', 'build'], ['rust-rules-check.ts', 'build'],
+  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
