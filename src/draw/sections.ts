@@ -857,7 +857,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints · 32 the cans venting stop, what they let out left in the air */
+  /** u32: 1 the smoke · 2 the cans venting stop, what they let out left in the air */
   what = 2,
   /** words a row */
   row = 3,

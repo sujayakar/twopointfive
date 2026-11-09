@@ -23,7 +23,6 @@ const WORDS = [undefined, 'snow', 'packed snow', 'old snow'] as (Box['does'])[];
 const ALIVE = 1, HIDDEN = 2, DEAD = 4;
 /** the wind a snow level's ripples lie along (rust/game_rules/src/weather_kinds WEATHER_PRESETS.snow) */
 const RIPPLE: [number, number] = [0.8, 0.3];
-const BLASTS = 4, MARKS = 8, PRINTS = 16;
 
 /** the men's rows, as one object a man that lasts */
 export function readMen(D: Drawn, L: Man[], made: Map<number, Man>): void {
@@ -57,12 +56,6 @@ export class SnowPicture {
     this.tracks = SNOW_LOOK.tracks && this.field ? makeSnowTracks() : null;
     E.gbuffer.setSnowField(this.field, snowCfgRows(this.field, this.tracks ? TRACK_RES : 0));
     E.gbuffer.setSnowTracks(this.tracks);
-  }
-  /** what the game said of the snow this tick (rust/game_draw resets.rs) */
-  reset(what: number): void {
-    if (what & BLASTS) this.blasts.clear();
-    if (what & MARKS) this.things.clear();
-    if (what & PRINTS && this.tracks) clearSnowTracks(this.tracks);
   }
   /** the game is another moment than the one last drawn */
   cut(): void { this.said = -1; this.fx.cut(); this.breath.clear(); this.blasts.clear(); this.things.clear(); if (this.tracks) clearSnowTracks(this.tracks); }
