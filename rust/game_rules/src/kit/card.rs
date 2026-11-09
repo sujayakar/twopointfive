@@ -2,7 +2,7 @@
 //! few presses and store lines only the desk asks for. Only the card as a tree stands here: its other forms are gone from the rules.
 //!
 //! A read takes `&mut Game` only because the helpers do: it leaves the cards as they were.
-use super::p_03::{same_value, value_text};
+use super::{same_value, value_text};
 use super::*;
 use crate::game::Game;
 use crate::gunslots::GunSlot;

@@ -366,7 +366,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
         let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g| {
             g.player = pl;
-            crate::seats::b_01::view_rekey(g, old, pl);   // (what the modules keep for this seat's view stays the seat's: seats.ts SEAT_TABLES)
+            crate::seats::view_rekey(g, old, pl);   // (what the modules keep for this seat's view stays the seat's: seats.ts SEAT_TABLES)
             g.pl[pl].light = light;
             crate::kit::kit_fresh(g);
             let c = g.pl[pl].ch;

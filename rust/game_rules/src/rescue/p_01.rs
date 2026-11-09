@@ -473,7 +473,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
-                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
+                    budget: Some(m::max(crate::nightbreach::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
                 }
             }
             None => crate::guards::UnitOpts {
