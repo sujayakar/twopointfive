@@ -218,7 +218,7 @@ fn an_eye_sees_a_man_up_with_the_other_down() {
             let (from, chest) = ([20.0, 1.5, AISLE], [16.0, 1.2, AISLE]);
             let look = game::v3::normalize(game::v3::sub(chest, from));
             let e = game::guards::Eye { pos: from, look, range: 20.0, half_deg: 45.0, near_m: 0.0, near_deg: 45.0, v_half_deg: Some(45.0) };
-            let vis = game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None);
+            let vis = game::guards::eye_contact(&mut p.g, e, pc, false, 1.0, None);
             assert!(vis.visible, "seed {s}: seat {seat}'s man stands in the cone, up, with the other down");
         }
     }
@@ -432,7 +432,7 @@ fn a_camera_sees_any_player_in_its_cone() {
             let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
             let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(dd.pitch));
             let e = game::guards::Eye { pos: def.pos, look, range: def.range.unwrap_or(dd.range), half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-            assert!(game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
+            assert!(game::guards::eye_contact(&mut p.g, e, pc, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
             game::devices::update_camera(&mut p.g, c, 1.0 / 60.0, true);
             let last = game::sim_lightshome::camera_machine_last_seen(&p.g, c);
             assert!(last.map_or(false, |l| (l[0] - spot[0]).abs() < 0.1 && (l[2] - spot[2]).abs() < 0.1), "seed {s}: seat {seat}'s man stands at {spot:?} in the cone, the other behind the lens, and the camera last saw {last:?}");

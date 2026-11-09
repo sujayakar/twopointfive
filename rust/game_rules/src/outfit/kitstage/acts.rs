@@ -211,10 +211,10 @@ pub(super) fn pools(g: &mut Game, st: &KitStage, f: Option<&str>) {
 // ------------------------------------------------------------ the gun fires
 pub(super) fn fire_at(g: &mut Game, man: Option<GuardId>, to: V3) {
     let c = match man { Some(x) => g.gd[x].ch, None => g.pl[g.player].ch };
-    let w = crate::combat::firearm_of(g, c, man.is_none());
+    let w = crate::combat::firearm_of(g, c);
     if !crate::weapons::firearm_fire(g, w) { crate::weapons::firearm_rearm(g, w); crate::weapons::firearm_fire(g, w); }
     let o = crate::combat::FireOpts { steady: Some(true), ..crate::combat::FireOpts::default() };
-    crate::combat::fire_weapon(g, c, to, man.is_none(), Some(&o));
+    crate::combat::fire_weapon(g, c, to, Some(&o));
 }
 /// WHAT A BURST LEAVES, all of it put back plain: the marks, the glass's books and holes, the panes, the destruction, the shards, every prop, every shot-out fixture; never the doors, the switches or the men. A wall left open keeps its marks, its cells and its props: they go with the restage that stands it.
 pub(super) fn mend(g: &mut Game, st: &mut KitStage) {

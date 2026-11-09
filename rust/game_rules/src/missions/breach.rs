@@ -693,7 +693,7 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
     if t >= due && !crate::weapons::firearm_reloading(g, fa) {
         if crate::weapons::firearm_fire(g, fa) {
             let dir = v3::normalize(v3::sub(chest, g.ch[c].muzzle));
-            crate::combat::fire_weapon(g, c, chest, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.01), ..Default::default() }));
+            crate::combat::fire_weapon(g, c, chest, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.01), ..Default::default() }));
             dr!(g).flows[i].n += 1.0;
             dr!(g).rounds[i] += 1.0;
             breach_drill_beat(g, &alloc::format!("shot{}", i + 1));

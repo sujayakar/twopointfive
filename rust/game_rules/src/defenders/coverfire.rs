@@ -657,7 +657,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         } else {
             crate::combat::FireOpts { spread: Some(mods.spread), ..Default::default() }
         };
-        crate::combat::fire_weapon(g, c, to, false, Some(&opts));
+        crate::combat::fire_weapon(g, c, to, Some(&opts));
         if crate::weapons::firearm_rounds_ready(g, fa) == 0.0 {
             crate::guards::start_reload_beat(g, gd);
         }
@@ -745,7 +745,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
         spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) * sup_k + speed * p.shooter_move_k * 0.5),
         ..Default::default()
     };
-    crate::combat::fire_weapon(g, c, to, false, Some(&opts));
+    crate::combat::fire_weapon(g, c, to, Some(&opts));
     g.tab.roomfight_op[o].rounds += 1.0;
     let k_now = cw.k + 1.0;
     set_chew(g, gd, |row| row.k = k_now);

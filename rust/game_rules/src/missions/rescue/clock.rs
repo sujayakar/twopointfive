@@ -82,7 +82,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         let up_before = standing(g, &ops).len();
         let flash = g.pl[pl].hit_flash;
         let down = crate::condition::down(g, g.pl[pl].ch);
-        crate::combat::fire_weapon(g, c, chest, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.01), ..Default::default() }));
+        crate::combat::fire_weapon(g, c, chest, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.01), ..Default::default() }));
         let ops = g.staged.team.clone();
         let took = crate::condition::down(g, g.pl[pl].ch) != down || g.pl[pl].hit_flash > flash || standing(g, &ops).len() < up_before;
         rescue_end_act(g);

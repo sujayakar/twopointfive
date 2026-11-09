@@ -362,7 +362,7 @@ fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let o = g.guards[i];
         i += 1;
         let (o_team, o_ch) = (g.gd[o].team, g.gd[o].ch);
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch, false).visible {
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
             return true;
         }
     }
@@ -384,7 +384,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
         if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
             continue;
         }
-        if !crate::guards::can_see_char(g, o, v_ch, false).visible {
+        if !crate::guards::can_see_char(g, o, v_ch).visible {
             continue;
         }
         mind(g, o);

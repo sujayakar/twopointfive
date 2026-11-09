@@ -476,7 +476,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         let side = tool!(g, pid).side;
         let at = crate::shotgun::lock_point(g, d, side);
         let opts = crate::combat::FireOpts { weapon: Some(m870(g).clone()), steady: Some(true), spread: Some(0.0), ..Default::default() };
-        crate::combat::fire_weapon(g, c, at, true, Some(&opts));
+        crate::combat::fire_weapon(g, c, at, Some(&opts));
         let gave = if lock {
             !crate::doors::door_locked(g, d)
         } else {

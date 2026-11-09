@@ -9,9 +9,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ shooting
 
 /// The Firearm this character carries: the player's gun in hand, else his pistol; a guard's weapon; a stray's 9 mm.
-pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId, is_player: bool) -> FirearmId {
-    if is_player {
-        let p = g.player;
+pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId) -> FirearmId {
+    if let crate::character::Who::Player(p) = g.ch[shooter].who {
         return match crate::game::player_gun_in_hand(g, p) { Some(f) => f, None => g.pl[p].pistol };
     }
     if let Some(x) = guard_of_char(g, shooter) { return g.gd[x].weapon; }
@@ -63,25 +62,25 @@ fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<Guard
 }
 
 /// One round from the shooter's muzzle at `target`, in the game as he has it.
-pub fn fire_weapon(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: Option<&crate::combat::FireOpts>) {
+pub fn fire_weapon(g: &mut crate::game::Game, shooter: CharId, target: V3, o: Option<&crate::combat::FireOpts>) {
     let none = FireOpts::default();
     let o = o.unwrap_or(&none);
-    round_in_view(g, shooter, target, is_player, o, None);
+    round_in_view(g, shooter, target, o, None);
 }
 
 /// fireWeapon for one pellet of a shell, the shell lent so the round writes on it.
-pub(in crate::guns) fn fire_pellet(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
-    round_in_view(g, shooter, target, is_player, o, Some(shell));
+pub(in crate::guns) fn fire_pellet(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
+    round_in_view(g, shooter, target, o, Some(shell));
 }
 
 /// fireWeapon's one line: the view, the fog's begin, the round, the bars unmet, the fog's done.
-fn round_in_view(g: &mut Game, shooter: CharId, target: V3, is_player: bool, o: &FireOpts, mut pel: Option<&mut crate::shotgun::Shell>) {
+fn round_in_view(g: &mut Game, shooter: CharId, target: V3, o: &FireOpts, mut pel: Option<&mut crate::shotgun::Shell>) {
     let id = g.ch[shooter].id;
     let seat = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
     in_seat(g, seat, &mut |g: &mut Game| {
         let who = g.ch[shooter].id;
         let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
-        fire_weapon_raw(g, shooter, target, is_player, o, pel.as_deref_mut());
+        fire_weapon_raw(g, shooter, target, o, pel.as_deref_mut());
         crate::winbars::bars_unmeet(g);
         crate::fogofwar::fog_of_war_done(g, was);
     });
@@ -270,7 +269,8 @@ fn lamp_own(g: &Game, t: FixtureId) -> Vec<f64> {
 }
 
 /// The round itself, the shooter's muzzle to where it stops: what it found, what it broke, what the floor heard.
-fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, pel: Option<&mut crate::shotgun::Shell>) {
+fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &crate::combat::FireOpts, pel: Option<&mut crate::shotgun::Shell>) {
+    let is_player = crate::character::is_player(g, shooter);
     use crate::game::GuardState;
     use crate::glasspen::{path_at, seg_at, spent_in_pane};
     use crate::sim_lightshome::FixtureKind;
@@ -279,7 +279,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
     if let Some(s) = sg { if g.gd[s].work_stow.is_some() { crate::workstow::stow_fired(g, s); } }
     if !is_player && g.ch[shooter].anim.big_tool.is_some() { crate::bigkit::big_fired(g, shooter); }
     let sg_team = if is_player { crate::teams::Team::Player } else { match sg { Some(s) => g.gd[s].team, None => crate::teams::Team::Guard } };
-    let def: crate::weapons::WeaponDef = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter, is_player); let id = g.fa[f].def; weapon_row(g, id) } };
+    let def: crate::weapons::WeaponDef = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter); let id = g.fa[f].def; weapon_row(g, id) } };
     let mut spread = o.spread.unwrap_or(0.0);
     let steady = o.steady.unwrap_or(false);
     let mut pel = pel;
@@ -294,7 +294,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
         let at = g.ch[shooter].muzzle;
         if crate::friendlyfire::ff_unpressed(g, sg, at, target, spread + wide + cone, &def) { return; }
     }
-    if pellets.is_some() && pel.is_none() { crate::shotgun::fire_shell(g, shooter, target, is_player, o, &def); return; }
+    if pellets.is_some() && pel.is_none() { crate::shotgun::fire_shell(g, shooter, target, o, &def); return; }
     let lead = match &pel { None => true, Some(p) => p.i == 0.0 };
     let third = match &pel { None => true, Some(p) => js::rem(p.i, 3.0) == 0.0 };
     if lead { crate::character::anim_fire(g, shooter); }
@@ -596,7 +596,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
     }
     if def.tracer.is_some() && g.tune.tracers {
         use crate::tracers::TracerImpact;
-        let gun = firearm_of(g, shooter, is_player);
+        let gun = firearm_of(g, shooter);
         let along = if pen.is_some() { v3::normalize(v3::sub(hit_p, muzzle)) } else { dir };
         let far = if pen.is_some() { v3::dist(muzzle, hit_p) } else { t_hit };
         let impact = if flesh { TracerImpact::Flesh } else if st.is_some() || ph.is_some() || through { TracerImpact::Solid } else { TracerImpact::None };

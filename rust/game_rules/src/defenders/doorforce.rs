@@ -475,7 +475,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
         } else {
             crate::combat::FireOpts { spread: Some(mo.spread), ..Default::default() }
         };
-        crate::combat::fire_weapon(g, c, aim, false, Some(&opts));
+        crate::combat::fire_weapon(g, c, aim, Some(&opts));
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { crate::guards::start_reload_beat(g, gd); }
     }
     let out = had - crate::weapons::firearm_rounds_ready(g, w);
