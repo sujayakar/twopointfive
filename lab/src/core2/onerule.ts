@@ -42,8 +42,8 @@ export const oneRuleMethods: Record<string, () => Method> = {
   exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
   exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
    // only leaves in cells, and every solid as it is, however wide the ray; the same, and small things gone where a ray is wider (as the first core has it)
-  leafonly: () => oneRule({ name: 'leafonly', upscale: bilinear, put: p => swap(p, 'lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(1e9); leafOnly = true;') }),
-  leafgone: () => oneRule({ name: 'leafgone', upscale: bilinear, put: p => swap(p, 'lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, 1e9, 1e9, 1e9); leafOnly = true;') }),
+  leafonly: () => oneRule({ name: 'leafonly', upscale: bilinear, put: p => swap(swap(p, 'lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(1e9); leafOnly = true;'), 'if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit') }),
+  leafgone: () => oneRule({ name: 'leafgone', upscale: bilinear, put: p => swap(swap(p, 'lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, 1e9, 1e9, 1e9); leafOnly = true;'), 'if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit') }),
   // what costs what: no cells met, anywhere or by lamps' shadows; no limbs; small things dropped as early as the first core does
   nocells: () => oneRule({ name: 'nocells', upscale: bilinear, put: p => swap(swap(p, 'if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best)', 'if (false)'), 'if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') }),
   lampsno: () => oneRule({ name: 'lampsno', upscale: bilinear, put: (p, s) => s === 'lamps' ? swap(p, 'if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') : p }),
