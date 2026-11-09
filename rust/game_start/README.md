@@ -330,9 +330,8 @@ counts and seconds, every red test by name with its panic line, what is ignored 
 badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
 
 **What the runs played to their ends do not hold.** The hands-off player is one player on one seed, and Sam cannot go down: a run holds the floor, not
-whether the mission can be survived, and his teammates die more often than a good player's would. `owes` holds what the game may never do and counts what
-smells; its counts are pinned and not judged, so a count that goes up is a pin moved, which a commit says why of. It holds one seat, and nothing of Sam's
-speed. Neither player says a mission is any good to play.
+whether the mission can be survived. `owes` holds what the game may never do and counts what smells; its counts are pinned and not judged, so a count that
+goes up is a pin moved. It holds one seat, and nothing of Sam's speed.
 
 **What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at
 a pin passes: `start` a game at rest, `play` and `again` what the runs' hands reach, `save` the three seconds after each moment, `seats` a fight nobody
