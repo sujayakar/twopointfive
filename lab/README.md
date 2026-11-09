@@ -10,6 +10,16 @@ A small WebGPU renderer, from scratch, with no dependencies: one world, one cloc
     node lab/tools/card.cjs lab/tools/poison.json --watch 600          # no stage makes a bad number; one broken on purpose is named, and heals
     node lab/tools/card.cjs lab/tools/poison.json --guards 3           # what the checks cost
 
+    node lab/tools/card.cjs lab/tools/detail.json --detail             # how much of the reference's detail is there, by size in pixels, and how far off from dark to bright
+    node lab/tools/card.cjs lab/tools/table.json --table               # the kept light alone, against paths, room by room
+    node lab/tools/card.cjs lab/tools/steady.json --steady             # what shimmers, what is off in motion
+    node lab/tools/card.cjs lab/tools/steady.json --settle             # frames until right again after a turn, after doors
+    node lab/tools/card.cjs lab/tools/leaves.json --leaves             # leaves against the reference, band by band
+    SCENE=street node lab/tools/card.cjs …                             # any of them in another scene: rooftop, street, forest, pass
+    bun run tools/stands.ts                                            # does everything stand on something, is nothing in anything else
+
+Set methods side by side in ONE run (`--bench a,b`, or `methods` in a view of detail.json): two boxes are not the same. A view may carry `tune` (src/tune.ts). `notes/` holds what is being asked.
+
 The page: `?bench` plays the fixed run and prints it; `?scale=0.75` fixes the render scale; `?tour` starts the tour.
 
 ## How it is put together
