@@ -75,7 +75,9 @@ faces (`faced_seat`). The team is down when all of it is (`all_down`).
 the other's: a hue a seat (`rims.rs`), the other's plan fainter (`plansToDraw`). A picked name reaches each machine at its own moment, so it is no game state: the page
 writes it over `player_name` (`shownAs`).
 
-**The lobby.** One door: `Lobby.seat`. `games:join` gives the first free seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
+**A seat is held by who is there** (`openSeat`): after `MP_COME_S` seconds an empty one goes to whoever asks by the code.
+
+**The lobby.** One door: `Lobby.seat`. `games:join` gives an open seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
 same one). It waits for the server's address and the page goes to `?net=…&netgame=…&netkey=…`. The link is `?join=<code>`. The host hands over the mission's address with
 `squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and his settings as commands (`HOSTED`). Not carried: his kit (both play the kit as issued).
 
@@ -167,5 +169,5 @@ lobby asks only for `cloudUrl`. `?cloud=0` is no backend at all for the visit, a
 - Two people on two machines over a real network; Host and Join through the hosted service. `modal.ts` has never run against Modal.
 - The look ahead and a correction judged by two players; how faint the other plan is; the purple, picked by number.
 - A mission ending on a server over the wire; a real socket backing up.
-- Faults: a seat claimed at the door is held until the game is over, and only that tab can come back to it. No resync after a word differs, and no reconnect
+- Faults: no resync after a word differs, and no reconnect
   without a reload. `SEAT_KINDS` is written twice.
