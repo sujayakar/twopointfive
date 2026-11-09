@@ -5,6 +5,7 @@ use game::scene_scenario_list::{all_missions, pick_search};
 use game::scene_scenarios::LessonTestKind;
 use game_start::lessons::{tutorials, Lesson, Tutorial};
 use game_start::moment::Moment;
+use game_start::owes::{self, Owes};
 use game_start::play::{Opts, Play};
 
 fn stand(id: &str) -> Play {
@@ -20,9 +21,12 @@ fn play(id: &str) {
     let mut p = stand(id);
     let mut l = Lesson::new(p.g.seats[0], tutorial(id), pace);
     let of = game::lesson::lesson_data(&p.g).expect("the mission has its lesson").steps.len();
-    let done = p.played_out(&mut l, 700.0);
+    let mut held = Owes::new();
+    let done = owes::played_out(&mut p, &mut l, 700.0, &mut held);
     let out = l.out.borrow().clone();
     println!("{}\n{}: {}/{} steps, {:.1} s, by the fight {:?}, {}", l.trace(), id, out.steps.len(), of, l.me.t(), out.by_fight, l.why().unwrap_or_else(|| String::from("ended")));
+    println!("{}: {}", id, held.line());
+    assert!(held.faults.is_empty(), "{}: {:?}", id, held.faults);
     assert!(done && out.ended, "{}: {} ({}/{} steps)\n{}", id, l.why().unwrap_or_else(|| String::from("he is still playing")), out.steps.len(), of, l.trace());
 }
 #[test] #[ignore = "the longest is over a minute in a debug build"] fn the_road() { play("tut-road"); }
