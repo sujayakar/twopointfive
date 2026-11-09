@@ -27,6 +27,7 @@ fn relief(kind: u32, p: vec2f, s: f32, fp: f32) -> f32 {
     case 15u: { a = vec4f(26.0, 5.0, 0.012, 60.0); b = 0.002; }
     case 16u: { a = vec4f(38.0, 38.0, 0.006, 90.0); b = 0.003; }
     case 24u: { a = vec4f(70.0, 70.0, 0.00006, 260.0); b = 0.00001; }
+    case 25u: { a = vec4f(6.0, 6.0, 0.00012, 60.0); b = 0.0; }
     default: {}
   }
   let f = max(a.x, a.y); return h + a.z * (0.65 * shows(f, fp) * vnoise(p * a.xy) + 0.35 * shows(f * 2.7, fp) * vnoise(p * a.xy * 2.7 + 5.0)) + b * shows(a.w, fp) * vnoise(p * a.w);
@@ -96,7 +97,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 21u: { base *= 0.95 + 0.1 * nB; }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
     case 12u: { if ((((*p).mat >> 8u) & 15u) == 0u) { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); } }
-    case 24u: { base *= 0.985 + 0.03 * nA; }
+    case 24u, 25u: { base *= 0.985 + 0.03 * nA; }
     case 23u: { let c = vnoise(uv * 260.0) * 0.6 + vnoise(uv * 620.0) * 0.4; base *= 1.0 - 0.22 * shows(260.0, fp) * smoothstep(0.35, 0.7, c); }
     case 22u: { base *= 0.82 + 0.25 * nA + 0.45 * (nC - 0.5) * shows(26.0, fp); let mend = smoothstep(0.52, 0.54, vnoise(floor(uv * vec2f(0.22, 0.45)) + 3.0)); base *= 1.0 - 0.22 * mend; let crack = abs(fbm(uv * 1.7 + 4.0) - 0.5) + 0.06 * smoothstep(0.4, 0.6, nB); base *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.004 + 0.6 * fp, crack)); s.rough = mix(s.rough, 0.62, smoothstep(0.45, 0.6, nB)); }
     case 13u, 15u, 16u: { base *= 0.6 + 0.7 * nB; }
@@ -127,7 +128,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     let t = vec2f(r.x + 0.5, select(0.5 - r.y, r.y + 0.5, h.code == 2u || h.code == 3u));
     let px = b.zw * 4096.0; let lod = log2(max(1.0, fp * px.x / a.z));
     let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
-    let wear = select(1.0 - 0.25 * smoothstep(0.5, 0.72, nB), 1.0, m.glow > 0.0 || m.kind == 18u);
+    let wear = select(1.0 - 0.25 * smoothstep(0.5, 0.72, nB), 1.0, m.glow > 0.0 || m.kind == 25u);
     let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); if (m.glow > 0.0) { let g = art.rgb * art.rgb; s.glow *= mix(vec3f(1.0), c.rgb * c.rgb * g, al); } s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
   }
   s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); return s;

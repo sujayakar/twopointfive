@@ -19,6 +19,7 @@ import temporal from './temporal.wgsl' with { type: 'text' };
 import blur from './blur.wgsl' with { type: 'text' };
 import air from './air.wgsl' with { type: 'text' };
 import airblur from './airblur.wgsl' with { type: 'text' };
+import tint from './tint.wgsl' with { type: 'text' };
 import resolve from './resolve.wgsl' with { type: 'text' };
 import { looseStages, LOOSE } from './loose';
 import { rainStages, rainKnobs } from './raindraw';
@@ -103,29 +104,30 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
-      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airA', 'rgba16float', 'half').signal('airB', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
+      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampT', 'rgba16float', 'render').signal('tone', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airA', 'rgba16float', 'half').signal('airB', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
       lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.buffer('pastLeaves', (Math.max(1, lab.building.world.instances.length) + LOOSE) * 48); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
       const raster = rasterStage(lab, g);
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
-      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), u = up.stages(g); m.result = u.result;
+      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dT = dn.stages({ signal: 'tone', div: 2, cap: 24, rounds: 3 }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), u = up.stages(g); m.result = u.result;
       const rains = rainStages(lab, g); const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
         ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),
-        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC' }, {}, { FINE: 4 }),
+        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, {}, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
         S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
-        ...dVis.stages, ...dB.stages, ...dM.stages, ...dS.stages,
+        ...dVis.stages, ...dT.stages, ...dB.stages, ...dM.stages, ...dS.stages,
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', 'fn airAt2(p: vec2u) -> f32 { return textureLoad(airD, p, 0).x; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0 }),
         S('air blur', airblur, 'half', { airH: 'src', surf: 'surf' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
-        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airB: 'air' }, { outC: 'color' }),
+        S('tint', tint, 'render', { surf: 'surf', lampU: 'lampU', [dT.result]: 'tone' }, { outT: 'lampT' }),
+        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampT: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airB: 'air' }, { outC: 'color' }),
         ...u.stages, ...rains, ...glows,
       ].map(s => o.edit ? o.edit(s) : s);
     },

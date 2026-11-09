@@ -5,7 +5,7 @@ import type { Lab } from '../lab';
 import type { UpscalePart } from './realtime';
 import hand from './taau.wgsl' with { type: 'text' };
 /** the upscaler as it was when the network learned: before the four tuned numbers went in */
-const taau = hand.replace('* 1.2);', '* 1.9);').replace(') * 1.1;', ');').replace('(n * 0.55 + 1.0)', '(n + 1.0)').replace('let ext = (sd', 'let ext = (sd');
+const taau = hand.replace('* mix(1.9, 1.2, go));', '* 1.9);').replace(') * 1.1;', ');').replace('(n * mix(1.0, 0.55, go) + 1.0)', '(n + 1.0)').replace('let ext = (sd', 'let ext = (sd');
 import feats from './upnet.wgsl' with { type: 'text' };
 export type Weights = Record<string, number[]>;
 /** a 3 x 3 layer as 4 x 4 blocks, tap by tap, input block by input block: columns are inputs */

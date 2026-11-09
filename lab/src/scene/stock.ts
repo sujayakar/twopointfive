@@ -2,16 +2,16 @@
 import { type V3, type Rot, rotX, rotY, rotZ, compose, apply, add, mul, norm, rng } from '../math';
 import { World, F, type Mark, type Piece } from './world';
 import { M } from './materials';
+import { inks } from './print';
 export type Kind = 'box' | 'flat' | 'cup' | 'bowl' | 'bag' | 'puff' | 'can' | 'slim' | 'bottle' | 'jug' | 'carton' | 'tall' | 'jar' | 'tube' | 'pouch' | 'six' | 'yogurt' | 'card';
 export interface Product { kind: Kind; art: number; col: V3; alt: V3; s: number; ax: number; ay: number; wide: number; deep: number; high: number }
 const SIZE: Record<Kind, [number, number, number]> = { box: [0.125, 0.085, 0.17], flat: [0.16, 0.10, 0.045], cup: [0.112, 0.112, 0.112], bowl: [0.155, 0.155, 0.076], bag: [0.15, 0.08, 0.20], puff: [0.17, 0.10, 0.22], can: [0.07, 0.07, 0.125], slim: [0.056, 0.056, 0.16], bottle: [0.072, 0.072, 0.22], jug: [0.10, 0.10, 0.27], carton: [0.08, 0.08, 0.25], tall: [0.10, 0.08, 0.25], jar: [0.08, 0.08, 0.11], tube: [0.08, 0.08, 0.24], pouch: [0.105, 0.06, 0.16], six: [0.20, 0.135, 0.13], yogurt: [0.078, 0.078, 0.07], card: [0.09, 0.02, 0.15] };
 export const PRINTS = 168;
 export function catalogue(): Product[] {
   const q = rng(909), out: Product[] = [], plan: [Kind, number][] = [['box', 16], ['flat', 10], ['cup', 12], ['bowl', 10], ['bag', 14], ['puff', 10], ['can', 12], ['slim', 8], ['bottle', 14], ['jug', 5], ['carton', 9], ['tall', 9], ['jar', 8], ['tube', 5], ['pouch', 9], ['six', 4], ['yogurt', 7], ['card', 6]]; let art = 0;
-  for (const [kind, n] of plan) for (let i = 0; i < n; i++) { const h = (i / n + 0.13 * q() + 0.07 * art) % 1, sat = q() < 0.18 ? 0.1 : 0.55 + 0.4 * q(), val = 0.35 + 0.6 * q(), c = hsv(h, sat, val), d = hsv((h + 0.35 + 0.3 * q()) % 1, 0.3 + 0.6 * q(), 0.5 + 0.5 * q()), s = 0.88 + 0.26 * q(), ax = 0.85 + 0.3 * q(), ay = 0.85 + 0.32 * q(), [w, dp, hg] = SIZE[kind]; out.push({ kind, art: art++ % PRINTS, col: c, alt: d, s, ax, ay, wide: w * s * ax, deep: dp * s * (kind === 'box' || kind === 'flat' || kind === 'bag' || kind === 'puff' || kind === 'six' ? 1 : ax), high: hg * s * ay }); }
+  for (const [kind, n] of plan) for (let i = 0; i < n; i++) { const [c, d] = inks(art), s = 0.88 + 0.26 * q(), ax = 0.85 + 0.3 * q(), ay = 0.85 + 0.32 * q(), [w, dp, hg] = SIZE[kind]; out.push({ kind, art: art++ % PRINTS, col: c, alt: d, s, ax, ay, wide: w * s * ax, deep: dp * s * (kind === 'box' || kind === 'flat' || kind === 'bag' || kind === 'puff' || kind === 'six' ? 1 : ax), high: hg * s * ay }); }
   return out;
 }
-const hsv = (h: number, s: number, v: number): V3 => { const f = (n: number) => { const k = (n + h * 6) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return [f(5), f(3), f(1)]; };
 export class Shelver {
   count = 0; readonly items = catalogue(); private last = new Map<string, number[]>(); private q = rng(77);
   constructor(private w: World) {}

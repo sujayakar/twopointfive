@@ -8,12 +8,12 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rd = pxRay(id.xy); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), textureLoad(frontT, id.xy, 0), rd);
-  if (p.sky || p.kind == 63u) { textureStore(outVis, id.xy, vec4f(0.0)); textureStore(outU, id.xy, vec4f(0.0)); textureStore(outC, id.xy, vec4f(0.0)); return; }
+  if (p.sky || p.kind == 63u) { textureStore(outVis, id.xy, vec4f(0.0)); textureStore(outU, id.xy, vec4f(0.0)); textureStore(outC, id.xy, vec4f(0.0)); if (((id.x | id.y) & 1u) == 0u) { textureStore(outTone, id.xy / 2u, vec4f(0.0)); } return; }
   rngInit(id.xy, 3u); let bn = blue2(id.xy, 0u); let b2 = blue2(id.xy, 7u); let b3 = blue2(id.xy, 11u); let n = select(p.n, vec3f(0.0), p.leaf);
-  var W = vec2f(0.0); var U = vec3f(0.0); var pick = vec3i(-1); var u = vec2f(b2.x, b3.x); var s = pxSurf(p); let shines = byFormula(p.rough) > 0.0 || isPaint(p.kind); if (isPaint(p.kind)) { s = paintFlakes(s); } var C = vec4f(0.0); var WC = 0.0; var uc = rnd();
+  var W = vec2f(0.0); var U = vec3f(0.0); var pe = vec3f(0.0); var pw = 1.0; var pick = vec3i(-1); var u = vec2f(b2.x, b3.x); var s = pxSurf(p); let shines = byFormula(p.rough) > 0.0 || isPaint(p.kind); if (isPaint(p.kind)) { s = paintFlakes(s); } var C = vec4f(0.0); var WC = 0.0; var uc = rnd();
   for (var g = 0u; g * 4u < frame.counts.x; g++) { let reach = lampReach(p.x, g); if (max4(reach) <= 0.0) { continue; }
    for (var j = 0u; j < 4u; j++) { let i = g * 4u + j; if (reach[j] <= 0.0 || i >= frame.counts.x) { continue; }
-    let e = lampE(i, p.x, n) * reach[j]; let w = lum(e); if (w <= 1e-5) { continue; } let c = select(0u, 1u, lamps[i].kind == 2u); if (c == 0u) { U += e; } W[c] += w; let q = w / W[c]; if (u[c] < q) { pick[c] = i32(i); u[c] = u[c] / q; } else { u[c] = (u[c] - q) / (1.0 - q); }
+    let e = lampE(i, p.x, n) * reach[j]; let w = lum(e); if (w <= 1e-5) { continue; } let c = select(0u, 1u, lamps[i].kind == 2u); if (c == 0u) { U += e; } W[c] += w; let q = w / W[c]; if (u[c] < q) { pick[c] = i32(i); u[c] = u[c] / q; if (c == 0u) { pe = e; pw = w; } } else { u[c] = (u[c] - q) / (1.0 - q); }
     if (shines) { let h = lampCoat(i, s, -rd) * reach[j]; let m = lum(h); if (c == 1u) { C.a += m; } else if (m > 0.0) { C = vec4f(C.rgb + h, C.a); WC += m; let g = m / WC; if (uc < g) { pick.z = i32(i); uc = uc / g; } else { uc = (uc - g) / (1.0 - g); } } }
   } }
   var v = vec4f(-1.0, -1.0, -1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
@@ -23,5 +23,6 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
     else { let l = pick[k - 1u]; if (l < 0) { continue; } var a: vec4f; if (k == 3u) { a = aimCoat(u32(l), s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(u32(l), p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), k == 2u)); } d = a.xyz; far = a.w - 0.02; if (dot(p.ng, d) <= 0.0 && !p.leaf) { v[k - 1u] = 0.0; continue; } }
     let T = lum(visible(p.x + p.ng * select(-o0, o0, dot(p.ng, d) > 0.0), d, 1e-3, far)); if (k == 0u) { v.w = T; if (T > 0.0 && noLeaves) { v.w = T * leafSun(p.x, p.ng * select(-1.0, 1.0, dot(p.ng, d) > 0.0), b3); } } else { v[k - 1u] = T; }
   }
+  if (((id.x | id.y) & 1u) == 0u) { let seen = max(v.x, 0.0); textureStore(outTone, id.xy / 2u, vec4f(clamp(pe / pw * W.x / max(U, vec3f(1e-6)), vec3f(0.0), vec3f(8.0)) * seen, seen)); }     /* (lamps of other colors may be hidden here: which color comes through is kept beside how much) */
   textureStore(outVis, id.xy, v); textureStore(outU, id.xy, vec4f(U, W.y)); textureStore(outC, id.xy, C);
 }

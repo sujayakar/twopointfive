@@ -1,3 +1,4 @@
+import { inks, css } from './print';
 // The signs, drawn once into one atlas: white on clear, colored where they are used.
 export const ART = ['04', '07', '12', 'A', 'B', 'R', 'arrow', 'arrowUp', 'stripes', 'ring', 'cross', 'exit', 'atrium', 'studio', 'keep', 'bar', 'dash', 'corner', 'hex', 'runner', 'L1', 'L2', 'hvac', 'caution', 'grid', 'line', 'half', 'dots', 'wave', 'slab', 'plus', 'fade', ...Array.from({ length: 168 }, (_, i) => 'p' + i), 'sando0', 'sando1', 'sando2', 'sando3', 'rice0', 'rice1', 'rice2', 'rice3', 'mag4', 'mag5', 'mag6', 'mag7', 'pop0', 'pop1', 'pop2', 'pop3', 'corner24', 'noodle', 'bar9', 'hotel', 'karaoke', 'pharmacy', 'neonArrow', 'parking', 'drinks', 'poster0', 'poster1', 'poster2', 'poster3', 'price', 'mag0', 'mag1', 'mag2', 'mag3', 'push', 'zebra', 'menu', 'lantern', 'noEntry', 'shutter', 'luckyduck', 'ice', 'donut', 'boba', 'tacos', 'suds', 'plate', 'seam', 'checker', 'burgermenu', 'mural', 'stop', 'booth', 'produce'] as const;
 const CELLS = 16, ROWS = 16, PX = 256;
@@ -68,7 +69,7 @@ function picture(x: CanvasRenderingContext2D, k: number, cx: number, cy: number,
   }
 }
 function label(x: CanvasRenderingContext2D, k: number) {
-  const r = rnd(k * 7 + 19), hue = (k * 0.381966) % 1, dark = r() < 0.3, sat = r() < 0.15 ? 0.06 : 0.55 + 0.4 * r(), a = hsl(hue, sat, dark ? 0.16 + 0.16 * r() : 0.42 + 0.45 * r()), b = hsl((hue + [0.5, 0.33, 0.08, 0.58, 0.15][k % 5]!) % 1, 0.6 + 0.35 * r(), dark ? 0.6 + 0.2 * r() : 0.3 + 0.35 * r()), c = dark ? '#ffffff' : ['#ffffff', '#fff6dc', '#111418', '#ffffff'][k % 4]!, kind = Math.floor(r() * 13), pic = Math.floor(r() * 14); x.fillStyle = a; x.fillRect(0, 0, 256, 256);
+  const r = rnd(k * 7 + 19), [ia, ib, ic] = inks(k), a = css(ia), b = css(ib), lightA = ia[0] * 0.3 + ia[1] * 0.6 + ia[2] * 0.1 > 0.62, c = lightA ? (k % 2 ? '#1d1a18' : css(ib)) : css(ic), dark = !lightA, kind = Math.floor(r() * 13), pic = Math.floor(r() * 14); x.fillStyle = a; x.fillRect(0, 0, 256, 256);
   const F2 = ['"Arial Black", Arial', 'Georgia, serif', 'Impact, "Arial Narrow", Arial', '"Trebuchet MS", Arial', '"Courier New", monospace'][Math.floor(r() * 5)]!, font = (px: number, w = 900) => { x.font = `${w} ${px}px ${F2}`; }, W = word(r), big = (y: number, px: number, fill: string, edge?: string) => { x.textAlign = 'center'; x.textBaseline = 'middle'; font(Math.min(px, 420 / Math.max(3, W.length))); if (edge) { x.lineWidth = 9; x.lineJoin = 'round'; x.strokeStyle = edge; x.strokeText(W, 128, y, 238); } x.fillStyle = fill; x.fillText(W, 128, y, 238); };
   switch (kind) {
     case 0: x.fillStyle = b; x.fillRect(0, 150, 256, 106); picture(x, pic, 128, 156, 62, r, a, b); big(58, 84, c, b); break;
