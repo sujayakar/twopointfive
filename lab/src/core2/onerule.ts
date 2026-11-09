@@ -18,7 +18,7 @@ export function oneRule(o: { name?: string; leafNear?: number; upscale?: Upscale
     if (s.name === 'foliage') {
       const lab = lab0!, many = lab.litCells.many;
       if (s.make) return { ...s, /* (looked at every other frame: what it costs is mostly waiting) */ async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('cellLight')!, 0, lab.scene.extraBuffer, lightRow(lab.scene.blocks, lab.scene.blockRow) * 16, (many + PEOPLE * LIMBS) * 48); }; } };
-      const { field: _f, folAt: _a, ...bind } = s.buffers!, lib = s.code.slice(signals.length, s.code.indexOf(bounceLib));
+      const { field: _f, folAt: _a, ...bind } = s.buffers!, at = s.code.indexOf(bounceLib), lib = s.code.slice(signals.length, at); if (at < 0 || !s.code.startsWith(signals)) throw new Error('the foliage stage is not put together as it was');
       s = { name: 'cells', when: () => turn === 0, over: { groups: () => [Math.ceil((many + PEOPLE * LIMBS) / 8), 1, 1] }, code: signals + lib + bounceLib + cells, buffers: { ...bind, ...CHANGES, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } };
     } else if (s.name === 'mirror' || s.name === 'shine') s = { ...s, code: swap(s.code, 'select(m, q.albedo + q.through, leaf) / PI * c.E * select(0.0, 1.0, c.n > 0.0)', 'select(m / PI * c.E * select(0.0, 1.0, c.n > 0.0), folJ(q.x, d), leaf)') };
     else if (s.name === 'lamps') s = { ...s, code: swap(s.code, 'leafTo = select(0.0, 1e9, exact);', o.softLamps ? 'leafTo = select(0.0, 1e9, exact);' : 'footSharp(footW, footS); if (exact) { leafTo = 1e9; }') };
@@ -42,10 +42,10 @@ export const oneRuleMethods: Record<string, () => Method> = {
   exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
   exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
    // what costs what: no cells met, anywhere or by lamps' shadows; no limbs; small things dropped as early as the first core does
-  nocells: () => oneRule({ name: 'nocells', upscale: bilinear, put: p => p.replaceAll('if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best)', 'if (false)').replace('if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') }),
-  lampsno: () => oneRule({ name: 'lampsno', upscale: bilinear, put: (p, s) => s === 'lamps' ? p.replace('if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') : p }),
-  nolimbs: () => oneRule({ name: 'nolimbs', upscale: bilinear, put: p => p.replace('if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit').replace('if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau', 'if (false) { T *= exp(-carryTau') }),
-  early: () => oneRule({ name: 'early', upscale: bilinear, put: p => p.replace('lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, t.y, 1e9, 1e9); blk.x = lim.x;') }),
+  nocells: () => oneRule({ name: 'nocells', upscale: bilinear, put: p => swap(swap(p, 'if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best)', 'if (false)'), 'if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') }),
+  lampsno: () => oneRule({ name: 'lampsno', upscale: bilinear, put: (p, s) => s === 'lamps' ? swap(p, 'if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') : p }),
+  nolimbs: () => oneRule({ name: 'nolimbs', upscale: bilinear, put: p => swap(swap(p, 'if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit'), 'if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau', 'if (false) { T *= exp(-carryTau') }),
+  early: () => oneRule({ name: 'early', upscale: bilinear, put: p => swap(p, 'lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, t.y, 1e9, 1e9); blk.x = lim.x;') }),
   // leaves gather as any surface does, with rays of their own, in place of reading their cells: by cells from the start, or one by one near by
   ...Object.fromEntries([['leafrays', 0, bilinear], ['leafraysnear', 1, bilinear], ['onerays', 0, taauUp]].map(([n, k, up]) => [n, () => oneRule({ name: n as string, upscale: up as UpscalePart, leafNear: k as number, edit: s => s.name === 'gather' ? code(s, 'if (p.leaf && folHas(p.x))', 'if (false)') : s.name === 'resolve' ? code(s, 'let e = folLight(p.x, p.n, p.ao.x); if (e.w > 0.0)', 'let e = vec4f(0.0); if (e.w > 0.0)') : s })])),
   one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),

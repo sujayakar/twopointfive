@@ -40,7 +40,9 @@ var<workgroup> firstHit: atomic<u32>; var<workgroup> refAt: vec3f; var<workgroup
   for (var k = 0u; k < 6u; k++) { let c = select(mean, vec3f(f32(atomicLoad(&red[k])), f32(atomicLoad(&green[k])), f32(atomicLoad(&blue[k]))) / max(n[k], 1.0), n[k] > 0.5) / 4095.0; let v = sqrt(c); let w = u32(v.x * 31.0 + 0.5) | (u32(v.y * 63.0 + 0.5) << 5u) | (u32(v.z * 31.0 + 0.5) << 11u); let z = 3u + (k >> 1u); out[z] = out[z] | (w << select(0u, 16u, (k & 1u) == 0u)); }
   for (var k = 0u; k < 8u; k++) { made[cell * 8u + k] = out[k]; }
 }`;
-export async function measureBlocks(lab: Lab, grid = 8): Promise<string> {
+/** `most`: rays a side of each cell, squared; eight is as many as there are threads */
+export async function measureBlocks(lab: Lab, most8 = 8): Promise<string> {
+  const grid = Math.min(8, most8);
   const { scene, gpu } = lab, B = scene.blocks, d = gpu.device, C = GPUShaderStage.COMPUTE; if (!B.many) return 'no cells';
   const places = buffer(gpu, 'cells at', B.cells, GPUBufferUsage.STORAGE), made = buffer(gpu, 'cells made', B.many * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC), most = buffer(gpu, 'cells many', new Uint32Array([B.many, 0, 0, 0]), GPUBufferUsage.UNIFORM), t0 = performance.now();
   const l1 = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: C, buffer: { type: 'read-only-storage' } }, { binding: 1, visibility: C, buffer: { type: 'storage' } }, { binding: 2, visibility: C, buffer: { type: 'uniform' } }] });
@@ -54,7 +56,12 @@ export async function measureBlocks(lab: Lab, grid = 8): Promise<string> {
   for (let i = 0; i < B.many; i++) { const s = slot[i]!; if (s >= 1 << 17) throw new Error('more cells than a word can name'); r[i * 8] = (r[i * 8]! | ((s >>> 15) << 24)) >>> 0; r[i * 8 + 1] = (r[i * 8 + 1]! | (((s >>> 8) & 127) << 25)) >>> 0; r[i * 8 + 2] = (r[i * 8 + 2]! | ((s & 255) << 24)) >>> 0; }
   const green = new Uint8Array(B.bricks.length / 588); for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff && r[i * 8]! >>> 26) green[Math.floor(B.said[i]! / 588)] = 1; for (let i = 0; i < B.page.length; i++) { const p = B.page[i]! & 0x7fffffff; B.page[i] = p ? (p | (green[p - 1] ? 0x80000000 : 0)) >>> 0 : 0; } scene.writeExtra(scene.blockRow, new Uint8Array(B.page.buffer));
   // an empty cell says how far round it there is nothing (within its brick), so that rays go by in strides
-  for (let b = 0; b < B.bricks.length; b += 588) for (const [from, per] of [[0, 8], [512, 4]] as const) for (let i = 0; i < per ** 3; i++) { if (B.bricks[b + from + i]! && B.bricks[b + from + i]! < 0x80000000) continue; const x = i % per, y = Math.floor(i / per) % per, z = Math.floor(i / per / per); let d = per; for (let k = 0; k < per ** 3; k++) { const v = B.bricks[b + from + k]!; if (!v || v >= 0x80000000) continue; d = Math.min(d, Math.max(Math.abs(k % per - x), Math.abs(Math.floor(k / per) % per - y), Math.abs(Math.floor(k / per / per) - z))); } B.bricks[b + from + i] = (0x80000000 | Math.max(1, d)) >>> 0; }
+  const far = new Uint8Array(512);
+  for (let b = 0; b < B.bricks.length; b += 588) for (const [from, per] of [[0, 8], [512, 4]] as const) {
+    const n = per ** 3; for (let i = 0; i < n; i++) far[i] = B.bricks[b + from + i] ? 0 : per; const pull = (i: number, x: number, y: number, z: number): void => { for (let c = -1; c <= 1; c++) for (let e = -1; e <= 1; e++) for (let f = -1; f <= 1; f++) { const X = x + f, Y = y + e, Z = z + c; if (X < 0 || Y < 0 || Z < 0 || X >= per || Y >= per || Z >= per) continue; const v = far[X + per * (Y + per * Z)]! + 1; if (v < far[i]!) far[i] = v; } };
+    for (let i = 0; i < n; i++) pull(i, i % per, Math.floor(i / per) % per, Math.floor(i / per / per)); for (let i = n - 1; i >= 0; i--) pull(i, i % per, Math.floor(i / per) % per, Math.floor(i / per / per));
+    for (let i = 0; i < n; i++) if (far[i]) B.bricks[b + from + i] = (0x80000000 | far[i]!) >>> 0;
+  }
   scene.writeExtra(scene.blockRow + B.page.length / 4, new Uint8Array(B.bricks.buffer)); scene.writeExtra(cellRow(B, scene.blockRow), new Uint8Array(r.buffer)); const places2 = new Float32Array(at), pu = new Uint32Array(places2.buffer); for (let i = 0; i < lit; i++) pu[i * 8 + 7] = at[i * 8 + 7]!; lab.litCells = { many: lit, at: places2 };
   let full = 0, leafy = 0; const by = [0, 0, 0, 0]; for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff) { full++; by[B.cells[i * 4 + 3]!]!++; if (r[i * 8]! >>> 31) leafy++; }
   return `${full} of ${B.many} cells have something in them (${by.join(', ')} by level), ${leafy} mostly leaves; ${B.bricks.length / 588} bricks; ${((B.page.length + B.bricks.length + B.many * 8) * 4 / 1e6).toFixed(2)} MB; ${(performance.now() - t0).toFixed(0)} ms`;

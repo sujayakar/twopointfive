@@ -6,10 +6,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"onetop2",
-"onetop1",
-"onetop0"
+"onelin"
 ],
 "paths": 700,
 "name": "ground day",

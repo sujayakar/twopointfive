@@ -13,11 +13,11 @@ const SPEC: { bone: string; half?: V3; at?: V3; tau: V3; of: string[]; level: nu
 /** up to which class a part of a person is met as it is: what it is a part of is gone all at once */
 export const partClass = (name: string): number => /^(chest|yoke|plate|pack|mag\d|strap|collar|neck|pelvis|seat|belly|belt|pouch|holster)/.test(name) ? 1 : 0;
 export class Carry {
-  readonly rows = new Float32Array(CARRY_ROWS * 4); private tint = new Map<Person, V3[]>();
+  readonly rows = new Float32Array(CARRY_ROWS * 4); private told = false; private tint = new Map<Person, V3[]>();
   private colors(p: Person): V3[] { let c = this.tint.get(p); if (!c) this.tint.set(p, c = SPEC.map(s => { const t = [0, 0, 0] as V3; let w = 0; for (const n of s.of) { const q = p.part(n); if (!q) continue; const a = q.half[0] * q.half[1] + q.half[1] * q.half[2] + q.half[2] * q.half[0], m = MATERIALS[q.mat & 255]!, e = q.tint ?? [1, 1, 1]; for (let k = 0; k < 3; k++) t[k]! += m.base[k]! * e[k]! * e[k]! * a; w += a; } return t.map(v => Math.min(0.94, v / Math.max(w, 1e-6))) as V3; })); return c; }
   /** where they are now */
   frame(lab: Lab, row: number) {
-    const f = this.rows, u = new Uint32Array(f.buffer), people = lab.building.people.slice(0, PEOPLE); f.fill(0); u[0] = people.length; u[1] = lab.litCells.many;
+    const f = this.rows, u = new Uint32Array(f.buffer), people = lab.building.people.slice(0, PEOPLE); if (lab.building.people.length > PEOPLE && !this.told) { this.told = true; console.warn(`limbs of ${PEOPLE} people, and there are ${lab.building.people.length}`); } f.fill(0); u[0] = people.length; u[1] = lab.litCells.many;
     people.forEach((p, i) => {
       f.set([p.pos[0], p.pos[1] + 0.95, p.pos[2], 1.25], (1 + i) * 4); const c = this.colors(p);
       SPEC.forEach((s, j) => { const q = p.part(s.bone)!, o = (1 + PEOPLE + (i * LIMBS + j) * LIMB_ROWS) * 4, d = s.at ?? [0, 0, 0], at = [0, 1, 2].map(k => q.at[k]! + q.rot[0][k]! * d[0] + q.rot[1][k]! * d[1] + q.rot[2][k]! * d[2]), h = s.half ?? q.half;

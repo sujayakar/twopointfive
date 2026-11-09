@@ -132,7 +132,7 @@ fn cellBox(r: vec4u, lo: vec3f, h: f32) -> CellBox {
 /** along a ray from t0 to t1 until it has met `want` of thickness; `lit`: what it is sent is summed. (Before blk.x only leaves are met: the rest is there as it is) */
 fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Blk {
   var o: Blk; o.cell = NOTHING; o.t = t1; o.tau = 0.0; if (BLK_MANY == 0u) { return o; }
-  let inv = safeInv(rd); let top = BLK_LO + vec3f(BLK_N) * BRICK; let a = (BLK_LO - ro) * inv; let b = (top - ro) * inv; var t = max(max3(min(a, b)), t0) + 1e-4; let te = min(min3(max(a, b)), t1) - 1e-4; let ahead = select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0));
+  let inv = safeInv(rd); let top = BLK_LO + vec3f(BLK_N) * BRICK; let a = (BLK_LO - ro) * inv; let b = (top - ro) * inv; var t = max(max3(min(a, b)), t0) + 1e-4; let te = min(min3(max(a, b)), min(t1, t0 + 150.0)) - 1e-4; let ahead = select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0));
   for (var i = 0u; i < 192u; i++) {
     if (t >= te || o.tau > 4.6) { break; }
     let level = select(0u, 1u, t >= blk.y); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
