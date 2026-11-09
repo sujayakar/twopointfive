@@ -125,7 +125,7 @@ pub struct WindStats {
 pub fn wind_field() -> crate::wind::WINDFIELD { crate::wind::WINDFIELD {  } }
 
 /// (src/game/wind.ts:53 WIND_DEFAULTS: a table nothing writes)
-pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::page_wind() }
+pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::WindK::page() }
 
 /// (src/game/wind.ts:54 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.wind";

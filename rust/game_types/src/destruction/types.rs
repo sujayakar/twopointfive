@@ -298,7 +298,7 @@ pub struct DestructionStats {
 pub fn pall_dirs() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [0.7071, 0.7071], [0.0, 1.0], [-0.7071, 0.7071], [-1.0, 0.0], [-0.7071, -0.7071], [0.0, -1.0], [0.7071, -0.7071]] }
 
 /// (src/game/destruction.ts:153 CHAOS_DEFAULTS: a table nothing writes)
-pub fn chaos_defaults() -> crate::knobs::ChaosK { crate::knobs::page_chaos() }
+pub fn chaos_defaults() -> crate::knobs::ChaosK { crate::knobs::ChaosK::page() }
 
 /// (src/game/destruction.ts:154 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.chaos";

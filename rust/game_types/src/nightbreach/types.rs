@@ -155,7 +155,7 @@ impl NightbreachMod {
     pub fn blank() -> Self {
         NightbreachMod {
             // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
-            applied: { let k = crate::knobs::page_nightbreach(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: None, ops_yaw: None }) },
+            applied: { let k = crate::knobs::NightbreachK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: None, ops_yaw: None }) },
         }
     }
 }

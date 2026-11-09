@@ -148,4 +148,4 @@ pub struct KitanimStats {
 }
 
 /// (src/game/kitanim.ts:83 KITANIM_DEFAULTS: a table nothing writes)
-pub fn kitanim_defaults() -> crate::knobs::KitanimK { crate::knobs::page_kitanim() }
+pub fn kitanim_defaults() -> crate::knobs::KitanimK { crate::knobs::KitanimK::page() }

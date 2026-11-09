@@ -247,7 +247,7 @@ pub struct CoverfireStats {
 }
 
 /// (src/game/coverfire.ts:79 COVERFIRE_DEFAULTS: a table nothing writes)
-pub fn coverfire_defaults() -> crate::knobs::CoverfireK { crate::knobs::page_coverfire() }
+pub fn coverfire_defaults() -> crate::knobs::CoverfireK { crate::knobs::CoverfireK::page() }
 
 /// (src/game/coverfire.ts:87 ZERO: a table nothing writes)
 pub fn zero() -> crate::coverfire::StateStats { crate::coverfire::StateStats { chews: 0.0, shots: 0.0, landed: 0.0, opened: 0.0, gave_up: 0.0, held_friend: 0.0, held_silent: 0.0, calls: 0.0, walked: 0.0, op_chews: 0.0, def_chews: 0.0, thru: 0.0, thru_shots: 0.0 } }

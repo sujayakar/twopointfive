@@ -2,7 +2,7 @@
 //!
 //! No pass of this tool names a crate. The crates are the folders of `rust/` that hold a `Cargo.toml`, and what each is
 //! comes from what it holds:
-//! - the crate whose `src/knobs.rs` declares `struct Knobs` holds the tables (the simulation has a knobs.rs of its own: a list
+//! - the crate whose `src/knobs/mod.rs` declares `struct Knobs` holds the tables (the simulation has a knobs.rs of its own: a list
 //!   of the knobs it reads, and no tables);
 //! - THE GAME'S CRATES are that crate and every plain library that depends on one of the game's crates, however far;
 //! - a crate that builds something to run (a `src/bin`, a `src/main.rs`, a `[[bin]]`, a `cdylib`) is a USER of the game, and so
@@ -79,9 +79,9 @@ pub fn find(root: &Path) -> Result<Layout, String> {
         ends |= d.join("src/bin").is_dir() || d.join("src/main.rs").exists();
         crates.push(Crate { name, deps, ends, page });
     }
-    let with_knobs: Vec<&Crate> = crates.iter().filter(|c| std::fs::read_to_string(rust.join(&c.name).join("src/knobs.rs")).map(|t| t.contains("pub struct Knobs ")).unwrap_or(false)).collect();
+    let with_knobs: Vec<&Crate> = crates.iter().filter(|c| std::fs::read_to_string(rust.join(&c.name).join("src/knobs/mod.rs")).map(|t| t.contains("pub struct Knobs ")).unwrap_or(false)).collect();
     let [types] = with_knobs.as_slice() else {
-        return Err(format!("{} crates under rust/ have a src/knobs.rs that declares `struct Knobs` ({}): the tables are in exactly one", with_knobs.len(), with_knobs.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ")));
+        return Err(format!("{} crates under rust/ have a src/knobs/mod.rs that declares `struct Knobs` ({}): the tables are in exactly one", with_knobs.len(), with_knobs.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ")));
     };
     let mut game: BTreeSet<String> = BTreeSet::from([types.name.clone()]);
     loop {
@@ -91,7 +91,7 @@ pub fn find(root: &Path) -> Result<Layout, String> {
         }
         game.extend(more);
     }
-    let knobs = Path::new("rust").join(&types.name).join("src/knobs.rs");
+    let knobs = Path::new("rust").join(&types.name).join("src/knobs/mod.rs");
     let mut l = Layout { crates, game, knobs, bodies: Vec::new() };
     // the body crates, a crate after the ones it depends on; a module is in one of them only (a pass names a module by its name)
     let mut have: BTreeMap<String, String> = BTreeMap::new();
@@ -245,7 +245,7 @@ mod tests {
     fn one_crate_is_found_with_its_users() {
         let d = tree("one", &[
             ("rust/game/Cargo.toml", "[package]\nname = \"game\"\n[dependencies]\nsim = { path = \"../sim\" }\n"),
-            ("rust/game/src/knobs.rs", "pub struct Knobs {}"),
+            ("rust/game/src/knobs/mod.rs", "pub struct Knobs {}"),
             ("rust/sim/src/knobs.rs", "pub const GAIT_LEAN: usize = 0;"),
             ("rust/game/src/doors/p_01.rs", ""),
             ("rust/game/src/doors/mod.rs", ""),
@@ -261,7 +261,7 @@ mod tests {
         assert_eq!(l.users(), ["game_face", "game_run"]);
         assert_eq!(l.crates.iter().filter(|c| c.page).map(|c| c.name.as_str()).collect::<Vec<_>>(), ["game_face"]);
         assert_eq!(l.game_and_users(), ["game", "game_face", "game_run"]);
-        assert_eq!(l.knobs, Path::new("rust/game/src/knobs.rs"));
+        assert_eq!(l.knobs, Path::new("rust/game/src/knobs/mod.rs"));
         assert_eq!(l.common(), "rust/game/src/");
         let _ = std::fs::remove_dir_all(&d);
     }
@@ -270,7 +270,7 @@ mod tests {
     fn a_split_game_is_found_by_what_its_crates_hold() {
         let d = tree("split", &[
             ("rust/game_types/Cargo.toml", LIB),
-            ("rust/game_types/src/knobs.rs", "pub struct Knobs {}"),
+            ("rust/game_types/src/knobs/mod.rs", "pub struct Knobs {}"),
             ("rust/game_types/src/doors/types.rs", ""),
             ("rust/game_types/src/doors/mod.rs", ""),
             ("rust/game_wire/Cargo.toml", "[dependencies]\ngame_types = { path = \"../game_types\" }\n"),
@@ -289,7 +289,7 @@ mod tests {
         assert_eq!(l.game.iter().cloned().collect::<Vec<_>>(), ["game", "game_rules", "game_types", "game_wire", "game_world"]);
         assert_eq!(l.bodies, ["game_world", "game_rules"]);
         assert_eq!(l.users(), ["game", "game_start"]);
-        assert_eq!(l.knobs, Path::new("rust/game_types/src/knobs.rs"));
+        assert_eq!(l.knobs, Path::new("rust/game_types/src/knobs/mod.rs"));
         assert_eq!(l.common(), "rust/");
         let _ = std::fs::remove_dir_all(&d);
     }
@@ -298,7 +298,7 @@ mod tests {
     fn a_module_with_bodies_in_two_crates_is_refused() {
         let d = tree("two", &[
             ("rust/a/Cargo.toml", LIB),
-            ("rust/a/src/knobs.rs", "pub struct Knobs {}"),
+            ("rust/a/src/knobs/mod.rs", "pub struct Knobs {}"),
             ("rust/a/src/doors/p_01.rs", ""),
             ("rust/b/Cargo.toml", "[dependencies]\na = { path = \"../a\" }\n"),
             ("rust/b/src/doors/p_02.rs", ""),

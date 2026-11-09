@@ -4,6 +4,9 @@
 //!   #[bytes(skip)]               on a field: it is in no bytes; its doc says why
 //!   #[bytes(parts)]              on a struct: its fields one at a time too, by name (`bytes::Parts`)
 //!
+//!   #[derive(Knobs)]             a table of numbers (game_types `knobs`): what it ships at, and each number by its dotted name
+//!   #[k(value)]                  on a field: what it ships at. A field with none is a table of its own
+//!
 //! It reads a declaration as tokens and needs no parser of the language: attributes, names, and where one field ends.
 extern crate proc_macro;
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
@@ -40,6 +43,62 @@ pub fn to_bytes(item: TokenStream) -> TokenStream {
         s += "} } ";
     }
     s.parse().unwrap()
+}
+/// what the walk knows of a field by its type: a number, a yes or no, a row of numbers, another table, or none of these (a list, a word): a value and nothing a person turns
+enum Holds { Number, YesNo, Row(usize), Table, Other }
+#[proc_macro_derive(Knobs, attributes(k))]
+pub fn knobs(item: TokenStream) -> TokenStream {
+    let mut t = item.into_iter().peekable();
+    attributes(&mut t, &["parts"]);
+    visibility(&mut t);
+    let (kind, name) = (word(t.next()), word(t.next()));
+    let Some(TokenTree::Group(g)) = t.next() else { panic!("Knobs is for a struct with named fields: {name}") };
+    if kind != "struct" || g.delimiter() != Delimiter::Brace { panic!("Knobs is for a struct with named fields: {name}") }
+    let rows: Vec<(String, Holds, Option<String>)> = split(g.stream()).into_iter().map(|f| {
+        let mut t = f.into_iter().peekable();
+        let mut value = None;
+        while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
+            t.next();
+            let Some(TokenTree::Group(g)) = t.next() else { panic!("an attribute with nothing in it") };
+            let mut a = g.stream().into_iter();
+            if word(a.next()) != "k" { continue; }
+            let Some(TokenTree::Group(v)) = a.next() else { panic!("#[k] says nothing") };
+            value = Some(v.stream().to_string());
+        }
+        visibility(&mut t);
+        let field = word(t.next());
+        t.next();   // (its colon)
+        let ty: String = t.map(|x| x.to_string()).collect::<String>().replace(' ', "");
+        let holds = match (ty.as_str(), &value) {
+            ("f64", _) => Holds::Number,
+            ("bool", _) => Holds::YesNo,
+            ("V3" | "[f64;3]", _) => Holds::Row(3),
+            ("[f64;2]", _) => Holds::Row(2),
+            ("[f64;4]", _) => Holds::Row(4),
+            (_, None) => Holds::Table,
+            _ => Holds::Other,
+        };
+        if value.is_none() && !matches!(holds, Holds::Table) { panic!("{name}.{field} says no value: #[k(…)]") }
+        (field, holds, Some(value.unwrap_or(format!("<{ty}>::page()"))))
+    }).collect();
+    let (mut page, mut walk, mut get, mut set) = (String::new(), String::new(), String::new(), String::new());
+    for (f, holds, value) in &rows {
+        page += &format!("{f}: {}, ", value.as_deref().unwrap_or(""));
+        match holds {
+            Holds::Number => { walk += &format!("::game_types::knobs::each_of(at, {f:?}, false, self.{f}, each); "); get += &format!("({f:?}, \"\") => Some(self.{f}), "); set += &format!("({f:?}, \"\") => {{ self.{f} = v; true }} "); }
+            Holds::YesNo => { walk += &format!("::game_types::knobs::each_of(at, {f:?}, true, self.{f} as u8 as f64, each); "); get += &format!("({f:?}, \"\") => Some(self.{f} as u8 as f64), "); set += &format!("({f:?}, \"\") => {{ self.{f} = v != 0.0; true }} "); }
+            Holds::Row(n) => for i in 0..*n { let part = format!("{f}.{i}"); walk += &format!("::game_types::knobs::each_of(at, {part:?}, false, self.{f}[{i}], each); "); get += &format!("({f:?}, \"{i}\") => Some(self.{f}[{i}]), "); set += &format!("({f:?}, \"{i}\") => {{ self.{f}[{i}] = v; true }} "); },
+            Holds::Table => { walk += &format!("::game_types::knobs::under(at, {f:?}, |at| ::game_types::knobs::KnobTable::walk(&self.{f}, at, &mut *each)); "); get += &format!("({f:?}, rest) => ::game_types::knobs::KnobTable::get(&self.{f}, rest), "); set += &format!("({f:?}, rest) => ::game_types::knobs::KnobTable::set(&mut self.{f}, rest, v), "); }
+            Holds::Other => {}
+        }
+    }
+    format!("impl {name} {{ pub fn page() -> Self {{ Self {{ {page} }} }} }} \
+             impl ::core::default::Default for {name} {{ fn default() -> Self {{ Self::page() }} }} \
+             impl ::game_types::knobs::KnobTable for {name} {{ \
+                 #[allow(unused_variables)] fn walk(&self, at: &mut ::alloc::string::String, each: &mut dyn FnMut(&str, bool, f64)) {{ {walk} }} \
+                 #[allow(unused_variables)] fn get(&self, name: &str) -> ::core::option::Option<f64> {{ match ::game_types::knobs::first_part(name) {{ {get} _ => None }} }} \
+                 #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
+             }}").parse().unwrap()
 }
 /// the fields of a struct that are written, as they are named after `self.`
 fn kept(f: &Fields) -> Vec<String> {

@@ -89,7 +89,7 @@ pub struct UnseenStats {
 }
 
 /// (src/game/unseen.ts:88 UNSEEN_DEFAULTS: a table nothing writes)
-pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::page_unseen() }
+pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::UnseenK::page() }
 
 /// (src/game/unseen.ts:108 WALLBEAT_BREAK)
 pub const WALLBEAT_BREAK: bool = false;
