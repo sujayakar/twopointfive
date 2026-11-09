@@ -1,4 +1,4 @@
-// DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
+// DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line.
 import { railClear, type Box } from './railclear';
 import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/drawpage.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
@@ -37,8 +37,6 @@ export class Overlay implements HudLike {
   private soundLab = document.querySelector('#meters .sound .lab') as HTMLElement; private floorKey = '';   // 'SOUND · carpet': what your feet are on, dim, after the label (view.marks.floor)
   private peak = 0; private peakT = 0; private drawnT = 0;
   private log = document.getElementById('log')!; private logKey = '';
-  private captionEl = document.getElementById('caption')!; private captionKey = '';
-  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
@@ -63,22 +61,6 @@ export class Overlay implements HudLike {
   readonly plan = new PlanFloor(this.traj);
   /** the player's own man made easy to find (ui/findring.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
-  /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
-    if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
-    const key = ch.list.length + '|' + ch.i;
-    if (key !== this.tlKey) {
-      this.tlKey = key; const total = ch.list.reduce((s, c) => s + c.dur, 0) || 1;
-      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" title="${k + 1}. ${c.title}" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
-      this.tlEl.className = 'on'; this.tlFill = this.tlEl.querySelector('.seg.cur b');
-    }
-    if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
-  }
-  setCaption(text: string, sub: string) {
-    const key = text + '|' + sub + (KEYMAP.rev ? `|k${KEYMAP.rev}` : ''); if (key === this.captionKey) return; this.captionKey = key;
-    this.captionEl.className = text ? 'on' : '';
-    if (text) this.captionEl.innerHTML = `<div class="cap">${keyText(text)}</div>${sub ? `<div class="sub">${keyText(sub)}</div>` : ''}`;
-  }
   private wish: HTMLElement; private wishKey = '';   // rust/game_rules/src/aimweight: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
   private reticle: HTMLElement; private ring: HTMLElement; private ringKey = -1;   // the ring on the marker F acts on; ring: progress round it (Interactable.progress — a lock being picked, the drive coming out)
   private hint: HTMLElement; private hintKey = '';                                  // the one word beside the ring: the 40 mm's too-close warning (HE40_SHORT)
@@ -216,7 +198,7 @@ export class Overlay implements HudLike {
     // interaction panel (top-left): the rows Space can do, the highlighted one lit; open (Space held) it says so and grows its cancel row
     { const ia = this.deriveInteractions(V);
       this.setInteractions(ia.rows, ia.primary, ia.more, ia.open, ia.hint, ia.cancel); }
-    // light + sound meters (bottom-left): how lit you are (the GPU light meter) and how much noise you are making (peak-hold marker)
+    // light + sound meters (bottom-left): how lit you are (the game's light meter) and how much noise you are making (peak-hold marker)
     const v = M.light;
     this.lightFill.style.width = `${(v * 100).toFixed(0)}%`; this.lightNum.textContent = src.page.debug ? `${(v * 100) | 0}  E ${M.irradiance.toFixed(3)}` : `${(v * 100) | 0}`;
     this.meters.classList.toggle('hot', v > 0.55);

@@ -9,9 +9,7 @@
 // THE ALLOWANCE IS TIME in the page (`ms`): warm code is then whole in the frame that asked, as it always was, and cold code takes the frames it needs.
 // A check gives a count of stops (`left`), which no clock can change. A JOB IN HAND IS NEVER HELD UP: every call takes one step at least, whatever is
 // left of the allowance, so nothing a frame's other planners do, however often, can keep one from being finished.
-// No generator is kept where the simulation's state is (a job half done is in no snapshot). The simulation does read the
-// picture through its sensors (the light meter reads the cache, and the cache keeps to a wall's side by the words): what a planner makes a few frames
-// late, a sensor sees a few frames late, as it sees the cache itself come round to a hole over many more.
+// No generator is kept where the simulation's state is (a job half done is in no snapshot).
 
 /** a frame's allowance, spent by every planner that is given it: stops left, and (the page's) milliseconds left. Infinity stops and no milliseconds = a
  *  planner runs to its end (a tool, a check, a level's first frame). */

@@ -1,9 +1,8 @@
-// TRY THE CONTROL PLANE, with no page. What a lobby screen will do, as lines of text: a game is made as one browser, joined by one more browser for every
+// TRY THE CONTROL PLANE, with no page. What the lobby does (src/ui/coop.ts), as lines of text: a game is made as one browser, joined by one more browser for every
 // further seat, and its state is printed as it changes until it is over (a server nobody connects to ends itself after a minute).
 //   bun run dev   and, in another terminal,   bun run tools/mp/runner-try.ts [http://localhost:5173]      this machine: the dev server's backend and build
 //   bun run tools/mp/runner-try.ts --cloud https://<name>.convex.cloud --build <commit>                   a hosted backend: it starts a REAL server there
-//   --scenario '?rescue'   the mission, as its page address (default ?roomclear&squad4) · --seats 2   how many seats the game is made with (default 1, what a
-//   mission has today). The game server refuses a setup whose seats are not the mission's own count: the game then reads failed (start failed), and the
+//   --scenario '?rescue'   the mission, as its page address (default ?roomclear&squad4) · --seats 2   how many seats the game is made with (default 1). The game server refuses a setup whose seats are not the mission's own count: the game then reads failed (start failed), and the
 //   server's output says why
 import { wire } from '../../src/cloud/wire.ts';
 

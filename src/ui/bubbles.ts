@@ -9,9 +9,9 @@ import { NET_ROW, netPlace } from './netplace';
 import type { BubblesLike } from '../host/hud';
 import { rectZoom, textZoom } from './textsize';
 
-/** the HUD cards a bubble must never sit under (the maintainer's rule): the tour caption and the interaction panel while they are up ('on'), and the kit column,
+/** the HUD cards a bubble must never sit under (the maintainer's rule): the interaction panel while it is up ('on'), and the kit column,
  *  the meters, the objective line and the radio strip whenever they show anything (review U9.12) */
-const BLOCKER_IDS_ON = ['caption', 'interact'], BLOCKER_IDS = ['equip', 'meters', 'objective', 'log'];
+const BLOCKER_IDS_ON = ['interact'], BLOCKER_IDS = ['equip', 'meters', 'objective', 'log'];
 /** the blockers' rects are MEASURED only when what they show changes (or the view's size does), and at most every so often besides — not three forced layouts a
  *  frame on the heels of the overlay's writes (review U9.4) */
 const BLOCKER_RECHECK_MS = 1000;
@@ -43,7 +43,7 @@ export class Bubbles implements BubblesLike {
     const cr = canvas.getBoundingClientRect(), tz = rectZoom(); const out: DOMRect[] = [];
     this.blockEls.forEach((e, i) => {
       if (!e) return;
-      if (i < BLOCKER_IDS_ON.length && !e.classList.contains('on')) return;   // (the caption / the interaction panel: only while up)
+      if (i < BLOCKER_IDS_ON.length && !e.classList.contains('on')) return;   // (the interaction panel: only while up)
       const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0) out.push(new DOMRect((r.left - cr.left) / tz, (r.top - cr.top) / tz, r.width / tz, r.height / tz));
     });
     return this.blockers = out;
@@ -65,7 +65,7 @@ export class Bubbles implements BubblesLike {
 
   update(src: HudSource, cam: HudCam, canvas: HTMLCanvasElement) {
     const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
-    // screen rects the bubbles must dodge this frame (canvas-relative): the tour caption while it is up, the interaction panel while it lists something, the kit column, the meters, the objective line, the radio strip
+    // screen rects the bubbles must dodge this frame (canvas-relative): the interaction panel while it lists something, the kit column, the meters, the objective line, the radio strip
     const blockers = this.blockerRects(canvas, w, h);
     const V = src.view, net = V.look.net;
     /** draw `el` as bubble `b` over `head` in the tone class `tone`; false = off screen this frame (the caller hides it) */
@@ -73,7 +73,7 @@ export class Bubbles implements BubblesLike {
       const { age } = b, tone = b.tone === 'own' ? 'sam' : b.tone;
       let [x, y, vis] = cam.project([head[0], head[1] + 0.62, head[2]], w, h, 1.05);   // a hand above the state glyph (which rides at +0.45); gone once 5 % of the view past its edge
       if (!vis) return false;
-      // never under the HUD: if the bubble's box (drawn up-and-centred from x,y) would land inside the tour's caption card, the top-left interaction panel, the kit
+      // never under the HUD: if the bubble's box (drawn up-and-centred from x,y) would land inside the top-left interaction panel, the kit
       // column, the meters, the objective line or the radio strip, hang it BELOW his head instead (flipped tail), and keep it inside the view's width either way
       const bw = Math.min(190, 12 + b.text.length * 5.6), bh = b.text.length > 34 ? 36 : 22;   // (a cheap estimate of the box; the real one is measured after layout, too late for this frame)
       let below = false;

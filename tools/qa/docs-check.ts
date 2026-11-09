@@ -52,9 +52,11 @@ function gone(code: string): string[] {
   return [...new Set(out)]; }
 
 /** whose work it is, said on its page and at the code: a rewrite of either keeps the line as it stands */
-const CREDIT = { line: 'Credit: Stephen Jayakar, from his pull request 1.', at: ['docs/agents/render.md',
+const CREDIT = { line: 'Credit: Stephen Jayakar, from his pull request 1.', at: ['docs/agents/render.md', 'README.md',
   ...['composite', 'fgather', 'gather_common', 'particles', 'reflect', 'restir', 'sdfrig', 'sharp_direct', 'volumetrics'].map(k => `src/render/shaders/${k}.wgsl`)] };
 const uncredited = (text: (f: string) => string) => CREDIT.at.filter(f => !text(f).includes(CREDIT.line));
+/** the notices the game's maths stands under */
+const NOTICE = { at: 'rust/sim/src/maths.rs', says: ['Copyright 2009 The Go Authors', 'Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier', 'Copyright (C) 2004 by Sun Microsystems', 'this list of conditions and the following disclaimer'] };
 
 /** every fault of a page */
 function faults(text: string, most: number): string[] {
@@ -83,6 +85,7 @@ if (!asked.length) {
   line(bytes <= INDEX.bytes && nLines <= INDEX.lines, `CLAUDE.md is ${bytes} bytes and ${nLines} lines (${INDEX.bytes} and ${INDEX.lines} at most)`);
   const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``));
   line(!unnamed.length, `the index names every page (${areas.length})${unnamed.length ? `: not ${unnamed.join(' ')}` : ''}`);
+  const told = NOTICE.says.filter(w => !read(NOTICE.at).includes(w)); line(!told.length, `${NOTICE.at} carries its ${NOTICE.says.length} notices${told.length ? `: not '${told.join(`', '`)}'` : ''}`);
   const un = uncredited(f => files.includes(f) ? read(f) : '');
   line(!un.length, `"${CREDIT.line}" stands at all ${CREDIT.at.length} of its places${un.length ? `: not ${un.join(' ')}` : ''}`);
 }

@@ -312,8 +312,7 @@ export const rainWallsConfig = { on: true };
  *  `const BOUNCE_WALLS`: where a man (or a box he carries) is the face read for, or the surface a gather ray left is no wall, the read point is found by short box
  *  rays (stopped short of the nearest box along the normal, its footprint held to the cells it can see, no read where it sees none) — the gather, the gloss /
  *  pane / ray-traced reflections' hit shading, the cache's own probes and a coat's sheen. On by default; host/pictureopens.ts lowers it at BOOT for ?nobouncewalls = every
- *  read as it was. No game table: nothing in the update reads it. NOT mended by it: the light meter (shaders/probe.wgsl) reads the cache AT the man, blended
- *  over the cells around him, and by a lit room's wall some of those cells are the room's. Its cost was never timed on a GPU. */
+ *  read as it was. No game table: nothing in the update reads it. Its cost was never timed on a GPU. */
 export const bounceWallsConfig = { on: true };
 /** WALLS HAVE TWO SIDES, AS ONE RULE FOR EVERY READ OF THE CACHE (render/wallSides.ts; shaders/common.wgsl sideAt, lighting_common.wgsl diceTaps and
  *  diceFacePointBy; the look page's row `walls`). The level's floor plan says which place a point is in, and a read of the radiance cache keeps to the place it is
@@ -338,9 +337,8 @@ export const lookConfig = { kept: 0, pressed: 1, bounce: 0.7, air: 1, sky: 1, sh
  *  its mirror; a metal shows all of it (F0 = its paint), so the steel shelving on the office's wall glowed with the storage room's light in the dark. The scene
  *  prelude's `const REFL_WALLS`: a metal's reflection rays take lighting_common.wgsl's walled read (diceWalledPoint: stopped short of the nearest box along the
  *  normal, the footprint held to the cells the point can see, no read where it sees none) at every hit; everything else keeps the read it had. On by default;
- *  host/pictureopens.ts lowers it at BOOT for ?noreflwalls = every read as it was. No game table: nothing in the update reads it, and the light meter (shaders/probe.wgsl)
- *  does not read the reflections. NOT mended by it: the same blend in the DIFFUSE gather's hits (a third as strong by the look's indirect scale, and a metal
- *  keeps under a third of its diffuse), the glossy floors' and the panes' mirror on the presets with no traced reflections, and the meter's own read. Five to
+ *  host/pictureopens.ts lowers it at BOOT for ?noreflwalls = every read as it was. No game table: nothing in the update reads it. NOT mended by it: the same blend in the DIFFUSE gather's hits (a third as strong by the look's indirect scale, and a metal
+ *  keeps under a third of its diffuse), and the glossy floors' and the panes' mirror on the presets with no traced reflections. Five to
  *  eight short box rays more for each ray of a metal pixel: never timed on a GPU. */
 export const reflWallsConfig = { on: true };
 /** SHARP DIRECT'S CAP (shaders/sharp_direct.wgsl, "never more than the lights that reach this cell send unshadowed"): the scene prelude's `const SHARP_CAP`.
@@ -356,8 +354,7 @@ export const sharpCapConfig = { on: true };
  *  follows the shading normal, so a material's relief catches it. Only where the reflection pass makes highlights at all: a finish up to the highlights' own fade
  *  (shaders/common.wgsl RT_HI_FADE, the same on ultra, high and medium; none on low). ON THE LOOK'S PAGE ONLY, on by default there; host/pictureopens.ts lowers it at BOOT for ?nosunglint = every
  *  picture as it was. Without the word the shader's flag is a constant false and its lines are the lines they were, with one empty turn of the shadow
- *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection and the light
- *  meter (shaders/probe.wgsl) does not either. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
+ *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
  *  inside the sun's highlight. On a flat smooth floor that is all of it or none of it, by where the camera looks; a metal's highlight is wide (a steel
  *  floor passes from most bearings). Never timed, never seen on a GPU. */
 export const sunGlintConfig = { on: true };

@@ -231,8 +231,8 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const { missionRows } = await import('../desk.ts'), LISTED = missionRows();
   const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], how: [] as string[], assign(u: string) { this.went.push(u); this.how.push('assign'); }, replace(u: string) { this.went.push(u); this.how.push('replace'); } }; return L; };
   const searchOf = (u: string) => u.slice(u.indexOf('?'));
-  const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&nomusic&hard=0&hour=noon&quality=low');
-  check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.how[0] === 'assign' && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['nomusic', 'quality=low']) && !/hard=0|hour=|depot/.test(t0.went[0]), `begun from the title: the first scene's address is loaded, the visitor's sound and quality flags on it and nothing that would change the fight (${t0.went[0]})`);
+  const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&mute&hard=0&hour=noon&quality=low');
+  check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.how[0] === 'assign' && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['mute', 'quality=low']) && !/hard=0|hour=|depot/.test(t0.went[0]), `begun from the title: the first scene's address is loaded, the visitor's sound and quality flags on it and nothing that would change the fight (${t0.went[0]})`);
   { const u = new URLSearchParams(searchOf(t0.went[0])), S = BENCH_SCENES[0], E = LISTED.find(e => e.id === S.scn)!;
     check(u.get('levelFile') === E.level && u.get('roomclear') === String(S.seed) && u.get('seed') === String(S.seed) && u.has('squad4') && u.get('difficulty') === (S.hard ? 'hard' : 'standard') && u.has('nokeep') && u.get('benchrun') === '0' && !u.has('bench'), 'the address pins the level, the deal, the die and the difficulty, keeps no replay of the try, and does not carry ?bench'); }
   const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));

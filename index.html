@@ -23,7 +23,7 @@
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: var(--h-mono); color: var(--h-ink); }
     #app { position: fixed; inset: 0; }
     canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
-    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
+    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames) and the interaction panel, which sits to the
        right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
     #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
     #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh / var(--tz, 1) - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
@@ -75,9 +75,6 @@
     #interact .prog b { display: block; width: 0; height: 100%; background: var(--h-ink); }
     #interact .it.k-door .prog b { background: #bfe6ff; }
     #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: var(--h-dim); }
-    /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
-    body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 4px); }
-    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 190px); } }
     /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
        thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
        click it to type; ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
@@ -268,7 +265,6 @@
     #checkpoint { position: absolute; right: 14px; top: 10px; font: 700 11px/1 var(--h-head); letter-spacing: 0.26em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
-    body.touring #checkpoint { display: none; }
     .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
@@ -538,32 +534,12 @@
     #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
     #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
     #missions .mrow > .vpips.none { opacity: 0.6; }
-    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw / var(--tz, 1)); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
-    #caption.on { opacity: 1; }
-    /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
-       there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
-    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
-    #timeline.on { display: flex; }
-    body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
-    #timeline .seg { position: relative; min-width: 0; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
-    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
-    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
-    #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }
-    #timeline .seg.done b { width: 100% !important; opacity: 0; }
-    #timeline .seg.cur { color: var(--h-hi); }
-    #timeline .seg:hover { color: #fff; border-top-color: rgba(var(--h-edge),0.9); }
-    body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
     body.blinded #bubbles, body.blinded .bubble, body.blinded .marker { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
     #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
     .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
     .bar.top { top: 0; } .bar.bot { bottom: 0; }
-    body.touring .bar { height: 7.5%; }
-    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
-    body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
-    body.touring #caption { top: calc(7.5% + 22px); }
-    #caption .cap { font: 600 20px/1.25 var(--h-font); color: var(--h-hi); text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
-    #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the fades */
     /* ?kitview (host/kitguard.ts): the page as a picture in the kit screen's frame — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
@@ -659,9 +635,9 @@
        in the bright ink, the fight's red and the wary yellow as over a head */
     .bubble.net { max-width: none; white-space: nowrap; background: rgba(var(--h-plate),0.86); } .bubble.net::after { display: none; }
     .bubble.net.calm { color: var(--h-hi); border-color: rgba(var(--h-edge),0.7); }
-    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
+    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the interaction panel */
     .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
-    #bubbles, .bubble { z-index: 9; }   /* above the tour's caption card and letterbox (z 8-ish) — a line being said is the thing to read */
+    #bubbles, .bubble { z-index: 9; }   /* a line being said is the thing to read */
   </style>
 </head>
 <body>
@@ -676,8 +652,6 @@
     <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
-    <div id="caption"></div>
-      <div id="timeline"></div>
     <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>
     <div id="panel" class="hidden"></div>
     <div id="loading">loading…</div>

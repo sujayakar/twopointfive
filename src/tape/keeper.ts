@@ -27,9 +27,6 @@ export interface KeeperOpts {
 /** the head is made again (the floor's drawing, the switches) once in this many pieces */
 const HEAD_EVERY = 6;
 
-/** (the check's red path: REPLAYEND_BREAK=1 — a run that becomes over is never due; a page has no process) */
-const END_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYEND_BREAK ?? '') === '1'; } catch { return false; } })();
-
 export class ReplayKeeper {
   readonly sid: string;
   /** why keeping stopped ('' = it has not) */
@@ -99,7 +96,7 @@ export class ReplayKeeper {
    *  whose first answer is 'over' has no ending of its own to file. `nowMs` is the caller's clock (the page's: performance.now()). Nothing of the game is
    *  read or written: this is the timer's own beat, early. */
   watch(over: boolean, nowMs: number): boolean {
-    if (over !== this.over) { if (over && this.over === false && !END_BREAK) this.endDue = nowMs + KEEP.endMs; this.over = over; }
+    if (over !== this.over) { if (over && this.over === false) this.endDue = nowMs + KEEP.endMs; this.over = over; }
     if (this.endDue >= 0 && nowMs >= this.endDue) { this.endDue = -1; return true; }
     return false;
   }

@@ -52,7 +52,7 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
  *  the fight (an hour, a weather, a difficulty lever, a rule's off switch would make it another fight than the set's). The shader rows on trial are here by
  *  their URL words (ui/shaderrows.ts), with the compile queue's and the shader trim's: a row asked for beside ?bench is what the run was meant to measure, and
  *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. A word that is NOT kept is named in the report (`left`) */
-const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|smokeindirect|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
+const CARRIED = new RegExp(`^(mute|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|smokeindirect|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 /** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
  *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was

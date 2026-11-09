@@ -2,7 +2,6 @@
 // SYSTEMS down a left rail (Frame · Direct · Indirect · …), and inside the selected system collapsible SECTIONS with a live one-line summary and, where a
 // shipped-defaults table exists, a '↺' reset — with a status strip (preset · fps · gpu ∪) and a search box that searches EVERY system at once (hits listed under
 // their 'System ▸ Section' path; Enter jumps to the first).
-// A panel nobody called `system()` on stays FLAT (sections straight into the body: .phead · .pbody › h3 + .sbody › .row).
 // Rows built while `panel.advanced` is true (or inside an advanced section) are A/B knobs: hidden until 'all knobs' is ticked or a search finds them.
 // The game panel shows ONE hover tip of its own (#ptip) in place of the browser's: whatever a row / button / header carried as its `title`, and the full text of
 // anything the 372 px column cut short with an ellipsis (the status strip, a page's subtitle, a section's live summary, a long label) — at once, wrapped, readable.
@@ -196,7 +195,7 @@ export class Panel {
     this.applyFilter(); this.refresh();
     const y = this.state.scroll?.[sys.name] ?? 0; this.body.scrollTop = this.searching ? 0 : y;
   }
-  /** open the panel on the system of this name (a page that is about one system — the sneak lab — opens on it) */
+  /** open the panel on the system of this name (a page about one system, the look page, opens on it) */
   show(name: string) { const s = this.systems.find(x => x.name === name); if (!s) return; if (!this.visible) this.toggle(); this.go(s, false); }
   /** the rail's neighbour in direction ±1 (wrapping) */
   private step(dir: number) { if (!this.systems.length) return; const i = Math.max(0, this.systems.indexOf(this.activeSys!)); this.go(this.systems[(i + dir + this.systems.length) % this.systems.length]); }
