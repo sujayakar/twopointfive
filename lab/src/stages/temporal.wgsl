@@ -32,14 +32,14 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
   var n = 0.0; var o = c1; var mom = vec4f(lum(c1.rgb), lum(c1.rgb) * lum(c1.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {
     h = select(c, h / max(hw, vec4f(1e-6)), hw > vec4f(1e-6)); mo /= ws; let st = steady(p.x); let cap = mix(3.0, CAP_NOW, st) * select(1.0, 0.5, aux.w > 0.5 || p.leaf) * select(1.0, mix(1.0, 0.35, sat(ad2.y * 2.5)), floats); n = min(mo.z, cap - 1.0);
-    var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wv + 1.0) / (wv + 2.0); let doubt = sqrt(q * (1.0 - q)); se = vec4f(max(sd.xyz, doubt.xyz), sd.w + 0.04); }
+    var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wv + 1.0) / (wv + 2.0); /* (where all of them say the same there is little to doubt: a shadow that has moved on is let go) */ let doubt = select(sqrt(q * (1.0 - q)), vec4f(0.05), (sd < vec4f(1e-3)) & (wv > vec4f(19.0))); se = vec4f(max(sd.xyz, doubt.xyz), sd.w + 0.04); }
  
     var e = se * (mix(SPREAD, 4.5, dull) * @tune.leash) + abs(m1) * mix(0.04, 0.25, dull) + 1e-4;
     // light that is rarely found (a small bright window) is in none of most frames' neighbours: what it has varied by over time is let stand, or the dark would be darker than it is
     if (KIND == 0 && AIR == 0) { let sdh = sqrt(max(mo.y - mo.x * mo.x, 0.0)); e += vec4f(sdh * select(1.6, 1.0 * dull, NARROW == 1) * @tune.leash * smoothstep(4.0, 16.0, n)); } let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
     var k = 1.0 / (n + 1.0); o = mix(hc, c1, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
-    if (KIND == 1) { o = select(o, c, c < vec4f(0.0)); }
+    if (KIND == 1) { o = select(o, c, c < vec4f(0.0)); if (p.leaf) { o.w = c.w; } }     // (the sun on a leaf is known without noise, and goes with that leaf's own tilt: not mixed with what other leaves here saw)
   }
   mom.z = n + 1.0;
   textureStore(outH, id.xy, o); textureStore(outM, id.xy, mom);
