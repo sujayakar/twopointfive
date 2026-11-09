@@ -1,7 +1,6 @@
 //! What a mission can be played with, as the screen before it asks (loadout.ts squadChoices, noteOf, rosterOf, the notes of a kit that is not yours).
 use crate::game::{Game, PairId};
-use crate::kit::{kit_packs, KitModLessonRowPacks, KitPacksE};
-use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind, ScenarioEntryPacks};
+use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
 use alloc::{format, string::String, vec::Vec};
 
 /// The kinds of mission the screen prepares: a scenario's, or the plain night, which stages nobody.
@@ -17,7 +16,6 @@ pub struct LoadoutEntry {
     pub level: Option<String>,
     pub group: Option<MissionGroup>,
     pub only: Option<String>,
-    pub packs: Option<ScenarioEntryPacks>,
 }
 
 /// The solo night's place on the list of missions.   (missions.ts SOLO_NIGHT)
@@ -31,14 +29,14 @@ impl From<ScenarioEntry> for LoadoutEntry {
             ScenarioEntryKind::Rescue => LoadoutKind::Rescue,
             ScenarioEntryKind::Quiet => LoadoutKind::Quiet,
         };
-        LoadoutEntry { id: e.id, kind, squad: e.squad, level: e.level, group: e.group, only: e.only, packs: e.packs }
+        LoadoutEntry { id: e.id, kind, squad: e.squad, level: e.level, group: e.group, only: e.only }
     }
 }
 
 /// A mission by its id, off the game's own list.   (loadout.ts entryOfMission)
 pub fn entry_of(id: &str) -> Option<LoadoutEntry> {
     if id == SOLO_ID {
-        return Some(LoadoutEntry { id: String::from(SOLO_ID), kind: LoadoutKind::Solo, squad: 0.0, level: None, group: None, only: None, packs: None });
+        return Some(LoadoutEntry { id: String::from(SOLO_ID), kind: LoadoutKind::Solo, squad: 0.0, level: None, group: None, only: None });
     }
     crate::scene_scenario_list::all_missions().into_iter().find(|e| e.id == id).map(LoadoutEntry::from)
 }
@@ -124,10 +122,8 @@ pub fn issue_note(note: &str, who: &str) -> String {
     joined(not_yours(note), &said)
 }
 
-/// The row is played with the kit as issued, whatever this machine keeps: a lesson, but not one the player packs for.   (loadout.ts kitAsIssued)
-pub fn kit_as_issued(g: &Game, e: &LoadoutEntry) -> bool {
-    is_lesson(e) && !kit_packs(g, Some(KitPacksE { packs: e.packs.map(|p| KitModLessonRowPacks { frags: p.frags }) }))
-}
+/// The row is played with the kit as issued, whatever this machine keeps: a lesson.   (loadout.ts kitAsIssued)
+pub fn kit_as_issued(e: &LoadoutEntry) -> bool { is_lesson(e) }
 
 /// The five sizes a screen with no mission offers: all of them, with nothing to say.
 pub fn any_size() -> Vec<SquadChoice> { SIZES.iter().map(|&n| SquadChoice { n, ok: true, own: false, note: String::new() }).collect() }
