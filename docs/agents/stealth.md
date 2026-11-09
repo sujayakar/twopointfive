@@ -93,7 +93,8 @@ reach. Only the rear grabs, and not an alert man; every window strikes. `close_r
 
 **The stalk.** `stalk_step` takes Sam's feet while the left button stays down on a man whose back he is behind: toward `station_m` behind him at the
 man's speed and a little. `out_of` ends it; `stalk_grab` hands on the grab. On a wall the held button is a wait (`corner_gate`, `corner_man`) and
-takes the man who comes past. Off a wall the `Grab` row works too; on one `stalk_click_only` leaves only the button.
+takes the man who comes past. Off a wall the `Grab` row ends it as well; on one, where the wait ends
+by itself, the button is the grab (`stalk_click_only`).
 
 **The hold.** `update_hold` runs `HoldPhase`: the gun comes out first (`disarm_begin`, `disarm_tick`), then `Held`, where `ask_held` and `answer_held`
 question him, `Choke` runs to `choke_out`, and `swap_hold` brings the pistol up for `Whip` or a round past him. `free_held` ends it.
