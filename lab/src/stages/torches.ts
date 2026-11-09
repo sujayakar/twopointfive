@@ -23,7 +23,7 @@ fn torchSpan(l: u32, ro: vec3f, rd: vec3f, t1: f32, R: f32) -> vec2f {
 export function torchStages(lab: Lab): Stage[] {
   lab.buffer('torchMap', N * N * MOST * 4); lab.uniform('torchK', new Uint32Array(12)); let count = 0;
   return [{ name: 'torch reach', over: { groups: () => [N / 8, N / 8, Math.max(1, count)] }, when: () => { count = pick(lab); return count > 0; }, buffers: { torchMap: ['torchMap', 'array<f32>', 'read_write'], torchK: ['torchK', 'array<vec4u, 3>', 'uniform'] }, code: torchCode.slice(0, torchCode.indexOf('/** how much')) + `
-@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let k = id.z; if (k >= torchK[0].x) { return; } let l = torchK[1u + (k >> 2u)][k & 3u]; let n = lamps[l].n; let b = basis(n); let p = ((vec2f(id.xy) + 0.5) / ${N}.0 * 2.0 - 1.0) * torchWide(l); let d = normalize(n + b[0] * p.x + b[1] * p.y); leafMode = 0u; let h = nearest(lamps[l].at, d, 0.08, 24.0, 0u, 1e9); torchMap[k * ${N * N}u + id.x + ${N}u * id.y] = min(h.t, 24.0); }` }];
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let k = id.z; if (k >= torchK[0].x) { return; } let l = torchK[1u + (k >> 2u)][k & 3u]; let n = lamps[l].n; let b = basis(n); let p = ((vec2f(id.xy) + 0.5) / ${N}.0 * 2.0 - 1.0) * torchWide(l); let d = normalize(n + b[0] * p.x + b[1] * p.y); leafMode = 2u; let h = nearest(lamps[l].at, d, 0.08, 24.0, 0u, 1e9); torchMap[k * ${N * N}u + id.x + ${N}u * id.y] = min(h.t, 24.0); }` }];
 }
 /** the torches that are on, nearest what is looked at first */
 function pick(lab: Lab): number {

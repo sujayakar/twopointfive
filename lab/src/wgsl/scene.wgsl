@@ -17,7 +17,7 @@ struct Frame {
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
   misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
-  tune: array<vec4f, 7>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
+  tune: array<vec4f, 8>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -138,6 +138,11 @@ fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - SUN_
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 /* 0 = leaf by leaf; 1 = each spray a ball that a ray may stop in; 2 = not in this walk: the foliage is asked for apart, as a medium (folWalk) */
 var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false;
+// A RAY'S FOOTPRINT: how wide an area its answer will be averaged over. It begins `w` wide and widens by `s` a metre; whatever is smaller than it need not be told apart. Leaves are taken one by one as
+// far as that (leafTo), and as a medium from there on.
+const LEAF_SIZE = 0.06; var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 0.0;
+fn foot(w: f32, s: f32) { footW = w; footS = s; leafTo = max(0.0, (LEAF_SIZE - w) / max(s, 1e-5)); }
+fn footAt(t: f32) -> f32 { return footW + footS * t; }
 // (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
@@ -165,7 +170,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       i++;
     }
   }
-  if (leafMode < 2u) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u;
+  if (leafMode < 2u || leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let solid = best; if (leafMode == 2u) { best = min(best, leafTo); }
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
@@ -185,7 +190,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
         }
       }
       i++;
-    } }
+    } if ((id & LEAF_HIT) == 0u || id == NOTHING) { best = solid; } }
   var h: Hit; h.t = best; h.piece = id; h.code = code; h.thru = vec3f(1.0); h.gt = g0.x; h.gpiece = gp; h.gcode = gc; if (g0.x >= best) { h.gpiece = NOTHING; }
   if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
   return h;
@@ -211,23 +216,23 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       i++;
     }
   }
-  if (!noLeaves && leafMode == 2u) { T *= folWalk(ro, rd, tmax, false).T; }
-  if (!noLeaves && leafMode < 2u) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u;
+  if (!noLeaves && leafMode == 2u && tmax > leafTo) { T *= folWalk(ro + rd * leafTo, rd, tmax - leafTo, false).T; }
+  if (!noLeaves && (leafMode < 2u || leafTo > tmin)) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let lmax = select(tmax, min(tmax, leafTo), leafMode == 2u);
     while (i < per) {
       let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, tmax)) { i = (*n).skip; continue; }
+      if (!boxHit(n, ro, inv, tmin, lmax)) { i = (*n).skip; continue; }
       let lf = (*n).leaf;
       if ((lf & 15u) != 0u) {
         let k = lf >> 4u; let I = &insts[k];
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));
-        if (leafMode == 1u) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
+        if (leafMode == 1u) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, lmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
           walked += 1u; let m = &nodes[q0 + q];
-          if (!boxHit(m, o, inv2, tmin, tmax)) { q = (*m).skip; continue; }
+          if (!boxHit(m, o, inv2, tmin, lmax)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, tmax) > 0.0) { T *= vec3f(0.1, 0.16, 0.03); if (T.y < 0.02) { return vec3f(0.0); } } }
+          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { T *= vec3f(0.1, 0.16, 0.03); if (T.y < 0.02) { return vec3f(0.0); } } }
           q++;
         }
       }

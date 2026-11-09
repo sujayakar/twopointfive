@@ -38,6 +38,8 @@ fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
 fn folSlot(s: u32, k: u32) -> vec4u { return bitcast<vec4u>(extra[FOL_SLOTS + (s - 1u) * ${SLOT_ROWS}u + k]); }
 /** what a cell's leaves send along −rd */
 fn folSent(r: vec4u, rd: vec3f) -> vec3f { let q = folSlot(r.z, 0u); let J = vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); let sun = unpack2x16float(q.y).y; if (sun <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { return J; } let c = folColors(r); var s: Surf; s.albedo = c[0]; s.through = c[1]; return J + leafPhase(s, rd) * frame.sunE.xyz * sun; }
+/** what a leaf at x sends back along a ray that met it: as its cell does */
+fn folBack(x: vec3f, rd: vec3f) -> vec3f { let c = clamp(vec3i(floor((x - FOL_LO) / FOL_C)), vec3i(0), FOL_N - 1); let r = folCell(c); if (FOL_MANY < 2u || (r.z & 0x80000000u) != 0u) { return vec3f(0.0); } return folSent(r, rd); }
 /** the light (all but the sun and the lamps) that lands on a leaf at x from the side n looks to; w = is there any kept. The six ways of a cell, mixed over the eight cells round x. open: how much of that side its own twig leaves open; the rest sees that twig's leaves */
 fn folLight(x: vec3f, n: vec3f, open: f32) -> vec4f {
   if (FOL_MANY < 2u) { return vec4f(0.0); } let g = (x - FOL_LO) / FOL_C - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); var E = vec3f(0.0); var G = vec3f(0.0); var ws = 0.0; let n2 = n * n;

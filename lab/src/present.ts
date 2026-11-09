@@ -7,7 +7,7 @@ const tunedFrom = (code: string) => code.replace(/@tune\.(\w+)/g, (_, n: string)
 import { CURVE, exposeKnobs } from './stages/expose';
 export class Present {
   bias = 0; private pipes = new Map<string, GPURenderPipeline>(); private sampler: GPUSampler; private mod!: GPUShaderModule; private knob: GPUBuffer; private dummy: GPUTexture;
-  constructor(private g: Gpu) { const d = g.device; this.sampler = d.createSampler({ magFilter: 'linear', minFilter: 'linear' }); this.knob = d.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); this.dummy = d.createTexture({ size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }); }
+  constructor(private g: Gpu) { const d = g.device; this.sampler = d.createSampler({ magFilter: 'linear', minFilter: 'linear' }); this.knob = d.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); this.dummy = d.createTexture({ size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }); }
   async init() {
     this.mod = this.g.device.createShaderModule({ label: 'present', code: tunedFrom(CURVE + `
 @group(0) @binding(0) var src: texture_2d<f32>; @group(0) @binding(1) var<storage, read> e: array<f32, 4>; @group(0) @binding(2) var<uniform> k: array<vec4f, 9>; @group(0) @binding(3) var glow: texture_2d<f32>; @group(0) @binding(4) var sm: sampler; @group(0) @binding(5) var base: texture_2d<f32>; @group(0) @binding(6) var rain: texture_2d<f32>;
