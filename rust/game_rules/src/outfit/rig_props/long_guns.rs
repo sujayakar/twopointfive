@@ -353,7 +353,7 @@ pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::
     let p = rig.sc20k.slung;
     let s = slung_base(g, c_2, p, false, None);
     let out = p.off[2] - v3::dot(v3::sub(s.o, s.cf.o), s.cf.z);
-    let clear = bigrig().clear;
+    let clear = BIGRIG.clear;
     (match kind { BigClearOfKind::Hammer => clear.hammer, BigClearOfKind::Shotgun => clear.shotgun }) + (if m::abs(out) < 1e-6 { 0.0 } else { out })
 }
 
@@ -361,7 +361,7 @@ pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::
 fn pack_side_dims(g: &crate::game::Game, what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     if what == PackSideDimsWhat::Hammer {
-        let h = bigrig().hammer;
+        let h = BIGRIG.hammer;
         return PackSideDims {
             grip: Some(h.head_at),
             thick: h.handle.thick,
@@ -453,7 +453,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
     let on_back = match pack_side(g, c_2, side_what, Some(rig)) {
         Some(side) => side,
         None => {
-            let table = bigrig();
+            let table = BIGRIG;
             let p = match kind { BigBoxesKind::Hammer => table.hammer.back, BigBoxesKind::Shotgun => table.shotgun.back };
             let clear_kind = match kind { BigBoxesKind::Hammer => BigClearOfKind::Hammer, BigBoxesKind::Shotgun => BigClearOfKind::Shotgun };
             let by = if clear { big_clear_of(g, c_2, clear_kind, Some(rig)) } else { 0.0 };
@@ -468,7 +468,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
         if let Some(hand) = bone(g, c_2, crate::character::Bone::HandR) {
             if kind == BigBoxesKind::Hammer {
                 let h = crate::character::character_hand_frame_r(g, c_2, None);
-                let grip = bigrig().hammer.grip;
+                let grip = BIGRIG.hammer.grip;
                 gf = mix_frame(on_back, Frame { o: v3::mad(v3::mad(v3::mad(hand, h.fingers, grip.fwd), h.back, -grip.palm), h.thumb, grip.side), x: v3::cross(h.back, h.thumb), y: h.back, z: h.thumb }, k);
             } else {
                 gf = mix_frame(on_back, carbine_frame(g, c_2, hand, rig.carbine).g, k);
@@ -483,7 +483,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
     if let Some(sink) = meta.as_deref_mut() {
         sink.push(RigNodeMeta {  });
     }
-    let (table, col) = (bigrig(), crate::rig_props::col());
+    let (table, col) = (BIGRIG, crate::rig_props::col());
     seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
     seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
 }
