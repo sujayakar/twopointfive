@@ -1288,7 +1288,7 @@
     { "id": "box_1177", "floor": "f0", "group": "look", "c": [2.7, 0.01284, 13.975], "h": [1.2551147891956325, 0.002, 0.275], "yaw": -0.9119902906774203, "albedo": [0.108, 0.072, 0.04], "rough": 1, "stuff": "earth", "does": "unnamed dark", "flags": ["NoShadow"] },
     { "id": "box_1178", "floor": "f0", "group": "look", "c": [14.2, 0.012, 5.35], "h": [0.75, 0.003, 0.6], "yaw": 0.2, "material": "damp", "flags": ["NoShadow"] },
     { "id": "box_1179", "floor": "f0", "group": "look", "c": [14.25, 0.0128, 5.4], "h": [0.4, 0.003, 0.325], "yaw": 0.7, "material": "oil", "flags": ["NoShadow"] },
-    { "id": "box_1180", "floor": "f0", "group": "look", "c": [14.25, 0.625, 6.376], "h": [0.5500000000000007, 0.625, 0.004], "material": "iron", "metal": false, "flags": ["NoShadow"] },
+    { "id": "box_1180", "floor": "f0", "group": "look", "c": [14.25, 0.625, 6.372], "h": [0.5500000000000007, 0.625, 0.004], "material": "iron", "metal": false, "flags": ["NoShadow"] },
     { "id": "box_1181", "floor": "f0", "group": "look", "c": [20.3, 0.0127, 20.025], "h": [0.25, 0.002, 0.025], "albedo": [0.612, 0.5865, 0.5185], "rough": 1, "stuff": "plaster", "does": "unnamed light", "flags": ["NoShadow"] },
     { "id": "box_1182", "floor": "f0", "group": "look", "c": [20.3, 0.01272, 20.475], "h": [0.25, 0.002, 0.025], "albedo": [0.612, 0.5865, 0.5185], "rough": 1, "stuff": "plaster", "does": "unnamed light", "flags": ["NoShadow"] },
     { "id": "box_1183", "floor": "f0", "group": "look", "c": [20.075, 0.01274, 20.25], "h": [0.25, 0.002, 0.025], "yaw": -1.5707963267948966, "albedo": [0.612, 0.5865, 0.5185], "rough": 1, "stuff": "plaster", "does": "unnamed light", "flags": ["NoShadow"] },

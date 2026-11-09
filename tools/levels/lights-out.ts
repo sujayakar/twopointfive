@@ -101,7 +101,7 @@ export function build() {
   G.generator(10.75, 17.75, HALF); G.jerryCan(11.75, 18.25, 0.2); G.jerryCan(10.45, 15.25, HALF);
   T.breakerAt(LIGHTS.breaker[0], LIGHTS.breaker[2], 'w');
   grp('cage');
-  G.yardWallZ(10, 18.6, 20.4); G.yardWallZ(13.6, 18.6, 20.4);
+  G.yardWallZ(10, 18.72, 20.4); G.yardWallZ(13.6, 18.72, 20.4);   // (from the shed's own face)
   G.ground(10.14, 18.74, 13.46, 20.26, 'slab');
   G.drums(11.9, 20.0, 2); G.gasBottle(13.2, 20.0);
   grp('outer');
