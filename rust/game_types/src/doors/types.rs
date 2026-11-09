@@ -356,3 +356,6 @@ pub const FLOOR_Y0: f64 = 0.2;
 
 /// doors a level can have
 pub const DOOR_CAP: f64 = 64.0;
+
+/// contacts a step of the doors is sized for: how many men a game can hold is worked out of it
+pub const DOOR_CONTACTS: f64 = 256.0;

@@ -18,7 +18,8 @@ pub fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
 /// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.   (levelfit.ts menHeld)
 pub fn men_held(g: &mut crate::game::Game) -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
-    crate::sim_propshome::prop_io(g).max_contacts
+    let held = m::floor(crate::doors::DOOR_CONTACTS / (crate::game::body_door_particles().len() as f64 + 1.0));
+    m::min(held, crate::sim_propshome::prop_io(g).max_contacts)
 }
 
 /// What one step is handed of the men, at most.   (levelfit.ts handOverMost)
