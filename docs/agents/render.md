@@ -172,7 +172,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   motion bit up the flow is not measured (`MOTION_BITS` in `prevTexelAt`), `mvPx` stays 0 and every lever's branch is not taken, so what differs from the old plain
   program is untaken branches. A frame the camera moved runs the text `restirM` ran. What it buys: one program of 244 KB pasted is no longer compiled after every
   boot (38 s with the driver's cache off on the rented NVIDIA card at medium, the compile-time goal's reading), the encode picks nothing, and the stand-in rule
-  (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
+  (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaders-check rows` holds that a moved frame runs the one program
   with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
   frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
 - **ONE FOG MARCH ON EVERY TIER (2026-11-07; the maintainer's pick on a card, "Per-pixel, two lights a step", from stills of both ways and the cloud
@@ -224,8 +224,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   `MARCH_MINOR_K` (a light under 4 % of the stronger ones at a step spends no ray); `MARCH_REFRESH_W` (a shadow answer is refreshed only at steps
   that weigh in the pixel). The first three are the likely next cut in what the march costs on every tier.
   CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
-  `tools/qa/shaderrows-check.ts` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
-  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaderinline-check` (floors 35 and 100).
+  `tools/qa/shaders-check.ts rows` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
+  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaders-check inline` (floors 35 and 100).
   NOT SEEN: the software adapter draws no smoke, so the card's pages above are the only frames with smoke in them on the new path, and they were
   read for errors and timed; the stills are in the project's files for the maintainer's eyes (fog5-night-medium-new, fog5-night-verylow-new against
   fog5-night-verylow-base). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
@@ -248,7 +248,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   where a calm room traced the cylinder (`?roundexact=1` asked for the cylinder until 2026-11-07). THE COST, on that card (A10G, the tree before, the two
   sets pinned in turn in one page, 2026-11-07): the office in rain +1.9 % of a frame on High and +1.7 % on Medium; the squad lesson on the look
   page +0.5 % and 0 %. The 1.9 x fog pass once read there is not reproduced. HELD: the module list by label and text hash is IDENTICAL to the
-  tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaderinline-check --json`); shaderinline, shaderfold, pipequeue
+  tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaders-check inline --json`); shaderinline, shaderfold, pipequeue
   (its background tests ask by LATER now) and the cutboxes probe family re-aimed (the swap's two probes are out, the prelude's verdict stays).
   NOT SEEN on a GPU as this tree; the card saw the same programs through `__cut.programs.force` on the tree before.
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
@@ -639,7 +639,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   second level of its family 0 → 0 · a snow level 58 of 66 → 13 of 65. Pipelines whose every stage an earlier page had made: 39 of 142 → 104 of 142 for the first mission, 41 of
   146 → 129 of 146 for the snow level. What still differs is what really reads a switch: thirteen modules read `WX_KINDS` (the title's office is the one family with it off), six
   to thirteen the snow's, one carries the level's own mesh-tree sizes. A quality change (medium → high on the title) made no module and no pipeline in the six seconds watched.
-  `tools/qa/shadertrim-check.ts` (the Engine booted on a recording stand-in, whole and cut: same modules, order kept, every root kept, nothing left that mentions a dropped name,
+  `tools/qa/shaders-check.ts trim` (the Engine booted on a recording stand-in, whole and cut: same modules, order kept, every root kept, nothing left that mentions a dropped name,
   cutting twice changes nothing; a level whose weather switch differs is 10 new texts of 35 where it was 30; `SHADERTRIM_BREAK=1` must fail) — one Engine, so one stand's worth; it
   passes under `TPS_PROFILE=shipped` the same. `window.__boot.shaderText {modules, before, after, ms}` and `.slowest` (the six boot pipelines that came back last) are on the boot
   line; the benchmark's text carries them under `load`, with a `loads` row of every scene's own load (the first compiles cold, the later ones show what the browser kept).
@@ -669,27 +669,27 @@ row on his machine is the answer, and the word puts the count back on any machin
   prelude is kept by no one module: the cut of a boot's 64 modules took 67 ms with the trim alone and takes 87 with the fold, on a busy machine).
   LEFT AS WRITTEN: a test the constants do not decide BEFORE anything else is asked (`x && OFF` runs x
   first), a name inside a comparison or a call, a `select`, an `if` with an attribute in front of it, and a function that has a parameter or a local of the
-  constant's name. MEASURED ON THE BUILD ALONE (`shaderinline-check --json`, the shipped page, no browser; text handed to the browser, then the same with
+  constant's name. MEASURED ON THE BUILD ALONE (`shaders-check inline --json`, the shipped page, no browser; text handed to the browser, then the same with
   every call pasted into its caller): the title, the page's own start (the compact set with separate shadow rays) 3.62 to 3.24 MB and 15.0 to 11.1 MB
   pasted, today's writing 3.56 to 3.23 MB and 25.8 to 20.2 MB; a snow level in its weather, the page's start 3.62 to 3.39 MB and 15.1 to 12.0 MB,
-  today's writing 25.8 to 21.4 MB (the composite 977 to 620 KB). SINCE THE FOLD A KERNEL'S SIZE FOLLOWS THE SWITCHES, so `tools/qa/shaderinline-check.ts`
+  today's writing 25.8 to 21.4 MB (the composite 977 to 620 KB). SINCE THE FOLD A KERNEL'S SIZE FOLLOWS THE SWITCHES, so `tools/qa/shaders-check.ts inline`
   holds its rows to two pages, the title and a snow level in its weather (every switch a level raises; the listing is the snow level's, the heavier; a
   second run of the file sizes the title's, where the arms a level's switch turns OFF stand), and its rows were brought level with that in the same
   change; what a word on the address adds (a trial, `?look`) is in neither, and `--setting look` lists that page. ONE BOOT FOR THE TOOLS
   (`tools/qa/pageboot.ts`): the page's boot over a recording stand-in, the Engine, the smoke solver, the Game's own modules and the cut-box set, with the
   switches `main.ts` raises, under one setting (`title`, `snow`, `look`) a process; the size check, the fold's check and the dump all read it (the
   second writing's checks booted a bare Engine with the page's switches down, so the page's own folded texts were neither compiled nor read).
-  CHECKS: `tools/qa/shaderfold-check.ts` (hand-written texts of every form, cut as written by hand or left alone; the page's own modules under each
+  CHECKS: `tools/qa/shaders-check.ts fold` (hand-written texts of every form, cut as written by hand or left alone; the page's own modules under each
   setting: no test left that the constants decide, the dead side of every plain branch of the unfolded text gone and its constant still there, both read
   off the unfolded text and not by the fold, the queue's line still in every module that had it, nothing left standing after a jump, a second fold cuts
   nothing but the constants' lines, every root kept, nothing left that mentions a dropped name, no module bigger; `SHADERFOLD_BREAK=1` turns every
   constant over before the fold reads it and must fail; a fold that keeps the wrong side of a plain branch fails the dead-side line; run it on both
-  stands). `shadertrim-check` and `shaderrows-check` read unfolded texts (their rules are of declarations as written). `bench-check` and `cardreplay`
+  stands). `shaders-check trim` and `shaders-check rows` read unfolded texts (their rules are of declarations as written). `bench-check` and `cardreplay`
   hold that a benchmark and a replay carry the word. `tools/qa/wgsl-compile.cjs` compiles every distinct folded text of the page's boot in the browser's
   own compiler, under each setting and with the shader rows as written and as the page opens (211 texts with the look in), and is red on a warning too. THE SAME FRAME: `tools/qa/draw-equal.cjs capture … --with shaderfold=0`
   against a capture without, then `compare` (the software adapter). NEVER SEEN ON A GPU, and no driver's compiler has read a folded text: what the
   software adapter draws is the same WGSL through another back end.
-- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaders-check.ts inline [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
   Chrome on Windows compiles a pipeline's WGSL through DXC, which pastes every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy
   function, not for the text its module was handed. The tool makes that a number with no browser and no Windows machine: the page's boot run over a recording stand-in
   device (the Engine, the smoke solver, the Game's mesh shadows / particles / light probe / skinned raster, then `cutSwap.build()`; the shipped stand, cut boxes, the
@@ -882,7 +882,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   by one constant is a text the visit has not built. Nine constants of the scene prelude were a LEVEL's: `WX_KINDS` (any level but the office's
   family, with the level's own roofs on), `WX_SNOW` and the seven `SNOW_*` rows (the pass and four training levels). So the title (the office) to any
   mission compiled every program that read one of them a second time: 17 of 47 module texts and about a third of the pipelines between the title and a
-  snow level (`shaderinline-check --json` of the two settings, before). And the mesh shadows' module carried the cast's own nodes, triangles, levels and
+  snow level (`shaders-check inline --json` of the two settings, before). And the mesh shadows' module carried the cast's own nodes, triangles, levels and
   corner base as constants: two programs more wherever the men were the other cast. NOW the nine are bits of `frame.levelCfg.x` (a new member, the
   last of the head: FRAME_HEAD_BYTES 976, FRAME_BYTES 31216, the two tables four words on), written by `writeFrame` from the same three tables main.ts
   always wrote (`weatherKindConfig`, `snowConfig`, `snowLookConfig`: no caller can leave the word out), and a shader asks `lv(WX_KINDS)`: the prelude
@@ -894,7 +894,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the mesh buffer is written by the same kernel). The snow's hills pipeline (`gbufSnow`) is made on every level and drawn where a level has drifts.
   Nothing in the update reads any of it; `rust/game_rules/src/snow_fx` still asks the three tables what the page's level raised. No switch: one path.
   **What it costs:** the title's first compile reads the weather's and the snow's code it used to leave out: 6.8 MB pasted for the boot's set where the
-  title had 6.2 and a snow level 6.8 (`shaderinline-check`, the page's rows on), about a tenth more text for the office and nothing more for a snow
+  title had 6.2 and a snow level 6.8 (`shaders-check inline`, the page's rows on), about a tenth more text for the office and nothing more for a snow
   level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all.
   **On a cloud NVIDIA card (A10G, Chrome 157 on Vulkan, the benchmark at high with `adapt=0`, the tree before against this change alone, two pairs on four
   boxes of one kind, 2026-11-07):** the first load's shaders 25.4 and 28.5 s before, 26.1 and 25.5 s after: no change outside what two runs of one build
@@ -924,16 +924,16 @@ row on his machine is the answer, and the word puts the count back on any machin
   pass alone, lost; in it the men's pipeline alone, lost, the boxes', the cut boxes' and the down pass clean; and with the line as `false`, as
   `lv(SNOW_SURF)` alone or as the `snowCfg` read alone, clean. So it is the short-circuit of those two uniform reads in that fragment program, nothing of
   size or memory. `cold` asks `GBUF_SNOW` now and `gbufSkin` has its `gbufSkinSnow` (`GBuffer.prepareSkin`: the level's own awaited, the other through
-  the later lane, the two asked in one order on every level, which `levelset-check` reads), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
+  the later lane, the two asked in one order on every level, which `shaders-check levelset` reads), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
   is the text it was before the level word existed. (`LevelSw.SNOW_SURF` still rides in the word and no shader asks it.) After it: the same unstaged
   read of the look's page draws two frames and keeps its device, and the snow level under `?look`, which lost its device here too, runs 150 s clean. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
   it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
   level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
-  **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
+  **Checks:** `bun run tools/qa/shaders-check.ts levelset` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
   page opens: the same module texts and pipelines; the level word 0 and 511; the mesh shadows' one text for both casts with each cast's numbers in
   its list; `LEVELSET_BREAK=1` fails three) and `PORT=… JOBS=levels node tools/qa/keeppage-page.cjs` (EVERY mission of the list picked in turn on the
-  kept page from the title: each compiles no pipeline and no module). `shadertrim-check` holds that the weather switch changes no text, the snow
-  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaderrows-check` was stamped.
+  kept page from the title: each compiles no pipeline and no module). `shaders-check trim` holds that the weather switch changes no text, the snow
+  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaders-check rows` was stamped.
   **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the title compiled 148 pipelines and 68 modules (its boot's own, then the fog of war's and the later twins behind the start); each of the 30 missions of the list picked in turn on that one device then asked for 152 and compiled NONE, nor a module, 2 to 5 s a load (137 and none once the three old denoise chains were out and the Rust game was the page's). Before, by the same pages' text (`shader-count-page.cjs` on the tree before): the compound's mission after the title had 104 of its 142 pipelines' texts made already and compiled the rest. **On a GPU: the counts and the times above on the cloud card, by tools. Nobody has looked at its picture there, and nothing of it was run on an Apple GPU.**
 - **Nothing is compiled at its first use: the fog of war's programs are asked for at every boot (2026-11-07; `engine.ts warmFirstUse`, called by
   main.ts after the boot's freeze; `render/fogofwar.ts FogPass.warm`, `FogSight.warm`).** The fog's sight table and its pass made their programs the
@@ -958,7 +958,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   that text is the one kept and the second glass block is deleted: `compositeR`, `compositeSR`, `pCompR`, `pCompSR`, `passes.glassRefract` and the LATER
   twin of the compute composite are gone, `compositeS` is the boot's own, and the fragment `composite` stays a LATER program under the first-frame row.
   `settings.glassRefract`, `?norefract` and the panel's row are as they were. Two programs fewer at the boot and two fewer of the cut set: about 0.8 MB
-  of pasted text in each (`shaderinline-check`). **Picture** (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by
+  of pasted text in each (`shaders-check inline`). **Picture** (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by
   360, high): the glass view, the squad view and the office at night EQUAL at both checkpoints, and the glass view under `&norefract` EQUAL at both (its
   frames are not the default's, so the setting still does something). What those frames did not hold: a broken or cracked pane (the rig's staging broke
   none on this build: its `unmet` says so), so the cracks' statements were moved by reading, not by a picture. Never seen on a GPU.
@@ -967,7 +967,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `create…PipelineAsync` held in one line: a program goes to the browser when the one before it is back, and its time is its own. **On a cloud NVIDIA
   card (A10G, Chrome on Vulkan, the driver's cache off, high, `?firstframe=1`, this tree with the cleanup's deletes to the one direct-light program):**
   128 programs, 140.9 s of one compiler thread: the first-frame set 97 programs and 41.7 s, the later set 8 and 27.3 s, THE CUT-BOX SET 23 and 72.0 s
-  (the split is mine, by label, off `shaderrows-check`'s LATER list and a label's second program as its cut twin: the tool itself cannot name a
+  (the split is mine, by label, off `shaders-check rows`'s LATER list and a label's second program as its cut twin: the tool itself cannot name a
   program's set, every one of them is asked before the page calls itself ready). The same page booted the usual way on that box: 93 pipelines in 15.5 s (25 to
   28 s for 119 on the benchmark's first load that morning, before the deletes). So the browser draws under three threads' worth from the box, and a load's wait is the SUM of its
   programs, not their number: 82 of the first-frame programs are under half a second each and 5.5 s together. Dearest, seconds alone (boot form | cut
@@ -987,10 +987,10 @@ row on his machine is the answer, and the word puts the count back on any machin
   however a compiler orders it) and the self-shadow is the plain one: the picture of a frame without dust cannot move by arithmetic. With dust alive the
   statements run are the twin's own. What changes for a player: dust is dust from its first frame (no wait for a later program), and on a classic tier a
   dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
-  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaderinline-check`, with the cut test's text): vol 337 to 364 KB,
+  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaders-check inline`, with the cut test's text): vol 337 to 364 KB,
   volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
   for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
-  plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
+  plain read as text (the wallbreak family's looks probe runs the same pin), `shaders-check rows` reads that both programs carry the look and that no
   `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
   adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
   PIXEL-EQUAL to the tree before (`draw-equal`, office-night and firefight at high, both checkpoints). ON THE CLOUD NVIDIA CARD (A10G, Vulkan; the named
@@ -1103,10 +1103,10 @@ row on his machine is the answer, and the word puts the count back on any machin
   still written and read by nobody. `settings.directHistory` is a switch now (above 0 = the shadow client's history on), not a weight. The debugger lost
   24 rows: `panel-inventory.ts --gone --only labels.json` takes deleted rows out of its fixture (and `--reword --only` rewords named ones) without touching
   another lane's missing rows. **THE LAST KERNEL IN TWO WRITINGS** was the gather's light loop (`shaders/gather_split_common.wgsl` beside `shaders/gather_common.wgsl`): one since the
-  same day, the bullet 'THE GATHER'S LIGHT LOOP HAS ONE WRITING' above. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
+  same day, the bullet 'THE GATHER'S LIGHT LOOP HAS ONE WRITING' above. **What was measured**: `tools/qa/shaders-check.ts inline --json` before the change with the two rows' words in front and after it with none, on the
   title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same
   127, 129 and 130 kernels are asked for at the same sizes. So the page as it opens compiles character for character what it did. **What changed for a
-  tool**: `shaderinline-check` has one budget table; `shaderrows-check` has two arms (off, first) and its store cases are the one row's (its stand-in device
+  tool**: `shaders-check inline` has one budget table; `shaders-check rows` has two arms (off, first) and its store cases are the one row's (its stand-in device
   now has room for the gather's points buffer); `splitrays-check` holds who reaches the light loop, the buffer's layout, the refusal's report and what a load
   compiles (`SPLITRAYS_BREAK=1` writes a second call site of the light loop into `light`); `wgsl-compile.cjs` dumps each setting once; `splitrays-twin.cjs` and `fixtures/compact-kernels.json` are gone; the checks that held a rule "in both writings" (highlights, huesplit, reflup,
   rolled, sunglint, sharpcap, snowglow, wallsides, lookexpo, lookveil, plainair, portal, bouncewalls) read the one, and three of them count the gather's sites
@@ -1130,7 +1130,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   it was in (`docs/agents/qa.md`). (2) The benchmark waits while `Engine.standsIn` (`ui/bench.ts standing`, 180 s in all on a page; past that its lines are
   timed on the picture as it is and the report says so once). (3) Auto quality's first measure waits for the later set, 30 s of frames at most
   (`quality.ts STANDS_IN`, the ladder's own cap; before, with the row off by default, that wait had no end), and a page that hides the view is not drawn
-  behind while it waits (`Quality.measuring`, main.ts `viewHidden`). **What it rests on:** the headless arms (`shaderrows-check` `first` and `both`: the later
+  behind while it waits (`Quality.measuring`, main.ts `viewHidden`). **What it rests on:** the headless arms (`shaders-check rows` `first` and `both`: the later
   set out, the stand-ins, all of it in, `laterIdle`; its `driven` case and the wiring pins for main.ts and the workbench), `quality-check` (D1's two lines on
   the boot's measure, `LADDERHOLD_BREAK=1` must fail) and the page walks on the software adapter (`shaderrows-page.cjs starts`: a person's default load from
   the moment the card is live until every later pipeline is in, then the page as a tool opens it). **What nobody has:** any time on a real GPU for this row in
@@ -1163,7 +1163,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   row is not turned off for that machine's next load, so it draws no bounce light until its player turns the row off. **Known seams:** the SHIPPED stand of the
   harness also boots with the rows off, so there it is not the page as it opens for these two (`TPS_COMPACTSHADERS=1 TPS_SPLITRAYS=1` in front of a headless
   tool is; `splitrays-check` sizes the two together); on Ultra the Tab panel and the preset still read resampling on while the split draws the plain gather; a
-  browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
+  browser with no storage shows a row turned off as still on. **Checks:** `shaders-check.ts rows` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
   `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
   is the next step, not done here.
 - **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above. SINCE 2026-11-08 Start on first frame shaders is not a row either: a person's page starts on, a driven page off, `?firstframe=0 / =1` holds for the visit and nothing is kept, so a machine's old `{"firstFrame":false}` is read past.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
@@ -1178,9 +1178,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   'volFroxel' true) and the K = 0 twin (`const VOL_K0`, 'volK0', built the first frame `volLightCap` is 0). **THE SECOND COPY IS A PROTOTYPE: one set goes when the
   default is decided.** Until then a change to one of the ten is made in BOTH files, or the row draws the picture as it was before the change:
   `git diff <before> <after> -- src/render/shaders/<k>.wgsl | sed 's#shaders/<k>#shaders/compact/<k>#g' | git apply --3way` carries a change that is outside the
-  rewritten lines, then `bun run tools/qa/shaderrows-check.ts --stamp`. The check is RED while one of today's ten differs from what it was when its twin was last
+  rewritten lines, then `bun run tools/qa/shaders-check.ts rows --stamp`. The check is RED while one of today's ten differs from what it was when its twin was last
   brought level (`tools/qa/fixtures/compact-kernels.json`), and names the kernel. Every tool that reads a kernel by its path (`dust-look-check`, the snow and fog
-  probes …) reads TODAY's; `shadertrim-check` and any other harness tool takes the compact set under `TPS_COMPACTSHADERS=1`.
+  probes …) reads TODAY's; `shaders-check trim` and any other harness tool takes the compact set under `TPS_COMPACTSHADERS=1`.
   **Start on first frame shaders (`?firstframe=1`, `gpu/device.ts PIPE_QUEUE.later`)**: the start waits only for what the first frame draws; the LATER set (direct,
   restirM, fgather, fgatherGi, fgatherGiS, reflectP5, composite, compositeR, compositeS, the five froxel kernels, the dust twin where dust is drawn, and volFroxel with
   the compact set) is not counted on the start card and is compiled behind it. With the compile queue on (a Windows browser) it is held until the boot's own are in, one
@@ -1197,10 +1197,10 @@ row on his machine is the answer, and the word puts the count back on any machin
   fragment composite is in clears the picture (black until one lands: no preset does either); the set compiles in the order it is asked for (the froxel kernels
   first, the composites last), not the order a tier needs it; a page that never settles the queue (the workbench, the editor) gets it one at a time; the compact K = 0
   twin is built from the boot's prelude alone, outside the cut swap, and is picked ahead of the dust and froxel twins (no preset runs K = 0).
-  **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
+  **The checks**: `bun run tools/qa/shaders-check.ts rows` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
   process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
   for it, with the later set out and in: 136 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 27; the same on both stands); `pipequeue-check` has
-  the later lane (49 lines in all with the gentle load's and a lost device's, `docs/agents/qa.md`; `PIPEQUEUE_BREAK=1` fails 31); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  the later lane (49 lines in all with the gentle load's and a lost device's, `docs/agents/qa.md`; `PIPEQUEUE_BREAK=1` fails 31); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaders-check.ts inline` sizes the compact set against its own table
   (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
   `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
   `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows
@@ -1229,7 +1229,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   code, their Options rows, their URL and harness words and their checks are gone; a choice kept under either is dropped the next time a row is moved. What stays
   is the one path: the later set compiled behind the start (the first-frame row above), the cut set built in the background after the boot (`cutSwap.start()`), and
   the ladder's hold while a later program compiles (`ui/quality.ts STANDS_IN`, at most 30 s in one wait; `quality-check` case D1, `LADDERHOLD_BREAK=1`). **Checked:**
-  `shaderrows-check.ts --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
+  `shaders-check.ts rows --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
 - **(SINCE 2026-11-07 this is the only gather and no row: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
@@ -1237,7 +1237,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `trace` (pass `gather`) casts the rays and writes each point that wants light to a buffer (the point, its normal, its bounce-card set, its paint, the radiance it
   already has), `light` (a pass of its own, `gatherLight`, so the Tab list and the F9 recorder price the two halves apart) lights them in one loop round ONE
   `directAtPoint`, takes the firefly bound, and stores what the gather stores. The cut-box set gets the same two (they are made in `traceJobs`, like every traced
-  pipeline). **Sizes (the size tool, `TPS_SPLITRAYS=1 bun run tools/qa/shaderinline-check.ts`):** `trace` 249 KB and `light` 125 KB where `main` is 780 KB and
+  pipeline). **Sizes (the size tool, `TPS_SPLITRAYS=1 bun run tools/qa/shaders-check.ts inline`):** `trace` 249 KB and `light` 125 KB where `main` is 780 KB and
   `mainGi` 842 KB; a load's boot set goes from 13,110 KB to 10,490 KB and both sets together from 25,175 KB to 19,935 KB. The split set has budget rows of its own
   (261 and 131 KB, in place of the megakernel gathers' rows only while the row is on); no row of today's table moves. What is left in `trace`: `occluded` ×4
   (the cards' term, the glints, a pane's dust), `traceClosest` ×3, `glossGlints` ×2 and a pane's shading at 97 KB.
@@ -1572,7 +1572,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   march (three noise reads and four more density taps a sample in the soot, four more a light for its self shadow) runs on every frame a fire is in
   range, where it ran for seconds after a blast; nobody has timed it. The twin draws a cloud's edge thinner than a sight line reads it
   (`dust_look.wgsl`), on top of the Fire smoke row's own price above.
-  CHECKED: typecheck; `fire-check` 23 of 23 on both stands; `shaderrows-check`, `dice-check`, `rollback-check --static`; the fire's shader alone
+  CHECKED: typecheck; `fire-check` 23 of 23 on both stands; `shaders-check rows`, `dice-check`, `rollback-check --static`; the fire's shader alone
   (`fire-lab.cjs`, with and without the handover) and the look page (119 of 119 programs, no error) on the software adapter.
   SEEN on the software adapter only (the pass at dusk, 18 drawn frames a tenth of a second apart and four more, 480 x 300: a play view and two from the
   side; a frame there is over a minute): the embers climb in one narrow stream off the flame's tips along its lean; the flame's tips go dark red into a
@@ -1941,7 +1941,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   each one's column at the point's height (the pixel's own man's gun is skipped, men's bodies are not asked), a probe beyond a wall or inside a crate
   is left out and the others share its part; where the four hold about the same (the most under 1.3 times the least) no ray is asked and the read is the
   plain one. The four side reads are gone with the row on (they were for a probe buried in a container, and that one is not seen). ONE box walk in the
-  text, ONE call site: the composite's rows in `shaderinline-check` went up by its 15 KB (the look's text is in the build's kernel, dead under `LOOK`).
+  text, ONE call site: the composite's rows in `shaders-check inline` went up by its 15 KB (the look's text is in the build's kernel, dead under `LOOK`).
   SECOND, THE SUN PATCH: a pixel in full light was returned as the open air with no read, so the day's contrast was given back to the patch's soft edge
   and not to the patch (a bright rim round a middle hardly brighter than the floor). Such a pixel is now asked where it is too, only when the contrast
   row would touch it (darker than sunlit ground), and it is under a roof by a stricter span (the place holds under a quarter of the open air's light:
@@ -2088,7 +2088,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   NOT SEEN: a man in motion (the flicker frames stand still), the overcast hour, the stagger and half-rate cache options with the ring (stagger gives the
   ring two bakes a point, which can leave a two-frame ripple an eighth the size), frame time (one copy of the dice and one pass over it a frame, untimed),
   any level but the pass. The light meter and the smoke read the dice, so on the look page the row also steadies what guards see by. An old red on this
-  branch, not from this change: `shaderinline-check`'s budget line (fgather, volumetrics, reflectP5 and particles over their rows since the look rows of
+  branch, not from this change: `shaders-check inline`'s budget line (fgather, volumetrics, reflectP5 and particles over their rows since the look rows of
   10-31). NEVER SEEN ON A GPU.
 - **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `scene/placePlan.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
   `lookConfig.doorGaps` set in `main.ts` from `game.doors.list`, `engine.ts` hands it to `PlaceField.setBoxes`. The maintainer on his GPU, of the pass at
@@ -2172,7 +2172,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   own side; 65964 floor points and none with a column across a wall; 28 slow closings from four angles and none left stale, the words made 122 times in 11,228
   frames; the column table right at 40 × 28 and at 80 × 56; `WALLSIDES_BREAK=1` leaves one wall out of the map, skips the last rebuilds of each closing, and
   fails three lines). The look page is
-  on neither stand, so there is no word for either. COST: `shaderinline-check` IS RED ON THIS BRANCH and its rows were not raised: it counts text and cannot see code a const compiles out, so it reads
+  on neither stand, so there is no word for either. COST: `shaders-check inline` IS RED ON THIS BRANCH and its rows were not raised: it counts text and cannot see code a const compiles out, so it reads
   higher than what is built (composite 1060 of 1032 KB, 1027 before this work, the smoke lab's two pictures and the sided reads; `fgather / main` 936 of 805
   and `mainGi` 990 of 870, which were 894 and 957 and already over). Whoever takes the row to the build either cuts the dead guards' text or raises those rows
   on purpose. The uniform array's cost on a GPU is not measured (`?look=walls:0` and a reload is the A/B; the look panel's cost sweep leaves the row out,
@@ -2736,7 +2736,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   (`placeSideCell`) turns at a doorway it meets from the side, to the point's side of that doorway's line, and stops at another wall's line: the
   floor at the foot of a wall that ends in a doorway is of the room on its side of the door, and the pocket behind a shelf's end panel is never the
   room across the partition. NOTHING ELSE is by the pixel, no read of the cache says a place, and the composite carries one box walk less
-  (`shaderinline-check`: 1070 to 1052 KB a module, still over its row of 1030 as it was).
+  (`shaders-check inline`: 1070 to 1052 KB a module, still over its row of 1030 as it was).
   WHAT ELSE MOVED, all on the look page: (1) A DOORWAY'S CELL HOLDS NO LEVEL in the field, and no level is pulled through a doorway (`PLACE.link`
   is gone): two rooms through an open door are two places to the door's line, each with the level its own floor holds, and what joins them in the
   picture is the Light in order row, which shows the floor a bright room lights inside a dark one's door by the level of the light on it. A room's
@@ -2799,7 +2799,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   lit, is shaded by `Uv` where it was shaded by the lamp's nominal hue; the same to rounding for a lamp, and for an opening's daylight the exact
   hue of what it sends in place of its record's. Check: `bun run tools/qa/probes.ts huesplit` (family `render`; the order held by its text in
   both writings, and a one-ray model of the half shadow that takes its order from that text; `HUESPLIT_BREAK=1` moves the memory first and must
-  fail; with the kernel's text as it was both lines fail), `shaderrows-check` (the compact estimator re-stamped), all 69 shader texts compile.
+  fail; with the kernel's text as it was both lines fail), `shaders-check rows` (the compact estimator re-stamped), all 69 shader texts compile.
   DRAWN, software adapter, the depot at midday, one wall's shadow on the dust: across its edge in the direct light's view red over green ran
   from 1.00 up to 1.6 and 2.7 before, and stays at 1.00 to 1.02 with the mend; in the picture the edge peaked at 1.63 on dust that is 1.25 lit and
   1.28 in shade, and peaks at 1.39 now (what the tone curve does to a tan as it darkens, and no more). NEVER SEEN ON A GPU, and not timed there:
@@ -2828,7 +2828,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   place the row asks. The lasting mend is a word in the particle's record for the light on it. Check: `bun run tools/qa/lookexpo-check.ts` (the
   splat's lines: the text of the call, of its three builds and of the field's hand-over, and the arithmetic of the estimate, mirrored;
   `PARTSHOW_BREAK=1` shows a particle with no gain and must fail: 3 lines, on both stands), `tools/qa/wallsides-check.ts` (the rule is one text and
-  each of its three askers calls it once), all 69 shader texts compile, `shaderrows-check` (the compact march re-stamped). DRAWN, software adapter, the white roof's service room at midday with its door open (a room the
+  each of its three askers calls it once), all 69 shader texts compile, `shaders-check rows` (the compact march re-stamped). DRAWN, software adapter, the white roof's service room at midday with its door open (a room the
   model shows by its own level, far over the frame's), 48 casings put on its floor: they read 161 of 255 by luminance on a floor at 217 before, dark
   grey dashes, and 233 with the mend, pale gold (154, 161, 174 and 239, 233, 213); the page booted and drew with no page or GPU error. NEVER SEEN
   ON A GPU. NOT DONE: a spark and the other glowing things; the lamps' haze and beams; a particle's own light carried from the sim.
@@ -2863,7 +2863,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   text pins. `PORTALDEEP_BREAK=1` = the whole rectangle, fails 3; `PORTALRIMS_BREAK=1` = a rim at both ends whatever stands there, fails 1). The
   mirror's rays went from 24 by 24 pixels to 48 by 48: at 24 a point 4 % of the rays reach sky from read 0.78 × or 0.97 × by the count alone. The
   older figures in the portal's bullet above now read: 1.22 × a hand inside the sill, 0.96 to 1.05 × from 1 m in; 0.0 % and 5.6 % left in the dice.
-  `openings-check` both stands, `shaderrows-check`, all 69 shader texts compile, `tsc` both. The frozen stand has no openings' lights: nothing of it
+  `openings-check` both stands, `shaders-check rows`, all 69 shader texts compile, `tsc` both. The frozen stand has no openings' lights: nothing of it
   moves. DRAWN, software adapter, the service door from inside at midday: the same build with `&holedepth=0` and without. With the
   old light the floor beside the sun's patch is a cloud of blotches, in the picture and in the direct light's own view; with the new it is one
   smooth wedge with a soft edge where the fan ends. Between two frames a patch of the fan's side changes by 0.44 of 255 in the mean with the old
@@ -2890,7 +2890,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   Check: `bun run tools/qa/probes.ts reflup` (family `render`; the rule held by its text in both writings, and the weights' arithmetic:
   a dark face between its own texels at 1 and another surface's at 1000 reads 1.00 past a jamb, past a sill half a metre behind it, at 14 m and at
   a foot at a right angle, where the plain blend read 330; a brick's face beside a bevel 25° off takes 3.8 of 10 where it took 5.5;
-  `REFLUP_BREAK=1` = the plain blend, fails), `shaderrows-check` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
+  `REFLUP_BREAK=1` = the plain blend, fails), `shaders-check rows` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
   inside at midday, the specular view: the white bar up the jamb (a neighbour's sunlit texel under the room's gain) went from 88 bright pixels to 2; a shorter bar lower on the same jamb is unchanged at 75, so it is the jamb's own highlight and not a neighbour's texel, and the bricks' hooks beside the door stay as said above. The page booted and drew with no page or GPU error (120 programs; that boot also carried the daylight pieces of the bullet below). NEVER SEEN ON A GPU, and not timed there.
 - **THE MIRROR AND THE HIGHLIGHTS ARE TWO TERMS IN TWO TARGETS** (11-05; EVERY PAGE THAT TRACES REFLECTIONS, medium and up. One path; the address's
   `&hireach=0` is the same path with the highlights fading where the mirror does, the reach they had, to hold the two pictures side by side on one
@@ -2955,7 +2955,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   do (as it was a pixel's share of the term ran from none to 0.63, deviation 0.19; now the highlights' share is 1 everywhere and the mirror's has a
   deviation of 0.03); the block's mean and the nine-texel read written again; an opening's sky counted once, which is the text of its two halves
   and an identity; a metal's highlights. `HIGHLIGHTS_BREAK=1` and `PORTALMIRROR_BREAK=1` each fail), `reflup-check` and
-  `sunglint-check` (their pins moved with the text), `shaderrows-check` (re-stamped), `shaderinline-check`, all 213 shader texts compile, `tsc`
+  `sunglint-check` (their pins moved with the text), `shaders-check rows` (re-stamped), `shaders-check inline`, all 213 shader texts compile, `tsc`
   both. SEEN ON A CLOUD NVIDIA CARD (11-05, fourteen boots of this
   tree, no shader, pipeline or device error): the white roof's service room with its door shut on an overcast day, as played and its specular
   view: the grains are an even pool of sheen with the floor's own stipple soft in it; with `&hireach=0` soft blobs are left (the finish sits at
@@ -3000,7 +3000,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   3 %. 4w: 56 near, wide and leaning asks against 300 by 300 rays, 0.94 to 1.30 ×, eight in ten within 15 %; every one keeps all its rays; three
   walks 0.5 mm at a time and two faces turned through a right angle never move by more than 0.14 % a step. 4v: the dice's sum at four probes,
   23 faces, 0.84 to 1.00 ×. `PORTALBANDS_BREAK=1` = the eight points and rays laid over the whole seen part: 4x and 4w fail. The pins hold the
-  texts. `shaderrows-check`, all 69 shader texts compile, `tsc` both. DRAWN, software adapter, the white roof's service door swung in at dusk (the page booted and drew with no page or GPU error, 120 programs): the leaf's eight bands are gone in the direct light's own view and in the played picture; down the leaf, rows 10 px apart stepped by up to 8 % in a saw's teeth and now fall evenly, the largest step 2 to 3 %. (That boot also carried the reflection texel rule above.) NEVER SEEN ON A GPU, and not timed there.
+  texts. `shaders-check rows`, all 69 shader texts compile, `tsc` both. DRAWN, software adapter, the white roof's service door swung in at dusk (the page booted and drew with no page or GPU error, 120 programs): the leaf's eight bands are gone in the direct light's own view and in the played picture; down the leaf, rows 10 px apart stepped by up to 8 % in a saw's teeth and now fall evenly, the largest step 2 to 3 %. (That boot also carried the reflection texel rule above.) NEVER SEEN ON A GPU, and not timed there.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
@@ -3020,7 +3020,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   behind `?footing=0`; the wall cell's side by what the cache holds where the plan does not say (the floor plan's silent cells, 5.8 % of 48,877
   wall cells over 60 levels with doors shut, most of them on four levels); the corrections on the model named under ONE EXPOSURE AT EVERY HOUR.
   CHECKS: `lookexpo-check` (the kernel's text in both writings, that nothing of the rows is left in either, that the model has no row),
-  `lookgrade-check` (its last line is the frame's numbers and the model's own toning line), `shaderrows-check` (the compact twin took the same
+  `lookgrade-check` (its last line is the frame's numbers and the model's own toning line), `shaders-check rows` (the compact twin took the same
   change; fixture stamped), all 68 shader texts compile, both typechecks, `bench-check`; the checks that read the composite and are red at the
   base are red on the same lines (`scenetweak`, `snowglow`, `snowsparkle`, `round-check`, `shaderinline`: the composite's kernels read 1072 KB
   with the every-hour lines and 1070 after this, against a budget now 1030, the Room contrast row's 1.5 KB taken back out of both rows).
@@ -3096,7 +3096,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   REFLECTION PASS RUNS: a finish under the preset's roughness cut (0.55 ultra, 0.45 high, 0.35 medium, none on low), at that pass's resolution
   and through its denoiser. No game table. KNOWN, LEFT: one ray at the disc's middle, so under cloud its edge in a shadow is harder than the
   shade's; untinted through glass, as a lamp's. (Since 11-05 no highlight goes through the denoiser: they are a target of their own.) CHECK `tools/qa/probes.ts
-  sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaderrows-check` holds the compact pass's text. Never timed, never
+  sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaders-check rows` holds the compact pass's text. Never timed, never
   seen on a GPU, night included: the three numbers are first guesses.
 - **NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN** (11-04; the scene prelude's `GLINT_PICK`, `render/frame.ts glintPickConfig`, `rtGlints` in the
   three reflection passes; the look's page only, `&glintpick=1`, OFF unless asked; a const of the shaders, so a reload of the address is the
@@ -3258,7 +3258,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   writer, the page and the exporter, a second writing of the places it acts, the word in each look's second FILE against its
   generator's; `KEPT_BREAK=1` fails two). It holds the rule by its text and a second writing: nothing in it draws a frame, so that kept 0
   is the frame as it was rests on the reading of each term and the card pair above, on both
-  stands; the render family's gate, `shaderrows-check`, `shaderinline-check` (both settings), `look-check`, `stuff-check`,
+  stands; the render family's gate, `shaders-check rows`, `shaders-check inline` (both settings), `look-check`, `stuff-check`,
   `lookmaps-check`, `ways`, `materials`, `level`, `frame-layout`, all 213 shader texts compile, `tsc` both, every level file's export
   unchanged.
 - **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
@@ -3296,7 +3296,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   finished by `manH4`, the old hash's own integer steps a lane (178 KB). DO NOT PUT A LOOP BACK to save text: take call sites out another way.
   Check: probe `charmats-shader` (its last line: no `for`, no `array<` in the two functions, their text, and 32,000 corners hashed both ways
   in integer arithmetic with none differing; `MANLOOP_BREAK=1` changes one constant of the four-at-a-time hash and fails it), both stands;
-  `shaderinline-check --setting look`. NOT SEEN on a GPU as this text (the loop form was); stills are asked.
+  `shaders-check inline --setting look`. NOT SEEN on a GPU as this text (the loop form was); stills are asked.
 - **AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, WHERE IT WAS FIVE** (11-05; `common.wgsl PORTAL_PIECES` 3, `portalPiece`; every pass that
   asks an opening's sum: the direct estimators, the sharp upscale, the cache's dice. THE DAY'S HALF of the openings' cost, after the reach
   below. NO WORD ON THE ADDRESS, and why: the five-piece text would have to stay in every direct kernel beside the three, which is the second
@@ -3380,7 +3380,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   fifty is cut short along a drift's edge; grass is the dearest painted layer to make after the mud wall (about 0.7 s of arithmetic at 512 under
   bun, tarmac 0.55, a middling layer 0.3), paid once a boot by a level that names it. WHAT A FIRST LOCAL STILL TAUGHT: with the table
   alone changed the office drew exactly as before, flat, because of the file's own words above. Check: `bun run tools/qa/lookmaps-check.ts` and
-  `stuff-check.ts`, both stands; `look-check`, `lookunits-check`, `shaderrows-check`, `shaderinline-check`, `tsc` both. SEEN ON A CLOUD NVIDIA CARD
+  `stuff-check.ts`, both stands; `look-check`, `lookunits-check`, `shaders-check rows`, `shaders-check inline`, `tsc` both. SEEN ON A CLOUD NVIDIA CARD
   (11-05, stills in three rounds from still-only commits in which the office's file names the two; no shader or pipeline error): the car park
   as played and close at midday, the lawn's corner as played and close at midday and at dusk. The first round's tarmac was too pale and speckled
   like terrazzo and its grass flat with pale blotches; the second read right (a mottled lawn, a worn dark lot; at dusk the blades' relief is strong
@@ -3533,7 +3533,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   would want the canister share published. A band's times come from the can's age and where it lies. With `?nodustlook` no tint is kept and the row does
   nothing. **puffs** = the can's output × a slow wave, the one row that moves the smoke itself. Costs: creases 4 texel
   reads a refresh; bands run the kind transport in a can's bricks (it is skipped for plain canister smoke). CHECKED: `wgsl-compile` (68 texts),
-  `shaderrows-check` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
+  `shaders-check rows` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
   software adapter with every row up (below). NEVER SEEN ON A GPU, and whether any of it reads well is his to say: the stills are 640 px on a software
   adapter. Not built: idea 2 (a round carves a tube: the fine lattice in its wake), smoke reprojected by the solver's own velocity instead of averaged.
   WHAT THE ROWS DO TOGETHER (11-02, the maintainer's lab at dusk with `densityScale` 3: "curious why there's so much orange in the smoke, also seems

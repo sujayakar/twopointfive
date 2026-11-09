@@ -637,7 +637,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of the boot's set (27.8 s after a 26.5 s boot, 41.5 after 40.7, 40.0 after 40.8, 26.6 after 27.5) where the loop's set took a fifth to two fifths longer (34.6
   after 28.7, 35.7 after 25.3, 38.1 after 28.6): one box each, a ratio inside one box. WHAT IT COSTS: text. Eight planes are written out where one stood in a
   loop, at every copy of the box test: 3.1 KB a copy, and the cut set's kernels 13 % bigger in the compact writing with separate shadow rays, 14 % in the plain
-  one (`tools/qa/shaderinline-check.ts`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
+  one (`tools/qa/shaders-check.ts inline`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
   (3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set to its boot twin, with the round's own test out and the cut test in and a
   fiftieth of the twin on top, so a call site only the rule's arms hold is red. CHECKS: `cutboxes-ray` holds that no function the box test reaches has a loop
   statement (it follows the calls), pins the shader's text of the test so `tools/qa/cut-rule.ts`, the checks' one mirror of it, must move with it, and holds
