@@ -1,6 +1,6 @@
 //! The types of `nightbreach`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -36,7 +36,7 @@ pub enum NightBreachState {
     Recalled,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NightBreach {
     pub active: bool,
     pub drill: Option<crate::breach::BreachDrill>,
@@ -58,33 +58,6 @@ pub struct NightBreach {
     pub cut: bool,
     pub failure: Option<String>,
 }
-impl NightBreach {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        NightBreach {
-            active: false,
-            drill: None,
-            ops: Vec::new(),
-            hostiles: Vec::new(),
-            layout: None,
-            marks: Vec::new(),
-            staged: 0.0,
-            log: Vec::new(),
-            no_drill: false,
-            bang_taken: false,
-            bang_by: None,
-            blind: false,
-            bursts: Vec::new(),
-            blind_rounds: 0.0,
-            benched: None,
-            beats_seen: 0.0,
-            said: JsSet::new(),
-            cut: false,
-            failure: None,
-        }
-    }
-}
-impl Default for NightBreach { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachLogItem {
@@ -122,18 +95,10 @@ pub struct NightBreachObjective {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NightbreachMod {
     /// (src/game/nightbreach.ts:140 applied)
-    pub applied: Option<crate::scene_scenarios::TeamStart>,
-}
-impl NightbreachMod {
-    pub fn blank() -> Self {
-        NightbreachMod {
-            // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
-            applied: { let k = crate::knobs::NightbreachK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: None, ops_yaw: None }) },
-        }
-    }
+    #[is({ let k = crate::knobs::NightbreachK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: None, ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 
 /// (src/game/nightbreach.ts:88 SQUAD4: a table nothing writes)

@@ -1,6 +1,6 @@
 //! The types of `scene_collision`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the share of the wind a square metre of the plan has (wind.ts:237 stormDrift): crate::wind::wind_share_under(g, x, z, roofs)
@@ -57,12 +57,12 @@ impl Default for GridWind {
     }
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StaticCollision {
     pub cells: Vec<Vec<f64>>,
-    pub w: f64,
-    pub h: f64,
-    pub cs: f64,
+    #[is(40.0)] pub w: f64,
+    #[is(28.0)] pub h: f64,
+    #[is(1.0)] pub cs: f64,
     pub nav: crate::scene_collision::NavGrid,
     pub sound: crate::scene_collision::SoundPaths,
     pub boxes: Vec<BoxId>,
@@ -77,71 +77,24 @@ pub struct StaticCollision {
     pub dynamic_boxes: Vec<BoxId>,
     /// (a copy made again from the boxes and lamps: in no bytes)
     #[bytes(skip)]
-    pub lamp_q: crate::scene_collision::StaticCollisionLampQ,
+    #[is(crate::scene_collision::StaticCollisionLampQ { on: false, p: None, sim: None, stands: 0.0, parts: 0.0, rows: None })] pub lamp_q: crate::scene_collision::StaticCollisionLampQ,
     pub fire_pass: Option<crate::scene_collision::FirePass>,
 }
-impl StaticCollision {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        StaticCollision {
-            cells: Vec::new(),
-            w: 40.0,
-            h: 28.0,
-            cs: 1.0,
-            nav: crate::scene_collision::NavGrid::blank(),
-            sound: crate::scene_collision::SoundPaths::blank(),
-            boxes: Vec::new(),
-            mirror: crate::scene_box_mirror::BoxMirror::blank(),
-            windowed: false,
-            tilted_at: Vec::new(),
-            pane_rule: None,
-            pane_rows: None,
-            glass_walkable: None,
-            dynamic_boxes: Vec::new(),
-            lamp_q: crate::scene_collision::StaticCollisionLampQ { on: false, p: None, sim: None, stands: 0.0, parts: 0.0, rows: None },
-            fire_pass: None,
-        }
-    }
-}
-impl Default for StaticCollision { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NavGrid {
-    pub cell: f64,
+    #[is(0.5)] pub cell: f64,
     pub w: f64,
     pub h: f64,
     pub blocked: Vec<u8>,
 }
-impl NavGrid {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        NavGrid {
-            cell: 0.5,
-            w: 0.0,
-            h: 0.0,
-            blocked: Vec::new(),
-        }
-    }
-}
-impl Default for NavGrid { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SoundPaths {
     pub cache: JsMap<String, crate::scene_collision::SoundPathsCacheValue>,
     pub now: f64,
     pub asking: bool,
 }
-impl SoundPaths {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        SoundPaths {
-            cache: JsMap::new(),
-            now: 0.0,
-            asking: false,
-        }
-    }
-}
-impl Default for SoundPaths { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SoundPathsCacheValue {
@@ -272,18 +225,10 @@ pub struct EyeContactAsk {
     pub in_cone: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SenseForRow {
     Sound,
     Paths,
-}
-impl SenseForRow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SenseForRow::Sound => "sound",
-            SenseForRow::Paths => "paths",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -310,29 +255,18 @@ pub struct Raycast {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SceneCollisionMod {
     /// (src/scene/collision.ts:105 ANYTIME)
-    pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
+    #[is(crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0 })] pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
     /// (src/scene/collision.ts:107 SENSED)
-    pub sensed: crate::scene_collision::SceneCollisionModSENSED,
+    #[is(crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, sound: 0.0, paths: 0.0 })] pub sensed: crate::scene_collision::SceneCollisionModSENSED,
     /// (src/scene/collision.ts:118 LAMPS)
-    pub lamps: crate::scene_collision::SceneCollisionModLAMPS,
+    #[is(crate::scene_collision::SceneCollisionModLAMPS { parts: 0.0 })] pub lamps: crate::scene_collision::SceneCollisionModLAMPS,
     /// (src/scene/collision.ts:126 RAYS)
-    pub rays: crate::scene_collision::SceneCollisionModRAYS,
+    #[is(crate::scene_collision::SceneCollisionModRAYS { n: 0.0 })] pub rays: crate::scene_collision::SceneCollisionModRAYS,
     /// (src/scene/collision.ts:130 PRICED)
-    pub priced: crate::scene_collision::SceneCollisionModPRICED,
-}
-impl SceneCollisionMod {
-    pub fn blank() -> Self {
-        SceneCollisionMod {
-            anytime: crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0 },
-            sensed: crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, sound: 0.0, paths: 0.0 },
-            lamps: crate::scene_collision::SceneCollisionModLAMPS { parts: 0.0 },
-            rays: crate::scene_collision::SceneCollisionModRAYS { n: 0.0 },
-            priced: crate::scene_collision::SceneCollisionModPRICED { n: 0.0, needs: 0.0, cells: 0.0, waits: false },
-        }
-    }
+    #[is(crate::scene_collision::SceneCollisionModPRICED { n: 0.0, needs: 0.0, cells: 0.0, waits: false })] pub priced: crate::scene_collision::SceneCollisionModPRICED,
 }
 
 /// (src/scene/collision.ts:87 FEET_Y)

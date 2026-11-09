@@ -1,6 +1,6 @@
 //! The types of `nvg`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -10,24 +10,13 @@ pub enum Mode {
     Dark,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
-    #[default] YourLight,
-    YourGoggles,
-    NotCompromised,
+    #[word("your light")] #[default] YourLight,
+    #[word("your goggles")] YourGoggles,
+    #[word("not compromised")] NotCompromised,
     Compromised,
-    NoRule,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::YourLight => "your light",
-            Why::YourGoggles => "your goggles",
-            Why::NotCompromised => "not compromised",
-            Why::Compromised => "compromised",
-            Why::NoRule => "no rule",
-        }
-    }
+    #[word("no rule")] NoRule,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -55,17 +44,10 @@ pub struct Team {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NvgMod {
     /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
-}
-impl NvgMod {
-    pub fn blank() -> Self {
-        NvgMod {
-            teams: None,
-        }
-    }
 }
 
 /// (src/game/nvg.ts:138 LOOK_M: a table nothing writes)

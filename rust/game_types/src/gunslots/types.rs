@@ -1,20 +1,12 @@
 //! The types of `gunslots`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum GunSlot {
     #[default] Primary,
     Secondary,
-}
-impl GunSlot {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunSlot::Primary => "primary",
-            GunSlot::Secondary => "secondary",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

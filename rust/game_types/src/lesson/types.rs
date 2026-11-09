@@ -1,6 +1,6 @@
 //! The types of `lesson`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS (lesson.ts:167-282), read whole from a level file's `{ is: '<kind>', … }` (game_start `records.rs`), each word typed: a word no type holds refuses the level
@@ -42,7 +42,7 @@ pub enum LessonTest {
     Any { of: Vec<crate::lesson::LessonTest> },
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Lesson {
     pub i: f64,
     pub done_at: JsMap<String, f64>,
@@ -50,19 +50,6 @@ pub struct Lesson {
     pub seen: Option<crate::lesson::StepSeen>,
     pub run: Option<u32>,
 }
-impl Lesson {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Lesson {
-            i: 0.0,
-            done_at: JsMap::new(),
-            log: Vec::new(),
-            seen: None,
-            run: None,
-        }
-    }
-}
-impl Default for Lesson { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct StepSeen {

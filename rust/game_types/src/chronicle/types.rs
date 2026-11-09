@@ -1,6 +1,6 @@
 //! The types of `chronicle`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,7 +12,7 @@ pub struct ChronEvent {
     pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ChronKind {
     #[default] Down,
     Shot,
@@ -50,48 +50,6 @@ pub enum ChronKind {
     CodeLearned,
     CodeEntered,
     Checkpoint,
-}
-impl ChronKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronKind::Down => "down",
-            ChronKind::Shot => "shot",
-            ChronKind::Blackout => "blackout",
-            ChronKind::Heard => "heard",
-            ChronKind::Objective => "objective",
-            ChronKind::Grab => "grab",
-            ChronKind::Ocp => "ocp",
-            ChronKind::Thrown => "thrown",
-            ChronKind::Radio => "radio",
-            ChronKind::Spotted => "spotted",
-            ChronKind::Contact => "contact",
-            ChronKind::Lost => "lost",
-            ChronKind::Calm => "calm",
-            ChronKind::Alarm => "alarm",
-            ChronKind::LightShot => "lightShot",
-            ChronKind::Interrogated => "interrogated",
-            ChronKind::KeyTaken => "keyTaken",
-            ChronKind::Ko => "ko",
-            ChronKind::Kill => "kill",
-            ChronKind::BodyFound => "bodyFound",
-            ChronKind::DoorKicked => "doorKicked",
-            ChronKind::LockPicked => "lockPicked",
-            ChronKind::Hit => "hit",
-            ChronKind::NeedBreak => "needBreak",
-            ChronKind::CivilianSpotted => "civilianSpotted",
-            ChronKind::CivilianReported => "civilianReported",
-            ChronKind::CivilianComplied => "civilianComplied",
-            ChronKind::CivilianKO => "civilianKO",
-            ChronKind::CivilianKilled => "civilianKilled",
-            ChronKind::CameraSpotted => "cameraSpotted",
-            ChronKind::CameraAlarm => "cameraAlarm",
-            ChronKind::LaserTripped => "laserTripped",
-            ChronKind::DeviceDown => "deviceDown",
-            ChronKind::CodeLearned => "codeLearned",
-            ChronKind::CodeEntered => "codeEntered",
-            ChronKind::Checkpoint => "checkpoint",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -131,37 +89,19 @@ pub struct ChronCounts {
     pub loads: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Chronicle {
     pub events: Vec<crate::chronicle::ChronEvent>,
     pub dropped: f64,
-    pub counts: crate::chronicle::ChronCounts,
+    #[is(crate::chronicle::ChronCounts { seen_up: 0.0, esc1: 0.0, esc2: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, blackouts: 0.0, kicked: 0.0, picked: 0.0, intel: 0.0, thrown: 0.0, grabs: 0.0, contacts: 0.0, heard: 0.0, radio: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0, devices: 0.0, hits: 0.0, down: false, down_by: String::from(""), saves: 0.0, loads: 0.0 })] pub counts: crate::chronicle::ChronCounts,
     pub questioned: JsSet<String>,
-    pub path: Vec<f32>,
+    #[is(alloc::vec![0.0; 12000])] pub path: Vec<f32>,
     pub path_n: f64,
-    pub path_every: f64,
+    #[is(0.5)] pub path_every: f64,
     pub path_next: f64,
     pub heard_of: JsMap<u32, usize>,
     pub heard_no_row: JsSet<u32>,
 }
-impl Chronicle {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Chronicle {
-            events: Vec::new(),
-            dropped: 0.0,
-            counts: crate::chronicle::ChronCounts { seen_up: 0.0, esc1: 0.0, esc2: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, blackouts: 0.0, kicked: 0.0, picked: 0.0, intel: 0.0, thrown: 0.0, grabs: 0.0, contacts: 0.0, heard: 0.0, radio: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0, devices: 0.0, hits: 0.0, down: false, down_by: String::from(""), saves: 0.0, loads: 0.0 },
-            questioned: JsSet::new(),
-            path: alloc::vec![0.0; 12000],
-            path_n: 0.0,
-            path_every: 0.5,
-            path_next: 0.0,
-            heard_of: JsMap::new(),
-            heard_no_row: JsSet::new(),
-        }
-    }
-}
-impl Default for Chronicle { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronCountKey {
@@ -314,18 +254,10 @@ pub enum ChronDoorKind {
     LockPicked,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ChronCheckpointWhat {
     Save,
     Load,
-}
-impl ChronCheckpointWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronCheckpointWhat::Save => "save",
-            ChronCheckpointWhat::Load => "load",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -348,17 +280,10 @@ pub enum SummaryLineState {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ChronicleMod {
     /// (src/game/chronicle.ts:90 CHATTER)
-    pub chatter: JsSet<crate::chronicle::ChronKind>,
-}
-impl ChronicleMod {
-    pub fn blank() -> Self {
-        ChronicleMod {
-            chatter: { let mut s = JsSet::new(); for k in [crate::chronicle::ChronKind::Heard, crate::chronicle::ChronKind::Shot, crate::chronicle::ChronKind::Radio, crate::chronicle::ChronKind::Lost, crate::chronicle::ChronKind::Calm, crate::chronicle::ChronKind::Contact, crate::chronicle::ChronKind::NeedBreak] { s.add(k); } s },
-        }
-    }
+    #[is({ let mut s = JsSet::new(); for k in [crate::chronicle::ChronKind::Heard, crate::chronicle::ChronKind::Shot, crate::chronicle::ChronKind::Radio, crate::chronicle::ChronKind::Lost, crate::chronicle::ChronKind::Calm, crate::chronicle::ChronKind::Contact, crate::chronicle::ChronKind::NeedBreak] { s.add(k); } s })] pub chatter: JsSet<crate::chronicle::ChronKind>,
 }
 
 /// (src/game/chronicle.ts:27 ROOMS: a table nothing writes)

@@ -1,6 +1,6 @@
 //! The types of `gunwall`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -65,20 +65,12 @@ pub struct RaisedLine {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GunwallMod {
     /// (src/game/gunwall.ts:56 ST)
     pub st: JsMap<CharId, crate::gunwall::St>,
     /// (src/game/gunwall.ts:72 FIGHT)
     pub fight: Option<crate::gunwall::GunwallModFIGHTValue>,
-}
-impl GunwallMod {
-    pub fn blank() -> Self {
-        GunwallMod {
-            st: JsMap::new(),
-            fight: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

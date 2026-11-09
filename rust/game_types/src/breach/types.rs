@@ -1,25 +1,25 @@
 //! The types of `breach`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct BreachDrill {
-    pub phase: crate::breach::Phase,
-    pub t_stack: f64,
-    pub t_set: f64,
-    pub t_go: f64,
-    pub t_kick: f64,
-    pub t_flung: f64,
-    pub t_toss: f64,
-    pub t_land: f64,
-    pub t_bang: f64,
-    pub t_enter: f64,
-    pub t_corner: f64,
-    pub t_clear: f64,
-    pub t_done: f64,
+    #[is(crate::breach::Phase::Wait)] pub phase: crate::breach::Phase,
+    #[is(f64::NAN)] pub t_stack: f64,
+    #[is(f64::NAN)] pub t_set: f64,
+    #[is(f64::NAN)] pub t_go: f64,
+    #[is(f64::NAN)] pub t_kick: f64,
+    #[is(f64::NAN)] pub t_flung: f64,
+    #[is(f64::NAN)] pub t_toss: f64,
+    #[is(f64::NAN)] pub t_land: f64,
+    #[is(f64::NAN)] pub t_bang: f64,
+    #[is(f64::NAN)] pub t_enter: f64,
+    #[is(f64::NAN)] pub t_corner: f64,
+    #[is(f64::NAN)] pub t_clear: f64,
+    #[is(f64::NAN)] pub t_done: f64,
     pub beats: Vec<crate::breach::BreachDrillBeatsItem>,
-    pub rounds: Vec<f64>,
+    #[is(alloc::vec![0.0, 0.0])] pub rounds: Vec<f64>,
     pub t: f64,
     pub done: JsSet<String>,
     pub aim_a: V3,
@@ -29,55 +29,15 @@ pub struct BreachDrill {
     pub can: Option<ItemId>,
     pub chopped: bool,
     pub down_logged: Vec<bool>,
-    pub flows: [crate::breach::OpFlow; 2],
+    #[is(core::array::from_fn(|_| crate::breach::OpFlow::default()))] pub flows: [crate::breach::OpFlow; 2],
     pub live: crate::breach::BreachLive,
-    pub t_run: f64,
+    #[is(f64::NAN)] pub t_run: f64,
     pub plan: crate::scene_level::BreachPlan,
-    pub a: GuardId,
-    pub b: GuardId,
+    #[is(GuardId(0))] pub a: GuardId,
+    #[is(GuardId(0))] pub b: GuardId,
     pub hostiles: Vec<GuardId>,
-    pub t_all_done: f64,
+    #[is(f64::NAN)] pub t_all_done: f64,
 }
-impl BreachDrill {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        BreachDrill {
-            phase: crate::breach::Phase::Wait,
-            t_stack: f64::NAN,
-            t_set: f64::NAN,
-            t_go: f64::NAN,
-            t_kick: f64::NAN,
-            t_flung: f64::NAN,
-            t_toss: f64::NAN,
-            t_land: f64::NAN,
-            t_bang: f64::NAN,
-            t_enter: f64::NAN,
-            t_corner: f64::NAN,
-            t_clear: f64::NAN,
-            t_done: f64::NAN,
-            beats: Vec::new(),
-            rounds: alloc::vec![0.0, 0.0],
-            t: 0.0,
-            done: JsSet::new(),
-            aim_a: [0.0; 3],
-            aim_b: [0.0; 3],
-            wp_a: Vec::new(),
-            wp_b: Vec::new(),
-            can: None,
-            chopped: false,
-            down_logged: Vec::new(),
-            flows: core::array::from_fn(|_| crate::breach::OpFlow::default()),
-            live: crate::breach::BreachLive::default(),
-            t_run: f64::NAN,
-            plan: crate::scene_level::BreachPlan::default(),
-            a: GuardId(0),
-            b: GuardId(0),
-            hostiles: Vec::new(),
-            t_all_done: f64::NAN,
-        }
-    }
-}
-impl Default for BreachDrill { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {

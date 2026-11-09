@@ -1,26 +1,15 @@
 //! The types of `hours`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum HourId {
     #[default] Overcast,
     Night,
     Dawn,
     Midday,
     Dusk,
-}
-impl HourId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HourId::Overcast => "overcast",
-            HourId::Night => "night",
-            HourId::Dawn => "dawn",
-            HourId::Midday => "midday",
-            HourId::Dusk => "dusk",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -122,21 +111,13 @@ pub struct NIGHT {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HoursMod {
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
     /// (made again from the world: in no bytes)
     #[bytes(skip)]
     pub reach: crate::hours::SkyReach,
-}
-impl HoursMod {
-    pub fn blank() -> Self {
-        HoursMod {
-            states: None,
-            reach: crate::hours::SkyReach::blank(),
-        }
-    }
 }
 
 /// (src/game/hours.ts:45 HOUR_IDS: a table nothing writes)

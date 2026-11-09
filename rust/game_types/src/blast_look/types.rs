@@ -1,6 +1,6 @@
 //! The types of `blast_look`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -283,17 +283,10 @@ pub struct BurstOfK {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct BlastLookMod {
     /// (src/game/blastLook.ts:150 STATE)
     pub state: JsMap<PlayerId, crate::blast_look::State>,
-}
-impl BlastLookMod {
-    pub fn blank() -> Self {
-        BlastLookMod {
-            state: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/blastLook.ts:57 BLAST: a table nothing writes)

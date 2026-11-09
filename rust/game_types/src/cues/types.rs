@@ -1,9 +1,9 @@
 //! The types of `cues`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum CueKind {
     #[default] Stay,
     Calm,
@@ -23,30 +23,6 @@ pub enum CueKind {
     SquadStays,
     SquadQuiet,
     Surprised,
-}
-impl CueKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CueKind::Stay => "stay",
-            CueKind::Calm => "calm",
-            CueKind::Cover => "cover",
-            CueKind::Flinch => "flinch",
-            CueKind::Still => "still",
-            CueKind::Help => "help",
-            CueKind::StayOurs => "stayOurs",
-            CueKind::HuntOver => "huntOver",
-            CueKind::FellBack => "fellBack",
-            CueKind::Planted => "planted",
-            CueKind::PinnedIn => "pinnedIn",
-            CueKind::SquadHears => "squadHears",
-            CueKind::SquadCopies => "squadCopies",
-            CueKind::SquadWaits => "squadWaits",
-            CueKind::SquadCopiesWaits => "squadCopiesWaits",
-            CueKind::SquadStays => "squadStays",
-            CueKind::SquadQuiet => "squadQuiet",
-            CueKind::Surprised => "surprised",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -86,51 +62,26 @@ pub enum ManMoved {
     Fallback,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Cues {
     pub rows: Vec<crate::cues::CueRow>,
-    pub stats: crate::cues::CuesStats,
-    pub kinds: crate::cues::CuesKinds,
+    #[is(crate::cues::CuesStats { heard: 0.0, heard_drawn: 0.0, shouts: 0.0, shouts_drawn: 0.0, cues: 0.0, cue_net: 0.0, cue_drawn: 0.0, dup: 0.0, gap: 0.0, full: 0.0, bumped: 0.0, bumped_young: 0.0, filed: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], drawn: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] })] pub stats: crate::cues::CuesStats,
+    #[is(crate::cues::CuesKinds { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kinds: crate::cues::CuesKinds,
     pub log: Vec<crate::cues::CuesLogItem>,
     pub bubbles: JsMap<GuardId, crate::cues::Bubble>,
     pub men: JsMap<GuardId, crate::cues::Man>,
     pub last_note: Option<crate::roomfight::FightNote>,
-    pub last_t: f64,
+    #[is(-1.0)] pub last_t: f64,
     pub said: JsMap<String, f64>,
     pub class_t: Vec<Option<f64>>,
     pub squad_t: Vec<Option<f64>>,
-    pub kind_t: crate::cues::CuesKindT,
+    #[is(crate::cues::CuesKindT { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kind_t: crate::cues::CuesKindT,
     pub n: f64,
     pub squelch_due: bool,
     pub heard_row: Option<crate::cues::CuesHeardRow>,
     pub heard_said: JsMap<String, f64>,
     pub shout_t: Option<f64>,
 }
-impl Cues {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Cues {
-            rows: Vec::new(),
-            stats: crate::cues::CuesStats { heard: 0.0, heard_drawn: 0.0, shouts: 0.0, shouts_drawn: 0.0, cues: 0.0, cue_net: 0.0, cue_drawn: 0.0, dup: 0.0, gap: 0.0, full: 0.0, bumped: 0.0, bumped_young: 0.0, filed: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], drawn: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
-            kinds: crate::cues::CuesKinds { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None },
-            log: Vec::new(),
-            bubbles: JsMap::new(),
-            men: JsMap::new(),
-            last_note: None,
-            last_t: -1.0,
-            said: JsMap::new(),
-            class_t: Vec::new(),
-            squad_t: Vec::new(),
-            kind_t: crate::cues::CuesKindT { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None },
-            n: 0.0,
-            squelch_due: false,
-            heard_row: None,
-            heard_said: JsMap::new(),
-            shout_t: None,
-        }
-    }
-}
-impl Default for Cues { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesStats {

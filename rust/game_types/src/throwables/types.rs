@@ -1,6 +1,6 @@
 //! The types of `throwables`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what an item does when it bounces (Item.onBounce); called from throwables_say with speed, point, item and face normal
@@ -17,7 +17,7 @@ pub enum ItemBounce {
     Loaded { kind: crate::throwables::ItemKind },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ItemKind {
     #[default] Pistol,
     Rifle,
@@ -29,21 +29,6 @@ pub enum ItemKind {
     Torch,
     Shell,
 }
-impl ItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ItemKind::Pistol => "pistol",
-            ItemKind::Rifle => "rifle",
-            ItemKind::Ring => "ring",
-            ItemKind::Smoke => "smoke",
-            ItemKind::Flash => "flash",
-            ItemKind::Frag => "frag",
-            ItemKind::Mag => "mag",
-            ItemKind::Torch => "torch",
-            ItemKind::Shell => "shell",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ThrowSolution {
@@ -53,27 +38,15 @@ pub struct ThrowSolution {
     pub land: V3,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Throwables {
     pub items: Vec<ItemId>,
     pub rows: Vec<ItemId>,
     pub store: crate::sim_itemshome::ItemStore,
-    pub serial: f64,
+    #[is(1.0)] pub serial: f64,
 }
-impl Throwables {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Throwables {
-            items: Vec::new(),
-            rows: Vec::new(),
-            store: crate::sim_itemshome::ItemStore::blank(),
-            serial: 1.0,
-        }
-    }
-}
-impl Default for Throwables { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Item {
     pub r: f64,
     pub kept: Option<Vec<f64>>,
@@ -82,20 +55,6 @@ pub struct Item {
     pub clatters: Option<f64>,
     pub hand: Option<bool>,
 }
-impl Item {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Item {
-            r: 0.0,
-            kept: None,
-            side: None,
-            on_bounce: None,
-            clatters: None,
-            hand: None,
-        }
-    }
-}
-impl Default for Item { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEM {

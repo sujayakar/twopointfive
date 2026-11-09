@@ -1,6 +1,6 @@
 //! The types of `flinch`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -10,17 +10,10 @@ pub struct FlinchModStateOfValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FlinchMod {
     /// (src/game/flinch.ts:51 stateOf)
     pub state_of: JsMap<GuardId, crate::flinch::FlinchModStateOfValue>,
-}
-impl FlinchMod {
-    pub fn blank() -> Self {
-        FlinchMod {
-            state_of: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

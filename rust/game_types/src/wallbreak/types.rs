@@ -1,6 +1,6 @@
 //! The types of `wallbreak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
@@ -9,38 +9,19 @@ pub enum ChangeListener {
     WallReact,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BKind {
     #[default] Wall,
     Cover,
 }
-impl BKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BKind::Wall => "wall",
-            BKind::Cover => "cover",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeKind {
     #[default] Door,
     Cover,
     Hole,
     Port,
     Reset,
-}
-impl LevelChangeKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeKind::Door => "door",
-            LevelChangeKind::Cover => "cover",
-            LevelChangeKind::Hole => "hole",
-            LevelChangeKind::Port => "port",
-            LevelChangeKind::Reset => "reset",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -57,24 +38,13 @@ pub struct LevelChange {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeCause {
     #[default] Blast,
     Fire,
     Load,
     Reset,
     Collapse,
-}
-impl LevelChangeCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeCause::Blast => "blast",
-            LevelChangeCause::Fire => "fire",
-            LevelChangeCause::Load => "load",
-            LevelChangeCause::Reset => "reset",
-            LevelChangeCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -151,7 +121,7 @@ pub struct AABB {
     pub z1: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallBreak {
     pub authored: f64,
     pub serial: f64,
@@ -160,7 +130,7 @@ pub struct WallBreak {
     pub list: Vec<WallbreakBreakableId>,
     pub owner: JsMap<crate::Num, WallbreakBreakableId>,
     pub hidden: JsMap<crate::Num, f64>,
-    pub counter: f64,
+    #[is(1.0)] pub counter: f64,
     pub dirty: bool,
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
@@ -171,31 +141,6 @@ pub struct WallBreak {
     pub hung_now: Option<crate::wallbreak::WallBreakHungNow>,
     pub hung_gone: JsMap<crate::Num, f64>,
 }
-impl WallBreak {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WallBreak {
-            authored: 0.0,
-            serial: 0.0,
-            changes: Vec::new(),
-            listeners: Vec::new(),
-            list: Vec::new(),
-            owner: JsMap::new(),
-            hidden: JsMap::new(),
-            counter: 1.0,
-            dirty: false,
-            fixture_boxes: JsSet::new(),
-            ghosts: Vec::new(),
-            wear: crate::wallwear::WallWear::blank(),
-            skins: crate::wallskin::WallSkin::blank(),
-            room: crate::levelfit::BreakRoom::default(),
-            shell_gaps: JsSet::new(),
-            hung_now: None,
-            hung_gone: JsMap::new(),
-        }
-    }
-}
-impl Default for WallBreak { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallBreakHungNow {
@@ -256,17 +201,10 @@ pub struct WallBreakPlanOfItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallbreakMod {
     /// (src/game/wallbreak.ts:160 WALL_LOG)
     pub wall_log: Vec<String>,
-}
-impl WallbreakMod {
-    pub fn blank() -> Self {
-        WallbreakMod {
-            wall_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

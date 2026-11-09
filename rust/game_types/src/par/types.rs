@@ -1,25 +1,15 @@
 //! The types of `par`: a room clear run against a clock (rust/game_rules/src/par).
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (on the wire: its word in small letters)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Medal {
     #[default] None,
     Gold,
     Silver,
     Bronze,
-}
-impl Medal {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Medal::None => "none",
-            Medal::Gold => "gold",
-            Medal::Silver => "silver",
-            Medal::Bronze => "bronze",
-        }
-    }
 }
 
 /// a finished run against its par
@@ -52,7 +42,7 @@ pub struct ParMark {
 
 /// THE PAR CLOCK'S RECORD: the game's own, written by the tick (`par::par_tick`), and all of it on the wire: the page draws `live`, `t0` and `res`,
 /// and a game stood again from a page's copy takes the clock up where it was.
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Par {
     /// the mission this clock is for, by its serial (a restart makes a new mission: the clock starts over)
     pub run: Option<u32>,
@@ -61,26 +51,12 @@ pub struct Par {
     /// the rounds and throws so far as the clock was armed
     pub fired0: f64,
     /// when the clock started on the game's clock (NaN: not yet)
-    pub t0: f64,
+    #[is(f64::NAN)] pub t0: f64,
     /// the finished run (None: not taken yet, wiped, or another mission's)
     pub res: Option<crate::par::ParResult>,
     /// a par is live now: the level has the block, its room clear is up, no show runs (written every tick)
     pub live: bool,
 }
-impl Par {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Par {
-            run: None,
-            marks: Vec::new(),
-            fired0: 0.0,
-            t0: f64::NAN,
-            res: None,
-            live: false,
-        }
-    }
-}
-impl Default for Par { fn default() -> Self { Self::blank() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

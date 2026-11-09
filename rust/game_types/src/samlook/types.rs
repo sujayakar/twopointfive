@@ -1,6 +1,6 @@
 //! The types of `samlook`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -16,15 +16,8 @@ pub struct SlipNow {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SamlookMod {
     /// (src/game/samlook.ts:33 STATE)
     pub state: JsMap<PlayerId, crate::samlook::St>,
-}
-impl SamlookMod {
-    pub fn blank() -> Self {
-        SamlookMod {
-            state: JsMap::new(),
-        }
-    }
 }

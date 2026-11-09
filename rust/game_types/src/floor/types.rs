@@ -1,9 +1,9 @@
 //! The types of `floor`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum FloorMat {
     #[default] Carpet,
     Lino,
@@ -11,18 +11,6 @@ pub enum FloorMat {
     Tile,
     Asphalt,
     Grass,
-}
-impl FloorMat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FloorMat::Carpet => "carpet",
-            FloorMat::Lino => "lino",
-            FloorMat::Stone => "stone",
-            FloorMat::Tile => "tile",
-            FloorMat::Asphalt => "asphalt",
-            FloorMat::Grass => "grass",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

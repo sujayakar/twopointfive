@@ -1,6 +1,6 @@
 //! The types of `sparks`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -27,23 +27,12 @@ pub struct Spark {
     pub gen_: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Sparks {
     pub pool: Vec<crate::sparks::Spark>,
     pub live: f64,
     pub params: crate::sparks::SparkParams,
 }
-impl Sparks {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Sparks {
-            pool: Vec::new(),
-            live: 0.0,
-            params: crate::sparks::SparkParams::default(),
-        }
-    }
-}
-impl Default for Sparks { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SparksEmitBurstO {

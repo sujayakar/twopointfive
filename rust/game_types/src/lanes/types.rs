@@ -1,6 +1,6 @@
 //! The types of `lanes`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's price list, nav.findPath's penalty: a cell of the mask costs `dear`, any other 1, or at least the pursuit tactics' price where there is one; a man the rule leaves alone pays the tactics' price alone (lanes.ts priceOf, lanePenalty)
@@ -222,17 +222,10 @@ pub enum FragPlace {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LanesMod {
     /// (src/game/lanes.ts:213 states)
     pub states: Option<crate::lanes::State>,
-}
-impl LanesMod {
-    pub fn blank() -> Self {
-        LanesMod {
-            states: None,
-        }
-    }
 }
 
 /// (src/game/lanes.ts:589 SPOT_RING)

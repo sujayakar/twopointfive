@@ -1,6 +1,6 @@
 //! The types of `player`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -303,26 +303,16 @@ pub struct CursorPointHit {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PlayerMod {
     /// (src/game/player.ts:1135 wsPend)
     pub ws_pend: JsMap<PlayerId, crate::player::PlayerModWsPendValue>,
     /// (src/game/player.ts:1165 wsPress)
     pub ws_press: JsMap<PlayerId, crate::player::PlayerModWsPressValue>,
     /// (src/game/player.ts:1210 PRESS_THINGS)
-    pub press_things: JsSet<String>,
+    #[is({ let mut s = JsSet::new(); for k in ["door", "switch", "breaker", "objective", "cam", "body"] { s.add(String::from(k)); } s })] pub press_things: JsSet<String>,
     /// (src/game/player.ts:2301 lightAt)
     pub light_at: JsMap<PlayerId, [f64; 2]>,
-}
-impl PlayerMod {
-    pub fn blank() -> Self {
-        PlayerMod {
-            ws_pend: JsMap::new(),
-            ws_press: JsMap::new(),
-            press_things: { let mut s = JsSet::new(); for k in ["door", "switch", "breaker", "objective", "cam", "body"] { s.add(String::from(k)); } s },
-            light_at: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/player.ts:92 BODY_R)

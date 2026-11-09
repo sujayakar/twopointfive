@@ -1,6 +1,6 @@
 //! The types of `doorpath`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -40,23 +40,12 @@ pub struct WalkNearItem {
     pub angle: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorPath {
     pub walks: JsMap<GuardId, crate::doorpath::Walk>,
     pub last_of: JsMap<DoorOpId, crate::doorpath::DoorPathLastOfValue>,
-    pub stats: crate::doorpath::DoorPathStats,
+    #[is(crate::doorpath::DoorPathStats { sent: 0.0, walked: 0.0, round: 0.0, no_round: 0.0, no_lane: 0.0, late: 0.0, held_s: 0.0, capped: 0.0, yields: 0.0, gave_up: 0.0, taken: 0.0, relaid: 0.0, turned: 0.0, moved: 0.0, wait_s: 0.0, nav: 0.0, stepped: 0.0 })] pub stats: crate::doorpath::DoorPathStats,
 }
-impl DoorPath {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        DoorPath {
-            walks: JsMap::new(),
-            last_of: JsMap::new(),
-            stats: crate::doorpath::DoorPathStats { sent: 0.0, walked: 0.0, round: 0.0, no_round: 0.0, no_lane: 0.0, late: 0.0, held_s: 0.0, capped: 0.0, yields: 0.0, gave_up: 0.0, taken: 0.0, relaid: 0.0, turned: 0.0, moved: 0.0, wait_s: 0.0, nav: 0.0, stepped: 0.0 },
-        }
-    }
-}
-impl Default for DoorPath { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorPathLastOfValue {

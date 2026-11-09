@@ -1,20 +1,12 @@
 //! The numbers of wallcharge.
-use crate::bytes::ToBytes;
+use crate::{bytes::ToBytes, Words};
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WallchargeKMenu {
     #[default] Page,
     Direct,
-}
-impl WallchargeKMenu {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallchargeKMenu::Page => "page",
-            WallchargeKMenu::Direct => "direct",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
