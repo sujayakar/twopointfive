@@ -23,9 +23,9 @@ export const chair: ObjectKind = { name: 'chair', title: 'Chair', make: (): Made
       p.add({ at: [0, 0.83, lean(0.83) - 0.010], half: [0.185, 0.020, 0.017], mat: M.print!, tint: WOOD }); p.add({ at: [0, 0.525, lean(0.525) - 0.010], half: [0.185, 0.012, 0.011], mat: M.print!, tint: WOOD }); for (const s of [-1, 1]) p.bar([s * 0.203, 0.20, 0.186], [s * 0.196, 0.20, -0.208], 0.010, 0.0099, M.print!, WOOD); p.bar([-0.20, 0.20, -0.005], [0.20, 0.20, -0.005], 0.010, 0.0099, M.print!, WOOD);
     } },
     { shape: 'pieces', error: 0.030, less: 'stretchers; five slats are two as wide, so as much light comes through', put(p) {
-      for (const s of [-1, 1]) for (const z of [0.188, -0.212]) p.add({ at: [s * 0.203, SEAT / 2 - 0.004, z], half: [0.0155, SEAT / 2 - 0.004, 0.0155], mat: M.print!, tint: WOOD });
-      p.box([0, SEAT + 0.004, 0], [W + 0.006, 0.018, 0.208], M.print!, WOOD); p.box([0, SEAT + 0.048, 0.004], [W - 0.014, 0.026, 0.184], M.canvas!, CLOTH); for (const s of [-1, 1]) p.add({ at: [s * 0.182, 0.65, lean(0.65)], half: [0.016, 0.21, 0.016], mat: M.print!, tint: WOOD, rot: rotX(-0.158) });
-      p.add({ at: [0, 0.83, lean(0.83) - 0.008], half: [0.168, 0.021, 0.018], mat: M.print!, tint: WOOD }); for (const s of [-1, 1]) p.add({ at: [s * 0.085, 0.665, lean(0.665) - 0.004], half: [0.041, 0.150, 0.006], mat: M.print!, tint: WOOD, rot: rotX(-0.158) });
+      for (const s of [-1, 1]) for (const z of [0.188, -0.212]) p.add({ at: [s * 0.203, SEAT / 2 - 0.004, z], half: [0.0145, SEAT / 2 - 0.004, 0.0145], mat: M.print!, tint: WOOD });
+      p.box([0, SEAT + 0.004, 0], [W + 0.006, 0.018, 0.208], M.print!, WOOD); p.box([0, SEAT + 0.048, 0.004], [W - 0.014, 0.026, 0.184], M.canvas!, CLOTH); for (const s of [-1, 1]) p.add({ at: [s * 0.182, 0.65, lean(0.65)], half: [0.0145, 0.21, 0.0145], mat: M.print!, tint: WOOD, rot: rotX(-0.158) });
+      p.add({ at: [0, 0.83, lean(0.83) - 0.008], half: [0.168, 0.0205, 0.016], mat: M.print!, tint: WOOD }); for (const s of [-1, 1]) p.add({ at: [s * 0.085, 0.665, lean(0.665) - 0.004], half: [0.0385, 0.150, 0.0055], mat: M.print!, tint: WOOD, rot: rotX(-0.158) });
     } },
   ],
 }) };
