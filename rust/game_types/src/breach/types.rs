@@ -17,8 +17,6 @@ pub struct BreachDrill {
     pub t_enter: f64,
     pub t_corner: f64,
     pub t_clear: f64,
-    pub t_next: f64,
-    pub t_stacked2: f64,
     pub t_done: f64,
     pub beats: Vec<crate::breach::BreachDrillBeatsItem>,
     pub rounds: Vec<f64>,
@@ -32,8 +30,7 @@ pub struct BreachDrill {
     pub chopped: bool,
     pub down_logged: Vec<bool>,
     pub flows: [crate::breach::OpFlow; 2],
-    pub guarantee_downs: bool,
-    pub live: Option<crate::breach::BreachLive>,
+    pub live: crate::breach::BreachLive,
     pub t_run: f64,
     pub plan: crate::scene_level::BreachPlan,
     pub a: GuardId,
@@ -57,8 +54,6 @@ impl BreachDrill {
             t_enter: f64::NAN,
             t_corner: f64::NAN,
             t_clear: f64::NAN,
-            t_next: f64::NAN,
-            t_stacked2: f64::NAN,
             t_done: f64::NAN,
             beats: Vec::new(),
             rounds: alloc::vec![0.0, 0.0],
@@ -72,8 +67,7 @@ impl BreachDrill {
             chopped: false,
             down_logged: Vec::new(),
             flows: core::array::from_fn(|_| crate::breach::OpFlow::default()),
-            guarantee_downs: false,
-            live: None,
+            live: crate::breach::BreachLive::default(),
             t_run: f64::NAN,
             plan: crate::scene_level::BreachPlan::default(),
             a: GuardId(0),
@@ -96,7 +90,6 @@ pub enum Phase {
     Done,
     Wait,
     Enter,
-    Restack,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -132,23 +125,11 @@ pub enum FlowSt {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreachLive {
     pub orders: f64,
-    pub lights: bool,
-    pub loud_boot: bool,
     pub stun: bool,
-    pub set_hold: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BreachDrillNewOpts {
-    pub guarantee_downs: Option<bool>,
-    pub live: Option<crate::breach::BreachLive>,
 }
 
 /// (src/game/breach.ts:26 RUN)
 pub const RUN: f64 = 3.4;
-
-/// (src/game/breach.ts:26 HOLD_OPEN)
-pub const HOLD_OPEN: f64 = 2.6;
 
 /// (src/game/breach.ts:28 SET_HOLD)
 pub const SET_HOLD: f64 = 2.4;
@@ -182,15 +163,6 @@ pub const SHIFT: f64 = 0.3;
 
 /// (src/game/breach.ts:41 FIRE_INSIDE_M)
 pub const FIRE_INSIDE_M: f64 = 0.3;
-
-/// (src/game/breach.ts:43 NEXT_AFTER_CLEAR)
-pub const NEXT_AFTER_CLEAR: f64 = 2.2;
-
-/// (src/game/breach.ts:43 RESTACK_HOLD)
-pub const RESTACK_HOLD: f64 = 1.5;
-
-/// (src/game/breach.ts:43 RESTACK_CAP)
-pub const RESTACK_CAP: f64 = 7.5;
 
 /// (src/game/breach.ts:57 LIVE_LINES: a table nothing writes)
 pub fn live_lines() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("clear1"), String::from("right side — clear.")); t.set(String::from("clear2"), String::from("left clear. i have the door.")); t.set(String::from("roomClear1"), String::from("room clear.")); t } }
