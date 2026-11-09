@@ -167,7 +167,6 @@ pub fn needs_live(g: &crate::game::Game) -> bool {
         && g.ai_enabled
         && !g.aside
         && g.puppet.is_none()
-        && !crate::lighting::is_daylight(g)
         && g.qrf.state == crate::qrf::QrfState::Idle
         && !crate::seats::all_down(g)
 }
@@ -206,9 +205,6 @@ pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     }
     if g.aside || g.puppet.is_some() {
         return Some(key("nobody plays"));
-    }
-    if crate::lighting::is_daylight(g) {
-        return Some(key("daylight"));
     }
     if g.qrf.state != crate::qrf::QrfState::Idle {
         return Some(key("the response team"));

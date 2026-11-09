@@ -423,7 +423,7 @@ pub fn weather_set_enabled_2(g: &mut crate::game::Game, on: bool) {
 /// Fire a stroke now. The Flash returned is a copy; the live one is `g.weather.flash`. (weather.ts Weather.strike)
 pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::WeatherStrikeOpts>) -> Option<crate::weather::Flash> {
     let opts = opts.unwrap_or_default();
-    if !g.weather.on || g.weather.suspended { return None; }
+    if !g.weather.on { return None; }
     if g.weather.flash.is_some() { weather_end_flash(g); }
     // the dice and the thunder are the module's. What was given is a number, what was not is thrown for
     let mut said = [0.0; 8];
@@ -460,19 +460,6 @@ pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
     // as a thing the tick reads (wet.ts rainNow reads `.rain` to say who is rained on), so the tick writes it as the TypeScript does.
     if g.engine.weather.is_none() { g.engine.weather = Some(crate::render_frame::no_weather()); }
     if !g.weather.on { zero(g.engine.weather.as_mut().unwrap()); weather_set_rain_now(g, 0.0); return; }
-    // day: the storm holds still and shows nothing; the night gets it back as it was
-    let day = crate::lighting::is_daylight(g) && g.weather.kind_now.is_none();
-    if day != g.weather.suspended {
-        g.weather.suspended = day;
-        if day {
-            if g.weather.flash.is_some() { weather_end_flash(g); }
-            weather_set_thunders_are(g, &[]);
-            weather_set_wet_2(g, false);
-            crate::audio_iface::game_audio_like_rain(g, 0.0);
-        }
-        weather_set_next_flash_at(g, -1.0);
-    }
-    if g.weather.suspended { zero(g.engine.weather.as_mut().unwrap()); weather_set_rain_now(g, 0.0); return; }
     let raining = weather_rain_rate(g) > 0.001;
     let soaked = ::sim::weather::lot_step(wx(g), dt);
     weather_set_wet_2(g, soaked);

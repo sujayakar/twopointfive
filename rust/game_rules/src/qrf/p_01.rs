@@ -240,7 +240,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !crate::lighting::is_daylight(g) && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
+    g.ai_enabled && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
 }
 
 /// This level has a response team.   (qrf.ts hasResponse)

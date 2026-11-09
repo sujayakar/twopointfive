@@ -148,6 +148,5 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 ## Not seen
 
 - **The other ways in** have stood only natively: nobody has played one on a GPU.
-- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. `set_daylight` is
-  only ever called to turn daylight off, so `level.daylight` is never seen.
+- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

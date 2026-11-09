@@ -63,7 +63,7 @@ export interface LightData {
   pos: Vec3; dir: Vec3; color: Vec3;
   /** point/spot: candela-ish; dir: irradiance on a surface square to it */
   intensity: number; range: number; innerDeg: number; outerDeg: number;
-  /** light-target group for the Lights panel / OCP / daylight ('exterior', 'manager', …) */
+  /** light-target group for the Lights panel / OCP ('exterior', 'manager', …) */
   group: string;
   enabled: boolean;
   /** haze scattering multiplier for beams */

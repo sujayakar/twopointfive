@@ -188,9 +188,6 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
     let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
     level.devices = Some(f.devices); level.vents = f.vents; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
-    level.daylight = f.daylight.map(|d| DaylightDef {
-        sun: light_of(d.sun), sky: DaylightDefSky { zenith: d.sky.zenith, horizon: d.sky.horizon }, groups_on: d.groups_on, groups_off: d.groups_off, lights_off: d.lights_off, haze: d.haze, exposure: d.exposure,
-    });
     level.breaker = LevelBreaker { pos: f.breaker.pos, boxes: vec![bx(&f.breaker.panel), bx(&f.breaker.led)], fumble: f.breaker.fumble };
     level.beacons = f.beacons.iter().map(|b| LevelBeaconsItem { pos: b.pos, box_: bx(&b.box_) }).collect();
     level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(f.plans.room_clear.into_iter().map(|p| p.plan).collect());

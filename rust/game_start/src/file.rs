@@ -137,8 +137,6 @@ pub struct Beacon { pub id: String, pub pos: V3, pub box_: String }
 json_struct!(Beacon { id: "id", pos: "pos", box_: "box" });
 pub struct Sky { pub zenith: V3, pub horizon: V3 }
 json_struct!(Sky { zenith: "zenith", horizon: "horizon" });
-pub struct Daylight { pub sun: LightData, pub sky: Sky, pub groups_on: Vec<String>, pub groups_off: Vec<String>, pub lights_off: Vec<String>, pub haze: f64, pub exposure: f64 }
-json_struct!(Daylight { sun: "sun", sky: "sky", groups_on: "groupsOn", groups_off: "groupsOff", lights_off: "lightsOff", haze: "haze", exposure: "exposure" });
 
 /// a drill's plan and the file's id of it
 pub struct Plan<T> { pub id: String, pub plan: T }
@@ -170,12 +168,12 @@ pub struct LevelFile {
     pub version: f64, pub name: String, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
     pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
     pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>,
-    pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub daylight: Option<Daylight>, pub plans: Plans, pub scenarios: Option<Scenarios>,
+    pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub plans: Plans, pub scenarios: Option<Scenarios>,
 }
 json_struct!(LevelFile {
     version: "version", name: "name", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors",
     routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", connectors: "connectors", mission: "mission",
-    breaker: "breaker", beacons: "beacons", sky: "sky", daylight: "daylight", plans: "plans", scenarios: "scenarios",
+    breaker: "breaker", beacons: "beacons", sky: "sky", plans: "plans", scenarios: "scenarios",
 });
 
 /// THE FILE READ: the level it is, where nothing about the reading is wrong, and every fault of the reading (a value that is not what its place wants, a member the game has no reading of).

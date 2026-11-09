@@ -76,13 +76,9 @@ pub fn hour_of(g: &crate::game::Game) -> crate::hours::HourId {
     match &g.m.hours.states { Some(st) => st.def.id, None => HourId::Night }
 }
 
-/// The exposure the game's scene is taken at now: the show's day's while it is in, else the hour's own, else the level's night's. Never 0: a sum divides by it. (hours.ts exposureOf)
+/// The exposure the game's scene is taken at now: the hour's own, else the level's night's. Never 0: a sum divides by it. (hours.ts exposureOf)
 pub fn exposure_of(g: &crate::game::Game) -> f64 {
-    let own = if crate::lighting::is_daylight(g) {
-        g.level.daylight.as_ref().map(|d| d.exposure)
-    } else {
-        g.m.hours.states.as_ref().map(|st| st.def.exposure)
-    };
+    let own = g.m.hours.states.as_ref().map(|st| st.def.exposure);
     let e = match own { Some(e) => e, None => g.k.env.exposure };
     if e > 0.0 { e } else { 1.0 }
 }
@@ -244,7 +240,6 @@ pub fn to_sun_of(d: &crate::hours::HourDef) -> V3 {
 /// Lay hour `id` over the game, or take it off (Night). Idempotent. True when something changed. (hours.ts applyHour)
 pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool {
     if hour_of(g) == id_2 { return false; }
-    if crate::lighting::is_daylight(g) { return false; }
     let cur = g.m.hours.states.clone();   // putIn reads the old row after takeOut has deleted it
     if cur.is_some() { take_out(g); }
     let table = hours();
@@ -299,7 +294,7 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
 /// THE NIGHT'S HAZE, what the picture's settings hold on a level's own night (`hazeDensity` in src/settings.ts: the test below reads the file)
 pub const NIGHT_HAZE: f64 = 0.035;
 
-/// The picture's settings as the level's own night has them, once the hour or the show's day taken off was at this exposure. (hours.ts nightPicture)
+/// The picture's settings as the level's own night has them, once the hour taken off was at this exposure. (hours.ts nightPicture)
 pub fn night_picture(g: &mut crate::game::Game, was_exposure: f64) {
     g.engine.settings.sky_zenith = v3::copy(g.level.sky.zenith);
     g.engine.settings.sky_horizon = v3::copy(g.level.sky.horizon);
@@ -420,11 +415,7 @@ fn sky_in_force(g: &Game) -> Sky {
         return Sky { sun: Some(st.sun), to_sun: st.to_sun, dome: None };
     }
     let moon = sky_lamp_of(g);
-    let day = if crate::lighting::is_daylight(g) { g.level.daylight.as_ref().map(|d| d.sky) } else { None };
-    let dome = match day {
-        Some(s) => SkyStateDome { zenith: s.zenith, horizon: s.horizon },
-        None => SkyStateDome { zenith: g.level.sky.zenith, horizon: g.level.sky.horizon },
-    };
+    let dome = SkyStateDome { zenith: g.level.sky.zenith, horizon: g.level.sky.horizon };
     let to_sun = match moon { Some(l) => { let d = g.tab.light[l].dir; [-d[0], -d[1], -d[2]] } None => [0.0, 1.0, 0.0] };
     Sky { sun: moon, to_sun, dome: Some(dome) }
 }

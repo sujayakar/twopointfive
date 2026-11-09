@@ -308,7 +308,6 @@ pub struct Level {
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
     pub sky: crate::scene_level::LevelSky,
-    pub daylight: Option<crate::scene_level::DaylightDef>,
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
@@ -464,23 +463,6 @@ pub struct LevelBeaconsItem {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LevelSky {
-    pub zenith: V3,
-    pub horizon: V3,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DaylightDef {
-    pub sun: crate::scene_level::LightDef,
-    pub sky: crate::scene_level::DaylightDefSky,
-    pub groups_on: Vec<String>,
-    pub groups_off: Vec<String>,
-    pub lights_off: Vec<String>,
-    pub haze: f64,
-    pub exposure: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct DaylightDefSky {
     pub zenith: V3,
     pub horizon: V3,
 }

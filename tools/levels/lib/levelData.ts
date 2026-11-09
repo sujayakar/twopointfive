@@ -89,7 +89,7 @@ export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; 
 /** The level-design devices (rust/game_rules/src/devices runs them; docs/level-format.md 'Devices'). Every one is drawn by the game itself from its record (a camera's body,
  *  lens and LED; a keypad's plate and LED; a laser's emitter, receiver and beam) — none of it is in `boxes` — and every one but the keypad is a light TARGET
  *  (rust/game_rules/src/game LightTarget kind 'device'): the pistol's OCP knocks it out for the OCP's spell, a round kills it for the encounter, `mains` (absent = true) puts
- *  it on the breaker so a blackout takes it down and the restrike brings it back; `group` (absent = 'security') is the Lights-panel / daylight group.
+ *  it on the breaker so a blackout takes it down and the restrike brings it back; `group` (absent = 'security') is the Lights-panel group.
  *   camera  at `pos` (the lens), looking along `yaw` (Character convention: forward = [sin yaw, 0, cos yaw]) tilted `pitch` (radians, negative = down; absent
  *           −0.35), panning between `sweep[0]`‥`sweep[1]` (absolute yaws) over `sweepPeriod` seconds there and back (absent 9; no sweep = fixed); `fovDeg` = the full cone
  *           (absent 70), `range` metres (absent 14). It sees Sam through the guards' own eye test and light meter (rust/game_rules/src/devices).
@@ -117,8 +117,6 @@ export type ObjectiveData =
 export interface MissionData { playerSpawn: Vec3; objectives: ObjectiveData[]; }
 
 export interface SkyData { zenith: Vec3; horizon: Vec3; }
-/** The daytime variant (level.ts DaylightDef): the sun is a LightData of kind 'dir'. */
-export interface DaylightData { sun: LightData; sky: SkyData; groupsOn: string[]; groupsOff: string[]; /** LightData.id list */ lightsOff: string[]; haze: number; exposure: number; }
 
 /** The drill plans are the RUNTIME structs verbatim (level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
  *  DoorData.id. Typed BY REFERENCE and written generically below (canonical order = known keys first, anything else after, alphabetically): a plan that grows
@@ -157,7 +155,6 @@ export interface LevelData {
   /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/game slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
   sky: SkyData;
-  daylight?: DaylightData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
   /** what the playtest scenarios take from this level (lib/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
    *  a level without the block stages none of them */
@@ -169,7 +166,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -183,7 +180,7 @@ export const KEYS = {
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
-  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
+  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)
 } as const;
@@ -253,7 +250,6 @@ export function canonicalLevelData(d: LevelData): LevelData {
     breaker: pick(d.breaker, KEYS.breaker),
     beacons: d.beacons.map(b => pick(b, KEYS.beacon)),
     sky: pick(d.sky, KEYS.sky),
-    ...(d.daylight ? { daylight: { ...pick(d.daylight, KEYS.daylight), sun: canonLight(d.daylight.sun), sky: pick(d.daylight.sky, KEYS.sky) } } : {}),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
     ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — lib/scenarios.ts is their shape)
   };
@@ -280,8 +276,8 @@ export function serializeLevelData(data: LevelData): string {
     if (Array.isArray(v)) {
       if (!v.length) { lines.push(`  ${JSON.stringify(k)}: []${last}`); return; }
       lines.push(`  ${JSON.stringify(k)}: [`); v.forEach((e, i) => lines.push(`    ${compact(e)}${i === v.length - 1 ? '' : ','}`)); lines.push(`  ]${last}`);
-    } else if (v && typeof v === 'object' && (k === 'materials' || k === 'plans' || k === 'daylight' || k === 'surfaces' || k === 'mission')) {
-      // records of records: one member per line (materials by name; plans.roomClear one plan per line; daylight / surfaces / mission field per line)
+    } else if (v && typeof v === 'object' && (k === 'materials' || k === 'plans' || k === 'surfaces' || k === 'mission')) {
+      // records of records: one member per line (materials by name; plans.roomClear one plan per line; surfaces / mission field per line)
       const o = v as Record<string, unknown>; const oks = Object.keys(o).filter(x => o[x] !== undefined);
       lines.push(`  ${JSON.stringify(k)}: {`);
       oks.forEach((x, i) => {

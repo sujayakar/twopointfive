@@ -6,7 +6,7 @@ import { Box, BoxFlag, makeBox } from '../../../src/scene/boxes';
 import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, madeOf, saidAs } from '../../../src/scene/stuff';
 import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from '../../../src/scene/world';
-import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
+import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from '../../../src/scene/markings';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
@@ -1113,27 +1113,6 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     { kind: 'laser', name: 'laser_storage', from: [31.85, 1.25, 10.1], to: [33.35, 1.25, 10.1], mains: false, alarm: 'suspicion' },
   ];
 
-  // ---------------- daylight (the breach showcase's variant; rust/game_rules/src/lighting set_daylight swaps it in and back out) ----------------
-  // Ten in the morning: the sun stands over the south lot, low enough (≈ 33°) that the south windows lay long mullioned patches three or four metres across the
-  // cubicle floor and the lobby's two runs of glazing throw theirs over the stone — it comes from the south-west, so it enters through the lobby glass side of the
-  // building and rakes east-north-east across the main office; warm white against a lifted blue-white sky (the escaping gather rays and the windows' own view of it);
-  // every fluorescent group in the building on, the sodium lamps and the moon out. Intensity: a directional light's number is the irradiance on a surface square to
-  // it (direct.wgsl evalLight kind 2) — 8 puts ≈ 4.4 W/m² on the floor, four times what a lit panel manages straight below itself, so a sun patch reads as sun next
-  // to fixture-lit carpet without whiting out under AgX at exposure 2.4. radius = angular radius: 0.02 rad ≈ four suns — window bars soften a hand's breadth over
-  // three metres of throw, enough to lose the stair-stepping of a hard edge at internal resolution, not enough to smear the mullions away. volumetric 1.5: the
-  // haze pass marches the sun under the ceiling only (volumetrics.wgsl — the building's dust, not weather), and from the game's high camera the scattering angle
-  // never gets much inside 60°, so the shafts under the south windows want about this much over a lamp's 1.0 to read as shafts and not a tint; haze 0.06 over
-  // the night's 0.035 for the same reason. All five numbers are the ones to judge by eye (Tab ▸ Frame ▸ exposure / haze; the sun is game.level.daylight.sun,
-  // re-read at the next setDaylight(true)).
-  const daylight: DaylightDef = {
-    sun: { kind: 'dir', pos: [0, 0, 0], dir: normalize3([0.45, -0.55, -0.70]), color: [1.0, 0.95, 0.86], intensity: 8, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'sun', group: 'daylight', enabled: true, volumetric: 1.5, radius: 0.02, mains: false },
-    sky: { zenith: [0.5, 0.72, 1.15], horizon: [1.1, 1.15, 1.2] },
-    groupsOn: ['lobby', 'cubicles', 'corridor', 'conference', 'server', 'manager', 'storage', 'breakroom', 'monitors'],
-    groupsOff: ['exterior'],
-    lightsOff: ['moon'],
-    haze: 0.06,
-    exposure: 2.4,
-  };
   // ---------------- the breach (rust/game_rules/src/breach): two operatives take the break room through its cubicle-side door ----------------
   // The break room is the room for it: its west door is the one door on this floor that opens straight off the main office (the conference room's is across the
   // corridor and walled in glass — nobody stacks on glass), the partition it sits in is solid, so the men on the marks are hidden from the room and the room from
@@ -1259,7 +1238,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   }
 
   return {
-    boxes, props, lights, switchables, daylight, breach,
+    boxes, props, lights, switchables, breach,
     doors: doorDefs,   // hinged leaves for the doorway gaps (closedDir 0: leaf runs +X from the hinge along a z-wall; π/2: runs +Z along an x-wall)
     devices,
     vents,             // the HVAC diffusers (rust/game_rules/src/wind): after devices, where loadLevel puts them — the identity probe compares key order too
