@@ -17,7 +17,6 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
     crate::scene_boxes::box_world_reset_capsules(g);
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
-    if crate::rails::rails_sky_on(g) { let me = g.pl[g.player].ch; drawn.retain(|c| *c != me); }
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
         let mut down: Vec<CharId> = Vec::new();
         let mut i = 0;
