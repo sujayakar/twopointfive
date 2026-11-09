@@ -523,9 +523,6 @@ pub struct Game {
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub puppet: Option<crate::game::GamePuppet>,
-    /// (a machine's own: in no bytes)
-    #[bytes(skip)]
-    pub m_per_px: f64,
     pub tmp_v: V3,
     pub called_in: bool,
     pub stood_down: bool,
@@ -748,7 +745,6 @@ impl Game {
             aim_snap: None,
             act: None,
             puppet: None,
-            m_per_px: 0.01,
             tmp_v: [0.0, 0.0, 0.0],
             called_in: false,
             stood_down: false,
@@ -2055,17 +2051,6 @@ impl GameLightEventCause {
             GameLightEventCause::Ocp => "ocp",
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GameViewPxCam {
-    pub distance: f64,
-    pub fov: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GameViewPxCanvas {
-    pub height: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

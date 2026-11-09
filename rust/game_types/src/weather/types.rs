@@ -53,7 +53,6 @@ pub struct Weather {
     pub snow_rate: f64,
     pub own: bool,
     pub fits: Option<bool>,
-    pub cam_yaw: f64,
     pub wet_on: bool,
     pub lot: Option<BoxId>,
 }
@@ -77,7 +76,6 @@ impl Weather {
             snow_rate: 0.0,
             own: false,
             fits: None,
-            cam_yaw: 0.0,
             wet_on: false,
             lot: None,
         }
