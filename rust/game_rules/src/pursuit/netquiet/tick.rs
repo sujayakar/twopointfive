@@ -50,12 +50,12 @@ fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     h.shots + h.kick + h.bang
 }
 
-/// a man this file is about at all: a defender or night staff, not the hostage rescue's cast (netquiet.ts side)
+/// a man this file is about at all: a defender or night staff, not a man the mission leads itself
 fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     g.gd[gd].civ.is_none()
         && (team == crate::teams::Team::Hostile || team == crate::teams::Team::Guard)
-        && !(g.rescue.active && g.rescue.hostiles.contains(&gd))
+        && !g.staged.leads(gd)
 }
 
 /// …and alive (netquiet.ts ours)

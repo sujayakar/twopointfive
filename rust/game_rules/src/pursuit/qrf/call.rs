@@ -41,13 +41,12 @@ pub(super) fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenario
 
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub(super) fn raid(g: &crate::game::Game) -> bool {
-    if !g.night_breach.active || g.rescue.active { return false; }
-    response_of(g).map_or(false, |r| r.raid.is_some())
+    g.staged.facts.raid && response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
 /// The raid is over: the room clear ended.   (qrf.ts raidOver)
 pub(super) fn raid_over(g: &crate::game::Game) -> bool {
-    g.room_clear.end.is_some()
+    g.staged.over
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)
@@ -59,11 +58,11 @@ pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
 pub(super) fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
-        Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
+        Some(id) => match g.staged.rooms.iter().find(|r| r.def.id == *id) {
             Some(room) => room.defenders.clone(),
             None => Vec::new(),
         },
-        None => g.night_breach.hostiles.clone(),
+        None => g.staged.foes.clone(),
     };
     let mut out = Vec::new();
     for x in of {
@@ -128,7 +127,7 @@ pub(super) fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
 pub(super) fn room_for(g: &crate::game::Game) -> f64 {
     let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
-        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.night_breach.hostiles.len() as f64 - g.qrf.men.len() as f64)
+        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.staged.foes.len() as f64 - g.qrf.men.len() as f64)
     } else {
         n
     }
@@ -240,7 +239,7 @@ pub(super) fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
+    g.ai_enabled && !crate::seats::all_down(g) && !g.staged.facts.fight && has_response(g)
 }
 
 /// This level has a response team.   (qrf.ts hasResponse)

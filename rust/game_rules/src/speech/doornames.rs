@@ -60,12 +60,8 @@ fn bare(s: &str) -> String {
 fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     let mut out: JsMap<String, String> = JsMap::new();
     let ordinals = ordinals();
-    let Some(scenarios) = level.scenarios.as_ref() else { return out };
-    let rooms: &[crate::scene_scenarios::StructureRoom] = match scenarios.room_clear.as_ref() {
-        Some(rc) => &rc.rooms,
-        None => &[],
-    };
-    if rooms.is_empty() || scenarios.lesson.is_some() {
+    let rooms = level.rooms();
+    if rooms.is_empty() || level.lesson().is_some() {
         return out;
     }
     // (id, name), in the file's order

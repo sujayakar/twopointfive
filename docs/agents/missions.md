@@ -20,13 +20,13 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
 | `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
-| `scenario_run.rs` | the one way from an address to a staged game; what is up; quit |
+| `scenario_run.rs` | the one way from an address to a staged game; its row of the list |
 | `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none |
 | `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
 | `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
 | `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
 | `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission.rs` | the stealth stages, the run's counts, the one objective line (`objective`) |
+| `mission.rs` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, end; a rule asks it and never the kind), the stealth stages, `objective` |
 | `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
 | `lesson.rs`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
@@ -121,7 +121,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
   `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. The gate's `played` rows, `missions.rs` and `coop.rs` find a room clear themselves (`room_clear_files`).
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
+- **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.

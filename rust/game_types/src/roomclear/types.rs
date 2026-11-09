@@ -28,7 +28,6 @@ pub struct RoomState {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RoomClearScenario {
-    pub rooms: Vec<crate::roomclear::RoomState>,
     pub end: Option<crate::roomclear::RoomClearEnd>,
     #[is(f64::NAN)] pub end_at: f64,
     #[is(String::from(""))] pub end_why: String,
@@ -37,7 +36,6 @@ pub struct RoomClearScenario {
     pub seed: f64,
     pub attempt: f64,
     pub fresh: f64,
-    pub way: f64,
     pub pair_said: bool,
     pub entry_said: bool,
     pub team_said: bool,
@@ -63,13 +61,6 @@ pub struct CheckSquadsS {
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub max_men: Option<f64>,
     pub squads: Option<Vec<crate::scene_scenarios::SquadData>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PropGapP {
-    pub home: [f64; 3],
-    pub hx: f64,
-    pub hz: f64,
 }
 
 #[derive(Clone, Debug, Default)]

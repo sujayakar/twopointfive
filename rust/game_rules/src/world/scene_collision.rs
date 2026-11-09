@@ -1433,6 +1433,11 @@ fn clampi(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
 }
 
+/// the sight line a→b against the level's STATICS alone   (roomclear.ts wallBetween)
+pub fn wall_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+    crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

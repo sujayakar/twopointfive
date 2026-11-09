@@ -57,7 +57,7 @@ pub(super) fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::press
 
 /// PRESSURE.wayOut on a floor whose structure asks for it. (pressure.ts wayOut)
 pub(super) fn way_out(g: &crate::game::Game) -> bool {
-    g.k.pressure.way_out && g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.way_out) == Some(true)
+    g.k.pressure.way_out && g.level.way_out()
 }
 
 /// The press forms up outside the doors before it goes; `gather` is off on the page and under hard. (pressure.ts forms)

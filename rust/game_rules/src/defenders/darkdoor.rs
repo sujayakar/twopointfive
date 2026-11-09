@@ -79,9 +79,6 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     x.state != crate::game::GuardState::Dead && x.civ.is_none() && x.held.is_none() && (x.team == crate::teams::Team::Hostile || x.team == crate::teams::Team::Guard)
 }
 
-/// one of the hostage rescue's cast.   (darkdoor.ts rescued)
-fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
-
 /// he knows something is out there.   (darkdoor.ts alarmed)
 fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
@@ -91,7 +88,7 @@ fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.   (darkdoor.ts own)
 fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
+    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !g.staged.leads(gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.   (darkdoor.ts able)

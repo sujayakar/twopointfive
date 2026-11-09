@@ -92,7 +92,6 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
 /// the bodies a round stops on, as far as the player can see them. (squad40.ts bodies)
 fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
     let (mut friends, mut foes, mut mates): (Vec<CharId>, Vec<CharId>, Vec<CharId>) = (Vec::new(), Vec::new(), Vec::new());
-    let hostages = g.rescue.hostages.clone();
     if !g.pl[g.player].down { friends.push(g.pl[g.player].ch); }
     for gd in g.guards.clone() {
         let c = g.gd[gd].ch;
@@ -101,7 +100,7 @@ fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
             if up { mates.push(c); }
         } else if up && !crate::fogofwar::fog_of_war_hidden(g, gd) {
             let team = g.gd[gd].team;
-            if crate::teams::is_hostile(g, crate::teams::Team::Operative, team) && g.gd[gd].civ.is_none() && !hostages.contains(&gd) {
+            if crate::teams::is_hostile(g, crate::teams::Team::Operative, team) && g.gd[gd].civ.is_none() && !g.staged.captives.contains(&gd) {
                 foes.push(c);
             } else {
                 friends.push(c);

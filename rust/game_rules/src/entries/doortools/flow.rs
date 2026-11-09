@@ -837,7 +837,7 @@ fn door_tools_pods2(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<crat
     let w = g.dr[d].def.width;
     let into = -side;
     let name = g.dr[d].def.name.clone();
-    if let Some(plan) = crate::roomclear::door_plan(g, &name) {
+    if let Some(plan) = g.level.door_plan(&name) {
         if crate::orders::side_of(g, d, plan.stack[0]) == side {
             let mut out: Vec<crate::entrypoints::Pod> = Vec::new();
             for k in 0..2 {

@@ -152,7 +152,7 @@ pub fn kit_you_nvg(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// A run that is played quietly: a quiet mission, or the plain night alone off the loadout screen.   (kit.ts stealthRun)
 pub(super) fn stealth_run(g: &crate::game::Game) -> bool {
-    g.quiet.active || (g.solo_card && !team_on_floor(g))
+    g.staged.facts.unseen || (g.solo_card && !team_on_floor(g))
 }
 
 /// Your card onto the fresh Player.   (kit.ts kitPlayer)
@@ -310,7 +310,7 @@ fn kit_solo(g: &mut crate::game::Game) {
 
 /// The page's own question: the plain night off the loadout screen, or a quiet mission alone, and no squad scenario up.   (kit.ts kitSoloIf)
 pub fn kit_solo_if(g: &mut crate::game::Game, solo: bool) {
-    if (solo || (g.quiet.active && !js::truthy(g.quiet.squad))) && !g.night_breach.active && !g.rescue.active { kit_solo(g); }
+    if !g.staged.facts.fight && (solo || (g.staged.facts.unseen && g.staged.team.is_empty())) { kit_solo(g); }
 }
 
 /// A mission started lowers the card on every host, and the harness's shipped stand asks the question too.   (kit.ts kitSoloStand)
@@ -318,7 +318,7 @@ pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
     let plain = plain.unwrap_or(true);
     g.solo_card = false;
     if !g.stood.solo_stand { return; }
-    let lesson = g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()).map_or(false, |l| !l.steps.is_empty());
+    let lesson = g.level.lesson().is_some_and(|l| !l.steps.is_empty());
     if !lesson { kit_solo_if(g, plain); }
 }
 

@@ -12,8 +12,6 @@ pub struct QuietDeal {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMission {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
     pub squad: f64,
     pub pin: Option<f64>,
     #[is(crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 })] pub deal: crate::quiet::QuietDeal,

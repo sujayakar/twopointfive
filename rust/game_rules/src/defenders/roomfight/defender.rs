@@ -67,8 +67,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
     if crate::owner::has(g, gd, crate::owner::by::MORALE) { return; }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return; }
     if digs_in(g) {
-        let keeps = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.dig_in) != Some(false);
-        if keeps && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
+        if g.level.digs_in() && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
     }
     let mode = g.tab.roomfight_def[d].mode;
     if mode == DefMode::Move { room_fight_tick_move(g, d, dt); return; }
@@ -213,7 +212,7 @@ fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64)
     move_pt(g, d, [tgt[0], 0.0, tgt[2]]);
     // (each look writes into D.pt in place: lent as a local and put back, the fix carried with it if it is that object)
     if digs_in(g) { let mut p = g.tab.roomfight_def[d].pt; crate::digin::dig_in_look(g, gd, &mut p); move_pt(g, d, p); }
-    if g.rescue.active { let mut p = g.tab.roomfight_def[d].pt; crate::rescue::rescue_crew_look(g, gd, &mut p); move_pt(g, d, p); }
+    if let Some(at) = crate::mission::gun_place(g, gd) { let p = g.tab.roomfight_def[d].pt; move_pt(g, d, [at[0], p[1], at[2]]); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::netquiet::net_quiet_look(g, gd, &mut p); move_pt(g, d, p); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::wallreact::wall_react_look_2(g, gd, &mut p); move_pt(g, d, p); }
     let pt = g.tab.roomfight_def[d].pt;

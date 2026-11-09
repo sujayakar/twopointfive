@@ -97,7 +97,8 @@ pub(in crate::defenders) fn room_fight_free_near(g: &crate::game::Game, p: V3) -
 pub(super) fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
     let (mut x0, mut x1, mut z0, mut z1) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
     {
-        let rooms = match g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()) { Some(r) if !r.rooms.is_empty() => &r.rooms, _ => return false };
+        let rooms = g.level.rooms();
+        if rooms.is_empty() { return false; }
         for r in rooms { x0 = m::min(x0, r.bounds.x0); x1 = m::max(x1, r.bounds.x1); z0 = m::min(z0, r.bounds.z0); z1 = m::max(z1, r.bounds.z1); }
     }
     if p[0] >= x0 && p[0] <= x1 && p[2] >= z0 && p[2] <= z1 { return false; }

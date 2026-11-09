@@ -175,7 +175,7 @@ fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         let p = g.ch[g.pl[pl].ch].pos;
         out.push([p[0], EYE, p[2]]);
     }
-    for &op in g.rescue.ops.iter() {
+    for &op in g.staged.team.iter() {
         if g.gd[op].state != crate::game::GuardState::Dead && !crate::control::man::blind(g, op) {
             let p = g.ch[g.gd[op].ch].pos;
             out.push([p[0], EYE, p[2]]);
@@ -250,8 +250,8 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
     }
     // who of theirs is known to be where: seen in a room marks it hot; seen anywhere else, or dead, lets it go
     let mut i = 0;
-    while i < g.rescue.hostiles.len() {
-        let h = g.rescue.hostiles[i];
+    while i < g.staged.foes.len() {
+        let h = g.staged.foes[i];
         i += 1;
         if g.gd[h].state == crate::game::GuardState::Dead {
             for &r in all.iter() {
@@ -286,7 +286,7 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
             continue;
         }
         let (who, pos) = (g.events[at].who, g.events[at].pos);
-        let h = g.rescue.hostiles.iter().copied().find(|&x| Some(g.ch[g.gd[x].ch].id) == who);
+        let h = g.staged.foes.iter().copied().find(|&x| Some(g.ch[g.gd[x].ch].id) == who);
         let Some(h) = h else { continue };
         if g.gd[h].state == crate::game::GuardState::Dead {
             continue;
@@ -388,8 +388,8 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
 /// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's. (rescueflow.ts RescueFlow.holder)
 fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
     let mut i = 0;
-    while i < g.rescue.ops.len() {
-        let op = g.rescue.ops[i];
+    while i < g.staged.team.len() {
+        let op = g.staged.team[i];
         i += 1;
         if g.gd[op].state == crate::game::GuardState::Dead {
             continue;
@@ -429,7 +429,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
     let k = g.rescue.flow.knobs;
     let f = rescue_flow_f(g);
     let f = match f {
-        Some(f) if g.rescue.active => f,
+        Some(f) if crate::rescue::rescue_up(g) => f,
         _ => {
             if !g.rescue.flow.jobs.is_empty() {
                 rescue_flow_drop_all(g, true);
@@ -655,8 +655,8 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             // the only free man: with another in the file who is in a fight or blind this moment it waits for him (wantSecs) and the man on Sam stays on Sam
             let mut file = 0;
             let mut i = 0;
-            while i < g.rescue.ops.len() {
-                let op = g.rescue.ops[i];
+            while i < g.staged.team.len() {
+                let op = g.staged.team[i];
                 i += 1;
                 if g.gd[op].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, op) {
                     if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
@@ -741,8 +741,8 @@ fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> boo
 fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut out: Vec<(GuardId, f64)> = Vec::new();
     let mut i = 0;
-    while i < g.rescue.ops.len() {
-        let gd = g.rescue.ops[i];
+    while i < g.staged.team.len() {
+        let gd = g.staged.team[i];
         i += 1;
         if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
             continue;

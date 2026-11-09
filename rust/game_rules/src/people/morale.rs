@@ -78,9 +78,6 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     m_.state != crate::game::GuardState::Dead && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
 }
 
-/// a man of the hostage rescue's cast (morale.ts rescued)
-fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
-
 /// may a sequence have him this frame (morale.ts reacts)
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.gd[gd].held.is_some() { return false; }
@@ -135,7 +132,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
     if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
-    g.room_clear.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
+    g.staged.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
 }
 
 /// the difficulty's mix, read once a tick (morale.ts mixNow)
@@ -243,7 +240,7 @@ pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 
 /// a feed for any event: shock on one man (morale.ts moraleShock)
 pub fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
-    if !ours(g, gd) || rescued(g, gd) { return; }
+    if !ours(g, gd) || g.staged.leads(gd) { return; }
     mind(g, gd);
     let n = nerved(g, amount);
     let cap = g.k.morale.shock_cap;
@@ -261,7 +258,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if gd == victim || !ours(g, gd) || rescued(g, gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
+        if gd == victim || !ours(g, gd) || g.staged.leads(gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
         mind(g, gd).leader_down = true;
         if crate::control::man::blind(g, gd) || !crate::guards::can_see_char(g, gd, vc, false).visible { continue; }
         let n = nerved(g, g.k.morale.leader_shock);
@@ -322,7 +319,7 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || rescued(g, gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
+        if !ours(g, gd) || g.staged.leads(gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let d = flat(g.ch[c].pos, b.at);
         if d > g.k.morale.blast_m { continue; }
@@ -623,7 +620,7 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || rescued(g, gd) { g.m.morale.state_of.delete(gd); continue; }
+        if !ours(g, gd) || g.staged.leads(gd) { g.m.morale.state_of.delete(gd); continue; }
         let r = mind(g, gd);
         r.drive = false;
         r.shock *= k;

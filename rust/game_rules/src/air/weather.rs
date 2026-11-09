@@ -52,7 +52,7 @@ fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
 
 /// A level that carries its own places: the office's footprints are not its building's. (weather.ts ownFloor)
 fn own_floor(g: &crate::game::Game) -> bool {
-    match &g.level.scenarios { Some(s) => s.quiet.is_some(), None => false }
+    g.level.own_places()
 }
 
 /// Mean of the stroke's envelope over [a, b]: the module's, its pulses handed over as three doubles each. (weather.ts strokeMean)

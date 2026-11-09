@@ -105,7 +105,7 @@ fn ensure_index(g: &mut Game) {
     g.destr.furn.kept = kept;
     // (Level.mission is always there: every level is built with one, so its front is always a truthy Vec3)
     let mut fronts: Vec<V3> = vec![g.level.mission.rack.front];
-    if let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) { for sp in &q.spots { fronts.push(sp.front); } }
+    for sp in g.level.spots() { fronts.push(sp.front); }
     g.destr.furn.fronts = fronts;
     let w = crate::scene_world::world();
     let (np, ns, gl, dy) = bits();

@@ -246,7 +246,7 @@ fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
 fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
     let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts::default());
     p.run(0.2);
-    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.quiet.ops.iter().map(|&m| p.g.gd[m].ch)).collect();
+    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.staged.team.iter().map(|&m| p.g.gd[m].ch)).collect();
     assert_eq!(team.len(), 2);
     for &c in &team { assert!(!wears(&p, c, "helmet"), "a quiet mission: a helmet"); }
     drop(p);

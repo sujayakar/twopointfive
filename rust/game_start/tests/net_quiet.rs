@@ -104,7 +104,7 @@ fn block(s: u32, on: bool) -> Play {
 /// the room whose men the quiet plan puts down: the farthest from Sam with a man in it
 fn back_room(p: &Play) -> Vec<game::ids::GuardId> {
     let far = |r: &&game::roomclear::RoomState| r.defenders.first().map_or(0.0, |&m| dist(p.at(m), p.sam_at()));
-    p.g.room_clear.rooms.iter().filter(|r| !r.defenders.is_empty()).max_by(|a, b| far(a).partial_cmp(&far(b)).unwrap()).map(|r| r.defenders.clone()).expect("a room with a man")
+    p.g.staged.rooms.iter().filter(|r| !r.defenders.is_empty()).max_by(|a, b| far(a).partial_cmp(&far(b)).unwrap()).map(|r| r.defenders.clone()).expect("a room with a man")
 }
 
 /// THE RULE: squads told to stay still miss a room that goes silent: the men of a room put down one a second without a sound: the roll call, then the squad asked for by name, then the word that one man goes, in that order, and ONE man leaves his post. CONTROL: the rule gives no man to send: nobody goes.

@@ -21,12 +21,12 @@ pub(super) fn rescue_flush_reset(g: &mut crate::game::Game) {
 
 /// The rule is up on this run (RESCUEFLUSH.on is settled true).   (rescueflush.ts RescueFlush.live)
 fn rescue_flush_live(g: &crate::game::Game) -> bool {
-    g.rescue.active && g.rescue.result.is_none() && g.ai_enabled && crate::roomfight::room_fight_on(g)
+    crate::rescue::rescue_up(g) && g.rescue.result.is_none() && g.ai_enabled && crate::roomfight::room_fight_on(g)
 }
 
 /// The living hostages, in the list's order.   (rescueflush.ts RescueFlush.alive)
 fn rescue_flush_alive(g: &crate::game::Game) -> Vec<GuardId> {
-    g.rescue.hostages.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
+    g.staged.captives.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
 }
 
 /// He came for her: his wait is `killSecs`.   (rescueflush.ts RescueFlush.came)
@@ -60,7 +60,7 @@ pub(super) fn rescue_flush_holder(g: &mut crate::game::Game, keep: Option<GuardI
     if alive.is_empty() { return None; }
     if let Some(k) = keep { if has(g, k, &alive) < f64::INFINITY { return Some(k); } }
     let (mut who, mut bd) = (None, f64::INFINITY);
-    let hostiles = g.rescue.hostiles.clone();
+    let hostiles = g.staged.foes.clone();
     for h in hostiles { let d = has(g, h, &alive); if d < bd { bd = d; who = Some(h); } }
     who
 }
@@ -127,7 +127,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     let in_room = alive.iter().any(|&h| crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
     // one of them stands in the room and nobody is there to shoot: they have been taken out
     if g.rescue.flush.gone_at.is_nan() && !in_room {
-        let by = g.rescue.hostiles.iter().copied().find(|&h| {
+        let by = g.staged.foes.iter().copied().find(|&h| {
             g.gd[h].state != crate::game::GuardState::Dead && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)
         });
         if let Some(by) = by {
@@ -160,7 +160,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     // the next man: never sent before the men who have been, then the nearest to where he would go
     let room = crate::rescue::rescue_outside_point(g);
     let mut pool = Vec::new();
-    for h in g.rescue.hostiles.clone() { if free(g, h, b, in_room) { pool.push(h); } }
+    for h in g.staged.foes.clone() { if free(g, h, b, in_room) { pool.push(h); } }
     {
         let g = &*g;
         let n_of = |h: GuardId| g.rescue.flush.sent.get(h).map_or(0.0, |s| s.n);

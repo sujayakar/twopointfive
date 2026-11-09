@@ -28,10 +28,6 @@ macro_rules! trip {
 fn on_trip(g: &Game, gd: GuardId) -> bool {
     g.m.needs.mem_of.get(gd).map_or(false, |r| r.trip.is_some())
 }
-/// `g.level.scenarios?.quiet` is there
-fn has_quiet(g: &Game) -> bool {
-    g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some())
-}
 /// `gd.route.points[wp]`
 fn route_point(g: &Game, gd: GuardId, wp: f64) -> V3 {
     g.tab.route[g.gd[gd].route].points[wp as usize]
@@ -57,8 +53,8 @@ fn key(s: &str) -> String {
 
 /// Where a need is answered on this level, or None. (needs.ts needSpot)
 fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
-    let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) else { return need_spots().get(key(kind.as_str())).cloned() };
-    let s = q.needs.as_ref().and_then(|n| match kind {
+    if !g.level.own_places() { return need_spots().get(key(kind.as_str())).cloned(); }
+    let s = g.level.needs().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
         NeedKind::Smoke => n.smoke.as_ref(),
         NeedKind::Water => n.water.as_ref(),
@@ -497,7 +493,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
     t.told = true;
     g.stats.needs.told += 1;
     let p = partner_for(g, gd);
-    let quiet = has_quiet(g);
+    let quiet = g.level.own_places();
     let lines = crate::dialogue::needs_lines_table();
     let kind = t.kind.as_str();
     if let Some(p) = p {
@@ -646,7 +642,7 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 d.set(key("kind"), text(kind.as_str()));
                 d.set(key("what"), text("left"));
                 d.set(key("to"), text(&trip!(g, gd).spot.name));
-                if has_quiet(g) {
+                if g.level.own_places() {
                     d.set(key("own"), Some(ChronicleDataValue::Num(1.0)));
                 }
                 let at = g.ch[c].pos;

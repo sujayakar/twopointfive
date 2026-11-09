@@ -649,7 +649,7 @@ pub fn level_text(g: &crate::game::Game) -> String {
 pub fn squads_held(e: &crate::scene_scenarios::ScenarioEntry) -> crate::difficulty::DifficultyWordsSquads {
     use crate::difficulty::DifficultyWordsSquads as S;
     if e.squads == Some(true) { return e.level.clone().filter(|l| !l.is_empty()).map_or(S::Bool(true), S::Text); }
-    S::Bool(e.kind == crate::scene_scenarios::ScenarioEntryKind::Roomclear)
+    S::Bool(e.kind == crate::scene_scenarios::MissionKind::Roomclear)
 }
 
 /// The same, by whoever knows whether this machine keeps the levers as they stand.
