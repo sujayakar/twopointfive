@@ -19,3 +19,7 @@ fn steady(x: vec3f) -> f32 { var k = 1.0; for (var i = 0u; i < 8u; i++) { let c 
 struct Changes { at: array<vec4f, 8>, all: vec4f };
 /** up to what roughness a coat is asked what it mirrors: where it is wet the coat is most of what is seen of dark ground, so rougher ones are asked too */
 fn asksMirror() -> f32 { return mix(0.43, 0.66, smoothstep(0.05, 0.3, frame.weather.x)); }
+/** the lamps' light with nothing in the way: the others' and the torches', then the first's and which it is */
+fn packLight(u: vec4f, f: vec4f) -> vec4u { let a = min(u, vec4f(6e4)); let b = min(f, vec4f(6e4)); return vec4u(pack2x16float(a.xy), pack2x16float(a.zw), pack2x16float(b.xy), pack2x16float(b.zw)); }
+fn lightAll(v: vec4u) -> vec4f { return vec4f(unpack2x16float(v.x), unpack2x16float(v.y)); }
+fn lightFirst(v: vec4u) -> vec4f { return vec4f(unpack2x16float(v.z), unpack2x16float(v.w)); }
