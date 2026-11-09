@@ -1,5 +1,5 @@
 // THE CHECKS THAT STAND NO GAME OF THEIR OWN MAKING: the picture's code, the shaders' texts, the page and its cards, the sounds, the level files, the player's words.
-// Where a mission's row is asked (bench, pricerun, mystery, writing), the game's module is: one built of these sources, or the checked-in one where it is of them (tools/desk.ts).
+// Where a mission's row is asked (bench, pricerun, mystery, writing) or a level's file judged (exports, level-lint and whatever loads a level), the game's module is: one built of these sources, or the checked-in one where it is of them (tools/desk.ts).
 // Each is a file run in a process of its own. The game's rules are asked in Rust (`gate tests`), whole plays by the native `gate`, missions and `hold`, the page by pages.ts.
 //   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group    groups: picture · shaders · page · menus · sound · levels · words · build
 //   env: CHECK_JOBS (four) at a time · CHECK_CAP (ten) minutes each, its process group stopped there
@@ -22,7 +22,7 @@ const ROWS: readonly Row[] = [
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
-  ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
+  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
   ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/gen.ts', 'build', '--check'],
 ];

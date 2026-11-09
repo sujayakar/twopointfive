@@ -143,10 +143,11 @@ Every file under `levels/` is read whole. `stand` REFUSES a file with any fault 
 
 Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
 
-## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
+## Levels: what a level owes whoever plays it (`src/levels.rs`, the program `src/bin/levels.rs`)
 
 ```
 cd rust/game_start
+cargo run --release --bin levels -- file [level …]         # its file has no fault
 cargo run --release --bin levels -- second-way [level …]   # every room the defenders can shut has another way in
 cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
 cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
@@ -234,7 +235,7 @@ target/gate/gate                 # every row, four at a time. Exit 0 = all pass 
 target/gate/gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
 target/gate/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 target/gate/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
-target/gate/gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`)
+target/gate/gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level`)
 target/gate/gate list            # the rows
 target/gate/gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
@@ -254,6 +255,7 @@ FAIL with the first lines of what it wrote; the four rows of one run share a chi
 | `par <id>`: every mission whose level has `scenarios.par` | The clock moves nobody: 30 s under `push`, with the file's par block and with it taken out of the tree before the stand. The parts differ in nothing but the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own part does differ, and the level's own record stands on each side as it stood | `moves` a die drawn once on the clocked side only · `noclock` the block is out on both sides |
 | long: `played <id>`: every room clear, rescue and the night breach, by the hands-off player (`src/hands_off.rs`) under the page's god mode, so that each goes on to its floor cleared | The mission played to its end by keys alone. (a) What a run owes (`src/owes.rs`), every tick. (b) It ends. (c) A line of words a reader can read ("taken 76.8 s · Sam up · 0 of 4 up · 5 down · 4 orders · friendly 0 · stuck 0 · overlap 0") and a word a second against the pins: a run that ends by its cap is pinned so, and the line says it | `deaf` the squad's key is deaf · `wall` a man is put in a wall at 5 s |
 | long: `lesson <id>`: the six tutorials, by a man at the keys (`src/lessons/`) | Every step goes by on its deed, the run ends, and it owes what a run owes. Not pinned: a change of play moves its seconds and not what it holds. `gate long` plays them again with him reading each line for 6 s | `third` nothing he does reaches the game from the third step on |
+| long: `level <question>`: each question of `levels` | What every level owes whoever plays it, asked of all of them. 43 s of one core | `spoiled` the question's own red path |
 
 The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `mousehole-four` under `kit`,
 `glasshouse-four` and `killhouse-four` and a rescue under `push`, a quiet night (`bazaar-quiet`) under `fires`, the snow (`pass-four`) under `bangs`, and the lesson of a partner's orders (`tut-pair`) under `pair`.

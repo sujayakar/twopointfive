@@ -24,7 +24,7 @@ is drawn is `render.md`.
 | `levelKit.ts`, `gwotKit.ts`, `livedKit.ts`, `livedPieces.ts` | with `officeGen.ts`, the kits: every piece a generator lays |
 | `tools/levels/library.ts`, `docs/library.md`, `library-hall.ts`, `gwot-yard.ts` | the catalogue of every piece and paint, and its two showrooms |
 | `rust/game_start/src/level.rs`, `records.rs`, `passes.rs`, `stand.rs` | the game's reader, its records, what a stand does to boxes, a start's order |
-| `rust/game_start/src/bin/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
+| `rust/game_start/src/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
 | `tools/qa/level-needs.ts`, `tools/qa/level-lint.ts`, `tools/levels/counts/` | what stands around a file, what reads off a file, the held counts |
 | `tools/qa/map-plan.ts` | a level's plan as an SVG |
 | `src/scene/materials.ts`, `stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, the palette, the men's dress, face marks, shapes |
@@ -147,13 +147,13 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 
 `levels <question> [LEVEL…]` (`LEVELS_BREAK=1` fails each): `stands` (each mission starts, and what it names is on joined floor); `doors`;
 `second-way`; `sight` and `charges` (held by count); `walked` (doors owed by name in `tools/levels/counts/walked/`); `stacks` (by mission: every stack
-mark reaches its door); `names`; `rain`.
+mark reaches its door); `names`; `rain`; `file` (its faults).
 
 `bun run tools/qa/level-needs.ts [name] [--run]` asks the `NEEDS` list (`generator`, `row`, `music`, `lived`, `ground`, `leak`, `key`, `lamps`,
 `roof`, `response` and more): a FAIL is a gap and a NOTE a thing to look at. `--run` adds `export --check`, the lint, `kitview-plan.ts`,
-`floor-order-check.ts` and the `levels` questions. `tools/qa/checks.ts` and `gate` do not run these, so run them after a level changes.
+`floor-order-check.ts` and the `levels` questions, which `gate long` asks of every level.
 
-`bun run tools/qa/level-lint.ts levels/<name>.json` reads the file alone (`levels/<name>.lint.json` holds a reason for an odd thing). In `checks.ts`:
+`levels/<name>.lint.json` holds a reason for an odd thing `level-lint.ts` finds. In `checks.ts`: `exports-check.ts`, `level-lint.ts`,
 `ground-pieces-check.ts`, `kit-stores-check.ts`, `palette-check.ts`, `stuff-check.ts`, `floor-order-check.ts`. By hand: `tools/qa/zfight-check.ts`,
 `bun run tools/levels/library.ts --check`.
 

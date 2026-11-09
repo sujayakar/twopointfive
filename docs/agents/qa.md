@@ -64,7 +64,7 @@ It plays every mission's start and a few runs,
 each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 a row failed, 64 a wrong word.
 
 - `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par`. `gate save` runs the rows whose name starts with that word.
-- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player) and `lesson` (the tutorials by a man at the keys).
+- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player) `lesson` (the tutorials by a man at the keys) and `level` (each question of `levels`).
 - `gate pin [ROW…]` records the pins again and says which moved. `gate breaks` plants each check's fault: the row must pass unbroken, then fail in its check's own words.
 
 **The other programs**, by `cargo run --release --bin <name> --` in `rust/game_start`.

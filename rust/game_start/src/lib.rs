@@ -19,6 +19,8 @@ pub mod handed;
 pub mod files;
 pub mod scene;
 #[cfg(feature = "std")]
+pub mod levels;
+#[cfg(feature = "std")]
 pub mod play;
 #[cfg(feature = "std")]
 pub mod hand;
