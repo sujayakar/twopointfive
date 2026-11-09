@@ -171,12 +171,24 @@ impl Play {
     }
     /// the game steps on every seat's command, on a machine that shows the seat `shown`
     pub fn net_step(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
+        self.net_tick(cmds, shown);
+        self.g.out.clear();
+    }
+    /// … with what the step told its host still on the game
+    fn net_tick(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
         let seats = self.g.seats.clone();
         game::seats::show_seat(&mut self.g, seats[shown]);
         game::game::game_step_seats(&mut self.g, DT, cmds);
         game::seats::show_seat(&mut self.g, seats[0]);
-        self.g.out.clear();
         self.frames += 1;
+    }
+    /// WHAT THE PAGE DOES WITH A TICK'S CHECKPOINTS (rust/game_face page::saves), as far as the play goes: what the tick asked of the controller, and a checkpoint taken. Nothing is kept: nobody here goes back.
+    fn host_saves(&mut self) {
+        use game::out_events::OutEvent as E;
+        use game::savestate::control::{self, Do};
+        let asked: Vec<E> = self.g.out.iter().filter(|e| matches!(e, E::CheckpointsKeep(_) | E::CheckpointsRequest(_))).cloned().collect();
+        for e in asked { match e { E::CheckpointsKeep(e) => control::keep(&mut self.g, &e.label), E::CheckpointsRequest(e) => control::request(&mut self.g, &e.why, &e.label), _ => {} } }
+        if let Some(Do::Keep { label, .. }) = control::tick(&mut self.g, DT) { let _ = game::chronicle::chron_checkpoint(&mut self.g, game::chronicle::ChronCheckpointWhat::Save, Some(&label)); }
     }
     /// what a host does round a step with hands on its seats: each seat's camera after its man, the end of its input's frame
     pub fn lens_and_keys(&mut self) {
@@ -188,7 +200,7 @@ impl Play {
         }
     }
     /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
-    /// with the box world's copy standing for his questions, the game stepped on them, the cameras after their men.
+    /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
     pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
         let [yaw, zoom] = script.lens();
         let cam = self.g.tab.cmd_seat[self.g.seats[0]].cam;
@@ -198,7 +210,9 @@ impl Play {
         if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
         game::scene_box_mirror::box_mirror_things(&mut self.g);
         script.hand(&self.g, &mut cmds[0], DT);
-        self.net_step(&cmds, 0);
+        self.net_tick(&cmds, 0);
+        self.host_saves();
+        self.g.out.clear();
         self.hear();
         self.lens_and_keys();
     }
