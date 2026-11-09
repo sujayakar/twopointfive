@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what this skeleton still cannot give
-/// a box's row. This skeleton has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes, this is the one line `&mut g.tab.boxes[b]`
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- helpers

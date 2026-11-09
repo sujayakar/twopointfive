@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
-/// A box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
+/// a box's row
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.

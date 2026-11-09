@@ -385,7 +385,7 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
     crate::render_particles::particles_clear(g);
 }
 
-/// `b.…` of a box. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].albedo`; once there is a table the body is the row.
+/// a box's row, to read and to write through
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.

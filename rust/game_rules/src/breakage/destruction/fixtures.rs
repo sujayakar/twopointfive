@@ -323,7 +323,7 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 
-/// `b.…` for any box: a box's row, statics and made boxes alike. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
+/// a box's row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]

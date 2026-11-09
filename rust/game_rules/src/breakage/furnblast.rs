@@ -16,7 +16,7 @@ use crate::scene_materials::{BreakClass, Does, Surf};
 use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, WallBreakNoteC};
 
 // ---------------------------------------------------------------- the one seam left (notes.md, ## Skeleton)
-/// A box's row, `seam_box(g, id)` as index/properties.txt has it: this skeleton has no table of Box rows (`StaticCollision.boxes` is `Vec<BoxId>`)
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- small readers

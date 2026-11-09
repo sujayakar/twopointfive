@@ -37,8 +37,7 @@ fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
-/// `b.c`, `b.h`, `b.yaw` of a box. Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`. Once the rows have a table
-/// this is the row's three fields. In a test, a stand-in for the table.
+/// a box's row
 fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     #[cfg(test)]
     return tests::box_row(b);

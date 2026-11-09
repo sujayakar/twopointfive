@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A box's row (`Box.*`). Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+/// a box's row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A word of a box's flags against a mask.
