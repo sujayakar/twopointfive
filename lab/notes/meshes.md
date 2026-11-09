@@ -10,14 +10,14 @@ What was made
 
 What was measured (A10G, 1920 x 1080 unless said)
 - **The raster is nearly free.** At half a pixel of error: 3.2 M triangles 0.69 ms in all (pick 0.20, indices 0.15, draw 0.28, depth 0.07); 2.3 M 0.52; 0.6 M 0.28. The finest column (2.8 M) smaller and smaller: 7.8 M a ms where 0.4 M are seen, 13.8 M a ms where none is bigger than a thousandth of a pixel. Small triangles do not begin to cost: there is no reason for a raster of our own.
-- **Corners shared by indices written each frame** beat corners fetched one by one: 1.3 to 1.9 times on full clusters, 4 times where clusters are a stone of 32 triangles each. A triangle's first corner belongs to no other, and tells it (there is no triangle number in WebGPU).
+- **Corners shared by indices written each frame** beat corners fetched one by one: in the draw 1.3 to 1.9 times on full clusters, 4 times where a cluster is a stone of 32 triangles; with the writing of indices counted 1.1, 1.2 and 2.8 times. A triangle's first corner belongs to no other, and tells it (there is no triangle number in WebGPU).
 - **Left out**: what depth hides is worth 2.6 times fewer triangles close to the column, 1.05 over the floor. Cones are worth nothing on rough stone.
 - **Where it is**: at half a pixel half of what is drawn is within 0.13 px of the finest mesh, nine tenths within 0.45 (0.74 from 30 m). The finest column's triangles are 2 mm: under 0.3 mm a pixel they are seen as soft shapes, and the material's grain goes on from there.
 - **Memory**: 70 to 80 bytes a triangle of the finest, levels and trees for rays and all (222 MB for 2.9 M; 88 MB for the page).
 - **Rays**: in the real-time frame at 1280 x 720, 9 m away: the finest 45.7 ms, by footprint 23.2, four footprints 18.3; error against the paths 17.0, 12.5, 12.6 %. Coarser is not worse, only cheaper.
 - **The seam** (traced triangles 1 to 64 times fewer than drawn; share of the sun wrong): starting on the surface 0.7 to 27 % (stones), 4 to 27 % (column); one error off along the normal 0.6 to 5 and 1 to 4 %; **passing through the backs of triangles within three errors 0.3 to 1.9 and 0.5 to 2.3 %**. Bounced light with that rule 0.4 to 4.5 and 1.4 to 5.6 %. From the depth buffer nothing more is to be had.
 - Over the stones seen at 4 to 10 mm a pixel, where a ray meets the relief of what is drawn as stones: shadow 2 to 10 %, bounce 7 to 11 % (too bright: the dark between the stones is lost first).
-- **How bright a level is** (path tracer, all on one level): a stone of 80 triangles sends back 3 % less, of 38 6 %, of 18 10 %, alike at any hour: one factor a level would mend it. A relief flattened to 4, 13, 26 mm: noon +1, +2, +1 %; low sun +9, +35, +75 %; grey sky +9, +26, +29 %. No color mends that.
+- **How bright a level is** (path tracer, all on one level): a stone of about 100 triangles sends back 3 % less, of 50 6 %, of 32 10 %, alike at any hour: one factor a level would mend it. A relief flattened to 4, 13, 26 mm: noon +1, +2, +1 %; low sun +9, +35, +75 %; grey sky +9, +26, +29 %. No color mends that.
 
 Traps
 - Distance alone is not enough of an error: color and small bumps vanish long before outlines do. Both count now (`COLOR`, `NORMAL` in simplify.ts). Rays go by distance alone (`apart`).
