@@ -124,7 +124,7 @@ pub fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorId> {
 }
 
 /// A spot a man can step to: walkable, and nobody up within 0.8 m. (roomfight.ts spotFree)
-pub fn room_fight_spot_free(g: &mut crate::game::Game, p: V3, self_: GuardId) -> bool {
+pub fn room_fight_spot_free(g: &crate::game::Game, p: V3, self_: GuardId) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     for pl in crate::seats::men(g) {
         if !g.pl[pl].down && flat(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }

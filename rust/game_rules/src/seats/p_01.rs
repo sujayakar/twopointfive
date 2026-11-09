@@ -105,7 +105,7 @@ pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
 }
 
 /// the men still up (seats.ts menUp)
-pub fn men_up(g: &mut crate::game::Game) -> Vec<PlayerId> {
+pub fn men_up(g: &crate::game::Game) -> Vec<PlayerId> {
     let mut all = men(g);
     all.retain(|p| !g.pl[*p].down);
     all

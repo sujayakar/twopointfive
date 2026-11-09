@@ -616,7 +616,7 @@ fn charge_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     Step::On
 }
-fn charge_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn charge_sam_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
     let q = at(st, [K.own_post[0] * st.latch, K.own_post[1], 0.0]);
     if !free(g, v2(q)) { return Err(String::from("no room at the door")); }
     let d = the_door(st);
@@ -1186,7 +1186,7 @@ fn swap_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "stow" { super::cards::sam_card(g, st); to(g, b, "draw"); sam_draw(st); return Step::On; }
     swap_up(g, st, b)
 }
-fn turn_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn turn_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
     let (a, c) = (b.yaw + K.turn_deg * R, b.yaw - K.turn_deg * R);
     let y = if m::sin(a) * st.n[0] + m::cos(a) * st.n[1] >= m::sin(c) * st.n[0] + m::cos(c) * st.n[1] { a } else { c };
     b.quiet = true; b.turn = true; b.h_to = 1.1;

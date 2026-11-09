@@ -856,7 +856,7 @@ pub fn door_tools_frag_held(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<D
 }
 
 /// the stages that hold, each while its door is still to be opened   (doortools.ts DoorTools.fragHolds)
-pub fn door_tools_frag_holds(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+pub fn door_tools_frag_holds(g: &crate::game::Game, op: DoorOpId) -> bool {
     let r = &o!(g, op);
     let (d, k) = (r.door, r.kick);
     match r.phase {

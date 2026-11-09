@@ -25,7 +25,7 @@ pub fn fresh() -> crate::nvg::Team {
 }
 
 /// One row of the QA log, the last 200.   (nvg.ts note)
-pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
+pub fn note(g: &crate::game::Game, gd: Option<GuardId>, what: &str) {
 }
 
 /// Is the team's state this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again).

@@ -431,7 +431,7 @@ fn sky_in_force(g: &Game) -> Sky {
 
 /// What is kept of the sky's reach is of the statics as the copy has them now, and of this sun.
 fn reach_fresh(g: &mut Game, to_sun: V3) {
-    let wrote = ::sim::world::world(g.sim).wrote as f64;
+    let wrote = ::sim::world::world_read(g.sim).wrote as f64;
     if g.m.hours.reach.wrote == wrote && g.m.hours.reach.to_sun == to_sun { return; }
     let box_ = box_of(g);
     g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_, cells: JsMap::new(), fine: JsMap::new() };

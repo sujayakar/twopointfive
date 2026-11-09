@@ -178,7 +178,7 @@ pub fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[GuardId
 }
 
 /// the tool the big slot's row names for these men on that door: toGun's own order (doortools.ts DoorTools.bigWord)
-pub fn door_tools_big_word(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsBigWord {
+pub fn door_tools_big_word(g: &crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsBigWord {
     let wedged = match t {
         crate::orders::OrderTarget::Door(x) => crate::doors::door_locked(g, x.door) && is_wedge(g, x.door) && door_tools_known_shut(g, x.door, x.side),
         _ => false,
@@ -503,7 +503,7 @@ pub fn door_tools_held_plain(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// a line of the order log (doortools.ts DoorTools.note)
-pub fn door_tools_note(g: &mut crate::game::Game, what: &str) {
+pub fn door_tools_note(g: &crate::game::Game, what: &str) {
 }
 
 /// a beat of an order, and its line in the log (doortools.ts DoorTools.beat)

@@ -125,7 +125,7 @@ pub fn pair_orders_last_paces(g: &mut Game, j: crate::pairorders::Job, gd: Guard
 }
 
 /// why a man an order pointed at is no longer one (None: he still is)   (PairOrders.gone)
-pub fn pair_orders_gone(g: &mut Game, h: GuardId) -> Option<String> {
+pub fn pair_orders_gone(g: &Game, h: GuardId) -> Option<String> {
     if g.gd[h].state == crate::game::GuardState::Dead || !g.guards.contains(&h) { return Some(String::from("he's down already.")); }
     if g.gd[h].held.is_some() { return Some(String::from("you've already got him.")); }
     if crate::fogofwar::fog_of_war_hidden(g, h) { return Some(String::from("lost sight of him.")); }

@@ -379,7 +379,7 @@ fn pieces_of(nx: usize, ny: usize, nz: usize, open: &[u8]) -> Vec<[f64; 6]> {
 }
 
 /// Greedy boxes over the closed cells: an untouched wall column stays one floor-to-top piece. (WallBreak.pieces)
-pub fn wall_break_pieces(g: &mut crate::game::Game, b: WallbreakBreakableId, open: Option<&[u8]>) -> Vec<[f64; 6]> {
+pub fn wall_break_pieces(g: &crate::game::Game, b: WallbreakBreakableId, open: Option<&[u8]>) -> Vec<[f64; 6]> {
     let r = &g.tab.wallbreak_breakable[b];
     pieces_of(r.nx as usize, r.ny as usize, r.nz as usize, open.unwrap_or(&r.open))
 }

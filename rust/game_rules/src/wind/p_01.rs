@@ -520,7 +520,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The air's velocity at p this frame, m/s: the sum over every active source. (wind.ts Wind.at)
-pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
+pub fn wind_at(g: &crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     let sum = wind_sum(g, p);
     put(out, sum)
 }

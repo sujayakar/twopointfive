@@ -41,7 +41,7 @@ const EARS_PATH_M: f64 = 28.0;
 #[derive(Clone, Copy)]
 struct OnFloor { ch: CharId, down: bool, gd: Option<GuardId>, pl: Option<PlayerId> }
 
-fn on_floor(g: &mut Game) -> Vec<OnFloor> {
+fn on_floor(g: &Game) -> Vec<OnFloor> {
     let mut out = Vec::with_capacity(g.guards.len() + g.seats.len() + 8);
     for pl in crate::seats::men(g) { out.push(OnFloor { ch: g.pl[pl].ch, down: g.pl[pl].down, gd: None, pl: Some(pl) }); }
     let guard = |g: &Game, gd: GuardId| OnFloor { ch: g.gd[gd].ch, down: g.gd[gd].state == GuardState::Dead, gd: Some(gd), pl: None };
@@ -323,7 +323,7 @@ fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
 }
 
 /// the side of the player's man a way lies on, in the words of the fog's own calls (asked of a point a long way off along it)
-fn side_word(g: &mut Game, pl: PlayerId, u: [f64; 2]) -> String {
+fn side_word(g: &Game, pl: PlayerId, u: [f64; 2]) -> String {
     use crate::close::CloseId;
     let p = g.ch[g.pl[pl].ch].pos;
     match crate::fogofwar::fog_of_war_side_of(g, [p[0] + u[0] * 50.0, 0.0, p[2] + u[1] * 50.0]) {
