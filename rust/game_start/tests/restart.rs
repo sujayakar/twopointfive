@@ -195,3 +195,23 @@ fn every_kind_of_mission_starts_over_as_it_started() {
         }
     }
 }
+
+/// THE RULE: the switches a quiet run took and the gloss the wet took are theirs: what stood under them is what the next try finds under it.
+/// A FAILURE MEANS: a restart takes the run's own switches for the player's, and they stay on when the run is over; the floor stays glossy after the rain has gone.
+#[test]
+fn a_restart_keeps_what_stood_under_the_runs_own_writes() {
+    let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts { seed: 1, ..Default::default() });
+    let was = p.g.quiet.was.expect("a run with a partner holds the switches");
+    assert!(game::savestate::control::restart(&mut p.g, None));
+    let again = p.g.quiet.was.expect("the run again holds them");
+    assert_eq!((again.pairup, again.silent, again.silent_start), (was.pairup, was.silent, was.silent_start), "what stood under the run");
+    drop(p);
+
+    let mut p = Play::level("office.json", false, &Opts { seed: 1, ..Default::default() });
+    p.g.engine.settings.gloss = false;
+    p.g.weather.wet_gloss = true;
+    game::weather::weather_set_wet_2(&mut p.g, true);
+    assert!(p.g.engine.settings.gloss, "the wet takes the gloss");
+    assert!(game::savestate::control::restart(&mut p.g, None));
+    assert!(!p.g.engine.settings.gloss, "a dry try has no gloss of the wet's");
+}

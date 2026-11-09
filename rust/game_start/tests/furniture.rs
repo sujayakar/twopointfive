@@ -63,7 +63,7 @@ fn a_restart_puts_the_furniture_back_and_the_same_blast_breaks_it_the_same() {
     p.run(0.5);
     let first = p.level_as_it_stands();
     assert!(first[0] != whole[0], "the staging: the blast took nothing");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g, None);
     p.g.god_mode = true;
     p.g.ai_enabled = false;
     p.g.player_invisible = true;
@@ -93,7 +93,7 @@ fn a_load_keeps_broken_furniture_broken_and_a_restart_after_it_restores() {
     p.frame();
     let loaded = p.level_as_it_stands();
     assert!(loaded[0] == at_save[0] && loaded[2] == at_save[2], "the load did not give the level as it was saved");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g, None);
     p.run(0.1);
     let back = p.level_as_it_stands();
     assert!(back[0] == whole[0] && back[2] == whole[2], "a restart after the load did not give the level back");

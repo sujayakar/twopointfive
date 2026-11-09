@@ -224,15 +224,16 @@ pub fn rescue_start(g: &mut crate::game::Game) -> Option<String> {
         }
     }
     rescue_bench(g);
+    crate::civilians::civilians_leave(g);
     g.rescue.active = true;
     g.rescue.staged = 0.0;
     g.rescue.log.clear();
     g.rescue.failure = None;
-    crate::game::game_restart_encounter(g);
+    rescue_stage(g);
     if g.rescue.active { None } else { Some(g.rescue.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
 }
 
-/// Stop it: the cast gone, the shift back, a fresh night encounter. (rescue.ts Rescue.stop)
+/// Stop it: the cast gone, the shift back. (rescue.ts Rescue.stop)
 pub fn rescue_stop(g: &mut crate::game::Game) {
     if !g.rescue.active { return; }
     g.rescue.active = false;
@@ -245,19 +246,13 @@ pub fn rescue_stop(g: &mut crate::game::Game) {
         benched.extend_from_slice(&g.guards);
         g.guards = benched;
     }
-    crate::game::game_restart_encounter(g);
+    crate::civilians::spawn_civilians(g);
     let text = if !g.level.routes.is_empty() { "hostage rescue off \u{2014} the night shift is back" } else { "hostage rescue off" };
     crate::game::game_msg(g, text);
 }
 
-/// Stage it afresh: a restart of the encounter, which stages. (rescue.ts Rescue.restage)
-pub fn rescue_restage(g: &mut crate::game::Game) {
-    if g.rescue.active { crate::game::game_restart_encounter(g); }
-}
-
-/// restartEncounter's last act: stages on the fresh encounter; a staging that fails ends it cleanly. (rescue.ts Rescue.onEncounterRestart)
-pub fn rescue_on_encounter_restart(g: &mut crate::game::Game) {
-    if !g.rescue.active { return; }
+/// Stage it; a staging that fails ends it cleanly. (rescue.ts Rescue.onEncounterRestart)
+fn rescue_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_tried(g) {
         let failure = format!("the staging failed: {}", e);
         g.rescue.failure = Some(failure.clone());

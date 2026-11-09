@@ -15,7 +15,7 @@ fn office(link: Option<&str>) -> Play {
 fn restart(p: &mut Play) {
     p.g.time = CLOCK;
     p.g.dice = Some(game::math_dice::sim_dice_new(9.0));
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g, None);
     p.g.god_mode = true;
     p.run(0.25);
 }

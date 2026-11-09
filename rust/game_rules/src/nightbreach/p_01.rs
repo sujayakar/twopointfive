@@ -384,16 +384,17 @@ pub fn night_breach_start(g: &mut crate::game::Game, layout: Option<&crate::nigh
     g.night_breach.layout = layout.cloned();
     night_breach_apply_team(g, layout);
     night_breach_bench(g);
+    crate::civilians::civilians_leave(g);
     g.night_breach.active = true;
     g.night_breach.staged = 0.0;
     g.night_breach.log.clear();
     g.night_breach.failure = None;
-    crate::game::game_restart_encounter(g);
+    night_breach_stage(g);
     if g.night_breach.active { return None; }
     Some(g.night_breach.failure.clone().unwrap_or_else(|| String::from("the staging failed")))
 }
 
-/// Stop it: the cast gone, the shift back, a fresh night encounter. (nightbreach.ts NightBreach.stop)
+/// Stop it: the cast gone, the shift back. (nightbreach.ts NightBreach.stop)
 pub fn night_breach_stop(g: &mut crate::game::Game) {
     if !g.night_breach.active { return; }
     g.night_breach.active = false;
@@ -416,7 +417,7 @@ pub fn night_breach_stop(g: &mut crate::game::Game) {
         guards.extend_from_slice(&g.guards);
         g.guards = guards;
     }
-    crate::game::game_restart_encounter(g);
+    crate::civilians::spawn_civilians(g);
     let line = if g.level.routes.is_empty() { format!("{} off", was) } else { format!("{} off — the night shift is back", was) };
     crate::game::game_msg(g, &line);
 }
@@ -429,14 +430,8 @@ pub fn night_breach_adopt(g: &mut crate::game::Game, gd: GuardId, mark: &crate::
     g.night_breach.bursts.push(BlindBurst { until: -1.0, n: 0.0, next: 0.0 });
 }
 
-/// Stage it afresh: a restart of the encounter, which stages. (nightbreach.ts NightBreach.restage)
-pub fn night_breach_restage(g: &mut crate::game::Game) {
-    if g.night_breach.active { crate::game::game_restart_encounter(g); }
-}
-
-/// restartEncounter's last act: stage, and a staging that fails ends the scenario. (nightbreach.ts NightBreach.onEncounterRestart)
-pub fn night_breach_on_encounter_restart(g: &mut crate::game::Game) {
-    if !g.night_breach.active { return; }
+/// Stage it, and a staging that fails ends the scenario. (nightbreach.ts NightBreach.onEncounterRestart)
+fn night_breach_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_checked(g) {
         let what = g.night_breach.layout.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| String::from("night breach"));
         let failure = format!("the staging failed: {}", e);

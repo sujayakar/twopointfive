@@ -131,7 +131,7 @@ fn a_restart_puts_step_one_back() {
         let of = game::lesson::lesson_data(&p.g).unwrap().steps.len();
         p.frame();
         p.g.lesson.i = 1.0;
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g, None);
         // (between frames: before the lesson's next tick the step it still holds would be the last run's)
         let first = format!("1/{}", of);
         assert!(game::lesson::lesson_index(&p.g) == 0.0 && p.objective().contains(&first) && !p.view().lesson.is_some_and(|v| v.finished), "{}: straight after a restart, before any frame: step {}, the row {:?}", t.id, game::lesson::lesson_index(&p.g) + 1.0, p.objective());

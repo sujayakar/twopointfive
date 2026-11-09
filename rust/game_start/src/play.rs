@@ -336,7 +336,7 @@ impl Play {
     /// where each teammate the mission staged stands (x, z), in the order it staged them
     pub fn team_at(&self) -> Vec<[f64; 2]> { game::scenario_run::team_of(&self.g).into_iter().map(|m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
     /// the restart a player presses: the same mission staged again
-    pub fn restaged(&mut self) { game::roomclear::room_clear_scenario_restage(&mut self.g); }
+    pub fn restaged(&mut self) { game::savestate::control::restart(&mut self.g, None); }
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.

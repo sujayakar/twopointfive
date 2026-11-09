@@ -66,7 +66,7 @@ held again. **Taken:** nobody holds and `response_up` is false. **Wiped:** every
 learns of the assault. F is the entry on the hostage room (`rescue_order_door`). The room held is only "secured". **Won** (`rescue_end_won`): nobody of theirs left for `clear_secs`, or every
 living hostage within `out_m` of the team's start, having been led (`rescue_end_word`). **Lost** (`rescue_outcome`): all hostages dead, one hit by your own fire, or Sam down.
 
-**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_before_restart` writes the deal into `g.level.mission` and benches the routes not manned. The stages run
+**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_deal` writes the deal into `g.level.mission` before the men are made; `quiet_mission_off_shift` benches the routes not manned. The stages run
 in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; walking off, sprinting or hauling a body lets go), Exfil, Done past any exit (`out_now`). Every player down is
 Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
@@ -74,8 +74,9 @@ Failed. `take_told` is true where the spot is `wired`, and then a calm man is se
 **How it ended** (`ended` in `verdict/b_01.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
 The objective line is one read, first speaker wins: script, lesson, room clear with its par, rescue, night breach, stages.
 
-**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/player/p_02.rs`). Inside
-`game_restart_encounter`, the first act is the quiet deal and the last is each scenario's staging again. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
+**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/player/p_02.rs`). A restart
+stands the mission by the stand's own lines (`standing::stand_men`): the quiet deal comes before the men, who read it, and each scenario stages once on the men
+it finds. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
 carries the quiet deal, the lesson's step and a script's place in its beat.
 
 **Deals and ways in.** Every try starts the same. `k.roomclear.seed` is 0, which `place_defenders` reads as each room's first `garrison` marks in file order; `?roomclear=3` shuffles them off that
@@ -121,7 +122,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
   `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
 - **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
-  a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
+  a tick line in `step_seats_on_first`, and its staging in its own start.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
 

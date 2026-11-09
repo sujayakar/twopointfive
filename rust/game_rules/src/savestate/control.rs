@@ -334,7 +334,7 @@ pub const START: &str = "start";
 pub struct First { image: Moment, men: crate::standing::Men }
 /// EVERY GAME THE CONTROL KEEPS OF A STAND: the first, what a stage goes back to, and what was kept as it ran
 #[derive(Default)]
-struct Held { first: Option<Rc<First>>, stage: Option<Rc<Moment>>, kept: BTreeMap<String, Kept>, used: u64 }
+struct Held { first: Option<Rc<First>>, stage: Option<Rc<crate::kitstage::KitStage>>, kept: BTreeMap<String, Kept>, used: u64 }
 /// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game dropped may stand again from a kept copy of itself (a panic's way back, a tool's slot given up), and is the same stand.
 static mut IMAGES: BTreeMap<u32, Held> = BTreeMap::new();
 static mut STANDS: u32 = 0;
@@ -362,10 +362,10 @@ pub fn keep_level(g: &mut Game, men: &crate::standing::Men) {
     let of = stood(g);
     held(of).first = Some(Rc::new(First { image: Moment::of(g), men: men.clone() }));
 }
-/// THIS GAME, kept as what `again` puts back: a stage's way, which sets itself up on a mission that is up
+/// THE STAGE AS ITS FIRST STAGING FOUND IT: what `again` hands the fresh mission
 pub fn keep_first(g: &mut Game) {
     let of = stood(g);
-    held(of).stage = Some(Rc::new(Moment::of(g)));
+    held(of).stage = g.kit_stage.as_deref().cloned().map(Rc::new);
 }
 /// what is kept of this stand's game, the best to go back to first: the newest save nothing came down after, the newest at all, and the run's first step last
 /// What a stand keeps is this again (a moment of the game going back: what was kept after it is gone, what it held comes back).
@@ -427,6 +427,9 @@ pub fn ask_restart(g: &mut Game, said: Option<&str>) { g.saves.again = Some(Stri
 pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
     let (slot, of) = (g.sim, stood(g));
     let Some(first) = held(of).first.clone() else { return false };
+    // (the switches a quiet run took and the gloss the wet took are theirs, and an evening keeps what stood under them)
+    crate::quiet::quiet_mission_release(g);
+    crate::weather::weather_gloss_back(g);
     let was = Survivors::of(g);
     let host = (g.host_cam, g.host_input);
     // (no box world's copy stands yet of a level with no men: the lines open it, as they did)
@@ -452,14 +455,23 @@ fn put_cards(g: &mut Game, kit: crate::kit::KitMod) {
     let of_new = core::mem::replace(&mut g.m.kit, kit);
     (g.m.kit.man_of, g.m.kit.bare_eyed, g.m.kit.kit_staged, g.m.kit.issued_player, g.m.kit.you_bare) = (of_new.man_of, of_new.bare_eyed, of_new.kit_staged, of_new.issued_player, of_new.you_bare);
 }
-/// A STAGE'S WAY OF STARTING OVER: the game `keep_first` kept stands again, die, sky and all, so a picture of the same cards is the same picture, with only the cards, the tables and what the host is owed. False where none was kept
-pub fn again(g: &mut Game) -> bool {
+/// A STAGE'S WAY OF STARTING OVER: the mission stands again by the stand's own lines, in the size asked, die, sky and all, so a picture of the same cards is the same picture, with only the cards, the tables and what the host is owed. False where no stage was kept
+pub fn again(g: &mut Game, size: Option<u32>) -> bool {
     let (slot, of) = (g.sim, stood(g));
-    let Some(first) = held(of).stage.clone() else { return false };
+    let (Some(first), Some(stage)) = (held(of).first.clone(), held(of).stage.clone()) else { return false };
     let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
-    over(g, first.laid(slot));
+    crate::scene_collision::unstand(g);
+    let mut new = first.image.laid(slot);
+    new.serial_next = new.serial_next.max(g.serial_next);
+    core::mem::swap(g, &mut *new);
     put_cards(g, kit);
     (g.k, g.out, g.cmd_buf) = (k, out, cmd);
+    // (a mission that refuses leaves the plain floor, and a stage on it is a picture of nothing)
+    let mut men = first.men.clone();
+    if let (Some(n), Some(q)) = (size, men.words.as_mut()) { q.set("squad", &alloc::format!("{n}")); }
+    let _ = crate::standing::stand_men(g, &men);
+    crate::scene_collision::light_ready(g);
+    g.kit_stage = Some(alloc::boxed::Box::new((*stage).clone()));
     true
 }
 /// the run's first moment is kept, once, for a game that is lost before anything else is

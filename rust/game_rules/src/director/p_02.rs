@@ -348,16 +348,6 @@ fn cancel_beat(g: &mut Game, b: DirectorLiveBeatId, why: Option<&str>) {
     note(g, &name, DirectorPushRowKind::Beat, "cancelled", Some(obj(data)));
 }
 
-/// The encounter restarted under a play program: its men are gone, the program ends where it stood. (director.ts Director.onEncounterRestart)
-pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
-    let Some(r) = running(g) else { return };
-    if !g.director.exiting && g.tab.director_run[r].show.is_none() {
-        note(g, "", DirectorPushRowKind::Program, "reset", None);
-        g.tab.director_run[r].units.clear();
-        director_stop(g, Some(false));
-    }
-}
-
 // ---------------------------------------------------------------- the tick
 /// Once a frame from Game.update, before tacticsTick. (director.ts Director.tick)
 /// (`_input`, `_cam`: the call surface's row still carries them, and nothing reads them: the host's camera and keys are the game's `host_cam` /
@@ -789,10 +779,6 @@ pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
     for d in g.doors.list.clone() {
         crate::doors::door_reset(g, d);
     }
-    let p = g.player;
-    if g.pl[p].down || g.tab.director_run[r].def.opts.fresh_encounter.unwrap_or(false) {
-        crate::game::game_restart_encounter(g);
-    }
     g.ai_enabled = true;
     g.god_mode = true;
     g.player_invisible = true;
@@ -877,7 +863,7 @@ pub fn director_exit_show(g: &mut crate::game::Game, r: DirectorRunId) {
     crate::game::game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
     crate::out_events::push_smoke_system_like_clear_all(g);
-    crate::game::game_restart_encounter(g);
+    crate::savestate::control::ask_restart(g, None);
     if let Some(cam) = g.host_cam {
         g.tab.camera[cam].pin = None;
     }
