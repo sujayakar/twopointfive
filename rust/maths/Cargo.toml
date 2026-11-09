@@ -1,0 +1,11 @@
+# The game's own maths and its die. It keeps nothing, and links only the exact operations.
+[workspace]
+
+[package]
+name = "maths"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+prim = { path = "../prim" }

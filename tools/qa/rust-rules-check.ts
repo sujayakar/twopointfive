@@ -1,5 +1,5 @@
 // WHAT THE RUST OF THE GAME MAY NOT SAY, where no compiler keeps it out. No cargo, no game: the sources are read.
-//   rules     no line of rust/sim (the world's numbers: lines, bodies, doors, light, the maths) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
+//   rules     no line of rust/sim or rust/maths (the world's numbers: lines, bodies, doors, light, the maths) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
 //             one arithmetic on every machine, and nothing kept where a snapshot does not see it
 //   statics   every `static mut` of rust/sim and rust/prim is a row here: the games' state, scratch of one call, or a copy proven where it is made
 //   sides     every crate under rust/ is gameplay, dressing or both, and neither side links the other; a crate from outside has no side
@@ -14,7 +14,7 @@ let red = 0; const line = (bad: string[], what: string, good: string): void => {
 /** WHICH SIDE OF THE LINE EACH CRATE UNDER rust/ IS ON. 'gameplay': it decides the game, runs on the server, and is bound to one arithmetic. 'dressing': it only makes the picture, and may round as the machine
  *  likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row here is red: nothing joins without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module a host loads)
+const SIDES: Record<string, Side> = { prim: 'both', maths: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module a host loads)
 /** what a line of rust/sim may not say */
 const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
@@ -82,18 +82,11 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
- *  LIST in rust/Cargo.lock — every build here is `--locked`, so the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a
+ *  LIST in its Cargo.lock: the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a
  *  dependency. A package the lock names that is no folder here (a crate from outside) comes back too, and has no side. */
 function links(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const n of readdirSync(WORK).sort()) if (existsSync(join(WORK, n, 'Cargo.toml'))) out[n] = [];
-  const lock = existsSync(join(WORK, 'Cargo.lock')) ? readFileSync(join(WORK, 'Cargo.lock'), 'utf8') : '';
-  for (const block of lock.split(/^\[\[package\]\]\s*$/m).slice(1)) {
-    const name = /^name\s*=\s*"([^"]+)"/m.exec(block)?.[1]; if (!name) continue;
-    const list = /^dependencies\s*=\s*\[([^\]]*)\]/m.exec(block)?.[1] ?? '';
-    out[name] = [...list.matchAll(/"([^"\s]+)[^"]*"/g)].map(m => m[1]);   // ("name" or "name version (source)": the name)
-  }
-  // (a crate that is a workspace of its own has a lock of its own: what it and the crates only it names link is read there; the workspace's own word on a crate stands)
   for (const n of Object.keys(out)) { const own = join(WORK, n, 'Cargo.lock'); if (!existsSync(own)) continue;
     for (const block of readFileSync(own, 'utf8').split(/^\[\[package\]\]\s*$/m).slice(1)) {
       const name = /^name\s*=\s*"([^"]+)"/m.exec(block)?.[1]; if (!name || (out[name]?.length ?? 0) > 0) continue;
@@ -106,11 +99,11 @@ function links(): Record<string, string[]> {
 function code(crate: string): { at: string; file: string; text: string }[] {
   const out: { at: string; file: string; text: string }[] = [], walk = (d: string): void => { for (const n of readdirSync(d).sort()) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) { const file = relative(WORK, p); readFileSync(p, 'utf8').split('\n').forEach((raw, i) => out.push({ at: `rust/${file}:${i + 1}`, file, text: raw.replace(/\/\/.*$/, '') })); } } };
   walk(join(WORK, crate, 'src')); return out; }
-const sim = code('sim'), prim = code('prim');
+const sim = [...code('sim'), ...code('maths')], prim = code('prim');
 if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs', text: 'static mut PLANTED: f64 = x.sin();' });
 
 { const bad = sim.flatMap(l => RULES.filter(R => R.but !== l.file && R.re.test(l.text)).map(R => `${l.at} — ${R.why}`));
-  line(bad, 'rules: no line of rust/sim rounds as the machine likes or keeps what no block holds', `${sim.length} lines read for ${RULES.length} rules`); }
+  line(bad, 'rules: no line of rust/sim or rust/maths rounds as the machine likes or keeps what no block holds', `${sim.length} lines read for ${RULES.length} rules`); }
 { const bad: string[] = [], met = new Set<string>();
   for (const l of [...sim, ...prim]) {
     if (/^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+(?!mut\b)\w+\s*:.*\b(\w*Cell|Atomic\w+|Mutex|RwLock|Once\w*|Lazy\w*)\b/.test(l.text)) bad.push(`${l.at} — a static written through a cell or a lock: what is kept between calls is a \`static mut\` with a row in STATICS`);

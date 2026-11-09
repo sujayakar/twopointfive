@@ -85,5 +85,5 @@ public/      models and animations             docs/       level format, notes, 
 
 Base character mesh and animations: **Universal Animation Library (Standard)** by Quaternius, CC0
 (https://quaternius.com). The game's own maths follows the Go standard library's math package (Copyright 2009 The Go Authors), the Cephes
-Math Library (Stephen L. Moshier) and FreeBSD's msun (Sun Microsystems): their notices are in `rust/sim/src/maths.rs`. The compact shader
+Math Library (Stephen L. Moshier) and FreeBSD's msun (Sun Microsystems): their notices are in `rust/maths/src/fns.rs`. The compact shader
 kernels: Credit: Stephen Jayakar, from his pull request 1. Everything else was made here.

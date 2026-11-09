@@ -56,7 +56,7 @@ const CREDIT = { line: 'Credit: Stephen Jayakar, from his pull request 1.', at: 
   ...['composite', 'fgather', 'gather_common', 'particles', 'reflect', 'restir', 'sdfrig', 'sharp_direct', 'volumetrics'].map(k => `src/render/shaders/${k}.wgsl`)] };
 const uncredited = (text: (f: string) => string) => CREDIT.at.filter(f => !text(f).includes(CREDIT.line));
 /** the notices the game's maths stands under */
-const NOTICE = { at: 'rust/sim/src/maths.rs', says: ['Copyright 2009 The Go Authors', 'Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier', 'Copyright (C) 2004 by Sun Microsystems', 'this list of conditions and the following disclaimer'] };
+const NOTICE = { at: 'rust/maths/src/fns.rs', says: ['Copyright 2009 The Go Authors', 'Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier', 'Copyright (C) 2004 by Sun Microsystems', 'this list of conditions and the following disclaimer'] };
 
 /** every fault of a page */
 function faults(text: string, most: number): string[] {

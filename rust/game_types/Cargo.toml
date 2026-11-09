@@ -11,7 +11,7 @@ publish = false
 crate-type = ["rlib"]
 
 [dependencies]
-sim = { path = "../sim" }
+maths = { path = "../maths" }
 prim = { path = "../prim" }
 game_derive = { path = "../game_derive" }
 
