@@ -77,7 +77,7 @@ error about a local puts back every softened place of its function. A softened r
 these hands out the same place.
 
 **Reading twins.** A block of the simulation is handed out as `&'static mut` from a slot number. Beside such a function a twin named `…_read` hands
-the same thing out as `&'static` with no `mut` (`state_read` in `rust/sim/src/state.rs`, `wx_read` in `rust/game_rules/src/air/weather.rs`: written
+the same thing out as `&'static` with no `mut` (`state_read` in `rust/sim/src/state.rs`, `of_read` in `rust/sim/src/weather.rs`: written
 by hand). The pass finds the pairs by that shape and moves every call that compiles onto the twin.
 
 **The taint: what the compiler cannot see.** A function can write with only `&Game` in hand through anything that is `unsafe`, a static or a cell, or

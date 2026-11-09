@@ -293,50 +293,39 @@ pub fn pen_passes(ax: f64, ay: f64, az: f64, rx: f64, ry: f64, rz: f64, n: usize
     list[..2 * n].copy_from_slice(&s[..2 * n]);
     pen::shot_passes(&cx(), [ax, ay, az], [rx, ry, rz], &list[..2 * n], energy, tune) as u32
 }
-// ---- the weather that play reads (wind.rs, weather.rs, air.rs, snow.rs)
-/// sizes the host holds its own to: 0 roofs · 1 thunder rows · 2 the plan's cells across · 3 down
-pub fn weather_cap(i: u32) -> usize {
-    match i {
-        0 => weather::ROOFS,
-        1 => weather::THUNDERS,
-        2 => air::AIR_W,
-        _ => air::AIR_H,
-    }
-}
-/// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it (air.rs plan)
-fn air_of(g: usize, stamp: f64) -> (&'static mut air::Air, &'static mut air::Plan) {
+// ---- the dust (air.rs)
+/// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it and the roofs (air.rs plan)
+fn air_of(g: usize, stamp: f64, roofs: &[[f64; 4]]) -> (&'static mut air::Air, &'static mut air::Plan) {
     let wx = weather::of(g);
-    let p = air::plan(g, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize);
+    let p = air::plan(g, stamp, &wx.air, roofs);
     (&mut wx.air, p)
 }
 /// the dust's field stood up afresh: every cell the open air's, no opening asked, no list
-pub fn air_clear(g: usize, stamp: f64) {
-    let (a, p) = air_of(g, stamp);
+pub fn air_clear(g: usize, stamp: f64, roofs: &[[f64; 4]]) {
+    let (a, p) = air_of(g, stamp, roofs);
     a.clear(p)
 }
 /// the field begun: its switch, nothing owed, no opening known
-pub fn air_begin(g: usize, stamp: f64, on: u32) {
-    let (a, p) = air_of(g, stamp);
-    a.begin(p, on != 0)
+pub fn air_begin(g: usize, stamp: f64, on: bool, roofs: &[[f64; 4]]) {
+    let (a, p) = air_of(g, stamp, roofs);
+    a.begin(p, on)
 }
 /// the field seeded under the roofs in force at the leak given
-pub fn air_seed(g: usize, stamp: f64, leak: f64) {
-    let (a, p) = air_of(g, stamp);
-    let wx = weather::of(g);
-    let (roofs, n) = (wx.roofs, wx.roofs_n as usize);
-    a.seed(p, leak, |x, z| weather::under(&roofs, n, x, z))
+pub fn air_seed(g: usize, stamp: f64, leak: f64, roofs: &[[f64; 4]]) {
+    let (a, p) = air_of(g, stamp, roofs);
+    a.seed(p, leak, |x, z| weather::under_any(roofs, x, z))
 }
-/// …every opening asked and run on until it stands still. Said → scratch 0‥3 (air.rs Said)
-pub fn air_settle(g: usize, stamp: f64, w: usize, set: i32, ask: u32, tune: &Knobs) {
+/// …every opening asked and run on until it stands still
+pub fn air_settle(g: usize, stamp: f64, w: usize, set: i32, ask: u32, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
     let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp);
+    let (a, p) = air_of(g, stamp, roofs);
     a.settle(p, w, set, ask, &mut said, tune);
-    said.tell(scratch());
+    said
 }
-/// one tick of it: said → scratch 0‥3
-pub fn air_update(g: usize, stamp: f64, w: usize, set: i32, ask: u32, dt: f64, tune: &Knobs) {
+/// one tick of it
+pub fn air_update(g: usize, stamp: f64, w: usize, set: i32, ask: u32, dt: f64, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
     let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp);
+    let (a, p) = air_of(g, stamp, roofs);
     a.update(p, w, set, ask, dt, &mut said, tune);
-    said.tell(scratch());
+    said
 }

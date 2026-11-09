@@ -251,7 +251,6 @@ pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod sim_slabshome { pub mod types; pub use types::*; }
 pub mod sim_state { pub mod types; pub use types::*; }
-pub mod sim_weatherhome { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }

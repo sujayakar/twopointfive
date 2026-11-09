@@ -139,7 +139,7 @@ fn a_storm_is_cut_by_the_levels_own_roofs() {
     let gusts: Vec<String> = p.g.wind.all.iter().filter_map(|s| p.g.tab.wind_wind_source[*s].door).map(|d| p.g.dr[d].def.name.clone()).collect();
     assert!(gusts.iter().any(|n| n == "fire_exit"), "the warehouse's doors with a gust: {gusts:?}");
     drop(p);
-    for level in ["office.json", "block.json", "bazaar.json"] { let mut p = Play::level(level, false, &o); p.run(0.1); assert!(!p.g.weather.own, "{level} keeps the office's roofs, or a still night"); if level == "bazaar.json" { assert_eq!(game::weather::weather_rain_rate(&p.g), 0.0); } }
+    for level in ["office.json", "block.json", "bazaar.json"] { let mut p = Play::level(level, false, &o); p.run(0.1); assert!(!p.g.weather.own, "{level} keeps the office's roofs, or a still night"); if level == "bazaar.json" { assert_eq!(p.g.weather.rain_rate, 0.0); } }
 }
 
 /// THE RULE ("wear, paths in the ground … can all tell a story for how people walk through the level"): the map a level's floors are worn by is worn along every way of it and at every threshold, and

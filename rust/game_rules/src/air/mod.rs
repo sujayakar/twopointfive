@@ -11,7 +11,6 @@ pub mod render_particles;
 pub mod render_reach;
 pub mod render_snow_field;
 pub mod fixtures;
-pub mod sim_weatherhome;
 pub mod smoke_types;
 pub mod snow_blast;
 pub mod snow_bog;
