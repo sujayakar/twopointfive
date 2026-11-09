@@ -506,7 +506,7 @@ export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
 /** the carpets' plum. The palette has no paint of this hue (its reds are the depot's and the registry's), so it is a colour of this file's own and only decals
- *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: src/scene/look.ts LOOK_DOORS */
+ *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/doors/paint.rs */
 const PLUM: Vec3 = [0.15, 0.035, 0.075];
 const SKIN: Skin = {
   wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,

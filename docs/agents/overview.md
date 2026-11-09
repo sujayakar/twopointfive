@@ -131,12 +131,11 @@ src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *S
                      (SmokeSystem), smoke.wgsl, smokeGrid.ts (the lattice + the consts both shader sides get), red-black SOR pressure solve, emitters; SoundSeal'd door LEAVES are obstacles (a
                      ≤ 32-leaf sealers uniform, re-baked when a leaf shuts / opens / moves and on `SmokeSystem.obstaclesChanged(c, r)`: destruction hides a static); ω clamped [1, 1.95];
                      wind_force.wgsl = the wind lane's forcing; types.ts = the face game code sees (`SmokeSystemLike`)
-src/scene/           markings.ts + markingDefaults.ts (the markings model + per-kind recipes), level.ts (runtime types Level / LightDef / PropDef / plans + buildLevel() = loadLevel(levels/office.json), imported so Bun
-                     inlines it into the bundle), levelData.ts (the FILE format LevelData v1: ids, flag names, materials, refs by id; validate /
-                     canonical serialize / digest / structuralDiff / id helpers — docs/level-format.md), levelLoad.ts (loadLevel data→Level and
-                     levelToData Level→data, order-preserving: data.boxes[i] ≡ world.statics[i]), officeGen.ts (LEGACY procedural generator,
-                     not imported by the game: tools/level-export.ts regenerates the JSON from it; probes.ts level = 0-diff identity gate),
-                     boxes.ts (Box, flags, CPU raycast), collision.ts (capsule-vs-grid, nav grid + A*, sound propagation paths), world.ts
+src/scene/           boxes.ts (Box, flags, CPU raycast), markings.ts (the markings model), shapes.ts, stuff.ts + materials.ts (what a thing is made of, what it does), the paints, the
+                     missions' list and words, world.ts: what the picture and the pages read
+tools/levels/        a generator a level (<name>.ts), export.ts; lib/: what only level making uses — level.ts (a Level's types), levelData.ts (the FILE format: ids, flag names, materials,
+                     refs by id; validate / canonical serialize / digest / structuralDiff — docs/level-format.md), levelLoad.ts (loadLevel data→Level and levelToData Level→data,
+                     order-preserving), officeGen.ts (the office's generator and kit: tools/level-export.ts writes the JSON from it), gwotKit.ts, levelKit.ts, lint.ts, markingDefaults.ts
 levels/              office.json — the level as data (782 boxes incl. 22 Glass panes and 6 vent grilles + their markings, lights, switchables, doors + locks, routes, props, mission, plans, daylight;
                      office-relief.json = the pre-markings 925-box office (?level=relief))
 src/game/            game.ts (Game: state, constructor, event plumbing, doors/props glue, update() orchestration — the split-out

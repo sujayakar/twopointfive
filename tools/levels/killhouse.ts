@@ -261,7 +261,7 @@ export const NAME = 'killhouse';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES} — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the floor's.`;
 /** the range's marking paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it;
- *  the outside doors' paint is this, darker: src/scene/look.ts LOOK_DOORS */
+ *  the outside doors' paint is this, darker: rust/game_rules/src/doors/paint.rs */
 const VIOLET: Vec3 = [0.42, 0.2, 0.66];
 /** the three ply targets' lanes (tools/levels/killhouse.ts, group 'range': targets at x 33.4) and where the firing line lies, between the east wall's foot and them */
 const TARGET_Z = [10.4, 13.5, 16.6], FIRE_X = 29.5;

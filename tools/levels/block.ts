@@ -629,7 +629,7 @@ export const NAME = 'block';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = BLOCK_ROOMS;
-/** the one accent (a word to change it — and the outside doors' paint beside it: src/scene/look.ts LOOK_DOORS) */
+/** the one accent (a word to change it — and the outside doors' paint beside it: rust/game_rules/src/doors/paint.rs) */
 const ACCENT: GwotMat = 'prodGreen';
 /** THE ROOMS' OWN FLOORS (block.ts lays one wall to wall in each lived room, in a colour of its own): what each is made of, by the colour it was written in.
  *  The shared rules ask a lived thing the furniture questions, and a floor is no furniture: the switch room's grey-green read as a cot's blanket and was

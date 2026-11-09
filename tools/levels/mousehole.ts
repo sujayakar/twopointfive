@@ -359,7 +359,7 @@ export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const OWN = MOUSEHOLE_PAINT;
 const R = MOUSEHOLE_ROOMS;
 /** the clinic's teal. The palette has no paint of this hue, so it is a colour of this file's own and only decals wear it; the outside door's paint is this,
- *  darker: src/scene/look.ts LOOK_DOORS */
+ *  darker: rust/game_rules/src/doors/paint.rs */
 const TEAL: Vec3 = [0.07, 0.3, 0.29];
 const SKIN: Skin = {
   // WHAT EACH THING IS MADE OF, where the shared rules had no word for it or a wrong one (the look draws a paint as a material by its palette row, and a paint
