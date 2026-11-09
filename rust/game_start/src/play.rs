@@ -202,19 +202,27 @@ impl Play {
     /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
     /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
     pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
-        let [yaw, zoom] = script.lens();
-        let cam = self.g.tab.cmd_seat[self.g.seats[0]].cam;
-        if yaw != 0.0 { game::camera::follow_camera_rotate(&mut self.g, cam, yaw); }
-        if zoom != 0.0 { game::camera::follow_camera_zoom(&mut self.g, cam, zoom); }
+        self.lens_of(script, 0);
         let mut cmds = self.net_sample();
-        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
-        game::scene_box_mirror::box_mirror_things(&mut self.g);
-        script.hand(&self.g, &mut cmds[0], DT);
+        self.hand_of(script, &mut cmds[0]);
         self.net_tick(&cmds, 0);
         self.host_saves();
         self.g.out.clear();
         self.hear();
         self.lens_and_keys();
+    }
+    /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
+    pub fn hand_of(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
+        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
+        game::scene_box_mirror::box_mirror_things(&mut self.g);
+        script.hand(&self.g, cmd, DT);
+    }
+    /// the view of the seat turned and pulled back as he asked since his last hand
+    pub fn lens_of(&mut self, script: &mut dyn crate::player::Script, seat: usize) {
+        let [yaw, zoom] = script.lens();
+        let cam = self.g.tab.cmd_seat[self.g.seats[seat]].cam;
+        if yaw != 0.0 { game::camera::follow_camera_rotate(&mut self.g, cam, yaw); }
+        if zoom != 0.0 { game::camera::follow_camera_zoom(&mut self.g, cam, zoom); }
     }
     /// … until he has nothing more to do, for at most `secs`: did he get there
     pub fn played_out(&mut self, script: &mut dyn crate::player::Script, secs: f64) -> bool {
