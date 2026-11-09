@@ -386,7 +386,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
         g.gd[id].path_goal = None;
         g.gd[id].path_goal_orbit = false;
     }
-    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
+    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None);
     let c = g.gd[id].ch;
     let at = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos };
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
@@ -394,7 +394,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
 }
 /// Control's voice on the net.   (devices.ts control)
 fn control(g: &mut crate::game::Game, text: &str) {
-    crate::game::game_msg(g, &format!("radio: CONTROL — {}", text));
+    crate::cues::cues_radio(g, &format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
     g.devices.radio_count += 1.0;
     let mut row: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
@@ -516,8 +516,6 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("the {} pad needs a code you don't have, but somebody on this floor knows it", door_says));
     let here = g.ch[c].pos;
     let where_ = crate::chronicle::room_of(g, here);
     devices_note(g, &DevicesNoteR {  });
@@ -556,8 +554,6 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     keys.add(g.dr[d].lock_id.clone());
     let who = g.ch[g.pl[pl].ch].id;
     crate::doors::doors_use(g, d, p, who, Some(&keys));
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} — the {} takes it", spell(&k.def.code), door_says));
     let door_name = g.dr[d].def.name.clone();
     let row = data(&[("door", text(&door_name))]);
     let centre = g.dr[d].frame_centre;

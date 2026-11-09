@@ -159,7 +159,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
         }
         GatePhase::Bang => {
             stand_gate(g, gd, dt, Some(g_2.face)); g_2.look = Some(inside); g_2.crouch = 0.4;
-            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None, None); begin_cross(g, gd, g_2); }
+            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None); begin_cross(g, gd, g_2); }
             true
         }
         GatePhase::Slice => {   // across the opening station by station, muzzle into the room, a quarter second on each
@@ -176,7 +176,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
                 let line: &str = if gate_mate(g, g_2, GateMateRole::Second, gd).is_some() {
                     crate::words::wg(g, &"clear as far as I can see — crossing, on me", &"clear as far as I see — crossing, on me")
                 } else { "crossing" };
-                crate::game::game_say(g, gd, line, None, None, None);
+                crate::game::game_say(g, gd, line, None, None);
                 begin_cross(g, gd, g_2);
             }
             true
@@ -261,7 +261,7 @@ fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::
     }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
-    crate::game::game_say(g, thrower, "bang out", None, None, None);
+    crate::game::game_say(g, thrower, "bang out", None, None);
     if thrower != gd {
         let row = s(g).gates.get(thrower).cloned();
         if let Some(row) = row {

@@ -575,7 +575,7 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
                 let p = g.ch[g.gd[gd].ch].pos;
                 if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = crate::words::wg(g, &THUNDER_OUT_GUIDE, &THUNDER_OUT); }   // he is out in it
             }
-            crate::game::game_say(g, gd, line, None, None, None);
+            crate::game::game_say(g, gd, line, None, None);
             g.weather.stats.barks += 1.0;
             let at = g.time;
             weather_set_last_bark_t(g, at);

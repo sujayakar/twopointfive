@@ -475,7 +475,7 @@ fn wall_charge_step(g: &mut crate::game::Game, op: WallOpId) {
         if o!(g, op).phase == Phase::Place {
             o!(g, op).set_t = f64::NAN;
             o!(g, op).t0 = t;
-            crate::game::game_say(g, lead, "i've got the charge.", None, None, None);
+            crate::game::game_say(g, lead, "i've got the charge.", None, None);
             let a = set_job(g, &w, spot);
             wall_charge_assign(g, op, lead, &a);
             let line = format!("setter now {}", g.gd[lead].callsign);
@@ -508,7 +508,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
         if asg!(g, a).arrived && near {
             o!(g, op).set_t = t + crate::workstow::mate_stow_lead(g);
         } else if !wall_charge_waiting(g, op, el) {
-            crate::game::game_say(g, lead, "can't get on that wall.", None, None, None);
+            crate::game::game_say(g, lead, "can't get on that wall.", None, None);
             wall_charge_end(g, op, "never made the wall");
         }
         return;
@@ -523,7 +523,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
     }
     if t - set_t < secs { return; }
     if wall_charge_open_at(g, w) {
-        crate::game::game_say(g, lead, "it's open.", None, None, None);
+        crate::game::game_say(g, lead, "it's open.", None, None);
         wall_charge_end(g, op, "the wall opened");
         return;
     }
@@ -531,7 +531,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
         let paid = wall_charge_take(g);
         if paid < 0.0 {
             let none = wall_charge_none_words(g, &crate::seats::here(g));
-            crate::game::game_say(g, lead, &none, None, None, None);
+            crate::game::game_say(g, lead, &none, None, None);
             wall_charge_end(g, op, "no charges");
             return;
         }
@@ -554,7 +554,7 @@ fn step_standoff(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64
     if wall_charge_charge_on(g, &crate::seats::here(g), w).is_none() { wall_charge_end(g, op, "the charge is gone"); return; }
     if o!(g, op).owes.unwrap_or(false) && v3::dist_xz(pos_of(g, lead), wall_pt(g, w, 0.0, 0.0, None)) >= g.k.wallkill.near_m {
         o!(g, op).owes = Some(false);
-        crate::game::game_say(g, lead, "charge set.", None, None, None);
+        crate::game::game_say(g, lead, "charge set.", None, None);
     }
     let men = o!(g, op).men.clone();
     let all_there = men.iter().all(|&gd| { let a = *o!(g, op).mine.get(gd).unwrap(); asg!(g, a).arrived });
@@ -564,9 +564,7 @@ fn step_standoff(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64
         let p = pos_of(g, m);
         if wall_charge_blast_share(g, w, p, None, Some(false)) > 0.0 { inside = true; break; }
     }
-    crate::game::game_say(g, lead, if inside { "can't get clear of it. your call." } else { "stood off. your call." }, None, None, None);
-    let line = format!("charge set on the wall. press {} to blow it", g.k.doortools.blow_key.replacen("Key", "", 1));
-    crate::game::game_msg(g, &line);
+    crate::game::game_say(g, lead, if inside { "can't get clear of it. your call." } else { "stood off. your call." }, None, None);
     o!(g, op).phase = Phase::Armed;
     o!(g, op).t0 = t;
     wall_charge_beat(g, op, "armed");
@@ -726,7 +724,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
     }
     if pods.is_empty() {
         let lead = o!(g, op).lead;
-        crate::game::game_say(g, lead, "no way in.", None, None, None);
+        crate::game::game_say(g, lead, "no way in.", None, None);
         wall_charge_end(g, op, "no floor inside");
         return;
     }
@@ -798,7 +796,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
     o!(g, op).t0 = t;
     wall_charge_beat(g, op, "go");
     let lead = o!(g, op).lead;
-    crate::game::game_say(g, lead, "going in.", None, None, None);
+    crate::game::game_say(g, lead, "going in.", None, None);
 }
 
 /// where he crossed the wall's line; read by the checks and their words only   (wallcharge.ts WallCharge.cross)
@@ -957,17 +955,9 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, flash_at, [0.0, 0.0, 0.0],
         Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     crate::throwables::item_set_fired(g, it, true);
-    // (`m !== last`, wallcharge.ts:1078, asks whether the burst pushed a message: an identity. A message is its serial, dealt as it is pushed; the
-    //  list at its cap with the same words in the same tick would read "nothing new" by length, text and time)
-    let last = g.messages.last().map(|m| m.serial);
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
     g.guards = all;
-    let fresh = match g.messages.last() {   // ('flashbang went off': this was not one)
-        Some(m) => last != Some(m.serial) && m.text.contains("flashbang"),
-        None => false,
-    };
-    if fresh { g.messages.pop(); }
     if let Some(ii) = g.items.items.iter().position(|&x| x == it) { g.items.items.remove(ii); }
 
     let (mut knocked, mut stunned, mut backblast, mut lost) = (0.0, 0.0, 0.0, 0.0);
@@ -1051,7 +1041,6 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     if lost != 0.0 { said += &format!(" · {} of yours down", lost); }
     if backblast != 0.0 { said += &format!(" · {} of yours too close", backblast); }
     if sam > 0.0 { said += " · you were too close"; }
-    crate::game::game_msg(g, &said);
     let hole_words = match hole { Some(h) => format!("hole {} m", js::to_fixed(h.half * 2.0, 2)), None => String::from("no hole") };
     let tail = if wk { format!(" lost {}{}", lost, if sam_down { " · the player down" } else { "" }) } else { String::new() };
     let note = format!("blow wall {}: {} knocked {} stunned {} backblast {}{}", w.index, hole_words, knocked, stunned, backblast, tail);
@@ -1064,7 +1053,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             None => {
                 let lead = o!(g, op).lead;
                 let up = if g.gd[lead].state != GuardState::Dead { Some(lead) } else { o!(g, op).men.iter().copied().find(|&m| g.gd[m].state != GuardState::Dead) };
-                if let Some(up) = up { crate::game::game_say(g, up, "no way through.", None, None, None); }
+                if let Some(up) = up { crate::game::game_say(g, up, "no way through.", None, None); }
                 wall_charge_end(g, op, "no hole");
                 continue;
             }

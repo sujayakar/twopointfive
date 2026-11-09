@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
@@ -112,13 +112,6 @@ pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Opt
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
     let by = by.unwrap_or(DownBy::Player);
     if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, line, weapon); return; }
-    if let Some(b) = g.gd[gd].bubble.clone() {
-        if g.time - b.t < 0.8 && !g.messages.iter().any(|m| m.t == b.t && m.text.ends_with(b.text.as_str())) {
-            let head = if g.gd[gd].unit.is_some() { alloc::format!("{}: ", g.gd[gd].callsign) } else { String::from("guard: ") };
-            let text = head + b.text.as_str();
-            crate::game::game_msg(g, &text);
-        }
-    }
     if g.gd[gd].state == GuardState::Dead { return; }
     if crate::rails::rails_spare_2(g, gd) { return; }
     g.gd[gd].script = None;
@@ -153,23 +146,6 @@ pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Opt
         g.gd[gd].dropped = Some(it);
     }
     crate::character::character_ragdollize(g, c, true, dir, quiet);
-    let text: String = match line {
-        Some(l) => String::from(l),
-        None => {
-            let unit = g.gd[gd].unit.is_some();
-            let team = g.gd[gd].team;
-            let cs = g.gd[gd].callsign.clone();
-            if how == DownKind::Choked { String::from("choked out \u{2014} he'll keep, breathing") }
-            else if how == DownKind::Struck { String::from("takedown \u{2014} out cold, breathing (a knockout, not a kill)") }
-            else if by == DownBy::Guard {
-                if unit { alloc::format!("{} down \u{2014} hit by his own side", cs) } else { String::from("guard down \u{2014} hit by his own side") }
-            }
-            else if unit && team == crate::teams::Team::Hostile { alloc::format!("{} down", cs) }
-            else if unit && team == crate::teams::Team::Operative { alloc::format!("{} down{}", cs, if by == DownBy::Player { " \u{2014} your round" } else { "" }) }
-            else { String::from("guard down \u{2014} dead") }
-        }
-    };
-    crate::game::game_msg(g, &text);
 }
 
 /// What a dying hand lets go of: an item at the hand, carrying the body's motion plus a nudge along the round.   (combat.ts dropFromHand)
@@ -244,13 +220,6 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
             if gun == rifle { g.pl[p].rifle_gone = true; }
         }
         crate::character::character_ragdollize(g, c, true, from_dir, false);
-        let elapsed = g.mission.stats.elapsed;
-        let ck = crate::savestate::checkpoints_newest(g, Some(true), Some(elapsed));
-        let back = match &ck { Some(info) => crate::savestate::checkpoints_is_this_run(g, info), None => false };
-        crate::game::game_msg(g, if back { "you're down. press Enter to go back to the last checkpoint, or Shift+Enter to restart the mission" } else { "you're down. press Enter to restart the mission" });
-    } else {
-        let text = if g.pl[p].hits_left == 1.0 { "hit \u{2014} one more and you are down" } else { "you were hit" };
-        crate::game::game_msg(g, text);
     }
 }
 
@@ -722,7 +691,6 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let pos = crate::throwables::item_pos(g, it);
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
     crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
-    crate::game::game_msg(g, "smoke deployed");
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);
 }

@@ -119,7 +119,7 @@ fn clearing_men(g: &mut crate::game::Game) -> Vec<GuardId> {
 fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
     let a = cl!(g).a;
     if g.gd[a].state != crate::game::GuardState::Dead {
-        crate::game::game_say(g, a, text, Some(radio.unwrap_or(false)), None, None);
+        crate::game::game_say(g, a, text, Some(radio.unwrap_or(false)), None);
     }
 }
 
@@ -142,7 +142,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
                     crate::belief::word(g, left, at);
                     g.gd[left].react_t = 0.7;
                     g.gd[left].search_t = 0.0;
-                    crate::game::game_say(g, left, "hey — you with me? …say something.", None, None, None);
+                    crate::game::game_say(g, left, "hey — you with me? …say something.", None, None);
                 }
             }
         }
@@ -302,8 +302,6 @@ fn clearing_muster(g: &mut crate::game::Game) -> bool {
         return true;
     }
     if t > (if muster_busy(g, Some(a)) || muster_busy(g, b) { 50.0 } else { 15.0 }) {
-        let text = format!("clear of the {} called off — the pair never freed up", plan_name(cl!(g).cur.as_ref()));
-        crate::game::game_note(g, &text);
         cl!(g).stage = ClearStage::Done;
         return false;
     }
@@ -365,7 +363,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
                 }
             }
         }
-        crate::game::game_say(g, by, &line, None, None, None);
+        crate::game::game_say(g, by, &line, None, None);
         let c = g.gd[by].ch;
         let at_ear = bone_or(g, c, crate::character::Bone::Head, g.ch[c].pos);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));

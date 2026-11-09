@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::vec::Vec;
 
 /// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.   (combat.ts flashFuse)
 pub fn flash_fuse(g: &crate::game::Game) -> f64 {
@@ -63,7 +63,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         serial,
         ..crate::game::GameEvent::default()
     });
-    let mut n: i32 = 0;
     let entry = crate::roomfight::fight_live(g);
     let side: crate::teams::Team = match g.tab.item[it].side {
         Some(s) => s,
@@ -127,7 +126,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
             g.gd[gd].dazzled_at = Some(at);
             let along = v3::sub(g.ch[c].pos, at);
             crate::character::anim_hit_from(g, c, Some(along));
-            n += 1;
         }
     }
     let sam_side: crate::teams::Team = sam.and_then(|s| s.side).unwrap_or(side);
@@ -186,19 +184,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         }
         if !told {
             told = true;
-            let text: String = if side == crate::teams::Team::Hostile {
-                if n != 0 { alloc::format!("their stun charge — {} dazzled", n) } else { String::from("their stun charge went off") }
-            } else if n != 0 {
-                alloc::format!("flashbang — {} guard{} dazzled", n, if n > 1 { "s" } else { "" })
-            } else {
-                String::from("flashbang went off")
-            };
-            crate::game::game_msg(g, &text);
-        }
-        if sam_secs > 0.0 {
-            let by = if sam_side == crate::teams::Team::Player || sam_side == crate::teams::Team::Operative { "a flashbang" } else { "their stun charge" };
-            let text = alloc::format!("{} blinded you", by);
-            crate::game::game_msg(g, &text);
         }
     });
 }

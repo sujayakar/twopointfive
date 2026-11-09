@@ -9,7 +9,7 @@ const SEEDS: [u32; 3] = [1, 2, 3];
 
 fn line_of(v: &game::view::TickView, man: f64) -> Option<BubbleView> { v.bubbles.iter().find(|b| b.man == Some(man)).cloned() }
 fn id_of(p: &Play, gd: GuardId) -> f64 { p.g.ch[p.g.gd[gd].ch].id }
-fn says(p: &mut Play, gd: GuardId, text: &str) { game::guards::say(&mut p.g, gd, text, None, Some(true), None); }
+fn says(p: &mut Play, gd: GuardId, text: &str) { game::guards::say(&mut p.g, gd, text, None, Some(true)); }
 
 /// A FAILURE MEANS: a seat's HUD is told a line it should not show, or not told one it should. A man the fog hides has no line over him, unless he is the seat's own, whose line
 /// goes to the edge of the view; a line that has had its time is gone; a man who has gone down has no line, and his squad's call of it stands where he fell.
@@ -108,13 +108,10 @@ fn the_strip_is_told_the_rows_alive_and_a_shout_in_a_free_place() {
     for seed in SEEDS {
         let mut p = Play::level("kit-yard.json", true, &Opts { seed, ..Default::default() });
         p.frame();
-        game::game::game_msg(&mut p.g, "radio: control to all");
+        game::cues::cues_radio(&mut p.g, "control to all");
         let v = p.view();
         assert_eq!(v.radio.len(), 1, "seed {}: {:?}", seed, v.radio);
         assert!(v.radio[0].kind == RadioKind::Net && v.radio[0].text == "control to all" && v.radio[0].age == 0.0, "seed {}: {:?}", seed, v.radio);
-        // CONTROL: a line of the log that went on no net
-        game::game::game_msg(&mut p.g, "guards reset");
-        assert_eq!(p.view().radio.len(), 1, "seed {}", seed);
         // a shout in a free place, oldest first
         let t = p.g.time;
         p.g.cues.heard_row = Some(game::cues::CuesHeardRow { t, text: String::from("find them!") });
@@ -123,7 +120,7 @@ fn the_strip_is_told_the_rows_alive_and_a_shout_in_a_free_place() {
         assert_eq!(v.radio[1].text, "find them!", "seed {}", seed);
         // the strip full: no place for it
         let most = p.g.k.cues.rows as usize;
-        for i in 0..most { game::game::game_msg(&mut p.g, &format!("radio: row {}", i)); }
+        for i in 0..most { game::cues::cues_radio(&mut p.g, &format!("row {}", i)); }
         let v = p.view();
         assert!(v.radio.len() == most && v.radio.iter().all(|r| r.kind == RadioKind::Net), "seed {}: {:?}", seed, v.radio);
         // past its time

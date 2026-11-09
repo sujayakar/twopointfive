@@ -81,7 +81,7 @@ fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// His line through the game's own say; false where it did not land (a man with no voice). (showwhy.ts say)
 fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, text: &str) -> bool {
-    crate::game::game_say(g, gd, text, None, None, None);
+    crate::game::game_say(g, gd, text, None, None);
     if g.gd[gd].bubble.as_ref().map(|b| b.text.as_str()) != Some(text) {
         return false;
     }

@@ -185,7 +185,7 @@ fn choose(g: &mut crate::game::Game, gd: GuardId) {
         let until = g.time + g.k.startle.draw;
         let row = g.m.startle.state_of.get_mut(gd).unwrap();
         row.draw_until = until;
-        if row.call { crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false), Some(false)); }
+        if row.call { crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false)); }
     }
     g.m.startle.state_of.get_mut(gd).unwrap().call = false;
 }

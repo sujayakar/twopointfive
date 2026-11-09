@@ -789,7 +789,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
                 if said.map_or(true, |t| !js::truthy(t) || g.time - t > 20.0) {
                     g.tab.enemysquads_squad[q].own_said = Some(g.time);
                     let text = format!("{}: {}'s {} — stay on your doors, make them come!", name_of(g, q), l.name, if up_in > 0 { "hit" } else { "gone" });
-                    crate::game::game_say(g, due.gd, &text, Some(true), None, None);
+                    crate::game::game_say(g, due.gd, &text, Some(true), None);
                 }
                 let key = stay_key(g, due.gd, &StayKeyRoom { name: l.name.clone() });
                 g.tab.enemysquads_squad[q].stayed.get_or_insert_with(JsSet::new).add(key);
@@ -807,7 +807,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
         let way = match way { Some(w) if !w.is_empty() => format!(" {}", w), _ => String::new() };
         let text = format!("{}: coming to you{} — hold on!", name_of(g, q), way);
-        crate::game::game_say(g, due.gd, &text, Some(true), None, None);
+        crate::game::game_say(g, due.gd, &text, Some(true), None);
         let why = format!("{} goes to the squad's room under attack", sign_of(g, due.gd));
         event(g, q, SquadEventWhat::Reinforce, &why, Some(due.gd));
     }
@@ -933,7 +933,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
         let mate_back = g.tab.enemysquads_squad[q].sent.iter().enumerate().any(|(j, x)| j != i && x.role == SentRole::Look && x.back == Some(true));
         if !mate_back {
             let text = format!("{}: no sign of them — back on our doors!", name_of(g, q));
-            crate::game::game_say(g, gd, &text, Some(true), None, None);
+            crate::game::game_say(g, gd, &text, Some(true), None);
             let why = format!("{} and his mate found nothing where the team was last put, {} s after the word", sign_of(g, gd), js::to_fixed(g.time - s.t0, 1));
             event(g, q, SquadEventWhat::Back, &why, Some(gd));
         }
@@ -1014,7 +1014,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             g.tab.enemysquads_squad[q].sent[i].there = Some(t);
             let got = crate::words::wg(g, &"we've got", &"we have");
             let text = format!("{}: in position — {} the door!", name, got);
-            crate::game::game_say(g, gd, &text, Some(true), None, None);
+            crate::game::game_say(g, gd, &text, Some(true), None);
             let why = format!("{}{}, {} s after the word", sign, dn.as_ref().map_or(String::new(), |n| format!(" holding {}", n)), since);
             event(g, q, SquadEventWhat::InPosition, &why, Some(gd));
         } else {
@@ -1028,7 +1028,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
     if there && !seen {
         g.tab.enemysquads_squad[q].sent[i].there = Some(g.time);
         let text = format!("{}: in position — on them!", name);
-        crate::game::game_say(g, gd, &text, Some(true), None, None);
+        crate::game::game_say(g, gd, &text, Some(true), None);
         let why = format!("{}{}, {} s after the word", sign, dn.as_ref().map_or(String::new(), |n| format!(" at {}", n)), since);
         event(g, q, SquadEventWhat::InPosition, &why, Some(gd));
     } else if s.role == SentRole::Flank {

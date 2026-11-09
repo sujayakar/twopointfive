@@ -690,7 +690,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         g.tab.tactics_role[role].said_moving = true;
         let place = crate::dialogue::place_name(g, hold.unwrap_or(t_pt));
         let text = flank_call(g, plan, m, &place);
-        crate::game::game_say(g, m, &text, Some(true), None, None);
+        crate::game::game_say(g, m, &text, Some(true), None);
         let now = g.time;
         g.tab.tactics_plan[plan].last_radio_t = now;
     }

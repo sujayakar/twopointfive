@@ -381,10 +381,6 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
         if state != was {
             let note = alloc::format!("flow:state:{}:{}", g.rescue.flow.known[at].o.id, state.as_str());
             crate::rescue::rescue_note(g, &note);
-            if state == OpenState::Hot {
-                let msg = alloc::format!("contact — {}", g.rescue.flow.known[at].o.name);
-                crate::game::game_msg(g, &msg);
-            }
         }
     }
 }
@@ -564,7 +560,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                 if !said_hot {
                     g.rescue.flow.jobs.get_mut(gd).unwrap().said_hot = true;
                     g.rescue.flow.stats.hot_holds += 1.0;
-                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None, None);
+                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None);
                     let note = alloc::format!("flow:hold:{}:{}", g.rescue.flow.jobs.get(gd).unwrap().o.id, g.gd[gd].callsign);
                     crate::rescue::rescue_note(g, &note);
                 }
@@ -578,7 +574,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         let done = if on_t.is_nan() { t - t0 > k.give_up } else { t - on_t >= look && (sam_past || t - on_t >= k.max_cover) };
         if !said_wait && has_chain && on_route && sam[0] - pos[0] > k.wait_m {
             g.rescue.flow.jobs.get_mut(gd).unwrap().said_wait = true;
-            crate::game::game_say(g, gd, "wait one.", None, None, None);
+            crate::game::game_say(g, gd, "wait one.", None, None);
             let note = alloc::format!("flow:wait:{}", g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -717,7 +713,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             let id = o.id.clone();
             g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Corridor, o, a, t0: t, on_t: f64::NAN, chain: Vec::new(), said_hot: false, said_wait: false, leap: false });
             g.rescue.flow.stats.corridor += 1.0;
-            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None, None);
+            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None);
             let note = alloc::format!("flow:corridor:{}:{}", id, g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -790,7 +786,7 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
     let t0 = g.time;
     g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Cover, o: o.clone(), a, t0, on_t: f64::NAN, chain: chain.to_vec(), said_hot: false, said_wait, leap });
     g.rescue.flow.stats.takes += 1.0;
-    crate::game::game_say(g, gd, &o.call, None, None, None);
+    crate::game::game_say(g, gd, &o.call, None, None);
     let note = alloc::format!("flow:take:{}:{}", o.id, g.gd[gd].callsign);
     crate::rescue::rescue_note(g, &note);
 }
@@ -818,7 +814,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
         g.rescue.flow.mine.add(a);
     }
     if let Some(w) = words {
-        crate::game::game_say(g, gd, w, None, None, None);
+        crate::game::game_say(g, gd, w, None, None);
     }
 }
 

@@ -145,7 +145,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
     g.stats.unseen.cues += 1;
     let sam = lead(g);
     let low = g.pl[sam].crouch || on_wall(g, sam);
-    crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None, None);
+    crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None);
 }
 
 /// this teammate is unseen this frame (unseen.ts underUnseen)

@@ -416,9 +416,9 @@ impl Survivors {
     }
 }
 /// A step asks for the mission over (Enter once down, Shift+Enter): the step ends first, as a load in a step does
-pub fn ask_restart(g: &mut Game, said: Option<&str>) { g.saves.again = Some(String::from(said.unwrap_or(""))); }
+pub fn ask_restart(g: &mut Game) { g.saves.again = true; }
 /// THE MISSION OVER, from outside a step: the level stands again and the men are stood on it by the stand's own lines, with what an evening keeps; a new run, the view cut to the fresh man. False where the game keeps no level (it has lost its place among the stands held)
-pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
+pub fn restart(g: &mut Game) -> bool {
     let (slot, of) = (g.sim, stood(g));
     let Some(first) = held(of).first.clone() else { return false };
     let was = Survivors::of(g);
@@ -429,13 +429,12 @@ pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
     new.serial_next = new.serial_next.max(g.serial_next);
     core::mem::swap(g, &mut *new);
     was.write_under(g);
-    // (a mission that started once and refuses now leaves the plain floor, as a refused start does, and says so)
-    if let Some(why) = crate::standing::stand_men(g, &first.men) { crate::game::game_msg(g, &why); }
+    // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
+    let _ = crate::standing::stand_men(g, &first.men);
     crate::scene_collision::light_ready(g);
     was.write_over(g);
     g.mission.serial = g.serial();
     assert!((g.host_cam, g.host_input) == host, "the men's lines made the host's rows elsewhere than the first time");
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }
     crate::game::game_cut_to_men(g);
     g.restart_cut = true;
     g.stats.cleanrestart.restarts += 1;
@@ -464,8 +463,7 @@ fn keep_start(g: &mut Game) {
 }
 /// a step's end: a restart it asked for is made
 fn restart_asked(g: &mut Game) -> bool {
-    let Some(said) = g.saves.again.take() else { return false };
-    restart(g, Some(&said))
+    core::mem::take(&mut g.saves.again) && restart(g)
 }
 /// a step's end with the controller off (a tape walked): the run's first step is kept, and a restart it asked for is made
 pub fn restart_turn(g: &mut Game) -> bool {

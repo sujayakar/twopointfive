@@ -381,7 +381,6 @@ pub struct Game {
     pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    pub messages: Vec<crate::game::GameMessagesItem>,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -553,14 +552,6 @@ pub struct GameBeaconsItem {
 pub struct GameFxItem {
     pub box_: FrameBoxId,
     pub ttl: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMessagesItem {
-    pub text: String,
-    pub t: f64,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -757,7 +748,6 @@ pub struct Player {
     #[is(-1.0)] pub kit_owed: f64,
     pub kit_owed_for: Option<crate::game::PlayerKitOwedFor>,
     pub sling_rest: Option<crate::game::PlayerSlingRest>,
-    pub ocp_hinted: bool,
     #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
@@ -767,7 +757,7 @@ pub struct Player {
     pub hand_wait: f64,
     pub near_sel: i32,
     #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, file_t: -1000000000.0, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
@@ -876,7 +866,6 @@ pub struct PlayerSel {
     pub word_t: f64,
     /// the word is why a press did nothing (`interact::refuse`), and this is what it is about. None: an empty tap's, which the view reads off what he stands beside
     pub word_kind: Option<crate::view::ThingKind>,
-    pub file_t: f64,
     pub ring: Option<crate::game::PlayerSelRing>,
 }
 

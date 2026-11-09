@@ -794,7 +794,7 @@ fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: 
     }
     m.cue_t = g.time;
     g.stats.sneak.cues += 1;
-    crate::game::game_say(g, gd, line, None, None, None);
+    crate::game::game_say(g, gd, line, None, None);
     true
 }
 

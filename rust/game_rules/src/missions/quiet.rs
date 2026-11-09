@@ -231,7 +231,6 @@ pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
         g.quiet.failure = Some(failure.clone());
         crate::stickycam::sticky_visit_set(g, 0.0);
         quiet_mission_stop(g);
-        crate::game::game_msg(g, &format!("quiet mission — {}", failure));
     }
 }
 
@@ -390,10 +389,6 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
     g.quiet.cut = true;
     let line = format!("staged: {}", quiet_mission_summary(g));
     quiet_mission_note(g, &line);
-    let p = quiet_mission_spot(g).unwrap();
-    let thing = quiet_mission_thing(g);
-    let tail = if js::truthy(g.quiet.squad) { "Your partner is with you and staying silent. X for his orders" } else { "You're alone" };
-    crate::game::game_msg(g, &format!("{} — {} is in {}. {}", p.place, thing, p.holder, tail));
     Ok(())
 }
 

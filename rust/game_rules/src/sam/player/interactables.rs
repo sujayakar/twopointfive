@@ -773,7 +773,6 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     let pl = g.player;
     if g.pl[pl].dragging.is_some() {
         release_body(g, None);
-        crate::game::game_msg(g, "body dropped");
         return;
     }
     if g.pl[pl].down || g.pl[pl].sprinting { return; }
@@ -797,7 +796,6 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     let best = match best {
         Some(b) if g.ch[g.gd[b].ch].ragdoll.is_some() => b,
         _ => {
-            crate::game::game_msg(g, "no body within reach");
             return;
         }
     };
@@ -809,17 +807,6 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     let bc = g.gd[best].ch;
     if let Some(r) = g.ch[bc].ragdoll { crate::ragdoll::ragdoll_wake(g, r); }
     crate::hands::haul_begin(g, best);
-    let (carry, head) = match g.pl[pl].haul.as_ref() {
-        Some(h) => (h.carry.is_some(), h.end == crate::hands::HaulEnd::Head),
-        None => (false, false),
-    };
-    crate::game::game_msg(g, if carry {
-        "picking him up — Space puts him down, sprint drops him"
-    } else if head {
-        "got him under the arms — Space lets go, sprint drops him"
-    } else {
-        "dragging the body — Space lets go, sprint drops it"
-    });
 }
 
 /// Let go of the body in tow: the ankle pins come off and its feet fall where they are   (player.ts releaseBody)
@@ -899,7 +886,6 @@ pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
     { let to = q; crate::character::pos_replace(g, c, to); }
     g.pl[pl].safe = Some([q[0], 0.0, q[2]]);
     crate::character::character_update(g, c, 0.0);
-    crate::game::game_note(g, "teleported");
 }
 
 #[cfg(test)]

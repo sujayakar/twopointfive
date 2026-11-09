@@ -199,7 +199,6 @@ pub fn silent_tool(g: &mut crate::game::Game, loud: bool) {
     if !loud || !squad_silent(g, &crate::seats::here(g)) { return; }
     set_silent(g, false, Some(By::Tool));
     g.stats.silent.tools += 1;
-    crate::game::game_msg(g, "squad: going loud on that order.");
 }
 
 /// is the silent squad compromised right now   (silent.ts silentCompromised)
@@ -312,7 +311,7 @@ pub fn silent_tick(g: &mut crate::game::Game) {
     if let Some(man) = hot {
         if !was_hot {
             g.stats.silent.compromised += 1;
-            if !was { crate::game::game_say(g, man, "compromised.", None, None, None); }
+            if !was { crate::game::game_say(g, man, "compromised.", None, None); }
         }
     }
     let s = g.m.silent.states.get_mut(key).unwrap();

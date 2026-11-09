@@ -13,15 +13,6 @@ fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: V3) -> V3 {
     match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, up) }
 }
 
-/// `s.view.viewProj` and `g.viewProj`, as in_view reads them
-fn as_in_view(vp: &Option<crate::game::GameViewProj>) -> Option<InViewVp> {
-    match vp {
-        Some(crate::game::GameViewProj::Array(v)) => Some(InViewVp::Array(v.clone())),
-        Some(crate::game::GameViewProj::Float32Array(v)) => Some(InViewVp::Float32Array(v.clone())),
-        None => None,
-    }
-}
-
 // ---------------------------------------------------------------- her voice, the gates, the floor's queue
 /// A hostage says a line of this moment, off her own die, never the one over her head now. False: down, held, or no such line.   (civilians.ts hostageSay)
 pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialogue::HostageMoment, other: Option<GuardId>) -> bool {
@@ -40,7 +31,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
     }
     if pool.is_empty() { return false; }
     let line = pick(g, gd, &pool);
-    civ_say(g, gd, &line, Some(0.0), Some(matches!(moment, M::Wait | M::Threat | M::Alone)));
+    civ_say(g, gd, &line, Some(0.0));
     if matches!(moment, M::Aimed | M::Shot | M::Entry) {
         let c = g.gd[gd].ch;
         let head = bone_or(g, c, crate::character::Bone::Head, [0.0, 0.4, 0.0]);
@@ -121,7 +112,7 @@ fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
                         .cloned().collect();
                     let line = pick(g, cv, &pool);
                     let text = fill(g, cv, &line, Some(o));
-                    crate::guards::say(g, o, &text, None, None, None);
+                    crate::guards::say(g, o, &text, None, None);
                 }
             }
         }
@@ -131,7 +122,7 @@ fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
             let key = String::from(p.key.as_deref().unwrap_or("someone"));
             let line = match lines.guard_radio.get(key) { Some(t) => t.clone(), None => lines.guard_radio.get(String::from("someone")).unwrap().clone() };
             let text = fill(g, cv, &line, Some(o));
-            crate::guards::say(g, o, &text, Some(true), None, None);
+            crate::guards::say(g, o, &text, Some(true), None);
             let oc = g.gd[o].ch;
             let at = match g.ch[oc].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => g.ch[oc].pos };
             crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
@@ -182,7 +173,7 @@ fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
             if g.gd[cv].state != GuardState::Dead && g.gd[cv].held.is_none() {
                 let lines = crate::dialogue::civ_lines();
                 let line = pick(g, cv, &lines.comply.civ);
-                civ_say(g, cv, &line, None, None);
+                civ_say(g, cv, &line, None);
             }
         }
         PendKind::FoundReport => {
@@ -204,10 +195,9 @@ fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
     }
 }
 
-/// She says it: a bubble over her head, and the log under her name when she is off screen.   (civilians.ts civSay)
-pub(super) fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>, unheard: Option<bool>) {
+/// She says it: a bubble over her head.   (civilians.ts civSay)
+pub(super) fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>) {
     let hold = hold.unwrap_or(0.0);
-    let unheard = unheard.unwrap_or(false);
     let text = String::from(text);
     let cv = civ_of(g, gd);
     let t = fill(g, gd, &text, None);
@@ -215,25 +205,6 @@ pub(super) fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: 
     let now = g.time;
     g.gd[gd].bubble = Some(crate::game::GuardBubble { text: t.clone(), t: now, dur: m::min(4.5, m::max(2.0, 1.5 + length * 0.055 + hold)), radio: false });
     g.cv[cv].last_line_at = now;
-    if !unheard && (crate::fogofwar::fog_of_war_hidden(g, gd) || !on_screen_head(g, gd)) {
-        let line = format!("{}: {}", g.cv[cv].name, t);
-        crate::game::game_msg(g, &line);
-    }
-}
-
-/// On a player's screen: with two, on either's.   (civilians.ts onScreenHead)
-fn on_screen_head(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let p = bone_or(g, g.gd[gd].ch, crate::character::Bone::Head, [0.0, 1.7, 0.0]);
-    if g.seats.len() > 1 {
-        let seats = g.seats.clone();
-        for s in seats {
-            let vp = crate::seats::with_seat(g, s, &mut |g| as_in_view(&g.view_proj));
-            if in_view(vp.as_ref(), p) { return true; }
-        }
-        return false;
-    }
-    let vp = as_in_view(&g.view_proj);
-    in_view(vp.as_ref(), p)
 }
 
 /// Is `p` inside this view-projection's frame.   (civilians.ts inView)
@@ -293,8 +264,8 @@ pub(super) fn fill(g: &mut crate::game::Game, gd: GuardId, text: &str, guard: Op
 pub(super) fn control(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     use crate::chronicle::{ChronKind, ChronicleDataValue as D};
     let t = fill(g, gd, text, None);
-    let line = format!("radio: CONTROL — {}", t);
-    crate::game::game_msg(g, &line);
+    let line = format!("CONTROL — {}", t);
+    crate::cues::cues_radio(g, &line);
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
     let mut data: JsMap<String, Option<D>> = JsMap::new();
     data.set(String::from("who"), Some(D::Text(String::from("CONTROL"))));
@@ -310,7 +281,7 @@ fn scream(g: &mut crate::game::Game, gd: GuardId, shout: Option<&str>) {
     let head = bone_or(g, g.gd[gd].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
     let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
     crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-    if let Some(s) = shout { if !s.is_empty() { civ_say(g, gd, s, None, None); } }
+    if let Some(s) = shout { if !s.is_empty() { civ_say(g, gd, s, None); } }
     hear_scream(g, gd);
 }
 
@@ -795,7 +766,7 @@ pub(super) fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
     if line {
         let lines = crate::dialogue::civ_lines();
         let s = pick(g, gd, &lines.settle);
-        civ_say(g, gd, &s, None, None);
+        civ_say(g, gd, &s, None);
     }
     set_state(g, gd, CivState::Work);
 }
@@ -816,7 +787,7 @@ fn to_startled(g: &mut crate::game::Game, gd: GuardId, at: V3, sound: bool) {
     let lines = crate::dialogue::civ_lines();
     let pool = no_security(g, &lines.glimpse);
     let s = pick(g, gd, &pool);
-    civ_say(g, gd, &s, None, None);
+    civ_say(g, gd, &s, None);
     let line = format!("startled by {} at ({}, {})", if sound { "a noise" } else { "a glimpse" }, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     log(g, gd, &line);
     set_state(g, gd, CivState::Startled);
@@ -845,7 +816,7 @@ fn startled(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         g.cv[cv].shrug_at = g.time;
         let lines = crate::dialogue::civ_lines();
         let s = pick(g, gd, &lines.shrug);
-        civ_say(g, gd, &s, None, None);
+        civ_say(g, gd, &s, None);
         log(g, gd, "talked herself out of it");
         g.cv[cv].look_at = None;
         set_state(g, gd, CivState::Work);
@@ -1061,7 +1032,7 @@ pub(super) fn to_flee(g: &mut crate::game::Game, gd: GuardId, t: &crate::civilia
         scream(g, gd, Some(&s));
     } else {
         let s = pick(g, gd, &lines.evac);
-        civ_say(g, gd, &s, None, None);
+        civ_say(g, gd, &s, None);
     }
 }
 
@@ -1168,7 +1139,7 @@ fn to_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId) {
     let cause = g.cv[cv].cause;
     let pool = report_pool(g, cause.map(|k| k.as_str()));
     let s = pick(g, gd, &pool);
-    civ_say(g, gd, &s, Some(0.8), None);
+    civ_say(g, gd, &s, Some(0.8));
     let at = g.cv[cv].cause_pos.unwrap_or(g.ch[c].pos);
     prime_guard(g, o, at, 0.5);
     g.ch[c].anim.act = Some(crate::character::AnimAct { clip: String::from("Idle_Talking_Loop"), loop_: Some(true), rate: Some(1.2), in_: Some(0.3), out: Some(0.4) });

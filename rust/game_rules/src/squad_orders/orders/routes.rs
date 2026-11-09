@@ -976,7 +976,7 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
     if let Some(SquadOrdersWalkStacks::Text(words)) = &next {
         let i = js::rem(g.orders.acks, held.len() as f64) as usize;
         g.orders.acks += 1.0;
-        crate::game::game_say(g, held[i], words, None, None, None);
+        crate::game::game_say(g, held[i], words, None, None);
         for &mm in &held { walk_stop(g, mm); }
         return;
     }
@@ -988,7 +988,7 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
         if let Some(n) = n {
             squad_orders_walk_send(g, mm, SquadOrdersWalkSendT { door: n.door, side: n.side, post: n.post }, at, &on_to_assign(&t.on));
         } else if let Some(why) = why {
-            if !said { crate::game::game_say(g, mm, &why, None, None, None); }
+            if !said { crate::game::game_say(g, mm, &why, None, None); }
             said = true;
             walk_stop(g, mm);
         } else {

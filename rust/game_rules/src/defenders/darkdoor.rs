@@ -49,7 +49,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind,
     let said = s.said;
     s.said += 1.0;
     let i = js::rem(g.ch[c].id + said, pool.len() as f64) as usize;
-    crate::game::game_say(g, gd, pool[i], Some(radio), None, None);
+    crate::game::game_say(g, gd, pool[i], Some(radio), None);
     if radio {
         let at = head_of(g, c);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
