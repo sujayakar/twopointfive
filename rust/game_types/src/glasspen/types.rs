@@ -1,22 +1,13 @@
 //! The types of `glasspen`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum PaneType {
     #[default] Annealed,
     Laminated,
     Tempered,
-}
-impl PaneType {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PaneType::Annealed => "annealed",
-            PaneType::Laminated => "laminated",
-            PaneType::Tempered => "tempered",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

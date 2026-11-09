@@ -1,6 +1,6 @@
 //! The types of `lighting`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -20,22 +20,12 @@ pub struct DayStateBlackout {
     pub since: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SetBlackoutCause {
     Shot,
     Ocp,
     Debug,
     Hand,
-}
-impl SetBlackoutCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SetBlackoutCause::Shot => "shot",
-            SetBlackoutCause::Ocp => "ocp",
-            SetBlackoutCause::Debug => "debug",
-            SetBlackoutCause::Hand => "hand",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

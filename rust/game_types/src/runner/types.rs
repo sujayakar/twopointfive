@@ -1,6 +1,6 @@
 //! The types of `runner`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -34,18 +34,10 @@ pub struct Run {
     pub script: crate::game::GuardScript,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum LineKind {
     Done,
     Mates,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Done => "done",
-            LineKind::Mates => "mates",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

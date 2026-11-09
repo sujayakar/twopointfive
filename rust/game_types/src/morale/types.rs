@@ -1,6 +1,6 @@
 //! The types of `morale`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -73,7 +73,7 @@ pub struct Blast {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum LineKind {
     Clear,
     Out,
@@ -84,21 +84,6 @@ pub enum LineKind {
     Duck,
     Call,
     Okay,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Clear => "clear",
-            LineKind::Out => "out",
-            LineKind::Lost => "lost",
-            LineKind::Spent => "spent",
-            LineKind::Order => "order",
-            LineKind::Again => "again",
-            LineKind::Duck => "duck",
-            LineKind::Call => "call",
-            LineKind::Okay => "okay",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

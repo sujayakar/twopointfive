@@ -1,6 +1,6 @@
 //! The types of `rescueflush`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
@@ -35,21 +35,11 @@ pub struct Sent {
     pub via: Vec<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Goal {
     #[default] Out,
     Side,
     Noise,
     Room,
-}
-impl Goal {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Goal::Out => "out",
-            Goal::Side => "side",
-            Goal::Noise => "noise",
-            Goal::Room => "room",
-        }
-    }
 }
 

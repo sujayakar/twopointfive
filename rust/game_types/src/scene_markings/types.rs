@@ -1,44 +1,23 @@
 //! The types of `scene_markings`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum MarkFace {
-    #[default] X,
-    X2,
-    Y,
-    Y2,
-    Z,
-    Z2,
-}
-impl MarkFace {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MarkFace::X => "+x",
-            MarkFace::X2 => "-x",
-            MarkFace::Y => "+y",
-            MarkFace::Y2 => "-y",
-            MarkFace::Z => "+z",
-            MarkFace::Z2 => "-z",
-        }
-    }
+    #[word("+x")] #[default] X,
+    #[word("-x")] X2,
+    #[word("+y")] Y,
+    #[word("-y")] Y2,
+    #[word("+z")] Z,
+    #[word("-z")] Z2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum MarkRes {
     Base,
     Fine,
     Coarse,
-}
-impl MarkRes {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MarkRes::Base => "base",
-            MarkRes::Fine => "fine",
-            MarkRes::Coarse => "coarse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

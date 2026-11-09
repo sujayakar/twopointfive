@@ -1,6 +1,6 @@
 //! The types of `kit`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// KitRow.get and .set: a row that is not one field of the card reads and writes it itself. The arm says which
@@ -43,57 +43,29 @@ pub struct SlotLoadout {
     pub missing: Vec<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum KitWeapon {
     #[default] Pistol,
     Rifle,
     Shotgun,
 }
-impl KitWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitWeapon::Pistol => "pistol",
-            KitWeapon::Rifle => "rifle",
-            KitWeapon::Shotgun => "shotgun",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BigKit {
     #[default] Shotgun,
     None,
     Hammer,
 }
-impl BigKit {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigKit::Shotgun => "shotgun",
-            BigKit::None => "none",
-            BigKit::Hammer => "hammer",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum BigPick {
     Shotgun,
     None,
     Hammer,
     Wall,
 }
-impl BigPick {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigPick::Shotgun => "shotgun",
-            BigPick::None => "none",
-            BigPick::Hammer => "hammer",
-            BigPick::Wall => "wall",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SuitId {
     #[default] Issued,
     Black,
@@ -104,22 +76,8 @@ pub enum SuitId {
     Khaki,
     Desert,
 }
-impl SuitId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SuitId::Issued => "issued",
-            SuitId::Black => "black",
-            SuitId::Grey => "grey",
-            SuitId::Navy => "navy",
-            SuitId::Olive => "olive",
-            SuitId::Jungle => "jungle",
-            SuitId::Khaki => "khaki",
-            SuitId::Desert => "desert",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TrimId {
     #[default] Red,
     Blue,
@@ -129,36 +87,13 @@ pub enum TrimId {
     Amber,
     White,
 }
-impl TrimId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TrimId::Red => "red",
-            TrimId::Blue => "blue",
-            TrimId::Issued => "issued",
-            TrimId::Black => "black",
-            TrimId::Green => "green",
-            TrimId::Amber => "amber",
-            TrimId::White => "white",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum CanMix {
     Smoke,
     Stun,
     Issued,
     Even,
-}
-impl CanMix {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CanMix::Smoke => "smoke",
-            CanMix::Stun => "stun",
-            CanMix::Issued => "issued",
-            CanMix::Even => "even",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -192,7 +127,7 @@ pub struct KitHand {
     pub wand: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum KitField {
     #[default] Smoke,
     Light,
@@ -216,33 +151,6 @@ pub enum KitField {
     Trim,
     Cans,
 }
-impl KitField {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitField::Smoke => "smoke",
-            KitField::Light => "light",
-            KitField::Wand => "wand",
-            KitField::Bangs => "bangs",
-            KitField::Frags => "frags",
-            KitField::Shells => "shells",
-            KitField::Charges => "charges",
-            KitField::Cams => "cams",
-            KitField::Walls => "walls",
-            KitField::Suit => "suit",
-            KitField::Bare => "bare",
-            KitField::Big => "big",
-            KitField::Primary => "primary",
-            KitField::Secondary => "secondary",
-            KitField::SideCan => "sideCan",
-            KitField::Rings => "rings",
-            KitField::Weapon => "weapon",
-            KitField::Suppressed => "suppressed",
-            KitField::Nvg => "nvg",
-            KitField::Trim => "trim",
-            KitField::Cans => "cans",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub enum KitValue {
@@ -263,20 +171,11 @@ pub struct KitRow {
     pub get: Option<crate::kit::KitRowGet>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum KitPreset {
     Quiet,
     Issued,
     Loud,
-}
-impl KitPreset {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitPreset::Quiet => "quiet",
-            KitPreset::Issued => "issued",
-            KitPreset::Loud => "loud",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

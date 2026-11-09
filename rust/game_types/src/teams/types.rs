@@ -1,26 +1,15 @@
 //! The types of `teams`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Team {
     #[default] Guard,
     Operative,
     Hostile,
     Player,
     Civilian,
-}
-impl Team {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Team::Guard => "guard",
-            Team::Operative => "operative",
-            Team::Hostile => "hostile",
-            Team::Player => "player",
-            Team::Civilian => "civilian",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

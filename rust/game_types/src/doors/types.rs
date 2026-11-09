@@ -1,6 +1,6 @@
 //! The types of `doors`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -278,7 +278,7 @@ pub struct SIDEKICK {
     pub out: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SlabRowGK {
     T,
     A,
@@ -297,29 +297,6 @@ pub enum SlabRowGK {
     Bw,
     Bl,
     Bx,
-}
-impl SlabRowGK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlabRowGK::T => "t",
-            SlabRowGK::A => "a",
-            SlabRowGK::Vx => "vx",
-            SlabRowGK::Vz => "vz",
-            SlabRowGK::By => "by",
-            SlabRowGK::Px => "px",
-            SlabRowGK::Py => "py",
-            SlabRowGK::Pz => "pz",
-            SlabRowGK::Vy => "vy",
-            SlabRowGK::Spin => "spin",
-            SlabRowGK::Wedged => "wedged",
-            SlabRowGK::Tip => "tip",
-            SlabRowGK::TipV => "tipV",
-            SlabRowGK::Ang => "ang",
-            SlabRowGK::Bw => "bw",
-            SlabRowGK::Bl => "bl",
-            SlabRowGK::Bx => "bx",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

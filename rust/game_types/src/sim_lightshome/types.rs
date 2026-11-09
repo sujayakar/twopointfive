@@ -1,6 +1,6 @@
 //! The types of `sim_lightshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -82,22 +82,12 @@ impl Fixture {
 }
 impl Default for Fixture { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum FixtureKind {
     Analytic,
     Emissive,
     Breaker,
     Device,
-}
-impl FixtureKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FixtureKind::Analytic => "analytic",
-            FixtureKind::Emissive => "emissive",
-            FixtureKind::Breaker => "breaker",
-            FixtureKind::Device => "device",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

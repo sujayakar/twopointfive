@@ -1,6 +1,6 @@
 //! The types of `wallcharge`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's answer kept for the open menu (wallcharge.ts keptWalks): a 'w|' key's length of walk (-1: no way), an 'r|' key's refusal from SquadOrders.reach (None: he can walk it)
@@ -282,7 +282,7 @@ pub struct WallChargeRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallChargeRowsRowOverKind {
     Cam,
     Guard,
@@ -296,24 +296,6 @@ pub enum WallChargeRowsRowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl WallChargeRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallChargeRowsRowOverKind::Cam => "cam",
-            WallChargeRowsRowOverKind::Guard => "guard",
-            WallChargeRowsRowOverKind::Breaker => "breaker",
-            WallChargeRowsRowOverKind::Door => "door",
-            WallChargeRowsRowOverKind::Light => "light",
-            WallChargeRowsRowOverKind::Body => "body",
-            WallChargeRowsRowOverKind::Objective => "objective",
-            WallChargeRowsRowOverKind::Held => "held",
-            WallChargeRowsRowOverKind::Wall => "wall",
-            WallChargeRowsRowOverKind::Switch => "switch",
-            WallChargeRowsRowOverKind::Charge => "charge",
-            WallChargeRowsRowOverKind::Cancel => "cancel",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]

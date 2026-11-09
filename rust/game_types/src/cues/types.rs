@@ -1,9 +1,9 @@
 //! The types of `cues`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum CueKind {
     #[default] Stay,
     Calm,
@@ -23,30 +23,6 @@ pub enum CueKind {
     SquadStays,
     SquadQuiet,
     Surprised,
-}
-impl CueKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CueKind::Stay => "stay",
-            CueKind::Calm => "calm",
-            CueKind::Cover => "cover",
-            CueKind::Flinch => "flinch",
-            CueKind::Still => "still",
-            CueKind::Help => "help",
-            CueKind::StayOurs => "stayOurs",
-            CueKind::HuntOver => "huntOver",
-            CueKind::FellBack => "fellBack",
-            CueKind::Planted => "planted",
-            CueKind::PinnedIn => "pinnedIn",
-            CueKind::SquadHears => "squadHears",
-            CueKind::SquadCopies => "squadCopies",
-            CueKind::SquadWaits => "squadWaits",
-            CueKind::SquadCopiesWaits => "squadCopiesWaits",
-            CueKind::SquadStays => "squadStays",
-            CueKind::SquadQuiet => "squadQuiet",
-            CueKind::Surprised => "surprised",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

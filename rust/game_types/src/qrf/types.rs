@@ -1,6 +1,6 @@
 //! The types of `qrf`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -21,7 +21,7 @@ pub struct Marks {
     pub tag: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum QrfState {
     Idle,
     Requested,
@@ -29,34 +29,13 @@ pub enum QrfState {
     Arriving,
     Deployed,
 }
-impl QrfState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            QrfState::Idle => "idle",
-            QrfState::Requested => "requested",
-            QrfState::Inbound => "inbound",
-            QrfState::Arriving => "arriving",
-            QrfState::Deployed => "deployed",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum QrfReason {
     Gunfire,
     Panel,
     Silent,
     Bodies,
-}
-impl QrfReason {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            QrfReason::Gunfire => "gunfire",
-            QrfReason::Panel => "panel",
-            QrfReason::Silent => "silent",
-            QrfReason::Bodies => "bodies",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
@@ -85,18 +64,10 @@ pub struct Target {
     pub word: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TargetKind {
     #[default] Room,
     Point,
-}
-impl TargetKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TargetKind::Room => "room",
-            TargetKind::Point => "point",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

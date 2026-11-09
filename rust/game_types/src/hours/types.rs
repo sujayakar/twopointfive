@@ -1,26 +1,15 @@
 //! The types of `hours`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum HourId {
     #[default] Overcast,
     Night,
     Dawn,
     Midday,
     Dusk,
-}
-impl HourId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HourId::Overcast => "overcast",
-            HourId::Night => "night",
-            HourId::Dawn => "dawn",
-            HourId::Midday => "midday",
-            HourId::Dusk => "dusk",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

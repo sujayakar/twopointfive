@@ -1,6 +1,6 @@
 //! The types of `devices`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -36,18 +36,10 @@ pub struct LaserDef2 {
     pub alarm: Option<crate::devices::LaserDef2Alarm>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum LaserDef2Alarm {
     Alarm,
     Suspicion,
-}
-impl LaserDef2Alarm {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LaserDef2Alarm::Alarm => "alarm",
-            LaserDef2Alarm::Suspicion => "suspicion",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -176,18 +168,10 @@ pub enum ChronDeviceDataValue {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum LearnCodeHow {
     Told,
     Overheard,
-}
-impl LearnCodeHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LearnCodeHow::Told => "told",
-            LearnCodeHow::Overheard => "overheard",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

@@ -1,9 +1,9 @@
 //! The types of `netquiet`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum LineKind {
     #[default] Body,
     Name,
@@ -11,18 +11,6 @@ pub enum LineKind {
     Why,
     Alone,
     Ask,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Body => "body",
-            LineKind::Name => "name",
-            LineKind::Last => "last",
-            LineKind::Why => "why",
-            LineKind::Alone => "alone",
-            LineKind::Ask => "ask",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

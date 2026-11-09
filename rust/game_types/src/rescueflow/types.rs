@@ -1,26 +1,15 @@
 //! The types of `rescueflow`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum OpenState {
     #[default] Held,
     Unknown,
     Cleared,
     Hot,
     Looked,
-}
-impl OpenState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            OpenState::Held => "held",
-            OpenState::Unknown => "unknown",
-            OpenState::Cleared => "cleared",
-            OpenState::Hot => "hot",
-            OpenState::Looked => "looked",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

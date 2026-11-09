@@ -1,6 +1,6 @@
 //! The types of `frag`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -213,18 +213,10 @@ pub struct OwnBangE {
     pub who: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WindUp {
     Own,
     Arc,
-}
-impl WindUp {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindUp::Own => "own",
-            WindUp::Arc => "arc",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

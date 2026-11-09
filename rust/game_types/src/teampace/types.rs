@@ -1,24 +1,14 @@
 //! The types of `teampace`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RunWhy {
     #[default] Blast,
     Cover,
     Follow,
     Told,
-}
-impl RunWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunWhy::Blast => "blast",
-            RunWhy::Cover => "cover",
-            RunWhy::Follow => "follow",
-            RunWhy::Told => "told",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -28,7 +18,7 @@ pub struct Leave {
     pub until: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LeaveWhy {
     #[default] Blast,
     Cover,
@@ -36,18 +26,6 @@ pub enum LeaveWhy {
     Told,
     Close,
     Fight,
-}
-impl LeaveWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LeaveWhy::Blast => "blast",
-            LeaveWhy::Cover => "cover",
-            LeaveWhy::Follow => "follow",
-            LeaveWhy::Told => "told",
-            LeaveWhy::Close => "close",
-            LeaveWhy::Fight => "fight",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

@@ -1,9 +1,9 @@
 //! The types of `scene_stuff`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum BoxStuff {
     Carpet,
     Grass,
@@ -16,7 +16,7 @@ pub enum BoxStuff {
     Steel,
     Enamel,
     Tarmac,
-    MudWall,
+    #[word("mud wall")] MudWall,
     Plaster,
     Block,
     Earth,
@@ -29,52 +29,14 @@ pub enum BoxStuff {
     Carpaint,
     Stucco,
     Skim,
-    GlossBlock,
-    BoardConcrete,
-    CastPanel,
+    #[word("gloss block")] GlossBlock,
+    #[word("board concrete")] BoardConcrete,
+    #[word("cast panel")] CastPanel,
     Paver,
     Brushed,
     Louvre,
     Plain,
     Waits,
-}
-impl BoxStuff {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BoxStuff::Carpet => "carpet",
-            BoxStuff::Grass => "grass",
-            BoxStuff::Rubber => "rubber",
-            BoxStuff::Metal => "metal",
-            BoxStuff::Glass => "glass",
-            BoxStuff::Wood => "wood",
-            BoxStuff::Plastic => "plastic",
-            BoxStuff::Fabric => "fabric",
-            BoxStuff::Steel => "steel",
-            BoxStuff::Enamel => "enamel",
-            BoxStuff::Tarmac => "tarmac",
-            BoxStuff::MudWall => "mud wall",
-            BoxStuff::Plaster => "plaster",
-            BoxStuff::Block => "block",
-            BoxStuff::Earth => "earth",
-            BoxStuff::Gravel => "gravel",
-            BoxStuff::Slab => "slab",
-            BoxStuff::Sheet => "sheet",
-            BoxStuff::Cloth => "cloth",
-            BoxStuff::Paint => "paint",
-            BoxStuff::Veneer => "veneer",
-            BoxStuff::Carpaint => "carpaint",
-            BoxStuff::Stucco => "stucco",
-            BoxStuff::Skim => "skim",
-            BoxStuff::GlossBlock => "gloss block",
-            BoxStuff::BoardConcrete => "board concrete",
-            BoxStuff::CastPanel => "cast panel",
-            BoxStuff::Paver => "paver",
-            BoxStuff::Brushed => "brushed",
-            BoxStuff::Louvre => "louvre",
-            BoxStuff::Plain => "plain",
-            BoxStuff::Waits => "waits",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

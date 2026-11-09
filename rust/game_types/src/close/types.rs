@@ -1,6 +1,6 @@
 //! The types of `close`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -11,22 +11,12 @@ pub enum CloseKind {
     Seat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CloseId {
     #[default] Behind,
     Front,
     Left,
     Right,
-}
-impl CloseId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseId::Behind => "behind",
-            CloseId::Front => "front",
-            CloseId::Left => "left",
-            CloseId::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -114,7 +104,7 @@ pub struct CloseRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum CloseRowsRowOverKind {
     Cam,
     Guard,
@@ -128,24 +118,6 @@ pub enum CloseRowsRowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl CloseRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseRowsRowOverKind::Cam => "cam",
-            CloseRowsRowOverKind::Guard => "guard",
-            CloseRowsRowOverKind::Breaker => "breaker",
-            CloseRowsRowOverKind::Door => "door",
-            CloseRowsRowOverKind::Light => "light",
-            CloseRowsRowOverKind::Body => "body",
-            CloseRowsRowOverKind::Objective => "objective",
-            CloseRowsRowOverKind::Held => "held",
-            CloseRowsRowOverKind::Wall => "wall",
-            CloseRowsRowOverKind::Switch => "switch",
-            CloseRowsRowOverKind::Charge => "charge",
-            CloseRowsRowOverKind::Cancel => "cancel",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

@@ -1,9 +1,9 @@
 //! The types of `attention`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DrawKind {
     #[default] Door,
     Light,
@@ -11,32 +11,12 @@ pub enum DrawKind {
     Whistle,
     Lent,
 }
-impl DrawKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DrawKind::Door => "door",
-            DrawKind::Light => "light",
-            DrawKind::Noise => "noise",
-            DrawKind::Whistle => "whistle",
-            DrawKind::Lent => "lent",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum HoldMode {
     #[default] Go,
     Look,
     Lent,
-}
-impl HoldMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HoldMode::Go => "go",
-            HoldMode::Look => "look",
-            HoldMode::Lent => "lent",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

@@ -1,9 +1,9 @@
 //! The types of `weather_kinds`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum WeatherKind {
     Clear,
     Overcast,
@@ -12,19 +12,6 @@ pub enum WeatherKind {
     Fog,
     Dust,
     Snow,
-}
-impl WeatherKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WeatherKind::Clear => "clear",
-            WeatherKind::Overcast => "overcast",
-            WeatherKind::Rain => "rain",
-            WeatherKind::Downpour => "downpour",
-            WeatherKind::Fog => "fog",
-            WeatherKind::Dust => "dust",
-            WeatherKind::Snow => "snow",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

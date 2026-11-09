@@ -1,6 +1,6 @@
 //! The types of `throwables`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what an item does when it bounces (Item.onBounce); called from throwables_say with speed, point, item and face normal
@@ -17,7 +17,7 @@ pub enum ItemBounce {
     Loaded { kind: crate::throwables::ItemKind },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ItemKind {
     #[default] Pistol,
     Rifle,
@@ -28,21 +28,6 @@ pub enum ItemKind {
     Mag,
     Torch,
     Shell,
-}
-impl ItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ItemKind::Pistol => "pistol",
-            ItemKind::Rifle => "rifle",
-            ItemKind::Ring => "ring",
-            ItemKind::Smoke => "smoke",
-            ItemKind::Flash => "flash",
-            ItemKind::Frag => "frag",
-            ItemKind::Mag => "mag",
-            ItemKind::Torch => "torch",
-            ItemKind::Shell => "shell",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

@@ -100,6 +100,30 @@ pub fn knobs(item: TokenStream) -> TokenStream {
                  #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
              }}").parse().unwrap()
 }
+/// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says
+#[proc_macro_derive(Words, attributes(word))]
+pub fn words(item: TokenStream) -> TokenStream {
+    let mut t = item.into_iter().peekable();
+    attributes(&mut t, &["parts"]);
+    visibility(&mut t);
+    let (kind, name) = (word(t.next()), word(t.next()));
+    let Some(TokenTree::Group(g)) = t.next() else { panic!("Words is for an enum: {name}") };
+    if kind != "enum" { panic!("Words is for an enum: {name}") }
+    let arms: String = split(g.stream()).into_iter().map(|arm| {
+        let mut t = arm.into_iter().peekable();
+        let mut said = None;
+        while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
+            t.next();
+            let Some(TokenTree::Group(g)) = t.next() else { panic!("an attribute with nothing in it") };
+            let mut a = g.stream().into_iter();
+            if word(a.next()) == "word" { if let Some(TokenTree::Group(w)) = a.next() { said = Some(w.stream().to_string()); } }
+        }
+        let arm = word(t.next());
+        let w = said.unwrap_or_else(|| format!("{:?}", arm[..1].to_lowercase() + &arm[1..]));
+        format!("Self::{arm} => {w}, ")
+    }).collect();
+    format!("impl {name} {{ pub const fn as_str(self) -> &'static str {{ match self {{ {arms} }} }} }}").parse().unwrap()
+}
 /// the fields of a struct that are written, as they are named after `self.`
 fn kept(f: &Fields) -> Vec<String> {
     match f {

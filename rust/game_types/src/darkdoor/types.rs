@@ -1,6 +1,6 @@
 //! The types of `darkdoor`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -55,26 +55,14 @@ pub struct Read {
     pub mean: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum LineKind {
     With,
     Copy,
     Alone,
-    Self_,
+    #[word("self")] Self_,
     Call,
     Nobody,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::With => "with",
-            LineKind::Copy => "copy",
-            LineKind::Alone => "alone",
-            LineKind::Self_ => "self",
-            LineKind::Call => "call",
-            LineKind::Nobody => "nobody",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

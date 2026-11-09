@@ -1,6 +1,6 @@
 //! The types of `digin`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -56,24 +56,13 @@ pub struct Man {
     pub stalls: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum Cue {
     Kick,
     Scrape,
     Radio,
     Shout,
     Tried,
-}
-impl Cue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Cue::Kick => "kick",
-            Cue::Scrape => "scrape",
-            Cue::Radio => "radio",
-            Cue::Shout => "shout",
-            Cue::Tried => "tried",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

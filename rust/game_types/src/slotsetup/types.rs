@@ -1,36 +1,19 @@
 //! The types of `slotsetup`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SetupGun {
     #[default] Pistol,
     Rifle,
 }
-impl SetupGun {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SetupGun::Pistol => "pistol",
-            SetupGun::Rifle => "rifle",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum SetupKind {
     #[default] Light,
     Load,
     Mode,
-}
-impl SetupKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SetupKind::Light => "light",
-            SetupKind::Load => "load",
-            SetupKind::Mode => "mode",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

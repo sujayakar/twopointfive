@@ -1,6 +1,6 @@
 //! The types of `nvg`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -10,24 +10,13 @@ pub enum Mode {
     Dark,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
-    #[default] YourLight,
-    YourGoggles,
-    NotCompromised,
+    #[word("your light")] #[default] YourLight,
+    #[word("your goggles")] YourGoggles,
+    #[word("not compromised")] NotCompromised,
     Compromised,
-    NoRule,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::YourLight => "your light",
-            Why::YourGoggles => "your goggles",
-            Why::NotCompromised => "not compromised",
-            Why::Compromised => "compromised",
-            Why::NoRule => "no rule",
-        }
-    }
+    #[word("no rule")] NoRule,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

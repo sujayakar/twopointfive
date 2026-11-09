@@ -1,24 +1,14 @@
 //! The types of `needs`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum NeedKind {
     #[default] Smoke,
     Coffee,
     Water,
     Stretch,
-}
-impl NeedKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NeedKind::Smoke => "smoke",
-            NeedKind::Coffee => "coffee",
-            NeedKind::Water => "water",
-            NeedKind::Stretch => "stretch",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -38,22 +28,12 @@ pub struct Need {
     pub trip_m: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TripPhase {
     #[default] Going,
     Telegraph,
     Dwell,
     Returning,
-}
-impl TripPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TripPhase::Going => "going",
-            TripPhase::Telegraph => "telegraph",
-            TripPhase::Dwell => "dwell",
-            TripPhase::Returning => "returning",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

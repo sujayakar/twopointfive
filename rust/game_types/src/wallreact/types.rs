@@ -1,6 +1,6 @@
 //! The types of `wallreact`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -108,22 +108,12 @@ pub enum WallReactHeadGd {
     Sam,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactManKnowsHow {
     Heard,
     Saw,
     Told,
     Made,
-}
-impl WallReactManKnowsHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactManKnowsHow::Heard => "heard",
-            WallReactManKnowsHow::Saw => "saw",
-            WallReactManKnowsHow::Told => "told",
-            WallReactManKnowsHow::Made => "made",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -157,20 +147,11 @@ pub enum WallReactReconsider {
     Later,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactReconsider10 {
     Fine,
     Moved,
     Later,
-}
-impl WallReactReconsider10 {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactReconsider10::Fine => "fine",
-            WallReactReconsider10::Moved => "moved",
-            WallReactReconsider10::Later => "later",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

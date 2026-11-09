@@ -1,6 +1,6 @@
 //! The types of `lightswitch`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -66,7 +66,7 @@ pub struct SwitchRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SwitchRowsRowOverKind {
     Cam,
     Guard,
@@ -80,24 +80,6 @@ pub enum SwitchRowsRowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl SwitchRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SwitchRowsRowOverKind::Cam => "cam",
-            SwitchRowsRowOverKind::Guard => "guard",
-            SwitchRowsRowOverKind::Breaker => "breaker",
-            SwitchRowsRowOverKind::Door => "door",
-            SwitchRowsRowOverKind::Light => "light",
-            SwitchRowsRowOverKind::Body => "body",
-            SwitchRowsRowOverKind::Objective => "objective",
-            SwitchRowsRowOverKind::Held => "held",
-            SwitchRowsRowOverKind::Wall => "wall",
-            SwitchRowsRowOverKind::Switch => "switch",
-            SwitchRowsRowOverKind::Charge => "charge",
-            SwitchRowsRowOverKind::Cancel => "cancel",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

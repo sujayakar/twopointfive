@@ -1,6 +1,6 @@
 //! The types of `pairorders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
@@ -64,18 +64,10 @@ pub struct Job {
     pub back_t: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum JobMode {
     #[default] Mark,
     Now,
-}
-impl JobMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobMode::Mark => "mark",
-            JobMode::Now => "now",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -112,22 +104,12 @@ pub struct PairordersModPAIRLOGItem {
     pub serial: u32,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum PairOrdersMarkBy {
     Row,
     Hands,
     Api,
-    F,
-}
-impl PairOrdersMarkBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairOrdersMarkBy::Row => "row",
-            PairOrdersMarkBy::Hands => "hands",
-            PairOrdersMarkBy::Api => "api",
-            PairOrdersMarkBy::F => "F",
-        }
-    }
+    #[word("F")] F,
 }
 
 #[derive(Clone, Debug, Default)]

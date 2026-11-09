@@ -1,6 +1,6 @@
 //! The types of `wallbreak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
@@ -9,38 +9,19 @@ pub enum ChangeListener {
     WallReact,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BKind {
     #[default] Wall,
     Cover,
 }
-impl BKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BKind::Wall => "wall",
-            BKind::Cover => "cover",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeKind {
     #[default] Door,
     Cover,
     Hole,
     Port,
     Reset,
-}
-impl LevelChangeKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeKind::Door => "door",
-            LevelChangeKind::Cover => "cover",
-            LevelChangeKind::Hole => "hole",
-            LevelChangeKind::Port => "port",
-            LevelChangeKind::Reset => "reset",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -57,24 +38,13 @@ pub struct LevelChange {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeCause {
     #[default] Blast,
     Fire,
     Load,
     Reset,
     Collapse,
-}
-impl LevelChangeCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeCause::Blast => "blast",
-            LevelChangeCause::Fire => "fire",
-            LevelChangeCause::Load => "load",
-            LevelChangeCause::Reset => "reset",
-            LevelChangeCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

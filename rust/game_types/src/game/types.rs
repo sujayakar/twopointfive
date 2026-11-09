@@ -1,22 +1,13 @@
 //! The types of `game`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ThrowKind {
     #[default] Smoke,
     Flash,
     Frag,
-}
-impl ThrowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ThrowKind::Smoke => "smoke",
-            ThrowKind::Flash => "flash",
-            ThrowKind::Frag => "frag",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -68,7 +59,7 @@ pub struct Interactable {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum InteractableKind {
     #[default] Cam,
     Guard,
@@ -83,26 +74,8 @@ pub enum InteractableKind {
     Charge,
     Cancel,
 }
-impl InteractableKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            InteractableKind::Cam => "cam",
-            InteractableKind::Guard => "guard",
-            InteractableKind::Breaker => "breaker",
-            InteractableKind::Door => "door",
-            InteractableKind::Light => "light",
-            InteractableKind::Body => "body",
-            InteractableKind::Objective => "objective",
-            InteractableKind::Held => "held",
-            InteractableKind::Wall => "wall",
-            InteractableKind::Switch => "switch",
-            InteractableKind::Charge => "charge",
-            InteractableKind::Cancel => "cancel",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Verb {
     Push,
     Hammer,
@@ -135,44 +108,8 @@ pub enum Verb {
     Lead,
     Stay,
 }
-impl Verb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Verb::Push => "push",
-            Verb::Hammer => "hammer",
-            Verb::Rattle => "rattle",
-            Verb::Pick => "pick",
-            Verb::Unlock => "unlock",
-            Verb::Kick => "kick",
-            Verb::Code => "code",
-            Verb::Drive => "drive",
-            Verb::Charge => "charge",
-            Verb::Cancel => "cancel",
-            Verb::Pull => "pull",
-            Verb::Ease => "ease",
-            Verb::Nocode => "nocode",
-            Verb::Wand => "wand",
-            Verb::Breach => "breach",
-            Verb::Grab => "grab",
-            Verb::Question => "question",
-            Verb::Choke => "choke",
-            Verb::Whip => "whip",
-            Verb::Comply => "comply",
-            Verb::Drag => "drag",
-            Verb::Drop => "drop",
-            Verb::BreakerOff => "breakerOff",
-            Verb::BreakerOn => "breakerOn",
-            Verb::Blow => "blow",
-            Verb::TakeCam => "takeCam",
-            Verb::LightsOff => "lightsOff",
-            Verb::LightsOn => "lightsOn",
-            Verb::Lead => "lead",
-            Verb::Stay => "stay",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SlotKind {
     #[default] Pistol,
     Rifle,
@@ -181,19 +118,8 @@ pub enum SlotKind {
     Frag,
 }
 
-impl SlotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlotKind::Pistol => "pistol",
-            SlotKind::Rifle => "rifle",
-            SlotKind::Smoke => "smoke",
-            SlotKind::Flash => "flash",
-            SlotKind::Frag => "frag",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum GuardState {
     #[default] Patrol,
     Suspicious,
@@ -201,48 +127,19 @@ pub enum GuardState {
     Search,
     Dead,
 }
-impl GuardState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardState::Patrol => "patrol",
-            GuardState::Suspicious => "suspicious",
-            GuardState::Alert => "alert",
-            GuardState::Search => "search",
-            GuardState::Dead => "dead",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownKind {
     #[default] Shot,
     Struck,
     Choked,
 }
-impl DownKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownKind::Shot => "shot",
-            DownKind::Struck => "struck",
-            DownKind::Choked => "choked",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,
     Player,
     World,
-}
-impl DownBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownBy::Guard => "guard",
-            DownBy::Player => "player",
-            DownBy::World => "world",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -271,24 +168,13 @@ pub struct WitnessHeard {
     pub last_t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum WitnessAlertedBy {
     Body,
     Held,
     Radio,
     Sound,
     Sight,
-}
-impl WitnessAlertedBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessAlertedBy::Body => "body",
-            WitnessAlertedBy::Held => "held",
-            WitnessAlertedBy::Radio => "radio",
-            WitnessAlertedBy::Sound => "sound",
-            WitnessAlertedBy::Sight => "sight",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -323,24 +209,13 @@ pub struct WitnessSawHeld {
     pub who: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum MissionStage {
     #[default] Drive,
     Infiltrate,
     Exfil,
     Done,
     Failed,
-}
-impl MissionStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionStage::Drive => "drive",
-            MissionStage::Infiltrate => "infiltrate",
-            MissionStage::Exfil => "exfil",
-            MissionStage::Done => "done",
-            MissionStage::Failed => "failed",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -961,34 +836,17 @@ pub enum Foe {
     Player,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PairId {
     #[default] Red,
     Blue,
 }
-impl PairId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairId::Red => "red",
-            PairId::Blue => "blue",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Temperament {
     #[default] Steady,
     Nervy,
     Hard,
-}
-impl Temperament {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Temperament::Steady => "steady",
-            Temperament::Nervy => "nervy",
-            Temperament::Hard => "hard",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -1411,20 +1269,11 @@ pub struct GuardTaskArm0 {
     pub pos: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum GuardTaskArm0Kind {
     #[default] Breaker,
     Device,
     Rack,
-}
-impl GuardTaskArm0Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardTaskArm0Kind::Breaker => "breaker",
-            GuardTaskArm0Kind::Device => "device",
-            GuardTaskArm0Kind::Rack => "rack",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

@@ -1,6 +1,6 @@
 //! The types of `weapons`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// WHICH OF THE THREE A GUN IS: a Pistol's and a Rifle's own rows are fields of the one Firearm (g.fa)
@@ -22,7 +22,7 @@ pub struct FeedPlan { pub cues: Option<Vec<FeedCue>>,  pub drop: Option<f64> }
 #[derive(Clone, Debug, ToBytes)]
 pub struct FeedCue { pub t: f64, pub sfx: String, pub gain: f64, pub rate: f64 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum GunModelId {
     #[default] M870,
     Mk12,
@@ -32,21 +32,8 @@ pub enum GunModelId {
     Hk45,
     G18,
 }
-impl GunModelId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunModelId::M870 => "m870",
-            GunModelId::Mk12 => "mk12",
-            GunModelId::Mp7 => "mp7",
-            GunModelId::Mk46 => "mk46",
-            GunModelId::M1014 => "m1014",
-            GunModelId::Hk45 => "hk45",
-            GunModelId::G18 => "g18",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum WeaponId {
     #[default] Fiveseven,
     Guard9mm,
@@ -65,43 +52,12 @@ pub enum WeaponId {
     Mk18bare,
     G19bare,
 }
-impl WeaponId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WeaponId::Fiveseven => "fiveseven",
-            WeaponId::Guard9mm => "guard9mm",
-            WeaponId::Aks74u => "aks74u",
-            WeaponId::Ak74m => "ak74m",
-            WeaponId::Akms => "akms",
-            WeaponId::Fn2000 => "fn2000",
-            WeaponId::M870 => "m870",
-            WeaponId::Mk12 => "mk12",
-            WeaponId::Mp7 => "mp7",
-            WeaponId::Mk46 => "mk46",
-            WeaponId::M1014 => "m1014",
-            WeaponId::Hk45 => "hk45",
-            WeaponId::G18 => "g18",
-            WeaponId::Pkm => "pkm",
-            WeaponId::Mk18bare => "mk18bare",
-            WeaponId::G19bare => "g19bare",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum FireMode {
     #[default] Semi,
     Auto,
     Burst,
-}
-impl FireMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FireMode::Semi => "semi",
-            FireMode::Auto => "auto",
-            FireMode::Burst => "burst",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -138,22 +94,12 @@ pub struct WeaponDef {
     pub own: Option<crate::weapons::WeaponDefOwn>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WeaponClass {
     #[default] Pistol,
     Carbine,
     Rifle,
     Shotgun,
-}
-impl WeaponClass {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WeaponClass::Pistol => "pistol",
-            WeaponClass::Carbine => "carbine",
-            WeaponClass::Rifle => "rifle",
-            WeaponClass::Shotgun => "shotgun",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -265,20 +211,11 @@ impl Ocp {
 }
 impl Default for Ocp { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum RifleAttachment {
     Ring,
     He40,
     Cam,
-}
-impl RifleAttachment {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RifleAttachment::Ring => "ring",
-            RifleAttachment::He40 => "he40",
-            RifleAttachment::Cam => "cam",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

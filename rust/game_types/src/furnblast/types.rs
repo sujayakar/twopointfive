@@ -1,22 +1,13 @@
 //! The types of `furnblast`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum BlastSource {
     Frag,
     Door,
     Wall,
-}
-impl BlastSource {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BlastSource::Frag => "frag",
-            BlastSource::Door => "door",
-            BlastSource::Wall => "wall",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]

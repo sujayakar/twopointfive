@@ -1,6 +1,6 @@
 //! The types of `rescue`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
@@ -199,24 +199,13 @@ pub struct RescueAct {
     pub hold: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum RescueStep {
     Waiting,
     Shouting,
     Counting,
-    AboutTo,
+    #[word("about to")] AboutTo,
     Stopped,
-}
-impl RescueStep {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueStep::Waiting => "waiting",
-            RescueStep::Shouting => "shouting",
-            RescueStep::Counting => "counting",
-            RescueStep::AboutTo => "about to",
-            RescueStep::Stopped => "stopped",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

@@ -1,9 +1,9 @@
 //! The types of `dialogue`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Knowledge {
     #[default] None,
     Heard,
@@ -11,32 +11,12 @@ pub enum Knowledge {
     Saw,
     SawHurt,
 }
-impl Knowledge {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Knowledge::None => "none",
-            Knowledge::Heard => "heard",
-            Knowledge::Glimpsed => "glimpsed",
-            Knowledge::Saw => "saw",
-            Knowledge::SawHurt => "sawHurt",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Band {
     #[default] Low,
     Mid,
     High,
-}
-impl Band {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Band::Low => "low",
-            Band::Mid => "mid",
-            Band::High => "high",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -45,7 +25,7 @@ pub enum StageKey {
     X,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Need {
     Shift,
     RollcallLive,
@@ -69,35 +49,8 @@ pub enum Need {
     PartnerKnown,
     Office,
 }
-impl Need {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Need::Shift => "shift",
-            Need::RollcallLive => "rollcallLive",
-            Need::Blackout => "blackout",
-            Need::BodyFound => "bodyFound",
-            Need::FloorUp => "floorUp",
-            Need::Lockdown => "lockdown",
-            Need::Episode => "episode",
-            Need::HeardSmall => "heardSmall",
-            Need::HeardShots => "heardShots",
-            Need::HeardBang => "heardBang",
-            Need::BodyCalled => "bodyCalled",
-            Need::BodyKnown => "bodyKnown",
-            Need::MissingKnown => "missingKnown",
-            Need::HeldLong => "heldLong",
-            Need::Dazzled => "dazzled",
-            Need::SawShot => "sawShot",
-            Need::SawDrop => "sawDrop",
-            Need::AlertNow => "alertNow",
-            Need::DrewOnYou => "drewOnYou",
-            Need::PartnerKnown => "partnerKnown",
-            Need::Office => "office",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum Token {
     Door,
     Code,
@@ -122,35 +75,6 @@ pub enum Token {
     Minutes,
     Badge,
     PadDoor,
-}
-impl Token {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Token::Door => "door",
-            Token::Code => "code",
-            Token::Missing => "missing",
-            Token::Body => "body",
-            Token::N => "n",
-            Token::Up => "up",
-            Token::Post => "post",
-            Token::Room => "room",
-            Token::Route => "route",
-            Token::Partner => "partner",
-            Token::Victim => "victim",
-            Token::SawWhere => "sawWhere",
-            Token::HeardWhere => "heardWhere",
-            Token::PartnerRoute => "partnerRoute",
-            Token::Caller => "caller",
-            Token::Checker => "checker",
-            Token::Checked => "checked",
-            Token::ClearRoom => "clearRoom",
-            Token::BreakerRoom => "breakerRoom",
-            Token::CheckEta => "checkEta",
-            Token::Minutes => "minutes",
-            Token::Badge => "badge",
-            Token::PadDoor => "padDoor",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -189,61 +113,31 @@ impl Default for Line {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum LineK {
     None,
     Heard,
     Glimpsed,
     Saw,
     SawHurt,
-    Empty,
-}
-impl LineK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineK::None => "none",
-            LineK::Heard => "heard",
-            LineK::Glimpsed => "glimpsed",
-            LineK::Saw => "saw",
-            LineK::SawHurt => "sawHurt",
-            LineK::Empty => "*",
-        }
-    }
+    #[word("*")] Empty,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum LineA {
     Low,
     Mid,
     High,
-    Mid2,
-}
-impl LineA {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineA::Low => "low",
-            LineA::Mid => "mid",
-            LineA::High => "high",
-            LineA::Mid2 => "mid+",
-        }
-    }
+    #[word("mid+")] Mid2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum LineOnly {
     Shift,
     Office,
 }
-impl LineOnly {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineOnly::Shift => "shift",
-            LineOnly::Office => "office",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum IntelKind {
     #[default] CheckOn,
     Clearing,
@@ -257,23 +151,6 @@ pub enum IntelKind {
     Missing,
     Drive,
 }
-impl IntelKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IntelKind::CheckOn => "checkOn",
-            IntelKind::Clearing => "clearing",
-            IntelKind::RollcallLive => "rollcallLive",
-            IntelKind::Blackout => "blackout",
-            IntelKind::Door => "door",
-            IntelKind::Code => "code",
-            IntelKind::Rollcall => "rollcall",
-            IntelKind::LockdownPosts => "lockdownPosts",
-            IntelKind::Routes => "routes",
-            IntelKind::Missing => "missing",
-            IntelKind::Drive => "drive",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct IntelItem {
@@ -283,7 +160,7 @@ pub struct IntelItem {
     pub live: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ShapeKey {
     #[default] Pedant,
     Selfown,
@@ -294,21 +171,6 @@ pub enum ShapeKey {
     Con,
     Game,
     Menace,
-}
-impl ShapeKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShapeKey::Pedant => "pedant",
-            ShapeKey::Selfown => "selfown",
-            ShapeKey::Folder => "folder",
-            ShapeKey::Ramble => "ramble",
-            ShapeKey::Fan => "fan",
-            ShapeKey::Stoic => "stoic",
-            ShapeKey::Con => "con",
-            ShapeKey::Game => "game",
-            ShapeKey::Menace => "menace",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -425,22 +287,12 @@ pub enum DialoguePickWidened {
     Repeat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum SamStage {
     #[default] Press,
     Open,
     Ask,
     Dry,
-}
-impl SamStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamStage::Press => "press",
-            SamStage::Open => "open",
-            SamStage::Ask => "ask",
-            SamStage::Dry => "dry",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
@@ -470,7 +322,7 @@ pub struct SamLine {
     pub guide: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SamLineS {
     #[default] Press,
     Key,
@@ -479,19 +331,6 @@ pub enum SamLineS {
     Ask,
     Dry,
     Script,
-}
-impl SamLineS {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamLineS::Press => "press",
-            SamLineS::Key => "key",
-            SamLineS::Open => "open",
-            SamLineS::Q => "q",
-            SamLineS::Ask => "ask",
-            SamLineS::Dry => "dry",
-            SamLineS::Script => "script",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -581,7 +420,7 @@ impl Default for RoomLine {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum HandlerBeat {
     #[default] Blackout,
     Drive,
@@ -591,20 +430,6 @@ pub enum HandlerBeat {
     Server,
     BodyKo,
     BodyDead,
-}
-impl HandlerBeat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HandlerBeat::Blackout => "blackout",
-            HandlerBeat::Drive => "drive",
-            HandlerBeat::Alarm => "alarm",
-            HandlerBeat::Rack => "rack",
-            HandlerBeat::Lockdown => "lockdown",
-            HandlerBeat::Server => "server",
-            HandlerBeat::BodyKo => "bodyKo",
-            HandlerBeat::BodyDead => "bodyDead",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -2476,26 +2301,14 @@ pub struct HimOf {
     pub text: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum HimOfK {
     #[default] None,
     Heard,
     Glimpsed,
     Saw,
     SawHurt,
-    Empty,
-}
-impl HimOfK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HimOfK::None => "none",
-            HimOfK::Heard => "heard",
-            HimOfK::Glimpsed => "glimpsed",
-            HimOfK::Saw => "saw",
-            HimOfK::SawHurt => "sawHurt",
-            HimOfK::Empty => "*",
-        }
-    }
+    #[word("*")] Empty,
 }
 
 /// the state this module keeps at its top level

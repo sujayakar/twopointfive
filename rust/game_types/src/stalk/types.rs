@@ -1,9 +1,9 @@
 //! The types of `stalk`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum Why {
     Keys,
     Wall,
@@ -12,19 +12,6 @@ pub enum Why {
     Turned,
     Hands,
     Far,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Keys => "keys",
-            Why::Wall => "wall",
-            Why::Let => "let",
-            Why::Him => "him",
-            Why::Turned => "turned",
-            Why::Hands => "hands",
-            Why::Far => "far",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

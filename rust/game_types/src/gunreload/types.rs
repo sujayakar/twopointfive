@@ -1,6 +1,6 @@
 //! The types of `gunreload`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -51,20 +51,11 @@ pub enum FeedKeyAt {
     Pouch,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum FeedKeyHow {
     Mag,
     Top,
     Pouch,
-}
-impl FeedKeyHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FeedKeyHow::Mag => "mag",
-            FeedKeyHow::Top => "top",
-            FeedKeyHow::Pouch => "pouch",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

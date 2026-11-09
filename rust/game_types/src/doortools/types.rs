@@ -1,6 +1,6 @@
 //! The types of `doortools`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the step onto the diagonals, kept until the first can's burst has run dry (doortools.ts toThreshold's `out`)
@@ -84,24 +84,13 @@ impl DoorTools {
 }
 impl Default for DoorTools { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DoorToolKind {
     #[default] Charge,
     Outside,
     BangClear,
     OpenClear,
     Threshold,
-}
-impl DoorToolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolKind::Charge => "charge",
-            DoorToolKind::Outside => "outside",
-            DoorToolKind::BangClear => "bangClear",
-            DoorToolKind::OpenClear => "openClear",
-            DoorToolKind::Threshold => "threshold",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -510,18 +499,10 @@ pub struct KnownThreat {
     pub how: crate::doortools::KnownThreatHow,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum KnownThreatHow {
     #[default] Shot,
     Seen,
-}
-impl KnownThreatHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KnownThreatHow::Shot => "shot",
-            KnownThreatHow::Seen => "seen",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -578,36 +559,18 @@ pub struct DoortoolsModSKYValue {
     pub open: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsTakeWhat {
     Frag,
     Bang,
     Charge,
 }
-impl DoorToolsTakeWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsTakeWhat::Frag => "frag",
-            DoorToolsTakeWhat::Bang => "bang",
-            DoorToolsTakeWhat::Charge => "charge",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsRefundWhat {
     Frag,
     Bang,
     Charge,
-}
-impl DoorToolsRefundWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsRefundWhat::Frag => "frag",
-            DoorToolsRefundWhat::Bang => "bang",
-            DoorToolsRefundWhat::Charge => "charge",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -616,18 +579,10 @@ pub enum DoorToolsStackable {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsBigWord {
     Shotgun,
     Hammer,
-}
-impl DoorToolsBigWord {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsBigWord::Shotgun => "shotgun",
-            DoorToolsBigWord::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -644,20 +599,11 @@ pub struct DoorToolsStackLeftPostValue {
     pub stack_side: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsEntryVerb {
     Pick,
     Kick,
     Open,
-}
-impl DoorToolsEntryVerb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsEntryVerb::Pick => "pick",
-            DoorToolsEntryVerb::Kick => "kick",
-            DoorToolsEntryVerb::Open => "open",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -717,22 +663,12 @@ pub enum DoorToolsIssue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsOrderKind {
     Outside,
     BangClear,
     OpenClear,
     Threshold,
-}
-impl DoorToolsOrderKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsOrderKind::Outside => "outside",
-            DoorToolsOrderKind::BangClear => "bangClear",
-            DoorToolsOrderKind::OpenClear => "openClear",
-            DoorToolsOrderKind::Threshold => "threshold",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]

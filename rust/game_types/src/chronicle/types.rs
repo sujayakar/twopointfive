@@ -1,6 +1,6 @@
 //! The types of `chronicle`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,7 +12,7 @@ pub struct ChronEvent {
     pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ChronKind {
     #[default] Down,
     Shot,
@@ -50,48 +50,6 @@ pub enum ChronKind {
     CodeLearned,
     CodeEntered,
     Checkpoint,
-}
-impl ChronKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronKind::Down => "down",
-            ChronKind::Shot => "shot",
-            ChronKind::Blackout => "blackout",
-            ChronKind::Heard => "heard",
-            ChronKind::Objective => "objective",
-            ChronKind::Grab => "grab",
-            ChronKind::Ocp => "ocp",
-            ChronKind::Thrown => "thrown",
-            ChronKind::Radio => "radio",
-            ChronKind::Spotted => "spotted",
-            ChronKind::Contact => "contact",
-            ChronKind::Lost => "lost",
-            ChronKind::Calm => "calm",
-            ChronKind::Alarm => "alarm",
-            ChronKind::LightShot => "lightShot",
-            ChronKind::Interrogated => "interrogated",
-            ChronKind::KeyTaken => "keyTaken",
-            ChronKind::Ko => "ko",
-            ChronKind::Kill => "kill",
-            ChronKind::BodyFound => "bodyFound",
-            ChronKind::DoorKicked => "doorKicked",
-            ChronKind::LockPicked => "lockPicked",
-            ChronKind::Hit => "hit",
-            ChronKind::NeedBreak => "needBreak",
-            ChronKind::CivilianSpotted => "civilianSpotted",
-            ChronKind::CivilianReported => "civilianReported",
-            ChronKind::CivilianComplied => "civilianComplied",
-            ChronKind::CivilianKO => "civilianKO",
-            ChronKind::CivilianKilled => "civilianKilled",
-            ChronKind::CameraSpotted => "cameraSpotted",
-            ChronKind::CameraAlarm => "cameraAlarm",
-            ChronKind::LaserTripped => "laserTripped",
-            ChronKind::DeviceDown => "deviceDown",
-            ChronKind::CodeLearned => "codeLearned",
-            ChronKind::CodeEntered => "codeEntered",
-            ChronKind::Checkpoint => "checkpoint",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -314,18 +272,10 @@ pub enum ChronDoorKind {
     LockPicked,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ChronCheckpointWhat {
     Save,
     Load,
-}
-impl ChronCheckpointWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronCheckpointWhat::Save => "save",
-            ChronCheckpointWhat::Load => "load",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

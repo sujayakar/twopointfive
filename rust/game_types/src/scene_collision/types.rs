@@ -1,6 +1,6 @@
 //! The types of `scene_collision`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the share of the wind a square metre of the plan has (wind.ts:237 stormDrift): crate::wind::wind_share_under(g, x, z, roofs)
@@ -272,18 +272,10 @@ pub struct EyeContactAsk {
     pub in_cone: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SenseForRow {
     Sound,
     Paths,
-}
-impl SenseForRow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SenseForRow::Sound => "sound",
-            SenseForRow::Paths => "paths",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

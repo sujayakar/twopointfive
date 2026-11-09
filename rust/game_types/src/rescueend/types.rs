@@ -1,6 +1,6 @@
 //! The types of `rescueend`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -52,7 +52,7 @@ pub struct RescueEndRows2RowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RescueEndRows2RowOverKind {
     Cam,
     Guard,
@@ -66,22 +66,4 @@ pub enum RescueEndRows2RowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl RescueEndRows2RowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndRows2RowOverKind::Cam => "cam",
-            RescueEndRows2RowOverKind::Guard => "guard",
-            RescueEndRows2RowOverKind::Breaker => "breaker",
-            RescueEndRows2RowOverKind::Door => "door",
-            RescueEndRows2RowOverKind::Light => "light",
-            RescueEndRows2RowOverKind::Body => "body",
-            RescueEndRows2RowOverKind::Objective => "objective",
-            RescueEndRows2RowOverKind::Held => "held",
-            RescueEndRows2RowOverKind::Wall => "wall",
-            RescueEndRows2RowOverKind::Switch => "switch",
-            RescueEndRows2RowOverKind::Charge => "charge",
-            RescueEndRows2RowOverKind::Cancel => "cancel",
-        }
-    }
 }

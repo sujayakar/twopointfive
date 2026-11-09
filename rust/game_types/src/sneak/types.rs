@@ -1,26 +1,15 @@
 //! The types of `sneak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
     #[default] Door,
     Near,
     Open,
     Lit,
     Long,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Door => "door",
-            Why::Near => "near",
-            Why::Open => "open",
-            Why::Lit => "lit",
-            Why::Long => "long",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]

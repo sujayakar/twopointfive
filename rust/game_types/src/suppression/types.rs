@@ -1,6 +1,6 @@
 //! The types of `suppression`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -57,24 +57,13 @@ impl Sup {
 }
 impl Default for Sup { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum SupMoment {
     Flinch,
     Friendly,
     Pinned,
     Displace,
     Recover,
-}
-impl SupMoment {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SupMoment::Flinch => "flinch",
-            SupMoment::Friendly => "friendly",
-            SupMoment::Pinned => "pinned",
-            SupMoment::Displace => "displace",
-            SupMoment::Recover => "recover",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

@@ -1,6 +1,6 @@
 //! The types of `roomclear`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,18 +12,10 @@ pub struct Placement {
     pub name: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum RoomClearEnd {
     Taken,
     Wiped,
-}
-impl RoomClearEnd {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearEnd::Taken => "taken",
-            RoomClearEnd::Wiped => "wiped",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

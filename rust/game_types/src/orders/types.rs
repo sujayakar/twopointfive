@@ -1,6 +1,6 @@
 //! The types of `orders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
@@ -386,22 +386,12 @@ pub struct SquadOrdersReachedValueLock {
     pub side: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum TargetKind {
     None,
     Door,
     Floor,
     Foe,
-}
-impl TargetKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TargetKind::None => "none",
-            TargetKind::Door => "door",
-            TargetKind::Floor => "floor",
-            TargetKind::Foe => "foe",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

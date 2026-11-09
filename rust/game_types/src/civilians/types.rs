@@ -1,13 +1,13 @@
 //! The types of `civilians`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CivState {
     #[default] Held,
     Work,
@@ -20,24 +20,8 @@ pub enum CivState {
     Evacuate,
     Gone,
 }
-impl CivState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivState::Held => "held",
-            CivState::Work => "work",
-            CivState::Startled => "startled",
-            CivState::Alarmed => "alarmed",
-            CivState::Flee => "flee",
-            CivState::Report => "report",
-            CivState::Phone => "phone",
-            CivState::Cower => "cower",
-            CivState::Evacuate => "evacuate",
-            CivState::Gone => "gone",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum CivCause {
     Shot,
     Bang,
@@ -49,22 +33,6 @@ pub enum CivCause {
     Noise,
     Grabbed,
     Panel,
-}
-impl CivCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivCause::Shot => "shot",
-            CivCause::Bang => "bang",
-            CivCause::Body => "body",
-            CivCause::Sam => "sam",
-            CivCause::Gun => "gun",
-            CivCause::Gunfire => "gunfire",
-            CivCause::Scream => "scream",
-            CivCause::Noise => "noise",
-            CivCause::Grabbed => "grabbed",
-            CivCause::Panel => "panel",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -244,18 +212,10 @@ pub struct PickTargetOpts {
     pub exits_only: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DeliverReportHow {
     Found,
     Told,
-}
-impl DeliverReportHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DeliverReportHow::Found => "found",
-            DeliverReportHow::Told => "told",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

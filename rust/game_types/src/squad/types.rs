@@ -1,6 +1,6 @@
 //! The types of `squad`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
@@ -241,22 +241,12 @@ pub struct BODYLINESCOLD {
     pub radio1: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum EndGuardScriptState {
     Patrol,
     Suspicious,
     Alert,
     Search,
-}
-impl EndGuardScriptState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EndGuardScriptState::Patrol => "patrol",
-            EndGuardScriptState::Suspicious => "suspicious",
-            EndGuardScriptState::Alert => "alert",
-            EndGuardScriptState::Search => "search",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -287,7 +277,7 @@ pub struct RoomClearNewOpts {
     pub live: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RoomClearSayKey {
     Stack1,
     Stack2,
@@ -301,24 +291,6 @@ pub enum RoomClearSayKey {
     Corner1,
     Empty2,
     Radio1,
-}
-impl RoomClearSayKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearSayKey::Stack1 => "stack1",
-            RoomClearSayKey::Stack2 => "stack2",
-            RoomClearSayKey::Go2 => "go2",
-            RoomClearSayKey::In1 => "in1",
-            RoomClearSayKey::Side2 => "side2",
-            RoomClearSayKey::Side1 => "side1",
-            RoomClearSayKey::Push1 => "push1",
-            RoomClearSayKey::Under2 => "under2",
-            RoomClearSayKey::Nothing2 => "nothing2",
-            RoomClearSayKey::Corner1 => "corner1",
-            RoomClearSayKey::Empty2 => "empty2",
-            RoomClearSayKey::Radio1 => "radio1",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

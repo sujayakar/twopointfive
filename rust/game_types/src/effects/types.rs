@@ -1,6 +1,6 @@
 //! The types of `effects`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body (combat.ts fireWeaponRaw), a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)
@@ -32,7 +32,7 @@ pub struct MuzzleFx {
     pub light_range: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum MuzzleFxKey {
     #[default] Mk12,
     Mp7,
@@ -44,22 +44,6 @@ pub enum MuzzleFxKey {
     Sc20k,
     PistolSuppressed,
     PistolBare,
-}
-impl MuzzleFxKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MuzzleFxKey::Mk12 => "mk12",
-            MuzzleFxKey::Mp7 => "mp7",
-            MuzzleFxKey::Mk46 => "mk46",
-            MuzzleFxKey::M1014 => "m1014",
-            MuzzleFxKey::Hk45 => "hk45",
-            MuzzleFxKey::G18 => "g18",
-            MuzzleFxKey::Carbine => "carbine",
-            MuzzleFxKey::Sc20k => "sc20k",
-            MuzzleFxKey::PistolSuppressed => "pistolSuppressed",
-            MuzzleFxKey::PistolBare => "pistolBare",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

@@ -1,6 +1,6 @@
 //! The types of `verdict`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
@@ -75,20 +75,11 @@ pub struct Track {
     pub next: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ManState {
     #[default] Dead,
     Out,
     Up,
-}
-impl ManState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManState::Dead => "dead",
-            ManState::Out => "out",
-            ManState::Up => "up",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -109,40 +100,20 @@ pub struct RunVerdict {
     pub start: [f64; 2],
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum RunVerdictKind {
     Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
 }
-impl RunVerdictKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunVerdictKind::Nightbreach => "nightbreach",
-            RunVerdictKind::Roomclear => "roomclear",
-            RunVerdictKind::Rescue => "rescue",
-            RunVerdictKind::Quiet => "quiet",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Approach {
     Doors,
     Quiet,
     Walls,
     Dark,
-}
-impl Approach {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Approach::Doors => "doors",
-            Approach::Quiet => "quiet",
-            Approach::Walls => "walls",
-            Approach::Dark => "dark",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

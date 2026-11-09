@@ -1,24 +1,14 @@
 //! The types of `cover`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum OpeningKind {
     #[default] Door,
     Mouth,
     Gap,
     Rear,
-}
-impl OpeningKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            OpeningKind::Door => "door",
-            OpeningKind::Mouth => "mouth",
-            OpeningKind::Gap => "gap",
-            OpeningKind::Rear => "rear",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

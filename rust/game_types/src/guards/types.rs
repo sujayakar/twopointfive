@@ -1,6 +1,6 @@
 //! The types of `guards`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to (guards.ts litPlace's `key`; null is the Option's None)
@@ -73,7 +73,7 @@ pub struct Pair {
     pub vel: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum StandoffMoment {
     Lost,
     Enter,
@@ -83,20 +83,6 @@ pub enum StandoffMoment {
     Dropped,
     Freed,
     HitHim,
-}
-impl StandoffMoment {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StandoffMoment::Lost => "lost",
-            StandoffMoment::Enter => "enter",
-            StandoffMoment::Cornered => "cornered",
-            StandoffMoment::NoShot => "noShot",
-            StandoffMoment::Line => "line",
-            StandoffMoment::Dropped => "dropped",
-            StandoffMoment::Freed => "freed",
-            StandoffMoment::HitHim => "hitHim",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -493,7 +479,7 @@ pub enum InHand {
     Weapon,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RaiseEscalationCause {
     Search,
     Civilian,
@@ -501,18 +487,6 @@ pub enum RaiseEscalationCause {
     Missing,
     Body,
     Hostage,
-}
-impl RaiseEscalationCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RaiseEscalationCause::Search => "search",
-            RaiseEscalationCause::Civilian => "civilian",
-            RaiseEscalationCause::Device => "device",
-            RaiseEscalationCause::Missing => "missing",
-            RaiseEscalationCause::Body => "body",
-            RaiseEscalationCause::Hostage => "hostage",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

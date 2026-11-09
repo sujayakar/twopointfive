@@ -1,6 +1,6 @@
 //! The types of `enemysquads`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then (enemysquads.ts roundCtx); rear is RoundCtx.rear
@@ -26,7 +26,7 @@ pub enum SquadChoice {
     Help,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SquadState {
     #[default] Down,
     Contact,
@@ -35,19 +35,6 @@ pub enum SquadState {
     Barricade,
     Flank,
     Help,
-}
-impl SquadState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadState::Down => "down",
-            SquadState::Contact => "contact",
-            SquadState::Hold => "hold",
-            SquadState::Alerted => "alerted",
-            SquadState::Barricade => "barricade",
-            SquadState::Flank => "flank",
-            SquadState::Help => "help",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -107,7 +94,7 @@ pub struct SquadEvent {
     pub what: crate::enemysquads::SquadEventWhat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SquadEventWhat {
     #[default] Down,
     Back,
@@ -121,7 +108,7 @@ pub enum SquadEventWhat {
     Flank,
     Help,
     Reinforce,
-    InPosition,
+    #[word("in position")] InPosition,
     Met,
     Rally,
     Stays,
@@ -129,50 +116,15 @@ pub enum SquadEventWhat {
     Check,
     Asks,
     Looks,
-    NoSign,
+    #[word("no sign")] NoSign,
     Glimpse,
     Calls,
-    CutOff,
-    NetCheck,
-    NetQuery,
-    NetAsks,
-    NetLooks,
-    NetHelp,
-}
-impl SquadEventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadEventWhat::Down => "down",
-            SquadEventWhat::Back => "back",
-            SquadEventWhat::Contact => "contact",
-            SquadEventWhat::Lost => "lost",
-            SquadEventWhat::Quiet => "quiet",
-            SquadEventWhat::Found => "found",
-            SquadEventWhat::Said => "said",
-            SquadEventWhat::Sweep => "sweep",
-            SquadEventWhat::Barricade => "barricade",
-            SquadEventWhat::Flank => "flank",
-            SquadEventWhat::Help => "help",
-            SquadEventWhat::Reinforce => "reinforce",
-            SquadEventWhat::InPosition => "in position",
-            SquadEventWhat::Met => "met",
-            SquadEventWhat::Rally => "rally",
-            SquadEventWhat::Stays => "stays",
-            SquadEventWhat::Follows => "follows",
-            SquadEventWhat::Check => "check",
-            SquadEventWhat::Asks => "asks",
-            SquadEventWhat::Looks => "looks",
-            SquadEventWhat::NoSign => "no sign",
-            SquadEventWhat::Glimpse => "glimpse",
-            SquadEventWhat::Calls => "calls",
-            SquadEventWhat::CutOff => "cut off",
-            SquadEventWhat::NetCheck => "net check",
-            SquadEventWhat::NetQuery => "net query",
-            SquadEventWhat::NetAsks => "net asks",
-            SquadEventWhat::NetLooks => "net looks",
-            SquadEventWhat::NetHelp => "net help",
-        }
-    }
+    #[word("cut off")] CutOff,
+    #[word("net check")] NetCheck,
+    #[word("net query")] NetQuery,
+    #[word("net asks")] NetAsks,
+    #[word("net looks")] NetLooks,
+    #[word("net help")] NetHelp,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

@@ -1,22 +1,13 @@
 //! The types of `sim_fallshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum FallSound {
-    #[default] Empty,
+    #[word("")] #[default] Empty,
     GlassTinkle,
     GlassShatter,
-}
-impl FallSound {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FallSound::Empty => "",
-            FallSound::GlassTinkle => "glassTinkle",
-            FallSound::GlassShatter => "glassShatter",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

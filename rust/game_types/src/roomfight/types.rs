@@ -1,6 +1,6 @@
 //! The types of `roomfight`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -134,20 +134,11 @@ pub struct Room {
     pub entries: Vec<crate::roomfight::Entry>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DefMode {
     #[default] Hold,
     Move,
     Free,
-}
-impl DefMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DefMode::Hold => "hold",
-            DefMode::Move => "move",
-            DefMode::Free => "free",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

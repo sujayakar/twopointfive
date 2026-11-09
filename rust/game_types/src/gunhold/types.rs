@@ -1,6 +1,6 @@
 //! The types of `gunhold`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -91,22 +91,12 @@ pub struct PickCover {
     pub edge: Option<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum GunHoldPoolKind {
     Shot,
     Round,
     Gone,
     Gun,
-}
-impl GunHoldPoolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunHoldPoolKind::Shot => "shot",
-            GunHoldPoolKind::Round => "round",
-            GunHoldPoolKind::Gone => "gone",
-            GunHoldPoolKind::Gun => "gun",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

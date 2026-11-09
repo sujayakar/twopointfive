@@ -1,6 +1,6 @@
 //! The types of `character`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// THE NAMES OF A BODY'S JOINTS, in the order a real game's `bones` has them (read off a running game: `for k in b` walks this order)
@@ -76,22 +76,12 @@ pub enum Untwist {
     Back { i_e1: Quat, i_e2: Quat, i_e3: Quat, p1: V3, p2t: V3, p3t: V3 },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum KitItem {
     Pistol,
     Rifle,
     Can,
     Knife,
-}
-impl KitItem {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitItem::Pistol => "pistol",
-            KitItem::Rifle => "rifle",
-            KitItem::Can => "can",
-            KitItem::Knife => "knife",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -128,7 +118,7 @@ pub enum UpperMode {
     Relaxed,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Stance {
     #[default] None,
     Wall,
@@ -136,37 +126,16 @@ pub enum Stance {
     HighReady,
     LowReady,
 }
-impl Stance {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Stance::None => "none",
-            Stance::Wall => "wall",
-            Stance::Stack => "stack",
-            Stance::HighReady => "highReady",
-            Stance::LowReady => "lowReady",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum LongStance {
     PatrolLong,
     LowLong,
     Shoulder,
     PortLong,
 }
-impl LongStance {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongStance::PatrolLong => "patrolLong",
-            LongStance::LowLong => "lowLong",
-            LongStance::Shoulder => "shoulder",
-            LongStance::PortLong => "portLong",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum SignalKind {
     Hold,
     Go,
@@ -174,30 +143,11 @@ pub enum SignalKind {
     Aside,
     Squeeze,
 }
-impl SignalKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SignalKind::Hold => "hold",
-            SignalKind::Go => "go",
-            SignalKind::Rally => "rally",
-            SignalKind::Aside => "aside",
-            SignalKind::Squeeze => "squeeze",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum TellKind {
     Watch,
     Neck,
-}
-impl TellKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TellKind::Watch => "watch",
-            TellKind::Neck => "neck",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -206,24 +156,13 @@ pub enum StrikeKind {
     Jab,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BlowStyle {
     #[default] Mouth,
     Sweep,
     Slash,
     Chop,
     Palm,
-}
-impl BlowStyle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BlowStyle::Mouth => "mouth",
-            BlowStyle::Sweep => "sweep",
-            BlowStyle::Slash => "slash",
-            BlowStyle::Chop => "chop",
-            BlowStyle::Palm => "palm",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -235,58 +174,28 @@ pub enum FallStyle {
     Slump,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TakenStyle {
     #[default] Arch,
     Hunch,
     Snap,
 }
-impl TakenStyle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TakenStyle::Arch => "arch",
-            TakenStyle::Hunch => "hunch",
-            TakenStyle::Snap => "snap",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ReadyKind {
     #[default] Grab,
     Seat,
     Strike,
     GrabGun,
 }
-impl ReadyKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ReadyKind::Grab => "grab",
-            ReadyKind::Seat => "seat",
-            ReadyKind::Strike => "strike",
-            ReadyKind::GrabGun => "grabGun",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum HoldPhase {
     #[default] Held,
     Grab,
     Choke,
     Whip,
     Kill,
-}
-impl HoldPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HoldPhase::Held => "held",
-            HoldPhase::Grab => "grab",
-            HoldPhase::Choke => "choke",
-            HoldPhase::Whip => "whip",
-            HoldPhase::Kill => "kill",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -347,22 +256,12 @@ pub struct DoorPush {
     pub reach: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WorkKind {
     #[default] Keys,
     Charge,
     Take,
     Lever,
-}
-impl WorkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WorkKind::Keys => "keys",
-            WorkKind::Charge => "charge",
-            WorkKind::Take => "take",
-            WorkKind::Lever => "lever",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

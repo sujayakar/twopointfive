@@ -1,6 +1,6 @@
 //! The types of `squadthrow`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
@@ -301,48 +301,23 @@ pub struct SquadthrowModSQUADTHROWLOGItem {
     pub rest: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum Word {
     Frag,
     Bang,
 }
-impl Word {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Word::Frag => "frag",
-            Word::Bang => "bang",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum None {
-    NoBangsLeft,
-    NoFragsInThisKit,
-    NoFragsLeft,
-}
-impl None {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            None::NoBangsLeft => "no bangs left.",
-            None::NoFragsInThisKit => "no frags in this kit.",
-            None::NoFragsLeft => "no frags left.",
-        }
-    }
+    #[word("no bangs left.")] NoBangsLeft,
+    #[word("no frags in this kit.")] NoFragsInThisKit,
+    #[word("no frags left.")] NoFragsLeft,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RowOf {
     FragThere,
     StunThere,
-}
-impl RowOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RowOf::FragThere => "fragThere",
-            RowOf::StunThere => "stunThere",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

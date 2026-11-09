@@ -1,9 +1,9 @@
 //! The types of `gunlook`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum ModelCol {
     #[default] Lens,
     Metal,
@@ -15,22 +15,6 @@ pub enum ModelCol {
     Poly,
     Furn,
     Brass,
-}
-impl ModelCol {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ModelCol::Lens => "lens",
-            ModelCol::Metal => "metal",
-            ModelCol::Torch => "torch",
-            ModelCol::Shell => "shell",
-            ModelCol::Steel => "steel",
-            ModelCol::Cloth => "cloth",
-            ModelCol::Black => "black",
-            ModelCol::Poly => "poly",
-            ModelCol::Furn => "furn",
-            ModelCol::Brass => "brass",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -55,22 +39,12 @@ pub struct SegAdj {
     pub rot: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ModelPartIs {
     Lens,
     Cover,
     Mag,
     Grip,
-}
-impl ModelPartIs {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ModelPartIs::Lens => "lens",
-            ModelPartIs::Cover => "cover",
-            ModelPartIs::Mag => "mag",
-            ModelPartIs::Grip => "grip",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

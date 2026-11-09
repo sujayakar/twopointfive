@@ -1,9 +1,9 @@
 //! The types of `scene_materials`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DoesWord {
     #[default] Snow,
     Carpet,
@@ -19,71 +19,30 @@ pub enum DoesWord {
     Tarmac,
     Casing,
     Screen,
-    UnnamedDark,
+    #[word("unnamed dark")] UnnamedDark,
     Plasterboard,
     Partition,
     Ceiling,
     Laminate,
     Pane,
-    DarkCarpet,
+    #[word("dark carpet")] DarkCarpet,
     Card,
     Frame,
     Plant,
-    PackedSnow,
-    OldSnow,
+    #[word("packed snow")] PackedSnow,
+    #[word("old snow")] OldSnow,
     Unnamed,
-    UnnamedGrey,
-    UnnamedLight,
-    UnnamedLightGrey,
-    UnnamedPale,
-    UnnamedPaleGrey,
-    DarkPlastic,
-    GreyPlastic,
-    DarkGlass,
-}
-impl DoesWord {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoesWord::Snow => "snow",
-            DoesWord::Carpet => "carpet",
-            DoesWord::Lino => "lino",
-            DoesWord::Stone => "stone",
-            DoesWord::Grass => "grass",
-            DoesWord::Wood => "wood",
-            DoesWord::Plastic => "plastic",
-            DoesWord::Concrete => "concrete",
-            DoesWord::Fabric => "fabric",
-            DoesWord::Steel => "steel",
-            DoesWord::Enamel => "enamel",
-            DoesWord::Tarmac => "tarmac",
-            DoesWord::Casing => "casing",
-            DoesWord::Screen => "screen",
-            DoesWord::UnnamedDark => "unnamed dark",
-            DoesWord::Plasterboard => "plasterboard",
-            DoesWord::Partition => "partition",
-            DoesWord::Ceiling => "ceiling",
-            DoesWord::Laminate => "laminate",
-            DoesWord::Pane => "pane",
-            DoesWord::DarkCarpet => "dark carpet",
-            DoesWord::Card => "card",
-            DoesWord::Frame => "frame",
-            DoesWord::Plant => "plant",
-            DoesWord::PackedSnow => "packed snow",
-            DoesWord::OldSnow => "old snow",
-            DoesWord::Unnamed => "unnamed",
-            DoesWord::UnnamedGrey => "unnamed grey",
-            DoesWord::UnnamedLight => "unnamed light",
-            DoesWord::UnnamedLightGrey => "unnamed light grey",
-            DoesWord::UnnamedPale => "unnamed pale",
-            DoesWord::UnnamedPaleGrey => "unnamed pale grey",
-            DoesWord::DarkPlastic => "dark plastic",
-            DoesWord::GreyPlastic => "grey plastic",
-            DoesWord::DarkGlass => "dark glass",
-        }
-    }
+    #[word("unnamed grey")] UnnamedGrey,
+    #[word("unnamed light")] UnnamedLight,
+    #[word("unnamed light grey")] UnnamedLightGrey,
+    #[word("unnamed pale")] UnnamedPale,
+    #[word("unnamed pale grey")] UnnamedPaleGrey,
+    #[word("dark plastic")] DarkPlastic,
+    #[word("grey plastic")] GreyPlastic,
+    #[word("dark glass")] DarkGlass,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Surf {
     #[default] Carpet,
     Metal,
@@ -95,22 +54,6 @@ pub enum Surf {
     Concrete,
     Fabric,
     Foliage,
-}
-impl Surf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Surf::Carpet => "carpet",
-            Surf::Metal => "metal",
-            Surf::Glass => "glass",
-            Surf::Wood => "wood",
-            Surf::Plastic => "plastic",
-            Surf::Cardboard => "cardboard",
-            Surf::Drywall => "drywall",
-            Surf::Concrete => "concrete",
-            Surf::Fabric => "fabric",
-            Surf::Foliage => "foliage",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

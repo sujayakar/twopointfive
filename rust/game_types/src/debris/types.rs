@@ -1,6 +1,6 @@
 //! The types of `debris`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -71,7 +71,7 @@ pub struct DebrisFeetStats {
     pub gave_up: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum ChunkKind {
     Tile,
     Shard,
@@ -79,18 +79,6 @@ pub enum ChunkKind {
     Clutter,
     Binder,
     Chunk,
-}
-impl ChunkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChunkKind::Tile => "tile",
-            ChunkKind::Shard => "shard",
-            ChunkKind::Housing => "housing",
-            ChunkKind::Clutter => "clutter",
-            ChunkKind::Binder => "binder",
-            ChunkKind::Chunk => "chunk",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]

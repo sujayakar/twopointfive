@@ -1,24 +1,14 @@
 //! The types of `quietfog`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum QuietRung {
     #[default] Team,
     Own,
     Off,
     Cones,
-}
-impl QuietRung {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            QuietRung::Team => "team",
-            QuietRung::Own => "own",
-            QuietRung::Off => "off",
-            QuietRung::Cones => "cones",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
