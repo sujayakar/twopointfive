@@ -548,7 +548,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   layer (`character.ts`), the Team & kit door picture draws none (`rust/game_rules/src/kitstage`). NO SWITCH: every stand is the build as it was with the
   shield off, so the shipped stand's digests are unmoved and the frozen stand's move only where a shield was staged (the long hall; the kit probes that planted one). WHAT OLD
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
-  the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
+  the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`tools/levels/lib/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
   man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
   another version and is refused before a re-run, in words (`tape/format.ts tapeWhy`). QA:

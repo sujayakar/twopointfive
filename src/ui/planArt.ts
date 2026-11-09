@@ -6,7 +6,7 @@
 // never used here: the caller lays the way in over it (`artGround` projects a point of the floor).
 // Reads a parsed level file and a 2D context; writes nothing but pixels.
 
-/** what the picture takes from a level file (scene/levelData.ts LevelData, the keys read here) */
+/** what the picture takes from a level file (tools/levels/lib/levelData.ts LevelData, the keys read here) */
 export interface ArtData {
   meta?: { bounds?: { min?: number[]; max?: number[] } };
   materials?: Record<string, { albedo?: number[] }>;

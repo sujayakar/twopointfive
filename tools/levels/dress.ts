@@ -1,16 +1,16 @@
 // DRESSING: the things a loud level carries only so that a firefight has something to wreck (rust/game_rules/src/destruction finds them BY SHAPE, as it finds the office's) —
 // paper stacks, mugs, phones, box files and dark monitors on the tables and counters a generator already stood up, binder runs on its shelf boards, files on its
-// cabinets. No new look: every piece is one the office already has (scene/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
+// cabinets. No new look: every piece is one the office already has (lib/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
 // at floor level, nothing outdoors, nothing where the generator already put a thing. tools/levels/export.ts calls dressLevel() after build() and files the boxes
-// LAST under the editor group DRESS_GROUP; scene/levelLoad.ts leaves that group out with the destruction switch off (scene/dressing.ts), so the level a
+// LAST under the editor group DRESS_GROUP; lib/levelLoad.ts leaves that group out with the destruction switch off (lib/dressing.ts), so the level a
 // generator returns — and every index in it — is untouched by any of this.
 // Deterministic: every choice is a hash of the surface's own centre (never Math.random); a generator that moves a desk moves its dressing with it.
 import type { Vec3 } from '../../src/math/vec';
 import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
 import { PHONE_BLACK, madeOf, worded } from '../../src/scene/stuff';
-import type { Level } from '../../src/scene/level';
-import * as MD from '../../src/scene/markingDefaults';
-import { DRESS_GROUP } from '../../src/scene/dressing';
+import type { Level } from './lib/level';
+import * as MD from './lib/markingDefaults';
+import { DRESS_GROUP } from './lib/dressing';
 
 const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025], BLACK: Vec3 = [0.04, 0.04, 0.045];   // (the kit's screenOff / black paints: the export names them by colour, finish and all)
 const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], [0.2, 0.2, 0.21]];
@@ -90,7 +90,7 @@ export function dressLevel(level: Level, groups: string[]): DressStats {
 }
 
 type Mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, extra?: Partial<Box>) => Box;
-/** scene/levelKit.ts papers(): two sheets' worth of stack, the upper one askew */
+/** lib/levelKit.ts papers(): two sheets' worth of stack, the upper one askew */
 function paperPair(c: Vec3, yaw: number, mk: Mk, R: () => number): Box[] {
   const seed = 31 + Math.floor(R() * 40) * 2; const cs = Math.cos(yaw), sn = Math.sin(yaw);
   const h0: Vec3 = [0.11, 0.02, 0.15], h1: Vec3 = [0.1, 0.012, 0.14];
@@ -99,7 +99,7 @@ function paperPair(c: Vec3, yaw: number, mk: Mk, R: () => number): Box[] {
     mk([c[0] + cs * 0.03 - sn * 0.02, c[1] + 0.052, c[2] - sn * 0.03 - cs * 0.02], h1, yaw + 0.25, [0.9, 0.88, 0.8], { flags: BoxFlag.NoShadow, marks: MD.paperMarks(h1, seed + 1, R() < 0.4) }),
   ];
 }
-/** scene/levelKit.ts monitor(…, on = false): foot, neck, housing, the dark screen on local +Z — no keyboard, no switchable (a dead screen: it cracks and comes off its stand, no light goes) */
+/** lib/levelKit.ts monitor(…, on = false): foot, neck, housing, the dark screen on local +Z — no keyboard, no switchable (a dead screen: it cracks and comes off its stand, no light goes) */
 function darkMonitor(c: Vec3, yaw: number, mk: Mk): Box[] {
   const cs = Math.cos(yaw), sn = Math.sin(yaw); const at = (ly: number, lz: number): Vec3 => [c[0] + sn * lz, c[1] + ly, c[2] + cs * lz];
   const hs: Vec3 = [0.25, 0.15, 0.004];

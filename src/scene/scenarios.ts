@@ -1,5 +1,5 @@
 // What a SCENARIO needs from the level it is played on, as data (Level.scenarios — the level file's own `scenarios` block, docs/level-format.md 'Scenarios'; for the
-// office included: its block is written into levels/office.json from levels/office.scenarios.ts by its generator). The three playtest scenarios — the night breach (rust/game_rules/src/nightbreach), the room clear (rust/game_rules/src/roomclear,
+// office included: its block is written into levels/office.json from tools/levels/lib/officeScenarios.ts by its generator). The three playtest scenarios — the night breach (rust/game_rules/src/nightbreach), the room clear (rust/game_rules/src/roomclear,
 // with the pair or the four) and the hostage rescue (rust/game_rules/src/rescue + rust/game_rules/src/rescueflow) — read their rooms, doors, marks and team start from here and from nowhere
 // else, so a level that carries a block is a level they run on. Types, and one pure function (scenarioQuery): nothing here imports the game.
 //
@@ -180,7 +180,7 @@ export interface QuietSpot {
   door: string;
   /** what the thing is taken from, as the row says it ('the grey cabinet', 'rack 3') */
   holder: string;
-  /** names the lights that go dark once it is out: switchables `rack<N>_leds` / `rack<N>_glow` (scene/levelKit.ts rack) — none by that name, nothing goes dark */
+  /** names the lights that go dark once it is out: switchables `rack<N>_leds` / `rack<N>_glow` (tools/levels/lib/levelKit.ts rack) — none by that name, nothing goes dark */
   rackIndex: number;
   /** the point on the holder's face (the marker; reach is measured from it) and half its width along that face */
   front: Vec3; halfW: number;

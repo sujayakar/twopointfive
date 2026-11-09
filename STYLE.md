@@ -57,7 +57,7 @@ treated one.
 
 Two palettes, one set of rules. Colours are linear albedo, written as plain numbers in code.
 
-**The office** (`src/scene/officeGen.ts`): a neutral shell (pale walls, dark carpet, grey lino and
+**The office** (`tools/levels/lib/officeGen.ts`): a neutral shell (pale walls, dark carpet, grey lino and
 stone) with furniture in a few saturated primaries: brick-red and royal-blue partitions, tan desks,
 blue chairs, cardboard brown.
 
@@ -113,7 +113,7 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 | consulate | a town-house consulate | plum carpet bound in brass |
 
 Other levels have a skin of their own (in `tools/levels/<name>.ts`, its `finish` over its `build`) or are built straight from the kit
-(`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
+(`tools/levels/lib/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
 ![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
 

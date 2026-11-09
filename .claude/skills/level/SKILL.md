@@ -26,7 +26,7 @@ did not.
 
 - **A level is a generator, never a hand-edited file.** `tools/levels/<name>.ts` exports `NAME`, `NOTES` and `build()`
   (`{ level, scenarios, groups, surfaces }`); `bun run tools/levels/export.ts <name>` writes `levels/<name>.json`. The office
-  alone is `src/scene/officeGen.ts` + `bun run tools/level-export.ts`. Level files are never merged by hand: merge the
+  alone is `tools/levels/lib/officeGen.ts` + `bun run tools/level-export.ts`. Level files are never merged by hand: merge the
   generator and export again. **check** `generator`; `bun run tools/levels/export.ts <name> --check` (stale = exit 1).
 - **Grep before renaming.** Row ids, file names, door, room and route names are named by probes, lesson scripts and kit
   pictures. `grep -rn "<name>" tools/qa src docs/agents` first.
@@ -34,7 +34,7 @@ did not.
   level's fingerprint: old checkpoints and recordings of that level are refused. Marks, waits and room order alone do not.
   Say which in the write-up.
 - **Level data is not a switch.** A new RULE that reads level data is (CLAUDE.md: switch, `FROZEN_HOLDS` row, knob table, a
-  check with a `_BREAK` path). A new field wants its key in `src/scene/levelData.ts`, both directions in
+  check with a `_BREAK` path). A new field wants its key in `tools/levels/lib/levelData.ts`, both directions in
   `levelLoad.ts`, and a line in `docs/level-format.md`.
 
 ## 1. The idea (by eye, before any box)
@@ -151,7 +151,7 @@ like that."
   **check** `bun run tools/levels/library.ts --check`.
 - **`ground` · The ground is not one flat sheet.** From above, ground is most of the picture, and one paint over a whole
   court reads as a floor plan, not a place. What the renderer can carry, all of it in the look's kit
-  (`src/scene/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
+  (`tools/levels/lib/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
   court and a lot meet in lines the eye can follow; WEAR where feet and wheels go (`ruts`, a path trodden between the
   doors, the floor darker either side of a door as the look's skin lays it); STAINS where the use leaves them (`patch`:
   damp at a wall's foot or a tap, oil under an engine; `stain`: the ground's own paint darker, under ruts; a `hearth`
@@ -361,7 +361,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   team goes in by another; and `van`, the team's own vehicle by its way in, `pos` the spot at its open doors. As the
   game is now the mission is won when the tied man is in the van, the house taken or not, so the van wants a way back
   from wherever he can be caught that a led man can walk, and room at its doors. The van itself is the look kit's piece
-  (`van` in `src/scene/gwotKit.ts`). **seen** the maintainer, playing it: "like maybe we need to get him to a van near
+  (`van` in `tools/levels/lib/gwotKit.ts`). **seen** the maintainer, playing it: "like maybe we need to get him to a van near
   our infil". **check** `bun run tools/qa/snatch-check.ts`, `bun run tools/qa/snatchout-check.ts`.
 - **A lesson**: a line is one short sentence that names the key and what to do, written by the guide in CLAUDE.md ("Writing for
   the player": the way you'd say it aloud), in 96 characters, no compass word; a step never passes by itself and

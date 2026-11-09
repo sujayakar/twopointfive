@@ -72,7 +72,7 @@
 // whether that is ever seen). The light list holds 64 with every man's torch in it: the level keeps to a handful of fixtures. With eleven defenders, five of
 // the team and Sam the light probe is asked for more queries a frame than it answers (49 against 32: Sam's own meter is the one dropped) and only the first 8
 // characters cast shadow proxies — both are the enemy-count ceiling's to lift, not a map's.
-// Only the old demo's kit (src/scene/officeGen.ts officeKit). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit). Units: meters. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, the scenario probes, scripted play-throughs); nobody has looked at it on a GPU.
 //   bun run tools/levels/export.ts compound [--check]      → levels/compound.json
 //
@@ -82,17 +82,17 @@
 // cistern waters, fruit and chillies drying on sheets, a rug out to air, the cook fire's ash behind the kitchen, a chalk game by the front door) and patterned
 // rugs in every room. No painted lines, no stencils.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { SurfacesData } from '../../src/scene/levelData';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, madeOf, saidAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
-import { feetOn } from '../../src/scene/carShapes';
+import { feetOn } from './lib/carShapes';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
@@ -447,7 +447,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
   // out with the switch off, and then this is the compound above, box for box). A FARMER'S WALLED HOUSE THAT A FAMILY STILL LIVES IN: each room is furnished for the
   // family first (the household on the ground: cushions, quilts, trays, sacks, brass and blue tin), and the gunmen are guests — one or two of their things laid on
   // a family thing in a room (a rifle across a flowered blanket, a chest rig on the loom, boots dumped in the shoe hall). Rules kept: nothing within 1.1 m of a
@@ -759,7 +759,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.chair(17.7, 19.6, -Math.PI / 2, C.white);                                                                  // the second seat, drawn up to the pipe
     { K.prop('cardboard', 19.4, 21.6, 0, 0.4, [{ off: [0, 0.1, 0], h: [0.1, 0.1, 0.1], yaw: 0.6, albedo: C.red }]); L.own('ball'); }
     // ---- OUTSIDE THE WALLS — the field's edge, where the squad comes from: both ways in start out here, and the ground was bare from the wall's foot to the
-    // map's edge. What a farm leaves outside its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own add; the twin
+    // map's edge. What a farm leaves outside its own wall, every piece of it the look's kit (lib/gwotKit.ts through the office kit's own add; the twin
     // keeps a palette paint as it is) and EVERY PIECE OUT AT THE STRIP'S OUTER EDGE, none at the wall's foot. Two things live at that foot and a pile there
     // takes them away: a place to set a wall charge (the squad breaches this wall from its starts: two piles on the north wall took 17 of its 891 places,
     // levels charges) and the defenders' way round, which hugs the wall (below). The middle of each strip is the walk to a gate and stays bare,

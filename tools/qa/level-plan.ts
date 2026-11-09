@@ -8,8 +8,8 @@ import { resolve } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 

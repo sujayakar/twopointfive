@@ -19,8 +19,8 @@ export async function keptCheck(): Promise<boolean> {
   console.log(`\n=== kept: how kept a place is, one word a level${BRK ? ' (nothing asks the word: must fail)' : ''} ===`);
   const text = (f: string) => readFileSync(resolve(ROOT, f), 'utf8'), count = (t: string, s: string) => t.split(s).length - 1;
   // 1. the word in the file: there and back
-  { const { parseLevelData, validateLevelData, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-    const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  { const { parseLevelData, validateLevelData, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+    const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
     const base = parseLevelData(text('levels/white-roof.json')) as any; { const m = { ...base.meta }; delete m.kept; base.meta = m; }   // (a level to stand on, whatever it says of itself today)
     const said = (v: unknown) => ({ ...base, meta: { ...base.meta, kept: v } });
     const plain = loadLevel(base) as any, d = said(0.7), lv = loadLevel(d) as any;

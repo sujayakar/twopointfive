@@ -30,7 +30,7 @@
 // (mess hall, galley), Alpha the north wing (the day room and the post at the north gallery's east end). Six rooms stand EMPTY (wash room, bunks 4, duty office, bunks 1, bunks 2, armoury): behind a shut door
 // an empty room and a held one read the same.
 // The shell is the office's rectangle (outer walls on x 4 / 36, z 4 / 24): the weather's 'indoors' rectangle is typed to it, so the rooms are dry — and so is the
-// yard, which the weather also takes for indoors (no rain falls in it). Only the old demo's kit (src/scene/officeGen.ts officeKit). Units: metres. +X east, +Z south.
+// yard, which the weather also takes for indoors (no rain falls in it). Only the old demo's kit (lib/officeGen.ts officeKit). Units: metres. +X east, +Z south.
 // NOT SEEN DRAWN: laid out on paper and checked headless; nobody has looked at it on a GPU.
 //   bun run tools/levels/export.ts barracks [--check]      → levels/barracks.json
 //
@@ -40,15 +40,15 @@
 // on the square (a volleyball court, the formation's marks, the path worn corner to corner between the two gallery doors with its whitewashed stones) and
 // the rooms' numbers as tally bars on the gallery floors. The square stays dark and bare of anything large and pale: a man crossing it must stand out.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat, GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { drawnAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
@@ -329,7 +329,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Two swings are stopped short: o_s1 into bunks 3 (a cot stands past its jamb) and n3 into the gallery (wide open it would cross the fire door's leaf).
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
   // out with the switch off, and then this is the barracks above, box for box). A police battalion's lines: what makes each room ITS room. The five bunk rooms are
   // told apart by WHO sleeps there, said with one blanket a bed: recruits (brown-grey issue blankets, square, bunks stacked two high on the north wall), sergeants
   // (red quilts, a tunic with chevrons and a peaked cap on each), the standby section (blue blankets thrown back, vest and helmet on every bed), nobody (bare
@@ -342,7 +342,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // furnished alike. LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
-    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (src/scene/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
+    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (lib/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
     const IRON: Vec3 = [0.13, 0.13, 0.14], TIN: Vec3 = [0.55, 0.56, 0.55], YELLOW: Vec3 = [0.72, 0.58, 0.1];
     // BEDDING AND WHAT IS LAID ON IT IS CLOTH, AND SAYS SO IN THE LOOK'S OWN WORDS (src/scene/gwotPalette.ts): all of it is drawn only, so nothing in the
     // simulation reads these paints, and the skin keeps a drawn-only thing above the floor as authored — a colour of this file's own there is

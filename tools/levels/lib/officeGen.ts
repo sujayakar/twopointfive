@@ -1,34 +1,34 @@
-// LEGACY GENERATOR — the office level as it was authored before the level became data (levels/office.json, scene/levelData.ts).
+// LEGACY GENERATOR — the office level as it was authored before the level became data (levels/office.json, levelData.ts).
 // NOT imported by the game: the page boots from the JSON through level.ts buildLevel() → levelLoad.ts loadLevel(). This file is kept as the
 // source of truth for REGENERATING that JSON — `bun run tools/level-export.ts` runs buildOfficeProcedural() once and writes levels/office.json.
 // Edit the level here and re-export ONLY until the editor lane (G1b) lands; after that the JSON is the level and this file goes.
 // The body is the old buildLevel() verbatim but for its name, the `grp()` section markers (editor grouping recorded per box in `trace`, no effect on
 // the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
-import { Vec3, DEG, quat } from '../math/vec';
-import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, madeOf, saidAs } from './stuff';
+import { Vec3, DEG, quat } from '../../../src/math/vec';
+import { Box, BoxFlag, makeBox } from '../../../src/scene/boxes';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, madeOf, saidAs } from '../../../src/scene/stuff';
 import { carShapes, hubPaint, carSays } from './carShapes';
-import { WORLD } from './world';
+import { WORLD } from '../../../src/scene/world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
-import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from './markings';
+import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from '../../../src/scene/markings';
 import { LIVED } from './lived';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
-import { DESK_CLUSTERS, OFFICE_MARKS, OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the desks' four places, the office's named marks and its missions' data (plain literals; the builder puts them on its Level and the exporter writes them into the file)
-import type { LevelScenarios } from './scenarios';
+import { DESK_CLUSTERS, OFFICE_MARKS, OFFICE_SCENARIOS } from './officeScenarios';   // the desks' four places, the office's named marks and its missions' data (plain literals; the builder puts them on its Level and the exporter writes them into the file)
+import type { LevelScenarios } from '../../../src/scene/scenarios';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
-/** The markings lane's switches (docs/review/legibility.html): `markings` = the objects carry their pixel-art signifiers (scene/markingDefaults.ts) — keyboards,
+/** The markings lane's switches (docs/review/legibility.html): `markings` = the objects carry their pixel-art signifiers (markingDefaults.ts) — keyboards,
  *  cartons, cabinets, papers, whiteboards, the vending machines, racks…; `demote` = FACE RELIEF that used to be modelled as thin sub-part boxes (drawer pulls,
  *  LED nubs, the vending machines' glowing front slabs, clock faces and hands, screen sheets, door-gap strips, deck boards…) is removed and drawn as markings
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
  *  table). Both default ON. `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
 export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number;
   /** the office's lived tier (the hand pass's drawn-only things, groups `lived.<room>` at the tail): laid or left out. Absent = as the level is loaded here
-   *  (scene/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */
+   *  (tools/levels/lib/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */
   lived?: boolean; }
 
 const H = WORLD.ceilingY;
@@ -248,7 +248,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   /** COVER: a parked CAR 4.4 × 1.7, nose toward local +X, in the body colour given */
   function car(x: number, z: number, yaw: number, body: Vec3) {   // local +X forward
     const at = frameAt(x, z, yaw);
-    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — scene/carShapes.ts)
+    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — carShapes.ts)
     add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: paint, shape: S.body });                                   // lower body
     add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: glass, shape: S.glass });                 // greenhouse (dark glass)
     add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: paint, shape: S.roof });                             // roof
@@ -295,7 +295,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // the front of a cabinet, of a cast block). Each takes a paint ROW and says that row's word (scene/stuff.ts). DRAWN ONLY unless `solid`: a fitting is
   // dressing, so no foot, round or sight line meets it; `solid` = it is traced and stands (its edge throws its line of shadow), where a level means that.
   // WHEN ITS WALL IS BREACHED (rust/game_rules/src/wallbreak `hangers`): what is drawn only, a quarter of a metre or more off the floor, goes once half the wall behind
-  // it is open, so a level lays a long run of conduit in lengths; a band from the floor stays, as the other kit's painted dado does (scene/gwotKit.ts skirt).
+  // it is open, so a level lays a long run of conduit in lengths; a band from the floor stays, as the other kit's painted dado does (gwotKit.ts skirt).
   /** a box on a wall's face: u0‥u1 along the wall, y0‥y1 up it, d0‥d1 out from the face */
   const onFace = (axis: 'x' | 'z', line: number, side: 1 | -1, t: number) => { const f = line + side * t / 2;
     return (u0: number, u1: number, y0: number, y1: number, d0: number, d1: number, albedo: Vec3, solid: boolean) => { const extra = solid ? {} : { flags: BoxFlag.NoShadow };
@@ -322,7 +322,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
       for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, flags: BoxFlag.NoShadow }); };
     round(y0, y1, r); for (const [ry0, ry1, rr] of rings) round(ry0, ry1, rr);
   };
-  // ---- paint on what is there (markings: scene/markings.ts; the recipes and the painter's tins: scene/markingDefaults.ts) ----
+  // ---- paint on what is there (markings: scene/markings.ts; the recipes and the painter's tins: markingDefaults.ts) ----
   /** the box whose `face` holds the point: one that stands square (nothing turned, no pane). A box is found by where its face is, never by its number */
   const boxOn = (face: MarkFace, x: number, y: number, z: number): number => {
     const ax = face[1] === 'x' ? 0 : face[1] === 'y' ? 1 : 2, sg = face[0] === '+' ? 1 : -1, pt = [x, y, z];
@@ -359,7 +359,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
    *  `z` between x0 and x1, one box a piece, with `names` stencilled on it in `ink` (each [text, its middle x, its foot y, scale, res], on the piece that
    *  holds it whole: a name no piece holds throws). Drawn only */
   type BandName = readonly [text: string, x: number, y: number, scale: number, res: 'base' | 'coarse'];
-  // the kit's PIECES by name (scene/library.ts). The two tools below lay a band and conduit THROUGH this door, so a level's bands and conduit are counted as
+  // the kit's PIECES by name (library.ts). The two tools below lay a band and conduit THROUGH this door, so a level's bands and conduit are counted as
   // the pieces they are (laid by the bare functions they were in no count: the catalogue's uses page had the office with no band and no conduit)
   const P = pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe });
   const bandRuns = (z: number, t: number, x0: number, x1: number, y1: number, paint: Vec3, minTop = y1, names: readonly BandName[] = [], ink: MarkPal = MD.TIN.chalk) => {
@@ -523,7 +523,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       if ((seed + i) % 4 === 1) add({ c: [cx + dx + 0.5, 0.98, cz + dz + out * 0.1], h: [0.12, 0.25, 0.15], yaw: 0.2, albedo: C.cardboard }); // box on desk
     });
   }
-  // (where the four stand is the office's own data, beside the marks of the desks they hold: levels/office.scenarios.ts DESK_CLUSTERS)
+  // (where the four stand is the office's own data, beside the marks of the desks they hold: officeScenarios.ts DESK_CLUSTERS)
   ([[C.partRed, C.partTan], [C.partBlue, C.partTan], [C.partTan, C.partRed], [C.partRed, C.partBlue]] as const).forEach(([a, b], i) => cubicleCluster(DESK_CLUSTERS[i][0], DESK_CLUSTERS[i][1], a, b, i + 1));
   // scattered moving boxes (like reference #3)
   cardboardBox(12.45, 13.4, 0.55, 0.3); cardboardBox(12.5, 14.1, 0.45, -0.4); cardboardBox(12.48, 13.6, 0.4, 0.9, 0.55);   // against the partition wall so the NW aisle stays a guard-width clear
@@ -1219,7 +1219,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // What a painter and a fitter left on a kept building, laid where the floor is walked and fought (how that was read: docs/agents/levels.md, the hand pass).
   // The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading the
   // player for game play", and of the look he is after: "it's all quite intentionally dressed". Three kinds of thing, each through the system that owns it:
-  //   WORN PATHS   are not here: the ways the day's people walk are named marks and `walked` rows beside the office's scenarios (levels/office.scenarios.ts),
+  //   WORN PATHS   are not here: the ways the day's people walk are named marks and `walked` rows beside the office's scenarios (officeScenarios.ts),
   //                and the look's page wears the floor by them.
   //   PAINT        on a surface that is already there is a MARKING on that box (scene/markings.ts): drawn, met by nothing.
   //   FITTINGS     and painted floor panels are new boxes: every one DRAWN ONLY (its own flag: no foot, round, ray or sight line meets it), in the LIVED tier
@@ -1274,11 +1274,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     beacons,
     playerSpawn: [5.1, 0, 15.2],
     routes, chokepoints, clearPlans, civilians,
-    marks: OFFICE_MARKS.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })),   // where a person stands to use each thing (levels/office.scenarios.ts): written into the file by the exporter, as any level's marks are
+    marks: OFFICE_MARKS.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })),   // where a person stands to use each thing (officeScenarios.ts): written into the file by the exporter, as any level's marks are
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
     mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
     kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/render.md, A LEVEL SAYS HOW KEPT IT IS)
-    scenarios: JSON.parse(JSON.stringify(OFFICE_SCENARIOS)) as LevelScenarios,   // what the night breach, the room clear and the rescue take from this level (levels/office.scenarios.ts): the level's own block, written into the file by the exporter as any level's is: last, where loadLevel puts it (the identity probe compares key order too). (A copy: a Level and the generator's tables never share an array.)
+    scenarios: JSON.parse(JSON.stringify(OFFICE_SCENARIOS)) as LevelScenarios,   // what the night breach, the room clear and the rescue take from this level (officeScenarios.ts): the level's own block, written into the file by the exporter as any level's is: last, where loadLevel puts it (the identity probe compares key order too). (A copy: a Level and the generator's tables never share an array.)
   };
 }
 

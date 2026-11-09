@@ -1321,7 +1321,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   KNOWN WRONG, AND THE LEVEL'S TO MEND: the depot's hut walls are painted with the partition's tan, whose row says 'cloth' (`stuff.ts`: "drawn as
   cloth because the tan is a cream rug's"), so 32 boxes of its walls throw tufts where they threw gypsum; the compound's walls of the same paint say
   'stucco' beside it and are right. THE VEHICLES SAY WHAT THEY ARE MADE OF (11-05, the change after the rule). A vehicle's BODY says
-  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`scene/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
+  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`tools/levels/lib/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
   lorry and motorbike (`gwotKit.ts coat`), the plain car (`carSays`: `officeGen.ts car`, `levelKit.ts car`), and the three vehicles a level builds by
   hand (the bazaar's lorry, tut-road's tanker, the plough lorry of tut-sky and tut-team). A paint's ROW cannot say it: the truck enamels are cots,
   lockers, floor lines and signs too and stay 'paint', and the tanker's cream is a wall's elsewhere (its row says plaster: a round threw gypsum off a

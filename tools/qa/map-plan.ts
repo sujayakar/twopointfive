@@ -14,8 +14,8 @@ import { existsSync, readFileSync, writeFileSync, renameSync, rmSync } from 'nod
 import { planSvg, type PlanPen } from './level-plan.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 
 /** `block` · `levels/block.json` · `block.json` · `block-four` (a row's id) → the level's name, or null. A PATH must be this checkout's own levels/<name>.json:

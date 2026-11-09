@@ -32,7 +32,7 @@
 //! STANDS: each mission the file names is started, and the game's own words on its block against the floor are read (the room clear's structure, the rescue's marks, a quiet mission's block); the spawn, the
 //! objectives, the patrols' points and legs and the chokepoints are on floor and joined. A man of a rescue stood in a chair is said and passes: it is pushed.
 //!
-//! DOORS (src/scene/doorSize.ts): each leaf's own size, the air between its jambs and under its head, the guards' own search through its frame, a stride of free floor on both faces, nothing of the level
+//! DOORS (tools/levels/lib/doorSize.ts): each leaf's own size, the air between its jambs and under its head, the guards' own search through its frame, a stride of free floor on both faces, nothing of the level
 //! in the gap, a wall at both its ends; and each doorway with no leaf, found by its head.
 //!
 //! CHARGES (the compound's wood piles once took 23 of 891 places and nobody chose it): how many places of the level have floor behind them as the walk grid stands, against its count file
@@ -572,7 +572,7 @@ fn stands(levels: &[String]) -> i32 {
 }
 
 // ---------------------------------------------------------------------------------------------------------------- doors
-// src/scene/doorSize.ts DOOR_SIZE: the hole, its head, the widest that is a door's, the leaf
+// tools/levels/lib/doorSize.ts DOOR_SIZE: the hole, its head, the widest that is a door's, the leaf
 const GAP: f64 = 0.9;
 const HEAD: f64 = 2.05;
 const SLOT_MAX: f64 = 1.3;

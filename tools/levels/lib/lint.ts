@@ -1,4 +1,4 @@
-// Level LINT: the design checks the schema validator (scene/levelData.ts validateLevelData) deliberately does not make — budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
+// Level LINT: the design checks the schema validator (levelData.ts validateLevelData) deliberately does not make — budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
 // (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors).
 //
 // What stands on the floor and can be walked to is asked of the game itself (rust/game_start levels: stands, doors). It loads the level and reports
@@ -6,13 +6,13 @@
 // finding names the thing in the file. Severity: 'error' = the game will misbehave (a light inside a wall),
 // 'warn' = probably unintended (duplicate slabs, budgets getting tight),
 // 'info' = worth knowing. `allow` silences a code for listed ids (or '*') with a reason — for legitimately odd authored things.
-import type { Vec3 } from '../math/vec';
+import type { Vec3 } from '../../../src/math/vec';
 import { LevelData, validateLevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
 import { loadLevel } from './levelLoad';
-import { Box, BoxFlag, rayBox } from './boxes';
-import { WORLD } from './world';
+import { Box, BoxFlag, rayBox } from '../../../src/scene/boxes';
+import { WORLD } from '../../../src/scene/world';
 import type { Level } from './level';
-import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from './markings';
+import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from '../../../src/scene/markings';
 
 export type Severity = 'error' | 'warn' | 'info';
 export interface Finding { severity: Severity; code: string; message: string; ids: string[] }

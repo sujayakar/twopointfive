@@ -30,14 +30,14 @@
 // The floor between those two lines is what the far guns see: indoors it is the hall, outside it is the strip nobody stands on when 'front' opens.
 // No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
@@ -146,7 +146,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists; left out by the loader with the switch off).
+  // ---- LIVED IN (lib/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists; left out by the loader with the switch off).
   // The four rooms only: THE HALL STAYS BARE, that is the mission. Everything stands against a wall, 1.1 m and more off every door's line, off every
   // defender's mark and out of his line to his door; nothing taller than a table stands free of a wall. No light, nothing emissive.
   {
@@ -207,7 +207,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.thing(26.5, 0.8, 19.85, 0.8, 0.55, 0.02, C.woodDark);
     L.hung(26.5, 19.82, true, 1.3, 0.95, 1.8, [0.7, 0.66, 0.52], 0.01);
     L.hung(30.9, 15.28, true, 0.9, 1.0, 1.7, C.black, 0.02);
-    // ROUND THE WING, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). A company wing's outside: the PORCH is where a relief
+    // ROUND THE WING, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round). A company wing's outside: the PORCH is where a relief
     // waits (ammunition crates by the bench, a drum, the sandbag line carried on past the lamp's side, the tyres off the truck that brought them); the
     // YARD along the blank south wall keeps the firewood and two drums, with field stones lying where they were turned up; the BACK has the block left
     // over from the wall. Nothing stands in the strip the hall's two guns see through the open front door, on a start mark, or before the bunks' window.

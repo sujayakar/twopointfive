@@ -34,7 +34,7 @@ const PALETTE_STUFF = {
 
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   ...PALETTE_STUFF,
-  // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, rust/game_rules/src/particle_fx MAT_SURF)
+  // ---- the office's paints (tools/levels/lib/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, rust/game_rules/src/particle_fx MAT_SURF)
   wood: 'wood', woodDark: 'wood',   // (planks: the name is a bench, a crate and a pallet as well as a desk. A desk's smooth board is 'veneer', and the desk says so itself)
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'fabric',   // (a carpet is the coarse weave; a seat's cloth the fine one)
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
@@ -71,7 +71,7 @@ const PALETTE_DOES = {
 } as const satisfies Record<GwotMat, DoesWord>;
 export const PAINT_DOES: Readonly<Record<string, DoesWord>> = {
   ...PALETTE_DOES,
-  // ---- the office's paints, which the kit's palette shares (scene/officeGen.ts OFFICE_PALETTE, levelKit.ts KIT_PALETTE)
+  // ---- the office's paints, which the kit's palette shares (tools/levels/lib/officeGen.ts OFFICE_PALETTE, levelKit.ts KIT_PALETTE)
   wall: 'plasterboard', partRed: 'partition', partBlue: 'partition', partTan: 'partition', ceiling: 'ceiling', white: 'laminate', glass: 'pane', glassExt: 'pane',
   concrete: 'concrete', wallDark: 'concrete', stone: 'stone', lino: 'lino', asphalt: 'tarmac', carpet: 'carpet', carpetBlue: 'carpet', carpetRed: 'carpet', grass: 'grass',
   wood: 'wood', woodDark: 'wood', cardboard: 'card', metal: 'steel', red: 'enamel', black: 'casing', glassFrame: 'frame', screenOff: 'screen', chair: 'fabric', plant: 'plant',

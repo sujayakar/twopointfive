@@ -40,7 +40,7 @@
 // change. No stair tower: the response team is gated off under the scenarios — but rust/game_rules/src/weather still types the office's tower in as ANNEX (x 1.1..4,
 // z 9.33..12.87), and the fire exit opens beside it: in the storm that patch of the west verge stays dry and the door lets no gust in. Known, left: the only
 // doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (rust/game_rules/src/floor), as on every level.
-// NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (src/scene/officeGen.ts officeKit).
+// NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (lib/officeGen.ts officeKit).
 // Units: meters. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, the scenario probes, scripted play-throughs); nobody has looked at it on a GPU.
 //
@@ -50,15 +50,15 @@
 // across both sides of every hall door, a number on the apron outside each of the five ways in, lane lines along the racks, pallet squares on the marshalling
 // floor and the dock, truck bays outside the shutters, the staff's parking by their door). No rugs, no dados, no earth indoors.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, PANEL_GREY, CHAIR_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
@@ -349,7 +349,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED-IN ROOMS (src/scene/lived.ts: left out by the loader with the switch off) ----------------
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts: left out by the loader with the switch off) ----------------
   // A bonded customs shed. THE SHED IS GREY AND YELLOW, AND THE ONLY BRIGHT COLOURS IN IT ARE THE THINGS THAT WERE SEIZED, in three places with three jobs: the
   // bulk locked up on the cage's shelf tops, one opened carton on the hall's examining table, and a few small pieces (his cut) beside the chief's safe. Every place gets one thing only it has, the clutter of that use, a floor of its own
   // and something loose. Additions only, the TAIL of the boxes and of the props; no light, nothing lit.
@@ -360,7 +360,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // in the porters' room only, paper in towers and tied bundles in the manifest office only. tools/levels/livedKit.ts has the shared pieces; what only this level has is a few lines here.
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
-    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (src/scene/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
+    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (lib/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
     const YEL: Vec3 = [0.75, 0.55, 0.08], CREAM: Vec3 = [0.78, 0.74, 0.6], BOARD: Vec3 = [0.2, 0.35, 0.3], TEA: Vec3 = [0.75, 0.6, 0.3];
     // what was seized: bolts of cloth, whisky. Nothing the house owns wears these
     const MAG: Vec3 = [0.62, 0.1, 0.38], TURQ: Vec3 = [0.05, 0.45, 0.45], SAFF: Vec3 = [0.88, 0.5, 0.06], AMBER: Vec3 = [0.5, 0.28, 0.06];

@@ -1,4 +1,4 @@
-// THE LEVEL FORMAT'S PLAIN RECORDS: a box, a door, a light, as a level file and a kit view's set write them (the file's whole shape: scene/levelData.ts, which takes them from here).
+// THE LEVEL FORMAT'S PLAIN RECORDS: a box, a door, a light, as a level file and a kit view's set write them (the file's whole shape: tools/levels/lib/levelData.ts, which takes them from here).
 import type { Quat, Vec3 } from '../math/vec';
 import type { MarkingDef } from './markings';
 import type { ShapeForm } from './shapes';
@@ -56,7 +56,7 @@ export interface BoxData {
  *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
 export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint, finish and word */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.does */ does?: string; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
 export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
-/** An analytic light (scene/level.ts LightDef, every field the renderer reads). `id` is the LightDef.name the game keys targets / panels on. */
+/** An analytic light (tools/levels/lib/level.ts LightDef, every field the renderer reads). `id` is the LightDef.name the game keys targets / panels on. */
 export interface LightData {
   id: string;
   kind: 'point' | 'spot' | 'dir';

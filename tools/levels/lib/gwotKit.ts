@@ -12,25 +12,25 @@
 //   · WALK-OVER        = a plain static whose top is ≤ 0.19 m (floor cushions, a concrete pad, rubble): lit, shadowed, seen by every ray, never in the way;
 //   · DECAL            = a NoShadow box (rugs, ground patches, the damp foot of a wall, a painted dado, washing on a line, overhead wires): drawn and lit,
 //                        invisible to every ray and every collision query — it can be added to a finished level without moving one digest;
-//   · PROP             = a pushable body (scene/level.ts PropKind — only 'chair' | 'cardboard' | 'bin' | 'plant' exist): plastic chairs, jerry cans, gas
+//   · PROP             = a pushable body (level.ts PropKind — only 'chair' | 'cardboard' | 'bin' | 'plant' exist): plastic chairs, jerry cans, gas
 //                        bottles, dry bushes. Props never block sight, sound or the nav grid.
 // Conventions: positions are the piece's CENTRE on the floor; `yaw` is Box.yaw (local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw)); a
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
-import { quat, type Quat, type Vec3 } from '../math/vec';
-import { Box, BoxFlag } from './boxes';
+import { quat, type Quat, type Vec3 } from '../../../src/math/vec';
+import { Box, BoxFlag } from '../../../src/scene/boxes';
 import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop, coated } from './carShapes';
-import type { BoxShape, ShapePiece } from './shapes';
-import { WORLD } from './world';
+import type { BoxShape, ShapePiece } from '../../../src/scene/shapes';
+import { WORLD } from '../../../src/scene/world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
-import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, MAX_MARKS_PER_BOX, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex, texelOf } from './markings';
+import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, MAX_MARKS_PER_BOX, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex, texelOf } from '../../../src/scene/markings';
 
 const H = WORLD.ceilingY;
 
-import { GWOT_PAINTS, GWOT_DARKER, ROUGH_CLOTH, type GwotMat, type KitPaints } from './gwotPalette';
-import type { DoesWord } from './materials';
+import { GWOT_PAINTS, GWOT_DARKER, ROUGH_CLOTH, type GwotMat, type KitPaints } from '../../../src/scene/gwotPalette';
+import type { DoesWord } from '../../../src/scene/materials';
 import { pieces } from './library';
-import { tonedAs, wordFor, saidAs, doesOfName, paintOf, doingAs } from './stuff';
-export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, gwotAs, lookPaintOf, paintsOf, type GwotMat, type KitPaints } from './gwotPalette';
+import { tonedAs, wordFor, saidAs, doesOfName, paintOf, doingAs } from '../../../src/scene/stuff';
+export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, gwotAs, lookPaintOf, paintsOf, type GwotMat, type KitPaints } from '../../../src/scene/gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
 export type GwotOpening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
@@ -159,7 +159,7 @@ export function gwotKit(host: GwotHost) {
   /** A LAMP IS A LAMP IN ANY CLOTHES: a head lamp's lens is white and a tail lamp's red whatever the vehicle wears, and the game finds a vehicle's lamps by
    *  those two paints of the kit's own palette (rust/game_rules/src/carlamps). So lenses are laid in them and never in a paint the host hands over */
   const LENS = { head: matIn(GWOT_PAINTS, 'plasticWhite'), tail: matIn(GWOT_PAINTS, 'truckRed') };
-  const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: scene/carShapes.ts carCoat)
+  const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: carShapes.ts carCoat)
   /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of scene/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */
   const as = (m: GwotMat, does: DoesWord): Mat => ({ ...M[m], albedo: asPaint(m, does) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
@@ -197,7 +197,7 @@ export function gwotKit(host: GwotHost) {
   };
   type Put = ReturnType<typeof piece>;
   /** DECAL: SNOW OR DUST LAID ON A VEHICLE'S BOWED TOP — `top`: one of the `tops` the vehicle standing at (x, z, yaw) handed back; the slab is said in the
-   *  vehicle's frame as a piece's box is. A flat slab kept to the crown, and a sheet that follows the bow (scene/carShapes.ts layOn: the one rule for it).
+   *  vehicle's frame as a piece's box is. A flat slab kept to the crown, and a sheet that follows the bow (tools/levels/lib/carShapes.ts layOn: the one rule for it).
    *  `nth`: it lies on that many earlier falls */
   const lay = (x: number, z: number, yaw: number, top: BowedTop, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: Mat, nth = 0) =>
     piece(x, z, yaw)(lx, lz, y0, y1, hx, hz, m, { flags: BoxFlag.NoShadow, shape: layOn(top, [lx, (y0 + y1) / 2, lz], [hx, (y1 - y0) / 2, hz], m, { nth }) });
@@ -768,7 +768,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal
    *  gun in the bed (the "technical") */
   const pickup = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite', opts: { load?: 'none' | 'drums' | 'sacks' | 'crates'; mount?: boolean } = {}) => {
-    const b = piece(x, z, yaw), P = coat(M[body]), S = pickupShapes({ hub: hubPaint(PAL.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = pickupShapes({ hub: hubPaint(PAL.galv) });   // (S: the shape each box says — carShapes.ts)
     for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.8, 2.45, 0.86, P, { shape: S.tub });                                     // the body tub, sill to waistline
     b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperFront }); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperRear });   // bumpers
@@ -788,7 +788,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
   const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
-    const b = piece(x, z, yaw), P = coat(M[body]), S = vanShapes({ hub: hubPaint(PAL.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = vanShapes({ hub: hubPaint(PAL.galv) });   // (S: the shape each box says — carShapes.ts)
     for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
     b(2.44, 0, 0.36, 0.58, 0.04, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.44, 0, 0.3, 0.44, 0.04, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step (each BEGINS at the body's end: two centimetres into it, their sides lay in the body's sides and flickered)
@@ -802,7 +802,7 @@ export function gwotKit(host: GwotHost) {
     return S;
   };
   /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every
-   *  vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
+   *  vehicle here it hands back the shapes its boxes say (tools/levels/lib/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
   const lorry = (x: number, z: number, yaw = 0) => {
     const L = piece(x, z, yaw), red = coat(M.truckRed), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
     for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
@@ -821,7 +821,7 @@ export function gwotKit(host: GwotHost) {
   };
   /** COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X */
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
-    const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — carShapes.ts)
     b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel }); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel });
     b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, coat(M[tank]), { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
     b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
@@ -910,7 +910,7 @@ export function gwotKit(host: GwotHost) {
     return { lens, top };
   };
 
-  // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
+  // the kit's TOOLS, then its PIECES by name (library.ts: the catalogue, docs/library.md, is written from this list)
   return { M, mk, face, marksOf, piece, round, as, groundAt, lie, flatAt, lay, ...pieces('gwotKit', {
     // walls
     wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,

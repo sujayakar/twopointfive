@@ -12,7 +12,7 @@
 import { desk } from '../view/desk';
 import type { Setting, SheetView, StartRow, StartView } from '../view/read';
 import { menuTheme } from './theme';
-import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — scene/level.ts imports the same module: its plan needs no server)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — tools/levels/lib/level.ts imports the same module: its plan needs no server)
 import { artFrom, drawSheet, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
 import { stillOf, drawStill } from './menuStills';   // (a card's picture: the mission's key art, where one was made)
 

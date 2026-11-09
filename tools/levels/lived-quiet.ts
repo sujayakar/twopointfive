@@ -1,5 +1,5 @@
 // LIVED-IN ROOMS for the two quiet levels played as two (tools/levels/crossing.ts, tools/levels/quiet-relay.ts): the small pen their `furnish()` steps draw with.
-// Everything it adds is a LIVED thing (src/scene/lived.ts): a box in the editor group `lived.<room>`, a loose prop named `lived.<room>.<what>` — left out by the
+// Everything it adds is a LIVED thing (lib/lived.ts): a box in the editor group `lived.<room>`, a loose prop named `lived.<room>.<what>` — left out by the
 // loader with the switch off, so off is the level as it was. The contract: rebuild/play-style-levels/rooms/read-first.md.
 // Rules it keeps for its callers: paint only from the GWOT kit's palette (the simulation reads paint; these two levels have no second look file), NO light and
 // no emissive box (the hiding dark is the level), no Math.random (a piece is what its arguments say). What it cannot keep for them — off every door's line,
@@ -9,9 +9,9 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { drawnRoundSlabs, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
-import { pieces } from '../../src/scene/library';
+import type { PropDef, PropKind, PropPart } from './lib/level';
+import { drawnRoundSlabs, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from './lib/gwotKit';
+import { pieces } from './lib/library';
 
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
 export interface LivedHost {
@@ -47,7 +47,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   const line = (x0: number, z0: number, x1: number, z1: number, wid: number, m: GwotMat, y = 0.03) => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 0.01; return put((x0 + x1) / 2, (z0 + z1) / 2, y, y + 0.004, L / 2, wid / 2, m, Math.atan2(-(z1 - z0), x1 - x0), NS);
   };
-  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
+  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (lib/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
    *  two squares 45° apart, the second a hair lower so the tops never fight. Only for a round standing on a FLOOR or a table: a disc on a wall's face is one flat
    *  `d()`. `solid` false = drawn only */
   const round = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => {
@@ -80,7 +80,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   ]);
   /** a kit PROP (a chair, a jerry can) taken into this room: renamed `lived.<room>.<what>` */
   const own = (p: PropDef, what: string) => { if (!room) throw new Error(`lived-quiet: the prop '${what}' before room()`); const name = `lived.${room}.${what}`; if (names.has(name)) throw new Error(`two lived props named ${name}`); names.add(name); p.name = name; return p; };
-  // the pen's TOOLS (the room, raw boxes and rounds, a raw prop), then its PIECES by name (src/scene/library.ts)
+  // the pen's TOOLS (the room, raw boxes and rounds, a raw prop), then its PIECES by name (lib/library.ts)
   return {
     /** everything that follows belongs to this place */
     room(id: string) { room = id; K.grp(`lived.${id}`); },

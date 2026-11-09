@@ -13,7 +13,7 @@ import { GWOT_PALETTE, lookPaintOf, type GwotMat } from '../../src/scene/gwotPal
 import { tonedAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 
-/** a palette row darker in one piece, as the kit's own `toned` writes it (src/scene/gwotKit.ts: the same band, the same rounding, the same refusal of a tone
+/** a palette row darker in one piece, as the kit's own `toned` writes it (lib/gwotKit.ts: the same band, the same rounding, the same refusal of a tone
  *  that is another row's colour). The kit does not hand that function out; when it does, this is it */
 function toned(m: GwotMat, k: number): Vec3 {
   if (!(k > 0.55 && k < 0.99)) throw new Error(`snowRock: a tone of ${m} at ${k} is outside 0.55‥0.99`);

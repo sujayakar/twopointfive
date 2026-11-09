@@ -31,7 +31,7 @@
 //   z 22 +==================*====[ GATE ]==========================+      * = the lamp over the gate
 //   z 24    way 1 (x 11.6)         the road (packed snow, ruts)       jersey barriers
 //
-// Built from the 2010s kit (src/scene/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
+// Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
 // colours, boxes only; no second look file.
 // WHAT A SNOW PIECE IS TO A MAN (rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m):
 //   · ground, road, cleared earth  = thin solid slabs at the floor (feet, rounds and light land on them);
@@ -41,11 +41,11 @@
 //   · a CAP                         = a decal on the top of a thing: a round goes through it to the thing; where the thing is cover that breaks (the
 //                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/wallbreak `ghosts`).
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -521,7 +521,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
 
   extra.kept?.({ K, G, cap });
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the TEA ROOM is rugs and floor cushions round the stove, low tables with the tea on them, the
   // samovar's table; the KITCHEN the bread oven, a work table, flour in sacks and the water cans; the STORE sacks to the beams, fuel drums and
   // crates under one dim bulb; the BUNK ROOM four cots, a tin trunk and a felt on the floor round its stove; the BAY the halt's pickup, a bench, tyres and a

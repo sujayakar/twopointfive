@@ -34,13 +34,13 @@
 //   · THE FIRING LINE east of the house, in front of the three ply targets: a band of violet and tape blocks, and a toe line square to each target.
 // No letters, no lane lines, no bays, no tiles, no bands at a door. No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, ParData, Rect, StructureData, TeamStart } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, type Skin } from './gwotSkin';
@@ -156,9 +156,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE RANGE ROUND THE HOUSE. The house's five rooms have their things; the ground round it had a table, a bench, one line of sandbags and the butts. What a
-  // range is made of stands on it now, in the look's own kit (src/scene/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
+  // range is made of stands on it now, in the look's own kit (lib/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
   // turn (ammunition crates by the table, the water can, the drum the empty cases go in, the tyres nobody has carried round to the house yet), the SOUTH side
   // has the end of its sandbag line and the stones cleared off the back way in, the BUTTS have lane markers past the firing line, a sandbag return at each end
   // of the backstop and the spall at its foot, and the dark NORTH side is where the house's spares lie (block for the next wall, timber for the barricades).

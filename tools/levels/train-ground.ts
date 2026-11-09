@@ -1,5 +1,5 @@
 // TRAIN-GROUND: the Training group's shared floor (not a level: no NAME, never exported by itself). Every lesson level (tools/levels/train-*.ts) stands on the
-// same walled compound in the GWOT kit (src/scene/gwotKit.ts) — a 24 × 16 m yard, a foot gate in the west wall and one in the east — and adds its own huts,
+// same walled compound in the GWOT kit (lib/gwotKit.ts) — a 24 × 16 m yard, a foot gate in the west wall and one in the east — and adds its own huts,
 // cover, lights, men and its `scenarios` blocks. One shell so a lesson's file is its rooms and its steps, and seven lessons read as one place.
 //
 //        x 8                                                      32
@@ -15,11 +15,11 @@
 //   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: rebuild/play-style-levels/look/read-first.md)
 //   return T.finish({ spawn, routes, mission, scenarios: { quiet, lesson } });
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';

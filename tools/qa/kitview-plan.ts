@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
-import { parseLevelData, validateLevelData } from '../../src/scene/levelData';
+import { parseLevelData, validateLevelData } from '../levels/lib/levelData';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -90,7 +90,7 @@ function parity() {
 }
 
 // ---- C
-/** a `hide` / `show` / `pane.box` that names a box by its GENERATED id (scene/levelLoad.ts gives a box with no name of its own its PLACE in the file): add a box before it in the level's source and the
+/** a `hide` / `show` / `pane.box` that names a box by its GENERATED id (tools/levels/lib/levelLoad.ts gives a box with no name of its own its PLACE in the file): add a box before it in the level's source and the
  *  name is another box's, with nothing red. And of a WRITTEN `hide` (it wins outright, so nothing else looks at it): a box it takes in no line from the camera, and what still stands in those lines */
 const GENERATED = /^box_\d{4,}$/;
 function hideNotes(w: string, Y: Data, A: Data) {
