@@ -324,6 +324,44 @@ fn joints_keep_their_length_and_bend_only_as_joints_do() {
     }
 }
 
+/// THE RULE: in every gait a foot comes off the floor to go anywhere: it does not slide while it is on the floor, at mid swing its toe is well over the floor, and the toe is never under it.
+/// THE CONTROL: a foot has somewhere to go in each: the bound on the top is the foot leaving the floor at all.
+/// A FAILURE MEANS: he drags his feet, most of all crouched, or stubs them through the floor.
+#[test]
+fn a_foot_clears_the_floor_in_every_gait() {
+    for s in SEEDS {
+        let check = |p: &mut Play, c: CharId, what: &str, frames: usize, most: f64| {
+            let (f, _) = feet(p, c, frames);
+            for foot in &f {
+                assert!(foot.slid < most, "seed {s} {what}: a foot slid {:.3} m on the floor", foot.slid);
+                assert!(foot.top > 0.03, "seed {s} {what}: a toe came up {:.3} m at most", foot.top);
+                assert!(foot.under > -0.01, "seed {s} {what}: a toe went {:.3} m under the floor", -foot.under);
+            }
+        };
+        let (mut p, c) = rifle_up(s);
+        p.key_down("KeyD");
+        check(&mut p, c, "setting off", 60, 0.05);
+        check(&mut p, c, "walking", 180, 0.05);
+        p.key_up("KeyD");
+        check(&mut p, c, "stopping", 60, 0.06);
+        p.key_down("KeyD"); p.key_down("ShiftLeft");
+        check(&mut p, c, "going to a sprint", 60, 0.05);
+        check(&mut p, c, "sprinting", 180, 0.05);
+        p.key_up("ShiftLeft"); p.key_up("KeyD");
+        // (the last foot is still turning flat as it lands, and its toe comes forward with it)
+        check(&mut p, c, "stopping a sprint", 60, 0.06);
+        drop(p);
+        let (mut p, c) = rifle_up(s);
+        p.tap("KeyC");
+        p.run(0.8);
+        p.key_down("KeyD");
+        check(&mut p, c, "low, setting off", 60, 0.05);
+        check(&mut p, c, "low, walking", 180, 0.05);
+        p.key_up("KeyD");
+        check(&mut p, c, "low, stopping", 60, 0.05);
+    }
+}
+
 /// THE RULE: however he goes from one thing to another, no joint moves more in one frame than a limb can: a change of what he is doing is a blend and not a cut. (Measured from his hips, so what is left is the pose.)
 /// A FAILURE MEANS: a pop on the screen as a man starts, stops, goes low or changes guns.
 #[test]

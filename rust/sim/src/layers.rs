@@ -7189,11 +7189,11 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
             return 0;
         }
         if w_f < 0.003 {
-            for f in foot.iter_mut() { f.down = false; f.swing = -1.0; f.off = [0.0; 3]; f.off_v = [0.0; 3]; f.off_yaw = 0.0; f.fresh = true; }
+            for f in foot.iter_mut() { f.down = false; f.swing = -1.0; f.off = [0.0; 3]; f.off_v = [0.0; 3]; f.off_yaw = 0.0; f.clear = 0.0; f.fresh = true; }
             return RAN;
         }
         let active = w_f > 0.5 && FEET.on > 0.5;
-        if !active && foot.iter().all(|f| f.swing < 0.0 && f.off == [0.0; 3] && f.off_yaw == 0.0) {
+        if !active && foot.iter().all(|f| f.swing < 0.0 && f.off == [0.0; 3] && f.off_yaw == 0.0 && f.clear == 0.0) {
             return RAN;
         }
         let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
@@ -7246,6 +7246,8 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
             let v = if dt > 1e-5 { ((want_toe[i][0] - foot[i].toe_was[0]) * went[0] + (want_toe[i][2] - foot[i].toe_was[2]) * went[1]) / dt } else { 0.0 };
             if dt > 1e-5 { foot[i].toe_was = want_toe[i]; }
             let going = s > FEET.going_from && v > FEET.going_k * s;
+            // a foot going forward clears the floor: what the cycle does not lift it by (a crouch's stride hardly does), it is lifted by
+            foot[i].clear = damp(foot[i].clear, if going { max(0.0, FEET.clear - (ty_ - TOE_FLOOR_Y)) } else { 0.0 }, FEET.clear_k, dt);
             if teleported {
                 foot[i].down = false;
                 foot[i].swing = -1.0;
@@ -7357,6 +7359,7 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
             } else {
                 shown[i] = add3(want_p[i], foot[i].off);
             }
+            shown[i][1] += foot[i].clear;
             // a foot not down goes no faster than a foot goes, seen from where he stands: what the pose asks past that it comes to by the same easing. Down, it is the body that moves.
             let free = !(foot[i].swing < 0.0 && foot[i].down);
             if dt > 1e-5 && free && !foot[i].fresh && !teleported {
@@ -7383,6 +7386,10 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
                 if a > most { q = slerp(&foot[i].q_was, &q, most / a); }
             }
             foot[i].q_was = q;
+            // and a toe that would be under the floor comes up onto it: in a step, onto it and then the step's lift over that
+            let toe_off = q_rotate(&q, &q_rotate(&[-rot[i][0], -rot[i][1], -rot[i][2], rot[i][3]], &sub3(toe[i], ankle[i])));
+            let up = if foot[i].swing >= 0.0 { sin(PI * min(1.0, foot[i].swing)) * lift } else { 0.0 };
+            shown[i][1] = max(shown[i][1] - up, p0[1] + TOE_FLOOR_Y - toe_off[1]) + up;
             placed[i] = (to_model(&shown[i]), q_mul(&body_back, &q));
         }
         let ((tl, ql), (tr, qr)) = (placed[0], placed[1]);
