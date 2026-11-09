@@ -36,9 +36,9 @@ const HANDS_DIFFER_ONE_IN: usize = 5;
 /// parts a line names, at most
 const NAMED: usize = 12;
 
-/// THE RUNS: a mission and a hand. Between them they reach the office's night breach, a room clear in the rain under bangs, a compound's doors, a glasshouse's kit, the kill house and a
-/// quiet night under push, a rescue under push and snow under bangs.
-pub const RUNS: [(&str, &str); 8] = [("night-breach", "doors"), ("depot-four", "bangs"), ("compound-four", "doors"), ("glasshouse-four", "kit"), ("killhouse-four", "push"), ("bazaar-quiet", "push"), ("rescue-registry", "push"), ("pass-four", "bangs")];
+/// THE RUNS: a mission and a hand. Between them they reach the office's night breach, a room clear in the rain under bangs, a compound's doors, a mouse hole's kit, a glasshouse and the kill house and a
+/// quiet night under fire, a rescue under push, snow under bangs and a partner's orders in the lesson that has them. Every line of a run's hand happens in it, or its `play` row is red.
+pub const RUNS: [(&str, &str); 10] = [("night-breach", "doors"), ("depot-four", "bangs"), ("compound-four", "doors"), ("mousehole-four", "kit"), ("glasshouse-four", "push"), ("killhouse-four", "push"), ("bazaar-quiet", "fires"), ("rescue-registry", "push"), ("pass-four", "bangs"), ("tut-pair", "pair")];
 /// a game of two is held on these
 const SEATS: [&str; 3] = ["room-clear-four", "compound-four", "depot-four"];
 /// THE PARTS THAT ARE THE CLOCK'S OWN: a level with a par block and the same level without it may differ here, and nowhere else
@@ -88,12 +88,12 @@ pub fn all() -> Vec<Row> {
 }
 /// ONE FAULT A CHECK: the row, the break's name, and a piece of the check's own words its failure must hold
 pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
-    let (run, moved) = (run_name(5), run_name(1));
+    let (run, moved) = (run_name(6), run_name(1));
     let start = start_name("tut-road", 1);
     let (seats, par) = (format!("seats {}", SEATS[0]), String::from("par killhouse-four"));
     vec![
         (start.clone(), "pin", "the start moved"), (start, "second", "a second start"),
-        (format!("play {}", run), "pin", "parts from its pin"),
+        (format!("play {}", run), "pin", "parts from its pin"), (format!("play {}", run), "silent", "never happens"),
         (format!("again {}", run), "second", "the second run"),
         (format!("save {}", run), "block", "put back, parts"),
         (format!("load {}", run), "block", "loaded into"),
@@ -224,9 +224,10 @@ pub fn stand_run(k: usize, seed: u32) -> (Play, Hand) {
     (p, hand)
 }
 /// one frame of a run: the hand's lines that fall due (a line the game refuses is counted by the caller's `did`), then the host's frame
-fn frame_of(p: &mut Play, hand: &Hand, k: usize, next: &mut usize, did: &mut [usize]) {
+fn frame_of(p: &mut Play, hand: &Hand, k: usize, next: &mut usize, did: &mut [(usize, String)]) {
     while *next < hand.at.len() && hand.at[*next].0 <= k {
-        if act(p, &hand.at[*next].1).is_ok() { did[hand.at[*next].2] += 1; }
+        let line = &mut did[hand.at[*next].2];
+        match act(p, &hand.at[*next].1) { Ok(()) => line.0 += 1, Err(why) => line.1 = why }
         *next += 1;
     }
     p.frame();
@@ -242,7 +243,7 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
     let t = Instant::now();
     let names = parts::names();
     let (mut p, hand) = stand_run(k, SEED);
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let (mut w, mut row, mut next) = (game::bytes::W::new(), Vec::new(), 0);
     let (mut series, mut seconds): (Vec<u32>, Vec<Vec<u32>>) = (Vec::new(), Vec::new());
     let mut kept: Vec<Kept> = Vec::new();
@@ -265,8 +266,11 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
                 fail.push(format!("the run parts from its pin in second {} (pins.txt): `hold keep` on the build before and `hold check` on this one name the part", at));
             },
         }
-        let never: Vec<&str> = hand.lines.iter().zip(&did).filter(|(_, d)| **d == 0).map(|(l, _)| l.as_str()).collect();
-        say(&name("play"), t.elapsed().as_secs_f64(), &fail, &if never.is_empty() { String::new() } else { format!("never done here: {}", never.join("; ")) });
+        // (a line of the hand that nothing comes of holds nothing, and looks as if it did: the hand is mended, or the line leaves it)
+        if f.breaks("silent") { did[0].0 = 0; }
+        let never: Vec<String> = hand.lines.iter().zip(&did).filter(|(_, d)| d.0 == 0).map(|(l, d)| format!("{} ({})", l, d.1.trim_end_matches('.'))).collect();
+        if !never.is_empty() { fail.push(format!("a line of the hand never happens: {}", never.join("; "))); }
+        say(&name("play"), t.elapsed().as_secs_f64(), &fail, "");
     }
     if kinds.contains(&"save") { save_row(&name("save"), &mut p, &hand, &mut kept, &names, f); }
     drop(p);
@@ -281,7 +285,7 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
 fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let home = p.g.sim;
     let end = game_start::block::bytes(home).to_vec();
     let mut fail = Vec::new();
@@ -305,7 +309,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let mut fail = Vec::new();
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
     let mut slot = sim::state::GAMES;
@@ -339,7 +343,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
     for (time, ordinal) in [(1, "second"), (2, "third")] {
         let (mut p, hand) = stand_run(k, SEED);
         if f.breaks("second") && time == 1 { game::math_dice::sim_random(&mut p.g); }
-        let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+        let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         for i in 0..frames {
             frame_of(&mut p, &hand, i, &mut next, &mut did);
             if i % 60 != 59 { continue; }
@@ -352,7 +356,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
             // (the next run on the list: another level, its own hand)
             let other = (k + 1) % RUNS.len();
             let (mut q, hand) = stand_run(other, SEED);
-            let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+            let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
             for i in 0..BETWEEN_SECS * 60 { frame_of(&mut q, &hand, i, &mut next, &mut did); }
         }
         if !fail.is_empty() { break; }
@@ -497,7 +501,7 @@ fn par_row(name: &str, id: &str, f: Flags) {
         let mut p = Play::mission_of(d, &link, &opts(SEED, 1));
         p.g.god_mode = hand.unhurt;
         if planted { game::math_dice::sim_random(&mut p.g); }
-        let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+        let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         let mut rows = vec![p.words()];
         for i in 0..frames {
             frame_of(&mut p, &hand, i, &mut next, &mut did);

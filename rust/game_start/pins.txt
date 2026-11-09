@@ -63,43 +63,53 @@ start lights-out-two, two players
 play night-breach doors
 play depot-four bangs
 play compound-four doors
-play glasshouse-four kit
+play mousehole-four kit
+play glasshouse-four push
 play killhouse-four push
-play bazaar-quiet push
+play bazaar-quiet fires
 play rescue-registry push
 play pass-four bangs
+play tut-pair pair
 again night-breach doors
 again depot-four bangs
 again compound-four doors
-again glasshouse-four kit
+again mousehole-four kit
+again glasshouse-four push
 again killhouse-four push
-again bazaar-quiet push
+again bazaar-quiet fires
 again rescue-registry push
 again pass-four bangs
+again tut-pair pair
 save night-breach doors
 save depot-four bangs
 save compound-four doors
-save glasshouse-four kit
+save mousehole-four kit
+save glasshouse-four push
 save killhouse-four push
-save bazaar-quiet push
+save bazaar-quiet fires
 save rescue-registry push
 save pass-four bangs
+save tut-pair pair
 load night-breach doors
 load depot-four bangs
 load compound-four doors
-load glasshouse-four kit
+load mousehole-four kit
+load glasshouse-four push
 load killhouse-four push
-load bazaar-quiet push
+load bazaar-quiet fires
 load rescue-registry push
 load pass-four bangs
+load tut-pair pair
 draw night-breach doors
 draw depot-four bangs
 draw compound-four doors
-draw glasshouse-four kit
+draw mousehole-four kit
+draw glasshouse-four push
 draw killhouse-four push
-draw bazaar-quiet push
+draw bazaar-quiet fires
 draw rescue-registry push
 draw pass-four bangs
+draw tut-pair pair
 seats room-clear-four
 seats compound-four
 seats depot-four
@@ -441,14 +451,16 @@ sim.smoke 811c9dc5
 sim.poses 997f461a 95ce36df d6f781d6 c6c68b9a 8e028857 5f792276 29f3d013 bdc8b9e3 679339b3 5dfd3493 fd6a8742 be33e573 1d74961a 95ce36df d6f781d6 c9cf24d7 be33e573 1d74961a 95ce36df d6f781d6 5f792276 29f3d013 7af32257 afa491d3 7af32257 afa491d3 7af32257 afa491d3 c9cf24d7 e18c7b43 ae565a13 f9ca25d2 c6c68b9a 8e028857 d78373b7 cb620556 ae565a13 f9ca25d2 ae565a13 f9ca25d2 5f792276 29f3d013 fd27cbaa 2b9f6c23 bdc8b9e3 56fcb402 4208876a e7128466
 sim.panes 811c9dc5
 series
-play night-breach doors: e69b9a02 22ad9f78 0e6cd6c3 88854fb3 3083083c ccc96ec6 d651c2e3 56dd98e5 a61bc284 559686e3 edb32a92 ff6953aa 0360714f 71d06d15 d4fadf0e 3297a5bf cba18c31 8caf7df7 2a8f4757 29cdef3a 0e6643db f5b5b02f ef4dddce ee6afca9 9e8ef058 a80bc956 2d12c9ae e93be3fb 7a325595 5a71c359 484adae0 b380b38f f35133f4 a9b653ff 33fec359 442bac6b 4584ee63 7f1b6e5e 97a53b3a f8f009ab
+play night-breach doors: e69b9a02 22ad9f78 0e6cd6c3 88854fb3 3083083c ccc96ec6 d651c2e3 56dd98e5 86a0ef12 738b71ba 49de4e0e 35959328 aaaa3c3a 05727f4e a1e8b576 d7511306 36baaead 5a4423f1 1cd64fe4 8782e996 af66bd51 b36c1e42 8dd65076 be2c0f65 d57bbf3b ccdb9f57 1d4f80a3 ae52cec1 c8f2c7a3 7a71621e 10055a56 21359a5d 1dd980ca 42bf03fd dc9d3b23 6cc2afad ffa26aad 2b29e541 8e4abffa dd7bc65d
 play depot-four bangs: 4e9e164e 45efa47a b957e1c3 8d409b82 f17cbd22 e7d4890b 33e5bd7f ec0e1204 7bb415ec f31a1fa8 5d4b4fa3 8f8fb280 337c7694 e28f3d8f c58c8e26 412bfa44 0810ab28 bea9976f 7f9ec142 e75d67fc c60d6b87 3914a0da ab66da63 4f5fcd66 4ecb599e ca616bea 926c6bfa 7c617795 1f1418bf cb201c43 cfc2bc37 beec6799 e9ea4b7d 493c0c16 00ff506a 62e54e35 230aaf0e 4d8caf19 189fa8c7 b9cb0c63
-play compound-four doors: 13525de3 2aa3b34c 3e3cce55 09ebfd65 2f2ef76b 1f2b4508 1fe4eeff 77f41080 5a04f76e 5364b76d 7767e1f0 82945fc3 0544c164 09764964 f5b54bd1 d747d3c5 dd53ea6c ff414d7f 9a9458a7 ffb4487f 7a10c937 dc262be1 61927abc 98dd1489 6e7d8f6c 1841d23a 25f61aa6 2a167611 20f2e913 04a419c1 48c494bb 0c7d5656 714c0d5f 3d01c978 f1c8886d c6195304 c5dbc6e4 88e4f925 13bc0118 d2fe6ef1
-play glasshouse-four kit: 3915be12 f3cf8c2c c9a5ad02 fc51b8b0 2d4d9c41 a6852324 ed1b2b74 e8df0b2c 17903075 fe4d097b e6381203 df83e7d8 c6281ce2 50e19875 f33cc223 83804e3f 2c4a0716 07cb0447 04519861 214e7b74 a88baef1 f53fe37f 36b0e985 9c5005a2 120bf7d6 4940965f b16645f4 a6014b91 d5aa49a9 e00a1569 f6746d20 e4a979ed 45efabde 4346a40f f636959a ee32a251 bcf386f8 09749f69 fc8286c4 332bfe5e
+play compound-four doors: 13525de3 2aa3b34c 3e3cce55 09ebfd65 2f2ef76b 1f2b4508 1fe4eeff 77f41080 0571a381 1e7ea242 de717dfb 9cfd604c 6a95ae97 ceec6c76 3195935e f46eca1f 85ef5451 52dcd9cb b4210d7b 4571247d 76044656 bf9db012 3b9c1243 270c8248 c7ddf29b 853c5d10 726bcf1c debae877 5dd6b0a3 f9ea050b c836a304 9fe33d14 564fc88a f0b45ebe 1234f157 5fb209da a4e5517f 14b15ecf 1b80eee2 25b7bdf3
+play mousehole-four kit: e2c75688 07e903bd a3062c64 189929d9 bc4aaf82 a5ec9b26 1b27f568 98d65f9e 89d15fe1 f242cf8a 6fa07d0c 445fbc67 8f17356d 2c249e7f f3648da1 4864e755 92cf4af2 366c6d4d 69b80e81 0a94d17c f342d438 bb7f29ba 7f7a887c 0a46cfa1 b94975cf f28a44d4 68660d1a 78b48d67 6aaf918a 2ea6346c 3b493dd2 a33722b7 eaf5ba39 62e87773 645afb6b c1e6d45d 9b576c21 afa2d6d0 7d3715a9 db5699b2
+play glasshouse-four push: 3915be12 3c23d8f1 22b28c5e fab7c57e 90c46ee3 3bdb742f 22c9229e bc9c4176 ef00970f 189d87f6 a465c5d7 1f8dae3d 88066caf 57986534 f573bfd8 fb26f892 4c2d8c75 db6e6abe 4f2ba606 55f00c23 ce17b421 d48a022e 0a1fdc7b bfd64eb1 b8c5210e fd1bbb3b a214a9ef 190803d9 512734d7 a99b54eb 4b36a983 9eca53dc 37805e33 a96ea3b5 6d9f8a50 ad4a22bb d9f75156 b92cdc0e 347c9944 bb97cea5
 play killhouse-four push: 03cd1f6e a14a15e0 7bf909d1 59b089a5 0d3b9483 7fb4f87d 033f7a9b 3d22b96c 66e0a558 56e3a950 0e655bba b5cdfc4a cce21d47 9b6a6b14 3db11c22 22f92a42 8eda2f17 3c2b936d 4448e236 c9e5d254 6bd0f7c2 16e9179f efb0aa89 83cccd45 51414c74 be8dafab 524f383c a2669fb9 f6f0b434 b0158aa9 db6d387c 1551a8f4 6589f57c 8a42c64b 0656abe7 891110e0 44f9b77a 1ced6042 9458180a 4d6cdf34
-play bazaar-quiet push: 0a177b9e 97ddd6fb 1884d940 03207ad9 77b55b15 ae073471 fb03854f eb5836d8 37fb2fa6 907cb9e6 d24dd682 6aa3eecb 6a99f116 6a6397ab 041dbec5 6383b356 39f79873 58a7da29 aab3fce1 d1365768 3099cacb 864eedbe ee84916a b45ba299 3c8a02bc 7ff6ae56 9777471e edae5584 5b52fbb3 24f2ea61 5d3659d2 7265fa62 5a1db68b 46ab0e38 445216d9 b50b9f3e d4f0262e f98caa1c f3ea124e c7fb4315
+play bazaar-quiet fires: 0a177b9e 97ddd6fb 1884d940 03207ad9 77b55b15 ae073471 fb03854f eb5836d8 37fb2fa6 907cb9e6 d24dd682 6aa3eecb 6a99f116 6a6397ab 041dbec5 6383b356 39f79873 58a7da29 aab3fce1 d1365768 3099cacb 864eedbe ee84916a b45ba299 3c8a02bc 7ff6ae56 9777471e edae5584 5b52fbb3 24f2ea61 5d3659d2 7265fa62 5a1db68b 46ab0e38 445216d9 b50b9f3e d4f0262e f98caa1c f3ea124e c7fb4315
 play rescue-registry push: 7c5fbe2f df7e1b3e bfb2e17d 9d6074b3 94ea647b 570cdd50 f01ca474 8edec417 e2c6c2de d71728eb 1e6b147c 3d1e5997 9dcac332 6ab62caf 9af9202f 42c89db5 27907cf9 146968bc 9c7cb002 59ab743d 1a41153e 25afe212 6455b51a ea2d12b9 3ea4d5f9 73675780 a2634687 bee111ea 6ee2e530 38216ec8 af92a30a b39d9a35 6fad0f54 e8a862fc 8d04e8b6 6d55ae03 ecb12ccc 9f52fc7a 6f1f9216 a4a69b08
 play pass-four bangs: d7527801 8fd283de b06af4d2 281ba7af 4e30d22c 9e8d06b8 325ffbbb a8826e7e 5b43b319 f47b319c e8c55879 8cf11631 7fe7b721 17d9f521 80d751c0 de719978 3e67d10d cd239070 0cdcc5c1 17c4ab27 109365a5 979503bd 388a6883 1c028aed e80134e8 25b6ac61 c32d8443 042ebedc 50d93232 993fff23 bfab0275 f55f6401 31d6756a 838d0444 65156b7d 59cfca67 b80e07c3 65e7e560 f07ca589 d9e98410
+play tut-pair pair: c9dcc5bf c824c116 b6ce69c5 673b9ae4 13470168 87e7bd7e aff8a01a 9ba0eca2 a6100fa2 4527a597 3cb41b7e 808ad5fd 9c806463 108b596a ef8fb2aa 0f10f64a ea5fc74e 45830927 20503497 cda48f00 ee46e787 5c4d846e 28223af8 04319122 3f812509 3ee967ed 160fb276 297a86c6 8135305f af36ead3 5342a845 6efd8f4d 82226f78 71a79f76 46ef8c5c 8953bec1 9f26b76e f37b6f07 bbafc1fe 0626a143
 seats room-clear-four: 5b5fd9fa cadafa09 2946bb7f 580c88ec f104aaf8 2a1e572f 01cc49a3 677d2b6f 032b7a61 85746df7 877e0ae2 abf87022 164a32f8 bd6c8ec7 6f7b3afd 5249f82e e57dd947 c095fca1 af237bfa af8ce580 f8fdf3b3 317b8a5d 1e99e5d2 719ee468 3fa9df8a a60143c5 06cacde2 d8f27bac 10337303 80f37163
 seats compound-four: 80817587 20597f5e 7d0ed371 46ad62e3 fe94f94a decb2c7f fe6591d1 4b5bf134 3262c302 0b1d075e ebf98456 b0799039 c0f05c7a e3bb880a fd1f4054 d90c6c44 4808ff82 ce706d09 141f865d c5ca2d53 9df4705b 67c6a020 15025a94 2707ea03 1b587bc7 ff0c9eee 72c54126 f378b825 e70494a9 5f871925
 seats depot-four: 7a2e1661 b079eeee ca876fc4 e39470e7 10740c00 34e37825 93711508 b05679b9 d5c2e362 da0d627c 818d1d7c 0d5ed86f 67e6494c f92c0c51 e2bfcba7 6b7dc3fc 9f8fa3dd d8c260b4 b2f27705 a06a52a8 e8f1b5c5 b630e3f3 c8d0748c 42976f8f afa10208 c9c99a1a e2030643 bb4542f0 e7e3d2c5 44caf37a

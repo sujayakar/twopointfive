@@ -262,7 +262,7 @@ room clears) by every hand by seed 1: 120 runs, about ten minutes on four cores 
 --hand rest` is the 72 of the first proofs, six minutes).
 
 A hand is a few lines of what is done to the game from outside (`hands/*.hand`; the file's head in `src/bin/hold.rs` is its
-grammar). Five stand here, and each file says what it reaches and what it does not:
+grammar). Seven stand here, and each file says what it reaches and what it does not:
 
 | hand | what it does | reaches |
 |---|---|---|
@@ -271,6 +271,8 @@ grammar). Five stand here, and each file says what it reaches and what it does n
 | `doors` | Sam unhurtable; the squad stacks on the door nearest that man and is told to go, falls in, then a pair bangs its way in while the other holds the threshold | the stack order, the word to go, the door tools, entries and the room fight behind them |
 | `kit` | Sam unhurtable; the squad goes silent, closes, throws a flash and a frag on order, covers, goes loud, holds, falls in | silent and loud, the throws' page, cover, hold; smoke and the wand where a floor brings them |
 | `rest` | nothing | a floor at rest: patrols, sentries, lights, the level's own script |
+| `fires` | Sam unhurtable; every 10 s he fires a round at the nearest such man | a floor with no squad, woken by shots |
+| `pair` | Sam unhurtable; the partner is told to take the nearest such man, and to watch him | the partner's take and watch, where a mission has them |
 
 A run's line says how many of the hand's lines the game took, and names each line it NEVER took on that floor with the game's own
 reason (`NEVER DONE HERE: order shutDoor door all (it's shut)`), so a hand is not trusted for what it only names. On a floor with
@@ -318,12 +320,12 @@ target/gate/gate tests [BINARY [TEST]]   # the whole native test set: no part of
 ```
 
 Each row prints one line in the rows' order, and the last line is the count and the wall time, with what each kind cost. A row is a child process, so a game that panics costs its own rows, which then
-FAIL with the first lines of what it wrote; the four rows of one run share a child, because the run is played once for all of them. About a minute and a half on four cores, release build.
+FAIL with the first lines of what it wrote; the four rows of one run share a child, because the run is played once for all of them. About a minute and a half on four cores.
 
 | row | what it holds | its break |
 |---|---|---|
 | `start <id>, one player` · `, two players`: every row of `all_missions`, twice | The start is the pinned start, part by part, or the same refusal in the same words. A second start in one process is the first: 5 s idle, every part each half second, then the mission before it on the list stood and run 2 s, then the mission again, the same | `pin` a word of the pin made wrong · `second` the second start's seed is one more |
-| `play <run>` | 40 s under a hand: one word a second (every part folded as `hold` folds them) against the pin. Says which of the hand's lines were never done on that floor | `pin` a word of the series made wrong |
+| `play <run>` | 40 s under a hand: one word a second (every part folded as `hold` folds them) against the pin. Red if a line of the hand never happens on that floor, with the game's reason | `pin` a word of the series made wrong · `silent` a line is said to have never happened |
 | `again <run>` | The run stood and played twice more in one process, 10 s of the next run on the list between the two: the same word every second | `second` the second run's die is drawn once before its first frame |
 | `save <run>` | THE GAME PUT BACK IS THE GAME THAT WENT ON: a `Moment` at 3, 9, 15, 21 and 27 s, each stood again (the odd ones in slot 1) and played 3 s under the same hand: every part of every frame the same. What a host keeps beside a game (where the hand's next line is, `Play.cursor`) goes back with it. | `block` a moment whose block bytes are the run's end's |
 | `load <run>` | A LOAD: the moments of 9 and 21 s, the value a save keeps, the run's game gone and another mission played 2 s in the process, then stood as a page stands a kept game in a slot nobody was in and played 3 s under the same hand: every part of every frame the run's | `block` one byte of the block's die is another |
@@ -331,8 +333,8 @@ FAIL with the first lines of what it wrote; the four rows of one run share a chi
 | `seats <id>` | A fight of two is its records: scripted hands, each tick's two commands through `cmd_text` and back. Fresh games play the records with nobody sampling, showing seat 0 and then seat 1, and a moment at 12 s is put back and played to 18 s: every part the same each half second. The series is pinned. The two players' hands differ on one tick in five at least, each man walks and the fight fires at least so much (a small fight: its hands walk a man 4 to 8 metres and fire 2 to 8 rounds), and more than half the seconds have different words | `pin` · `fresh` a fresh game's replay hands each seat the other's records · `moment` the moment's does · `idle` nobody's hands do anything |
 | `par <id>`: every mission whose level has `scenarios.par` | The clock moves nobody: 30 s under `push`, with the file's par block and with it taken out of the tree before the stand. The parts differ in nothing but the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own part does differ, and the level's own record stands on each side as it stood | `moves` a die drawn once on the clocked side only · `noclock` the block is out on both sides |
 
-The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `glasshouse-four` under `kit`,
-`killhouse-four` and `bazaar-quiet` and a rescue under `push`, and the snow (`pass-four`) under `bangs`.
+The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `mousehole-four` under `kit`,
+`glasshouse-four` and `killhouse-four` and a rescue under `push`, a quiet night (`bazaar-quiet`) under `fires`, the snow (`pass-four`) under `bangs`, and the lesson of a partner's orders (`tut-pair`) under `pair`.
 
 **`gate tests`** builds the tests of every crate that has any (the list is at the head of `src/bin/gate/tests.rs`, and a crate with tests that is not on it fails the run) and runs each binary as a process of its own from its crate's folder, as many at once as there are cores. It prints each binary with its counts and seconds, every red test by name with its panic line, what is ignored and why, the ten slowest and a last line. Exit 1 on a red, a binary that ended badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
 
