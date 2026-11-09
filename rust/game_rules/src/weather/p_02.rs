@@ -55,11 +55,6 @@ pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     if tz > 0.0 { acc[4] += i * tz; } else { acc[5] -= i * tz; }
 }
 
-/// Sight through the weather: the fog's transmittance along a to b.   (weather.ts airTrans)
-pub fn air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    weather_air_trans(g, a, b)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
