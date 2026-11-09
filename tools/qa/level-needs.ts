@@ -487,7 +487,7 @@ if (import.meta.main) {
     L.lights.push({ id: 'planted_bulb', kind: 'point', pos: [4.5, 2, 3], group: 'planted', range: 5, intensity: 20 });
     L.lights.push({ id: 'planted_flood_a', kind: 'spot', pos: [30, 3.6, 2], dir: [0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 }, { id: 'planted_flood_b', kind: 'spot', pos: [33, 3.6, 2], dir: [-0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 });   // (two spots that face each other, far from the shelf so that they light nothing of it)
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
-    const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
+    const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined, offList: undefined };
     const planted: Tables = { music: () => false, still: () => false, picture: () => false, docs: '' };
     const lines = ask(name, L, [row], planted);
     // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds)
