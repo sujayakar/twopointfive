@@ -244,7 +244,6 @@ pub mod roomclear { pub mod types; pub use types::*; }
 pub mod roomfight { pub mod types; pub use types::*; }
 pub mod roomfit { pub mod types; pub use types::*; }
 pub mod roomread { pub mod types; pub use types::*; }
-pub mod root_settings { pub mod types; pub use types::*; }
 pub mod rowset { pub mod types; pub use types::*; }
 pub mod runner { pub mod types; pub use types::*; }
 pub mod rustknobs { pub mod types; pub use types::*; }

@@ -9,7 +9,6 @@ pub mod kit_stage;
 pub mod gltf;
 pub mod level;
 pub mod passes;
-pub mod settings;
 pub mod stand;
 pub mod handed;
 #[cfg(feature = "std")]

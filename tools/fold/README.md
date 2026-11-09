@@ -182,10 +182,10 @@ A struct of the wire's table mirrors a TypeScript interface. When the interface 
 over the wire and read by nothing.
 
 ```sh
-fold fields-gone --type root_settings::RenderSettings --ts src/settings.ts > gone.txt   # the list, by program: `mod::Type.field` a line
+fold fields-gone --type some_mod::SomeType --ts src/some_file.ts > gone.txt   # the list, by program: `mod::Type.field` a line
 bun run tools/wire/wire.ts drop --file gone.txt                                         # off the wire (table, io.rs, the page's half)
 fold fields-drop --file gone.txt --write                                                # out of the Rust source
-bun run tools/wire/wire.ts drop-type root_settings::RenderSettingsDenoiser              # a type whose last field went: off the wire,
+bun run tools/wire/wire.ts drop-type some_mod::SomeTypeInner              # a type whose last field went: off the wire,
 fold types-drop --file types.txt --write                                                # and out of the Rust source (`mod::Type` a line)
 ```
 

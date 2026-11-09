@@ -208,7 +208,6 @@ pub use game_rules::roomclear;
 pub use game_rules::roomfight;
 pub use game_rules::roomfit;
 pub use game_rules::roomread;
-pub use game_rules::root_settings;
 pub use game_rules::rowset;
 pub use game_rules::runner;
 pub use game_rules::rustknobs;

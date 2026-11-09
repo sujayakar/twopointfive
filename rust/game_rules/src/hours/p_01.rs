@@ -177,7 +177,7 @@ pub fn cloud_total(d: &crate::hours::HourDef, c_2: f64) -> f64 {
     cloud_sun(m::max(v3::clamp(c_2, 0.0, 1.0), ch)) / cloud_sun(ch)
 }
 
-/// The weather this game is in laid over the hour's row: the storm's switch, the sun and the sky. (hours.ts underWeather)
+/// The weather this game is in laid over the hour's row: the storm's switch and the sun. (hours.ts underWeather)
 pub fn under_weather(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let (d, was_off, sun) = (st.def.clone(), st.was_off, st.sun);
@@ -211,8 +211,6 @@ pub fn under_weather(g: &mut crate::game::Game) {
     if r != g.tab.light[sun].radius {
         g.tab.light[sun].radius = r;
     }
-    g.engine.settings.sky_zenith = greyed(d.sky.zenith, soft, Some(sky_k));
-    g.engine.settings.sky_horizon = greyed(d.sky.horizon, soft, Some(sky_k));
 }
 
 /// The weather under a running game changed: the hour's storm switch, sun and sky follow; nothing at night. (hours.ts hourWeatherChanged)
@@ -253,7 +251,7 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
     true
 }
 
-/// The moon out, the hour's sun in at the moon's place, the sky, haze and exposure, the weather over it, the photocell. (hours.ts putIn)
+/// The moon out, the hour's sun in at the moon's place, the weather over it, the photocell. (hours.ts putIn)
 pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
     let kind = crate::weather::weather_kind(g).is_some();
@@ -284,10 +282,6 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
         ..crate::render_lights::RtLight::default()   // every optional field absent, as in the literal
     });
     g.engine.lights.lights.insert(at, sun);
-    g.engine.settings.sky_zenith = v3::copy(def.sky.zenith);
-    g.engine.settings.sky_horizon = v3::copy(def.sky.horizon);
-    g.engine.settings.haze_density = def.haze;
-    g.engine.settings.exposure = def.exposure;
     g.m.hours.states = Some(HourState {
         sun, def: def.clone(), sun_k, given, soft: 0.0, sky_k: 1.0, was_off, moons, lamps: JsMap::new(), storm,
         to_sun,
@@ -296,31 +290,21 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
     lamps_out(g);
 }
 
-/// THE NIGHT'S HAZE, what the picture's settings hold on a level's own night (`hazeDensity` in src/settings.ts: the test below reads the file)
+/// THE NIGHT'S HAZE, what a picture is told on a level's own night (`hazeDensity` in src/settings.ts: the test below reads the file)
 pub const NIGHT_HAZE: f64 = 0.035;
-
-/// The picture's settings as the level's own night has them, once the hour or the show's day taken off was at this exposure. (hours.ts nightPicture)
-pub fn night_picture(g: &mut crate::game::Game, was_exposure: f64) {
-    g.engine.settings.sky_zenith = v3::copy(g.level.sky.zenith);
-    g.engine.settings.sky_horizon = v3::copy(g.level.sky.horizon);
-    g.engine.settings.haze_density = NIGHT_HAZE;
-    g.engine.settings.exposure = g.k.env.exposure * (g.engine.settings.exposure / was_exposure);
-}
 
 /// Everything the hour laid over the level put back. (hours.ts takeOut)
 pub fn take_out(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let lamps: Vec<(FixtureId, bool)> = st.lamps.iter().map(|(t, was)| (t, *was)).collect();
     let moons = st.moons.clone();
-    let (sun, def_exposure) = (st.sun, st.def.exposure);
+    let sun = st.sun;
     let on = crate::sim_lightshome::light_in().on;
     for (t, was) in lamps {
         if !crate::sim_lightshome::fixture_on(g, t) { crate::sim_lightshome::light_home_in(g, on, Some(t), Some(if was { 1.0 } else { 0.0 }), None, None, None); }
     }
     for l in moons { g.tab.light[l].enabled = true; }
     crate::render_lights::light_set_remove(g, sun);
-    // the picture told what the night's is: the level's sky, the night's haze and exposure, with a turn of the player's Brightness under the hour carried back. What the settings held before the hour is the picture's, so the game keeps none of it
-    night_picture(g, def_exposure);
     let storm = g.m.hours.states.take().and_then(|st| st.storm);
     g.weather.fog_glow = 1.0;
     if let Some(storm) = &storm {
@@ -363,7 +347,7 @@ pub fn hour_world_changed(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- the meter's stand-in
 
-/// THE SKY THE GAME'S LIGHT IS WORKED FROM NOW: the hour's as its weather leaves it, else the level's own night. Worked out from state the game keeps, as `exposure_of` is, and never read off the picture's settings, which a panel turns. What `under_weather` tells the picture is this.
+/// THE SKY THE GAME'S LIGHT IS WORKED FROM NOW: the hour's as its weather leaves it, else the level's own night. Worked out from state the game keeps, as `exposure_of` is, and never read off a picture. What a picture is told is this (`told`).
 pub fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
     match g.m.hours.states.as_ref() {
         Some(st) => crate::hours::SkyStateDome { zenith: greyed(st.def.sky.zenith, st.soft, Some(st.sky_k)), horizon: greyed(st.def.sky.horizon, st.soft, Some(st.sky_k)) },

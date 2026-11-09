@@ -443,10 +443,8 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
             if row.enabled && row.intensity > 0.0 {
                 row.intensity *= moon_scale;
                 st.moon_at = Some(LightAs { light: l, intensity: row.intensity });
-                let (z, h) = (g.engine.settings.sky_zenith, g.engine.settings.sky_horizon);
+                let (z, h) = crate::hours::told::sky_now(g);
                 let sky = ([z[0] * sky_scale, z[1] * sky_scale, z[2] * sky_scale], [h[0] * sky_scale, h[1] * sky_scale, h[2] * sky_scale]);
-                g.engine.settings.sky_zenith = sky.0;
-                g.engine.settings.sky_horizon = sky.1;
                 st.sky_at = Some(sky);
             }
         }
@@ -750,7 +748,6 @@ pub fn after(g: &mut Game) {
         let up = st.a.beat.as_ref().map_or(false, |b| b.row == Act::QuietGun) && st.a.rise > 0.0;
         if up { let c = g.pl[g.player].ch; let a = &mut g.ch[c].anim; a.crouch = m::min(a.crouch, 1.0 - QK.half * st.a.rise); } else { st.a.rise = 0.0; }
     }
-    if let Some((z, h)) = st.sky_at { g.engine.settings.sky_zenith = z; g.engine.settings.sky_horizon = h; }
     // (the team stands under a roof: no weather on the men, whatever the level's own roof test makes of a ceiling the camera never draws)
     if st.plan.as_ref().map_or(false, |p| p.indoors) {
         let pl = g.player;

@@ -208,7 +208,6 @@ pub mod roomclear;
 pub mod roomfight;
 pub mod roomfit;
 pub mod roomread;
-pub mod root_settings;
 pub mod rowset;
 pub mod runner;
 pub mod rustknobs;
