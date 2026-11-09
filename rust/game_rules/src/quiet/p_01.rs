@@ -243,14 +243,6 @@ pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
 /// once a frame: the camera put on a dealt start, the partner told to follow the first tick the orders have him   (quiet.ts QuietMission.tick)
 pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     if !g.quiet.active { return; }
-    if js::truthy(g.quiet.squad) {
-        if let Some(o) = g.quiet.ops.first().copied() {
-            if !g.guards.contains(&o) {   // despawned by something short of a restart: a full restart, which stages
-                crate::game::game_restart_encounter(g);
-                if !g.quiet.active { return; }
-            }
-        }
-    }
     if let (true, Some(cam)) = (g.quiet.cut, cam) {   // (with no camera the cut waits for a tick that has one)
         g.quiet.cut = false;
         let target = v3::copy(crate::game::game_follow_pos(g, None));

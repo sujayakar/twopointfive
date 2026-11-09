@@ -273,12 +273,6 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
 /// Once a frame from the game's update. (rescue.ts Rescue.tick)
 pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.rescue.active { return; }
-    let gone = g.rescue.ops.iter().chain(g.rescue.hostiles.iter()).any(|x| !g.guards.contains(x))
-        || g.rescue.hostages.iter().any(|h| !g.civilians.contains(h));
-    if gone {
-        crate::game::game_restart_encounter(g);
-        if !g.rescue.active { return; }
-    }
     crate::rescuecheck::rescue_check_say(g);
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
