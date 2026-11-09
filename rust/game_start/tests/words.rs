@@ -67,7 +67,7 @@ fn what_is_a_machines_own_moves_no_word() {
     let (here, other) = (p.g.seats[0], p.g.seats[1]);
     assert!(moved(&mut p, |g| game::seats::show_seat(g, other)).is_empty(), "which seat it shows");
     assert!(moved(&mut p, |g| game::seats::show_seat(g, here)).is_empty());
-    assert!(moved(&mut p, |g| g.out.push(game::out_events::OutEvent::ClearSnowMarks)).is_empty(), "what it told its picture");
+    assert!(moved(&mut p, |g| g.out.push(game::out_events::OutEvent::SmokeCansShut)).is_empty(), "what it told its picture");
     let cam = p.g.host_cam.expect("the host's camera");
     assert!(moved(&mut p, |g| g.tab.camera[cam].yaw += 1.0).is_empty(), "where it looks");
 }
