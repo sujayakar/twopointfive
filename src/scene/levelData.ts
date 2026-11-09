@@ -87,7 +87,7 @@ export interface ChokepointData { id: string; name?: string; floor?: string; pos
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
 /** A NAMED MARK (scene/level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
- *  way (scene/ways.ts) and a level script's place (game/director.ts). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
+ *  way (rust/game_draw/src/traffic.rs) and a level script's place (game/director.ts). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
 export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
 export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; floor?: string; c: Vec3; h: Vec3; yaw?: number; notes?: string; }
@@ -783,7 +783,7 @@ export function validateLevelData(d: LevelData): string[] {
           if (isStr(r.door)) { if (seen.has(r.door)) err(`${rw}.door`, `door '${r.door}' is named twice`); seen.add(r.door); }
           if (!isStr(r.name) || !r.name.trim() || r.name.length > 40) err(`${rw}.name`, 'must be a name of 1 to 40 characters'); });
       }
-      if (S.walked !== undefined) {   // (scene/scenarios.ts: ways the level is walked that nothing else in it says — scene/ways.ts; a name the level does not have walks nothing and is the level's lint's to say)
+      if (S.walked !== undefined) {   // (scene/scenarios.ts: ways the level is walked that nothing else in it says — rust/game_draw/src/traffic.rs; a name the level does not have walks nothing and is the level's lint's to say)
         const w = 'scenarios.walked';
         if (!Array.isArray(S.walked)) err(w, 'must be an array of { from, to, weight? }');
         else S.walked.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;

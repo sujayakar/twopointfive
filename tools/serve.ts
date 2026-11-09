@@ -8,7 +8,7 @@ import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 import { devRunner, type DevRunner } from "./mp/runner.ts";
 import { writePieces } from "./qa/capture-pieces.ts";
-import { faceAsk } from "./blitz/face-build.ts";   // the Rust game's module (rust/game_face), built when its sources are newer: the page asks for it only under ?rust=1
+import { faceAsk } from "./blitz/face-build.ts";   // the game's module (rust/game_face), built when its sources are newer
 
 /** the module file's own name (a kept run says which module it was played on: src/tape/module.ts) */
 let faceNamed = { path: "", at: 0, name: "" };
@@ -47,14 +47,14 @@ const server = Bun.serve({
       console.log(`capture: captures/${name}.tpscap.gz${pieces ? ` (and in ${pieces} pieces, ${name}.part1of${pieces}.tpscap.gz …)` : ''}  ·  bun run tools/qa/capture-read.ts captures/${name}.tpscap.gz`);
       return new Response(pieces ? `captured in ${pieces} pieces` : "captured");
     }
-    if (path === "/game_face.wasm") {   // THE RUST GAME (src/host/rustgame.ts, ?rust=1): the module's file. Where a source under rust/ is newer it is built first (tools/blitz/face-build.ts, the `play` profile), and the request is NOT held for the minutes that takes: 202 and a line the page shows while it asks again; where it cannot be built, 503 and the reason with the one command that mends it
+    if (path === "/game_face.wasm") {   // THE GAME: the module's file. Where a source under rust/ is newer it is built first (tools/blitz/face-build.ts, the `play` profile), and the request is NOT held for the minutes that takes: 202 and a line the page shows while it asks again; where it cannot be built, 503 and the reason with the one command that mends it
       const r = faceAsk(l => console.log(l), "play");
       if ("why" in r) return new Response(r.why, { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
       if ("wait" in r) return new Response(r.wait, { status: 202, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "2" } });
       return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store", ETag: `"${await faceName(r.path)}"` } });
     }
     const lv = await handleLevels(req); if (lv) return lv;
-    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a replay and a report file it: src/ui/replaykey.ts)
+    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a run and a report file it)
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
     if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
     const f = Bun.file("./public" + path);

@@ -3,7 +3,7 @@
 // roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray, cache
 // or light meter ever pays for it:
 //   • WORN PATHS on the polished floors — where the shift walks (the level's traffic map: patrol routes traced over the nav grid + every door's threshold,
-//     render/wear.ts) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
+//     rust/game_draw/src/traffic.rs) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
 //     never is even), never finer.
 //   • GRIME AT THE SKIRTING — the band of floor a mop does not reach (the traffic map's wall-proximity channel: within ~15 cm of anything standing on the
 //     floor): rougher, a shade darker; and the bottom hand-width of every wall / cabinet face carries the shoe and mop marks: darker, rougher.
@@ -12,7 +12,7 @@
 //   • EDGE WEAR ON METAL — within a couple of centimetres of a metal box's edges the paint / oxide is rubbed through to bright bare metal: base colour up,
 //     roughness down (the exact edge distance is free in a box world).
 // One amount k = frame.matCfg.w (settings.detail, 0‥1; 0.35 = 'lived-in', 1 = as far as it goes; 0 = none of this runs and the pixel is what it was).
-@group(1) @binding(6) var wearTex: texture_2d<f32>;      // the traffic map over the world's XZ footprint (render/wear.ts; rg8: r = traffic 0‥1, g = wall proximity 0‥1) — a 1×1 zero where nobody built one (the viewer)
+@group(1) @binding(6) var wearTex: texture_2d<f32>;      // the traffic map over the world's XZ footprint (rust/game_draw/src/traffic.rs; rg8: r = traffic 0‥1, g = wall proximity 0‥1) — a 1×1 zero where nobody built one (the viewer)
 
 const DUST_Y: f32 = 1.6;             // tops above this (m) gather dust
 const DUST_GREY: f32 = 0.33;         // what thick dust tends toward (a light warm grey, linear)

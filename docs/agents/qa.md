@@ -75,7 +75,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   general we should try to move fast at this point (maybe <5m for gate checks) and then have async checks that we fix forward").** A change is sent as
   single-parent commit(s) cut on the named head, and its sender runs the same reads first, from the repository's root: (1) THE SCAN: the diff against
   the named head read for anything that must not be public, every binary in the diff read with `strings` for machine paths, ids, names and hosts, no registry address in a lock file; (2) THE BAR:
-  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/claude-md-check.ts`, `bun run tools/qa/knobs-check.ts`,
+  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/checks.ts`,
   `bun run build`, all exit 0; (3) DETERMINISM AND ONE QUICK MISSION: `gate again` and `gate play` (`rust/game_start`): the same word every second in one process, and no pin moved, or the sender names the move. ONLY a change to what the page does at boot (the host, the
   loader) adds, up to a ceiling of fifteen minutes, one mission stood and played under real keys in headless Chromium (tools/qa/pages.ts). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
