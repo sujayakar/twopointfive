@@ -205,7 +205,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 8.88, 33.12, EXT, ext);                                               // north: blank, on the dark yard — the first hole
   K.wallX(k, 19, 8.88, 33.12, EXT, ext, [win(11.6, 13.6), win(19.0, 21.0)]);          // south: the corridor's two windows onto the lot. A metre clear of the duty room's door, so the camera's own side of the building does not hide that doorway
-  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/teammates/cleared.rs), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
+  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/teammates/cleared), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
   K.wallZ(k, 33, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'fire_exit', 'z', 33, 8.6, { exterior: true, steel: true, locked: true })]);   // east: the duty room's fire exit — steel, locked on its inside face (from the east side it opens to a hand: the second way in)
   K.grp(k, 'walls.interior');
   const iw = C.wall;
