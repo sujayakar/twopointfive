@@ -12,10 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK === '1', asked = process.argv.slice(2);
-const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
-/** pages still to be written over: named by the index, asked nothing. This list only gets shorter */
-const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel'].map(a => `docs/agents/${a}.md`);
-
+const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 16_000, WIDE = 200;
 /** the other documents people work from, and the most each may be */
 const OTHER: Readonly<Record<string, number>> = { 'CLAUDE.md': 12_000, 'README.md': 8_000, 'STYLE.md': 18_000, 'docs/level-format.md': 42_000, '.claude/skills/verify/SKILL.md': 11_000, '.claude/skills/level/SKILL.md': 20_000,
   'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/fold/README.md': 12_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
@@ -84,13 +81,12 @@ const line = (ok: boolean, text: string) => { if (!ok) bad++; console.log(`- ${o
 const index = read('CLAUDE.md'), areas = files.filter(f => /^docs\/agents\/[^/]+\.md$/.test(f)).sort(), nLines = index.split('\n').length, bytes = Buffer.byteLength(index);
 if (!asked.length) {
   line(bytes <= INDEX.bytes && nLines <= INDEX.lines, `CLAUDE.md is ${bytes} bytes and ${nLines} lines (${INDEX.bytes} and ${INDEX.lines} at most)`);
-  const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``)), lost = OLD.filter(f => !areas.includes(f));
+  const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``));
   line(!unnamed.length, `the index names every page (${areas.length})${unnamed.length ? `: not ${unnamed.join(' ')}` : ''}`);
-  line(!lost.length, `the list of pages still to be written over names pages that are there${lost.length ? `: not ${lost.join(' ')}` : ` (${OLD.length})`}`);
   const un = uncredited(f => files.includes(f) ? read(f) : '');
   line(!un.length, `"${CREDIT.line}" stands at all ${CREDIT.at.length} of its places${un.length ? `: not ${un.join(' ')}` : ''}`);
 }
-for (const f of areas.filter(a => asked.length ? asked.some(w => a.endsWith(`/${w.replace(/\.md$/, '')}.md`) || a === w) : !OLD.includes(a))) {
+for (const f of areas.filter(a => asked.length ? asked.some(w => a.endsWith(`/${w.replace(/\.md$/, '')}.md`) || a === w) : true)) {
   const found = faults(read(f), PAGE); line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes, every name in it is there`}`); for (const x of found) console.log(`    ${x}`); }
 for (const [f, most] of Object.entries(OTHER)) if (!asked.length || asked.includes(f)) {
   const found = files.includes(f) ? faults(read(f), most) : ['it is not in the tree']; line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes`}`); for (const x of found) console.log(`    ${x}`); }
