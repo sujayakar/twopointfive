@@ -511,10 +511,6 @@ export interface ScenarioEntry {
   /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (rust/game_rules/src/loadout
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL */
   only?: string;
-  /** a lesson THE PLAYER PACKS FOR (rust/game_rules/src/kit ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
-   *  every other lesson is played with. `frags` = the least of them he carries there whatever
-   *  he packs (rust/game_rules/src/kit kit_lesson_page: a step of that mission asks for one of his own) */
-  packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */
   level?: string;
   /** THE ROW'S OWN HOUR AND WEATHER (rust/game_rules/src/rowset, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one

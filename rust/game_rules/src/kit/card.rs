@@ -16,8 +16,6 @@ use alloc::{format, string::String, vec::Vec};
 pub struct CardFor {
     /// the mission has no fog of war, so a carried wand or cameras do nothing on it
     pub no_fog: bool,
-    /// the least frags the mission puts on you
-    pub frags: f64,
 }
 
 /// Where the launcher's load is worked from (slotsetup.ts loadKeys; the words of the build's own keys, as player.rs words them).
@@ -237,16 +235,13 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
     let v = row_get(g, r, m);
     let none = carries_none(g, r.field, &v);
     let idle = !none && on.no_fog && matches!(r.field, KitField::Wand | KitField::Cams);
-    let handed = if i == 0.0 && r.field == KitField::Frags { m::floor(m::max(0.0, on.frags)) } else { 0.0 };
-    let lent = handed > m.frags && r.field == KitField::Frags;
     let (kind, n) = match &v {
         KitValue::Num(n) => (CardKind::Count, *n),
         KitValue::Bool(b) => (CardKind::Flag, if *b { 1.0 } else { 0.0 }),
         KitValue::Text(_) => (CardKind::Choice, if none { 0.0 } else { 1.0 }),
     };
-    let note = if lent { row_note(g, i, r, &MemberKit { frags: handed, ..m.clone() }) } else { row_note(g, i, r, m) };
-    // (what the mission alone fills costs none of his pouches)
-    let cost = kit_row_cost(g, i, r, Some(m)).filter(|_| !(lent && m.frags == 0.0)).map_or(String::new(), |c| cost_words(&c));
+    let note = row_note(g, i, r, m);
+    let cost = kit_row_cost(g, i, r, Some(m)).map_or(String::new(), |c| cost_words(&c));
     let share = crate::kitload::load_share(g, i, m, r.field.as_str());
     let mut would = None;
     if share.is_none() {
@@ -284,7 +279,7 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
         fixed: !row_fixed(g, r, m).is_empty(),
         changed: !same_value(&v, &was),
         idle,
-        lent: if lent { handed } else { 0.0 },
+        lent: 0.0,
         less: kit_peek(g, i, r.field, -1.0).why,
         more: kit_peek(g, i, r.field, 1.0).why,
         can: kit_row_can(g, m, r.field),
