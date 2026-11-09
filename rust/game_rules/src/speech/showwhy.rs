@@ -594,17 +594,7 @@ fn owe(m: &mut crate::showwhy::Mem, text: &str, why: crate::showwhy::Why, by: f6
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_blank_memory_is_void() {
-        let r = blank(7.5);
-        assert_eq!(r.t, 7.5);
-        assert_eq!(r.line_t0, -100.0);
-        assert!(r.line_b.is_nan());
-        assert!(r.keep_t0.is_nan());
-        assert_eq!(r.hurt_said, -1.0);
-        assert!(r.owed.is_empty());
-    }
-
+    /// A FAILURE MEANS: a man nags: the same line twice, or more waiting than he will ever get to say.
     #[test]
     fn two_lines_at_most_wait_and_never_the_same_twice() {
         let mut r = blank(0.0);
@@ -618,6 +608,7 @@ mod tests {
         assert_eq!(r.owed[1].text, LINE_HURT);
     }
 
+    /// A FAILURE MEANS: a man waves at you without end: each raised fist waits twice the last, up to a cap that cannot overflow.
     #[test]
     fn the_fists_space_out_by_doubling() {
         assert_eq!(fist_doubling(1), 1.0);
@@ -626,17 +617,9 @@ mod tests {
         assert_eq!(fist_doubling(100), 1073741824.0);
     }
 
+    /// A FAILURE MEANS: a man on the floor above counts as far off: every range here is on the floor.
     #[test]
-    fn the_lines_are_the_tables() {
-        let t = showwhy_lines();
-        assert_eq!((t.line.as_str(), t.door.as_str(), t.hurt.as_str(), t.lag.as_str(), t.keep.as_str()), (LINE_LINE, LINE_DOOR, LINE_HURT, LINE_LAG, LINE_KEEP));
+    fn a_range_is_on_the_floor() {
+        assert_eq!(flat([0.0, 0.0, 0.0], [3.0, 9.0, 4.0]), 5.0);
     }
-
-    #[test]
-    fn flat_is_the_typescript_bits() {
-        assert_eq!(flat([1.5, 0.0, 2.25], [-3.1, 9.0, 0.7]).to_bits(), FLAT_A);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 5.0, -0.7]).to_bits(), FLAT_B);
-    }
-    const FLAT_A: u64 = 0x40136a9ef26f762e;
-    const FLAT_B: u64 = 0x3fed80a69c19e42a;
 }

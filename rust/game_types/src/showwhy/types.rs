@@ -75,15 +75,6 @@ pub struct State {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct SHOWWHYLINES {
-    pub line: String,
-    pub door: String,
-    pub hurt: String,
-    pub lag: String,
-    pub keep: String,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShowwhyMod {
@@ -91,5 +82,3 @@ pub struct ShowwhyMod {
     pub op_mem: JsMap<DoorOpId, crate::showwhy::OpMem>,
     pub states: JsMap<PlayerId, crate::showwhy::State>,
 }
-
-pub fn showwhy_lines() -> crate::showwhy::SHOWWHYLINES { crate::showwhy::SHOWWHYLINES { line: String::from("you're in my line."), door: String::from("after you."), hurt: String::from("I'm hit."), lag: String::from("I can't keep up."), keep: String::from("I've got this door.") } }

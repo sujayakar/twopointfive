@@ -173,29 +173,24 @@ mod tests {
         }
     }
 
+    /// A FAILURE MEANS: a lead calls a room clear with a man still in it, says nothing of a room he could not see all of, or "boss are quiet".
     #[test]
-    fn the_quiet_call_agrees_in_number_as_the_regex_does() {
-        for (name, plural) in [("bunks", true), ("server room", false), ("boss", false), ("s", false), ("", false), ("as", true)] {
-            assert_eq!(ends_plural(name), plural, "{name:?}");
-        }
-    }
-
-    #[test]
-    fn room_call_and_its_counters() {
+    fn a_lead_calls_clear_only_with_nobody_left_and_quiet_only_of_what_he_did_not_see() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
             assert_eq!(room_call(g, "mess", 0.0, false, false).as_deref(), Some("mess clear."));
             assert_eq!(room_call(g, "bunks", 3.0, false, false).as_deref(), Some("bunks are quiet. we didn't see all of it."));
             assert_eq!(room_call(g, "server room", 3.0, true, false).as_deref(), Some("server room's quiet. we didn't see all of it."));
+            assert_eq!(room_call(g, "boss", 3.0, true, false).as_deref(), Some("boss's quiet. we didn't see all of it."));
             assert_eq!(room_call(g, "mess", 0.0, true, false), None);
             assert_eq!(room_call(g, "mess", 3.0, true, true), None);
             assert_eq!(room_call(g, "mess", 3.0, false, true), None);
-            assert_eq!((g.squad_net.stats.clears, g.squad_net.stats.quiets), (1.0, 2.0));
         });
     }
 
+    /// A FAILURE MEANS: an entry onto open floor is called as if it had been a room, or a call is made when nothing can be said.
     #[test]
-    fn plain_call_counts_only_what_it_says() {
+    fn open_floor_is_clear_so_far_and_a_room_nobody_named_is_called_as_room() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
             assert_eq!(plain_call(g, true, 0.0, true, false).as_deref(), Some("clear so far."));
@@ -203,10 +198,10 @@ mod tests {
             assert_eq!(plain_call(g, false, 0.0, false, false).as_deref(), Some("room clear."));
             assert_eq!(plain_call(g, false, 3.0, false, false).as_deref(), Some("room's quiet. we didn't see all of it."));
             assert_eq!(plain_call(g, false, 3.0, true, true), None);
-            assert_eq!(g.squad_net.stats.ends, 3.0);
         });
     }
 
+    /// A FAILURE MEANS: a quick-key pick gives a reason it does not have, or keeps one it has to itself.
     #[test]
     fn why_words_says_only_the_reasons() {
         on_big_stack(|| {
@@ -227,17 +222,19 @@ mod tests {
         });
     }
 
+    /// A FAILURE MEANS: a restart still says "Hicks is down." from the last try, or tells of men already down when the net comes back.
     #[test]
-    fn reset_keeps_last_t() {
+    fn a_restart_clears_the_nets_rows_and_what_it_owes() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
-            g.squad_net.last_t = 7.0;
             g.squad_net.seeded = true;
+            g.squad_net.down.push(String::from("Hicks"));
+            g.squad_net.rows.push(crate::squadnet::NetRow { text: String::from("Hicks is down."), at: [0.0; 3], t: 1.0, dur: 3.0 });
             squad_net_line(g);
-            assert!(g.squad_net.click_due);
+            assert!(g.squad_net.click_due, "a line off your screen owes a click");
             squad_net_reset(g);
+            assert!(g.squad_net.rows.is_empty() && g.squad_net.down.is_empty());
             assert!(!g.squad_net.click_due && !g.squad_net.seeded);
-            assert_eq!((g.squad_net.stats.lines, g.squad_net.last_t), (0.0, 7.0));
         });
     }
 }

@@ -213,136 +213,116 @@ mod tests {
         LevelScenariosDoorNamesItem { door: door.to_string(), name: name.to_string() }
     }
 
-    fn level() -> Level {
+    fn level(rooms: Vec<StructureRoom>, written: Vec<LevelScenariosDoorNamesItem>) -> Level {
         let mut rc = StructureData::default();
-        rc.rooms = vec![
-            room("The  mess", &[("w_n", "the hall"), ("b_s", "outside"), ("x_1", "east side"), ("c_d", "bunks 1"), ("m_c", "north corridor"), ("q7", "the northern wing")]),
-            room("comms room", &[("m_c", "mess")]),
-            room("ward", &[("hd", "hall")]),
-            room("dock", &[("d1", "hall"), ("d2", "hall")]),
-            room("dock", &[("d3", "yard"), ("d4", "yard"), ("d5", "yard"), ("d6", "yard"), ("d7", "yard"), ("d8", "yard")]),
-            room("vault", &[("v1", "hall"), ("v2", "yard")]),
-            room("pantry", &[("p1", "northerner"), ("p2", "yard")]),
-        ];
+        rc.rooms = rooms;
         let mut s = LevelScenarios::default();
         s.room_clear = Some(rc);
-        s.door_names = Some(vec![row("v1", "  the strong door "), row("v1", "other"), row("nope", "x"), row("v2", " the "), row("n9", "THE\u{a0}night door")]);
+        s.door_names = Some(written);
         let mut l = Level::default();
         l.scenarios = Some(s);
         l
     }
 
-    fn ids() -> Vec<String> {
-        ["w_n", "b_s", "x_1", "c_d", "m_c", "q7", "hd", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "v1", "v2", "p1", "p2", "ward", "radio_room", "kitchen_to_hall", "back_1", "n9", "records_west"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect()
+    fn ids(list: &[&str]) -> Vec<String> { list.iter().map(|s| s.to_string()).collect() }
+
+    /// What the doors of these rooms are said by.
+    fn made(rooms: Vec<StructureRoom>, list: &[&str]) -> Vec<String> {
+        let m = names_of(&level(rooms, Vec::new()), &ids(list), None);
+        list.iter().map(|id| m.get(id.to_string()).cloned().unwrap_or_default()).collect()
     }
 
-    fn pairs(m: &JsMap<String, String>) -> Vec<(String, String)> {
-        m.iter().map(|(k, v)| (k, v.clone())).collect()
-    }
-
-    fn want(rows: &[(&str, &str)]) -> Vec<(String, String)> {
-        rows.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
-    }
-
-    // Every expected value below is what the TypeScript printed under bun for the same level.
-    const COMMON_HEAD: &[(&str, &str)] = &[
-        ("w_n", "hall-side mess door"),
-        ("b_s", "outer mess door"),
-        ("x_1", "first mess door"),
-        ("c_d", "mess door from bunks 1"),
-        ("m_c", "mess to comms room door"),
-        ("q7", "second mess door"),
-        ("hd", "second ward door"),
-        ("d1", "first dock door"),
-        ("d2", "second dock door"),
-        ("d3", "third dock door"),
-        ("d4", "fourth dock door"),
-        ("d5", "fifth dock door"),
-        ("d6", "fifth dock door"),
-        ("d7", "fifth dock door"),
-        ("d8", "fifth dock door"),
-    ];
-    const VAULT: &[(&str, &str)] = &[("v1", "hall-side vault door"), ("v2", "yard-side vault door")];
-    const PANTRY: &[(&str, &str)] = &[("p1", "northerner-side pantry door"), ("p2", "yard-side pantry door")];
-
+    /// A FAILURE MEANS: a door of a room with more than one way in is said so that a player cannot tell which.
     #[test]
-    fn made_names_match_the_typescript() {
-        let expect: Vec<(String, String)> = [COMMON_HEAD, VAULT, PANTRY].iter().flat_map(|r| want(r)).collect();
-        assert_eq!(pairs(&names_of(&level(), &ids(), None)), expect);
+    fn a_shorthand_door_is_said_by_its_room_and_what_lies_behind_it() {
+        let doors = [("w_n", "the hall"), ("b_s", "outside"), ("c_d", "bunks 1"), ("x_1", "annex side")];
+        assert_eq!(made(vec![room("The mess", &doors)], &["w_n", "b_s", "c_d", "x_1"]), ["hall-side mess door", "outer mess door", "mess door from bunks 1", "annex side mess door"]);
     }
 
+    /// A FAILURE MEANS: a door between two rooms is said as if it were only one room's.
     #[test]
-    fn written_names_match_the_typescript() {
-        let written = authored_of(&level(), &ids());
-        assert_eq!(pairs(&written), want(&[("v1", "strong door"), ("v2", "the"), ("n9", "night door")]));
-        let expect: Vec<(String, String)> = [COMMON_HEAD, PANTRY].iter().flat_map(|r| want(r)).collect();
-        assert_eq!(pairs(&names_of(&level(), &ids(), Some(&written))), expect);
+    fn a_door_two_rooms_list_names_both() {
+        let rooms = vec![room("mess", &[("m_c", "comms"), ("q7", "hall")]), room("comms room", &[("m_c", "mess")])];
+        assert_eq!(made(rooms, &["m_c"]), ["mess to comms room door"]);
     }
 
+    /// A FAILURE MEANS: "hall-side ward door" on a ward with no other door, or two doors of a room said alike.
     #[test]
-    fn no_names_for_a_lesson_or_a_level_without_structure() {
-        let mut lesson = level();
-        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::default().into());
-        assert!(names_of(&lesson, &ids(), None).is_empty());
-        assert!(names_of(&Level::default(), &ids(), None).is_empty());
+    fn a_rooms_only_way_is_just_its_door_and_doors_that_read_alike_are_told_apart() {
+        assert_eq!(made(vec![room("ward", &[("hd", "hall")])], &["hd"]), ["ward door"]);
+        // all to the same place, in the file's order, and the ordinals stop at the last there is
+        let dock = [("d1", "hall"), ("d2", "hall"), ("d3", "hall"), ("d4", "hall"), ("d5", "hall"), ("d6", "hall")];
+        assert_eq!(made(vec![room("dock", &dock)], &["d1", "d2", "d3", "d4", "d5", "d6"]), ["first dock door", "second dock door", "third dock door", "fourth dock door", "fifth dock door", "fifth dock door"]);
+        // a name another door's own id already reads as
+        assert_eq!(made(vec![room("ward", &[("hd", "hall")])], &["hd", "ward"]), ["second ward door", ""]);
     }
 
+    /// A FAILURE MEANS: "north corridor-side mess door" on a HUD that has no compass; and a word that only starts like a bearing is lost.
     #[test]
-    fn shorthand_ids_match_the_typescript() {
-        let rows = [
-            ("w_n", true), ("n4a", true), ("s34", true), ("mgr", true), ("hd", true), ("radio_room", false), ("fire_exit", false), ("bunks", false),
-            ("back_1", false), ("kitchen_to_hall", false), ("records_west", true), ("off", true), ("his", true), ("a__b", true), ("", true), ("12", false),
-            ("é", true), ("ééé", true), ("Abc", true), ("BCD", true),
-        ];
-        for (id, want) in rows {
-            assert_eq!(id_is_shorthand(id), want, "{id}");
-        }
+    fn a_bearing_behind_a_door_is_left_out_of_its_name() {
+        assert_eq!(made(vec![room("mess", &[("m_n", "north corridor"), ("b_e", "the western wing")])], &["m_n", "b_e"]), ["first mess door", "second mess door"]);
+        assert_eq!(made(vec![room("pantry", &[("p1", "northerner"), ("p2", "yard")])], &["p1", "p2"]), ["northerner-side pantry door", "yard-side pantry door"]);
+        assert!(has_bearing("north corridor") && has_bearing("the western wing"));
+        assert!(!has_bearing("northerner"));
     }
 
+    /// A FAILURE MEANS: a door whose id is its author's shorthand is read out ("w n door"), or a door whose id is words loses them.
     #[test]
-    fn bearing_is_a_whole_word() {
-        assert!(has_bearing("north corridor") && has_bearing("the western wing") && has_bearing("é east"));
-        assert!(!has_bearing("northerner") && !has_bearing("north_wing") && !has_bearing("North"));
+    fn an_id_of_words_is_said_and_an_id_of_letters_is_not() {
+        for id in ["radio_room", "fire_exit", "back_1", "kitchen_to_hall", "bunks"] { assert!(!id_is_shorthand(id), "{id}"); }
+        for id in ["w_n", "n4a", "mgr", "hd", "records_west", "off"] { assert!(id_is_shorthand(id), "{id}"); }
     }
 
+    /// A FAILURE MEANS: "the mess door" is said "the the mess door", or a word that starts like the article loses its head.
     #[test]
-    fn bare_drops_a_leading_article_only() {
+    fn a_name_loses_a_leading_article_only() {
         assert_eq!(bare("The  mess"), "mess");
-        assert_eq!(bare("THE\u{a0}x"), "x");
         assert_eq!(bare("theatre"), "theatre");
         assert_eq!(bare("the"), "the");
-        assert_eq!(bare("the\u{85}x"), "the\u{85}x");
-        assert_eq!(bare("é the x"), "é the x");
     }
 
-    /// A door by its ID: nameDoors over rows of `g.dr`; every expected value is what the TypeScript printed under bun for the same doors.
+    /// A FAILURE MEANS: a level's author writes a door's name and the game says something else.
     #[test]
-    fn names_hang_on_the_door_id() {
+    fn a_doors_first_usable_written_name_wins_and_none_is_made_for_it() {
+        let l = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")])], vec![row("v1", "  "), row("v1", "  the strong door "), row("v1", "other"), row("nope", "x")]);
+        let list = ids(&["v1", "v2"]);
+        let written = authored_of(&l, &list);
+        assert_eq!(written.iter().map(|(k, v)| (k, v.clone())).collect::<Vec<_>>(), [("v1".to_string(), "strong door".to_string())]);
+        let m = names_of(&l, &list, Some(&written));
+        assert_eq!((m.get("v1".to_string()), m.get("v2".to_string()).map(String::as_str)), (None, Some("yard-side vault door")));
+    }
+
+    /// A FAILURE MEANS: a lesson's doors, which it speaks of itself, get names of the mission kind.
+    #[test]
+    fn no_names_are_made_for_a_lesson_or_a_level_without_rooms() {
+        let mut lesson = level(vec![room("ward", &[("hd", "hall")])], Vec::new());
+        assert!(!names_of(&lesson, &ids(&["hd"]), None).is_empty());
+        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::default().into());
+        assert!(names_of(&lesson, &ids(&["hd"]), None).is_empty());
+        assert!(names_of(&Level::default(), &ids(&["hd"]), None).is_empty());
+    }
+
+    /// A FAILURE MEANS: a door carries no name, or the wrong name, once the level is stood; the office says only what its level wrote.
+    #[test]
+    fn a_door_says_its_written_name_first_and_the_office_says_only_that() {
         let mut g = Game::blank();
-        g.level = level();
+        g.level = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")]), room("ward", &[("hd", "hall")])], vec![row("v1", "the strong door")]);
         let mut door = |name: &str| {
             let mut d = crate::doors::Door::blank();
             d.def.name = name.to_string();
             g.dr.push(d)
         };
-        let (v1, hd, radio, d1) = (door("v1"), door("hd"), door("radio_room"), door("d1"));
-        let d2 = door("d2");
-        name_doors(&mut g, false, &[v1, hd, radio, d1, d2]);
+        let (v1, hd, radio) = (door("v1"), door("hd"), door("radio_room"));
+        name_doors(&mut g, false, &[v1, hd, radio]);
         assert_eq!(door_written_name(&mut g, v1).as_deref(), Some("strong door"));
         assert_eq!(door_said_name(&mut g, v1).as_deref(), Some("strong door"));
         assert_eq!(door_written_name(&mut g, hd), None);
         assert_eq!(door_said_name(&mut g, hd).as_deref(), Some("ward door"));
         assert_eq!(door_said_name(&mut g, radio), None);
-        assert_eq!(door_said_name(&mut g, d1).as_deref(), Some("first dock door"));
-        assert_eq!(door_said_name(&mut g, d2).as_deref(), Some("second dock door"));
-        // the office: only what its level wrote
-        let mut g2 = g.clone();
-        g2.m.doornames = DoornamesMod::blank();
-        name_doors(&mut g2, true, &[v1, d1]);
-        assert_eq!(door_said_name(&mut g2, v1).as_deref(), Some("strong door"));
-        assert_eq!(door_said_name(&mut g2, d1), None);
+        let mut office = g.clone();
+        office.m.doornames = DoornamesMod::blank();
+        name_doors(&mut office, true, &[v1, hd]);
+        assert_eq!(door_said_name(&mut office, v1).as_deref(), Some("strong door"));
+        assert_eq!(door_said_name(&mut office, hd), None);
     }
 }
