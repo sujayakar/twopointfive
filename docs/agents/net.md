@@ -258,8 +258,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
   lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own thirteen forms ·
   `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 331 files, 60 reads, all
-  under src/game) for every READ of a setting, each COUNTED on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap, laid over a
-  networked page before every tick), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already
+  under src/game) for every READ of a setting, each COUNTED on a named list of rows that says PICTURE, CARRIED (journal.ts EnvSnap), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already
   has a row for included), and so is a row that counts more than there are · `hour` a game stood on the
   stand asked: the night's with the picture at a quarter, the hour's own at midday with the picture told the same, the show's day's, the night's again
   each way back · `one run` barracks-four:1 played plain and with the picture turned three ways (`QA_PICTURE='{"exposure":0.5}'` in front of any
@@ -267,7 +266,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   (`--set '{"ENV":{"exposure":0.5}}'`) another, so the line can go red; its runs are the shipped stand's whichever stand the check is run on (the frozen
   one has no goggles on anybody). `SETTINGS_BREAK=1`: `reads` and `one run` fail. Two older probes now ask the game's own numbers where they asked the
   picture's (nvg-probes `nvg-sight`, irlight-probes). STILL TO MOVE, named on that list: the sky's colours for the hour (hours.ts skyLum),
-  `emissiveScale` and `flashlightRadius` (carried, so a co-op page cannot part by them), `debrisCap`, irlight.ts's `indirectScale` (the senses' owner's).
+  `flashlightRadius` (carried, so a co-op page cannot part by it), `debrisCap`, irlight.ts's `indirectScale` (the senses' owner's).
   WHO EMPTIES THE LIST: the multiplayer goal, a mend each on this one's pattern, for every TO MOVE and TO JUDGE row no other owner is named on. NOT ON
   IT, the same fault by another door: game code reads the picture's CAMERA (`engine.viewFocus`: wind.ts, airSim.ts, fire.ts, snowBreath.ts), and two
   players have two cameras. NOT a line of

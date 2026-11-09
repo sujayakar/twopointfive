@@ -36,7 +36,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
     let device = g.engine.device;
     g.decals = crate::render_decals::decals_new(g, device);
-    if !g.engine.settings.decals { g.decals.enabled = false; }
     g.weather = crate::weather::weather_new(g);
     let p = g.player;
     let player_light = g.tune.player_light;
@@ -138,35 +137,33 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
         }
     }
     // emissive markings are lights: a switchable box's marking with `emit` registers an emitter over its rect, on the same target's supply
-    if g.engine.settings.markings {
-        for &t in targets.iter() {
-            let (kind, group, name, boxes) = {
-                let f = &g.tab.sim_lightshome_fixture[t];
-                (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone())
-            };
-            if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "emergency" { continue; }
-            for &bi in boxes.iter() {
-                let (marks, tilted, albedo, c, h, yaw) = { let b = seam_box_row(g, ids[bi as usize]); (b.marks.clone(), b.rot.is_some(), b.albedo, b.c, b.h, b.yaw) };
-                let Some(marks) = marks else { continue };
-                if marks.is_empty() || tilted { continue; }
-                let mk_texel = g.engine.settings.marking_texel;
-                for (k, mk) in marks.iter().enumerate() {
-                    let st = crate::scene_markings::mark_stats(mk, albedo, Some(mk_texel));
-                    if !js::truthy(st.emask) { continue; }
-                    let maxc = m::max_n(&[st.mean_l[0], st.mean_l[1], st.mean_l[2]]);
-                    let i0 = maxc * st.area;
-                    if st.area < 0.01 || i0 < crate::game::MARK_LIGHT_MIN_I0 { continue; }   // LED rows, UI bars, buttons: they glow, they light nothing
-                    let r = crate::scene_markings::mark_world_rect(mk, c, h, yaw, Some(mk_texel));
-                    let n = r.n;
-                    let on = crate::sim_lightshome::fixture_on(g, t);
-                    let light = add_light(g, &format!("{}_mark{}_{}", name, bi as i64, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
-                        v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
-                        m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0, true,
-                        if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
-                    g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
-                    g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
-                    g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
-                }
+    for &t in targets.iter() {
+        let (kind, group, name, boxes) = {
+            let f = &g.tab.sim_lightshome_fixture[t];
+            (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone())
+        };
+        if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "emergency" { continue; }
+        for &bi in boxes.iter() {
+            let (marks, tilted, albedo, c, h, yaw) = { let b = seam_box_row(g, ids[bi as usize]); (b.marks.clone(), b.rot.is_some(), b.albedo, b.c, b.h, b.yaw) };
+            let Some(marks) = marks else { continue };
+            if marks.is_empty() || tilted { continue; }
+            let mk_texel = g.level.mark_texel.unwrap_or(crate::scene_markings::MARKING_TEXEL);
+            for (k, mk) in marks.iter().enumerate() {
+                let st = crate::scene_markings::mark_stats(mk, albedo, Some(mk_texel));
+                if !js::truthy(st.emask) { continue; }
+                let maxc = m::max_n(&[st.mean_l[0], st.mean_l[1], st.mean_l[2]]);
+                let i0 = maxc * st.area;
+                if st.area < 0.01 || i0 < crate::game::MARK_LIGHT_MIN_I0 { continue; }   // LED rows, UI bars, buttons: they glow, they light nothing
+                let r = crate::scene_markings::mark_world_rect(mk, c, h, yaw, Some(mk_texel));
+                let n = r.n;
+                let on = crate::sim_lightshome::fixture_on(g, t);
+                let light = add_light(g, &format!("{}_mark{}_{}", name, bi as i64, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
+                    v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
+                    m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0, true,
+                    if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
+                g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
+                g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
+                g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
             }
         }
     }

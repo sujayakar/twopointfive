@@ -66,7 +66,6 @@ pub struct DecalOpts {
 #[derive(Clone, Debug)]
 pub struct Decals {
     pub list: Vec<crate::render_decals::Decal>,
-    pub enabled: bool,
     pub buf: crate::Opaque,
     pub dirty: bool,
     pub serial: f64,
@@ -77,7 +76,6 @@ impl Decals {
     pub fn blank() -> Self {
         Decals {
             list: Vec::new(),
-            enabled: true,
             buf: crate::Opaque,
             dirty: true,
             serial: 0.0,

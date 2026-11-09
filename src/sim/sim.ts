@@ -134,7 +134,7 @@ export interface SimExports {
   lights_cap(table: number): number; lights_ids(): number;
   lights_in(g: number, kind: number, t: number, a: number, b: number, c: number, d: number): number;
   lights_flip(g: number, on: number, time: number, strike: number, n: number): void;
-  lights_step(g: number, time: number, dt: number, near: number, fumble: number, es: number): number;
+  lights_step(g: number, time: number, dt: number, near: number, fumble: number): number;
   camera_pan(g: number, i: number, dt: number, live: number, cones: number): number;
   camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
   laser_open(g: number, i: number): number;

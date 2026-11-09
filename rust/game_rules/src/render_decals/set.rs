@@ -162,9 +162,8 @@ fn defaults(kind: DecalKind) -> (f64, f64) {
 }
 
 /// THE RULE OF THE LIST. A mark of `kind` centred at `pos` on a surface whose outward normal is `normal`; `size` for the kind's own radius. What it answers is the
-/// mark's serial, or none where the list takes no such mark (the marks are off, a full list of play's marks and this only for the picture, a crack on no pane).
+/// mark's serial, or none where the list takes no such mark (a full list of play's marks and this only for the picture, a crack on no pane).
 pub fn lay(g: &mut Game, kind: DecalKind, pos: V3, normal: V3, size: Option<f64>, o: &DecalOpts) -> Option<u32> {
-    if !g.decals.enabled { return None; }
     let n = v3::normalize(normal);
     let mut t = match o.tangent { Some(t) => v3::sub(t, v3::scale(n, v3::dot(t, n))), None => perpendicular(n) };
     if v3::len(t) < 1e-4 { t = perpendicular(n); }

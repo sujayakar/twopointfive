@@ -50,7 +50,6 @@ export function bulletMark(g: Game, hitP: Vec3, n: Vec3, s: Surface, def: Weapon
 /** The stun charge went off at `at` (combat.ts detonateStun: a hand above the resting can): the big scorch on whatever it lay on — the floor, a desk, the seat of a
  *  chair (that one rides the chair) — and weaker splashes up the statics / leaves / furniture standing within a metre, fading with distance. */
 export function bangScorch(g: Game, at: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('bangScorch', undefined, [g, at]); if (__r !== RUST_PASS) return __r as any; } }
-  if (!g.decals.enabled) return;
   const from: Vec3 = [at[0], at[1] + 0.25, at[2]]; const down: Vec3 = [0, -1, 0];
   // what it lay on: the nearer of a static / leaf under it and a prop part under it (a can that came to rest on a carton scorches the carton)
   const st = g.col.raycast(from, down, 1.5); const ph = g.props.raycast(from, down, 1.5);
@@ -89,7 +88,6 @@ export function bangScorch(g: Game, at: Vec3) { { const __s = RUST_SURFACE; if (
 /** A boot through the lock of leaf `d` from `from`'s side (player.ts updateKick at the impact): a rubber scuff by the lock at kicking height on THAT face, riding the
  *  leaf as it flies. */
 export function kickScuff(g: Game, d: Door, from: Vec3) {
-  if (!g.decals.enabled) return;
   const side = g.doors.side(d, from); const u = d.dir(); const W = d.def.width;
   const along = Math.max(W * 0.5, Math.min(W - 0.2, (from[0] - d.def.hinge[0]) * u[0] + (from[2] - d.def.hinge[1]) * u[1]));   // by the lock, on the outer half (Doors.kickSpot's own clamp)
   const n: Vec3 = [-u[1] * side, 0, u[0] * side];                                                                             // out of the leaf on the kicker's side

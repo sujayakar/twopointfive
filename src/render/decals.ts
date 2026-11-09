@@ -130,7 +130,8 @@ export const MARKSIT = { on: false };
 export class Decals {
   /** live decals, oldest first (the ring drops from the front) */
   readonly list: Decal[] = [];
-  /** off: add() records nothing, frame() uploads nothing, the engine keeps FrameFlags.Decals down — the buffer stays exactly as it was (settings.decals mirrors in here) */
+  /** off (the picture's settings.decals, written here by the engine): frame() uploads nothing and the engine keeps FrameFlags.Decals down, so the buffer stays exactly as it was.
+   *  The list stands: the marks are the game's, whatever a picture shows */
   enabled = true;
   /** the header's fourth word as last UPLOADED (MARKSIT above): the table moved since = one more build and upload */
   private sat = false;
@@ -149,9 +150,8 @@ export class Decals {
   get count() { return this.list.length; }
 
   /** Leave a mark of `kind` centred at `pos` on a surface whose outward normal is `normal` (world). `size` overrides the kind's radius (the scuff's LENGTH goes in
-   *  opts.param). Returns the decal, or null when decals are off. Never touches Math.random (seeded QA runs must not shift): the look seed counts. */
+   *  opts.param). Returns the decal, or null where the list takes no such mark. Never touches Math.random (seeded QA runs must not shift): the look seed counts. */
   add(kind: DecalKind, pos: Vec3, normal: Vec3, size?: number, opts: DecalOpts = {}): Decal | null {
-    if (!this.enabled) return null;
     const n = v3.normalize(normal);
     let t = opts.tangent ? v3.sub(opts.tangent, v3.scale(n, v3.dot(opts.tangent, n))) : perpendicular(n);
     if (v3.len(t) < 1e-4) t = perpendicular(n); t = v3.normalize(t);

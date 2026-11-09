@@ -454,7 +454,6 @@ pub fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: c
     let rj = destruction_hash(g);
     if !destruction_take(g, DestructionTakeK::Decal) { return; }
     g.stats.destruction.destr_decals += 1;
-    if !g.decals.enabled { return; }
     let attach = if dynamic { Some(box_) } else { None };
     let said = if is_crack { None } else { crate::particle_fx::said_surf(g, Some(box_)) };
     match said {

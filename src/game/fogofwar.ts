@@ -745,7 +745,7 @@ export class FogOfWar {
     T.on = true; T.owners.clear(); T.lights.clear(); for (const pl of players(g)) { T.owners.add(pl.char.id); if (pl.light) T.lights.add(pl.light); }
     for (const gd of g.guards) if (this.onTeam(gd)) { T.owners.add(gd.char.id); if (gd.flashlight) T.lights.add(gd.flashlight); }
     // (2) the level's own lamps as the team last saw each: out but remembered lit = lit where nobody sees; lit but remembered out = lit only where the team sees
-    const down = g.blackout.active, es = g.engine.settings.emissiveScale;
+    const down = g.blackout.active;
     for (const t of g.targets) {
       if (!t.light && !t.areaLights) continue;
       if (t.light) { t.light.fog = 0; t.light.fogGhost = 0; } if (t.areaLights) for (const al of t.areaLights) { al.light.fog = 0; al.light.fogGhost = 0; }
@@ -755,7 +755,7 @@ export class FogOfWar {
       S.held++;
       if (FOG.kept && (lit || !(t.mains && down))) this.lampFace(t, !lit);   // (its face as the team last saw it: dark while it is lit unseen, lit while it is out unseen — a blackout is known to all, as below)
       if (lit) { if (t.light) t.light.fog = 1; if (t.areaLights) for (const al of t.areaLights) al.light.fog = 1; }
-      else if (!(t.mains && down)) { S.ghosts++; if (t.light) t.light.fogGhost = t.light.steady?.intensity ?? t.baseIntensity; if (t.areaLights) for (const al of t.areaLights) al.light.fogGhost = al.base * es; }   // (a fire put out unseen is remembered at a fire's strength, as a burning one is below: game/fire.ts `held`)
+      else if (!(t.mains && down)) { S.ghosts++; if (t.light) t.light.fogGhost = t.light.steady?.intensity ?? t.baseIntensity; if (t.areaLights) for (const al of t.areaLights) al.light.fogGhost = al.base; }   // (a fire put out unseen is remembered at a fire's strength, as a burning one is below: game/fire.ts `held`)
     }
     for (const l of L.lights) if (L.fogClass(l) === 1) S.hidden++;
     return true;
@@ -774,7 +774,7 @@ export class FogOfWar {
     F.lit = FOG.lit; F.litFill = Math.max(0, FOG.flat * FOG.litFill); F.litCut = Math.max(0, FOG.litCut); F.litAo = Math.min(1, Math.max(0, FOG.litAo)); F.litAoM = Math.max(0, FOG.litAoM);
     this.lampN = 0;
     for (const l of g.engine.lights.lights) if (l.kind === 2 && l.ttl < 0 && !l.transient && l.enabled) this.lampTake(l, l.intensity, true);   // the sun or moon (never the lightning: a transient)
-    const down = g.blackout.active, es = g.engine.settings.emissiveScale;
+    const down = g.blackout.active;
     for (const t of g.targets) {
       if (!t.light && !t.areaLights) continue;
       S.lamps++;
@@ -782,7 +782,7 @@ export class FogOfWar {
       if (rec !== lit) S.held++;
       if (!rec || (t.mains && down)) continue;
       if (t.light) this.lampTake(t.light, t.light.steady?.intensity ?? t.baseIntensity, false);   // (a burning fire's lamp is the fire's own steady strength, game/fire.ts FIRE.bright: the colour and reach packed below are the fire's too, so the remembered ground is as bright as the seen)
-      if (t.areaLights) for (const al of t.areaLights) this.lampTake(al.light, al.base * es, false);
+      if (t.areaLights) for (const al of t.areaLights) this.lampTake(al.light, al.base, false);
     }
     const pick = this.lampPick; let n = this.lampN;
     if (n > FOG_LIGHTS) { pick.length = n; pick.sort((a, b) => a.d - b.d); n = FOG_LIGHTS; }

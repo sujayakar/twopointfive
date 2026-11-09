@@ -734,7 +734,7 @@ export class Engine {
     const placeSnap = this.lookEye.snap || this.placeWas !== place;   // (a first frame, a restart, a still, a field just come live: the field and its eye are settled outright; cleared below once a field has been stepped)
     const powder = this.powderLive(); this.passes.setPowder(powder?.ready ? powder.view : null);   // (THE LOOK PROTOTYPE's loose snow in the air, above)
     const veil = powder?.ready ? lookVeilFrame({ x: WORLD.min[0], z: WORLD.min[2], w: WORLD.max[0] - WORLD.min[0], d: WORLD.max[2] - WORLD.min[2] }, 1, this.lights.lights) : null;   // (null anywhere else = the frame's two fields stay zeros)
-    if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
+    if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the picture's switch (off = nothing uploaded; the list stands, it is the game's); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
     this.cpuMs.boxes = performance.now() - t0;
     this.ensureSceneBG();

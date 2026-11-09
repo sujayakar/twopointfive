@@ -369,7 +369,7 @@ export class EdgeLook {
     if (k1 < 0) return;
     const ua = -F.L / 2 + F.w * k0, ub = -F.L / 2 + F.w * (k1 + 1), uc = (ua + ub) / 2, half = (ub - ua) / 2; const S = EDGE.scorch;
     const bl = this.blasted.get(B.id); if (bl) bl.push([uc, half]); else this.blasted.set(B.id, [[uc, half]]);
-    const D = this.g.decals; if (!EDGE.scorchDecals || !dir || !D || !D.enabled) return;
+    const D = this.g.decals; if (!EDGE.scorchDecals || !dir || !D) return;
     const far = v3.dot(dir, F.nrm) >= 0 ? 1 : -1; const floor = Math.max(0, F.y0), yc = floor + Math.min(1.05, (F.yTop - floor) * 0.45);
     lookDecal(D.add('scorch', this.at(F, uc, yc, -far * F.T), v3.scale(F.nrm, -far), half + S.near, { param: S.sootNear, look: true }));
     lookDecal(D.add('scorch', this.at(F, uc, yc, far * F.T), v3.scale(F.nrm, far), half + S.far, { param: S.sootFar, look: true }));

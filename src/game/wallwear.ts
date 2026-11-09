@@ -10,7 +10,7 @@
 //   · it adds NO decal: the round's own bullet mark (marks.ts bulletMark, placed by combat.ts just before the destruction lane hears of the round) is EDITED into
 //     decal kind 'damage' with param ≥ WEAR_MARK.look (render/decals.ts WEAR_MARK is the contract with decals.wgsl wearMark), so the decal ring's count — which
 //     the game digest carries — is what it was. Variation comes off the decal's own look seed. A counted round that laid no mark (a muzzle pressed through the
-//     wall — combat.ts wallAcrossArm — or the decals off) shows nothing new and throws nothing: the earlier marks of its cell still grow;
+//     wall — combat.ts wallAcrossArm) shows nothing new and throws nothing: the earlier marks of its cell still grow;
 //   · particles only where a GPU system is attached (gpuFx), ≤ WEAR.maxBirths a round;
 //   · nothing is saved: the ring already files a mark's kind / radius / strength (savestate.ts), so a load shows the wall as it was; the per-cell lists that let
 //     OLD marks grow are dropped on restart / load (marks made before a load stay the size they were).

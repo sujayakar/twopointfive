@@ -30,7 +30,7 @@ const UP: Vec3 = [0, 1, 0], DOWN: Vec3 = [0, -1, 0];
 
 interface Spread { core: number; lobes: number; reach: number; lobe: number; strength: number }
 
-function on(g: Game): boolean { return CHAOS.mess.on && DESTRUCTION.on && g.decals.enabled && g.destr.showChaos === null && chaosOf(g) > 0; }
+function on(g: Game): boolean { return CHAOS.mess.on && DESTRUCTION.on && g.destr.showChaos === null && chaosOf(g) > 0; }
 /** 0‥1 off a place and a number: the same mark in the same place every run */
 function H(x: number, z: number, k: number): number { return hash01(Math.imul(Math.round(x * 64), 73856093) ^ Math.imul(Math.round(z * 64), 19349663) ^ Math.imul(k + 1, 2654435761)); }
 function lookOf(d: { kind: string; param: number }): number { return d.kind === 'damage' ? Math.floor(d.param) : -1; }

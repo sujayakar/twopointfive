@@ -229,8 +229,8 @@ export class LightHome {
     if (until !== null) this.in(LIGHT_IN.blind, t, until);
   }
   /** ONE TICK (lights.rs step). → LIGHT_EV bits. */
-  step(time: number, dt: number, near: boolean, fumble: number, emissiveScale: number): number {
-    return X.lights_step(this.st.bind(), time, dt, near ? 1 : 0, fumble, emissiveScale);
+  step(time: number, dt: number, near: boolean, fumble: number): number {
+    return X.lights_step(this.st.bind(), time, dt, near ? 1 : 0, fumble);
   }
   /** WHAT THE MODULE WORKED OUT, TO WHAT THE PICTURE READS: a lamp's burning, and a beacon's turn */
   paint(): void {

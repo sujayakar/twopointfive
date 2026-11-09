@@ -72,7 +72,7 @@ export function updateTargets(g: Game, dt: number) { { const __s = RUST_SURFACE;
   let near: Guard | null = null;
   for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
   const fumble = g.level.breaker.fumble ?? 2.2, handT = bo.fixT + dt;   // (the level's own number where it gives one: a panel a man is long at)
-  const ev = H.step(time, dt, near !== null, fumble, g.engine.settings.emissiveScale);   // (rust/sim/src/lights.rs: the mains' clocks, the beacons, every fixture's factor, every lamp as it burns. The emissive scale is a renderer setting an area light's strength is scaled by, an input: a recording carries it, journal.ts EnvSnap)
+  const ev = H.step(time, dt, near !== null, fumble);   // (rust/sim/src/lights.rs: the mains' clocks, the beacons, every fixture's factor, every lamp as it burns)
   if (ev & LIGHT_EV.ranOut) mainsBack(g);   // (the OCP's timed trip ran out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
   if (ev & LIGHT_EV.hand) leverHands(g, near!.char, handT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
   if (ev & LIGHT_EV.fixed) { g.say(near!, wg("breaker's back on", "breaker's back in"), true); mainsBack(g); }

@@ -558,7 +558,6 @@ export class Destruction {
     if (box.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow) && m !== LANE_MARK.crack) return;
     const rj = this.hash(); if (!this.take('decal')) return;   // (the counter and the bucket move the same whether decals are drawn or not: a fight with decals off is the same fight — the identity probes)
     DESTR_STATS.decals++;
-    if (!g.decals.enabled) return;
     // (THE MARK THAT IS DRAWN goes by the picture's reading of the box — particleFx.ts HITSTUFF: a box that says what it is made of is drawn that stuff's
     //  mark, at that mark's size, not the dent its dark paint was taken for: metal the dent, cloth the shred, solid glass the crack, anything else a chip. ONE mark
     //  is laid either way — the run's digest counts them — and the dice and the bucket above have moved as they always did)

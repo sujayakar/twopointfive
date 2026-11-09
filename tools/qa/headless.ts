@@ -187,8 +187,7 @@ export interface Headless {
 
 /** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
  *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
- *  `env` (a tape's EnvSnap — tools/qa/rerun.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
- *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
+ *  `env` (a tape's EnvSnap — tools/qa/rerun.ts): stand the engine up as the RECORDING's was where the simulation can tell — a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
  *  `level` (a Level — loadLevel(parseLevelData(text)) of any file under levels/): stand the game up on THAT level instead of the bundled office.
  *  `seed` (or TPS_SEED=n in the environment): the Game owns its die, seeded with it (src/math/dice.ts) — as the page's game does. Absent = the game draws the
@@ -229,7 +228,7 @@ async function standBody(opts: { /** a recipe's or a tape's knob tables, laid ov
       const bad = Object.keys(turn).filter(k => !(k in engine.settings)); if (bad.length) throw new Error(`QA_PICTURE: the engine has no setting ${bad.join(', ')} (src/settings.ts): a turn of nothing would read as a run that did not move`);
       Object.assign(engine.settings, turn); } }
   if (opts.env) { const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = !!opts.env.destruction?.on; const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); LIVED.on = !!opts.env.lived; }   // (a recording made with the destruction switch on replays with it on: the roof rule, the dressing, the loud rules)
-  if (opts.env) { const { applyEnvSettings } = await import(`${ROOT}/src/game/journal.ts`); applyEnvSettings(engine.settings, opts.env); if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
+  if (opts.env) { if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
   if (opts.reach) { const { ReachKeep } = await import(`${ROOT}/src/render/reachKeep.ts`); engine.reach = new ReachKeep(engine.world, engine.lights); }
   const smoke: any = standMod.nullSmoke();
   if (opts.env?.canister) smoke.params = { ...opts.env.canister };
