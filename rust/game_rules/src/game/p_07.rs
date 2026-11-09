@@ -216,7 +216,7 @@ fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     while i < seat.nearby.len() {
         if seat.nearby[i].kind == InteractableKind::Guard && seat.nearby[i].in_reach {
             let taken = match seat.nearby[i].guard {
-                Some(gd) => crate::rescue::rescue_is_hostage(g, gd),
+                Some(gd) => g.staged.captives.contains(&gd),
                 None => false,
             };
             if !taken { return Some(seat.nearby[i].clone()); }

@@ -764,11 +764,8 @@ pub fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId
 }
 
 /// A man with the stack in his line of fire rests his gun on the floor outside the hostage door. (rescue.ts Rescue.crewLook)
-pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
-    let look = match g.rescue.defs.get(gd) { Some(d) if d.crew == DefCrew::Cross => d.look, _ => None };
-    if let Some(look) = look {
-        if rescue_crew_on(g) { pt[0] = look[0]; pt[2] = look[2]; }
-    }
+pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
+    match g.rescue.defs.get(gd) { Some(d) if d.crew == DefCrew::Cross && rescue_crew_on(g) => d.look, _ => None }
 }
 
 /// A man of Hard's crew lying in wait, whose place the net must not give away. (rescue.ts Rescue.crewHides)
@@ -1060,7 +1057,7 @@ pub fn rescue_side_way(g: &crate::game::Game) -> Vec<V3> {
 /// Who holds the hostages right now. (rescue.ts Rescue.captor)
 pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
     let b = rescue_bounds(g);
-    let all: Vec<GuardId> = g.rescue.hostages.iter().copied().filter(|&h| alive(g, h)).collect();
+    let all: Vec<GuardId> = g.staged.captives.iter().copied().filter(|&h| alive(g, h)).collect();
     if all.is_empty() { return None; }
     let held: Vec<V3> = all.iter().map(|&x| pos_of(g, x)).filter(|&p| in_rect(p, b)).collect();
     let was = g.rescue.cap_by;
@@ -1110,25 +1107,16 @@ mod tests {
     }
 
     #[test]
-    fn a_man_on_a_cross_writes_x_and_z_of_the_point_and_leaves_its_height() {
+    fn only_a_man_on_a_cross_under_hards_crew_has_a_place_for_his_gun() {
         let mut g = crew_on_game();
         let h = man_on(&mut g, DefCrew::Cross, Some([3.0, 9.0, 4.0]));
-        let mut pt: V3 = [1.0, 2.0, 1.0];
-        rescue_crew_look(&mut g, h, &mut pt);
-        assert_eq!(pt, [3.0, 2.0, 4.0]);
-    }
-
-    #[test]
-    fn nothing_else_moves_the_point() {
-        let mut g = crew_on_game();
-        let h = man_on(&mut g, DefCrew::Wait, Some([3.0, 9.0, 4.0]));
-        let mut pt: V3 = [1.0, 2.0, 1.0];
-        rescue_crew_look(&mut g, h, &mut pt);
-        rescue_crew_look(&mut g, GuardId(2), &mut pt);
+        assert_eq!(rescue_crew_look(&g, h), Some([3.0, 9.0, 4.0]));
+        assert_eq!(rescue_crew_look(&g, GuardId(2)), None);
+        g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Wait;
+        assert_eq!(rescue_crew_look(&g, h), None);
         g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Cross;
         g.k.pressure.on = false;
-        rescue_crew_look(&mut g, h, &mut pt);
-        assert_eq!(pt, [1.0, 2.0, 1.0]);
+        assert_eq!(rescue_crew_look(&g, h), None);
     }
 
     #[test]

@@ -227,7 +227,7 @@ pub fn rescue_start(g: &mut crate::game::Game) -> Option<String> {
         }
     }
     rescue_bench(g);
-    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, ..Default::default() });
+    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, leads_foes: true, ..Default::default() });
     g.rescue.staged = 0.0;
     g.rescue.log.clear();
     g.rescue.failure = None;
@@ -281,11 +281,6 @@ pub fn rescue_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     e.ops.iter().any(|x| x.ended.is_none() && g.tab.doortools_door_op[x.op].men.contains(&gd))
 }
 
-/// Is this civilian one of the scenario's hostages. (rescue.ts Rescue.isHostage)
-pub fn rescue_is_hostage(g: &crate::game::Game, gd: GuardId) -> bool {
-    crate::rescue::rescue_up(g) && g.rescue.hostages.contains(&gd)
-}
-
 /// The shift off the floor, lights out, kept for stop(). (rescue.ts Rescue.bench)
 pub fn rescue_bench(g: &mut crate::game::Game) {
     let staff: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].unit.is_none()).collect();
@@ -310,11 +305,11 @@ pub fn rescue_clear_cast(g: &mut crate::game::Game) {
         if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Patrol)); }
         crate::guards::despawn_unit(g, gd);
     }
-    let hostages = g.rescue.hostages.clone();
+    let hostages = g.staged.captives.clone();
     g.civilians.retain(|c| !hostages.contains(c));
     g.staged.team = Vec::new();
     g.staged.foes = Vec::new();
-    g.rescue.hostages = Vec::new();
+    g.staged.captives = Vec::new();
     g.rescue.entry = None;
     g.rescue.defs.clear();
     g.rescue.act = None;
@@ -369,7 +364,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     let Some(s) = rescue_data(g) else { return Err(String::from("the level has no hostage rescue data")); };
     g.staged.team = Vec::new();
     g.staged.foes = Vec::new();
-    g.rescue.hostages = Vec::new();
+    g.staged.captives = Vec::new();
     g.rescue.entry = None;
     g.rescue.defs.clear();
     g.rescue.called = false;
@@ -515,7 +510,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let hostage = crate::civilians::spawn_hostage(g, &crate::civilians::SpawnHostageDef {
             name, kind, tint, tint2: cd.and_then(|c| c.tint2), pos: h.pos, face: h.face,
         });
-        g.rescue.hostages.push(hostage);
+        g.staged.captives.push(hostage);
     }
     g.rescue.resolve = 0.0;
     g.rescue.resolve_secs = m::max(5.0, g.k.rescue.resolve_secs);

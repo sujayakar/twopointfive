@@ -55,9 +55,9 @@ pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     o.state != crate::game::GuardState::Dead && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
 }
 
-/// nobody's to take: the hostage rescue's cast and the response team   (runner.ts spoken)
+/// nobody's to take: the men a mission leads itself and the response team
 pub fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    (crate::rescue::rescue_up(g) && g.staged.foes.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
+    g.staged.leads(gd) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame   (runner.ts reacts)

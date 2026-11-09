@@ -49,7 +49,7 @@ pub fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
 /// The hostages still alive.   (rescueend.ts RescueEnd.alive)
 pub fn rescue_end_alive(g: &crate::game::Game) -> Vec<GuardId> {
     let mut alive = Vec::new();
-    for &h in g.rescue.hostages.iter() {
+    for &h in g.staged.captives.iter() {
         if g.gd[h].state != crate::game::GuardState::Dead { alive.push(h); }
     }
     alive
@@ -125,7 +125,7 @@ pub fn rescue_end_tick(g: &mut crate::game::Game) {
     if !crate::rescue::rescue_up(g) { return; }
     let act = g.act.as_ref().map(|a| (a.kind, a.guard, a.verb));
     if let Some((crate::game::InteractableKind::Guard, Some(guard), Some(verb))) = act {
-        if (verb == crate::game::Verb::Lead || verb == crate::game::Verb::Stay) && crate::rescue::rescue_is_hostage(g, guard) {
+        if (verb == crate::game::Verb::Lead || verb == crate::game::Verb::Stay) && g.staged.captives.contains(&guard) {
             let by = if verb == crate::game::Verb::Lead { let pl = who(g, &crate::seats::here(g)); Some(g.pl[pl].ch) } else { None };
             rescue_end_word(g, by);
         }

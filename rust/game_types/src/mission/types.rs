@@ -28,6 +28,8 @@ pub struct Facts {
     pub own_rule: bool,
     /// its men are drilled, where Hard drills men
     pub drilled: bool,
+    /// its foes are its own to lead: no rule of a garrison has them
+    pub leads_foes: bool,
     /// the level's own team may come for it as a raid
     pub raid: bool,
 }
@@ -42,6 +44,8 @@ pub struct Staged {
     pub team: Vec<GuardId>,
     /// the men it staged against them, dead or alive
     pub foes: Vec<GuardId>,
+    /// the people its foes hold: nobody fires or throws where they would be hurt
+    pub captives: Vec<GuardId>,
     /// which of the level's ways in the team came by
     pub way: f64,
     /// the wall charges it hands out, where it hands out any
@@ -54,9 +58,11 @@ impl Staged {
         self.up = Some(kind);
         self.facts = facts;
     }
+    /// a man of its foes that it leads itself
+    pub fn leads(&self, gd: GuardId) -> bool { self.facts.leads_foes && self.foes.contains(&gd) }
     /// It is no mission's floor any more. (Its men go by whoever staged them: their lists stand)
     pub fn down(&mut self) {
-        let (team, foes) = (core::mem::take(&mut self.team), core::mem::take(&mut self.foes));
-        *self = Staged { team, foes, ..Staged::default() };
+        let (team, foes, captives) = (core::mem::take(&mut self.team), core::mem::take(&mut self.foes), core::mem::take(&mut self.captives));
+        *self = Staged { team, foes, captives, ..Staged::default() };
     }
 }

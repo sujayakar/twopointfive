@@ -437,7 +437,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         for gd in crate::civilians::civilian_bodies(g) {
             if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let cv = g.gd[gd].civ.unwrap();
-            if crate::rescue::rescue_is_hostage(g, gd) { continue; }
+            if g.staged.captives.contains(&gd) { continue; }
             let gc = g.gd[gd].ch;
             let gp = g.ch[gc].pos;
             let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);

@@ -208,7 +208,7 @@ pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: 
     move_pt(g, d, [tgt[0], 0.0, tgt[2]]);
     // (each look writes into D.pt in place: lent as a local and put back, the fix carried with it if it is that object)
     if digs_in(g) { let mut p = g.tab.roomfight_def[d].pt; crate::digin::dig_in_look(g, gd, &mut p); move_pt(g, d, p); }
-    if crate::rescue::rescue_up(g) { let mut p = g.tab.roomfight_def[d].pt; crate::rescue::rescue_crew_look(g, gd, &mut p); move_pt(g, d, p); }
+    if let Some(at) = crate::mission::gun_place(g, gd) { let p = g.tab.roomfight_def[d].pt; move_pt(g, d, [at[0], p[1], at[2]]); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::netquiet::net_quiet_look(g, gd, &mut p); move_pt(g, d, p); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::wallreact::wall_react_look_2(g, gd, &mut p); move_pt(g, d, p); }
     let pt = g.tab.roomfight_def[d].pt;

@@ -79,7 +79,7 @@ pub fn urgent(g: &mut crate::game::Game) -> bool {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::rescue::rescue_last_warning(g, d) { return true; }
+        if crate::mission::last_warning(g, d) { return true; }
         i += 1;
     }
     false

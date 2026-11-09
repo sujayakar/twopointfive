@@ -610,7 +610,7 @@ impl DoorsAsk for Play {
     fn rescue_clock(&self) -> f64 { self.g.rescue.resolve }
     fn rescue_lost(&self) -> Option<bool> { self.g.rescue.result.as_ref().map(|r| r.state == game::rescue::RescueResultState::Lost) }
     fn rescue_men(&self) -> Vec<GuardId> { self.g.staged.foes.clone() }
-    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.rescue.hostages.clone() }
+    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.staged.captives.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
     fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {

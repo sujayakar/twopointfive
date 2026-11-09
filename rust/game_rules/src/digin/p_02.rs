@@ -452,7 +452,7 @@ fn haul_on(g: &mut Game, d: RoomfightDefId, m: &mut Man, rk: Option<RoomfightRoo
 /// roomfight.ts tickDef, every frame for every defender it runs   (digin.ts digInTick)
 pub fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let gd = g.tab.roomfight_def[def].gd;
-    if dead(g, gd) || crate::rescue::rescue_up(g) { return; }                     // the hostage rescue has its own script for these men
+    if dead(g, gd) || g.staged.facts.leads_foes { return; }
     let now = g.time;
     if state_of(g).frame_t != now { state_of(g).frame_t = now; watch(g); }
     let mut m = *state_of(g).men.get_or_insert_with(gd, new_man);

@@ -26,7 +26,7 @@ pub fn rescue_flush_live(g: &crate::game::Game) -> bool {
 
 /// The living hostages, in the list's order.   (rescueflush.ts RescueFlush.alive)
 pub fn rescue_flush_alive(g: &crate::game::Game) -> Vec<GuardId> {
-    g.rescue.hostages.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
+    g.staged.captives.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
 }
 
 /// He came for her: his wait is `killSecs`.   (rescueflush.ts RescueFlush.came)

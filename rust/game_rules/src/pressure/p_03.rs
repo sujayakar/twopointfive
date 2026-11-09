@@ -235,7 +235,7 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
 
 /// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet   (pressure.ts goLook)
 pub fn go_look(g: &mut crate::game::Game) {
-    if crate::rescue::rescue_up(g) { return; }   // (a hostage rescue's men are pinned to their room a frame at a time)
+    if g.staged.facts.leads_foes { return; }
     let mut up = 0.0;
     let mut i = 0;
     while i < g.fight.defs.len() {

@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct Rescue {
-    pub hostages: Vec<GuardId>,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
     pub entry: Option<crate::rescue::Entry>,
     pub staged: f64,
@@ -51,7 +50,6 @@ impl Rescue {
     /// what a new one holds
     pub fn blank() -> Self {
         Rescue {
-            hostages: Vec::new(),
             plan: None,
             entry: None,
             staged: 0.0,

@@ -378,7 +378,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     }
     let dname = g.dr[d].def.name.clone();
     if frag {
-        let hostages = g.rescue.hostages.clone().iter().any(|&h| alive(g, h));
+        let hostages = !crate::mission::captives_up(g).is_empty();
         let men = o!(g, op).men.clone();
         let who = if hostages { Some(String::from("hostages")) } else { door_tools_frag_behind(g, d, side, &men) };
         if let Some(who) = who {
@@ -1220,7 +1220,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
         thr!(g, op).shut_t = None;
     }
     let shared_word = match o!(g, op).word { Some(wd) => g.door_tools.ops.iter().any(|&x| x != op && o!(g, x).word == Some(wd)), None => false };
-    if !tr(thr!(g, op).hand_done) && !tr(o!(g, op).last_stack) && !tr(o!(g, op).last_hold) && !crate::rescue::rescue_last_warning(g, d) && !shared_word {
+    if !tr(thr!(g, op).hand_done) && !tr(o!(g, op).last_stack) && !tr(o!(g, op).last_hold) && !crate::mission::last_warning(g, d) && !shared_word {
         let lead_now = o!(g, op).lead;
         let wait = g.k.doortools.thr_hand_wait;
         let mut h = if th != lead_now && door_tools_thr_at(g, op, th) { Some(th) } else {

@@ -633,8 +633,8 @@ pub fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<c
     if let Some(gd) = mate { return Some(format!("{} is in it.", g.gd[gd].callsign)); }
     let no: String = match burst { Some(b) => b.no.clone(), None => String::from("no frag.") };
     let mut hostage = false;
-    for i in 0..g.rescue.hostages.len() {
-        let o = g.rescue.hostages[i];
+    for i in 0..g.staged.captives.len() {
+        let o = g.staged.captives[i];
         if live_in(g, o, &pts, reach) { hostage = true; break; }
     }
     if hostage { return Some(format!("hostages. {}", no)); }

@@ -208,7 +208,7 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some("on the move".into()); }
     if g.gd[gd].script.is_some() { return Some("on a script".into()); }
     if roused(g, gd) { return Some("in a fight".into()); }
-    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
+    if crate::mission::lies_in_wait(g, gd) || crate::mission::captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
     if crate::gunroles::gun_keeps_post(g, gd) { return Some("his gun keeps its post".into()); }
     if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some("kept home by the press".into()); }
     None
@@ -559,7 +559,7 @@ pub fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
     if knows {
         return stay(g, speaker, "power's out — that's them! Stay on your doors!", "a man of theirs is roused or has heard the team: nobody walks out to mend a fuse", true);
     }
-    if crate::rescue::rescue_captor(g).is_some() {
+    if crate::mission::captor(g).is_some() {
         return stay(g, speaker, "power's out — that's them! Stay on your doors!", "men holding hostages take the dark for the assault (rescue.ts: every one of them has learned of the team by it)", true);
     }
     if st(g).lost {

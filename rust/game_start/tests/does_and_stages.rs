@@ -78,7 +78,7 @@ fn kinds(data: &Json) -> Vec<(&'static str, &'static str)> {
 /// Is the mission of this word on the floor, its cast stood? What is wrong with it, if anything.
 fn staged(p: &mut Play, key: &str) -> Vec<String> {
     let mut bad = match key {
-        "rescue" => { let mut b = game::rescue::check_rescue(&mut p.g, None); b.retain(|w| !w.contains(": standing in ")); if !game::rescue::rescue_up(&p.g) { b.push(String::from("not active")); } if p.g.rescue.hostages.is_empty() { b.push(String::from("no hostages")); } if p.g.staged.foes.is_empty() { b.push(String::from("no captors")); } b }
+        "rescue" => { let mut b = game::rescue::check_rescue(&mut p.g, None); b.retain(|w| !w.contains(": standing in ")); if !game::rescue::rescue_up(&p.g) { b.push(String::from("not active")); } if p.g.staged.captives.is_empty() { b.push(String::from("no hostages")); } if p.g.staged.foes.is_empty() { b.push(String::from("no captors")); } b }
         "roomClear" => { let mut b = game::roomclear::check_structure(&mut p.g, None); if !game::roomclear::room_clear_scenario_active(&p.g) { b.push(String::from("not active")); } if p.hostiles().is_empty() { b.push(String::from("no defenders")); } b }
         "nightBreach" => if game::nightbreach::night_breach_up(&p.g) && !p.g.staged.foes.is_empty() { Vec::new() } else { vec![String::from("not active, or nobody home")] },
         "quiet" => if game::quiet::quiet_of(&p.g) { Vec::new() } else { vec![String::from("not active")] },
