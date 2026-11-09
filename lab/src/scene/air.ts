@@ -76,7 +76,7 @@ export class Air {
     const { n: [nx, ny, nz], list, heat } = this, [cx, cy, cz] = this.c as [Float32Array, Float32Array, Float32Array];
     for (let z = 0; z < nz; z++) for (let x = 0; x < nx; x++) { const v = this.free(this.o[0] + x + 0.5, this.o[2] + z + 0.5); for (let y = 0; y < ny; y++) { const i = this.ix(x, y, z), q = this.sky[i]! * dt, k = this.low(this.o[1] + (y + 0.5) * H[1]); if (q > 0) { cx[i]! += (v[0] * k - cx[i]!) * q; cz[i]! += (v[1] * k - cz[i]!) * q; } } }
     // what is warm rises
-    if (this.hot) { let most = 0; for (let m = 0; m < list.length; m++) { const i = list[m]!, q = heat[i]!; if (q > most) most = q; cy[i]! += 1.6 * q * dt; } if (most < 0.002) { this.hot = false; heat.fill(0); } }
+    if (this.hot) { let most = 0; for (let m = 0; m < list.length; m++) { const i = list[m]!, q = heat[i]!; if (q > most) most = q; cy[i]! += 2.6 * q * dt; } if (most < 0.002) { this.hot = false; heat.fill(0); } }
     for (const u of this.pushes) { const g = [0, 1, 2].map(k => (u.at[k]! - this.o[k]!) / H[k]! - 0.5), vol = Math.min(1, 4.19 * u.r ** 3 / (H[0] * H[1] * H[2])), b = g.map(Math.floor); for (let m = 0; m < 8; m++) { const x = b[0]! + (m & 1), y = b[1]! + ((m >> 1) & 1), z = b[2]! + (m >> 2); if (x < 0 || y < 0 || z < 0 || x >= nx || y >= ny || z >= nz) continue; const i = this.ix(x, y, z), k = (1 - Math.abs(g[0]! - x)) * (1 - Math.abs(g[1]! - y)) * (1 - Math.abs(g[2]! - z)) * vol * (1 - Math.exp(-dt * u.grip)); cx[i]! += (u.v[0] - cx[i]!) * k; cy[i]! += (u.v[1] - cy[i]!) * k; cz[i]! += (u.v[2] - cz[i]!) * k; if (u.heat) { heat[i]! += (u.heat - heat[i]!) * k; this.hot = true; } } }
   }
   private spread() {
