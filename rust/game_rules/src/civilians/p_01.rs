@@ -84,42 +84,6 @@ pub fn civilians_leave(g: &mut crate::game::Game) {
     }
 }
 
-/// Whoever a seat has hold of or is hauling let go of, then fresh civilians.   (civilians.ts resetCivilians)
-pub fn reset_civilians(g: &mut crate::game::Game) {
-    for s in g.seats.clone() {
-        let pl = crate::cmd::seat_man(g, s);
-        if let Some(h) = g.pl[pl].holding.as_ref().map(|h| h.g) {
-            if g.gd[h].civ.is_some() {
-                g.gd[h].held = None;
-                let hc = g.gd[h].ch;
-                g.ch[hc].anim.held_pose = None;
-                g.pl[pl].holding = None;
-                let pc = g.pl[pl].ch;
-                g.ch[pc].anim.hold_pose = None;
-            }
-        }
-        if let Some(d) = g.pl[pl].dragging {
-            if g.gd[d].civ.is_some() {
-                crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::game::game_toggle_drag(g, None));
-            }
-        }
-        if let Some(t) = g.pl[pl].takedown.as_ref().map(|t| t.g) {
-            if g.gd[t].civ.is_some() {
-                g.pl[pl].takedown = None;
-            }
-        }
-    }
-    for cv in g.civilians.clone() {
-        let c = g.gd[cv].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
-    let floor = floor_of(g);
-    floor.evac_told = false;
-    floor.greet_at = -1e9;
-    floor.pending.clear();
-    spawn_civilians(g);
-}
-
 /// A civilian of the usual make at her first mark, doing what she does there.   (civilians.ts makeCivilian)
 pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
     let id = CIV_ID0 + i;

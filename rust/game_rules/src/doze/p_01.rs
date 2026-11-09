@@ -109,12 +109,6 @@ pub fn left_lit(g: &mut crate::game::Game, gd: GuardId) {
     let until = g.time + g.k.doze.idle_secs;
     g.m.doze.left.get_or_insert_with(JsMap::new).set(mon, until);
 }
-/// every left screen off, the table gone (doze.ts leftOff)
-pub fn left_off(g: &mut crate::game::Game) {
-    let Some(l) = g.m.doze.left.as_ref() else { return };
-    for t in l.keys() { switch(g, t, 0.0); }
-    g.m.doze.left = None;
-}
 /// a left screen blanks when its time comes, or is gone when it is dead (doze.ts leftTick)
 pub fn left_tick(g: &mut crate::game::Game) {
     if g.m.doze.left.is_none() { return; }
@@ -607,19 +601,6 @@ pub fn doze_ear(g: &crate::game::Game, gd: GuardId) -> [f64; 2] {
     }
     whole()
 }
-/// everybody up, the records gone (doze.ts dozeReset)
-pub fn doze_reset(g: &mut crate::game::Game, load: Option<bool>) {
-    let load = load.unwrap_or(false);
-    g.m.doze.said = None;
-    if load { g.m.doze.left = None; } else { left_off(g); }
-    let rows: Vec<(GuardId, Doze)> = g.m.doze.rec.iter().map(|(k, v)| (k, *v)).collect();
-    for (gd, d) in rows {
-        if !load { dark(g, gd); }
-        if seated(d) { up(g, gd); }
-        drop(g, gd);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

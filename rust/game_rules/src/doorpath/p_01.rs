@@ -43,11 +43,6 @@ pub fn pt_seg(p: V3, a: V3, b: V3) -> f64 {
     m::hyp2(p[0] - a[0] - dx * t, p[2] - a[2] - dz * t)
 }
 
-/// Forget the walks and what is lent; `lastOf` stays, as there. (doorpath.ts DoorPath.reset)
-pub fn door_path_reset(g: &mut crate::game::Game) {
-    g.door_path.walks.clear();
-}
-
 /// The leaf as it stands: hinge → free tip. (doorpath.ts DoorPath.leaf)
 pub fn door_path_leaf(g: &crate::game::Game, d: DoorId) -> [V3; 2] {
     let u = crate::doors::door_dir(g, d);

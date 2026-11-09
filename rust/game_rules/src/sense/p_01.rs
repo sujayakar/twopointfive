@@ -107,13 +107,6 @@ pub fn smoke_clear(g: &mut crate::game::Game) {
     }
 }
 
-/// A new encounter: no smoke, on no plan, nothing swept. (A game no tick has opened has no smoke's part yet.)
-pub fn smoke_renew(g: &mut crate::game::Game) {
-    if sim::state::state_read(g.sim).smoke.live != 0 {
-        sim::bricks::reset(g.sim, true);
-    }
-}
-
 /// THE LIGHT UNDER A ROOF at a point that is no lamp's and not the sun's own beam (None: it is under the open
 /// sky, or nothing was swept yet).
 pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {

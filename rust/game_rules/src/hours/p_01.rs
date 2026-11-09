@@ -349,13 +349,6 @@ pub fn lamps_out(g: &mut crate::game::Game) {
     }
 }
 
-/// The level's switches are back as authored: the hour's are made again over them. (hours.ts hourAfterReset)
-pub fn hour_after_reset(g: &mut crate::game::Game) {
-    let Some(st) = g.m.hours.states.as_mut() else { return };
-    st.lamps.clear();
-    lamps_out(g);
-}
-
 // ---------------------------------------------------------------- the meter's stand-in
 
 /// THE SKY THE GAME'S LIGHT IS WORKED FROM NOW: the hour's as its weather leaves it, else the level's own night. Worked out from state the game keeps, as `exposure_of` is, and never read off the picture's settings, which a panel turns. What `under_weather` tells the picture is this.

@@ -6,5 +6,3 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 
-/// (src/game/snowBlast.ts:122 clearSnowBlast)
-pub fn clear_snow_blast(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::ClearSnowBlast); }

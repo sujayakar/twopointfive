@@ -491,12 +491,6 @@ pub fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
-/// a fresh start. (powerout.ts powerOutReset)
-pub fn power_out_reset(g: &mut crate::game::Game) {
-    g.m.powerout.states = None;
-    breaker_say(g);
-}
-
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent. (powerout.ts breakerSay)
 pub fn breaker_say(g: &mut crate::game::Game) {
     let rule = crate::owner::by::BREAKER;

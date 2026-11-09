@@ -189,12 +189,6 @@ pub fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::Step
     }
 }
 
-/// A restart: the fresh man's start is not a step from where the last one fell. (guards.ts groundFresh)
-pub fn ground_fresh(g: &mut crate::game::Game) {
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.guards.ground_track.delete(view);
-}
-
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped. (guards.ts playerGroundVel)
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
     let view = crate::seats::view_key(g, &crate::seats::here(g));

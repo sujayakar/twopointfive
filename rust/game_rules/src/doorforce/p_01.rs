@@ -589,9 +589,6 @@ pub fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Optio
     man_of(g, gd).saw = Some(ManSaw { at: [at[0], 0.0, at[2]], t, used: false });
 }
 
-/// A restart or a checkpoint load: forget everything about this game. (doorforce.ts doorForceReset)
-pub fn door_force_reset(g: &mut crate::game::Game) { g.m.doorforce.states = None; }
-
 #[cfg(test)]
 mod tests {
     use super::*;

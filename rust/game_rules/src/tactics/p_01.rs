@@ -333,11 +333,6 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
     id
 }
 
-/// A restart's clean slate: everything this game's tactics held goes. (tactics.ts tacticsReset)
-pub fn tactics_reset(g: &mut crate::game::Game) {
-    g.m.tactics.states = None;
-}
-
 /// Has this man taken this doorway as a drill already inside its current danger. (tactics.ts clearedFor)
 pub fn cleared_for(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let now = g.time;

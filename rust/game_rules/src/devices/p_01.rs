@@ -116,17 +116,6 @@ pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).   (devices.ts Devices.reset)
-pub fn devices_reset(g: &mut crate::game::Game) {
-    for c in g.devices.cameras.clone() {
-        let yaw = g.tab.devices_camera_rt[c].def.yaw;
-        crate::sim_lightshome::camera_machine_put(g, c, yaw, 0.0, 0.0, crate::sim_lightshome::CameraState::Idle, -100.0, None, false);
-    }
-    for l in g.devices.lasers.clone() { crate::sim_lightshome::laser_machine_put(g, l, -100.0, 0.0, false, false); }
-    g.devices.log.clear();
-    g.devices.radio_count = 0.0;
-}
-
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
 pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)

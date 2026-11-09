@@ -533,19 +533,3 @@ pub fn repair_lights(g: &mut crate::game::Game) {
     }
 }
 
-/// A restart's lights: as a level just opened has them, nothing said or sounded. Whether anything was out.   (lighting.ts freshLights)
-pub fn fresh_lights(g: &mut crate::game::Game) -> bool {
-    let mut was = crate::sim_lightshome::mains_active(g) || g.time - crate::sim_lightshome::mains_restored_at(g) < 4.0;
-    let mut i = 0;
-    while i < g.targets.len() {
-        let t = g.targets[i];
-        if crate::sim_lightshome::fixture_broken(g, t) || crate::sim_lightshome::fixture_disabled_until(g, t) > 0.0 {
-            was = true;
-        }
-        light_in(g, ::sim::lights::IN_MEND, Some(t), 0.0, 0.0, 0.0, 0.0);
-        light_in(g, ::sim::lights::IN_BLIND, Some(t), -1.0, 0.0, 0.0, 0.0);
-        i += 1;
-    }
-    light_in(g, ::sim::lights::IN_FRESH, None, 0.0, 0.0, 0.0, 0.0);
-    was
-}

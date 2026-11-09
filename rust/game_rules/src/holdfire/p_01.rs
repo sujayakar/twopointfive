@@ -256,9 +256,3 @@ pub fn hold_fire_glass_held(g: &mut crate::game::Game) {
     g.stats.holdfire.held_glass += 1;
 }
 
-/// A fresh encounter: nothing lifted.   (holdfire.ts holdFireReset)
-pub fn hold_fire_reset(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.holdfire.states.delete(key);
-}
-
