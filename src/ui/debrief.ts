@@ -108,7 +108,7 @@ export function renderDebrief(into: HTMLElement, end: RunEnd, actions: HTMLEleme
   const legend = el('div', 'db-legend');
   const seenLabels = new Set<string>();
   for (const k of Object.keys(PIN)) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
-  for (const [g, label] of [['S', 'insertion'], ['◎', end.quiet?.holder ?? 'the rack'], ['⇥', end.quiet ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
+  for (const [g, label] of [['S', 'insertion'], ...(end.holder ? [['◎', end.holder], ['⇥', 'a way out']] : [])] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
   { const s = el('span', 'lg path'); const i = el('i'); i.textContent = '━'; s.append(i, ' his path, early → late'); legend.appendChild(s); }
   right.appendChild(legend);
   return { root, debrief: D, copyText };

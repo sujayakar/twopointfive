@@ -341,7 +341,7 @@ pub struct Level {
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
-    pub mission: crate::quiet::QuietMissionAuthoredMission,
+    pub errand: crate::mission::Errand,
 }
 /// a BreachPlan is a RoomClearPlan with more on it: the part of it doorPlan's callers read
 fn plan_of_breach(b: &crate::scene_level::BreachPlan) -> crate::scene_level::RoomClearPlan {

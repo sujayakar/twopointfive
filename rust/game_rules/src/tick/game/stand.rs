@@ -247,7 +247,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
         g.guards.push(gd);
     }
     crate::opening::opening_start(g);   // a man whose route starts on top of the way in is found down his beat instead
-    let n = level.mission.rack.index;
+    let n = level.errand.index;
     let (leds, glow) = (format!("rack{}_leds", n), format!("rack{}_glow", n));
     let targets: Vec<FixtureId> = g.targets.clone();
     g.rack_targets = targets.iter().copied().filter(|&t| { let f = &g.tab.sim_lightshome_fixture[t]; f.name == leds || f.name == glow }).collect();
