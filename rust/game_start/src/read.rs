@@ -105,6 +105,8 @@ impl<T: FromJson> FromJson for JsMap<String, T> {
     }
 }
 
+impl<T: FromJson> FromJson for alloc::sync::Arc<T> { fn from_json(j: &Json, at: &At) -> Self { alloc::sync::Arc::new(T::from_json(j, at)) } }
+
 /// the member `key` of the record `j` as a field's value. A member a record does not say is left out: null is not a way to say nothing
 #[inline(never)]
 pub fn field<T: FromJson>(j: &Json, key: &str, at: &At) -> T {

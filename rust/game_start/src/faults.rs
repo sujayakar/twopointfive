@@ -470,7 +470,7 @@ impl<'a> Rules<'a> {
         }
         if let Some(r) = &s.room_clear { self.room_clear(r, s); }
         if let Some(q) = &s.quiet { self.quiet(q); }
-        if let Some(l) = &s.lesson { self.lesson(l); }
+        if let Some(l) = &s.lesson { self.lesson(l, s); }
         if let Some(p) = &s.par {
             if !(p.gold > 0.0 && p.gold < p.silver && p.silver < p.bronze) { self.say("scenarios.par", "gold under silver under bronze, seconds over 0"); }
             if p.loss_secs < 0.0 { self.say("scenarios.par.lossSecs", "seconds, 0 or more"); }
@@ -613,8 +613,25 @@ impl<'a> Rules<'a> {
         for (k, l) in [("phones", &q.phones), ("wayouts", &q.wayouts)] { for (i, s) in l.iter().flatten().enumerate() { stand(format!("{w}.{k}[{i}]"), s, false); } }
     }
 
-    /// the shapes alone: whether a test's doors, lights and areas are there is `lesson::check_lesson`'s, against the built floor
-    fn lesson(&self, l: &LessonData) {
+    /// a step's test: what no deed could ever answer, and a door, a room or a route this file has not. (A light and a man the mission stands: `tests/lessons.rs` asks of those)
+    fn lesson_test(&self, at: &str, t: &game::lesson::LessonTest, s: &LevelScenarios) {
+        use game::lesson::LessonTest as T;
+        let door = |d: &str| if !self.doors.contains(d) { self.say(at, format!("no door of the level is called '{d}'")); };
+        match t {
+            T::In { area: r } | T::Body { area: r } | T::Squad { area: r, .. } => if !(r.x0 < r.x1 && r.z0 < r.z1) { self.say(at, format!("an area that holds nothing: {r:?}")); },
+            T::Near { r: Some(r), .. } if *r <= 0.0 => self.say(at, format!("no man can be nearer than {r}")),
+            T::Men { down: Some(n) } if *n < 1.0 => self.say(at, "down: how many, at least one"),
+            T::Door { door: d, .. } | T::StackOn { door: d, .. } => door(d),
+            T::Stacks { doors, .. } => doors.iter().for_each(|d| door(d)),
+            T::Did { what, on: Some(d), .. } => { if !what.starts_with("order:") { self.say(at, format!("on: an order is given on a door, and '{what}' is none")); } door(d); }
+            T::Taken { room } => if !s.room_clear.as_ref().is_some_and(|c| c.rooms.iter().any(|r| r.id == *room)) { self.say(at, format!("no room of the level is called '{room}'")); },
+            T::Calm { route: Some(n) } => if !self.f.routes.iter().any(|r| r.name.as_deref().unwrap_or(&r.id) == n) { self.say(at, format!("no route of the level is called '{n}'")); },
+            T::All { of } | T::Any { of } => { if of.is_empty() { self.say(at, "a list of no tests"); } for x in of { self.lesson_test(at, x, s); } }
+            _ => {}
+        }
+    }
+
+    fn lesson(&self, l: &LessonData, s: &LevelScenarios) {
         let w = "scenarios.lesson";
         self.text(format!("{w}.title"), &l.title);
         if let Some(r) = &l.rails {
@@ -627,6 +644,7 @@ impl<'a> Rules<'a> {
             let at = named(i, &format!("{w}.steps"), &t.id);
             self.text(format!("{at}.id"), &t.id);
             self.text(format!("{at}.line"), &t.line);
+            self.lesson_test(&format!("{at}.done"), &t.done, s);
             if !ids.insert(&t.id) { self.say(&at, "the id is another step's already"); }
             for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line), ("pageLine", &t.page_line),
                 ("flatLine", &t.flat_line), ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }

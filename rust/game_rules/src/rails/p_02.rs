@@ -473,7 +473,6 @@ fn names_key(line: &str) -> bool {
 /// the one line on screen (None: the run is over) (rails.ts Rails.prompt)
 fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonAt) -> Option<crate::view::RailPrompt> {
     use crate::lesson::{lesson_line, lesson_over, lesson_settling, line_of};
-    use crate::scene_scenarios::LessonTestKind;
     let of = s.l.steps.len();
     if of == 0 || lesson_over(g, seat) { return None; }
     // (every step done and the mission not yet over: the last line stays up until the mission's own end)
@@ -481,7 +480,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let i = m::min(s.i, of as f64 - 1.0) as usize;
     let t = &s.l.steps[i];
     let step_line = || lesson_line(g, &line_of(g, t));
-    let cue = matches!(t.done, LessonTestKind::Cue { .. });
+    let cue = matches!(t.done, crate::lesson::LessonTest::Cue { .. });
     let said_now = |a: &crate::scene_scenarios::LessonStepAfter| said(a, g.rails.gave).filter(|l| !l.is_empty());
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     let (n, of_n) = (i as u32 + 1, of as u32);

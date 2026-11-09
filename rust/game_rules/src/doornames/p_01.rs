@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn no_names_for_a_lesson_or_a_level_without_structure() {
         let mut lesson = level();
-        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::default());
+        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::default().into());
         assert!(names_of(&lesson, &ids(), None).is_empty());
         assert!(names_of(&Level::default(), &ids(), None).is_empty());
     }
