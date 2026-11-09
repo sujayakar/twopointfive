@@ -174,7 +174,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         };
         play(&mut p, 0, 100);
         let there = p.words();
-        let kept = game_start::moment::Moment::of(&p.g);
+        let kept = game::savestate::control::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
         assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
         p.g = kept.stands(p.g.sim);
