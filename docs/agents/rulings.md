@@ -49,7 +49,7 @@ A ruling that stands on a system's own page is there and not here.
 - "our art style is also AWESOME so if we could highlight it": a mission's card on the list wears a picture (`menuStills.ts`).
 - "better but let's show the map vs. the (kinda low res) level art": the brief draws `drawMissionMap`, not the mission's picture (`loadbrief.ts`).
 - "this tutorial is good but we should attach it to a tutorial mission (and make it bespoke and explain how to plan), not for the regular ones": a regular mission's
-  Team & kit shows no walkthrough (`kitGuide.ts`).
+  Team & kit has no walkthrough.
 - "i think we can rip out the auto camera for now btw": the camera is the hand's alone, and a tap of its key does nothing.
 - "i think aim pan zero and turn direction reversed feel good": the page starts so (`FINDME_TUNED`).
 
