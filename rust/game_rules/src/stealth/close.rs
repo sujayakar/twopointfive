@@ -433,7 +433,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
 pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let st = g.gd[gd].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || dist < g.k.close.touch_m { return 1.0; }
-    let k = v3::smoothstep(g.k.close.dark_at, g.k.close.lit_at, g.pl[g.player].visibility);
+    let k = v3::smoothstep(g.k.close.dark_at, g.k.close.lit_at, g.shown[g.pl[g.player].ch].visibility);
     if k < 1.0 { g.stats.close.dark_passes += 1; }
     k
 }

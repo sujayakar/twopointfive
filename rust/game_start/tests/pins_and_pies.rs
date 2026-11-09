@@ -80,7 +80,7 @@ fn misses_raise_sams_own() {
         p.sam_put([26.0, 11.4]);
         p.frame();
         p.posted_calm(a, [10.0, 11.3], [26.0, 11.4]);
-        p.g.pl[p.g.player].visibility = 0.9;
+        p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.9;
         p.run(0.5);
         assert_eq!(p.g.cond[p.g.pl[p.g.player].ch].sup.v, 0.0, "seed {s}: he stands under nothing yet");
         (p.g.gd[a].state, p.g.gd[a].awareness, p.g.gd[a].last_known) = (GuardState::Alert, 1.0, Some([26.0, 0.0, 11.4]));
@@ -90,7 +90,7 @@ fn misses_raise_sams_own() {
         let mut last = p.g.time;
         for _ in 0..(60.0 * 6.0) as usize {
             let pl = p.g.player;
-            p.g.pl[pl].visibility = 0.9; p.g.gd[a].last_seen_t = p.g.time; p.g.pl[pl].hit_flash = 0.0;
+            p.g.shown[p.g.pl[pl].ch].visibility = 0.9; p.g.gd[a].last_seen_t = p.g.time; p.g.pl[pl].hit_flash = 0.0;
             let before = p.g.cond[p.g.pl[pl].ch].sup.v;
             p.frame();
             if his_shots(&p, a, last) > 0 {

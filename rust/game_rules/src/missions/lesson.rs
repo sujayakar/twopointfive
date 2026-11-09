@@ -178,7 +178,7 @@ fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
         T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
-        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
+        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage.as_str()) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, *state),
         T::Target { name, on } => ok_target(g, name, *on),

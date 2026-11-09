@@ -341,7 +341,7 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 /// …for the man `pc` in this man's view.
 fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if is_player {
-        let vis = g.pl[sam].visibility;
+        let vis = g.shown[g.pl[sam].ch].visibility;
         return eye_reach(g, vis);
     }
     let t = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[pc].pos };
@@ -352,7 +352,7 @@ fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, 
     }
     match o {
         Some(o) => {
-            let vis = g.gd[o].visibility;
+            let vis = g.shown[g.gd[o].ch].visibility;
             let c = g.gd[gd].ch;
             let glare = crate::roomfight::lamp_glare(g, c, o);
             eye_reach(g, m::max(vis, glare))

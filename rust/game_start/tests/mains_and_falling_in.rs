@@ -9,7 +9,7 @@ use game_start::play::{dist, Opts, Play};
 
 fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| matches!(&p.g.gd[m].task, Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Breaker)).collect() }
 fn said_it(p: &Play) -> usize { p.said.iter().filter(|l| l.text.contains("checking the breaker")).count() }
-fn keep_dark(p: &mut Play, secs: f64) { for _ in 0..(secs * 60.0) as usize { p.g.pl[p.g.player].visibility = 0.05; p.frame(); } }
+fn keep_dark(p: &mut Play, secs: f64) { for _ in 0..(secs * 60.0) as usize { p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.05; p.frame(); } }
 
 /// THE RULE: the mains are thrown on a room clear, where every defender is held on his mark: nobody is handed the errand, and nobody says he's checking the breaker, then or six seconds on. CONTROL: the office's night shift: a man who can walk is handed it, says it and walks for the panel. (The floor's own word on a blackout, the powerout, comes later than this asks and is dark_rooms.rs's.)
 /// A FAILURE MEANS: a man says he's off to the breaker and stands there.
@@ -53,13 +53,13 @@ fn the_errand_is_to_the_panels_own_face() {
     p.g.god_mode = true;
     let bp = p.g.level.breaker.pos;
     assert!(nav_grid_is_blocked(&p.g, bp[0] - 0.4, bp[2] - 0.9), "the staging: the fixed spot is floor here");
-    p.g.pl[p.g.player].visibility = 0.0;
+    p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.0;
     p.run(0.5);
     let (at, face, n) = panel_of(&p);
     set_blackout(&mut p.g, 86400.0, SetBlackoutCause::Hand);
     let (mut through, mut from) = (0, None);
     for _ in 0..45 * 60 {
-        p.g.pl[p.g.player].visibility = 0.0;
+        p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.0;
         p.frame();
         for m in p.g.guards.clone() {
             if game::sim_lightshome::mains_active(&p.g) && breaker_reset_near(&mut p.g, m) {

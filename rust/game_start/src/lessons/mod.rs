@@ -188,7 +188,7 @@ impl Bot {
     pub fn me<R>(&self, f: impl FnOnce(&game::game::Player) -> R) -> R { self.seen(|g, s| f(&g.pl[s.player])) }
     pub fn is_down(&self) -> bool { self.seen(|g, s| g.cond[g.pl[s.player].ch].down) }
     pub fn on_wall(&self) -> bool { self.me(|p| p.wall.is_some()) }
-    pub fn lit(&self) -> f64 { self.me(|p| p.visibility) }
+    pub fn lit(&self) -> f64 { self.seen(|g, s| g.shown[g.pl[s.player].ch].visibility) }
     pub fn rifle(&self) -> FirearmId { self.me(|p| p.rifle) }
     /// the gun in his hands, or the rifle where none is
     pub fn gun(&self) -> FirearmId { self.me(|p| if p.slot == SlotKind::Pistol { p.pistol } else { p.rifle }) }

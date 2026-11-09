@@ -258,7 +258,7 @@ pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: Guard
     let c = g.gd[gd].ch;
     let low = g.ch[c].anim.crouch > 0.5;
     let card = crate::kitload::load_seen(g, g.gd[gd].ch);
-    read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
+    read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.shown[g.gd[gd].ch].visibility, Some(low), Some(card))
 }
 
 /// The eye's rate on a man on a step: guards.ts sightGainOn's arithmetic.
