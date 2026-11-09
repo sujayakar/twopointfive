@@ -1,5 +1,5 @@
 // A LATTICE'S FEATURE POINTS ARE HASHED ONCE A LAYER: the check behind render/lookTex.ts cells2 and its cellTable.
-//   bun run tools/qa/probes.ts lookcells        (family `render`)
+//   bun run tools/qa/checks.ts lookcells
 //   LOOKCELLS_BREAK=1   the plain way below is handed a jitter a ten-thousandth off: must FAIL
 // Why: making a look map, every texel asked its nine neighbouring cells where their points lie (three hashes a cell and a square root a cell), which was
 // most of what a layer cost at the boot. cells2 now reads a table a lattice fills once, tells the nine apart by their squared distances and roots only the

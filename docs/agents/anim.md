@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 2407–2485 -->
-- **Character materials = a man shaded per material SLOT** (`render/charMaterials.ts` + `game/charLook.ts`; `settings.charMats`, DEFAULT OFF = `fsSkin`'s two tints, the frame as it
+- **Character materials = a man shaded per material SLOT** (`render/charMaterials.ts` + `rust/game_rules/src/char_look`; `settings.charMats`, DEFAULT OFF = `fsSkin`'s two tints, the frame as it
   was — on by itself for a mesh that keeps the contract, `?charmats` dresses the shipped mannequin by joint as a STAND-IN, `?nocharmats` holds it off; Tab ▸ Materials ▸ Characters,
   `__charmat {on, slots, tables, data(), get(i|'sam'), bump(), reset(), summary()}`). THE CONTRACT WITH THE MESHES is the slot NAMES as glTF material names — `skin cloth_uniform
   cloth_plain webbing boot helmet metal_dark rubber lens` (+ optional `accent`); case / `M_` / `.001` ignored (`slotOfMaterialName`); a cast of part meshes (MeshData.part + the
@@ -30,7 +30,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so a shirt keeps its level colour when the switch flips (what the placeholder does not follow: `accent` always takes the second colour — off, a tie is the shirt's colour and a straw hat or a tee the top's — and a row's `mix` — off, an operator's suit is his raw tint). On a cast the crease bake welds PER PART (`bakeCavity(m, perPart = true)`: alternative boots / shirts / hands share
   positions to the bit and no man wears both; the scale stays one mesh-wide percentile); the viewer's staged figure takes the table and tints of the SIDE of an outfit put on by
   name (`__vrt.wear`, `Runtime.wornSide`).
-- **The movement pass (MOVES) and turn weight (TURN)** (`src/game/character.ts`; both ON in the page, OFF in the harness — `host/standup.ts` / `tools/qa/headless.ts` pin them, `TPS_MOVES=1` /
+- **The movement pass (MOVES) and turn weight (TURN)** (`rust/game_rules/src/character`; both ON in the page, OFF in the harness — `host/standup.ts` / `tools/qa/headless.ts` pin them, `TPS_MOVES=1` /
   `TPS_TURN=1[,aim=7,…]` (or a setting's name, `TPS_TURN=medium`; a spec it does not understand stops the tool) in front of any headless tool turn them on; URL `?nomoves` / `?moves=0|1`, `?noturn` / `?turn=0|1` / `?turn=light|medium|heavy` (`TURN_FEEL`: three sets of the four rates, read everywhere through `setTurn(spec)`, named back by `turnFeel()`; `light` ships — the one that left the 144-seed tallies where they were; **the turn tallies and `turn-rates.ts` takes recorded before the names existed, at 8b3a5a3 / 7dd40b7 under a plain `TPS_TURN=1`, were `medium`** — reproduce them with `TPS_TURN=medium`), the native host `--nomoves | --moves 0|1` / `--noturn | --turn 0|1|light|medium|heavy` (also through `native:soak`); **off = the animator and the yaws exactly as they were**, held by
   `probes.ts moves-off` / `turn-off`, the gait numbers and the frozen digests). MOVES = `MOVES` switches + `MV` numbers: `anim.trained` 0‥1 dealt by side in game.ts (operators 1, QRF 0.75,
   defenders 0.12) scales the carry (trained glide: pelvis down, bob out, elbows in / untrained: shoulder swing, winged elbow), recoil per round (`anim.fire()` → `MV.recoil`: bore shove + trunk rock + climb),

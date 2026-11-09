@@ -1,29 +1,27 @@
-// A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its floor's generator (<name>-floor.ts), lets the exporter dress it
-// exactly as it dresses the plain file, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
+// A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its own `build` (the floor), lets the exporter dress it
+// exactly as it dresses any level, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
 //   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (src/scene/materials.ts, Box.does):
 //               every box has its word before the first repaint (tools/levels/doesWas.ts stampDoes, the exporter's own step) and a repaint leaves it, so
 //               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;
 //   · DECALS    appended LAST under the group 'look': NoShadow boxes only, EVERY ONE FROM THE FLOOR UP (rugs, patches and wear on the ground, the damp foot
 //               of an outside wall and the strip of ground along it, a painted dado indoors) — drawn and lit, invisible to every ray and every collision
-//               query (the old look-check also asked the three destruction indexes, which find things by shape, whether they list the same boxes in
-//               both files). From the floor up, because a drawn-only thing OFF the floor is something game/wallbreak.ts judges when what it touches breaks
+//               query. From the floor up, because a drawn-only thing OFF the floor is something rust/game_rules/src/wallbreak judges when what it touches breaks
 //               (it falls: debris, a sound) — a decal that starts at the floor is never asked. A decal on a wall's face goes with its wall when the wall
-//               is holed: scene/lookTidy.ts, picture only;
+//               is holed, picture only;
 //   · PROPS     keep their kind, place, mass and parts; a part's paint may change (nothing reads it but the renderer).
 // Never touched: lights, doors, routes, marks, scenarios, glass, lit boxes, fixtures, screens, the destruction dressing, and anything small enough to be the
 // clutter / paper the destruction index finds (by shape and by what the box does; until 2026-11-05 by tone, which is why the skin left them, and it still does).
 import type { Vec3 } from '../../src/math/vec';
 import { hashStr } from '../../src/math/dice';
-import type { Level, PropDef } from '../../src/scene/level';
+import type { Level, PropDef } from './lib/level';
 import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
 import { GWOT_PAINTS, GWOT_PALETTE, ROUGH_CLOTH, lookPaintOf, type GwotMat, type KitPaints } from '../../src/scene/gwotPalette';
-import { OFFICE_PALETTE } from '../../src/scene/officeGen';
-import { gwotKit, type GwotHost, type GwotKit, type RugStyle } from '../../src/scene/gwotKit';
+import { OFFICE_PALETTE } from './lib/officeGen';
+import { gwotKit, type GwotHost, type GwotKit, type RugStyle } from './lib/gwotKit';
 import { MARKING_TEXEL, mkHash } from '../../src/scene/markings';
 import { doesOf } from '../../src/scene/materials';
 import { stampDoes } from './doesWas';
-import { DRESS_GROUP } from '../../src/scene/dressing';
-import { isLived } from '../../src/scene/lived';
+import { DRESS_GROUP, isLived } from './lib/lived';
 import { saidAs, tonedAs, worded, repainted, type BoxStuff } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
@@ -34,7 +32,7 @@ const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const h01 = (a: number, b: number, c = 0) => (mkHash(a | 0, b | 0, c | 0) % 4096) / 4096;
 
 /** ALREADY IN THE LOOK'S OWN PAINT: a paint of the palette or one of its stand-ins, and no paint of the office's. A generator lays such a box when it builds
- *  with the look's kit (src/scene/gwotKit.ts over gwotOfOffice / gwotOfKit: a round drum, a tyre stack, sandbags in a lived tier). The skin leaves it as it
+ *  with the look's kit (lib/gwotKit.ts over gwotOfOffice / gwotOfKit: a round drum, a tyre stack, sandbags in a lived tier). The skin leaves it as it
  *  is, parts of a prop too: its rules go by the office paint a box WORE, and the simulation reads a kit paint as the office paint it stands for, so by those
  *  rules a blue drum was a metal thing to paint olive and a field stone a piece of the house's wall. */
 const OFFICE_PAINTS = new Set(Object.values(OFFICE_PALETTE as Record<string, Vec3>).map(a => a.join(',')));
@@ -54,7 +52,7 @@ export interface SkinCtx {
   y0: number; y1: number; thin: number; long: number;
   /** stands from the floor to (near) the ceiling */
   full: boolean;
-  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, furnblast.ts) */
+  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, rust/game_rules/src/furnblast) */
   steel: boolean;
   /** 0‥1, the same for every box of this group */
   gh: number;
@@ -204,7 +202,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   };
   const G = gwotKit(host);
   // the floor a decal lies on (the topmost flat thing there, in the paint it wears now), and a tone of it: wear is its own ground darker — never a colour laid on it
-  const bare = boxes.slice(0, n0).filter((_, i) => !isLived(groups[i]));   // (LIVED-IN ROOMS, src/scene/lived.ts: the decals are dealt as if the furniture were not there — the same decals with that switch on or off)
+  const bare = boxes.slice(0, n0).filter((_, i) => !isLived(groups[i]));   // (LIVED-IN ROOMS, lib/lived.ts: the decals are dealt as if the furniture were not there — the same decals with that switch on or off)
   const flats = bare.filter(b => !b.yaw && !(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && b.c[1] + b.h[1] <= 0.06 && b.h[0] > 0.4 && b.h[2] > 0.4);
   const floorAt = (x: number, z: number): Vec3 | null => { let best: Box | null = null, top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2] && b.c[1] + b.h[1] > top) { top = b.c[1] + b.h[1]; best = b; } return best ? best.albedo : null; };
   // (how high the topmost flat stands there: a ground decal is not laid where a flat stands over it — a runner, a threshold, the level's own rug — it would be buried, and take that flat's tone for a floor it does not lie on)

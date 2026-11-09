@@ -1,5 +1,5 @@
 // THE ROWS OF HOST/FINDME.TS (Options > Game): finding your own man on the screen, and how the camera answers the hand. What a page draws for them is
-// ui/findring.ts's, ui/findmeviz.ts's and draw/rims.ts's.
+// ui/findring.ts's and draw/rims.ts's.
 import { camCap } from '../host/keymap';
 import { FINDME, setFindMe, resetFindMe } from '../host/findme';
 

@@ -14,8 +14,8 @@ import { existsSync, readFileSync, writeFileSync, renameSync, rmSync } from 'nod
 import { planSvg, type PlanPen } from './level-plan.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 
 /** `block` · `levels/block.json` · `block.json` · `block-four` (a row's id) → the level's name, or null. A PATH must be this checkout's own levels/<name>.json:
@@ -26,7 +26,7 @@ export function mapName(arg: string): string | null {
   if (!/^[\w-]+$/.test(n) || !existsSync(file)) return null;
   return arg.includes('/') && resolve(process.cwd(), arg) !== file ? null : n;
 }
-/** the level as the game loads it (an office-family file gets the office's script and scenarios, as main.ts and the harness give it) */
+/** the level as the game loads it (an office-family file gets the office's script and scenarios) */
 export function loadMap(name: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')); return loadLevel(data); }
 
 const SQUAD_COLOURS = ['#ff6b6b', '#ffb347', '#c792ea', '#5ad1c8', '#f78fb3', '#9bd35a'];

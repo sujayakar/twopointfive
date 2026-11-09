@@ -5,15 +5,15 @@
 // strings; musicBackend.ts: a bowed section, a flute, a clarinet, a muted trumpet, horns) and electric only where the maintainer liked it so: the theme's own gliding pad,
 // sub and growling reese bass under every piece, a vibraphone, an electric piano, the bells (10-14: "more diverse instrumentation and making them sound more acoustic rather
 // than synth (specifically the accents and percussion, the long drawn out glissando pads and the fat synth bass are great)").
-//   MUSIC.pieces  the switch: ON in the page (`?onetheme` = the theme alone, as it was), OFF here and on the frozen stand (TPS_MUSIC=1). Off = the sequencer as it was, note for
-//                 note and draw for draw (tools/qa/music-check.ts holds the theme's note stream against a pin taken before this file existed; MUSIC_BREAK=1 must fail).
-//   which piece   THE LEVEL'S OWN (setlist.ts, MUSIC.byLevel — ON in the page, `?shuffle` off; OFF here and on the frozen stand, raised by the same TPS_MUSIC=1): each level has
+//   MUSIC.pieces  the switch: ON in the page, OFF here. Off = the sequencer as it was, note for
+//                 note and draw for draw.
+//   which piece   THE LEVEL'S OWN (setlist.ts, MUSIC.byLevel — ON in the page, OFF here): each level has
 //                 two pieces written down for it; play opens on the first (off the menu, or on a page that loads straight in), the next takes over once a piece has had MUSIC.minutes at a calm phrase end (twice
 //                 that whatever the floor is doing), in the list's order and round again. The theme is on no list: it is the main menu's. A new mission on the same page
 //                 keeps the music it has. Switch off (or a host that names no level): music.ts deals them from a shuffled bag (the page's own die, never the game's) — the
 //                 visit opens on a new one, a mission that starts once a piece has had MUSIC.missionAfter seconds moves on, and so does a piece that has had MUSIC.minutes.
-//   how tense     THE OPPOSITION'S NERVES (MUSIC.theirs — ON in the page, `?teamnerves` off; OFF here and on the frozen stand, raised by the same TPS_MUSIC=1): the tension the
-//                 score follows (game/guards.ts tension; the page hands it this switch) is how roused the men against the player are. In live play a teammate counts
+//   how tense     THE OPPOSITION'S NERVES (MUSIC.theirs — ON in the page, OFF here): the tension the
+//                 score follows (rust/game_rules/src/guards tension; the page hands it this switch) is how roused the men against the player are. In live play a teammate counts
 //                 only while he is in a fight of his own ('alert'); what a blast, a noise or a tripped breaker left on him does not. A man under an order never talks
 //                 himself calm, so with the switch off (as it was) one can left a teammate's wariness holding the score up for as long as his order stood, every
 //                 defender down or not. While a show runs (the day showcase's pair hunting) its men's scripted states are the score's cue and read as they always did.
@@ -23,7 +23,7 @@
 import type { MusicBackend, PieceVoices, MusicLevels, MetalHit, NoiseDice, KeyKind, PercKind, WindKind, BowKind } from './musicBackend';
 import { midi } from './musicBackend';
 
-/** the pieces switch, the level's-own-music switch, whose nerves the tension reads, and the two times the deal reads (registered in game/knobs.ts; the listener's ears only: no rule reads it, a replay holds no sound) */
+/** the pieces switch, the level's-own-music switch, whose nerves the tension reads, and the two times the deal reads (the listener's ears only: no rule reads it, a replay holds no sound) */
 export const MUSIC = { pieces: false, byLevel: false, theirs: false, minutes: 4, missionAfter: 45 };
 
 /** a struck metal's dice, in the order the graph drew them: the base pitch, then per partial the decay's draw and the pan's (the theme's pinned stream rests on this order) */

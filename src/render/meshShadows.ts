@@ -9,7 +9,7 @@
 //   [NODE_BASE + (k·N + i)·2 + 0]        node i of character k: (aabbMin.xyz as bits, skip)         skip = next node when this one is missed / done
 //   [NODE_BASE + (k·N + i)·2 + 1]                               (aabbMax.xyz as bits, triStart | triCount << 24)   count 0 = internal (children i+1 and topo.right)
 //   [TRI_BASE + (k·T + t)·3 + j]         corner j of triangle t of character k, skinned this frame: (pos.xyz as bits, 0)
-// k is the character's index in this frame's capsule list = its skin instance (game.ts writes both from one list; scene.charBounds[k] culls it,
+// k is the character's index in this frame's capsule list = its skin instance (rust/game_rules/src/game writes both from one list; scene.charBounds[k] culls it,
 // capsules[k·capsPerChar] carries its owner id). N ≈ 9k, T ≈ 13.7k: 281 KB of nodes + 644 KB of corners per character, ×8 slots ≈ 7.4 MB.
 // The node region is initialised for all slots with the real links and inside-out boxes, so a slot that has never been refit is a valid EMPTY
 // tree (the walk terminates on any slot, whatever the frame's character count).
@@ -24,7 +24,7 @@ const LEVEL_HDR = 64;                // u32 words of level offsets before the le
 const LEVEL_SIZES = LEVEL_HDR - 4;   // …the last four of them: the mesh's own sizes (levels, nodes, triangles, where the corners start), which the two kernels read
 const REFIT_WG = 256;                // one workgroup of this size refits one character's tree, level by level
 
-const bvhCache = new WeakMap<MeshData, MeshBvh>();   // one build per mesh per process (the headless QA harness constructs many Games)
+const bvhCache = new WeakMap<MeshData, MeshBvh>();   // one build per mesh per process
 /** The shared topology for a loaded character mesh (built on first use: ~80 ms for the mannequin). */
 export function meshBvhFor(mesh: MeshData): MeshBvh {
   let b = bvhCache.get(mesh);
@@ -99,7 +99,7 @@ const INST_ROWS: u32 = ${CHAR_INST_BYTES / 16}u;
 
 export class MeshShadows {
   readonly bvh: MeshBvh;
-  /** topology checksum — tools/qa/mesh-shadow-ref.ts prints the same for the same mesh (the fixture only applies when they agree) */
+  /** topology checksum */
   readonly digest: string;
   /** the one buffer the scene group binds (layout above) */
   readonly buf: GPUBuffer;
@@ -148,7 +148,7 @@ export class MeshShadows {
       { binding: 6, visibility: CS, buffer: { type: 'read-only-storage' } },
     ] });
     this.mod = makeShader(device, skinRefitSrc(), 'meshShadows');
-    this.pl = device.createPipelineLayout({ bindGroupLayouts: [layout] });   // (skin + refit: init(), awaited by main.ts / the viewer before the first frame)
+    this.pl = device.createPipelineLayout({ bindGroupLayouts: [layout] });   // (skin + refit: init(), awaited by the page before the first frame)
     this.bg = device.createBindGroup({ label: 'meshShadowsBG', layout, entries: [
       { binding: 0, resource: { buffer: this.buf } }, { binding: 1, resource: { buffer: restBuf } }, { binding: 2, resource: { buffer: cornerBuf } },
       { binding: 3, resource: { buffer: jointMats } }, { binding: 4, resource: { buffer: topoBuf } }, { binding: 5, resource: { buffer: levelBuf } },
@@ -156,7 +156,7 @@ export class MeshShadows {
     ] });
   }
 
-  /** skin + refit, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — main.ts / the viewer await it before the first frame; never called headless */
+  /** skin + refit, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — the page awaits it before the first frame */
   async init(): Promise<void> {
     if (this.pSkin && this.pRefit) return;
     [this.pSkin, this.pRefit] = await Promise.all([

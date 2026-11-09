@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 358–366 -->
-- **A calm guard burns his torch only where he needs it** (`src/game/calmtorch.ts`, `TORCH.calmOff`: on in the page, `?calmtorch=0`; frozen stand off, `TPS_CALMTORCH=1`; a `FROZEN_HOLDS`
+- **A calm guard burns his torch only where he needs it** (`rust/game_rules/src/calmtorch`, `TORCH.calmOff`: on in the page, `?calmtorch=0`; frozen stand off, `TPS_CALMTORCH=1`; a `FROZEN_HOLDS`
   row, in the knob registry and a journal's tables; Tab ▸ Sandbox ▸ Detection & movement ▸ 'calm guards: torch only in the dark'): a STAFF man on a plain patrol (`handCarry` 'torch',
   awareness < `calmAw` 0.3, no errand / body duty; never under a show) still carries the hand torch, but its light is off while his place is lit enough to work in — the place's own steady
   light (`lightEstimateAt(…, steadyOnly)`, nothing carried) ≥ `litAt` 0.2 where he stands or on floor in plain view within `spillM` 3 m (by day, daylit floor within `dayM` 12 m, through
@@ -16,7 +16,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `CALMTORCH_BREAK=1` must fail). Never seen on a GPU: the estimate has no bounce, so the bar is a guess.
 
 <!-- was CLAUDE.md lines 1392–1427 -->
-- **A hand torch hangs when the wall is at his hand** (`TORCH.wallLow`, `src/game/guards.ts torchLow`, `rigProps.ts torchCarryDir`; 10-22, the
+- **A hand torch hangs when the wall is at his hand** (`TORCH.wallLow`, `rust/game_rules/src/guards torch_low`, `rigProps.ts torchCarryDir`; 10-22, the
   maintainer off the stealth tutorial: "another example of character shining flashlight at a small point in front of them. feels a bit weird but i'm
   not sure what the natural thing is here"). A patrol's (or a man gone to look's) hand torch is carried level along his heading and chest at his aim's
   pitch; when he stopped or turned facing a wall a step off, the whole beam landed there as one small blown-out dot (a scripted run of the stealth
@@ -38,7 +38,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ray that is not on the floor runs clear to 1.6 m. `torch-wall` is 7 of 7 on both stands; on the page's a torch hung for 636 man-frames of 27000 where it
   hung for 420 (342 where 226 with the rule raised on the frozen stand). Not measured on a night of sneaking.
 - **The difficulty switch + the harder defenders (10-07;** record rebuild/harder-defenders/numbers.md, the two parts' own pages beside it):
-  `src/game/difficulty.ts` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
+  `rust/game_rules/src/difficulty` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
   Difficulty, `?hard` / `?hard=0` / `?difficulty=hard|standard` — over two tables that both ship OFF: `pressure.ts PRESSURE` (defenders come to a held room
   TOGETHER after a think beat, some sent round by a second door, a failed push or a last man falls back; `OWN.press` at the head of roomfight.ts `rally()`,
   `pressTick`) and `digin.ts DIGIN` (men who stay home shut, wedge and cover their doors, drag furniture, radio it; five one-clause seams in roomfight.ts:
@@ -57,7 +57,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `out.difficulty` per run; `tools/qa/defender-moves.ts --pair` for the paired intervals. The dig-in part's level 'The block' (`levels/block.json`, runner
   id `block-four`, eight defenders) is the start card's eighth row. Scripted numbers only — nothing of this was seen on a GPU. QA: `probes.ts picker-card`
   (the row, the links, custom), the room-fight families at standard.
-- **Defender cues (10-07;** `src/game/cues.ts`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
+- **Defender cues (10-07;** `rust/game_rules/src/cues`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
   telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`; off = the strip and every line as they
   were, digest for digest). Three things, all for a ROOM FIGHT's defenders (team 'hostile' units while `fightLive`): (1) their radio lines reach the RADIO STRIP — `say()`
   hands them to `cues.heard`, the overlay draws `game.view.radio` (`cues::radio_rows`, the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
@@ -77,7 +77,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own, never one of `rows`; the 'A shout heard' bullet in dialogue.md has the rule, the switch and the check). `CUES` rides a recording from that day.
 
 <!-- was CLAUDE.md lines 1444–1540 -->
-- **Defender squads (10-07;** `src/game/enemysquads.ts`, record rebuild/enemy-squads/squads.md, the file format squad-format.md beside it):
+- **Defender squads (10-07;** `rust/game_rules/src/enemysquads`, record rebuild/enemy-squads/squads.md, the file format squad-format.md beside it):
   a level whose `scenarios.roomClear.squads` names squads (scenarios.ts `SquadData`; `levels/block-squads.json` ← `tools/levels/blocksquads.ts` = The block with
   Alpha 3 in the mess, Bravo 5 in workshop + store, Charlie 3 in comms `mayLeave: false`; `maxMen` ≤ `SQUAD_MAX_MEN` 11; start card row 'The block, three
   squads') stages its defenders as SQUADS (`squadsStage` from roomclear.ts onStaged, `squadsTick` in its tick, `squadsStop` in clear). A squad holds until ITS
@@ -130,7 +130,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   never keys up (`keyUp` → true, no call), `callsCut` runs before the squad's 'every man down' exit, and the net's check waits while `Q.calls` holds a call. Probe section 18
   (learns at the end / cut off / gunfire = instant / the cue line / the env values / the men sent to look / the ask: none at [0, 0], a check under way, two cuts on one frame, a caller outside his rooms, no cut = the same game); `pair-sneak.ts` files each call's beat under `m.beats` (in Sam's lane, the
   partner's line, how it ended) and `PS_CALLERS=1` (tool only) makes the script go for a calling man first.
-- **Defenders respect a lane that cost them** (`src/game/lanes.ts`, 10-11; the maintainer: "enemies do seem to run into held corridors a bit too eagerly, especially when they've already taken
+- **Defenders respect a lane that cost them** (`rust/game_rules/src/lanes`, 10-11; the maintainer: "enemies do seem to run into held corridors a bit too eagerly, especially when they've already taken
   fire. was pretty easy to just hold a hallway and pick them off"; page rebuild/held-corridor/read-first.md). `LANES.on`: ON in the page (`?nolanes` = they come as they did),
   OFF in the module and on the frozen stand (`TPS_LANES=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables — a recording from before the table replays with it off; nothing of
   the file runs when off). Only a ROOM FIGHT's defenders (hostile units while `fightLive`), at any difficulty; no man, hit point or aim added. A LANE is opened by what the side SUFFERED: a
@@ -271,7 +271,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shipped stand unless `TPS_PROFILE=frozen`). Never seen on a GPU or played by a person.
 
 <!-- was CLAUDE.md lines 1611–1723 -->
-- **QRF on going loud** (`src/game/qrf.ts`, `Game.qrf: Qrf`, STATUS E12(0)): trigger polled once a frame after updateEscalation — `escalationOf(g) ≥ 2`
+- **QRF on going loud** (`rust/game_rules/src/qrf`, `Game.qrf: Qrf`, STATUS E12(0)): trigger polled once a frame after updateEscalation — `escalationOf(g) ≥ 2`
   AND (a PLAYER 'shot' event at level ≥ 1 reached a living staff man within the hearing model's 80 m gunfire gate inside `LOUD_MEMORY_SECS`, OR ≥ 2 staff
   bodies `found`) AND `live(g)` (aiEnabled, !quietUtility, !touring, !isDaylight, Sam up) AND `tune.qrf`; `requestQrf(g, reason)` also from the panel.
   States idle → requested → inbound (+1.6 s, control's line) → arriving (ETA−10: the men are SPAWNED then, on the landing, `stairBoots`) → deployed (ETA:
@@ -296,7 +296,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   budget: skinning holds 16 (`MAX_CHARS`); the shadow-proxy table holds 8 — Sam + guards/units are guaranteed (a 9th unit throws in spawnUnit), civilians
   are appended last and lose their shadow proxies while a full QRF wave is up. QA: `probes.ts qrf` (trigger / timeline / element / wave / reset /
   gating / limits / perimeter), `soak.ts --loud-at MIN` (+ qrf invariants always on: state sane, men never below 'search', budget, radio ≤ 30/min).
-- **Pursuit tactics** (`src/game/tactics.ts`, STATUS E12 a+b; `tune.tactics` on by default — OFF = the alert chase byte for byte as it was, `probes.ts
+- **Pursuit tactics** (`rust/game_rules/src/tactics`, STATUS E12 a+b; `tune.tactics` on by default — OFF = the alert chase byte for byte as it was, `probes.ts
   tactics-identity` holds it; nothing under `quietUtility`). Hunting men with a fix and NO eyes on their man only (the fight inside 6 m, the standoff, the shot
   are untouched): (A) ≥ 2 alert men of one side on one fix, all > 6 m off → `planApproach` deals ROLES over the nav grid: PRESSER (shortest route; jogs to the
   last blocked→open transition of the sight line = his corner, kneels, waits), FLANKER (A* again with the presser's corridor cells + his quarter of the fix's 4 m
@@ -314,7 +314,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tacticsTick` before the guards. Panel/QA: `game.tacticsSummary()`, `tacticsRoleOf`,
   `TACTICS_DEBUG.log`, `TACTICS_STATS`; `probes.ts tactics` (flank / single / lone / door / rounds / decay / identity), soak `--doorway-kills-per-min N`,
   `--tactics off`, invariants + the `walkInAtDangerDoor` smell (must stay 0).
-- **A pistol from behind a held man** (`src/game/gunhold.ts`, table `GUNHOLD`; `GUNHOLD.on` — ON in the page, `?nogunhold` = the standoff's ring as it was; OFF in the module and on the
+- **A pistol from behind a held man** (`rust/game_rules/src/gunhold`, table `GUNHOLD`; `GUNHOLD.on` — ON in the page, `?nogunhold` = the standoff's ring as it was; OFF in the module and on the
   frozen stand, `TPS_GUNHOLD=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the key replays with it off; never under `touring` or
   `quietUtility`). The maintainer, 10-12: "when you're holding a hostage, enemies pretty much ignore that you're shooting at them and you can just take them down. they should probably run
   for cover when you take out a gun and actively work on flanking you". The rule is the PISTOL's: the arm hold with no gun in it is the old ring frame for frame. Once a man of the
@@ -331,7 +331,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   QA: `bun run tools/qa/gunhold-check.ts [front|line|knife|all] [--verbose]` (`probes.ts gunhold-cover`, in family `gunhold` beside the pistol-to-the-head hold's own four; the
   standoff probes' staging run with the rule off, then on; by name on the shipped stand, under probes.ts the runner's own; `GUNHOLD_BREAK=1` must fail all but knife, which is an identity). Never seen on
   a GPU or played by anybody.
-- **Needs-driven patrol variation** (`src/game/needs.ts`, STATUS E12 c; `tune.needs` on by default — OFF = the calm patrol byte for byte, `probes.ts needs-identity`
+- **Needs-driven patrol variation** (`rust/game_rules/src/needs`, STATUS E12 c; `tune.needs` on by default — OFF = the calm patrol byte for byte, `probes.ts needs-identity`
   holds it against a digest frozen before the module). Each STAFF man (team 'guard', no unit) is dealt 2–3 of `NEED_KINDS` coffee / smoke / water / stretch off
   `hashStr(callsign)` (which, the fill time inside `FILL_MIN`'s window, the starting level 0.3‥0.7, and the departure waypoint = the route waypoint with wait ≥
   `NEEDS.minWait` nearest the spot by path; a kind under `minTripM` of it is not dealt: Novak stands beside the cooler) — today: Kowalski coffee/water/smoke from the
@@ -358,7 +358,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   QA: `probes.ts needs` (determinism / telegraph / one-away / interrupts incl. a whole headless tour lap / frozen-up / identity; telegraph + interrupts also in
   `ai-pass`), soak `--needs-rate K|off` (K > 1 adds the quiet-spell + send stimuli), invariants (≤ maxAway, no trip through a frozen floor or on a man not
   patrolling, levels / tellShown sane, lines only from the right mouths) + `needsStats`.
-- **Civilians** (`src/game/civilians.ts`, STATUS E12 d; `tune.civilians` default ON — OFF, or `?nocivilians`, = nobody but the shift, byte for byte; `probes.ts
+- **Civilians** (`rust/game_rules/src/civilians`, STATUS E12 d; `tune.civilians` default ON — OFF, or `?nocivilians`, = nobody but the shift, byte for byte; `probes.ts
   civilians-identity` also holds that their calm PRESENCE (greetings off) moves nothing of the shift's seeded three minutes). The cleaner (Marta, id 40) and the late
   worker (Owen, 41) are `Guard` records with `team 'civilian'` (teams.ts: hostile to nobody, nobody hostile to them) and a `civ: Civ` record, kept in `Game.civilians`
   — NEVER in `Game.guards`, so no AI loop, pairing, rollcall, clear or QRF count sees them. (They were built under a private die, `withDice`;
@@ -412,7 +412,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off; led down the hall behind the shield (`PT_HALL=file`, seeds 1-12; the shield has since left the game) 12 of 12 taken on both, lost 15 / 10, no killer past 12 m on either. records-pair × seeds 7-18: 11 of
   12 taken on both, lost 6 / 7 (the first tally's 3 / 5 was noise). On the frozen stand `TPS_FARSIGHT=1` moves no verdict in close, standoff, roomfight, quiet, silent, sneak,
   sticky, fog, pairup, pairs, lights-out, stealthpose, squadfire or journal. Never played: 26 m and the 0.4 / 0.8 meter bars are first numbers.
-- **Shaken — the first slice of enemy morale** (`src/game/morale.ts`, table `MORALE`; `MORALE.on` — ON in the page, `?nomorale` = every man as steady as he
+- **Shaken — the first slice of enemy morale** (`rust/game_rules/src/morale`, table `MORALE`; `MORALE.on` — ON in the page, `?nomorale` = every man as steady as he
   was; OFF in the module and on the frozen stand, `TPS_MORALE=1` raises it, `TPS_PROFILE=shipped` has it on; `FROZEN_HOLDS` row, `JOURNAL_KNOBS` + `applyKnobs`
   so a recording from before the key replays with it off, the debugger's Missions ▸ 'Enemy nerve' section (below), `moraleSnapshot` / `moraleRestore` in the checkpoint, `moraleReset` in
   `clearAftermath`). One number a man, `dread` 0‥1 = SHOCK (events; half-life 25 s; capped at `shockCap` 0.5, so shock alone never breaks anybody) + STANDING
@@ -490,7 +490,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the lit yard through the hole, 6 of 8 points), so he drops under his broken line a second in; and morale-check (3)'s lamp-lit hut read dark. morale-check
   (D) holds the two readings side by side. No panel row, no URL word for it. morale-check / training-check hold `RUNNER.on` and `DARKDOOR.on` off AFTER
   EVERY STAND-UP (a pin made once is undone by `standUp` re-reading `TPS_RUNNER=1`: case (5) was red on the frozen stand with all three words raised).
-- **Drops it and runs — the second slice of enemy morale** (`src/game/runner.ts`, table `RUNNER`; `RUNNER.on` — ON in the page, `?norunner` = a broken man
+- **Drops it and runs — the second slice of enemy morale** (`rust/game_rules/src/runner`, table `RUNNER`; `RUNNER.on` — ON in the page, `?norunner` = a broken man
   stays and changes his magazine, as he did; OFF in the module and on the frozen stand, `TPS_RUNNER=1` raises it and it acts only with `TPS_MORALE=1` beside
   it, `TPS_PROFILE=shipped` has both on; `FROZEN_HOLDS` row, `JOURNAL_KNOBS` + `applyKnobs` so a recording from before the key replays with it off, the panel's
   row under morale's, `runnerSnapshot` / `runnerRestore` in the checkpoint). No surrender, nobody's hands go up (the maintainer, 10-13). WHO: a man morale.ts
@@ -552,7 +552,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHO HE PLANS ROUND (10-18, `PICTURE.run`, picture.ts; `?picrun=0`): with the picture on, the way, the reachable floor, the outside he picks, the corner
   and the look ahead are reckoned from the men HE knows of, where he believes each to be, not from every enemy's true place; he leaves the floor on the
   TRUE lines as before. The rule, its check line and what was measured: `docs/agents/team-feel.md`, STEP 8 of the own-picture bullet.
-- **Not in there alone — the dark doorway** (`src/game/darkdoor.ts`, table `DARKDOOR`; `DARKDOOR.on` — ON in the page, `?nodarkdoor` = every man walks into
+- **Not in there alone — the dark doorway** (`rust/game_rules/src/darkdoor`, table `DARKDOOR`; `DARKDOOR.on` — ON in the page, `?nodarkdoor` = every man walks into
   the dark as he did; OFF in the module and on the frozen stand, `TPS_DARKDOOR=1` raises it, `TPS_PROFILE=shipped` has it on; IT ACTS ONLY WITH `MORALE.on`
   AS WELL (frozen: `TPS_MORALE=1 TPS_DARKDOOR=1`); `FROZEN_HOLDS` row, `JOURNAL_KNOBS` + `applyKnobs` so a recording from before the key replays with it off,
   the panel's Enemies row under morale's, `darkDoorSnapshot` / `darkDoorRestore` in the checkpoint: every man's act and clocks, who is green, the rooms given
@@ -599,7 +599,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rule has it off anyway). guards.ts `followPath`: the gate passes a man `gd.fled`. The panel row moved to Missions ▸ 'Enemy nerve' ('green men wait at a
   dark doorway'); no reset — the switch off leaves a stopped man's record, which the tick ends `keepSecs` after it is on again. darkdoor-check stages
   `MORALE.training` 'mixed' and holds `RUNNER.on` off after every stand-up; 17 lines green on both stands, headless, never on a GPU, never played.
-- **An enemy on alert does not sit blind in the dark** (`src/game/darkfoe.ts`, `DARKFOE.on`; page on, `?nodarkfoe`; frozen stand off, `TPS_DARKFOE=1`; on
+- **An enemy on alert does not sit blind in the dark** (`rust/game_rules/src/darkfoe`, `DARKFOE.on`; page on, `?nodarkfoe`; frozen stand off, `TPS_DARKFOE=1`; on
   the shipped stand `TPS_DARKFOE=0` puts it off; journal: a recording from before the key replays with it off). The maintainer's ask (2026-10-13, a Mousehole
   tape: nine alert defenders stood up to 111 s at meter 0.00 with every weapon light dealt off). BEFORE: sight went only by the light ON THE TARGET
   (`guards.ts sightGain`); nothing asked whether the WATCHER could see, and mission defenders (`unit.light` false) never lit. NOW, for a hostile unit the
@@ -654,7 +654,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stun charge each) against hard as built, seeds 1–8, shipped stand, scripted: the office four won 8 → 4, teammates up 24 → 7 of 32; the depot 29 → 24;
   the floodlit yard 19 → 11; the records pair unchanged; in all 74 → 44 of 112. `HARD.stuns` stays 0 (The block keeps its one each — `HARD_AT`): whether
   hard carries stuns everywhere is the maintainer's call, and the lever on the mission sheet already lets him play it.
-- **The QRF takes a room by the squad's own door and room code (`tune.qrfSquad`, 2026-10-13; `src/game/squadcast.ts`, qrf.ts `startDrill` /
+- **The QRF takes a room by the squad's own door and room code (`tune.qrfSquad`, 2026-10-13; `rust/game_rules/src/squadcast`, qrf.ts `startDrill` /
   `phaseDrill` / `dropDrill`).** At a room's door the element is A SECOND CAST of the classes Sam's squad runs: `squadCast(g, {mine, team, ring})` builds
   a `SquadOrders` and a `DoorTools` of its own over a VIEW of the Game (a Proxy on which only `orders` / `doorTools` read as the cast's pair; every other
   read and every write is the real Game's), and qrf.ts gives it `tools.order('bangClear' | 'openClear' | 'threshold', men, door, side)` and ticks
@@ -693,7 +693,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are not `live`), only on the office's plain solo night. NOW a level has a team only where its file says so: WHY this place has one (a sentence, refused
   if absent), the radio's words for the place and the team, one to three WAYS (four muster marks out of sight, a four-man fan inside, an optional door
   they throw), `men` and `eta` as ranges, optional outside posts for the second lift, optional `sweep` places. WHICH LEVELS, and why: the office (its
-  block is the old constant, mark for mark: `levels/office.scenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
+  block is the old constant, mark for mark: `tools/levels/lib/officeScenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
   the main gate or the impound gate), `bazaar` (a street under curfew; the patrol comes up the street's open end or by either gate), `crossing` (a
   border company's duty section, by either yard gate on the house's side). LEFT WITHOUT, ON PURPOSE: `quiet-relay` (a hilltop: nobody is within reach,
   and its wired spot already brings its own men), `vault` (private hired guards who call nobody), `lights-out` (its one idea is the mains), `quiet-yard`
@@ -784,7 +784,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ones: this floor is steep as it stands' (the warehouse and the block; 'nothing measured…' was the test bench talking), and the kit clause 'Here each
   carries a stun charge, and throws it down a hallway he knows you hold' — on the block nobody leaves his room, so the only use measured is the lane
   rule's charge (1 of 8 hall-door deals, 0 of 12 by the go-round). A floor whose squads do come at you with one would want the older words back.
-- **The net goes quiet** (`src/game/netquiet.ts`, `NETQUIET.on`; the third slice of the enemy's morale — the maintainer, 10-13: "Dread from unanswered
+- **The net goes quiet** (`rust/game_rules/src/netquiet`, `NETQUIET.on`; the third slice of the enemy's morale — the maintainer, 10-13: "Dread from unanswered
   radio checks and bodies found. Heard in the calls getting worse, seen in beams whipping to noises. Done-test: the last man never dies standing upright
   without firing"). ON in the page (`?nonetquiet` off; the debugger's Enemy nerve row 'a quiet net frightens them', kept for the visit), OFF in the module
   and on the frozen stand (`FROZEN_HOLDS` 'NETQUIET.on' → `TPS_NETQUIET=1`, which needs `TPS_MORALE=1`: it does nothing with MORALE off); rides the journal
@@ -899,7 +899,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `far` off, so it does not exercise this); no tally over missions; never seen on a GPU, never played. NOT touched (other files' own senses, a claim to their
   owners): a scripted man's eye in `squad.ts` and `qrf.ts` still writes his fix off any far glimpse. A fix can land a frame or two before the 'huh?' when the
   rate is under the 'seen' line (the unseen decay runs after the glimpse): he is at the line either way.
-- **Dig-in: the furniture comes home (10-13, `HAULHOME`, `src/game/digin.ts`).** A hauling defender was asked whether his furniture had made it the
+- **Dig-in: the furniture comes home (10-13, `HAULHOME`, `rust/game_rules/src/digin`).** A hauling defender was asked whether his furniture had made it the
   frame he stopped at his stand by the door (`case 'haul'`, planted). Furniture that had swung wide of him on the way was then 1.32 to 1.44 m from its
   place against the test's 1.3, with 4 to 6 s of `haulBy` unspent: 'the furniture did not make it to the door', and he took cover beside it. The compound's
   second hand placement (a620967d) re-dealt who hauls from where in the last stand and most deals fell in that hole (the haul's code had not changed): the
@@ -925,7 +925,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
   `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Measured with `hold`, before against after, all five hands, seeds 1 and 2, 240 s, standard difficulty, on compound, barracks and depot: 0 of 30 runs part, so wedges (compound 32, barracks 14, depot 0) and who is left standing are unchanged. Doors mostly start shut and men dig in before anyone has opened them, so these runs never reach the case; the bunk room in the test stages it. Hard not run. Never seen on a GPU, never played by a person;
   (2) nothing about which furniture he picks or where he pushes from.
-- **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
+- **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`rust/game_rules/src/doze`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it
   off; Tab ▸ Sandbox ▸ Detection & movement 'calm guards doze in the dark' + a read-only line). The maintainer's ask (2026-10-13): 'guards sleeping in dark
   rooms … snoozing off in a chair. it should make sense why they're hanging out when they can't see.' BEFORE: a patrol waypoint with a long wait in an unlit
@@ -1015,7 +1015,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   like any light (fried, a charge spent, dark). PLAY, AS IT IS: on the page most patrol torches in lit corridors are out, so a torch to knock out with the
   OCP is found in the dark rooms or on a man already looking. Proved by taking `gd.flashlight.enabled` out of `ocpable` in a side tree: the line goes red.
   Both stands. Never seen on a GPU.
-- **A blackout sends enemies to the breaker** (`src/game/powerout.ts`, `POWEROUT.on`, 10-17; the first slice of "defenders answer the plan the team
+- **A blackout sends enemies to the breaker** (`rust/game_rules/src/powerout`, `POWEROUT.on`, 10-17; the first slice of "defenders answer the plan the team
   chose": the answer to the mains being cut). BEFORE: a mission's defenders are every one of them held on a mark by the room fight, so with the `posted`
   rule nobody was handed the walk to the breaker and nobody said anything: the team cut the mains and the garrison stood in the dark for as long as the
   team cared to take. THE RULE, once per blackout, for the room fight's hostile defenders: a man NOTICES (a mains fixture burning in his plain view inside
@@ -1056,7 +1056,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SHAPE: the free-man test repeats what enemysquads / darkfoe / lighting each ask in their own words (a shared "is this man the room fight's to send"
   would be roomfight's to own). NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: the two lamps crossing a dark hall, whether the line reads on the strip in
   time, whether a lone man leaving his room reads as an opening or as a blunder, the lights coming back under the team.
-- **Squads from the rooms** (`src/game/squaddeal.ts`, `SQUADDEAL`; part of "defenders answer the plan the team chose"). WHAT WAS THERE: the contact
+- **Squads from the rooms** (`rust/game_rules/src/squaddeal`, `SQUADDEAL`; part of "defenders answer the plan the team chose"). WHAT WAS THERE: the contact
   call, the men who come to a hit room, the pair that goes round, the radio check and the men who walk to a silent post are all enemysquads.ts's, and
   none of it runs on a level whose file has no `scenarios.roomClear.squads` block (the depot, records, the kill house, the long hall, the floodlit yard,
   defuse, the snatch, the office room clear): there a loud way in drew nobody at standard and a man taken quietly at the back was missed by nobody. THE
@@ -1099,7 +1099,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   who knows still lights his lamp). `darkfoe-check.ts`'s walker runs hold `TPS_SQUADDEAL=0` themselves (the floors they were written for; 4 of its
   16 lines were red on the shipped stand without that) and a new line asks that on the kill house as dealt nobody is sent and every man standing
   is somebody else's. Whether a dug-in blind man should still take the walk is an open call for the maintainer.
-- **Squads that stay in their rooms still miss a room that goes silent** (`src/game/stayask.ts`, `STAYASK`; the quiet answer on the block and
+- **Squads that stay in their rooms still miss a room that goes silent** (`rust/game_rules/src/stayask`, `STAYASK`; the quiet answer on the block and
   Mousehole). WHAT WAS THERE: a squad counts only its own men, and the net's roll call of whole squads (`SQUADS.netAsk`, another goal's, off in the
   page: `?radiocheck=net`) never sends a man of a `mayLeave: false` squad. On a floor where every squad stays — a room each, two or three men a room —
   the team takes a whole room without a sound and the garrison stands as it stood. THE RULE, on a floor where it holds (`stayAskHere`, read once at
@@ -1121,7 +1121,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands; `STAYASK_BREAK=1` red on (a) (b) (e) on both. MEASURED (`answers.ts`, shipped, seed 7): with both rules 15 of 19 rows answer the three
   plans, on standard and on hard (13 without this one: the block and Mousehole had words only on the quiet plan). NOT MEASURED: what it costs a team (the scripted
   commander goes in loud). NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: whether a lone man crossing the block reads as the garrison waking or as a gift.
-- **A rescue's men check in by radio** (`src/game/rescuecheck.ts`, `RESCUECHECK`; the quiet answer on the three rescues, and the roamer's word on
+- **A rescue's men check in by radio** (`rust/game_rules/src/rescuecheck`, `RESCUECHECK`; the quiet answer on the three rescues, and the roamer's word on
   the other two plans). WHAT WAS THERE: a rescue's cast (captor, door man, guards, roamers: rescue.ts) are not squads, so none of the squads' senses
   ran there — a man put down quietly at the back was missed by nobody, and a roamer let off his post went without a word. THE RULE, while a rescue
   is staged and nobody of its cast is roused: every `every` s (first after `first`; beats from ids, no dice) the captor says "radio check — sound
@@ -1204,7 +1204,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
   17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
   ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
-- **Defenders are dealt guns off the squad's table, and a gun is used for what it is for** (`src/game/gunroles.ts`, `GUNROLES.on`; the maintainer,
+- **Defenders are dealt guns off the squad's table, and a gun is used for what it is for** (`rust/game_rules/src/gunroles`, `GUNROLES.on`; the maintainer,
   10-18: "also should we model more firearms?"). On in the page (`?nogunroles` = the build before), off in the module and on the frozen stand
   (`FROZEN_HOLDS 'GUNROLES.on'`, `TPS_GUNROLES=1`); a recording from before the table replays with it off. No state of its own: a role is read off the gun
   in a man's hands each time it is asked (a sidearm out after a dry primary does not change whose man he is).
@@ -1252,7 +1252,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
   looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
   drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
-- **The men left alive on a rescue come for the hostages** (2026-10-18; `src/game/rescueflush.ts`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
+- **The men left alive on a rescue come for the hostages** (2026-10-18; `rust/game_rules/src/rescueflush`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
   the module and on the frozen stand, `TPS_RESCUEFLUSH=1`; a debugger toggle). The maintainer: "remaining enemies should try to flush you out and/or kill the
   hostage when loud". WHAT WAS THERE: the captor's clock passed to a man of theirs only if he happened to stand in the hostage room; with the room the team's,
   the men alive elsewhere stayed where the fight had left them. THE RULE, once the team has been LOUD (`rescue.noiseAt`) and THE ROOM HAS FALLEN (every man
@@ -1300,7 +1300,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines pass by design); `RESCUEFLUSH_BREAK=lanes` 6 FAIL, the two lane lines on each mission. In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
   three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
   played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.
-- **An alerted man does not wait at a shut door** (`src/game/doorforce.ts`, `DOORFORCE.on`: ON in the page — `?doorforce=0` — OFF in the module and on the
+- **An alerted man does not wait at a shut door** (`rust/game_rules/src/doorforce`, `DOORFORCE.on`: ON in the page — `?doorforce=0` — OFF in the module and on the
   frozen stand, `TPS_DOORFORCE=1`, a `FROZEN_HOLDS` row, in the knob registry and a journal's tables: a recording from before the key replays with it
   off; off = the build as it was. The maintainer: "and if they're alerted they should behave realistically, like shooting through the door or
   eventually kicking through it".) WHAT WAS THERE: a defender who was up and knew a man stood at the far side of a shut door either rested his gun on it
@@ -1361,7 +1361,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the rule off, digest for digest). UNTUNED: every number above is a first number. Headless only: nobody has played it and nothing of it has been
   seen on a GPU — whether rounds through a door at a stack READ as fair, and whether four seconds to the boot is right, are questions for play.
 - **Enemies startle at first sight (10-22; the maintainer: 'we should also have startle animations when unaware enemies see you for the first time. a quick beat and then they pull out their gun or run').**
-  `src/game/startle.ts`, table `STARTLE {on, beat 0.5, draw 0.3, fresh 1.0, late 0.25, run, runM 8, nearM 2.5, clearSecs 1.5, runSecs 4, stuckSecs 0.75, stuckM 0.3}`: ON in the page (`?startle=0`; the debugger ▸ Enemy nerve ▸ 'enemies startle at
+  `rust/game_rules/src/startle`, table `STARTLE {on, beat 0.5, draw 0.3, fresh 1.0, late 0.25, run, runM 8, nearM 2.5, clearSecs 1.5, runSecs 4, stuckSecs 0.75, stuckM 0.3}`: ON in the page (`?startle=0`; the debugger ▸ Enemy nerve ▸ 'enemies startle at
   first sight'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'STARTLE.on'`, raised by `TPS_STARTLE=1`; under `TPS_PROFILE=shipped`, `TPS_STARTLE=0` holds it off), in `knobs.ts` and `JOURNAL_KNOBS` (a recording from before the
   table replays with it off); it stands aside for the tour and the utility stages. WHO: a man hostile to the player who stood calm (`patrol`) no more than `fresh` seconds ago and has his own eyes on a man now that he is alert — whether his
   eyes roused him (through the 'huh?' or not) or a shot did a moment ahead of the man coming through the door; never a man who has been looking for longer, a blinded or folded man, a civilian, a scripted man, the player's side; once a man.
@@ -1376,7 +1376,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE / NOT SEEN: never seen on a GPU and never played; the jolt has been looked at only as capsule pose strips (the long-gun one is the weakest: the feet stay planted); every number is a first number. Ideas left out: the beat by
   training, a run that goes for a living mate instead of cover, a half start for a searcher who rounds a corner onto a man, two men who start on one frame offset from each other.
 - **A man flinches when fire comes close, by his training; the very green may run (10-22; the maintainer: 'we should have some flinching when there's fire near a character' — 'maybe also proportional to training too' — 'so very inexperienced characters get freaked out by gunfire and may even run away').**
-  `src/game/flinch.ts`, table `FLINCH {on, least 0.06, full 0.35, far 0.45, minTravel 1, steadyK 0.65, friendly false, run, breakSecs 2.5, hotSecs 1, easeK 0.5, askSecs 0.25}`: TWO switches, both ON in the page and OFF in
+  `rust/game_rules/src/flinch`, table `FLINCH {on, least 0.06, full 0.35, far 0.45, minTravel 1, steadyK 0.65, friendly false, run, breakSecs 2.5, hotSecs 1, easeK 0.5, askSecs 0.25}`: TWO switches, both ON in the page and OFF in
   the module and on the frozen stand — `FLINCH.on` (`?flinch=0`; the debugger ▸ Enemy nerve ▸ 'men flinch when fire comes close'; `FROZEN_HOLDS 'FLINCH.on'`, `TPS_FLINCH=1`, and `TPS_FLINCH=0` holds it off under
   `TPS_PROFILE=shipped`) and `FLINCH.run` (`?flinchrun=0`; '… green men alone run from fire'; `TPS_FLINCHRUN=1` / `=0`). Registered in `knobs.ts`, carried by the journal (a recording from before the table: off).
   THE DUCK: fed where a round exists (`suppression.ts noteRound` → `flinchRound`, with the weight that model gives the round before temperament, cover or side: 0.4 by how near it passed inside 1.8 m + 0.3 by how
@@ -1421,7 +1421,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   runner took the corner with a clear way out because the run is planned from his picture, which had an enemy guessed into the doorway (a 'fix' on a
   sound) and a dead man told of at the other door: the runner's rule, its owner's. NOT SEEN, NOT PLAYED: nothing on a GPU or in the page; the
   laststand family is the only tally run.
-- **A man who has dropped his gun runs for it no matter what** (`src/game/runner.ts`, `RUNNER.anyway`; 10-23, from a recorded game on the block and the maintainer's
+- **A man who has dropped his gun runs for it no matter what** (`rust/game_rules/src/runner`, `RUNNER.anyway`; 10-23, from a recorded game on the block and the maintainer's
   words on it: 'i think in this case he could have pathed to the exit?' — 'if a guy gives up he should drop his gun (including pistol) and just run for it no
   matter what'; his note on the recording: only men giving up and trying to run out of the level are modelled, never a surrender). SWITCH: ON in the page
   (`?runanyway=0` = as it was), OFF in the module and on the frozen stand (`TPS_RUNANYWAY=1` raises it, and it acts only with `TPS_MORALE=1 TPS_RUNNER=1`
@@ -1461,7 +1461,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   there is not decided. The tutorials' scripted last man (`c.rout` in tut-squad and tut-plan) is this same run: he now drops both guns and, cornered by the
   team, runs past it for the nearest outside; no lesson run here routed one, so that is unplayed and unmeasured. Other modules that still take a man who has
   run for a calm living one (who speaks on the net, who counts as company) are not touched here: more men running through a level will meet them more often.
-- **A man who has run is nobody's enemy on the books** (`src/game/runner.ts`, `RUNNER.nobody`; 10-23, the first of the STILL OPEN list two bullets up, taken
+- **A man who has run is nobody's enemy on the books** (`rust/game_rules/src/runner`, `RUNNER.nobody`; 10-23, the first of the STILL OPEN list two bullets up, taken
   now that every man who gives up crosses the level instead of settling in a corner). SWITCH: ON in the page (`?runnobody=0` = as it was), OFF in the module
   and on the frozen stand (`TPS_RUNNOBODY=1` raises it, and it acts only with `TPS_MORALE=1 TPS_RUNNER=1` beside it; on the page's stand `TPS_RUNNOBODY=0`
   holds it off). Row in `FROZEN_HOLDS`, the table is the registered `RUNNER`, `journal.ts applyKnobs` puts it off for a recording from before the key;
@@ -1502,7 +1502,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: never seen on a GPU and never played. The page was only booted on the software adapter (`PORT=<port> node tools/qa/runanyway-page.cjs`: its key-on run, which opens the page as it ships and so with this key on, passes
   with no page error; its second load was cut by the time cap on a loaded machine and proves nothing).
 
-## Who has a man (`src/game/owner.ts`)
+## Who has a man (`rust/game_rules/src/owner`)
 
 - **ONE RECORD A MAN, 2026-11-05 (task GEp4o, the AI cleanup's first step).** Four columns of the men's table, and only `owner.ts` writes them: `owner` a word of claims, a bit a rule, because a
   man is held by several rules at once all the time (squad and lane 76,426 man-ticks of the 42 runs on the shipped stand); the highest bit set is the rule that has him; `rank` that bit's place;
@@ -1539,9 +1539,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rules' own families under the same audit.
   NOT SEEN: nothing here changes what is on screen but the debugger's line. Never seen on a GPU.
 <!-- 2026-11-05 -->
-- **What a man believes and what he covers are two things** (`src/game/belief.ts`, `BELIEF.on`: on in the page, `?belief=0`; off on the frozen stand, `TPS_BELIEF=1`; a `FROZEN_HOLDS` row, in the
+- **What a man believes and what he covers are two things** (`rust/game_rules/src/belief`, `BELIEF.on`: on in the page, `?belief=0`; off on the frozen stand, `TPS_BELIEF=1`; a `FROZEN_HOLDS` row, in the
   knob registry and a journal's tables). `Guard.lastKnown` is only where he believes the enemy to be. `Guard.covers` is the point his duty has his gun on, said anew each tick (`dutiesAnew` clears it
-  at the tick's top, the room fight and the scenarios say it again before any man's update), so a duty that ends leaves nothing behind. It is not state, and `game/digest.ts` does not read it; what
+  at the tick's top, the room fight and the scenarios say it again before any man's update), so a duty that ends leaves nothing behind. It is not state, and `rust/game_rules/src/digest` does not read it; what
   moves a shipped digest is `fix`, the field that no longer holds a door, and the gun's turn in `yaw`. `gunPoint()` is where the gun goes with no man to shoot at: what his eyes put in his belief this
   very tick, else what he covers, else what he believes. `eyesFix()` answers the rules that ask where his own eyes have the man (roomfight evidence and fixKeep, enemysquads teamKnown / teamKnownHow /
   contact, buddy, laststand), a fix led to where a lost man was going counting as his eyes' (`Guard.ledAt`). Every other reader takes the belief as it stands: frag's throw, picture's idea of his man,
@@ -1560,7 +1560,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   The soak on the page's stand: the base's four kinds and no new one, but more of them (27 first reports against 15; a selector left open 1,165 against 149 frames, knife-missing 2,267 against 2,093). The
   tour's three red stops are the base's. NOT MEASURED: no response team runs in the 42, so that reader is by code only.
   NOT SEEN: never on a GPU, never played. What to look for: held men acting on where you actually were, not on their own door.
-- **A man put on a post gives up his walk to a door** (`DOORFORCE.postEnds`, `src/game/doorforce.ts`: on in the page, `?postends=0`; off on the frozen stand, `TPS_POSTENDS=1`; a `FROZEN_HOLDS` row,
+- **A man put on a post gives up his walk to a door** (`DOORFORCE.postEnds`, `rust/game_rules/src/doorforce`: on in the page, `?postends=0`; off on the frozen stand, `TPS_POSTENDS=1`; a `FROZEN_HOLDS` row,
   carried by a journal's DOORFORCE table). Before it lanes.ts stopped him every 0.2 s and doorforce.ts walked him on: a visible stop and step for 4.6 s (rescue-consulate:2, Roamer 1, 21 alternations).
   Only the walk ends: what he believes of the door stands, so a posted man can still fire on it.
   CHECK `bun run tools/qa/postends-check.ts` (`probes.ts postends`, family doors; both stands); `POSTENDS_BREAK=1` fails line 1 on both.

@@ -20,8 +20,8 @@
 //   · NOT FOR A PAGE NOBODY SITS AT: a browser a script drives (`navigator.webdriver`: every page tool under tools/qa) is no first-time player, and the
 //     tools measure the step as it stands; there it is played only when asked for (`?kitguide=1`, or the word on the head).
 //   · THE SWITCH: KITGUIDE.on — on in the page, `?kitguide=0` = no walkthrough and no word on any step; `?kitguide=1` = played on this visit whatever
-//     the browser remembers (a mission's plan, or the general one on a regular mission). UI only: nothing under src/game reads it, no recording carries
-//     it, and it is mounted only by the one starting page (ui/startpage.ts), which no headless stand opens.
+//     the browser remembers (a mission's plan, or the general one on a regular mission). UI only: nothing in the game reads it, and
+//     it is mounted only by the one starting page (ui/startpage.ts).
 // Plain DOM in the mission list's layer, one style block injected once. Nothing at module level uses another module's exports.
 import type { LoadoutScreen } from './loadout';
 import type { KitBrief } from './kitBrief';
@@ -30,7 +30,7 @@ import { countWords } from './kitBrief';
 import { rectZoom } from './textsize';
 
 export const KITGUIDE = { on: true, again: false, /** a script drives this browser: nothing is played unasked */ driven: false };
-try { const v = new URLSearchParams(location.search).get('kitguide'); if (v === '0') KITGUIDE.on = false; else if (v === '1') KITGUIDE.again = true; KITGUIDE.driven = (globalThis.navigator as { webdriver?: boolean } | undefined)?.webdriver === true; } catch { /* no page (the harness) */ }
+try { const v = new URLSearchParams(location.search).get('kitguide'); if (v === '0') KITGUIDE.on = false; else if (v === '1') KITGUIDE.again = true; KITGUIDE.driven = (globalThis.navigator as { webdriver?: boolean } | undefined)?.webdriver === true; } catch { /* no page */ }
 export const KITGUIDE_LS = 'twopointsix.kitguide';
 /** ms a finished beat's card stays, ticked, before the next comes */
 export const KITGUIDE_TICK_MS = 520;

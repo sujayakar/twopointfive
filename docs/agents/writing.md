@@ -112,7 +112,7 @@ and a teammate sounds like a present-day American soldier, not a narrator.
 
 - **The tutorial's big line**: one short sentence that starts with a verb or with "Press" / "Hold" and the key. About twelve words
   at most, because it is read at a glance in the middle of a fight. It says what to do; the card says why.
-- **A move the keys can change is named by a token, not by its key** (`game/lesson.ts TOKENS`): `{grab him}`, `{grab him from behind}`,
+- **A move the keys can change is named by a token, not by its key** (`rust/game_rules/src/lesson TOKENS`): `{grab him}`, `{grab him from behind}`,
   `{knock him out}`, `{take him out}`, with any words for "him" (`{grab the near guard}`). The build writes the token out by the keys it has
   ("press [Space] to grab him" or "hold left click on him to grab him"; "right click to knock him out", with or without the knife), and
   `lesson-check` refuses a line that spells the grab's key out. So write the sentence around the token and read it aloud each way it can

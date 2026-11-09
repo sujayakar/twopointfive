@@ -1,14 +1,14 @@
-// THE SCENARIO LIST: the curated scenarios the mission list offers (ui/missions.ts renders one row per entry; main.ts boots the one the URL names) and the pure
+// THE SCENARIO LIST: the curated scenarios the mission list offers (ui/missions.ts renders one row per entry; host/drawpage.ts boots the one the URL names) and the pure
 // helpers between a row and the page's query string. A scenario with a level of its own is ONE NEW ROW here — `level` names its file under levels/, whose own
 // `scenarios` block carries the marks (scene/scenarios.ts LevelScenarios) — and no picker code.
 //
 // PICKING IS A PAGE LOAD. A row's href is scenarioQuery(entry) with the visitor's other flags kept (pickSearch): the page boots on the entry's level and
-// game/scenarioRun.ts starts it from the query — the one code path for a click and for a pasted URL. So a level is only ever loaded at boot, and the scenarios'
+// rust/game_rules/src/scenario_run starts it from the query — the one code path for a click and for a pasted URL. So a level is only ever loaded at boot, and the scenarios'
 // module-level team-start knobs (NIGHTBREACH.samAt, RESCUE.opsAt — written once per team start) never meet two levels in one page.
-// Types and pure functions: nothing here imports the game (but game/loadout.ts — itself types and pure functions, importing nothing at run time: keep it so) or
+// Types and pure functions: nothing here imports the game (but rust/game_rules/src/loadout — itself types and pure functions, importing nothing at run time: keep it so) or
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
-import { squadOfQuery, sizeWords, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { squadOfQuery, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
@@ -19,7 +19,7 @@ import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../h
 export const SCENARIOS: ScenarioEntry[] = [
   // the office (the bundled level). The night breach was built and tuned on this floor and its idea is picking your entry. It is CUT FROM THE LIST (the
   // maintainer, 10-24: "let's also remove "night breach" since it's unnecessary now"): no list or card draws it; the row, its address (`?nightbreach`) and
-  // every check that stages it stay, as the room clear and the rescue are built on its staging (game/nightbreach.ts). `?offlist=0` draws it again. The other
+  // every check that stages it stay, as the room clear and the rescue are built on its staging (rust/game_rules/src/nightbreach). `?offlist=0` draws it again. The other
   // three are the office versions of what the levels below were made for, kept beside them
   { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids', offList: true,
     place: 'The office · the break room', lean: 'either', defenders: 3,
@@ -67,7 +67,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     place: 'A five-room shoot house on a range', lean: 'loud', defenders: 6,
     blurb: 'The clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
   // new ideas (group 'ideas': small missions, each built on one idea). Mousehole = the walls are the way in: the level's own room clear issues the squad wall
-  // charges for the run (scenarios.roomClear.wallCharges → game/issue.ts), and every room's door opens on one lit corridor a duty-room gun looks down
+  // charges for the run (scenarios.roomClear.wallCharges → rust/game_rules/src/issue), and every room's door opens on one lit corridor a duty-room gun looks down
   { id: 'mousehole-four', title: 'Mousehole', kind: 'roomclear', squad: 4, level: 'mousehole.json', ways: ['the dark yard, on the blank wall', 'the dark side, on the fire exit'], untuned: true, group: 'strongholds',
     place: 'A clinic: three rooms and a duty room off one lit corridor', lean: 'loud', defenders: 9, squads: true,
     blurb: 'Every door opens onto one lit corridor, and a gunner behind a hatch covers it. A flashbang can\'t reach him, but you have wall charges.' },
@@ -75,22 +75,22 @@ export const SCENARIOS: ScenarioEntry[] = [
     place: 'One wing: a bare hall 23 metres long, four rooms off it', lean: 'loud', defenders: 7,
     only: 'Your kit is issued for this one, so it\'s played with the full squad of four.',
     blurb: 'Two enemies at the dim far end cover the whole hall, and the only door in opens onto it. Your kit is issued for this one.' },
-  // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: game/glasspen.ts), a blank back wall with the back door into the store; both starts are dark and out of sight.
-  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (probes.ts missions-list; a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
+  // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: rust/game_rules/src/glasspen), a blank back wall with the back door into the store; both starts are dark and out of sight.
+  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
   // The blurb is the premise and holds for both ways in (the sheet's 'Way in' row names them). The list deals the first way (beside the building: the lit glass is the player's own decision); the back lot is his pick on that row.
   // Two squads hold it since the hand placement (Front stays in the glasshouse, Back moves), and the level issues one wall charge for the blank end wall.
   { id: 'glasshouse-four', title: 'The glasshouse', kind: 'roomclear', squad: 4, level: 'glasshouse.json', ways: ['the dark beside the building, round the corner from the glass', 'the dark back lot, on the back door'], untuned: true, group: 'raids', offList: true,
     place: 'A seed station: a glazed front, glass between its rooms', lean: 'loud', defenders: 7, squads: true,
     blurb: 'The enemies in three dark, glass-walled rooms will shoot right through the glass. Only the back store has none. You get one wall charge.' },
   // The pass = a level MADE FOR SNOW (tools/levels/pass.ts: the snow on the ground, the drifts, the caps and the trodden paths are in the level file, laid by hand; what falls
-  // is the weather's, keyed on the level's name — game/weatherKinds.ts — so the link carries no `weather=`). A walled teahouse and truck halt at night: the one gate is lit and
+  // is the weather's, keyed on the level's name — rust/game_rules/src/weather_kinds — so the link carries no `weather=`). A walled teahouse and truck halt at night: the one gate is lit and
   // watched through windows from two sides of the yard; the other way in is the kitchen's back door, outside the wall. Eight men, two squads: filed under 'Strongholds'.
   { id: 'pass-four', title: 'The pass', kind: 'roomclear', squad: 4, level: 'pass.json', ways: ['the road, in the dark beside the gate', "the back of the halt, on the kitchen's door"], untuned: true, group: 'strongholds',
     place: 'A teahouse and truck halt on a pass road, under snow', lean: 'loud', defenders: 8, squads: true,
     blurb: 'The only gate is lit, with a truck snowed in just inside. Lit windows watch the yard, the kitchen has a back door, and there\'s a generator.' },
 ];
 
-// THE QUIET MISSIONS (game/quiet.ts; kind 'quiet'), in a table of their own: a level file with a `scenarios.quiet` block and ONE OR TWO ROWS here — squad 0
+// THE QUIET MISSIONS (rust/game_rules/src/quiet; kind 'quiet'), in a table of their own: a level file with a `scenarios.quiet` block and ONE OR TWO ROWS here — squad 0
 // alone, squad 1 with one partner under the pair rules. Each start deals one of the block's starts, spots and patrol sets off the run's seed. They are NOT in
 // SCENARIOS: that table is the squad's missions, and every tool that walks it (the scripted commander, the door and order tallies) means a team to command.
 // The bazaar row and the police post are levels built for sneaking alone (tools/levels/bazaar.ts, police-post.ts). A level built for a quiet style adds its rows here the same way.
@@ -101,7 +101,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
   { id: 'police-post-quiet', title: 'The police post', kind: 'quiet', squad: 0, level: 'police-post.json', untuned: true, offList: true,
     place: 'A walled district police post', lean: 'quiet', defenders: 5,
     blurb: 'The desk sergeant carries the keys, and the guards know the armory code. Grab one and ask, or pick a lock. Take the case file and leave through a side gate.' },
-  // (tools/levels/vault.ts: a quiet level built round the devices — a lens on each gate and one on a keypad door, as the bazaar and the police post have them, and two tripwire beams, which no level but the office had; tools/qa/vault-run.ts plays it, probe `vault`)
+  // (tools/levels/vault.ts: a quiet level built round the devices — a lens on each gate and one on a keypad door, as the bazaar and the police post have them, and two tripwire beams, which no level but the office had)
   { id: 'vault-quiet', title: 'The counting house', kind: 'quiet', squad: 0, level: 'vault.json', untuned: true, group: 'quiet-alone',
     place: "A money changer's house in a walled yard", lean: 'quiet', defenders: 3,
     blurb: 'There\'s a camera on the lit gate and a keypad on the strongroom. The clerk who knows the code smokes alone in the dark. Two tripwires guard the back door.' },
@@ -113,18 +113,17 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     place: 'A hilltop radio relay: mast, comms hut, ops room', lean: 'quiet', defenders: 6,
     blurb: 'The crypto drive is in the comms hut. Its door is lit, locked and on camera, and a guard watches it from the dark behind the mast. Send your partner behind him.' },
   // (tools/levels/lights-out.ts: a quiet level built for two — the breaker and the door it darkens are a courtyard apart, and the dark lasts as long as one man's walk to the panel;
-  //  the man at the hall's window is the one the game sends to the panel; tools/qa/lights-out-run.ts plays it as a pair, alone, with the partner left behind and
-  //  with the panel shot dead (low, at a sprint, and with the sentry choked out first), probe `lights-out`)
+  //  the man at the hall's window is the one the game sends to the panel)
   { id: 'lights-out-two', title: 'Lights out, as two', kind: 'quiet', squad: 1, level: 'lights-out.json', untuned: true, group: 'quiet-two',
     place: 'A walled compound: the generator shed, the radio house', lean: 'quiet', defenders: 3,
     blurb: 'The codebook is in the radio house, behind a camera, beams and a sentry. The breaker is in a shed, and the dark only lasts until he walks over to it.' },
 ];
 /** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
-/** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
+/** THE TUTORIAL (rust/game_rules/src/rails): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
  *  screen. The first is one man alone with his rifle; the second is his squad, led from the ground beside them. A row cut from the list (`offList`)
  *  keeps its place in this table: the list and a won lesson's next are the drawn rows in this order. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
-  // the first: one man and his rifle (tools/levels/tut-road.ts, levels/tut-road.script.ts). He walks one snowed-in mountain road, and every wreck and wall
+  // the first: one man and his rifle (tools/levels/tut-road.ts). He walks one snowed-in mountain road, and every wreck and wall
   // on the way up it is the cover for the next key. Nothing to throw, nobody to lead, nothing to sneak past
   { id: 'tut-road', title: 'The pass road, alone', kind: 'quiet', squad: 0, level: 'tut-road.json', group: 'tutorial',
     place: 'A snowed-in road below the pass, at night', lean: 'loud', defenders: 6, hour: 'night',   // (lit for the night: three fires, two trucks' lamps and a thin moon on snow)
@@ -137,7 +136,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road with you. Get them through the gate, then lead them door by door.',
     scene: 'The people who hit the convoy fell back to a road tunnel. You and your squad went after them and ran straight into their roadblock at the station by the tunnel\'s mouth.',
     teaches: ['Zoom out to see your squad', 'Move the squad with one key', 'Stack the squad up on a door, then send them in', 'Call the squad back to you'] },
-  // his kit, then the squad's (tools/levels/tut-kit.ts, levels/tut-kit.script.ts): the fuel halt at night. He goes in alone and uses each thing he carries
+  // his kit, then the squad's (tools/levels/tut-kit.ts): the fuel halt at night. He goes in alone and uses each thing he carries
   // once, then calls his four up and has them use theirs from the ring on the squad's key.
   { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
     hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
@@ -145,7 +144,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
-  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // the squad in two pairs (tools/levels/tut-queue.ts): he is on the ground with his four, and every stop is a thing one order to
   // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
   { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
@@ -164,8 +163,6 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The ledger shows payments to a truck park at the edge of town, and the convoy\'s fuel went through it. Two of you are going in to get the manifest from the office, and nobody can know.',
     teaches: ['A partner who follows you quietly', 'Send him around behind a guard', 'Take down two guards at once', 'Have him cut the power while your hands are full', 'Move through the dark together'] },
 ];
-/** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
-export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
 export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
 /** EVERY LEVEL THE LIST DRAWS: the rows a player is shown (not `offList`), a level each in the list's order, with the rows that play on it (the first is the
  *  one a tool opens the level by). The one answer to "which levels are on the mission list": the pricing run and the level tools ask it */
@@ -178,16 +175,14 @@ export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
  *  a quit drops it like the rest. */
-export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
+export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, rust/game_rules/src/loadout; `loadout=<id>`: its screen, ui/loadout.ts)
 
-/** 'you + the pair' / 'you + four' (and the loadout's other sizes: 'solo', 'you + one', 'you + three'): how many teammates, in the picker's words */
-export function teamWords(e: { squad: number }): string { return sizeWords(e.squad); }
 /** what the level is called on the picker: the file's stem, or 'office' for the bundled level */
 export function levelWords(e: { level?: string }): string { return e.level ? e.level.replace(/\.json$/, '') : 'office'; }
 
-/** What a query string asks for, read exactly as the page starts it (game/scenarioRun.ts): which scenario, with how many teammates, on which level file and
+/** What a query string asks for, read exactly as the page starts it (rust/game_rules/src/scenario_run): which scenario, with how many teammates, on which level file and
  *  placement seed — or null when it names none. `?squad4` alone is the room clear with the four; beside `?nightbreach` it is that scenario with four; the rescue
- *  stages its own pair whatever that FLAG says. `?squad=N` (0‥4, game/loadout.ts) is the loadout's size on any of the three, the rescue included, and wins over
+ *  stages its own pair whatever that FLAG says. `?squad=N` (0‥4, rust/game_rules/src/loadout) is the loadout's size on any of the three, the rescue included, and wins over
  *  the flag; with neither the size is the pair. `?quiet` (`?quiet=N`: the deal pinned) is the quiet mission on the level the URL names: alone, or `squad=1` — `squad4` beside it is not its
  *  flag and is ignored (a stale link is the quiet mission, never a room clear on a level that has none). */
 export interface ScenarioSpec { kind: ScenarioEntry['kind']; squad: SquadSize; level?: string; seed?: number }
@@ -196,24 +191,18 @@ export function specOfQuery(search: string | URLSearchParams): ScenarioSpec | nu
   const four = q.has('squad4');
   const kind: ScenarioEntry['kind'] | null = q.has('roomclear') || (four && !q.has('nightbreach') && !q.has('rescue') && !q.has('quiet')) ? 'roomclear' : q.has('nightbreach') ? 'nightbreach' : q.has('rescue') ? 'rescue' : q.has('quiet') ? 'quiet' : null;
   if (!kind) return null;
-  // (a quiet mission, game/quiet.ts: alone unless `squad=1` — any bigger size it is asked for is the one partner; `quiet=N` pins its deal)
+  // (a quiet mission, rust/game_rules/src/quiet: alone unless `squad=1` — any bigger size it is asked for is the one partner; `quiet=N` pins its deal)
   const spec: ScenarioSpec = kind === 'quiet' ? { kind, squad: (squadOfQuery(q, false) ?? 0) > 0 ? 1 : 0 } : { kind, squad: squadOfQuery(q, kind !== 'rescue') ?? 2 };
   const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) spec.level = lf;
   if (kind === 'roomclear') { const s = q.get('roomclear') || q.get('squad4'); if (s && Number.isFinite(Number(s))) spec.seed = Math.floor(Number(s)); }
   if (kind === 'quiet') { const s = q.get('quiet'); if (s && Number.isFinite(Number(s))) spec.seed = Math.floor(Number(s)); }
   return spec;
 }
-/** the list's row a query string boots (same kind, team size, level and seed), or null: a hand-typed combination the list does not hold (a row deployed at
- *  another size than its own is one: game/scenarioRun.ts runningScenario still names it) */
-export function entryOfQuery(search: string | URLSearchParams, list: ScenarioEntry[] = ALL_MISSIONS): ScenarioEntry | null {
-  const s = specOfQuery(search); if (!s) return null;
-  return list.find(e => e.kind === s.kind && e.squad === s.squad && (e.level ?? '') === (s.level ?? '') && (e.kind !== 'roomclear' || (e.seed ?? null) === (s.seed ?? null)) && (e.kind !== 'quiet' || e.seed === undefined || e.seed === s.seed)) ?? null;   // (a quiet row with no seed of its own is its row whatever deal the URL pins)
-}
 /** the visitor's query string with every scenario key dropped ('' or '?a=1&b') */
 export function quitSearch(search: string): string {
   const q = new URLSearchParams(search); for (const k of SCENARIO_KEYS) q.delete(k);
   q.delete('way');   // (the way in is ONE mission's pick — ui/missions.ts waySearch puts it on that row's link alone; it names no scenario, so it is not a SCENARIO_KEY)
-  if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — game/quietfog.ts puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
+  if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — rust/game_rules/src/quietfog puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
   if (heldPage(q)) for (const k of HELD_PAGE_WORDS) q.delete(k);   // (a priced page's own words for a held picture, host/runpage.ts: the run wrote them, so they go with the run's word below)
   for (const k of ['bench', 'benchcap', ...RUN_PAGE_WORDS, ...PRICE_ASK_WORDS]) q.delete(k);   // (a run's words — the benchmark's, ui/bench.ts and ui/benchrun.ts, and a run's page of any kind, host/runpage.ts: one run on the page it was asked on, never carried onto a mission's link)
   q.delete('cams');   // (… and the sticky cameras handed with it: the button beside the lever, on a quiet row's link alone)

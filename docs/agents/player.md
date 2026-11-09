@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 261–270 -->
-- **A raised gun comes down at a wall** (`src/game/gunwall.ts`, `GUNWALL.on`: on in the page, `?nogunwall` = off = the build before it; frozen stand off, `TPS_GUNWALL=1`; Tab ▸
+- **A raised gun comes down at a wall** (`rust/game_rules/src/gunwall`, `GUNWALL.on`: on in the page, `?nogunwall` = off = the build before it; frozen stand off, `TPS_GUNWALL=1`; Tab ▸
   'guns come down at walls'). A gun that is up (the aim, the high port) and whose own line meets a static or a leaf inside its reach goes to the low ready through `Guard.muzzleDown`
   (the bit `guards.ts muzzleCheck` sets for a colleague in the line — pose, fire gates and the laser already read it), with a lead for his closing speed and a down / up band; the
   low carriages are then pulled in by the room they have (`CharacterAnimator.gunWall` 0‥2 toward `character.ts WALL_TUCK`). A man with an enemy in his sights (`hot`: the alert
@@ -18,14 +18,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 <!-- was CLAUDE.md lines 328–357 -->
 - **Three small player rules from the 10-10 play notes** (each a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; `probes.ts startfile` / `autoreload` / `quickthrow`): (1) THE TEAM
-  STARTS FALLEN IN (`src/game/startfile.ts START.fallIn`: on in the page, `?nofallin`; frozen stand off, `TPS_FALLIN=1`): the night breach and every room clear stage the men on the menu's own
+  STARTS FALLEN IN (`rust/game_rules/src/startfile START.fallIn`: on in the page, `?nofallin`; frozen stand off, `TPS_FALLIN=1`): the night breach and every room clear stage the men on the menu's own
   'fall in' (`teamStartsFallenIn`, unspoken, not on `orders.log`) (Tab ▸ Sandbox ▸ Night breach ▸ 'team starts fallen in', read at the next staging); the RESCUE is not staged so — its men are held until its clock starts and fall in then (staged fallen in, a man of the pair shot a
-  roamer through the conference glass before Sam moved). (2) A DRY GUN RELOADS ITSELF (`src/game/autoreload.ts RELOAD {auto, delay 0.25}`: on in the page, `?noautoreload`; frozen off,
+  roamer through the conference glass before Sam moved). (2) A DRY GUN RELOADS ITSELF (`rust/game_rules/src/autoreload RELOAD {auto, delay 0.25}`: on in the page, `?noautoreload`; frozen off,
   `TPS_AUTORELOAD=1`): the gun in the PLAYER's hands, empty with a magazine left, starts its reload through the R key's own line of player.ts a beat after the last round (asked every frame, nothing
   latched: a reload a sprint / holster took away starts again); R is still his for a part-spent magazine; AI men always reloaded by themselves. Tab ▸ Sandbox ▸ Weapons & rifles ▸ 'reload by itself when dry' + 'auto reload delay s'. (3) THE G QUICK THROW IS GONE FROM THE PAGE
   (`src/game/quickthrow.ts QUICKTHROW.on`: off in the page, `?quickthrow`; the one row the FROZEN stand has ON — its probes and a recorded session press G (the soak does not) — `TPS_QUICKTHROW=0`): a
   can is thrown from its slot (3 / 4 / 5) with a click; the order menu's own G row (`FRAG.orderKey`) stays. Tab ▸ Sandbox ▸ Player, doors & props ▸ 'G quick throw'. Training 4 lost its quick-throw step.
-- **THE LAST MAGAZINE, SEATED AND NOT RACKED, IS STILL A RELOAD** (`src/game/autoreload.ts RELOAD.lastMag`: on in the page, `?nolastmag`; frozen off, `TPS_LASTMAG=1`; a
+- **THE LAST MAGAZINE, SEATED AND NOT RACKED, IS STILL A RELOAD** (`rust/game_rules/src/autoreload RELOAD.lastMag`: on in the page, `?nolastmag`; frozen off, `TPS_LASTMAG=1`; a
   `FROZEN_HOLDS` row, in `RELOAD`'s registered table, and a journal from before the key replays with it off). The flaw: a reload of the last magazine broken off between
   'magazine in' and the rack (a sprint, a holster, a takedown: a half-second window on the plain row) left a full magazine under an empty chamber with nothing spare;
   `Firearm.startReload` refused it for want of a spare ('no spare magazines' over a full gun), the dry-gun rule skipped it for the same reason, and the gun never fired
@@ -33,7 +33,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as a reload to come (with the dry-gun rule off, a click there still says 'reloading…' until R is pressed: player.ts's own line, not touched). Any Firearm, so an AI man's gun in that state too; no man was found who reaches it. Check: `tools/qa/autoreload-check.ts`
   lines (5c) and (5d) (`probes.ts autoreload`), `LASTMAG_BREAK=1` must fail (5c); run on both stands. No Tab row. Measured: nothing; the state was made by the check's
   own sprint. Nobody has played it, and it has never been seen on a GPU.
-- **The player and his own side** (`src/game/friends.ts FRIENDS {noSnap, lowReady, reachM 8, pastM, clearM, upSecs 0.25, quietS 5}`; two `FROZEN_HOLDS` rows, in the knob registry and a
+- **The player and his own side** (`rust/game_rules/src/friends FRIENDS {noSnap, lowReady, reachM 8, pastM, clearM, upSecs 0.25, quietS 5}`; two `FROZEN_HOLDS` rows, in the knob registry and a
   journal's tables; `probes.ts friends` = tools/qa/friends-check.ts, also under `player`, passes on both stands, `FRIENDS_BREAK=1` must fail). (1) NO RETICLE ON A FRIEND (`noSnap`: on in the page,
   `?friendsnap`; frozen stand off, `TPS_FRIENDS=1`; Tab ▸ Player, doors & props ▸ 'no aim ring on teammates'): player.ts `updateAim`'s three loops pass over a man not hostile to the player
   (`friendNoSnap`) — no ring, no snap point, never `g.aimGuard`; the cursor's own ray landing on his body first is kept as `g.aimFriend` (the nearest body on the ray decides: a hostile behind
@@ -43,7 +43,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lower it), nothing solid between — or, the aim free, the cursor on his body — while nobody is in a fight (`friendsInFight`: inside `quietS` of Sam's last round or of the last loud thing in a
   living teammate's ears, or a man hostile to him alert / searching). Down at once, up `upSecs` after; never on the wall hold, with a man held or hauled, under a show / puppet. State
   `Player.friendLow / friendT`, not saved. Never played by anybody.
-- **Friendly fire** (`src/game/friendlyfire.ts FRIENDLYFIRE {on, coneK 0.75, bodyM 0.34, sureM 0.2, care, words, nearM 0.6}`: on in the page, `?nofriendlyfire`; frozen stand off,
+- **Friendly fire** (`rust/game_rules/src/friendlyfire FRIENDLYFIRE {on, coneK 0.75, bodyM 0.34, sureM 0.2, care, words, nearM 0.6}`: on in the page, `?nofriendlyfire`; frozen stand off,
   `TPS_FRIENDLYFIRE=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; Tab ▸ Player, doors & props ▸ 'friendly fire'; `probes.ts friendlyfire` =
   tools/qa/friendlyfire-check.ts, also under `player`: 13 lines, passes on both stands, `FRIENDLYFIRE_BREAK=1` — the bodies without the care — fails 7 on each). Until this rule a round found
   only men of a side hostile to the shooter's. On, for Sam's side (Sam and his operatives; never the night staff, a defender, a civilian or a show's cast): (1) BODIES — combat.ts `fireWeapon`
@@ -64,7 +64,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the software adapter: one click at a teammate three metres off downs him and names Sam's round; with `?nofriendlyfire` five rounds pass through him. NOT DONE: the net in `fireWeapon`
   returns after its caller has spent the round (cover fire, the fight AI's own trigger: the count is not given back); teammates do not keep out of SAM's line of fire; defenders among
   themselves and the squad's rounds past a hostage are as they were. Never seen on a GPU, never played by anybody.
-- **A blast does to the player what it does to anybody** (`src/game/samstun.ts SAMSTUN {on, blindRoots, fade}`: on in the page, `?nosamstun`; frozen stand off, `TPS_SAMSTUN=1`; a `FROZEN_HOLDS` row, in the
+- **A blast does to the player what it does to anybody** (`rust/game_rules/src/samstun SAMSTUN {on, blindRoots, fade}`: on in the page, `?nosamstun`; frozen stand off, `TPS_SAMSTUN=1`; a `FROZEN_HOLDS` row, in the
   knob registry and a journal's tables; `probes.ts samstun` = a guard and Sam the same distance from one blast). Two stamps on `Player`, the Guard's own names: `staggerUntil` (frag.ts `blast` on a
   'wounded' player — written whatever the switch says, under `FRAG.samStun` — and a defender's stun canister in a room fight) = feet rooted (`samRooted` before the walk keys), the gun at the low
   ready through player.ts's `walled` seam, no round or throw, `anim.clutch`; `dazzledUntil` (combat.ts `detonateStun`, the guards' own rule copied for his eyes: the night game's line of sight inside
@@ -141,8 +141,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tools/qa/gear-check.ts` (`GEAR_BREAK=1` must fail; it holds the fifteen, the Mk 18 and the slug both ways); the fn2000 family's WORD checks ask for their lines
   through `gearText` / `ringTag`, so `TPS_GEAR=1 probes.ts fn2000` and `he40` are green as the frozen stand's are; rifle-slot, nvg-rig and the soak's rifle-box
   count follow the switch. Not seen on a GPU; `RIG.m4` / the tubes are first-pass numbers for the viewer.
-- **The player's aim has weight** (`src/game/aimweight.ts`, table `AIMWEIGHT {on, rate 11, smooth 0.05, heft 1.5, bare 1.25, onM 0.3, reach 18, launchWait 0.5}`; `AIMWEIGHT.on` — ON in the page, `?noaimweight` = the gun eased onto the cursor as it was; OFF in the module and on the frozen stand, `TPS_AIMWEIGHT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'aim has weight' + 'aim ▸ turn rad/s' / 'aim ▸ settle s', under all knobs 'aim ▸ on cursor m' / 'aim ▸ gun weight' / 'aim ▸ launcher s' / 'aim ▸ empty hands ×'). The maintainer, 10-12: "we should have limited turning rate + the aiming circle can lag behind the cursor (like helldivers 2)". TWO MARKS, TWO MEANINGS: the CURSOR is where he wants to aim (`g.aimPoint`, moved the frame the mouse does; the camera's lead, the order menu and the wall hold's step-out still read it), the CIRCLE is where the gun points. `aimWeighTurn` (the plain aim branch of player.ts, in place of its exponential ease) steps `Character.aimYaw` toward the cursor's bearing by a critically damped spring with a TOP RATE = `rate` rad/s × the handling of what is in his hands (weapons.ts `handlingOf`: pistol 1, rifle 0.8) raised to `heft`, empty hands `bare`; stepped in slices of 1/240 s at most (the same swing at 60, 120 and 144 frames a second), never past the point. A half turn: rifle 0.47 s, pistol 0.37 s, empty hands 0.33 s; a 7° correction lands in 0.12 s. WHAT LEAVES THE GUN MID-SWING GOES WHERE THE CIRCLE IS (`aimWeighShot` at the pistol's and the rifle's round sites and the launcher's, whichever load is up — ring, 40 mm or sticky camera: the target turned about him by what the gun still owes, range, height and a launcher's lead kept); once the circle is within `onM` across the line of the cursor every shot is the one the build fired before, to the bit. A LAUNCHER'S LOAD WAITS FOR THE GUN (`launchWait` 0.5 s; 0 = sent on the release frame; a recording whose AIMWEIGHT table lacks the key replays with 0): the right button let go of mid-swing keeps the load (`Player.launchHeld`), its arc drawn, and sends it the frame the circle is on the cursor or when the wait runs out (`aimWeighLaunch`); a frame the gun is down for a wall or a friend sends and draws nothing but keeps the load, the wait's clock running on (`aimWeighLaunchKeep`), and at the wait's end with the gun still down it is dropped unsent. THE HUD (overlay.ts off `game.view.aim`: `aimweight::aim_gun_point` / `aim_gun_on`): the aim ring `.reticle.aim` is drawn at the circle, class `trail` (quieter) while it is off the cursor, with a small dot `.aimwish` on what the reticle snapped to (or the circle small, `.aimwish.gun`, while the ring is busy on a row's thing). LEFT AS THEY WERE: the pistol's OCP (takes the snapped light at once), a thrown can (goes to the cursor), the wall hold and the rifle stack, a man in his arm, a sprint (each drives his facing itself: `aimWeighBegin`, first in his update, marks the frame unweighed and the next weighted frame starts from rest), every other man's turning (TURN is theirs), the camera's lead. On hard the fog's cone follows his gaze, which follows the gun: a flick behind opens that view only as the gun comes round (the half-turn times above). Never under a puppet or a show, never with Sam down; the player only. No dice, no camera, no pixels: radians, seconds and metres off `Player.aimw` (`AimWeight`), which rides a checkpoint's player slice (`aw`) only while a swing runs. On = NOT the off game by digest wherever the player turns (its owner's reading, not re-run since: shipped-stand runs with a scripted commander move; the frozen stand's do not). `bun run tools/qa/aimweight-check.ts` (`probes.ts aimweight`, also under `player`; ten checks; passes on both stands; `AIMWEIGHT_BREAK=1` must fail), `PORT=<dev server> node tools/qa/aimweight-page.cjs [outDir]` (the real page on the software adapter: the HUD's circle trails a flicked cursor and lands on it, and under `?noaimweight` sits on it the frame it moves; about 35 min). Never seen on a GPU or played by anybody: the rate, the settle and the wait are first-pass numbers.
-- **Kit handling = Sam's hands carry his kit** (`src/game/kitanim.ts` = the game's half, `character.ts KIT` + `kitSwap / kitLayer / pistolReloadArm` = the hands, `rigProps.ts KitDraw` = the
+- **The player's aim has weight** (`rust/game_rules/src/aimweight`, table `AIMWEIGHT {on, rate 11, smooth 0.05, heft 1.5, bare 1.25, onM 0.3, reach 18, launchWait 0.5}`; `AIMWEIGHT.on` — ON in the page, `?noaimweight` = the gun eased onto the cursor as it was; OFF in the module and on the frozen stand, `TPS_AIMWEIGHT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'aim has weight' + 'aim ▸ turn rad/s' / 'aim ▸ settle s', under all knobs 'aim ▸ on cursor m' / 'aim ▸ gun weight' / 'aim ▸ launcher s' / 'aim ▸ empty hands ×'). The maintainer, 10-12: "we should have limited turning rate + the aiming circle can lag behind the cursor (like helldivers 2)". TWO MARKS, TWO MEANINGS: the CURSOR is where he wants to aim (`g.aimPoint`, moved the frame the mouse does; the camera's lead, the order menu and the wall hold's step-out still read it), the CIRCLE is where the gun points. `aimWeighTurn` (the plain aim branch of player.ts, in place of its exponential ease) steps `Character.aimYaw` toward the cursor's bearing by a critically damped spring with a TOP RATE = `rate` rad/s × the handling of what is in his hands (weapons.ts `handlingOf`: pistol 1, rifle 0.8) raised to `heft`, empty hands `bare`; stepped in slices of 1/240 s at most (the same swing at 60, 120 and 144 frames a second), never past the point. A half turn: rifle 0.47 s, pistol 0.37 s, empty hands 0.33 s; a 7° correction lands in 0.12 s. WHAT LEAVES THE GUN MID-SWING GOES WHERE THE CIRCLE IS (`aimWeighShot` at the pistol's and the rifle's round sites and the launcher's, whichever load is up — ring, 40 mm or sticky camera: the target turned about him by what the gun still owes, range, height and a launcher's lead kept); once the circle is within `onM` across the line of the cursor every shot is the one the build fired before, to the bit. A LAUNCHER'S LOAD WAITS FOR THE GUN (`launchWait` 0.5 s; 0 = sent on the release frame; a recording whose AIMWEIGHT table lacks the key replays with 0): the right button let go of mid-swing keeps the load (`Player.launchHeld`), its arc drawn, and sends it the frame the circle is on the cursor or when the wait runs out (`aimWeighLaunch`); a frame the gun is down for a wall or a friend sends and draws nothing but keeps the load, the wait's clock running on (`aimWeighLaunchKeep`), and at the wait's end with the gun still down it is dropped unsent. THE HUD (overlay.ts off `game.view.aim`: `aimweight::aim_gun_point` / `aim_gun_on`): the aim ring `.reticle.aim` is drawn at the circle, class `trail` (quieter) while it is off the cursor, with a small dot `.aimwish` on what the reticle snapped to (or the circle small, `.aimwish.gun`, while the ring is busy on a row's thing). LEFT AS THEY WERE: the pistol's OCP (takes the snapped light at once), a thrown can (goes to the cursor), the wall hold and the rifle stack, a man in his arm, a sprint (each drives his facing itself: `aimWeighBegin`, first in his update, marks the frame unweighed and the next weighted frame starts from rest), every other man's turning (TURN is theirs), the camera's lead. On hard the fog's cone follows his gaze, which follows the gun: a flick behind opens that view only as the gun comes round (the half-turn times above). Never under a puppet or a show, never with Sam down; the player only. No dice, no camera, no pixels: radians, seconds and metres off `Player.aimw` (`AimWeight`), which rides a checkpoint's player slice (`aw`) only while a swing runs. On = NOT the off game by digest wherever the player turns (its owner's reading, not re-run since: shipped-stand runs with a scripted commander move; the frozen stand's do not). `bun run tools/qa/aimweight-check.ts` (`probes.ts aimweight`, also under `player`; ten checks; passes on both stands; `AIMWEIGHT_BREAK=1` must fail), `PORT=<dev server> node tools/qa/aimweight-page.cjs [outDir]` (the real page on the software adapter: the HUD's circle trails a flicked cursor and lands on it, and under `?noaimweight` sits on it the frame it moves; about 35 min). Never seen on a GPU or played by anybody: the rate, the settle and the wait are first-pass numbers.
+- **Kit handling = Sam's hands carry his kit** (`rust/game_rules/src/kitanim` = the game's half, `character.ts KIT` + `kitSwap / kitLayer / pistolReloadArm` = the hands, `rigProps.ts KitDraw` = the
   drawer; `KITANIM.on` — ON in the page, `?nokitanim` = the kit jumping between hand and holster on the key's frame as it was; OFF on the harness's frozen stand, `TPS_KITANIM=1`; Tab ▸ Kit
   handling). EQUIP: `kitTick(g)` (updatePlayer, right after the keys — so the lock-out lands on the key's frame — and AGAIN at its end, `kitTick(g, true)`, for what the
   frame did to his hands after the keys: off a wall, a sling for a throw, the last can away; also from the hold / takedown / kick / pick / keypad / down branches) compares `kitInHand(g)` (pistol | rifle | can | knife | null, the drawer's rules said once)
@@ -183,7 +183,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `Player.nvAmount` (the tube's picture) eases to: on from the frame they start down, off once they are up. A kit change takes the arm from a flip (the goggles still arrive); a reload takes it faster (`KIT.nv.hand.clear`: the hand is the reload's before the magazine leaves); N again inside a nod carries the head on (`nod.carry`); `an.nvCancel()` lets a flip go when he goes down (`ragdollize`) or the part stops being live (a show: `kitNvEye`). `Player.nv` and everything that reads it are the key's; what is NOT nothing is his body as drawn — the left arm at his brow is in `Character.capsules()` for the 0.9 s of a hand flip (a tripwire could meet it) — so no checkpoint is written mid-flip (`an.nvBusy` → `playerBusy`). The probe's staged runs digest the same with the part on and off. `SLING_FRONT`, `SLING_REST`, `KIT.front`, `KIT.nv` and `NV_SWING` are FIRST-PASS numbers placed against the mesh offline, never seen in the
   renderer — they sit outside `RIG` until the viewer has had them. QA: `probes.ts kitanim` (off / equip / midswap / reload / close / harness / edges / joints / sling / nv) — its rig holds other parts' key rules at the frozen stand's values where the tables exist (a dry gun reloading itself off, the G quick throw on: `world()`), so on any stand it asks about the hands alone,
   `bun run tools/qa/kitanim-strip.ts` → docs/shots/kitanim/*.png (stick figures + prop boxes, before / after rows), `tools/qa/pose-mesh.ts` situations `sling-*` / `nv-*` on the mesh.
-- **PACK SIDE = a long thing on a back that wears a pack stands at the pack's side** (`src/game/packside.ts PACKSIDE`, the maintainer, 10-18, of Sam's slung rifle through his radio
+- **PACK SIDE = a long thing on a back that wears a pack stands at the pack's side** (`rust/game_rules/src/packside PACKSIDE`, the maintainer, 10-18, of Sam's slung rifle through his radio
   and the breacher's back: "maybe we find a way to put equipment on the side of it? like a hammer would be on a strap to the side of a pack?"). Switch `PACKSIDE.on`: ON in the page
   (`?packside=0` puts it off; Tab row 'packs ▸ back tools ride at the side'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'PACKSIDE.on'`, `TPS_PACKSIDE=1`), in the knob
   registry and the journal (a recording from before the key replays with it off). LOOKS ONLY: boxes and a part mask; a run with it on digests as the run with it off. THE CAUSE: the
@@ -208,7 +208,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); 
   the swapped mask's fit is solved on first use, not with the cast's pre-solved set, and the worn mask is a frame behind a change of tool; `PACKSIDE`'s numbers are first-pass, placed against the mesh offline, judged on stills from the
   offline pose tool only — never seen in the renderer, on a GPU, or played.
-- **IN HAND = what a man holds is in the hand that holds it** (`src/game/inhand.ts INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
+- **IN HAND = what a man holds is in the hand that holds it** (`rust/game_rules/src/inhand INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
   aligned to hand for partner. we should do a pass for all the attachment points"). Switch `INHAND.on`: ON in the page (`?inhand=0` puts it off; Tab row 'in hand ▸ a pistol stays in the
   fist'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'INHAND.on'`, `TPS_INHAND=1`), in the knob registry and the journal (a recording from before the key replays with it
   off). LOOKS ONLY — every man, both sides. THE CAUSE: a pistol was laid out from the wrist joint along `Character.gunDir` (the analytic aim line in an aim) with its top to the world's
@@ -289,7 +289,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `pose-strip.ts throw-toss | throw-toss-crouch | throw-toss-armed | throw-least | throw-short | throw-full | throw-full-crouch | throw-untold`. The table
   and the toss's keys are first-pass numbers, looked at as capsule strips and as stills of the page on a software renderer: NEVER SEEN ON A GPU, and
   nobody has played it. A blast mid-swing takes the swing (same switch): folded by a blast or blinded while a throw is running, its arms and body English fade by how far the fold's and the blinded hunch's own weights (`mvs.cf`, `mvs.dz`) have risen since the swing began, so both arms and the trunk go where the hit man's go instead of throwing on over a folded body; a throw begun already blind or folded, or in the tail of either, is swung whole, as before; hurt and shaken change nothing, and no state shortens or alters a throw's flight. Lines (y) and (z) of the check: hit 4 frames into a toss, a short and a full overhand, standing, crouched and with a gun (MOVES raised for the lines); each part of the fade taken out turns one red; 576 unhit swings hash the same, every bone, as before the fade. Strips: `pose-strip.ts throw-blinded`, `throw-folded`. Known and not this rule's: a blinding alone does not call off the player's wind-up (a stagger and a guard's own blinding do), so his can still leaves a half-hunched arm. Measured on the bare figure only; never seen on a GPU, never played.
-- **Hands = picking a body up, working a door by hand** (`src/game/hands.ts`, state on the Player: `Player.haul: Haul | null`, `Player.doorMove: DoorMove | null`; `HANDS.on` — ON in
+- **Hands = picking a body up, working a door by hand** (`rust/game_rules/src/hands`, state on the Player: `Player.haul: Haul | null`, `Player.doorMove: DoorMove | null`; `HANDS.on` — ON in
   the page (`?nohands` = as it was), OFF on the frozen stand (`TPS_HANDS=1`), `FROZEN_HOLDS['HANDS.on']`; `HANDS.body` / `HANDS.door` = its two halves; a registered knob table, in
   `JOURNAL_KNOBS`; Tab ▸ Sandbox ▸ Hands). OFF = nothing in the file runs: the ankle pins on the frame of the tap, the leaf flung by `Doors.use`. A BODY is taken by the END HE IS AT
   (`haulBegin`: the ankles, or under the arms = the two shoulder particles, when the head end is `headBias` nearer; `bodyGripDist` puts the head end in `bodyDist`'s reach — the old
@@ -314,7 +314,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `stepM` → refused). game.ts `handsOnDoors` takes the move's door like an eased one (`DoorPush.reach` = +0.45 m of arm for it). A door move is `playerBusy` for the checkpoints
   ('working a door'; hauling already was). Nothing rolls a die or reads the camera. QA: `probes.ts hands` (hands-body / hands-door / hands-off (deleted 2026-11-06 with the off side: qa.md) / hands-harness — run under
   `TPS_PROFILE=shipped` too: they stage the page's door rules themselves), stills `node tools/qa/hands-look.cjs <dir> [nohands]`.
-- **Hands at work = a hand on the thing he is working, a hand to the radio, the torch ↔ sidearm swap** (`src/game/handwork.ts`; `HANDWORK.on` — ON in the page, `?nohandwork`
+- **Hands at work = a hand on the thing he is working, a hand to the radio, the torch ↔ sidearm swap** (`rust/game_rules/src/handwork`; `HANDWORK.on` — ON in the page, `?nohandwork`
   off; the frozen stand pins it off, `TPS_HANDWORK=1`; halves `work / radio / swap`; Tab ▸ Sandbox ▸ Hands at work). THREE small layers of `CharacterAnimator`, each fed on the
   frame and consumed by `update()` (nothing fed = nothing posed, no module state): (1) `anim.work: WorkPose {kind 'keys'|'charge'|'lever'|'take', p, n, t, dur, keys?, dir?,
   hand?}` → `workLayer` (the free hand — the left when the right has a gun or a torch, both for a charge / the drive when both are free — on a spot of the thing's face by
@@ -363,7 +363,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   were written on the old bag). ON A STEALTH MISSION (`kit.ts KITDEAL.stealth`, on in the page; the night alone is one) your charges are the STEALTH
   card's: none as issued, its pouches full of the mission's kit, so a pouch is given up to carry one, and the loud card's are not that run's.
   `owncharge-check` puts its charges on the card the run wears and has one line on the card as issued. Page: rebuild/player-charges/read-first.md. Never seen on a GPU or played by anybody; the stand-off numbers are the squad's, untuned for a hand.
-- **One big slot a man, and small pouches** (`src/game/kit.ts BIGSLOT`, `src/game/bigkit.ts`, slots.json v9; ONE switch `BIGSLOT.on`: ON in the page — `?nobigslot` = the cards
+- **One big slot a man, and small pouches** (`rust/game_rules/src/kit BIGSLOT`, `rust/game_rules/src/bigkit`, slots.json v9; ONE switch `BIGSLOT.on`: ON in the page — `?nobigslot` = the cards
   as they were — OFF in the module and on the frozen stand, `TPS_BIGSLOT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table
   replays with it off — an F10 journal carries the switch and no kit cards; an F7 run tape carries the cards whole (`runtape.ts kitNow`), `big` among them; Tab ▸ 'Big slot (breaching shotgun, hammer)': the switch, what is on you now, blows / beat / wind-up / draw). The
   maintainer, 10-14: "i do think we should change the breaching shotgun to not take up a primary weapon slot (ready or not and door kickers have it as a separate slot, like the wall
@@ -548,7 +548,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   layer (`character.ts`), the Team & kit door picture draws none (`rust/game_rules/src/kitstage`). NO SWITCH: every stand is the build as it was with the
   shield off, so the shipped stand's digests are unmoved and the frozen stand's move only where a shield was staged (the long hall; the kit probes that planted one). WHAT OLD
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
-  the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
+  the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`tools/levels/lib/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
   man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
   another version and is refused before a re-run, in words (`tape/format.ts tapeWhy`). QA:
@@ -558,7 +558,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
   bullet in missions.md for the hall without it. NOBODY HAS PLAYED A MISSION SINCE THE CUT; the kit figure, the kit view and a stack without a shield man have not been seen on a GPU.
-- **Lamps need a real hit, and moving feet cost the shot** (`src/game/aimcost.ts`, table `AIMCOST`; two switches, `AIMCOST.lamp` — ON in the page, `?lamphit=0`; and
+- **Lamps need a real hit, and moving feet cost the shot** (`rust/game_rules/src/aimcost`, table `AIMCOST`; two switches, `AIMCOST.lamp` — ON in the page, `?lamphit=0`; and
   `AIMCOST.move` — ON in the page, `?movecost=0`; both OFF in the module and on the frozen stand, `TPS_LAMPHIT=1` / `TPS_MOVECOST=1`; two `FROZEN_HOLDS` rows, the table in the knob
   registry and a journal's tables, a recording with no `AIMCOST` table replays with both off; neither acts under a show; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'lamps need
   a real hit' / 'moving costs accuracy' / 'moving ▸ cone ×' / 'moving ▸ held s'). The maintainer, 10-13, on the pistol against far lamps: "it's pretty much just point and click with
@@ -595,7 +595,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   as Player (`defuse.ts restore`, `format.ts decode`); an old replay's LOG lines keep the old word. Checks that match the strings follow (`roomclear-ends`,
   `verdict-check`, `deathrecap-check`, `defuse-check`, `roomkeep-check`, `teams-player`, `verdict-look.cjs`; 12 panel-inventory rows reworded with `--reword`).
   Headless only, both stands; the title, the kit page and a room clear's down line read off the real page on the software adapter. Never seen on a GPU.
-- **A primary and a secondary for every man** (`src/game/gunslots.ts`, `GUNSLOTS.on`; the maintainer, 10-18: "also should we model more firearms? and separate
+- **A primary and a secondary for every man** (`rust/game_rules/src/gunslots`, `GUNSLOTS.on`; the maintainer, 10-18: "also should we model more firearms? and separate
   primary and secondary slots?"). On in the page (`?nogunslots` = the card of the build before), off in the module and on the frozen stand
   (`FROZEN_HOLDS 'GUNSLOTS.on'`, `TPS_GUNSLOTS=1`); a recording from before the table replays with it off (`journal.ts applyKnobs`). It rides on the big
   slot's card (`BIGSLOT`: the shotgun is kit there, never a man's gun): with that off the card is the build before's too. WHAT THERE WAS: you carried two
@@ -665,7 +665,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   AKS-74U row and a bare pistol their sidearm (`bareWas`, what the key off still gives). The tile and a man's line name the gun the same either way.
   Checked: `gunslots-guns` THE SAME GUN, BARE and `gunslots-off` (deleted 2026-11-06 with the off side: qa.md)'s second journal verdict, both stands. Drawn with the suppressed row's rig (whether the
   can is drawn is the look's: with `GUNLOOK` on it is not — "A gun with its suppressor off is drawn without one", below); never seen or heard.
-- **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
+- **Lighter kit moves faster and hides better** (`rust/game_rules/src/kitload`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a
   step of bulk), `small` by the card's field, `big` by what the big slot carries. A card's guns are a list (`gunsOf`: the gun in
@@ -701,7 +701,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   row alone); two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
   four's issue is near even — mobility 0.65‥0.76, concealment 0.54‥0.56); a light player out-walks a silent squad's
   cap; what is thrown or set never lightens a man; a light, goggles and a suit weigh nothing, and a suppressor only where the gun's suppressed row is a heavier row of its own. Never seen on a GPU; nobody has played it.
-- **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
+- **Each gun its own look, sound and reload** (`rust/game_rules/src/gunlook`, `GUNLOOK.on`; `rust/game_rules/src/gunreload`; 10-18). The six guns the two slots offer beside the issue
   pair (Mk 12, MP7, Mk 46, M1014, HK45, Glock 18) were rows that are FELT and stand-ins to look at and listen to. SWITCH: on in the page (`?nogunlook` = the build
   before), off in the module and on the frozen stand (`FROZEN_HOLDS 'GUNLOOK.on'`, `TPS_GUNLOOK=1`, which shows nothing without `TPS_GUNSLOTS=1 TPS_BIGSLOT=1`); a
   recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
@@ -777,7 +777,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   lives on his gun, and a gun put away mid-beat keeps it until his next beat begins (every beat begins clean); the HUD's spare count for a tube gun is the
   row's "magazines", now shrinking a shell at a time. MEASURED: the check's own lines; the tour, three runs a stand. NEVER SEEN ON A GPU, NEVER HEARD, NEVER
   PLAYED: whether 0.36 s a shell reads right, and whether the trigger breaking off is wanted, are the maintainer's.
-- **A restart gives a clean level** (`CLEANRESTART`, `src/game/cleanrestart.ts`, 10-19; the maintainer, from a play test: "after resetting a level …
+- **A restart gives a clean level** (`CLEANRESTART`, `rust/game_rules/src/cleanrestart`, 10-19; the maintainer, from a play test: "after resetting a level …
   the lights kind of flicker on in engine. Like, we should reset the level to a clean state"). ONE switch: ON in the page (`?cleanrestart=0` = the
   restart as it was), OFF in the module and
   on the frozen stand (`TPS_CLEANRESTART=1`); a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the table replays its
@@ -845,7 +845,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   (`guards.ts`, `foeCrouched`) — NOT a fault, corrected 10-22: the squad's rig ran it and 0.8 m enters such a man in every sample; only a
   blinded, flinching defender at exactly half crouch is aimed at as if standing. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
   without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.
-- **A gun's key again opens its setup; the kit column is one box** (`src/game/slotsetup.ts`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
+- **A gun's key again opens its setup; the kit column is one box** (`rust/game_rules/src/slotsetup`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
   `src/ui/handbox.ts`; `src/host/keymap.ts KEYMAP.setFree`; 10-22. The maintainer: "repeating the current selection open up a menu for configuring
   the current one", "can allow us to pick between auto/semi (get rid of z)", "also lets us pick attachments better", "for L can we move that to the
   pistol/gun's equipment menu?", and of the box "scct had a really compact current equipment screen, probably too compact for us but we can aspire
@@ -984,7 +984,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rules and their words are `slotsetup::setup_view`; `Game.backable` reads `kit.setup`). No switch: it moves no rule. Native:
   `rust/game_start/tests/kit_view.rs` (three seeds, a control in each, the second seat shown). Set against the column before it on one scripted run, 62 steps over two seeds: the same. The
   kit screen before a mission still reads `kit.ts`'s tables (the cards'). NOBODY HAS seen it on a GPU or played it.
-- **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
+- **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`rust/game_rules/src/handslot HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
   nonlethal"). ON in the page (`?handslot=0` = E puts away and draws, as it was; the debugger's Player tick "empty hands are a slot"), OFF in the
@@ -1016,7 +1016,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   files `Digit0` and empties the hands, backtick again leaves them empty, the E key files nothing.
   NOT DONE HERE: the HUD's kit box still shows no row for the empty slot.
   Nobody has played it; never seen on a GPU.
-- **His own actions are a ring that stays, on E; the whistle is its last wedge; the corner shows one line** (`src/game/handring.ts HANDRING {on,
+- **His own actions are a ring that stays, on E; the whistle is its last wedge; the corner shows one line** (`rust/game_rules/src/handring HANDRING {on,
   holdSecs}`, 10-22; the maintainer: "radial menu for our own actions, remove existing menu in top left and awkward scrolling thing", "move whistle
   to our actions and remove v binding", "move our actions to E", "i think same would go for our actions (1-5 with the ring open)", "we can make our
   actions and squad actions symmetric … what the default action might be … in the top left, which might be fine", "tab could be that for us").
@@ -1161,7 +1161,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   it. The pistol's line of `player::gun_shut` is not run by the check. If no place within `leanGun` is clear he steps 0.6 m as before, and the ring is barred.
   `probes.ts gunwall` is red on the page's stand at the build head this was cut from (its standUp line), the same with and without this change.
   `tools/qa/hudmarks-page.cjs` reads the ring's classes on the real page (software adapter). NEVER SEEN ON A GPU: the bar, the longer step-out.
-- **His own charge goes off from his own actions, not from the squad's key** (`src/game/ownblow.ts OWNBLOW.on`, 10-22; the maintainer on the solo
+- **His own charge goes off from his own actions, not from the squad's key** (`rust/game_rules/src/ownblow OWNBLOW.on`, 10-22; the maintainer on the solo
   tutorial's "F: blow it": "i think we shouldn't use F for blow it, F should be reserved for squad. instead it should be one of our own actions"). With
   it on, a charge his own hands set (a door's, doortools.ts `by: SAM_BY`; a wall's, wallcharge.ts) is a ROW of his own list wherever he stands,
   'blow the charge' (kind `charge`, verb `blow`; player.ts buildInteractables puts it under the rows the things in reach had and ahead of the rows past
@@ -1272,7 +1272,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   squad's own throw rings (`ui/squadthrowviz.ts`: a frag's two, none for a stun) and the floor plan's (the kill radius alone) are other drawings of
   the same numbers and were left as they are. NOBODY HAS seen it on a GPU or thrown by it in play; the colours and line weights are a first guess
   against the snow level's shot.
-- **One footfall a step** (`FOOTFALL.once`, src/game/player.ts; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
+- **One footfall a step** (`FOOTFALL.once`, rust/game_rules/src/player; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
   walk cycle's phase crosses a half or wraps. Backpedal runs the cycle backwards, so when backpedal flips frame by frame the phase rocks over ONE edge
   and every frame files a footfall: 20 in 20 frames staged, and a calm man 0.76 m in front goes alert on eight of them. What flips it: forwards and
   backwards keys by turns (a scripted player hunting its mark), and the walk with a man in the arm, whose facing rule has no slack. A cursor parked at
@@ -1296,7 +1296,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   second files NO footfall with either key (the phase never reaches an edge); the key makes the milder shakes cheaper too (8 to 21 footfalls in ten
   seconds down to 3 to 9). A footfall owed to travel alone mends both: the next bullet, 'A footfall the legs owe'. NOT DONE: no tour, no soak; never heard in a page; the
   lesson's "seven frames running" was not met on that lesson's pushed head (two frames running on the build before it), only staged.
-- **A footfall the legs owe** (`FOOTFALL.owed`, a key UNDER `FOOTFALL.once`, src/game/player.ts `footfallDue`; 2026-10-23, the flaw 'One footfall a
+- **A footfall the legs owe** (`FOOTFALL.owed`, a key UNDER `FOOTFALL.once`, rust/game_rules/src/player `footfallDue`; 2026-10-23, the flaw 'One footfall a
   step' names as not its own). THE FLAW: a cycle turned about again and again rocks between its two edges and reaches neither, or crosses one with too
   little travel behind it for the first key to count. Staged on the lobby's floor for ten seconds, the forward key held and the cursor put in front of
   him and behind him every 10, 12 and 15 frames (the 10 on three seeds), over the same 10.9 m crouched and 13.3 m standing as a plain walk (18 and 22
@@ -1505,7 +1505,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   page. DECLINED from review, with why: `hudNotes` returning keyed notes under the rule (it would change what the block holds on the shipped
   stand, which that stand's checks read as strings); the objective record returning its parts (the Rust game's `mission::objective` words that line, in the view). Never seen on a GPU. NOBODY HAS PLAYED IT.
 
-- **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
+- **The gun is put away for a charge, and brought back after** (`rust/game_rules/src/workstow WORKSTOW.on`, 10-23; the maintainer: "characters should fully
   unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
   hands: the player set one with his left while the pistol stayed in his right, and a teammate pressed his on one-handed with the carbine in the
   other, free to fire all two seconds. With it on, BY THE PLAYER'S HANDS (a door charge and a wall charge, `doortools.ts` / `wallcharge.ts samTick`):
@@ -1542,7 +1542,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
   out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
   a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.
-- **Sam sprints with both hands on the pistol** (`RUNREADY`, src/game/character.ts; asked for by src/game/player.ts `anim.runReady`; 10-25, the
+- **Sam sprints with both hands on the pistol** (`RUNREADY`, rust/game_rules/src/character; asked for by rust/game_rules/src/player `anim.runReady`; 10-25, the
   maintainer: "sprinting with pistol animation is weird, should keep two hands on it and at low ready, like rifle sprinting animation"). WAS: a sprint
   takes the pistol's layer off (`upper` 'none'), so the gun rode the sprint clip's pumping fist, while the rifle's sprint is the long gun's low ready
   in both hands (`armRifle … 'lowLong'`). NOW, with the key on: while he sprints with the pistol in his hand (`pl.sprinting && pistolUp`, not while
@@ -1563,7 +1563,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   before). NOT TOUCHED: gunhand.ts / inhand.ts (how a gun sits in a hand) and the creep's arms. NOT SEEN, NOT PLAYED: never on a GPU or in the
   page; the numbers are first numbers off the capsule strips and CPU-skinned stills; the way into the sprint and out of it was looked at as a capsule strip only
   (`pose-strip.ts sprint-pistol-turns`: the hands are together inside 0.3 s, a little apart on the way); a sprint into a door's shoulder and a throw out of a sprint were not looked at with it on.
-- **A run carries its arms close** (`RUNARMS`, src/game/character.ts `runArms`, called on the standing pose once idle and gait are blended; 11-01,
+- **A run carries its arms close** (`RUNARMS`, rust/game_rules/src/character `runArms`, called on the standing pose once idle and gait are blended; 11-01,
   the maintainer, of Sam sprinting up the screen: "sprint looks dainty when viewed from the back, maybe should have arms closer in?"). WAS: the run
   clips' arms read as a run from the side and not from behind, where the camera is whenever he runs up the screen. Read in the shoulder line's own
   frame, the sprint's elbows stand 10 to 20 cm out from the shoulders, its hands swing up to 35 cm wide of them and travel only 24 cm fore and aft

@@ -30,14 +30,14 @@ function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SE
 export function lookNeedBits(bits: number) { for (let s = 1; s < 32; s++) if (bits >>> s & 1) lookSeen(s); }
 /** nothing has been any stuff yet (a check starts from here; the page never does: one level a page) */
 export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
-/** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
+/** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: host/drawpage.ts) */
 export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) lookSeen(lookStuffOf(w)); }
 /** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (5 bits), whether it MOVES (a box past the
  *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
  *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
  *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
- *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
+ *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/devices), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
  *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot
@@ -77,7 +77,7 @@ export const lookAmounts = { ...LOOK_DEFAULTS };
 export function lookSync() { lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; lookConfig.lamps = lookAmounts.lamps; lookConfig.veil = lookAmounts.veil; lookConfig.puffs = lookAmounts.puffs; lookConfig.eyes = lookAmounts.eyes; lookConfig.fireSmoke = lookAmounts.firesmoke; lookConfig.windows = lookAmounts.windows; lookConfig.glare = lookAmounts.glare; lookConfig.stir = lookAmounts.stir; lookConfig.rooms = lookAmounts.rooms; lookConfig.steady = lookAmounts.steady; lookConfig.roomBright = lookAmounts.roomb; lookConfig.order = lookAmounts.order; lookConfig.dark = lookAmounts.dark; lookConfig.pressed = lookAmounts.pressed;
   lookConfig.gradeExp = Math.pow(2, 2 * (lookAmounts.gexp - 1)); lookConfig.gradeC = lookAmounts.contrast; lookConfig.gradeH = 0.09 * (lookAmounts.highs - 1); lookConfig.gradeS = 0.09 * (lookAmounts.lows - 1); lookConfig.gradeSat = lookAmounts.colour; }   // (the grading rows rest at 1: Exposure 0‥2 = two stops down to two up; Highlights and Shadows 0‥2 = a stop and a half down to as much up, 0.09 of the tone map's 16.5 stops)
 /** the cast's part ids the look's men are drawn by (look.wgsl manWeb), each 1 + its index in the cast's part list, 0 = this cast has none: the operators' suit
- *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (main.ts). */
+ *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (host/drawpage.ts). */
 export const lookParts = { suit: 0, rig: 0 };
 
 export interface SkinnedDrawable {
@@ -149,7 +149,7 @@ export class GBuffer {
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the traffic map the detail layer reads (rg8unorm over the world's XZ; a 1×1 zero until a level hands one over — setWearMap)
       { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
       { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
-      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (game/snowTracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
+      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (rust/game_rules/src/snow_tracks; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
       // THE LOOK PROTOTYPE (look.wgsl): the two map arrays, their sampler and the panel's numbers
       { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -181,7 +181,7 @@ export class GBuffer {
   // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl): two mipped texture arrays and the panel's numbers.
   // A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS (11-04, with the catalogue growing past a dozen stuffs: a layer is 2.8 MB and about half a second of arithmetic,
   // and thirteen of them in the constructor had once been six seconds in front of the first compile). A stuff's layer is made the first time some box IS that
-  // stuff (lookWordOf says so; main.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
+  // stuff (lookWordOf says so; host/drawpage.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
   // goes from a layer to its slot through the block's table and draws a stuff with no slot plain. The arrays are as long as the slots in use: when they are
   // full they are made again longer and what they held is copied across on the GPU.
   private lookTex!: [GPUTexture, GPUTexture];   // (these four: makeLook, which the constructor calls)
@@ -266,7 +266,7 @@ export class GBuffer {
   lookMade: string[] = [];
   /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
   lookFillMs = 0;
-  /** the panel moved a number (lookAmounts), or a level came in and said how kept it is (lookConfig.kept, main.ts hostLevel): the uniform block again. */
+  /** the panel moved a number (lookAmounts), or a level came in and said how kept it is (lookConfig.kept, host/drawpage.ts hostLevel): the uniform block again. */
   setLook() {
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
     this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, lookConfig.kept, k.pressed, 0, 0, 0, 0, 0, 0, 0, 0, 0, k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0, ...this.lookSlotRows()]));
@@ -302,7 +302,7 @@ export class GBuffer {
     this.device.queue.writeTexture({ texture: this.snowTex, origin: [x0, z0] }, f.data, { offset: (z0 * f.w + x0) * 8, bytesPerRow: f.w * 8 }, [rw, rh]);
   }
   private trackTex: GPUTexture; private trackView: GPUTextureView; private trackW = 1; private trackH = 1;
-  /** the prints pressed into the snow (game/snowTracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
+  /** the prints pressed into the snow (rust/game_rules/src/snow_tracks): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
    *  (a 1×1 zero). The texture is made the first time a size is seen. */
   setSnowTracks(t: { data: Uint8Array; w: number; h: number } | null, rect?: readonly [number, number, number, number]) {
     const w = t?.w ?? 1, h = t?.h ?? 1;
@@ -317,7 +317,7 @@ export class GBuffer {
   }
   /** the look's numbers alone (the console's `__snow.relook()`) */
   setSnowCfg(cfg: Float32Array) { this.device.queue.writeBuffer(this.snowCfg, 0, cfg.subarray(0, SNOW_CFG_FLOATS)); }
-  /** the traffic map the detail layer reads (render/wear.ts builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
+  /** the traffic map the detail layer reads (rust/game_draw/src/traffic.rs builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
   private wearTex: GPUTexture; private wearView: GPUTextureView;
   setWearMap(data: Uint8Array, w: number, h: number) {
     this.wearTex.destroy();
@@ -327,7 +327,7 @@ export class GBuffer {
   }
 
   /** The box pipeline (every frame's raster), compiled off the GPU process's main thread (gpu/device.ts renderPipelineAsync). `opts.sharp`: also the sharp-direct down pass
-   *  (gdown), which is otherwise made synchronously on the first sharp frame — main.ts asks for it whenever a preset may switch sharp direct on. Engine.init awaits it. */
+   *  (gdown), which is otherwise made synchronously on the first sharp frame — host/drawpage.ts asks for it whenever a preset may switch sharp direct on. Engine.init awaits it. */
   async init(opts: { sharp?: boolean } = {}): Promise<void> {
     // The boxes' program and the cut boxes', each in its two writings (the constructor's note). The level's own is the boot's: awaited here, drawn every
     // frame. The other is asked for behind the boot and not kept: a page is one level for its whole life, and the ask is for the visit's next one.
@@ -349,7 +349,7 @@ export class GBuffer {
       if (s === snow) jobs.push(renderPipelineOrNull(this.device, d, 'cut pieces are DRAWN as whole boxes; rays still meet their cut shape').then(p => { this.cutPipe = p; })); else void laterRenderPipelineAsync(this.device, d); }
     await Promise.all(jobs);
   }
-  /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (main.ts / the viewer, once the glTF says which format) — the same
+  /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (the page, once the glTF says which format) — the same
    *  object skinPipe() would otherwise make synchronously inside that frame. */
   async prepareSkin(fmt: GPUVertexFormat): Promise<void> {
     if (this.skinPipes.has(fmt)) return;

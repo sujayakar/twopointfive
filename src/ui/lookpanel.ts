@@ -55,7 +55,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['colour', 'Colour', 'how strong the colours are (1 = as it is)', 2],
 ];
 
-/** the cloud cover the look page opens a snow level under (main.ts; the game's own snow is 0.9) */
+/** the cloud cover the look page opens a snow level under (host/drawpage.ts; the game's own snow is 0.9) */
 export const LOOK_SNOW_COVER = 0.5;
 
 /** the look page's own system on the debugger's rail (ui/panel.ts): the page opens on it */
@@ -89,7 +89,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     panel.keep(() => { const off = get() === null; inp.disabled = off; if (off && val) val.textContent = '·'; }, inp);
   };
   const layers = panel.section('Layers', { open: true, reset: () => { stayPlain = false; kept = null; for (const [k] of ROWS) lookAmounts[k] = LOOK_DEFAULTS[k]; send(); }, resetTitle: 'every row back to the number the page opens with' });
-  panel.text(layers, () => { let f = 0; try { f = fps(); } catch { return ''; }   // (the frame loop's number is declared further down main.ts than this panel is made, and a row is read once as it is made)
+  panel.text(layers, () => { let f = 0; try { f = fps(); } catch { return ''; }   // (the frame loop's number is declared further down host/drawpage.ts than this panel is made, and a row is read once as it is made)
     return `${f.toFixed(0)} fps · ${(1000 / Math.max(f, 1)).toFixed(1)} ms a frame · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight}`; });
   for (const [key, name, tip, max] of ROWS) panel.slider(layers, name, key === 'size' ? 0.5 : 0, max, 0.05, () => (kept ?? lookAmounts)[key], v => { (kept ?? lookAmounts)[key] = v; if (LIVE.has(key)) lookAmounts[key] = v; send(); }, tip, LOOK_DEFAULTS[key]);
   // SNOW WISPS (the maintainer, 11-03: "we also need to tweak the snow wisps before this release. make sure there's a section in the look panel for them"). The
@@ -150,7 +150,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   const hold = btn(row(cmp, 'plain boxes'), 'hold', 'the page as the game draws it today, while this is held'); let held = false; hold.addEventListener('pointerdown', () => { held = true; plain(true); }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) hold.addEventListener(ev, () => { if (!held) return; held = false; if (!stayPlain) plain(false); });   // (only a hold that began here ends here: the sweep's plain row is not ended by a pointer passing over)
   panel.toggleBox(cmp, 'stay plain', () => stayPlain, v => { stayPlain = v; plain(v); }, 'the boxes stay plain until this is put off');
   // THE SUN AND THE MOON (the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big reason why it looks flat. and perhaps we should also
-  // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (game/hours.ts), which a snow level's cloud leaves 9 % of, and the level's
+  // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (rust/game_rules/src/hours), which a snow level's cloud leaves 9 % of, and the level's
   // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (it then stands
   // against the cloud), Moon / height / bearing = the level's moon (`SkyTurns`: the page's own way to them). The page shows what it has: a row follows the hour and the level.
   if (sky) {
@@ -184,7 +184,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
       const play = btn(takes, 'Record play', 'records every frame while you play; press again to stop and send. A minute or two with a fight in it says most');
       const price = btn(takes, 'Price the layers', 'hands off for a few minutes: the picture holds still and each layer is switched off in turn. The picture flickers. The prices are read from the take afterwards');
       // SHARP DIRECT OFF, for a take to set beside one with it on (the costliest single row on the maintainer's laptop, 10-25: 4.9 ms of 15.5 at High). What ?nosharp
-      // does (main.ts), from a button, since a hosted page's address takes no flags: forced off for every preset the ladder puts on, and the preset put on again
+      // does (host/drawpage.ts), from a button, since a hosted page's address takes no flags: forced off for every preset the ladder puts on, and the preset put on again
       // so that its other resolve rows follow. The debugger's own row only holds until the next preset.
       const Q = w.__quality as { apply(name: string): void; current: string } | undefined;
       const sharp = btn(row(pf, 'sharp direct'), 'as the preset', 'direct light drawn at the screen\'s full size: the costliest single feature on a laptop. Off = a softer picture and a cheaper frame, whatever the quality goes to. For a recording to set beside one with it on');

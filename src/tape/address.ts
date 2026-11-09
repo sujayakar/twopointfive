@@ -2,12 +2,12 @@
 import { SHADER_ROW_WORDS } from '../ui/shaderrows';
 
 export const PLAYTAPE = 'playtape';
-/** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
- *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
- *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
+/** the address words a replay page keeps from the VISIT, not from the run it plays: how the page is looked at and listened to is the
+ *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar
+ *  `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
 export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'pace', 'giveway', 'flight', 'look', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'hireach',
   ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'fell', 'smokeindirect'];   // (the second line: how THIS machine builds its shaders — ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
-// (…and `fell`: the count of questions the TypeScript answered while its row was up, sim.ts FELL — a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
+// (…and `fell`: a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
 /** a word of an address is the visit's: one of VISIT_FLAGS */
 export const visitWord = (k: string): boolean => VISIT_FLAGS.includes(k);
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */

@@ -10,29 +10,28 @@ type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'wo
 type Row = readonly [file: string, group: Group, ...args: string[]];
 const ROWS: readonly Row[] = [
   ['bouncewalls-check.ts', 'picture'], ['cast-probes.ts', 'picture'], ['charmats-probes.ts', 'picture'], ['floor-order-check.ts', 'picture'], ['frame-layout.ts', 'picture'],
-  ['highlights-check.ts', 'picture'], ['huesplit-check.ts', 'picture'], ['kept-check.ts', 'picture'], ['ladder-replay.ts', 'picture', '--selftest'], ['lookcells-check.ts', 'picture'],
+  ['highlights-check.ts', 'picture'], ['huesplit-check.ts', 'picture'], ['kept-check.ts', 'picture'], ['lookcells-check.ts', 'picture'],
   ['lookexpo-check.ts', 'picture'], ['lookgrade-check.ts', 'picture'], ['lookmaps-check.ts', 'picture'], ['lookunits-check.ts', 'picture'], ['lookveil-check.ts', 'picture'], ['lookworkers-check.ts', 'picture'],
-  ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-plan.ts', 'picture'], ['rainscale-check.ts', 'picture'],
-  ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['sharpcap-check.ts', 'picture'], ['smokeline-check.ts', 'picture'],
+  ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-check.ts', 'picture'], ['rainscale-check.ts', 'picture'],
+  ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['smokeline-check.ts', 'picture'],
   ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
   ['sweep-ir-check.ts', 'picture'],
-  ['dust-look-check.ts', 'shaders'], ['levelset-check.ts', 'shaders'], ['parse-check.ts', 'shaders'], ['shaderfold-check.ts', 'shaders'], ['shaderinline-check.ts', 'shaders'], ['shaderrows-check.ts', 'shaders'], ['shadertrim-check.ts', 'shaders'],
+  ['shaders-check.ts', 'shaders', 'parse'], ['shaders-check.ts', 'shaders', 'trim'], ['shaders-check.ts', 'shaders', 'fold'], ['shaders-check.ts', 'shaders', 'inline'], ['shaders-check.ts', 'shaders', 'levelset'], ['shaders-check.ts', 'shaders', 'rows'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
-  ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'],
+  ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
-  ['claude-md-check.ts', 'build'],
+  ['claude-md-check.ts', 'build'], ['rust-rules-check.ts', 'build'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
-  'knobs-check.ts': 'the gate',
-  'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'zfight-check.ts': 'the level skill',
+    'zfight-check.ts': 'the level skill',
 };
 
-const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '');
+const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '') + (r[2] && !r[2].startsWith('--') ? `-${r[2]}` : '');   // (a file of sections has a row for each: shaders-fold)
 const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS;
 { const strange = words.filter(w => !ROWS.some(r => r[1] === w || name(r) === w || r[0] === w)); if (strange.length) { console.error(`checks: no check or group ${strange.join(', ')}`); process.exit(2); } }
 if (argv.includes('--list')) { for (const r of picked) console.log(`${r[1].padEnd(8)} ${name(r)}`); process.exit(0); }

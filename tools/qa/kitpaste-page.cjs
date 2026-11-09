@@ -1,5 +1,5 @@
 // COPY AND PASTE FOR LOADOUTS, ON THE REAL PAGE (the Team & kit step: ui/kitCard.ts KIT_CLIP — the two buttons, C and V — ui/loadout.ts — the keys from any
-// row, the roster's mark — game/kit.ts kitPaste). The maintainer, 10-15: "we should have copy and paste for loadouts".
+// row, the roster's mark — rust/game_rules/src/kit kit_paste). The maintainer, 10-15: "we should have copy and paste for loadouts".
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick), with five cards planted in the store by
 // the big slot's own fields: a man's kit is copied by the key and pasted onto another by the key, onto you by the button, the kit of a man with nothing in his big slot
 // onto you by Ctrl+C / Ctrl+V (your big slot is emptied with the rest: a paste hands over the whole card); each time the store holds the kit, written ONCE, the tiles that moved flash, the men who wear the copied kit are marked on the roster,
@@ -48,7 +48,7 @@ async function open(browser, extra, mission = 'depot-four') {
   return { ctx, page, read, pick, key, shot };
 }
 const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, walls: m?.walls });
-// A TOOL EACH PAIR (game/kit.ts KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
+// A TOOL EACH PAIR (rust/game_rules/src/kit KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
 // Red One's kit and after it, its tile does not move, and the store leaves his slot to the deal: a tool a man is only lent is never written, by a paste either.
 const counted = m => J({ ...kitOf(m), big: '' });
 
@@ -56,7 +56,7 @@ const counted = m => J({ ...kitOf(m), big: '' });
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
   { const P = await open(browser, ''), chk = check;
     const a = await P.read(); await P.shot('paste-0-open');
-    const N = a.tree ? 1 : 3;   // (the card laid out as a tree — src/game/kittree.ts KITTREE, on in the page — has the one reset where the three sets stood: the named kits are the screen's row)
+    const N = a.tree ? 1 : 3;   // (the card laid out as a tree has the one reset where the three sets stood: the named kits are the screen's row)
     chk(!!a.copy && !!a.paste && a.sets.length === N && a.sets3 === N && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[N - 1].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1 || (await P.page.evaluate(() => !!document.querySelector('#loadout .lo-kit .kc.kc-dense')) && Math.abs(a.head.top - a.copy.top) > 30) /* (the dense card — ui/kitDense.ts: the pouches are a line of their own over the tiles) */),
       'the card has Copy and Paste at the end of the sets\' line, on that one line, clear of the pouches', `${N} set${N === 1 ? '' : 's'} · sets ${J(a.sets)} · copy ${J(a.copy)} · paste ${J(a.paste)} · pouches ${J(a.head)}`);
     chk(!!a.paste && a.paste.off && !a.copy.on && a.marks.length === 0, 'nothing copied yet: Paste is dim, Copy is not lit, nobody on the roster is marked', `paste off ${a.paste?.off} · copy on ${a.copy?.on} · marks ${J(a.marks)}`);

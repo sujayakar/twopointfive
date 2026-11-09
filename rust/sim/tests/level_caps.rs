@@ -1,8 +1,8 @@
-//! A level file's most (src/scene/caps.ts, what its validator refuses a file by) is what the game's lists have room for.
+//! A level file's most (tools/levels/lib/caps.ts, what its validator refuses a file by) is what the game's lists have room for.
 
 /// the number `name` is given in the file, at its nth place
 fn said(name: &str) -> usize {
-    let text = include_str!("../../../src/scene/caps.ts");
+    let text = include_str!("../../../tools/levels/lib/caps.ts");
     let at = text.match_indices(name).map(|(i, _)| i + name.len()).find(|&i| text[i..].trim_start().starts_with(['=', ':'])).unwrap_or_else(|| panic!("no {name}"));
     let rest = text[at..].trim_start_matches([' ', '=', ':']);
     rest[..rest.find(|c: char| !c.is_ascii_digit()).unwrap()].parse().unwrap()

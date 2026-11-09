@@ -1,5 +1,5 @@
 // TRAIN-GROUND: the Training group's shared floor (not a level: no NAME, never exported by itself). Every lesson level (tools/levels/train-*.ts) stands on the
-// same walled compound in the GWOT kit (src/scene/gwotKit.ts) — a 24 × 16 m yard, a foot gate in the west wall and one in the east — and adds its own huts,
+// same walled compound in the GWOT kit (lib/gwotKit.ts) — a 24 × 16 m yard, a foot gate in the west wall and one in the east — and adds its own huts,
 // cover, lights, men and its `scenarios` blocks. One shell so a lesson's file is its rooms and its steps, and seven lessons read as one place.
 //
 //        x 8                                                      32
@@ -11,15 +11,15 @@
 //
 //   const T = trainGround();                    the shell: ground, the yard wall, both gates, the moon, a breaker, a beacon
 //   T.hut({ … })                                a room: four walls, a floor, a roof, its doors cut and hung → its inside rect
-//   T.lamp(x, z, name)                          a yard lamp: a 7 m pool of light to walk round (bun run tools/qa/light-map.ts <name> draws what is lit)
+//   T.lamp(x, z, name)                          a yard lamp: a 7 m pool of light to walk round
 //   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: rebuild/play-style-levels/look/read-first.md)
 //   return T.finish({ spawn, routes, mission, scenarios: { quiet, lesson } });
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -113,7 +113,7 @@ export function trainGround() {
       mission: o.mission, ...o.level,
     };
     const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
-    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — game/doornames.ts; no bearing in a name): the one off the track and the one across the ground.
+    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the one off the track and the one across the ground.
     // A level on this ground that knows a gate by something of its own writes its own row for it, and that row stands; its other rows are kept beside these.
     const own = o.scenarios.doorNames ?? [], gates = [{ door: 'gate_w', name: 'track gate' }, { door: 'gate_e', name: 'far gate' }].filter(g => !own.some(r => r.door === g.door));
     return { level, scenarios: { ...o.scenarios, doorNames: [...gates, ...own] }, groups: trace.groups, surfaces };

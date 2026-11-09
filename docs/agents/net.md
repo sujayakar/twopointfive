@@ -138,7 +138,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   under it are module state (`coop.ts PAGE`): the title is drawn twice, the boot card and then the live title over it, and both show the same. The
   title's key walk stops at the field with the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`). HOSTING is the one
   starting page in its co-op dress (`ui/startpage.ts StartPageOpts.coop`): only the missions two can play (`coopCan`: a kind the game seats two in —
-  `game/seats.ts seatsKind` — not a lesson, not a row built for its own size), the setup rail as ever, no kit step, and its block ('Host game') hands the
+  `rust/game_rules/src/seats seats_kind` — not a lesson, not a row built for its own size), the setup rail as ever, no kit step, and its block ('Host game') hands the
   mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
   weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
   teammates) and the difficulty levers this machine keeps written out (the server keeps nothing), a fresh die, and THE HOST'S OWN SETTINGS AS COMMANDS
@@ -167,8 +167,8 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
   the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
   as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
-- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
-  PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `src/game/verdict.ts roster`, `src/game/deathrecap.ts manOf`). The maintainer, from the
+- **Two players, two teams to the eye** (2026-11-03; `rust/game_rules/src/seats seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
+  PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `rust/game_rules/src/verdict roster`, `rust/game_rules/src/deathrecap man_of`). The maintainer, from the
   first game of two anybody played (two windows, his own GPU): "works on my m4! overall looks great. no outlines for the other player character (maybe
   we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path overlays (but probably fainter than yours) would be
   great", "at least have numbers for players or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". Before this a
@@ -238,7 +238,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   and the page's half on a check's clock, through stalls, bunched ticks, a restart and a page asleep; `NET_BREAK=1` fails). `PORT=<dev server> node
   tools/qa/mpclient-page.cjs` (headless Chromium against a real server, a bun client beside it; `--seats 2` = the page in the second seat): its lines are in
   its head. `lobby-check` and `lobby-page` above.
-- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `src/game/env.ts`: the knob table `ENV` and `tubeGain()`;
+- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `rust/game_rules/src/env`: the knob table `ENV` and `tubeGain()`;
   `hours.ts exposureOf(g)`; read by `nvg.ts tubeVis` / `tubeSig` and `irlight.ts`). What a goggled man's tube makes of a dark floor, and how strong his
   illuminator is, were worked out at `engine.settings.exposure` and `settings.nvGain`: the PICTURE's numbers, which a player moves (Options > Display >
   Brightness, the bracket keys, the debugger's two sliders), which no recipe, recording or save ever carried, and of which two players have two and a

@@ -1,4 +1,4 @@
-// A WAY MADE LONGER, to look at lag on one machine (the page's ?netlag / ?netjitter: page.ts; the scripted client's --lag / --jitter: tools/mp/bot.ts).
+// A WAY MADE LONGER, to look at lag on one machine (the page's ?netlag / ?netjitter; the scripted client's --lag / --jitter: tools/mp/bot.ts).
 // One queue a direction, let go by the clock: what goes in comes out that much later and IN THE ORDER IT WENT IN, as a socket keeps its order — a timer a
 // message does not (two timers due the same millisecond fire as the browser likes, and a tick message that overtakes the one before it reads as a hole in
 // the stream). A close goes through the same queue as the messages before it, so a goodbye is read before the socket it came on is seen shut.

@@ -44,7 +44,7 @@ than the camera you play from.
 
 ![Night vision: white phosphor through an oval eyepiece](public/assets/menu/solo-night.jpg)
 
-Numbers: `levels/office.json` (`lights`, `switchables`), `src/game/rigProps.ts`, `src/game/effects.ts`, `src/game/hours.ts`.
+Numbers: `levels/office.json` (`lights`, `switchables`), `rust/game_rules/src/rig_props`, `rust/game_rules/src/effects`, `rust/game_rules/src/hours`.
 
 ## The grade
 
@@ -57,7 +57,7 @@ treated one.
 
 Two palettes, one set of rules. Colours are linear albedo, written as plain numbers in code.
 
-**The office** (`src/scene/officeGen.ts`): a neutral shell (pale walls, dark carpet, grey lino and
+**The office** (`tools/levels/lib/officeGen.ts`): a neutral shell (pale walls, dark carpet, grey lino and
 stone) with furniture in a few saturated primaries: brick-red and royal-blue partitions, tan desks,
 blue chairs, cardboard brown.
 
@@ -112,8 +112,8 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 | records | a district land office | surveyors' magenta, on the ground only |
 | consulate | a town-house consulate | plum carpet bound in brass |
 
-Other levels have a skin of their own (`tools/levels/<name>.ts` over `<name>-floor.ts`) or are built straight from the kit
-(`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
+Other levels have a skin of their own (in `tools/levels/<name>.ts`, its `finish` over its `build`) or are built straight from the kit
+(`tools/levels/lib/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
 ![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
 
@@ -136,7 +136,7 @@ use: the corridor has almost nothing in it.
 ## Gear
 
 Guns, goggles, canisters and tools are small sets of flat-coloured boxes bolted to bones
-(`src/game/rigProps.ts`): gunmetal, dark-earth furniture, black polymer. They need to read as what
+(`rust/game_rules/src/rig_props`): gunmetal, dark-earth furniture, black polymer. They need to read as what
 they are from play distance, no more. Canisters are told by a band (smoke red, stun pale, frag
 yellow). What glows on gear: a lit weapon light's lens. The squad's lasers are infrared, hair-thin
 lines seen only through night vision. Goggles never glow.
@@ -156,7 +156,7 @@ lines seen only through night vision. Goggles never glow.
 - **Weather and hour are light, not filters.** Night is the home hour: moon, lamps, storm. Dawn and dusk are a low orange sun; midday is hard short shadows and dark rooms by contrast; fog and dust are air that the same lights shine into.
 - **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn but dim and nearly grey; men there are not drawn, and doors and furniture stay as the team last saw them. Its edge is cut by walls and door frames, as on a plan.
 
-Effect numbers are tuned by eye in the viewer and pasted back (`src/game/effects.ts`): treat them as authored data.
+Effect numbers are tuned by eye in the viewer and pasted back (`rust/game_rules/src/effects`): treat them as authored data.
 
 ## Screens
 

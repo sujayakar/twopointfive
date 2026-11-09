@@ -11,7 +11,7 @@ import { FLOOR, type FloorMat } from './floors';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
 import { Music, WebAudioMusicBackend } from './music';
-import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
+import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import type { AudioBackend, BackendVoice, SfxBuffer, SfxContext } from './backend';
 import { WebAudioBackend, noiseBuffer } from './webaudio';
 import { sfxContext } from './backend';
@@ -65,7 +65,7 @@ export function gameSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
  *  device's rate the same way, a voice at a time — that page's first sounds each pay for their own making, and the next page guesses right.
  *  ONE MIXER: the warm-up feeds the first mixer that starts; another on the same page makes its own table whole, as it was. */
 export const SFX_WARM = { on: true, rate: 48000, rateKey: 'twopointsix.sfxRate' };
-try { if (new URLSearchParams(location.search).get('sfxwarm') === '0') SFX_WARM.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('sfxwarm') === '0') SFX_WARM.on = false; } catch { /* no page */ }
 /** gameSfx's table, no voice rendered: name → the call that renders it (the same samples; a WAS_IN_GAME voice is the old table's and the redone one is never made) */
 export function gameSfxLater(ctx: SfxContext): Map<string, () => SfxBuffer> {
   const t: Map<string, () => SfxBuffer> = buildSfxLater(ctx);
@@ -117,11 +117,11 @@ export class AudioEngine implements GameAudioLike {
   /** the Web Audio context while the backend is the browser's (what the page's hooks / tests looked at) */
   get ctx(): AudioContext | null { return this.backend?.webAudio?.ctx ?? null; }
   music: Music | null = null;
-  /** the main menu is up (main.ts says so every frame, from before the first gesture makes the score): the score plays the theme alone there (music.ts `menu`) */
+  /** the main menu is up : the score plays the theme alone there (music.ts `menu`) */
   get scoreMenu() { return this.menuUp; }
   set scoreMenu(v: boolean) { this.menuUp = v; if (this.music) this.music.menu = v; }
   private menuUp = false;
-  /** the level's own music, as PIECE_NAMES indices (audio/setlist.ts; main.ts says it once at boot, before the first gesture makes the score): music.ts `setlist` */
+  /** the level's own music, as PIECE_NAMES indices (audio/setlist.ts; host/drawpage.ts says it once at boot, before the first gesture makes the score): music.ts `setlist` */
   get scoreSet() { return this.levelSet; }
   set scoreSet(v: readonly number[] | null) { this.levelSet = v; if (this.music) this.music.setlist = v; }
   private levelSet: readonly number[] | null = null;
@@ -258,8 +258,8 @@ export class AudioEngine implements GameAudioLike {
    *  the roof and the cars, built by the backend on first use, its gain eased toward `level` × its own ceiling on the ambience bus (src/audio/webaudio.ts rainLevel). */
   rain(level: number) { this.backend?.rainLevel(level); }
 
-  /** One footfall. The floor it lands on comes from the shared material map (game/floor.ts — the same map the guards' ears and the SOUND meter read; `mat` arrives
-   *  resolved by the caller, floor.ts tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
+  /** One footfall. The floor it lands on comes from the shared material map (rust/game_rules/src/floor — the same map the guards' ears and the SOUND meter read; `mat` arrives
+   *  resolved by the caller, rust/game_rules/src/floor tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
    *  sample runs a touch brighter on stone / duller on carpet. `loudness` already carries the material's share (carpet 0.6 ×, stone 1.1 × …), so it goes straight to the gain. */
   /** what is underfoot, where a footfall does not say (the page's game; none = the reference floor) */
   floorAt: (p: Vec3) => FloorMat = () => 'lino';
@@ -270,7 +270,7 @@ export class AudioEngine implements GameAudioLike {
 
   /** A followed voice let go: faded out, kept in the list (and in the cap's count) until the fade is done. */
   private unfollow(v: Voice, t: number) { this.backend!.stop(v.v, FOLLOW_FADE_MS); v.dying = true; v.end = Math.min(v.end, t + 6 * FOLLOW_FADE_MS / 1000); }
-  /** A sound that lasts as long as its thing does (a chair rolling on its castors: game.ts rollTick): ONE looping voice, started at the buffer's head and then held on
+  /** A sound that lasts as long as its thing does (a chair rolling on its castors: rust/game_rules/src/game): ONE looping voice, started at the buffer's head and then held on
    *  the buffer's loop stretch. `update()` asks `src` every frame for the thing's place and how hard it goes: level and pitch follow per frame, the panner and the
    *  low-pass with the other loops' (four times a second; its reverb send is the start's), and it is faded out when `src` answers null. Outside the one-shots' budget:
    *  at most MAX_FOLLOW alive (a nearer newcomer takes the farthest one's place, any other is not voiced) and two more still fading. It cannot run on: stopped when

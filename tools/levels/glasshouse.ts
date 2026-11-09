@@ -2,7 +2,7 @@
 // whitewashed block building whose whole front is glazed (the glasshouse, a long room of seedling benches behind six tall panes, 0.3 m off the ground to
 // 2.4) and whose inside walls between the glasshouse, the lab and the office are glass from 0.5 m to 2.4. Seven men. The forecourt is floodlit off the eaves
 // and the glazed rooms are dark, so whoever walks onto the forecourt is seen from three rooms at once by men he cannot see, and their rounds come through
-// the panes (game/glasspen.ts; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
+// the panes (rust/game_rules/src/glasspen; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
 // glass in any wall; it has its own door on the dark back lot, and a row of seed racks stands between that room and its door to the lab.
 // TWO WAYS IN (scenarios.roomClear.team / starts[0]), BOTH IN THE DARK AND OUT OF EVERY DEFENDER MARK'S SIGHT: the side of the building, round the corner
 // from the glass (stepping onto the lit forecourt in front of the panes is the player's own decision); or the back lot, on the back door.
@@ -18,13 +18,13 @@
 //   z 18 +==GGGGGGGGGGG==#=front=#==GGGGGGGGGGG==+  T   G = the glazed front, six panes · # = 1.8 m of block either side of the front door · T = the water tank
 //          * lamp        the forecourt (lit)   * lamp
 //
-// Built from the 2010s kit (src/scene/gwotKit.ts) on the office kit's walls and panes: flat colours, boxes only; no second look file.
+// Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes: flat colours, boxes only; no second look file.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -46,13 +46,13 @@ export const GLASSHOUSE_FRONT: Vec3 = [33.0, 0, 15.5], GLASSHOUSE_BACK: Vec3 = [
 // chest-high points the marks' guns rest on: the forecourt through the front panes (one bank, the other), and the doors' inner faces, each on the middle of
 // its doorway AS HUNG (the kit fits a 0.9 m doorway inside the 1.2 m slot drawn below: the exported file's hinge + half its width). THE STORE'S DOOR TO THE
 // LAB IS AT THE BACK-WALL END OF ITS WALL, never the glasshouse end: the camera looks down from the front of the building, and a door within about 1.9 m
-// behind a full-height wall that runs across its view is never drawn — no cursor finds it (tools/qa/doormenu-probes.ts 'the cursor on a door as drawn')
+// behind a full-height wall that runs across its view is never drawn — no cursor finds it
 const LOT_W: Vec3 = [15.2, 1.1, 22.0], LOT_E: Vec3 = [24.8, 1.1, 22.0], LOT_LAB: Vec3 = [14.0, 1.1, 22.0], FRONT_IN: Vec3 = [20.25, 1.1, 17.8];
 const LAB_S: Vec3 = [22.75, 1.1, 13.1], LAB_N: Vec3 = [22.75, 1.1, 12.9], STORE_E: Vec3 = [18.1, 1.1, 8.75];
 const OFFICE_E: Vec3 = [24.1, 1.1, 11.25], BACK_IN: Vec3 = [14.25, 1.1, 8.2], RACK_END: Vec3 = [15.85, 1.1, 12.2];
 
 /** THE ROOM CLEAR (scene/scenarios.ts StructureData). Seven men: glasshouse 3, lab 2, office 1, store 1.
- *  THE HAND PLACEMENT (roomclear.ts placeDefenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+ *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: men in the dark watch a floodlit forecourt through glass that stops no round.
  *  (The answers: come in through a wall that is not glass — the back door, or a hole of your own in the blank end wall — or put the light out.)
  *  · THE FORECOURT (the obvious plan: the short walk along the lit panes to the front door) is under four guns in three rooms from the first pane on:
@@ -232,7 +232,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the GLASSHOUSE is benches of seedling trays under the front panes, compost in sacks, a hand cart and
   // the watering drums; the LAB is one long bench with a burner's gas bottle, sample crates and a stool; the OFFICE a desk on a kilim, a chair, the station's
   // tin trunk of ledgers and a wall hanging; the STORE sacks to the roof beams and crates. Nothing stands within 1.1 m of a door's line, on a
@@ -299,7 +299,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the office, a point on its back wall, the front door
     mission: { serverRoom: { ...OFFICE }, entryDoor: 'office', rack: { index: 0, front: [28.2, 1.0, 8.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 18.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
+  // ---- what is underfoot (rust/game_rules/src/floor): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
   // ('stone'), lino laid in the lab and the office, the glasshouse's mat a carpet
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',

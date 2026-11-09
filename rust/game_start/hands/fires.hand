@@ -1,0 +1,5 @@
+# FIRES: Sam shoots at the nearest man who is not his, again and again. For a floor with no squad to order.
+# REACHES: guards hearing shots and hunting, wounds and deaths, a quiet floor woken up.
+# DOES NOT REACH: any order, grenades, Sam walking.
+unhurt
+every 10 from 5   fire nearest

@@ -15,10 +15,10 @@
 // A MAP THREAD COPIES tools/levels/block.ts (a real map) or this file (the smallest that passes): `build()` returns the Level, the scenarios block and the
 // editor groups; `bun run tools/levels/export.ts <name>` writes levels/<name>.json; `levels stands <name>` says whether it holds.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -149,7 +149,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'late', name: 'Late', arrive: { door: 'gate_s', spawn: [[19.4, 0, 24.6], [20.6, 0, 24.6]], men: 2 } },
     ],
   };
-  // ---- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears). `building` is the floor the zones are laid over — here
+  // ---- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears). `building` is the floor the zones are laid over — here
   //      the whole walled yard, asphalt — and each zone a rectangle of another finish, the first that holds a point winning. Without this block a map gets the
   //      OFFICE's map: carpet across x 4‥36, z 4‥24, its yard included.
   const surfaces: SurfacesData = {

@@ -2,7 +2,7 @@
 // second man makes possible. Its own ground (nothing shared with another level but the GWOT kit's pieces): a walled yard 33 × 23 m with a truck gate chained
 // shut, a way in through a fallen stretch of its wall, two shipping containers end to end across it (a third stood across the mouth of the gap between
 // them), the watch's camp in the truck park beyond them, walled on its south side, and an
-// office court with a fuel point at the far end. The rules are the quiet pair's (game/pairorders.ts, workthings.ts) on the frame (game/rails.ts), in an
+// office court with a fuel point at the far end. The rules are the quiet pair's (rust/game_rules/src/pairorders, rust/game_rules/src/workthings) on the frame (rust/game_rules/src/rails), in an
 // order a first-time player can follow, with the mains and the dark added.
 //
 //        x 5         16  18.4      24      29                38
@@ -19,7 +19,7 @@
 //        │             ← the strip round the south container's end is open
 //   z 26 └───────────────────────────────────────────────────┘
 //
-// THE LINE (scenarios.lesson; tools/qa/tut-pair-page.cjs plays it by real keys):
+// THE LINE (scenarios.lesson):
 //   the gate yard     the partner follows, low when the player is low. The squad's key on a man: the partner works round to that man's back, says "set" and
 //                     waits; the word (F) sends him, and he falls in again by himself.
 //   the truck park    two men who see each other. The squad's key on the far one; the player goes to the near one's back himself; his own grab is the
@@ -33,11 +33,11 @@
 // WHY THE PIECES STAND WHERE THEY DO
 //   · THE DOUBLE is the old Training lesson's geometry for it (the men 4.6 m apart, the near one looking straight at the far one's back, the far one looking
 //     out past him, an old wall a pace behind the far one that hides the partner's last strides): those numbers were found over many seeds. Two calm men
-//     inside 4.5 m of each other turn and talk (dialogue.ts AMBIENT.pairM), which is why they are not nearer.
-//   · THE START is more than ten metres by walking from every man: opening.ts moves on any man of the shift who starts nearer the spawn than that, and a man
+//     inside 4.5 m of each other turn and talk (rust/game_rules/src/dialogue AMBIENT.pairM), which is why they are not nearer.
+//   · THE START is more than ten metres by walking from every man: rust/game_rules/src/opening moves on any man of the shift who starts nearer the spawn than that, and a man
 //     moved on comes back to his post facing the way he came. It is outside the wall, on the road by their pickup, where the moon shows the two of them and
 //     no man has a line (levels stands).
-//   · THE MOON AND THE PARTNER. On the page the partner reads the way to a man's back by the light on himself (sneak.ts stalkAmbient): stood in the moon, he
+//   · THE MOON AND THE PARTNER. On the page the partner reads the way to a man's back by the light on himself (rust/game_rules/src/sneak): stood in the moon, he
 //     takes the whole way for lit, and will not cross it in front of a man who looks that way. So the moon is low in the south-west and every mark the
 //     player is led to is in a moon shadow.
 //   · NO SHADOW HERE IS DARK ON A REAL GPU, SO THE PARTNER'S WAYS ARE OUT OF EVERY LINE. The maintainer's first play (10-22, hard): the light meter read 14
@@ -54,16 +54,16 @@
 //         dead end the day he judged the way lit.
 //   · A MAN'S POST is on the middle of a nav cell (x and z ending .25 or .75) where his facing matters to a stride: a man put on a cell's edge takes one step
 //     onto it and stands as that step turned him.
-//   · NOBODY IS LEFT TO MEND THE MAINS. The game sends the nearest calm man to the box when the lights die (lighting.ts). Here the last man on his feet is in
+//   · NOBODY IS LEFT TO MEND THE MAINS. The game sends the nearest calm man to the box when the lights die (rust/game_rules/src/lighting). Here the last man on his feet is in
 //     the player's arm when they do, so the dark stays dark: the dark is for the lamps and the camera, and for the picture.
-//   · A CAMERA sees only what is lit (devices.ts): the lamp over the door is what feeds it. Both are on the mains.
+//   · A CAMERA sees only what is lit (rust/game_rules/src/devices): the lamp over the door is what feeds it. Both are on the mains.
 //   · THE WORLD is 40 × 28 m (scene/world.ts): the yard is as big as that leaves a road on either side of it.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, DeviceDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef, DeviceDef } from './lib/level';
 import type { LevelScenarios, LessonData, QuietData, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -282,12 +282,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const flag = (f: string) => ({ is: 'flag', flag: f });
   const pair = (what: string) => ({ is: 'pair', what });
   const mark = (p: P3): P3 => [p[0], 1, p[2]], chest = (p: P3): P3 => [p[0], 1.2, p[2]];
-  // (the far man's name on the net: the roster's third, as the routes are written — game.ts CALLSIGNS.)
+  // (the far man's name on the net: the roster's third, as the routes are written — rust/game_rules/src/game CALLSIGNS.)
   const FAR_MAN = 'Reyes';
   const opened = (door: string) => [{ is: 'door', door, state: 'open' }, { is: 'door', door, state: 'broken' }];
   const lesson: LessonData = {
     title: 'As two',
-    // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim, the knee. Each key is switched on by the step that teaches it and stays on.
+    // THE FRAME (rust/game_rules/src/rails). From the first step: the walk, the view, the aim, the knee. Each key is switched on by the step that teaches it and stays on.
     // `orders` = the squad's rows this night: his key on a man, on a thing to work, and anywhere else (the partner comes back). `rows` = the verbs the
     // interaction key offers: no row for the fuse box (the partner's work here), none for a lock, a body or a light plate.
     rails: { allow: ['move', 'camera', 'zoom', 'aim'], orders: ['pairMark', 'work', 'fallIn'], rows: ['grab', 'question', 'choke', 'push', 'pull', 'code', 'nocode', 'drive'] },
@@ -303,7 +303,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
         explain: { title: 'Two of you', text: 'Your partner follows you and stays as quiet as you do.\nPress [B] on a guard to send your partner around behind him. He\'ll say "set" when he\'s there, and then he\'ll wait for you to say go.' } },
       { id: 'word', line: 'Press [F] to say go, and he\'ll take the guard down', after: { word: 'He\'s taking the guard down, then he\'ll come back to you' }, allow: ['word'], at: chest(TP.A), atMan: 'pickup', done: down(1) },
       // ---- the truck park: two men on one beat ----
-      // (he falls in again by himself when his man is down — pairup.ts `rejoin` — so no line asks for it)
+      // (he falls in again by himself when his man is down — rust/game_rules/src/pairup `rejoin` — so no line asks for it)
       { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(near(TP.gap, 1.0), down(2)), hold: 0.3, at: mark(TP.gap) },   // (not on where the partner is: he stands back out of the two men's line by his own rule, and a step that waited on him was a dead end the day he judged the way lit)
       // (the word is shut from here on: this beat's signal is the player's own grab, and a second key lit by the partner asked 'what is F here' again. A
       //  press of it with the near man looking was 'hold', then 'going anyway' in his sight)
@@ -336,7 +336,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [id, m] of [['office', TP.door], ['gate_e', TP.gate]] as const) { const d = doors.find(x => x.name === id)!, c = [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2];
     if (Math.hypot(c[0] - m[0], c[1] - m[2]) > 0.03) throw new Error(`tut-pair: door '${id}' is fitted with its middle at ${c[0].toFixed(2)}, ${c[1].toFixed(2)}, and TP has it at ${m[0]}, ${m[2]}`); }
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
   // OUTSIDE THE WALL ONLY. Inside it every piece is the lesson's: a shadow the two work along, a line a man has or has not, a pool of light to walk round
   // (WHY THE PIECES STAND WHERE THEY DO, at the head), so nothing is added there and no lamp anywhere. What was bare is the ground the yard stands on: the
   // road they came by and the strips behind the north and east walls, each one sheet of dust. Decals and walk-over stones, but for the two drums and the

@@ -1,4 +1,4 @@
-// FURNITURE FOR THE LIVED-IN ROOMS (src/scene/lived.ts) of records, the block, the registry and the consulate: pieces built from plain boxes, one function each,
+// FURNITURE FOR THE LIVED-IN ROOMS (lib/lived.ts) of records, the block, the registry and the consulate: pieces built from plain boxes, one function each,
 // over whichever kit the generator uses (levelKit's k-first functions or officeKit's closures — a LivedHost adapts either).
 //   const P = livedPieces({ add: b => K.add(k, b), grp: n => K.grp(k, n), prop: (...a) => K.prop(k, ...a) }, K.KIT_PALETTE);
 //   P.room('staff'); P.table(26, 10.4, 1.8, 0.9, 0); …
@@ -7,13 +7,13 @@
 // No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (a paint of it says what the thing does: scene/stuff.ts PAINT_DOES,
 // scene/materials.ts); the colours named here are accents only.
 // A piece's FRONT is its local +Z and its back −Z (the wall side): yaw 0 = on a north wall facing south, π = on a south wall, π/2 = on a west wall facing east,
-// −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (game/destruction.ts index): a pale thin NoShadow sheet with its
+// −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (rust/game_rules/src/destruction index): a pale thin NoShadow sheet with its
 // longer half 0.08‥0.2 above 0.3 m is PAPER (flies); a small solid (half ≤ 0.17, ≤ 20 l) standing 0.7‥1.6 m up is CLUTTER (knocked off) — the pieces say which they make.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { drawnRoundSlabs, ROUND_FROM, roundFace, roundMarks, roundRadius, roundSlabs } from '../../src/scene/gwotKit';
-import { pieces } from '../../src/scene/library';
+import type { PropDef, PropKind, PropPart } from './lib/level';
+import { drawnRoundSlabs, ROUND_FROM, roundFace, roundMarks, roundRadius, roundSlabs } from './lib/gwotKit';
+import { pieces } from './lib/library';
 import { sayPaint, toned, madeOf } from '../../src/scene/stuff';
 
 export interface LivedHost {
@@ -43,7 +43,7 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     return { p,
       /** a solid box w × h × d standing on height y0, centred at local (lx, lz) */
       box: (lx: number, y0: number, lz: number, w: number, h: number, d: number, albedo: Vec3, dyaw = 0, extra: Partial<Box> = {}) => H.add({ c: p(lx, y0 + h / 2, lz), h: [w / 2, h / 2, d / 2], yaw: yaw + dyaw, albedo, ...extra }),
-      /** a ROUND thing of radius r, h tall, standing on height y0 at local (lx, lz): the kits' one way of writing a round (src/scene/gwotKit.ts) — from 0.2 m one box
+      /** a ROUND thing of radius r, h tall, standing on height y0 at local (lx, lz): the kits' one way of writing a round (lib/gwotKit.ts) — from 0.2 m one box
        *  that says it is round; smaller, two squares, the second reaching 1.32 r at its corners. `extra` may not turn or move it (its place and size are written last) */
       round: (lx: number, y0: number, lz: number, r: number, h: number, albedo: Vec3, extra: Partial<Box> = {}) => {
         if (!(h > 0.008)) throw new Error(`livedPieces: a round ${(h * 1000).toFixed(0)} mm thick: lay a sheet for a thing that thin`);
@@ -192,7 +192,7 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     /** a bucket (a mop bucket, a fire bucket on the floor, a coal scuttle) */
     bucket(x: number, z: number, albedo: Vec3 = C.metal, thing = 'bucket') { return loose(thing, albedo === C.metal ? 'bin' : 'cardboard', x, z, 0.2, 2, [part(0, 0, 0, 0.26, 0.28, 0.26, albedo), part(0, 0.28, 0, 0.3, 0.02, 0.03, tone(albedo, 0.6))]); },
   };
-  // the TOOLS (a frame, a loose prop, a part, a tone, the room), then the PIECES by name (src/scene/library.ts)
+  // the TOOLS (a frame, a loose prop, a part, a tone, the room), then the PIECES by name (lib/library.ts)
   const { at: _at, loose: _loose, part: _part, tone: _tone, room: _room, ...made } = P;
   return { ...P, ...pieces('livedPieces', made) };
 }

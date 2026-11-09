@@ -3,7 +3,7 @@
 // The page never deals: the piece picked plays until another is (MUSIC.pieces stays off here; setPiece is by hand).
 // UNDER THE PIECES, THE LEVELS (audio/setlist.ts): one row a level with the two pieces written down for it — the one that opens it, the one that follows — each with its own
 // play button and each a picker: a pairing the listener changes is kept with the marks and comes back in the same pasted line (`records: Paper Walls, Cold Storage`).
-// `window.__music` is the QA hook (tools/qa/music-page.cjs): `render(piece, x, secs)` plays a piece into an OfflineAudioContext on the same chain and measures what came out.
+// `window.__music` is the QA hook: `render(piece, x, secs)` plays a piece into an OfflineAudioContext on the same chain and measures what came out.
 import { Music, WebAudioMusicBackend, PIECE_NAMES } from '../audio/music';
 import { PIECES, THEME } from '../audio/pieces';
 import { setlistKey, setlistNames } from '../audio/setlist';

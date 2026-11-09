@@ -116,7 +116,7 @@ the head and the tops of the shoulders), and on the colour tables. Union 41,020 
 - Colours (src/render/charMaterials.ts): the irregulars' shirts are eleven earth and wash colours with no saturated red, blue or
   green (the squad's pair colours), hats and denim likewise; hair is a list of four by the man (`HAIR`) and matte; the cleaner's apron
   and kerchief are pale (the civilians' `accent` row is a list of two dealt by the id parity the two civilian variants are dealt by);
-  the response team's `accent` is its white mark. The Red pair's suit tint is a step lighter (game/nightbreach.ts SQUAD4).
+  the response team's `accent` is its white mark. The Red pair's suit tint is a step lighter (rust/game_rules/src/nightbreach SQUAD4).
 
 ## Stage 2: the set (2026-10-08)
 
@@ -282,7 +282,7 @@ SECOND file built by the same builder. `cast.gltf` is untouched: `python3 tools/
     python3 tools/chars/check_cast.py public/assets/chars/cast-gwot.gltf
     bun run tools/qa/probes.ts cast                        # cast-file and cast-fit run on BOTH files; cast-look holds the switch
 
-Same contract (32 parts, eleven slots, 14 variants with the SAME names on the same sides in the same order, so `src/game/cast.ts` deals a man the same
+Same contract (32 parts, eleven slots, 14 variants with the SAME names on the same sides in the same order, so `rust/game_rules/src/cast` deals a man the same
 variant name under either look). What differs:
 
 - **Operators** keep their part lists. `helmet` is `part_helmet_gwot()`: the same high-cut shell plus two side rails, a counterweight pouch on the back

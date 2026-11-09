@@ -171,12 +171,63 @@ impl Play {
     }
     /// the game steps on every seat's command, on a machine that shows the seat `shown`
     pub fn net_step(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
+        self.net_tick(cmds, shown);
+        self.g.out.clear();
+    }
+    /// … with what the step told its host still on the game
+    fn net_tick(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
         let seats = self.g.seats.clone();
         game::seats::show_seat(&mut self.g, seats[shown]);
         game::game::game_step_seats(&mut self.g, DT, cmds);
         game::seats::show_seat(&mut self.g, seats[0]);
-        self.g.out.clear();
         self.frames += 1;
+    }
+    /// WHAT THE PAGE DOES WITH A TICK'S CHECKPOINTS (rust/game_face page::saves), as far as the play goes: what the tick asked of the controller, and a checkpoint taken. Nothing is kept: nobody here goes back.
+    fn host_saves(&mut self) {
+        use game::out_events::OutEvent as E;
+        use game::savestate::control::{self, Do};
+        let asked: Vec<E> = self.g.out.iter().filter(|e| matches!(e, E::CheckpointsKeep(_) | E::CheckpointsRequest(_))).cloned().collect();
+        for e in asked { match e { E::CheckpointsKeep(e) => control::keep(&mut self.g, &e.label), E::CheckpointsRequest(e) => control::request(&mut self.g, &e.why, &e.label), _ => {} } }
+        if let Some(Do::Keep { label, .. }) = control::tick(&mut self.g, DT) { let _ = game::chronicle::chron_checkpoint(&mut self.g, game::chronicle::ChronCheckpointWhat::Save, Some(&label)); }
+    }
+    /// what a host does round a step with hands on its seats: each seat's camera after its man, the end of its input's frame
+    pub fn lens_and_keys(&mut self) {
+        for s in self.g.seats.clone() {
+            let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
+            let (follow, aim) = game::seats::with_seat(&mut self.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+            game::camera::follow_camera_update(&mut self.g, cam, DT, follow, Some(aim));
+            game::input::input_end_frame(&mut self.g, input);
+        }
+    }
+    /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
+    /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
+    pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
+        self.lens_of(script, 0);
+        let mut cmds = self.net_sample();
+        self.hand_of(script, &mut cmds[0]);
+        self.net_tick(&cmds, 0);
+        self.host_saves();
+        self.g.out.clear();
+        self.hear();
+        self.lens_and_keys();
+    }
+    /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
+    pub fn hand_of(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
+        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
+        game::scene_box_mirror::box_mirror_things(&mut self.g);
+        script.hand(&self.g, cmd, DT);
+    }
+    /// the view of the seat turned and pulled back as he asked since his last hand
+    pub fn lens_of(&mut self, script: &mut dyn crate::player::Script, seat: usize) {
+        let [yaw, zoom] = script.lens();
+        let cam = self.g.tab.cmd_seat[self.g.seats[seat]].cam;
+        if yaw != 0.0 { game::camera::follow_camera_rotate(&mut self.g, cam, yaw); }
+        if zoom != 0.0 { game::camera::follow_camera_zoom(&mut self.g, cam, zoom); }
+    }
+    /// … until he has nothing more to do, for at most `secs`: did he get there
+    pub fn played_out(&mut self, script: &mut dyn crate::player::Script, secs: f64) -> bool {
+        for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
+        script.over()
     }
     /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {

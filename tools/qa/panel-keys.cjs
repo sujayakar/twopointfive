@@ -1,12 +1,12 @@
-// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see page-look.cjs for what that
+// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see pages.ts for what that
 // adapter can and cannot do) and REAL key events are sent through the browser, so the whole road is under test: Input's capture listener, the panel's veto,
-// the panel's own listener for a focused field, main.ts's hotkey line.
+// the panel's own listener for a focused field, host/drawpage.ts's hotkey line.
 //   backtick  opens and shuts the tweak panel — with the pointer over the game, over the panel, with the search box / a slider / a list holding the keyboard —
 //             is never typed into the search, and steps NO debug view (the buffers are the 'debug view' row on the Frame page, by the list alone)
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (game/handslot.ts; under ?handslot=0 it is Backquote)
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_rules/src/handslot; under ?handslot=0 it is Backquote)
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);

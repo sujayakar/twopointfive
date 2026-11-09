@@ -145,7 +145,7 @@ export async function keepBudget(): Promise<number> {
 /** a visit some page wrote to this recently is taken to be still being played (a page files every KEEP.secs) — unless its page said it was going (`left`):
  *  a game just left for the list of replays is not being played, and its row must not say so for a minute */
 export const WRITING_MS = 60000;
-/** (the check's red path: REPLAYLEFT_BREAK=1 in front of tools/qa/replaykeep-probes.ts — a page has no process) */
+/** (the check's red path: REPLAYLEFT_BREAK=1 — a page has no process) */
 const LEFT_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYLEFT_BREAK ?? '') === '1'; } catch { return false; } })();
 export const beingWritten = (r: KeptRow, nowMs = Date.now()): boolean => { if (r.left && !LEFT_BREAK) return false; const t = Date.parse(r.lastAt); return Number.isFinite(t) && Math.abs(nowMs - t) < WRITING_MS; };
 /** LET GO OF THE OLDEST until the kept tapes fit `max` bytes, oldest first — never `live`

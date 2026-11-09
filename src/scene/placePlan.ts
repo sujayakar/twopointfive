@@ -5,8 +5,8 @@
 // that is solved on it; that file keeps the field, its buffer and Sam's eye, and reads the plan from here.
 // WHO READS IT: render/placeField.ts (the light of a place, the look's exposure), render/wallSides.ts (which side of a wall a point is on), scene/openings.ts
 // (where a place is open to the sky), and the checks of each.
-// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
-// --place); the solve's are read by render/placeField.ts alone.
+// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did;
+// the solve's are read by render/placeField.ts alone.
 import { Box, BoxFlag, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { type Pt, apart, narrowest, footprint, WAY } from './wayThrough';
@@ -56,7 +56,7 @@ export function placeWall(b: PlanBox): number {
   for (let k = 0; k < SLICES; k++) { const y = PLACE.maxFoot + (k + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) bits |= 1 << k; }
   return bits;
 }
-/** OR `bits` into the cells of one box's footprint (render-side twin of game/airSim.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
+/** OR `bits` into the cells of one box's footprint (render-side twin of rust/game_rules/src/air_sim stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
 export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: number, each: (k: number) => void): void {
   const cell = 1 / PLACE_RES, c = Math.cos(yaw), s = Math.sin(yaw), square = Math.abs(c * s) < 0.02;
   const need = cell * (square ? 0.5 : 0.75) + 1e-4, ex = Math.max(hx, need), ez = Math.max(hz, need);

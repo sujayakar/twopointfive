@@ -29,7 +29,7 @@ export interface MachineLine { pid: string; gpu: string; browser: string; visits
    *  said, the minutes on battery among them, and the lowest charge read; `powerMin` 0 where no record said */
   powerMin: number; batteryMin: number; batteryLow: number | null }
 
-/** A PAGE THAT IS NOT A VISIT (src/cloud/cloud.ts cloudReports: the replay viewer, the game's page playing a tape) marks its `visit` record with the
+/** A PAGE THAT IS NOT A VISIT (src/cloud/cloud.ts cloudReports: the game's page playing a tape) marks its `visit` record with the
  *  page's word: '' for a visit somebody played */
 export const pageOf = (visit: Rec | undefined): string => typeof visit?.data?.page === 'string' ? visit.data.page : '';
 /** the machine a visit ran on, in a few words: the adapter where the page got one, else the WebGL card, else that it had neither (a page that asks for

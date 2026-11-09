@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 271–318 -->
-- **A wall charge goes on an OUTER wall** (`WALLCHARGE.outer` in `src/game/wallcharge.ts`: on in the page, `?noouterwall` = off = every outer wall refused in words as before;
+- **A wall charge goes on an OUTER wall** (`WALLCHARGE.outer` in `rust/game_rules/src/wallcharge`: on in the page, `?noouterwall` = off = every outer wall refused in words as before;
   frozen stand off, `TPS_OUTERWALL=1`; Tab ▸ Destruction ▸ Walls and cover rows). `outerWall(g, i)` = structure up to `outerThick` 0.26 m (the levels' shells are 0.24), not steel, ≥ `outerMinLen`, with the open
   sky over ONE face (`skyFaces`: nine upward `col.solidBlocked` rays off each face — the 1 m roofed-cell map is wrong for shells, roof slabs overhang) or over both with
   `outerYard` (yard / perimeter walls). `wallAt` then answers `ok` + `outer` and every verb of the partition's charge is the same (X · 5 · 3, Sam's Space row 'wall · outer wall',
@@ -270,7 +270,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   room, 4 through), no page error; under `?hungcharge=0` the same charge opens nothing and the board hangs on. NOBODY HAS SEEN IT on a GPU and nobody has
   played it: the stills (`STILLS=<dir>`, `EXTRA='hour=midday&wallsafe=0'`, the camera on the charge's side facing the wall) are the software adapter's
   at verylow; the picture goes dark between about 0.3 and 0.7 s after the blast in them, as after any wall charge (not looked into here).
-- **What is painted on a wall goes with the wall** (`src/game/wallskin.ts`, `WALLSKIN`, 2026-11-05; found by the office's hand pass: a 2.2 m blast on
+- **What is painted on a wall goes with the wall** (`rust/game_rules/src/wallskin`, `WALLSKIN`, 2026-11-05; found by the office's hand pass: a 2.2 m blast on
   four partitions took the vent over the hole and left every painted band from the floor hanging across its foot, and a length of conduit that carries a
   branch hanging across the breach with its clips gone). A level's walls carry drawn-only boxes on their faces (the look kit's `skirt` and `dado`, a
   damp foot, a mend, a stripe, conduit, card boards and the papers on them). `wallbreak.ts hangers` takes what is MOUNTED on the stretch that opened, only
@@ -418,7 +418,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frame cost of up to 42 more emitters in a window (fewer when the solver is short: `slack`), how a fight through the dust feels. HIS CALL, GIVEN (10-14,
   the words above): the pall hides men, both sides, for a few seconds; what that does to a fight is to be thought about after he has played it
   (`?pall=look` stays as the one flag back to a cloud nobody is hidden by).
-- **A blast leaves the floor a mess: films of settled dust, the marks of the pieces the pool took** (`src/game/floormess.ts`, numbers `CHAOS.mess` in
+- **A blast leaves the floor a mess: films of settled dust, the marks of the pieces the pool took** (`rust/game_rules/src/floormess`, numbers `CHAOS.mess` in
   `destruction.ts`; the maintainer 10-14: "maybe we've just blown up too much stuff but the office floor looks too clean"). WHY IT WAS CLEAN: the pall thins in
   seconds, chips are particles that live eighteen, and the debris pool (`settings.debrisCap`, 64 / 32) gives a resting chunk's slot to the next one thrown —
   after a long fight nothing recorded it. THE RULE (`CHAOS.mess.on`: ON in the page, `?mess=0` off; OFF in the module and on the frozen stand, word
@@ -478,7 +478,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   step ask this one), `col.shotBlocked` = a line of FIRE (the same solid walk, named for the question: guards.ts `clearShot` — the alert branch's `blocked` —
   and tactics.ts `losOpen` for the presser's / flanker's cover point and the lone man's corner; a man who SEES Sam through a pane has no shot from there and
   goes round through the door instead of planting on the corridor putting rounds into the glass, and no corner is taken behind a pane; aim.ts `noteBore`'s
-  reach is his own half of the line, so a far jamb eating rounds also moves him); device tripwire beams END at glass like at any solid. A Glass box thicker than `THICK_GLASS_HALF` (5 cm) across its thin axis would be SOLID glass (same pane treatment, glassHit stars only sheets) — nothing in the office uses it since the water-cooler bottle went back to a plain box (a refracting box read as an ice cube). Panes NEVER break IN THIS MODULE'S OWN RULE (what the frozen harness stands up; since the rebuild the page ships `GLASSFX` on and a pane cracks, lets rounds through and comes apart — the three glass bullets below): `game/glass.ts glassHit(g, bi, p, dir, who)` (combat.ts: a
+  reach is his own half of the line, so a far jamb eating rounds also moves him); device tripwire beams END at glass like at any solid. A Glass box thicker than `THICK_GLASS_HALF` (5 cm) across its thin axis would be SOLID glass (same pane treatment, glassHit stars only sheets) — nothing in the office uses it since the water-cooler bottle went back to a plain box (a refracting box read as an ice cube). Panes NEVER break IN THIS MODULE'S OWN RULE (what the frozen harness stands up; since the rebuild the page ships `GLASSFX` on and a pane cracks, lets rounds through and comes apart — the three glass bullets below): `rust/game_rules/src/glass glass_hit(g, bi, p, dir, who)` (combat.ts: a
   round whose static hit is a pane — the round STOPS in it, the next one too — or the pane between shoulder and muzzle when pressed to it) adds a decal of
   kind `'glassHit'` on that pane (`Decal.pane` = its static index; radius 0.075‥0.2 and the 12-bit look seed from `hitSeed(the pane's box, point)` — the same shot
   draws the same star), plays `glassCrack`, pushes GameEvent `'glass'` (level `GLASS.hearLevel` 0.85, horizon `hearM` 30; guards.ts hearingCheck) and
@@ -513,7 +513,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   buffer rewritten only on change, read by the g-buffer's FRAGMENT stage (group 1 binding 3; `decalWgslConsts(binding)` prepends the binding + layout
   consts) which edits the albedo / normal / gloss-keep (albedo target alpha, × the gloss floors' spec in composite) it stores — so direct light, the bounce
   at the pixel and the gloss term respond by themselves (secondary hits and the AI's light meter do not). Marks on dynamic boxes ride them (local frame,
-  `sync`). Emit sites, one call each, in `game/marks.ts`: combat.ts fireWeapon → `bulletMark`, detonateStun → `bangScorch` (+ splashes), player.ts /
+  `sync`). Emit sites, one call each, in `rust/game_rules/src/marks`: combat.ts fireWeapon → `bulletMark`, detonateStun → `bangScorch` (+ splashes), player.ts /
   squad.ts kick impact → `kickScuff`, launcher.ts clack → `chipMark`; glass.ts → 'glassHit' (drawn by composite, skipped by the g-buffer). Never touches
   Math.random. `settings.decals` (default on; `?nodecals`, `?decalStress=N` = measurement), Tab ▸ Renderer — decals, `__marks` {test, random, clear, bang,
   scuff}. Cleared by resetLevelState. QA: `probes.ts decals` (ring / sites / follow / off / identity — identity also under `weapons`), soak invariants.
@@ -535,7 +535,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   uniform block, seeds off the system's own serial), kernel `emit` + `update` in ONE compute pass after the cascades (collision = `traceClosest` through
   the trace grid, resting chips sleep, shading per particle: sparks on the CPU sparks' cooling ramp, chips / dust / brass LIT off the three strongest
   shadow-tested lights + the dice), then a splat into the HDR target between composite and bloom (`passes.encode(…, overlayHdr)`). Sites in
-  `game/particleFx.ts`, out events on every host (`engine.particlesOn`, = `settings.gpuParticles` ∧ attached, is whether the picture draws them): impactFx by material,
+  `rust/game_rules/src/particle_fx`, out events on every host (`engine.particlesOn`, = `settings.gpuParticles` ∧ attached, is whether the picture draws them): impactFx by material,
   muzzleSparksFx, casingFx (+ the CPU-scheduled `casingTink`), bangFx, kickDustFx, clackFx, the tracers' `sparkSink`. `?noparticles`, Tab ▸ Renderer —
   particles, `__particles` {stats, params, on, test(kind, at), emit, clear}. QA: `probes.ts particles` (queue / sites / off / determinism).
   The fifth kind `sheet` (id 4, LONG ring; `render/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
@@ -545,7 +545,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scoring front and back irradiance (three strongest shadow-rayed, `TRANS` 0.3 of the back face shows through); the splat antialiases its rim over `fwidth(loc)`,
   gives each leaf its own tone and writes a LOW reactive weight at rest (litter keeps its TAA history). Sheets cast no shadow (a splat, not a box). Every kind
   now carries `aspect` (`EmitOpts.aspect/tumble/nrmJit` → the record's posB; 1 = the chip as it was — a splinter is a chip with aspect 3).
-- **Destruction under sustained fire** (`src/game/destruction.ts` + `debris.ts`, STATUS stage 3b; docs/internal/destruction.md, page docs/review/destruction.html):
+- **Destruction under sustained fire** (`rust/game_rules/src/destruction` + `debris.ts`, STATUS stage 3b; docs/internal/destruction.md, page docs/review/destruction.html):
   ONE knob `tune.chaos` 0‥1 (default 0.5, Tab ▸ Sandbox ▸ chaos rows; **0 = the game byte for byte as it was** — both hooks
   return on their first line, `probes.ts destruction-identity` holds it; `chaosOf(g)` is also 0 while `touring`). Rounds (anybody's — combat.ts fireWeapon calls
   `g.destr.round(shooter, hitP, dir, hit, def)` right after impactFx) and stun charges (`g.destr.bang(at)` after bangScorch) pour HEAT into a 2 m grid with a 2 s
@@ -560,7 +560,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   behind each, clutter / binder = small dark-or-not statics 0.7–1.6 m up inside the building, never a fixture's box; things standing on each other form a `group`
   knocked together) and a monitor housing on a direct hit KNOCKED OFF as rigid debris, a chair a round finds spun; E ≥ 9 (≈ 1.2 s of the FN2000 on AUTO at 0.5, or
   one stun charge = `bangHeat` 9) a CEILING TILE over the beaten zone drops (one per 0.6 m square, ≥ `tileGapSecs` 2.2 apart, ≤ `tilesPerEncounter` 8, indoors,
-  nothing solid under the slab there). `game/debris.ts Debris` = the RIGID pool: `Chunk {kind tile|housing|clutter|binder|chunk, box (Dynamic, mkey MKEY.debris +
+  nothing solid under the slab there). `rust/game_rules/src/debris Debris` = the RIGID pool: `Chunk {kind tile|housing|clutter|binder|chunk, box (Dynamic, mkey MKEY.debris +
   serial), v, w}`, swept centre-ray contact against statics + leaves + props with the box's own support distance, dead bounces, `layFlat` toward the face nearest
   down on each floor touch, sleep (rests on a prop until that prop moves), a world-floor fallback; capped by `settings.debrisCap` (quality.ts `Caps.debris` 64 / 64
   / 32 / 32 / 32 = the image-quality program's chaos budget) — over it a spawn EVICTS the oldest resting chunk, and with none resting REFUSES → the caller demotes the
@@ -637,7 +637,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of the boot's set (27.8 s after a 26.5 s boot, 41.5 after 40.7, 40.0 after 40.8, 26.6 after 27.5) where the loop's set took a fifth to two fifths longer (34.6
   after 28.7, 35.7 after 25.3, 38.1 after 28.6): one box each, a ratio inside one box. WHAT IT COSTS: text. Eight planes are written out where one stood in a
   loop, at every copy of the box test: 3.1 KB a copy, and the cut set's kernels 13 % bigger in the compact writing with separate shadow rays, 14 % in the plain
-  one (`tools/qa/shaderinline-check.ts`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
+  one (`tools/qa/shaders-check.ts inline`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
   (3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set to its boot twin, with the round's own test out and the cut test in and a
   fiftieth of the twin on top, so a call site only the rule's arms hold is red. CHECKS: `cutboxes-ray` holds that no function the box test reaches has a loop
   statement (it follows the calls), pins the shader's text of the test so `tools/qa/cut-rule.ts`, the checks' one mirror of it, must move with it, and holds
@@ -648,10 +648,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before this too). The timings are of the commit before the last (the last makes the entry's comparison strict and adds the assert). NOT SEEN: an
   Apple chip (graphics read no cost for the loop's set on the M4 Max on 11-04, so nothing may move there), Windows, an AMD card; a picture of a cut piece
   drawn with the new test on any GPU other than the cloud card's four stills; the wait for the cut set on Windows, which follows the text.
-- **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, no word (the shader const is always up: main.ts);
+- **Glass that comes apart** (`rust/game_rules/src/glassbreak`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, no word (the shader const is always up: main.ts);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
   flipping the Tab row wants a reload (the row says so); const off = the shader text main compiled before). **THE FRACTURE MODEL (rebuild, 10-08; pure geometry in
-  `src/game/glassPattern.ts` — keep it and `common.wgsl gp*/gb*` + `composite.wgsl gbCracks` in step, `probes.ts glassbreak-open` compares the rule over the uploaded rows):** a blow
+  `rust/game_rules/src/glass_pattern` — keep it and `common.wgsl gp*/gb*` + `composite.wgsl gbCracks` in step, `probes.ts glassbreak-open` compares the rule over the uploaded rows):** a blow
   leaves a SITE (≤ 8 a pane): 9‥12 hashed RADIAL cracks + straight CHORDS between neighbouring radials (partial concentric rings) → a crater (band 0), ring pieces (bands 1, 2)
   and, once the pane has RUN, forked DAGGERS to the frame, most snapped across once (bands 3‥6; fid = site × 84 + band × 12 + sector; territories = a power diagram). BY TYPE
   (`typeOfPane` — on the page the kind now comes from where the pane SITS, the *Glass as buildings have it* bullet; what follows is the first rule, the frozen stand's: OUTSIDE glass tempered — a pane with open sky over exactly ONE face, found from the level's own geometry on every level (`skySide`, cached, also the gust's inward direction; the office comes out
@@ -671,9 +671,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   restart = intact); `levelFingerprint` untouched. Deterministic (hashes of pane, point, piece — never Math.random). The NATIVE engine's reader (`trace.metal`) opens only a pane
   gone WHOLE — the per-piece rule is not ported. Tab ▸ Destruction ▸ Glass, `__glassbreak`; QA `probes.ts glassbreak` (13: off / gate / pattern / support / release / open / blast / seams /
   walk / caps / reset / gust / determinism; all but off + determinism also under `glass`), `bun run tools/qa/glass-plot.ts --out DIR` = the 2D crack plots (SVG per moment + model
-  checks); notebook docs/internal/glassbreak.md (the first port's identity hashes and cost — its Voronoi model is superseded). NOT merged from that branch: wall-break (needs the checkpoint fingerprint over appended statics; since 10-08 walls DO break, by the destruction goal's own engine `src/game/wallbreak.ts` — not that branch's), fire × water,
+  checks); notebook docs/internal/glassbreak.md (the first port's identity hashes and cost — its Voronoi model is superseded). NOT merged from that branch: wall-break (needs the checkpoint fingerprint over appended statics; since 10-08 walls DO break, by the destruction goal's own engine `rust/game_rules/src/wallbreak` — not that branch's), fire × water,
   the showcase page.
-- **Rounds through glass** (`src/game/glasspen.ts`, notes rebuild/glass/penetration.md in the project files; `GLASSPEN.on` — the PAGE ships ON, `standGame({harness})` stands it OFF
+- **Rounds through glass** (`rust/game_rules/src/glasspen`, notes rebuild/glass/penetration.md in the project files; `GLASSPEN.on` — the PAGE ships ON, `standGame({harness})` stands it OFF
   (`glassPenHarness`: every frozen digest was recorded with rounds stopping in glass; `GLASSPEN=on` env / `?glasspen=0|1` force it, Tab ▸ Renderer fx ▸
   Glass ▸ 'rounds pass through glass'); off, or `Game.touring`, = the base digest for digest). A round carries ENERGY (`GLASSPEN.energy` by row: fn2000 1.0 · aks74u 0.9 · fiveseven 0.6 ·
   guard9mm 0.5); a SHEET takes `cost[type]` (annealed 0.10 · tempered 0.16 · laminated 0.42 — `GlassBreak.typeOf`'s typing) × thickness ∕ 12 mm × min(3, 1 ∕ cos θ) × ¼ through an earlier hole
@@ -689,7 +689,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ai / rule / lines + the no-tunnel brute force / near / off; all but -off ride `glass`, -off rides all-quick); whole-run identity = `PT_DIGEST=1 tools/qa/playthrough.ts` against the base.
 - **Glass, the three parts as one + the tuning rounds** (record rebuild/glass/tuning.md): ONE master switch `glass.ts GLASSFX` (env
   `GLASSFX=on|off` under bun; settled ON in the page, with no address word: the Rust game breaks a pane whatever a page's copy says, and `?glassfx=0` and `?glassbreak=0` went on 11-08 because they put the picture's half down under it and left holes it could not show) over the fracture (`tune.glassBreak`), rounds through
-  (`GLASSPEN.on`) and falling glass (`tune.glassShards`, `src/game/shards.ts`: plates + the `shard` particle kind + landing sounds + litter underfoot) — off = glass as it was
+  (`GLASSPEN.on`) and falling glass (`tune.glassShards`, `rust/game_rules/src/shards`: plates + the `shard` particle kind + landing sounds + litter underfoot) — off = glass as it was
   before any of it, by run digest; the harness (standup.ts) stands all three OFF unless the run says `GLASSFX=on`, and then `GLASSBREAK=off` / `GLASSPEN=off` / `GLASSSHARDS=off`
   take one part out for an A/B (`GLASSPARTS=shipped` leaves the three as the page ships them whatever the master says: `GLASSFX=off GLASSPARTS=shipped` = the
   stand-up the build's off-equals-the-base digests were run on; `tools/qa/glass-levels.ts` = every scenario level started the page's way with the parts as shipped — live, a pane of each kind
@@ -709,7 +709,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it on a GPU.
 
 <!-- added 2026-10-13, after the cut -->
-- **Glass as buildings have it: toughened glass drops at once, and a pane's glass comes from where it sits** (2026-10-21; `src/game/glassbreak.ts GLASSREAL`,
+- **Glass as buildings have it: toughened glass drops at once, and a pane's glass comes from where it sits** (2026-10-21; `rust/game_rules/src/glassbreak GLASSREAL`,
   two rules, each ON in the page and off in the module and on the frozen stand; `FROZEN_HOLDS` rows `GLASSREAL.drop` → `TPS_GLASSDROP=1`, `GLASSREAL.place` →
   `TPS_GLASSPLACE=1` (both act only with the glass up, `GLASSFX=on`); the table is in the knob registry and the session journal, a recording from before it replays
   with both off; Tab ▸ Destruction ▸ Glass breaking, two rows). The maintainer, of a toughened window: "it seems like there are two types of glass breaking -- one
@@ -756,7 +756,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   after the drop. NOBODY HAS SEEN any of it on a GPU or played it: the white sheet standing a tenth of a second, the fall, the look of big blocks pouring as
   dice, and how the levels play with their windows float. OPEN, the maintainer's: laminated frontage for a secure building (a level's own word on a pane) is not
   built; the manager's sidelight is laminated still, where the rule for a door's panel would make it toughened.
-- **A hit's seed is the box's own, never its place in the level's list** (2026-11-05; `src/game/glass.ts boxSeed`, `pointSeed`, `hitSeed`, `blastSeed`). A
+- **A hit's seed is the box's own, never its place in the level's list** (2026-11-05; `rust/game_rules/src/glass box_seed`, `pointSeed`, `hitSeed`, `blastSeed`). A
   pane's star and break, a round's turn through a pane (`glasspen.ts`) and its turn through a thin wall or a door's leaf (`wallpen.ts`) were seeded by the
   box's INDEX in the level (`wallpen` passed `index % 1e6`: a static's index, or a leaf's place in the list of leaves). An index moves with every box written
   before it, so one box more or less in a level's file moved every break and every turn written after it, and with them the digest of every run that met
@@ -821,8 +821,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   open and under `rakeOpen`. `glass-shot`'s decal line follows `hitSeed` by the pane's box.
   NOBODY HAS SEEN IT: every star, every break and every turn of a round is another roll than it was, and none has been seen on a GPU or played.
 - **What a pane of glass is to play is the Rust module's** (2026-11-05; `rust/sim/src/panes.rs`, `pattern.rs`, `pen.rs`, the `panes` part of a game's block; no switch: the module is the game, and the game's own settings `tune.glassBreak`, `GLASSFX.on`, `GLASSPEN.on`, `GLASSREAL.drop / .place`, `tune.glassShards`, `SHARDS.byFall`, `WINBARS.on` stay what they were and reach it through `knobs.rs`). Cracking, which pieces fall and when, the toughened pane's dice, what a blast takes and what a burst's three views would count on, a round's toll, turn and path through glass, the line of fire past a pane, a muzzle held through one, what the floor hears, and which window's bars are gone: statement for statement the rule the TypeScript had, by the same hashes and the same maths, so nothing about play moved.
-  - **File by file, gameplay against dressing.** `panes.rs` (gameplay): a pane's state and every rule that writes it. `pattern.rs` (gameplay): the crack pattern's geometry and the dice's clumps, kept in scratch and compared against their source numbers, so they are no state. `pen.rs` (gameplay): rounds through glass. `glass.rs` (gameplay): the open question, which now reads a row where it stands in the block. `src/game/glassbreak.ts`: thin calls, and the picture's half: `fill` (the renderer's record), the wind sources (`gustDirty`, `updateGusts`: wind is not ported), what a fragment becomes as `onRelease` hands it on. `src/game/shards.ts` (dressing): plates, spray, chips; its `crossed` asks the module to lay the jet's litter. `src/game/glass.ts`: the seeds and the event gap are calls; the star, the decal, the sound and the 'glass' event stay here until the senses and sounds move. `src/game/glasspen.ts`: thin calls, plus the shell's marks (`shellMark`), which live on the `Shell` for one shell's flight and go with the rounds. `src/game/winbars.ts`: which bars are gone and what a blast takes are the module's; the pieces (`g.destr.debris`, dressing since debris went), the chips and the round's own `met` list (combat.ts flies the round) stay.
-  - **The block.** The part stands LAST, so no part before it moved. Nothing of it is written until something of a pane's is, and when the last of that goes it is as a game that never touched glass has it, to the bit (`panes.rs stand`, `settle`): a game with no pane touched parks and snapshots what it did (a last pool with nothing in use takes no room: `src/sim/state.ts span`), and a restart is a fresh game. A POOL WITH NOTHING IN USE HAS NOTHING IN IT: `pn` reads its counts as none, so a take from before any pane was touched, put back, or a slot another game had, is no glass and not that game's. Its dense runs: a row a pane touched, the through-holes, the queue. A row's first 80 doubles and 64 words are the very layout `glass.rs` reads, so lines and rays read state where it stands and the mirror's pane half writes nothing for a game with a block. **The level's sheets of glass are no state:** which static, which face has the sky, how far from a door's opening stand with the box world's copy (`world.rs Sheet`, written with the statics), settled as the level stands up (`GlassBreak.stood`, Game's constructor, last) where the TypeScript asked each the first time it mattered: statics do not move, and no line asks a line of its own from inside its walk. On the office: block 2.45 → 3.14 MB (692,656 bytes a slot, none of it carried unless used), module memory 32.2 → 49.4 MB (the part in four slots, the world's table, the queue's out-list, the pattern's and the clumps' scratch), parked with no pane touched 445,040 bytes both ways, parked with eight panes broken 2,461,344 (the poses' room stands before it), snapshot with no pane touched +8 bytes, with eight panes broken +13.2 KB.
+  - **File by file, gameplay against dressing.** `panes.rs` (gameplay): a pane's state and every rule that writes it. `pattern.rs` (gameplay): the crack pattern's geometry and the dice's clumps, kept in scratch and compared against their source numbers, so they are no state. `pen.rs` (gameplay): rounds through glass. `glass.rs` (gameplay): the open question, which now reads a row where it stands in the block. `rust/game_rules/src/glassbreak`: thin calls, and the picture's half: `fill` (the renderer's record), the wind sources (`gustDirty`, `updateGusts`: wind is not ported), what a fragment becomes as `onRelease` hands it on. `rust/game_rules/src/shards` (dressing): plates, spray, chips; its `crossed` asks the module to lay the jet's litter. `rust/game_rules/src/glass`: the seeds and the event gap are calls; the star, the decal, the sound and the 'glass' event stay here until the senses and sounds move. `rust/game_rules/src/glasspen`: thin calls, plus the shell's marks (`shellMark`), which live on the `Shell` for one shell's flight and go with the rounds. `rust/game_rules/src/winbars`: which bars are gone and what a blast takes are the module's; the pieces (`g.destr.debris`, dressing since debris went), the chips and the round's own `met` list (combat.ts flies the round) stay.
+  - **The block.** The part stands LAST, so no part before it moved. Nothing of it is written until something of a pane's is, and when the last of that goes it is as a game that never touched glass has it, to the bit (`panes.rs stand`, `settle`): a game with no pane touched parks and snapshots what it did (a last pool with nothing in use takes no room: `rust/game_rules/src/sim_state span`), and a restart is a fresh game. A POOL WITH NOTHING IN USE HAS NOTHING IN IT: `pn` reads its counts as none, so a take from before any pane was touched, put back, or a slot another game had, is no glass and not that game's. Its dense runs: a row a pane touched, the through-holes, the queue. A row's first 80 doubles and 64 words are the very layout `glass.rs` reads, so lines and rays read state where it stands and the mirror's pane half writes nothing for a game with a block. **The level's sheets of glass are no state:** which static, which face has the sky, how far from a door's opening stand with the box world's copy (`world.rs Sheet`, written with the statics), settled as the level stands up (`GlassBreak.stood`, Game's constructor, last) where the TypeScript asked each the first time it mattered: statics do not move, and no line asks a line of its own from inside its walk. On the office: block 2.45 → 3.14 MB (692,656 bytes a slot, none of it carried unless used), module memory 32.2 → 49.4 MB (the part in four slots, the world's table, the queue's out-list, the pattern's and the clumps' scratch), parked with no pane touched 445,040 bytes both ways, parked with eight panes broken 2,461,344 (the poses' room stands before it), snapshot with no pane touched +8 bytes, with eight panes broken +13.2 KB.
   - **Bounds.** Sheets, rows and through-hole rows 256, as the level fit always held (`levelfit.ts`); a sheet's clumps 8,192 and bars gone 128, new rows of the same count (the largest in the level files today: the barracks' 22 bars). The queue holds 4,096 pieces: a piece past that stays in its frame until the next support pass. No run has come near it.
   - **Special cases removed.** The burst's rows handed over per pane (a view is now the burst's numbers, and each pane answers from its own state). The renderer's `glassStatics` list inside a blast (the world's `sheets`: every sheet of the level, ascending, thick glass no longer among them). The mirror's compare of pane rows (`stalePanes`), which had to find out what had changed. Each fragment's landing crossing back to TypeScript under `SHARDS.byFall` (the rule schedules it in `falls.rs` as the piece lets go, and a jet's the same). Reading a type "as asked" for a box the level does not hold (one function, `place_rule`, takes the sizes, the wall and the door's distance, whoever asks).
   - **Special cases kept, and why.** A pane's type by where it sits: that is the rule (`GLASSREAL.place`), a building's glass, one function. A word on a pane's glass (`setType`, tools today): 32 of them stand in the block, for it is the game's. The thick-glass test (a half thickness over 5 cm is solid glass, the cooler's bottle, no sheet): it is what a sheet is. The tour (`glassBreakLive` false under `Game.touring`): the showcases' choreography was laid with glass stopping rounds, and the switch is asked in the host, where the question of whether to call starts. The stand-in spawn while `onRelease` is null (`tune.glassShards` off, a game's own setting): dressing, in the host, read by nothing. A blast's `BLAST_MIN_K`, the crater and the dagger's own numbers: the rule's. The fall's `off` path (`SHARDS.byFall` false, a recording from before it): the shards still ask `fallOf`, one rule from either side, until recordings that old are given up.
@@ -983,7 +983,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   longer than a hole, so two of the check's tests could no longer fail. `holesnow` now stands the level as the file has it and draws one site's bank out
   to 15 m itself (its sixth line; the feed row asked under 3 m, was 6). Proved by breaking the rule two ways in a side tree: the row not clipped to the hole
   (row 15.0 m) and the size bar holding snow (the bank stands) each turn that line red; the lines before it stayed green under the second. Both stands.
-- **What the walk grid calls floor, feet cross** (`UNDERFOOT` in `src/scene/collision.ts`, 10-17; the maintainer, of two wall charges on the pass: "one
+- **What the walk grid calls floor, feet cross** (`UNDERFOOT` in `rust/game_rules/src/scene_collision`, 10-17; the maintainer, of two wall charges on the pass: "one
   set of guys couldn't pathfind through the wall breach"). His tape, re-run: the pair at the store's wall were sent through their hole and walked on the
   spot at the wall's line (z 5.0) until the tape ended. The store keeps sacks against that wall; the blast took the pile's upper layers and left the
   bottom one in the hole (two sacks, top 0.2 m). The walk grid's bake asks from 0.25 m up, so the route went straight across them; a walking body was
@@ -1000,7 +1000,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   do not rise); the check holds `FURN.mouth.base` off so that his breach keeps the sacks its line asks about. A hauled body and a
   shoved chair are asked lower than a walker and still meet such a thing (a body dragged behind its carrier catching there: not looked at); a thing whose
   top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
-- **A window's bar breaks from one round** (`src/game/winbars.ts`, `src/scene/bars.ts`; the maintainer, 2026-10-25, of The Pass's windows: "for gameplay
+- **A window's bar breaks from one round** (`rust/game_rules/src/winbars`, `src/scene/bars.ts`; the maintainer, 2026-10-25, of The Pass's windows: "for gameplay
   it'd be nice if they broke off with the glass and just as fast. so each bar breaks up with just a single bullet?"; page rebuild/window-bars/read-first.md).
   SWITCH `WINBARS.on`: ON in the page (`?winbars=0` = a bar stops every round like the piece of wall it was), OFF in the module and on the frozen stand
   (`TPS_WINBARS=1` raises it; `FROZEN_HOLDS` row; journal: a recording with no `WINBARS` table replays with it off), inert while a showcase runs. No panel
@@ -1041,7 +1041,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   12 shipped runs with the rule on: 8 differ by digest (bars are shot in play), 11 of 12 won on both arms, squad men standing 28 → 27 of 42, defenders
   left 2 → 2 of 84. Twelve runs say the rule plays through, nothing about balance.
   NEVER SEEN ON A GPU, never played: how the pieces and chips look, whether a bar going reads at a glance, and how a window fight feels without them.
-- **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
+- **Rounds through thin walls and doors** (`rust/game_rules/src/wallpen`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
   wooden doors with the energy it has left, as it already does through glass"; page rebuild/thin-walls/read-first.md). SWITCH `WALLPEN.on`: ON in the page
   (`?wallpen=0` = a round stops in the first built thing it meets, as it did), OFF in the module and on the frozen stand (`TPS_WALLPEN=1` raises it;
   `FROZEN_HOLDS` row; journal: a recording with no `WALLPEN` table replays with it off), inert while a showcase runs; Tab ▸ Renderer fx ▸ Glass ▸ 'rounds pass
@@ -1104,7 +1104,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   headless, his site only: of 14 sacks in the two piles by the hole, 4 bottom ones were left before and none are now; the bank at the wall's foot (top 0.17 m)
   stays. Across the levels every small floor thing with a top at 0.2 m is the bottom of such a pile (read off the level files, 10 levels have them). Nobody
   has seen the hole on a GPU or played it.
-- **A wall shot's smoke is thinner and its shock fills the room** (`WALLSHOT`, `src/game/wallcharge.ts`; the maintainer, 10-19, of rooms on the mousehole
+- **A wall shot's smoke is thinner and its shock fills the room** (`WALLSHOT`, `rust/game_rules/src/wallcharge`; the maintainer, 10-19, of rooms on the mousehole
   taken through blown walls: "the smoke after a wall shot makes it too hard -- we should probably (1) turn down its density a little and (2) make it so
   everyone in the room gets more of a shock"). WHAT HIS RUN SHOWED (his replay walked headless, exact): the one man in the first room, 3 m from the
   charge, was folded 2.0 s and blind 4.7 s, came up inside the pall and shot the first man at the hole 2.7 s after the blast. THE RULE: (1) the charge's
@@ -1127,7 +1127,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man, who came up at 2.0 s inside a hole still hidden, now comes up at 3.5 s, a second after it reads again. Runs differ by a quarter second. NOT
   MEASURED: no tally over seeds (how often a room taken through a wall costs a man before and after); never seen on a GPU or played; the seconds are a
   first setting for the maintainer's play, not a tuned one.
-- **A wall charge kills whoever stands at it** (`WALLKILL {on, nearM 1.5}`, `src/game/wallcharge.ts blow`; the maintainer, 10-19, a room clear on the kill
+- **A wall charge kills whoever stands at it** (`WALLKILL {on, nearM 1.5}`, `rust/game_rules/src/wallcharge blow`; the maintainer, 10-19, a room clear on the kill
   house on hard, god mode off, standing 0.9 m from a charge he had set on a wall when he pressed the trigger — the log said 'you were too close' and he walked
   on: "blowing a wall charge with me right next to it should kill me"). A blast does to the player what it does to anyone, so it is ONE rule for every man on
   the floor (the player, ours, the defenders, a civilian who is in the building): on the charge's OWN side nearer than `nearM` with a line to it he is killed
@@ -1215,7 +1215,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pool's size follows the graphics tier (64 or 32) and the budget is a look knob kept per machine, so two machines did not play one game. WITH THE RULE a
   fragment has ONE landing, worked out as it lets go (`fallOf`: where and when it reaches what is under it): all its glass is laid there (a diced clump four
   fifths, a laminated sheet three tenths, as before), the floor is told once at the landings' level, and a plate is DRESSING (`Chunk.dress`: no hearing
-  event, no glass at rest, no furniture feels it). The gameplay half is the game's `FallStore` (`src/sim/fallshome.ts`, with a Rust twin: the row
+  event, no glass at rest, no furniture feels it). The gameplay half is the game's `FallStore` (`rust/game_rules/src/sim_fallshome`, with a Rust twin: the row
   `RUST.falls`, `docs/agents/rust.md`). SWITCH: off in the module and on the frozen stand (`TPS_GLASSFALL=1`), ON in the page (`?glassfall=0`); a
   `FROZEN_HOLDS` row; a key of the registered table `SHARDS`, and a recording from before the key replays with it off (`journal.ts applyKnobs`). Off = litter
   where each plate rests, as it was, by run digest (the shards probes' 36 lines, unchanged; the five comparison missions break no glass and are the
@@ -1245,7 +1245,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ceiling tile lands hard enough to break again, with a puff the senses read: the simulation lets that puff out, and a dressing chunk's own re-break
   leaves it out), and a blast that knocks one of the lane's own things off says its shove BEFORE the thing is thrown (`Debris.fling`), so the landing has
   the shove too. The landings
-  wait in the game's `FallStore` (`src/sim/fallshome.ts`, the list `FALL_PIECES` beside the glass's; `docs/agents/rust.md`, the row `RUST.falls`) and
+  wait in the game's `FallStore` (`rust/game_rules/src/sim_fallshome`, the list `FALL_PIECES` beside the glass's; `docs/agents/rust.md`, the row `RUST.falls`) and
   `destruction.ts update` tells the floor as each comes due, at the piece's level and on whoever threw it. Every chunk is then `Chunk.dress`: its knock is
   for the ear, it pushes nothing, its box is `Box.dress` (PICTURE ONLY to the world's ray, as a look piece is: `scene/boxes.ts`), the mark a re-broken piece
   leaves is a look decal, a piece a later blast kicks is not heard again, and the three read-backs ask the simulation (the tile is down; the budget is
@@ -1283,7 +1283,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   again, and a plate of a plate (`shards.ts`, by `SHARDS.byFall` when it lands or rests), are what the switch says THEN, not what their piece was;
   the mend is one fact stated by every caller and no switch read in `spawnRaw`. NOT HELD BY A CHECK: the look mark in a full ring, `told` against
   a full list. Not run: any play tally (none of these moves a landing under the page's rules).
-- **What a hit looks like goes by what the thing says it is made of** (`src/game/particleFx.ts HITSTUFF`, 2026-11-04; the maintainer, shooting cars on
+- **What a hit looks like goes by what the thing says it is made of** (`rust/game_rules/src/particle_fx HITSTUFF`, 2026-11-04; the maintainer, shooting cars on
   the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make cracks (but maybe not fracture?)",
   then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we don't want to model the
   inside"). THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (`surfOf`: a palette name where the numbers have
@@ -1321,7 +1321,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   KNOWN WRONG, AND THE LEVEL'S TO MEND: the depot's hut walls are painted with the partition's tan, whose row says 'cloth' (`stuff.ts`: "drawn as
   cloth because the tan is a cream rug's"), so 32 boxes of its walls throw tufts where they threw gypsum; the compound's walls of the same paint say
   'stucco' beside it and are right. THE VEHICLES SAY WHAT THEY ARE MADE OF (11-05, the change after the rule). A vehicle's BODY says
-  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`scene/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
+  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`tools/levels/lib/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
   lorry and motorbike (`gwotKit.ts coat`), the plain car (`carSays`: `officeGen.ts car`, `levelKit.ts car`), and the three vehicles a level builds by
   hand (the bazaar's lorry, tut-road's tanker, the plough lorry of tut-sky and tut-team). A paint's ROW cannot say it: the truck enamels are cots,
   lockers, floor lines and signs too and stay 'paint', and the tanker's cream is a wall's elsewhere (its row says plaster: a round threw gypsum off a

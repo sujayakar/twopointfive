@@ -16,7 +16,7 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
 (`tools/qa/bench-page.cjs`: the title, its Extras list with no showcase rows, three mission pages); never seen on a GPU.
 
 <!-- was CLAUDE.md lines 695–758 -->
-- **The breach drill and the daylight variant** (`src/game/breach.ts BreachDrill`; it was the choreography of the removed DAY showcase and is now run live by the night breach scenario, `game/nightbreach.ts`, and offered to a level script as `drill.breach`). `lighting.ts
+- **The breach drill and the daylight variant** (`rust/game_rules/src/breach BreachDrill`; it was the choreography of the removed DAY showcase and is now run live by the night breach scenario, `rust/game_rules/src/nightbreach`, and offered to a level script as `drill.breach`). `lighting.ts
   setDaylight(g, on)` swaps `level.daylight` in (a kind-2 sun added to the LightSet, sky / haze / exposure swapped, `groupsOn/Off`, moon out) and
   back out bit for bit (state in a WeakMap; `isDaylight`); volumetrics.wgsl marches kind-2 lights through the haze UNDER the ceiling only
   (up-ray roof test per step; the moon carries volumetric 0 so night is unchanged).
@@ -34,8 +34,8 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   `targets[{centre, corner}]` / `next {door, stack, stackFace, stackSide, stackAim}` / breachLines (entry / entryAim kept = the flows, for RoomClear dry runs).
   QA: `probes.ts breach` = `breach-daylight` (the daylight round trip, bit for bit) + `clear-doctrine` (squad.ts RoomClear keeps the same doctrine); the drill itself is
   exercised by `probes.ts nightbreach`. Nothing runs it as a Director drill any more.
-- **The Director = level scripting M1** (`src/game/director.ts`, `Game.director`, `__director`; spec docs/design/level-scripting.md, record docs/internal/director.md; merged 54fd23c):
-  a level's SCRIPT is a plain function `(D: DirectorApi) => void` in `levels/<name>.script.ts` importing NOTHING from src/ at run time (`import type` only; scene/level.ts
+- **The Director = level scripting M1** (`rust/game_rules/src/director`, `Game.director`, `__director`; spec docs/design/level-scripting.md, record docs/internal/director.md; merged 54fd23c):
+  a level's SCRIPT is a plain function `(D: DirectorApi) => void` in `levels/<name>.script.ts` importing NOTHING from src/ at run time (`import type` only; tools/levels/lib/level.ts
   `withScript` attaches one as a NON-ENUMERABLE `Level.script`). NO SHIPPED LEVEL HAS ONE: the office's held only the two removed showcases, so nothing is
   attached to the office at load (its scenario data is its file's own block) and every Game's Director has no manifest and idles. Define time = handles by name (`D.mark / door / volume / route / plan / loadout / lightGroup /
   variant`) + `D.program(name, P => …, {showcase, lowerThird, endVeil, endHold})` + `D.expect.*` / `D.systems.*` → a MANIFEST linted against the level in the Game constructor

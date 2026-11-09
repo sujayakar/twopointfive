@@ -1,5 +1,5 @@
 // TEST-ROOMS: the tiny level the scenario probes run on (levels stands) — NOT a level to play for its own sake. Three rooms off one short
-// hall and a lobby the team starts in, built from the office's own kit (src/scene/officeGen.ts officeKit: its walls, doors, furniture, lights and palette —
+// hall and a lobby the team starts in, built from the office's own kit (lib/officeGen.ts officeKit: its walls, doors, furniture, lights and palette —
 // no new art), 20 × 14 m inside the 40 × 28 m world. It exists to prove that the room clear (pair and four) and the hostage rescue stage, are walked and
 // finish on a level that is not the office, with everything they need coming from this file's `scenarios` block (src/scene/scenarios.ts).
 //
@@ -15,9 +15,9 @@
 // A LEVEL TASK COPIES THIS FILE: `build()` returns the Level, the scenarios block and the editor groups; `bun run tools/levels/export.ts <name>` writes
 // levels/<name>.json from it and refuses a file that does not load back to the same level. (rebuild/scenario-levels/contract.md is the how-to.)
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -158,6 +158,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       },
     },
   };
-  scenarios.doorNames = [{ door: 'a', name: 'room A door' }, { door: 'b', name: 'room B door' }, { door: 'c', name: 'room C door' }, { door: 'ab', name: 'A to B door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'a', name: 'room A door' }, { door: 'b', name: 'room B door' }, { door: 'c', name: 'room C door' }, { door: 'ab', name: 'A to B door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/doornames; no bearing in a name)
   return { level, scenarios, groups: trace.groups };
 }

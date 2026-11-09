@@ -1,10 +1,9 @@
 // WHAT A BOX DID BY ITS COLOUR, UNTIL 2026-11-05: THE OLD RULE, FROZEN.
 // The game's rules used to ask a box's COLOUR what it was (src/scene/materials.ts tells how). They ask the box's word now (Box.does), and this file keeps
-// the old rule for two jobs and no other:
+// the old rule for one job and no other:
 //   · BRINGING A BOX FORWARD. A box whose maker said no word is given, when its level is exported, the word its colour would have had (stampDoes below:
 //     tools/levels/export.ts). So a generator that paints a thing in numbers nobody named still gets today's answer, written in the file where anyone
 //     can read it and say a better one. Whoever names a paint (scene/stuff.ts) or says a box's word is never asked here.
-//   · THE AUDIT (tools/qa/does-audit.ts): what the colour said of every box against what its word says.
 // NOTHING IN src/ READS THIS, and nothing here reads the game: the palettes below are COPIES of the numbers as they stood that day (the office's rows, the
 // 2010s look's and the snow kit's), so a palette may change its colours and this rule answers as it always did. The hair's shift by which a paint of the
 // look stood for another office paint (gwotAs, to 0.0024 a channel) is here too, with its list in its old order: the files written before carry it.
@@ -22,7 +21,7 @@ const STEP = 0.0008;
 const shifted = (a: V, code: number): number[] => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4);
 const WET = (a: V): number[] => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
 
-/** an exact colour → the office paint's name (the first row of those numbers), as game/particleFx.ts paletteName built it */
+/** an exact colour → the office paint's name (the first row of those numbers), as rust/game_rules/src/particle_fx built it */
 const officeBy = new Map<string, string>(); for (const [k, a] of Object.entries(OFFICE)) { const key = a.join(','); if (!officeBy.has(key)) officeBy.set(key, k); }
 /** an exact colour of the look's → what it stood for, as scene/gwotPalette.ts gwotSimOf built it, in its order */
 const lookBy = new Map<string, string>();
@@ -45,27 +44,27 @@ const STEEL_GREY = { chroma: 0.07, value: [0.3, 0.8] };
 const SCREEN_OFF = [0.02, 0.02, 0.025];
 export const lum = (a: V): number => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const near = (a: V, b: V, e: number): boolean => Math.abs(a[0] - b[0]) < e && Math.abs(a[1] - b[1]) < e && Math.abs(a[2] - b[2]) < e;
-const near3 = near;   // (destruction.ts had its own, the same test)
+const near3 = near;   // (rust/game_rules/src/destruction had its own, the same test)
 
 /** WHAT THE RULES MADE OF A COLOUR, each as the code that read it wrote it (the file and the function are named a line) */
 export interface Was {
-  /** particleFx.ts paletteName: the office paint's name, its own or the one a look's paint stood for */
+  /** rust/game_rules/src/particle_fx: the office paint's name, its own or the one a look's paint stood for */
   name: string | undefined;
-  /** particleFx.ts surfOf */
+  /** rust/game_rules/src/particle_fx */
   surf: Surf;
-  /** furnblast.ts breakClassOf */
+  /** rust/game_rules/src/furnblast break_class_of */
   breaks: BreakClass;
-  /** furnblast.ts steelGrey */
+  /** rust/game_rules/src/furnblast */
   steel: boolean;
-  /** wallbreak.ts index, wallpen.ts stuffOf: the wall paints */
+  /** rust/game_rules/src/wallbreak index, wallpen stuff_of: the wall paints */
   wall: 'board' | 'screen' | undefined;
-  /** wallpen.ts stuffOf: a named paint that is plasterboard */
+  /** rust/game_rules/src/wallpen stuff_of: a named paint that is plasterboard */
   board: boolean;
-  /** wallbreak.ts index (cover), furnblast.ts (a panel, a carton) */
+  /** rust/game_rules/src/wallbreak index (cover), furnblast (a panel, a carton) */
   cover: 'wood' | 'cardboard' | undefined;
-  /** furnblast.ts STRUCT; and its one exception, white */
+  /** rust/game_rules/src/furnblast STRUCT; and its one exception, white */
   struct: boolean; counter: boolean;
-  /** destruction.ts index: not over 0.1 bright; over 0.7; the dead screen's colour to 0.004 */
+  /** rust/game_rules/src/destruction index: not over 0.1 bright; over 0.7; the dead screen's colour to 0.004 */
   casing: boolean; paper: boolean; screen: boolean;
   /** render/snowField.ts snowPaintOf: a snow paint to 0.002 */
   snow: SnowKind | undefined;
@@ -89,7 +88,7 @@ export function wasOf(albedo: V): Was {
 }
 /** is this colour, to the number, a row of the look's palette or a snow paint AS THEY STOOD (not a stand-in a hair off one)? */
 export const lookRowWas = (albedo: V): boolean => { const k = albedo.join(','); return Object.values(LOOK).some(a => a.join(',') === k) || Object.values(SNOW).some(a => a.join(',') === k); };
-/** … and of the lot's slab while the weather had soaked it (game/weather.ts setWet halved its colour in place, and the rules read that) */
+/** … and of the lot's slab while the weather had soaked it (rust/game_rules/src/weather setWet halved its colour in place, and the rules read that) */
 export const wasWetOf = (albedo: V): Was => wasOf(WET(albedo));
 
 /** the row each office paint's name is (scene/materials.ts) */
@@ -101,7 +100,7 @@ const NAME_ROW: Record<string, DoesWord> = {
 const SNOW_ROW: Record<SnowKind, DoesWord> = { snow: 'snow', snowPacked: 'packed snow', snowOld: 'old snow' };
 /** THE WORD A COLOUR HAD: the row of the table of materials that says what the old rule said of it. A named paint's row by its name (lying snow by its
  *  kind); a colour nobody named, the 'unnamed' row of its surface, its tone and whether it is a plain grey. Where no row holds every column (a tone the
- *  table has no row for) the nearest is given: the audit lists each such box and says whether a rule could tell. */
+ *  table has no row for) the nearest is given. */
 export function wordWas(albedo: V): DoesWord {
   const w = wasOf(albedo);
   if (w.name !== undefined) { const row = w.snow !== undefined && w.name === SNOW_IS ? SNOW_ROW[w.snow] : NAME_ROW[w.name] ?? DOES_DEFAULT; return row === 'carpet' && w.casing ? 'dark carpet' : row; }   // (one named paint the index could tell dark from light: a small thing in a dark rug's dye)

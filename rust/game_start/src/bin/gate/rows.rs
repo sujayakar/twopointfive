@@ -1,11 +1,12 @@
 //! THE ROWS: what each holds, its break, and how it is played (README.md, "The gate", has them in a table). All stand as the page and the server stand a game: seed 9, `dress`, through the
 //! game's own start on the mission's own link. The list of missions is the game's.
 use crate::pins::{Pins, Start};
+use crate::played;
 use game::cmd::PlayerCmd;
-use game::game::GuardState;
 use game::scene_scenario_list::{all_missions, pick_search};
 use game::scene_scenarios::ScenarioEntry;
 use game_start::hand::{act, read_hand, Hand};
+use game_start::hands_off::{HandsOff, Plan};
 use game_start::moment::Moment;
 use game_start::parts;
 use game_start::play::{Opts, Play};
@@ -29,16 +30,16 @@ const SEATS_SECS: usize = 30;
 /// a moment of a game of two, and how far its records are played from there
 const SEATS_MOMENT: (usize, usize) = (12, 18);
 const PAR_SECS: usize = 30;
-/// the least a fight of two does in its seconds, at about half of the least the three runs give (a man walked 4 to 8 metres, the fights fired 2 to 8 rounds, the hands differed on two ticks of five)
+/// the least a fight of two does in its seconds, at about half of the least the three runs give (a man walked 4 metres and more, the fights fired 4 rounds and more, the hands differed on two ticks of five)
 const MEN_WALK: f64 = 2.0;
 const FIGHT_FIRES: f64 = 1.0;
 const HANDS_DIFFER_ONE_IN: usize = 5;
 /// parts a line names, at most
 const NAMED: usize = 12;
 
-/// THE RUNS: a mission and a hand. Between them they reach the office's night breach, a room clear in the rain under bangs, a compound's doors, a glasshouse's kit, the kill house and a
-/// quiet night under push, a rescue under push and snow under bangs.
-pub const RUNS: [(&str, &str); 8] = [("night-breach", "doors"), ("depot-four", "bangs"), ("compound-four", "doors"), ("glasshouse-four", "kit"), ("killhouse-four", "push"), ("bazaar-quiet", "push"), ("rescue-registry", "push"), ("pass-four", "bangs")];
+/// THE RUNS: a mission and a hand. Between them they reach the office's night breach, a room clear in the rain under bangs, a compound's doors, a mouse hole's kit, a glasshouse and the kill house and a
+/// quiet night under fire, a rescue under push, snow under bangs and a partner's orders in the lesson that has them. Every line of a run's hand happens in it, or its `play` row is red.
+pub const RUNS: [(&str, &str); 10] = [("night-breach", "doors"), ("depot-four", "bangs"), ("compound-four", "doors"), ("mousehole-four", "kit"), ("glasshouse-four", "push"), ("killhouse-four", "push"), ("bazaar-quiet", "fires"), ("rescue-registry", "push"), ("pass-four", "bangs"), ("tut-pair", "pair")];
 /// a game of two is held on these
 const SEATS: [&str; 3] = ["room-clear-four", "compound-four", "depot-four"];
 /// THE PARTS THAT ARE THE CLOCK'S OWN: a level with a par block and the same level without it may differ here, and nowhere else
@@ -55,10 +56,10 @@ impl Flags {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Job { Start(String, u32), Run(usize), Seats(String), Par(String) }
+pub enum Job { Start(String, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64) }
 impl Job {
     /// which is started first, the longest kinds before the others: the lower, the sooner
-    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) => 2, Job::Start(..) => 3 } }
+    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) => 2, Job::Start(..) => 3 } }
 }
 
 #[derive(Clone)]
@@ -68,7 +69,9 @@ impl Row {
     /// its column of the pins' starts
     pub fn column(&self) -> Option<String> { match &self.job { Job::Start(id, seats) => Some(column(id, *seats)), _ => None } }
     /// its line of the pins' series
-    pub fn series(&self) -> Option<String> { match &self.job { Job::Run(_) if self.name.starts_with("play ") => Some(self.name.clone()), Job::Seats(_) => Some(self.name.clone()), _ => None } }
+    pub fn series(&self) -> Option<String> { match &self.job { Job::Run(_) if self.name.starts_with("play ") => Some(self.name.clone()), Job::Seats(_) | Job::Played(_) => Some(self.name.clone()), _ => None } }
+    /// its line of the pins' words
+    pub fn worded(&self) -> bool { matches!(self.job, Job::Played(_)) }
 }
 fn column(id: &str, seats: u32) -> String { format!("{}/{}", id, seats) }
 fn run_name(k: usize) -> String { format!("{} {}", RUNS[k].0, RUNS[k].1) }
@@ -86,14 +89,24 @@ pub fn all() -> Vec<Row> {
     for e in list.iter().filter(|e| has_par(e)) { out.push(Row { name: format!("par {}", e.id), job: Job::Par(e.id.clone()) }); }
     out
 }
+/// the rows of `gate long` beyond these: a merge has no time for them
+pub fn long() -> Vec<Row> {
+    let mut out = Vec::new();
+    for id in played::his_missions() { out.push(Row { name: format!("played {}", id), job: Job::Played(id) }); }
+    for id in played::lessons() { out.push(Row { name: format!("lesson {}", id), job: Job::Lesson(id.to_string(), 0.0) }); }
+    for id in played::lessons() { out.push(Row { name: format!("lesson {}, reading each line", id), job: Job::Lesson(id.to_string(), played::READS) }); }
+    out
+}
+/// every row, of both kinds
+pub fn every() -> Vec<Row> { let mut out = all(); out.extend(long()); out }
 /// ONE FAULT A CHECK: the row, the break's name, and a piece of the check's own words its failure must hold
 pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
-    let (run, moved) = (run_name(5), run_name(1));
+    let (run, moved) = (run_name(6), run_name(1));
     let start = start_name("tut-road", 1);
     let (seats, par) = (format!("seats {}", SEATS[0]), String::from("par killhouse-four"));
     vec![
         (start.clone(), "pin", "the start moved"), (start, "second", "a second start"),
-        (format!("play {}", run), "pin", "parts from its pin"),
+        (format!("play {}", run), "pin", "parts from its pin"), (format!("play {}", run), "silent", "never happens"),
         (format!("again {}", run), "second", "the second run"),
         (format!("save {}", run), "block", "put back, parts"),
         (format!("load {}", run), "block", "loaded into"),
@@ -101,12 +114,14 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (format!("draw {}", moved), "told", "drawing the game changed it"), (format!("draw {}", moved), "mark", "the page's"), (format!("draw {}", moved), "head", "the boxes' head says"), (format!("draw {}", moved), "opened", "just opened"),
         (seats.clone(), "pin", "parts from its pin"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
         (par.clone(), "moves", "the clock moved"), (par, "noclock", "the staging"),
+        (format!("played {}", SEATS[0]), "deaf", "the pinned line"), (format!("played {}", SEATS[0]), "wall", "inside a static box"),
+        (String::from("lesson tut-road"), "third", "steps went by on their deeds"),
     ]
 }
 
 /// a child's rows
 pub fn one(names: &[String], f: Flags) {
-    let rows = all();
+    let rows = every();
     let mine: Vec<&Row> = names.iter().map(|n| rows.iter().find(|r| &r.name == n).unwrap_or_else(|| panic!("no row is called '{}'", n))).collect();
     let pins = Pins::read_file();
     match &mine[0].job {
@@ -114,6 +129,8 @@ pub fn one(names: &[String], f: Flags) {
         Job::Run(k) => run_rows(*k, &mine.iter().map(|r| r.name.split(' ').next().unwrap()).collect::<Vec<_>>(), &pins, f),
         Job::Seats(id) => seats_row(&mine[0].name, id, &pins, f),
         Job::Par(id) => par_row(&mine[0].name, id, f),
+        Job::Played(id) => played::played_row(&mine[0].name, id, &pins, f),
+        Job::Lesson(id, pace) => played::lesson_row(&mine[0].name, id, *pace, f),
     }
 }
 
@@ -123,9 +140,9 @@ pub fn say(name: &str, secs: f64, fail: &[String], note: &str) {
     println!("row\t{}\t{}\t{:.2}\t{}", name, if fail.is_empty() { "PASS" } else { "FAIL" }, secs, words.replace(['\n', '\t'], " "));
 }
 
-fn mission(id: &str) -> ScenarioEntry { all_missions().into_iter().find(|e| e.id == id).unwrap_or_else(|| panic!("no mission is called '{}'", id)) }
+pub fn mission(id: &str) -> ScenarioEntry { all_missions().into_iter().find(|e| e.id == id).unwrap_or_else(|| panic!("no mission is called '{}'", id)) }
 fn opts(seed: u32, seats: u32) -> Opts { Opts { seed, seats, dress: true, may_refuse: true, ..Default::default() } }
-fn stand(e: &ScenarioEntry, seed: u32, seats: u32) -> Play { Play::mission(&file_of(e), &pick_search(e, ""), &opts(seed, seats)) }
+pub fn stand(e: &ScenarioEntry, seed: u32, seats: u32) -> Play { Play::mission(&file_of(e), &pick_search(e, ""), &opts(seed, seats)) }
 
 /// a refusal as the pins hold it: one line
 fn clean(why: &str) -> String { why.replace(['\n', '\t'], " ").trim().to_string() }
@@ -148,7 +165,7 @@ pub fn moved_parts(pin: &BTreeMap<String, u32>, now: &BTreeMap<String, u32>) -> 
 }
 fn by_name(words: &[u32]) -> BTreeMap<String, u32> { parts::names().into_iter().zip(words.iter().copied()).collect() }
 pub fn word_of(words: &[u32]) -> u32 { let f = parts::fold(words); (f ^ (f >> 32)) as u32 }
-fn hex(words: &[u32]) -> String { words.iter().map(|w| format!("{:08x}", w)).collect::<Vec<_>>().join(" ") }
+pub fn hex(words: &[u32]) -> String { words.iter().map(|w| format!("{:08x}", w)).collect::<Vec<_>>().join(" ") }
 
 // ---- start
 
@@ -224,9 +241,10 @@ pub fn stand_run(k: usize, seed: u32) -> (Play, Hand) {
     (p, hand)
 }
 /// one frame of a run: the hand's lines that fall due (a line the game refuses is counted by the caller's `did`), then the host's frame
-fn frame_of(p: &mut Play, hand: &Hand, k: usize, next: &mut usize, did: &mut [usize]) {
+fn frame_of(p: &mut Play, hand: &Hand, k: usize, next: &mut usize, did: &mut [(usize, String)]) {
     while *next < hand.at.len() && hand.at[*next].0 <= k {
-        if act(p, &hand.at[*next].1).is_ok() { did[hand.at[*next].2] += 1; }
+        let line = &mut did[hand.at[*next].2];
+        match act(p, &hand.at[*next].1) { Ok(()) => line.0 += 1, Err(why) => line.1 = why }
         *next += 1;
     }
     p.frame();
@@ -242,7 +260,7 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
     let t = Instant::now();
     let names = parts::names();
     let (mut p, hand) = stand_run(k, SEED);
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let (mut w, mut row, mut next) = (game::bytes::W::new(), Vec::new(), 0);
     let (mut series, mut seconds): (Vec<u32>, Vec<Vec<u32>>) = (Vec::new(), Vec::new());
     let mut kept: Vec<Kept> = Vec::new();
@@ -265,8 +283,11 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
                 fail.push(format!("the run parts from its pin in second {} (pins.txt): `hold keep` on the build before and `hold check` on this one name the part", at));
             },
         }
-        let never: Vec<&str> = hand.lines.iter().zip(&did).filter(|(_, d)| **d == 0).map(|(l, _)| l.as_str()).collect();
-        say(&name("play"), t.elapsed().as_secs_f64(), &fail, &if never.is_empty() { String::new() } else { format!("never done here: {}", never.join("; ")) });
+        // (a line of the hand that nothing comes of holds nothing, and looks as if it did: the hand is mended, or the line leaves it)
+        if f.breaks("silent") { did[0].0 = 0; }
+        let never: Vec<String> = hand.lines.iter().zip(&did).filter(|(_, d)| d.0 == 0).map(|(l, d)| format!("{} ({})", l, d.1.trim_end_matches('.'))).collect();
+        if !never.is_empty() { fail.push(format!("a line of the hand never happens: {}", never.join("; "))); }
+        say(&name("play"), t.elapsed().as_secs_f64(), &fail, "");
     }
     if kinds.contains(&"save") { save_row(&name("save"), &mut p, &hand, &mut kept, &names, f); }
     drop(p);
@@ -281,7 +302,7 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
 fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let home = p.g.sim;
     let end = game_start::block::bytes(home).to_vec();
     let mut fail = Vec::new();
@@ -305,7 +326,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
-    let mut did = vec![0; hand.lines.len()];
+    let mut did = vec![(0, String::new()); hand.lines.len()];
     let mut fail = Vec::new();
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
     let mut slot = sim::state::GAMES;
@@ -339,7 +360,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
     for (time, ordinal) in [(1, "second"), (2, "third")] {
         let (mut p, hand) = stand_run(k, SEED);
         if f.breaks("second") && time == 1 { game::math_dice::sim_random(&mut p.g); }
-        let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+        let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         for i in 0..frames {
             frame_of(&mut p, &hand, i, &mut next, &mut did);
             if i % 60 != 59 { continue; }
@@ -352,7 +373,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
             // (the next run on the list: another level, its own hand)
             let other = (k + 1) % RUNS.len();
             let (mut q, hand) = stand_run(other, SEED);
-            let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+            let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
             for i in 0..BETWEEN_SECS * 60 { frame_of(&mut q, &hand, i, &mut next, &mut did); }
         }
         if !fail.is_empty() { break; }
@@ -362,54 +383,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
 
 // ---- seats
 
-const KEYS: [&str; 20] = ["KeyG", "KeyF", "KeyE", "KeyQ", "KeyB", "KeyC", "KeyR", "KeyV", "KeyT", "KeyH", "KeyN", "KeyX", "KeyZ", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Space", "Tab"];
-
-/// the two players' hands for tick `i`: each man walks at the nearest enemy with the cursor on him, a burst every four seconds, a key of the game's every second and a half
-fn drive(p: &mut Play, i: usize, held: &mut [Option<&'static str>; 2]) {
-    let canvas = p.host.canvas;
-    let seats = p.g.seats.clone();
-    for (hi, &s) in seats.iter().enumerate() {
-        let (input, cam) = (p.g.tab.cmd_seat[s].input, p.g.tab.cmd_seat[s].cam);
-        for k in ["KeyW", "KeyA", "KeyS", "KeyD"] { p.g.tab.input[input].keys.delete(String::from(k)); }
-        let man = p.g.ch[p.g.pl[game::cmd::seat_man(&p.g, s)].ch].pos;
-        let flat = |a: [f64; 3]| game::m::hyp2(a[0] - man[0], a[2] - man[2]);
-        let mut foes: Vec<[f64; 3]> = p.g.guards.iter().filter(|&&gd| p.g.gd[gd].state != GuardState::Dead && p.g.gd[gd].team != game::teams::Team::Operative).map(|&gd| p.g.ch[p.g.gd[gd].ch].pos).collect();
-        foes.sort_by(|a, b| flat(*a).total_cmp(&flat(*b)));
-        let a = i as f64 / 200.0 + hi as f64;
-        let t = foes.first().copied().unwrap_or([man[0] + game::m::sin(a) * 8.0, 0.0, man[2] + game::m::cos(a) * 8.0]);
-        let (dx, dz) = (t[0] - man[0], t[2] - man[2]);
-        let d = game::m::hyp2(dx, dz).max(1e-9);
-        let b = game::camera::follow_camera_planar_basis(&p.g, cam);
-        let (along, across) = ((dx * b.fwd[0] + dz * b.fwd[2]) / d, (dx * b.right[0] + dz * b.right[2]) / d);
-        const T: f64 = 0.3827;
-        let keys = &mut p.g.tab.input[input].keys;
-        if d > 3.0 {
-            if along > T { keys.add(String::from("KeyW")); }
-            if along < -T { keys.add(String::from("KeyS")); }
-            if across > T { keys.add(String::from("KeyD")); }
-            if across < -T { keys.add(String::from("KeyA")); }
-        }
-        let (sx, sy, front) = game::camera::follow_camera_project(&p.g, cam, [t[0], 1.2, t[2]], canvas.client_width, canvas.client_height, None, None);
-        let hand = &mut p.g.tab.input[input];
-        if front { hand.mouse_x = sx; hand.mouse_y = sy; }
-        let ph = (i + hi * 37) % 240;
-        if ph > 120 && ph < 200 { hand.buttons = ((hand.buttons as u32) | 1) as f64; if ph == 121 { hand.clicked = ((hand.clicked as u32) | 1) as f64; } } else { hand.buttons = ((hand.buttons as u32) & !1) as f64; }
-        let beat = i + hi * 53;
-        if beat % 90 == 0 { let k = KEYS[(beat / 90) % KEYS.len()]; hand.keys.add(String::from(k)); hand.pressed.add(String::from(k)); held[hi] = Some(k); }
-        else if beat % 90 == 6 { if let Some(k) = held[hi].take() { hand.keys.delete(String::from(k)); } }
-    }
-}
-/// what a host with two hands does round a step: each seat's camera after its man, the end of its input's frame
-fn lens_and_keys(p: &mut Play) {
-    for s in p.g.seats.clone() {
-        let (input, cam) = (p.g.tab.cmd_seat[s].input, p.g.tab.cmd_seat[s].cam);
-        let (follow, aim) = game::seats::with_seat(&mut p.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
-        game::camera::follow_camera_update(&mut p.g, cam, game_start::play::DT, follow, Some(aim));
-        game::input::input_end_frame(&mut p.g, input);
-    }
-}
-
-/// A FIGHT OF TWO IS ITS RECORDS: scripted hands make each tick's two commands, which cross as text and are stepped on as they came back. Fresh games that play the records with nobody sampling,
+/// A FIGHT OF TWO IS ITS RECORDS: a hands-off player on each seat (what he does goes by the keys: each seat's own orders, doors and rounds) makes each tick's two commands, which cross as text and are stepped on as they came back. Fresh games that play the records with nobody sampling,
 /// the machine showing seat 0 and then seat 1, are the same game; so is a moment of it put back with the records played from there. The series is pinned.
 /// The staging is asked as facts: the two players' hands are not one hand, each man walks and the fight fires.
 /// BREAKS: `pin` a word of the series made wrong · `fresh` a fresh game's replay hands each seat the other's records · `moment` the moment's does · `idle` nobody's hands do anything.
@@ -422,18 +396,19 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
     let (ticks, half) = (SEATS_SECS * 60, 30);
     let (mut records, mut rows, mut series): (Vec<[String; 2]>, Vec<Vec<u32>>, Vec<u32>) = (Vec::new(), Vec::new(), Vec::new());
     let (mut same_hands, mut walked, mut was) = (0, [0.0f64; 2], [[0.0f64; 3]; 2]);
-    let mut held = [None, None];
     let mut moment = None;
+    let mut players = [0usize, 1].map(|k| HandsOff::new(p.g.seats[k], Plan { seed: SEED + k as u32, cap: SEATS_SECS as f64 + 1.0, ..Default::default() }));
     for i in 0..ticks {
         if i == SEATS_MOMENT.0 * 60 { moment = Some(Moment::of(&p.g)); }
-        if !f.breaks("idle") { drive(&mut p, i, &mut held); }
-        let cmds = p.net_sample();
+        if !f.breaks("idle") { for k in 0..2 { p.lens_of(&mut players[k], k); } }
+        let mut cmds = p.net_sample();
+        if !f.breaks("idle") { for k in 0..2 { p.hand_of(&mut players[k], &mut cmds[k]); } }
         if (&cmds[0].keys, &cmds[0].pressed, cmds[0].buttons) == (&cmds[1].keys, &cmds[1].pressed, cmds[1].buttons) { same_hands += 1; }
         let text = [game::cmd::cmd_text(&cmds[0]), game::cmd::cmd_text(&cmds[1])];
         let back: Vec<PlayerCmd> = text.iter().map(|x| game::cmd::cmd_from_text(x)).collect();
         records.push(text);
         p.net_step(&back, 0);
-        lens_and_keys(&mut p);
+        p.lens_and_keys();
         for (s, seat) in p.g.seats.iter().enumerate() {
             let at = p.g.ch[p.g.pl[game::cmd::seat_man(&p.g, *seat)].ch].pos;
             if i > 0 { walked[s] += (at[0] - was[s][0]).hypot(at[2] - was[s][2]); }
@@ -497,7 +472,7 @@ fn par_row(name: &str, id: &str, f: Flags) {
         let mut p = Play::mission_of(d, &link, &opts(SEED, 1));
         p.g.god_mode = hand.unhurt;
         if planted { game::math_dice::sim_random(&mut p.g); }
-        let (mut next, mut did) = (0, vec![0; hand.lines.len()]);
+        let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         let mut rows = vec![p.words()];
         for i in 0..frames {
             frame_of(&mut p, &hand, i, &mut next, &mut did);

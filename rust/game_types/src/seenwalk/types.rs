@@ -49,4 +49,4 @@ pub struct SeenwalkStats {
 }
 
 /// (src/game/seenwalk.ts:44 SEENWALK_DEFAULTS: a table nothing writes)
-pub fn seenwalk_defaults() -> crate::knobs::SeenwalkK { crate::knobs::SeenwalkK { on: false, lit_at: 0.1, dear: 6.0, long: 1.35, less: 1.5, eye_step: 4.0, eye_y: 1.6, margin: 8.0 } }
+pub fn seenwalk_defaults() -> crate::knobs::SeenwalkK { crate::knobs::SeenwalkK { lit_at: 0.1, dear: 6.0, long: 1.35, less: 1.5, eye_step: 4.0, eye_y: 1.6, margin: 8.0 } }

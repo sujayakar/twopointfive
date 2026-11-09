@@ -10,11 +10,11 @@ import { SmokeEmitter, SmokePush, SmokeSystemLike, WIND_GPU_MAX } from './types'
 import type { WindGpuSource } from './types';
 import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
-import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
+import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
 import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
-// WIND (game/wind.ts): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
+// WIND (rust/game_rules/src/wind): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
 import windForceSrc from './wind_force.wgsl' with { type: 'text' };
 
@@ -69,7 +69,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  once it is all zero; 0.002 is where the view march stops counting a sample — at half-float's 6e-5 a plume's invisible skirt would hold bricks for another 25 s); thinDecay / thinBelow =
    *  density under thinBelow goes up to thinDecay/s faster, always (a look knob: how far the faint skirt spreads); soft* = the pool's soft ceiling (smoke.wgsl SP); viewBias / viewR = that ceiling by where the
    *  camera looks: past viewR metres from engine.viewFocus (full at twice that) it starts sooner, bites harder, and the last quarter of the pool is refused (0 = one ceiling everywhere); indirect = dispatch exactly the live
-   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and main.ts); directAt = with `indirect` on, the share of the pool stepping
+   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and host/drawpage.ts); directAt = with `indirect` on, the share of the pool stepping
    *  (as last read back) from which the whole pool is dispatched anyway: each indirect call costs a validation dispatch, −0.14 ms a step on the maintainer's Mac at ¾ full (> 1 = never); split = time the step's five
    *  parts apart. WHO STEPS (smoke.wgsl buildList): calmMax = the longest a brick may wait between steps, in frames (1 = every brick every frame, the solver as first benched; 2; 4); how calm it must be is
    *  params.calmCells (cells its fastest air may cross in the wait, 0 = never waits in sight); farCells = the same allowance out of sight (needs viewBias; 0 = no laxer than in sight; 1 keeps a far plume within a fifth of its stepped-every-frame mass at 7 s for two thirds fewer steps, 2 leaves nearly twice the smoke hanging: notebook §9.1).
@@ -233,7 +233,7 @@ export class SmokeSystem implements SmokeSystemLike {
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
   drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
-  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; rust/game_rules/src/combat asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
@@ -362,7 +362,7 @@ export class SmokeSystem implements SmokeSystemLike {
     for (const s of this.windNear()) {
       const o = (WIND_HDR_BYTES + n * WIND_SRC_BYTES) / 4;
       if (s.kind === 'storm') {
-        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, game/wind.ts WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
+        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, rust/game_rules/src/wind WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
         for (let k = 0; k < 8; k++) wf[4 + k] = R?.[2 + (k >> 2)]?.[k & 3] ?? 0;
         wf[o] = I[0]; wf[o + 1] = I[1]; wf[o + 2] = I[2]; wf[o + 3] = I[3]; wf[o + 4] = s.dir[0]; wf[o + 5] = s.dir[1]; wf[o + 6] = s.dir[2]; wf[o + 7] = s.speed;
         wf[o + 8] = A[0]; wf[o + 9] = A[1]; wf[o + 10] = A[2]; wf[o + 11] = A[3]; wu[o + 12] = 1;

@@ -5,10 +5,9 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 620–692 -->
-- **The level is data** (`levels/office.json`, schema `scene/levelData.ts` LevelData v1, docs/level-format.md). `buildLevel()` loads it
-  (validate → `levelLoad.ts loadLevel`, every vector copied, box ORDER preserved, id refs resolved to indices); the game never sees ids —
-  tools / the editor keep the LevelData as the document and use `indexLevelData` for id → index. To CHANGE the level while the legacy
-  generator (`scene/officeGen.ts buildOfficeProcedural`) still exists: edit the generator, `bun run tools/level-export.ts`, commit both
+- **The level is data** (`levels/office.json`, schema `tools/levels/lib/levelData.ts` LevelData v1, docs/level-format.md). The game reads the file itself
+  (`rust/game_start/src/level.rs`); a tool loads it with `levelLoad.ts loadLevel` (validated, every vector copied, box ORDER preserved, id refs resolved to
+  indices). To CHANGE the level: edit the generator (`tools/levels/lib/officeGen.ts buildOfficeProcedural`), `bun run tools/level-export.ts`, commit both
   (the export refuses a file that does not reload to the same Level; `probes.ts level` = generator vs JSON 0 diffs + validator + round
   trip, and `tools/level-export.ts --check` says stale/not; `level-identity` runs AS THE EXPORTER RUNS, on the engine's maths on every
   stand — `tools/qa/headless.ts asExporter` — because the exporter raises no stand: under the game's own maths, `math/exact.ts`, the
@@ -18,14 +17,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   levelData.ts feeds both the validator and the canonical form — adding a field = interface + KEYS + both directions in levelLoad.ts); the drill
   plans (`plans.*`) are the exception: typed by reference to RoomClearPlan / BreachPlan and carried generically, so re-choreographing the breach
   needs no schema change. A lane that edited the OLD level.ts body: apply its hunks to officeGen.ts and re-export (recipe in docs/level-format.md).
-  `game/floor.ts` reads a level's footstep map from its file's `surfaces` block (`Level.surfaces`, non-enumerable; a generator's `build()` may return one); a file with
+  `rust/game_rules/src/floor` reads a level's footstep map from its file's `surfaces` block (`Level.surfaces`, non-enumerable; a generator's `build()` may return one); a file with
   none gets the office's map, which floor.ts still carries and `level-validate` asserts equal to the office file's block. Nothing in the
   office was random, so the export froze nothing.
 - **Scenario data travels with the level** (`src/scene/scenarios.ts` `LevelScenarios`, `Level.scenarios`; docs/level-format.md *Scenarios*; how-to
   rebuild/scenario-levels/contract.md): what the night breach, the room clear (pair or four) and the hostage rescue take from a level — rooms,
   doors, defenders' marks, the team's start, hostages / captor / door man / roamers, the rescue's route — is a `scenarios` block in the LEVEL FILE, read by
   roomclear.ts / nightbreach.ts / rescue.ts / rescueflow.ts and by nothing else. The office's file carries its block like any level's (since 2026-11-07: it was a module attached at load by the level's name, `withOfficeScript`, and every
-  tool that loaded a level file had a line for the office): its tables are written in `levels/office.scenarios.ts`, the office generator's input beside
+  tool that loaded a level file had a line for the office): its tables are written in `tools/levels/lib/officeScenarios.ts`, the office generator's input beside
   `OFFICE_MARKS`, and `tools/level-export.ts` writes them into `levels/office.json` and `office-relief.json`. Nothing but the generator imports that module;
   `STRUCTURE` (roomclear.ts) and `SIDE_MARKS` (rescue.ts) remain as the office's data under the names its probes import, and the team-start knobs
   (`NIGHTBREACH.samAt / samYaw`, `RESCUE.samAt / samYaw / opsAt`) are the office's until `start()` on another level writes that level's (once per team-start
@@ -36,20 +35,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (data checks — validate, `checkStructure`, `checkRescue`, the route — then each scenario staged, walked and finished under a plain scripted player) and
   `probes.ts scenario-levels` (that on test-rooms). Still office-only by constant: weather INTERIOR / ANNEX, chronicle ROOMS, QRF_MARKS (only with `RESPONSE` off — on, the team's places are the level's own `scenarios.response`: enemies.md), NEED_SPOTS, CIV_SPOTS,
   the rescue flow's +x corridor.
-- **The default look = 2010s GWOT** (`src/scene/look.ts`; what the game looks like as a whole, as rules to hold new work to: `STYLE.md` at the repo root). `LOOK.on` says what the men wear and how a leaf is painted: ON in the page, with no word that puts it off; OFF in the module, `TPS_LOOK=1` on a harness run. No play reads it. EACH LEVEL HAS ONE FILE (2026-11-08): `levels/<name>.json` is what the page plays and every headless run stands on. A loud level's generator is `tools/levels/<name>.ts`, which runs `tools/levels/gwotSkin.ts skinLevel` over the level its floor's generator `tools/levels/<name>-floor.ts` builds: other PAINT, and NoShadow decals appended in group `'look'`. `bun run tools/levels/export.ts <name>` writes and `--check`s it. A level's paint plays: a surface's own colour is in the light that comes round a room (`rust/sim/src/glow.rs`), and a man's eye reads that.
+- **The default look = 2010s GWOT** (`src/scene/look.ts`; what the game looks like as a whole, as rules to hold new work to: `STYLE.md` at the repo root). `LOOK.on` says what the men wear and how a leaf is painted: ON in the page, with no word that puts it off; OFF in the module, `TPS_LOOK=1` on a harness run. No play reads it. EACH LEVEL HAS ONE FILE (2026-11-08): `levels/<name>.json` is what the page plays and every headless run stands on. A loud level's generator is `tools/levels/<name>.ts`, whose `finish` runs `tools/levels/gwotSkin.ts skinLevel` over the level its `build` makes (the floor; one file): other PAINT, and NoShadow decals appended in group `'look'`. `bun run tools/levels/export.ts <name>` writes and `--check`s it. A level's paint plays: a surface's own colour is in the light that comes round a room (`rust/sim/src/glow.rs`), and a man's eye reads that.
   THE SWAP. `?look=plain`, `?look=0|off`, `?nolook` and the plain files of thirteen levels went; there is no switch for it (a file is no switch). The game plays as it did: the page already loaded these files, and a headless run with no word already stood on them, so 21 runs on the twelve rows with such a file (seeds 1 and 2) match the build before by digest, and no tally moved. WHAT A PLAYER SEES MOVE is the mission list's map sheet and its cards (`ui/missions.ts`), which drew the plain file: they now draw the one file, with its paint and rugs. Before the swap the two files did not play alike (23 runs on an older build: 18 differed by digest and 5 ended differently, wins 13 plain, 10 look), by the bounce field reading each surface's colour, and the plain file is gone, so no number recorded on it stands. A tape recorded on an old `-gwot` file or under `?look=plain` refuses in words and the map viewer plays it (`tape/format.ts tapeOldFile`); a headless tape from before the one stand, on the plain file under no word, cannot be told apart and plays on the kept file. The generator's `DRESS_AS` and `keptWord.ts` went with the second files. `levels/defuse.json` has no mission row. Nobody has played this commit; never seen on a GPU.
   EACH LOOK FILE IS ITS OWN PLACE (the overnight polish, 10-10): one family of ground marks a level and AT MOST one accent hue (the registry has none, on purpose: it is told by its floor), none shared — compound = a farmer's walled
   house (blue doors; the household on the ground: plot, drying sheets, cook fire, chalk game), warehouse = a bonded customs shed (yellow / black; lane lines, hazard
   bands at doors, numbered doors, pallet squares with tallies), barracks = a police battalion's lines (green; a volleyball court, formation marks, a worn diagonal,
   tally bars at the numbered bunk rooms' doors), depot = an old army motor pool (oxide red; lettered doors A B C, an inspection pit, parking bays), registry = a
-  provincial records office (no accent; floor tiles, a red line to the registrar and a blue one through the stacks, row numbers), the block (both files, one skin: `block-gwot.ts SKIN`) = a district telephone exchange (pistachio gloss; cable trenches as chains of 1 m cover plates through the rooms, a painted lifting plate every fifth, a rimmed chamber cover where the trunk branches), records = a district land office (surveyors' magenta, on the ground only; a traverse round the building, a triangle station at every pane with its sight line, a bench mark at the locked door, practice plots pegged out in the lot), consulate = a town house consulate (plum carpet bound in brass — the plum a colour of that file's own, decals only; a roped lane's sockets and a star in the lobby, a runner down the corridor, the hall carpeted wall to wall, a brass sill in every opening; cut from the registry's plan, so it paints rooms where the registry paints routes), defuse = a bomb maker's house (the firing wire's copper; a twin lead along the floor from each bench to one battery plate in the hall, a painted 1 and 2 at the workshop doors), floodlit = the fuel post of a bush airstrip (aviation orange; a landing pad's ring and H in the yard, approach chevrons in through the gate, a wind tee), mousehole = a district clinic (teal; the queue: a dashed line down the corridor to a 'wait here' box under the hatch, a standing square at each room's door, a cross on the porch), killhouse = a training shoot house on a forward base (the range's violet marking paint and white engineer tape; a start box at every way in, a numeral and a clear line at each held room's door, a firing line at the targets), hall = a border scouts' company wing (pale sky blue; the range card painted down the hall: a firing line, a distance line every five metres, the two limits of the far guns' arc) — in those five no wall wears the accent: it is a colour of that file's own that only its ground decals wear, the outside door a darker shade of it (`LOOK_DOORS`). The marks are
+  provincial records office (no accent; floor tiles, a red line to the registrar and a blue one through the stacks, row numbers), the block (both files, one skin: `block-gwot.ts SKIN`) = a district telephone exchange (pistachio gloss; cable trenches as chains of 1 m cover plates through the rooms, a painted lifting plate every fifth, a rimmed chamber cover where the trunk branches), records = a district land office (surveyors' magenta, on the ground only; a traverse round the building, a triangle station at every pane with its sight line, a bench mark at the locked door, practice plots pegged out in the lot), consulate = a town house consulate (plum carpet bound in brass — the plum a colour of that file's own, decals only; a roped lane's sockets and a star in the lobby, a runner down the corridor, the hall carpeted wall to wall, a brass sill in every opening; cut from the registry's plan, so it paints rooms where the registry paints routes), defuse = a bomb maker's house (the firing wire's copper; a twin lead along the floor from each bench to one battery plate in the hall, a painted 1 and 2 at the workshop doors), floodlit = the fuel post of a bush airstrip (aviation orange; a landing pad's ring and H in the yard, approach chevrons in through the gate, a wind tee), mousehole = a district clinic (teal; the queue: a dashed line down the corridor to a 'wait here' box under the hatch, a standing square at each room's door, a cross on the porch), killhouse = a training shoot house on a forward base (the range's violet marking paint and white engineer tape; a start box at every way in, a numeral and a clear line at each held room's door, a firing line at the targets), hall = a border scouts' company wing (pale sky blue; the range card painted down the hall: a firing line, a distance line every five metres, the two limits of the far guns' arc) — in those five no wall wears the accent: it is a colour of that file's own that only its ground decals wear, the outside door a darker shade of it (`doors/paint.rs`). The marks are
   `tools/levels/lookMarks.ts lookMarks(T)` (seg / path / dashed / outline / fill / hazard / checker / glyph / word / tally — a 3 × 5 font for 0‥9 A B C N S), every
   one a floor decal through the skin's own `T.flat`. `Skin.rooms` names MORE rooms for the dado and rug rules than the scenarios do (they list held rooms only: a
   dressed room would mark a held one), `Skin.noRug` holds the automatic rug off.
   WHAT A BOX IS TO A ROUND, A CHARGE AND A BLAST IS A WORD ON THE BOX (`Box.does`, a row of `src/scene/materials.ts`; the bullet "What a box does is said
   in a word" at the end of this file), never its paint: the skin gives every box its word before the first repaint and a repaint leaves it, so a level
   and its look twin are one simulation in any colours. (Until 2026-11-05 the rules read the colour and a repainted box wore its paint a hair off, the
-  office paint it stood for in the offset; `gwotAs(mat, does)` is now the row's own numbers on a thing that does something else.) THE KIT for new levels: `src/scene/gwotKit.ts gwotKit(...)`
+  office paint it stood for in the offset; `gwotAs(mat, does)` is now the row's own numbers on a thing that does something else.) THE KIT for new levels: `tools/levels/lib/gwotKit.ts gwotKit(...)`
   (walls, parapets, gates, HESCO, drums, cots, rugs, lanterns, wash lines … flat colours, boxes only) + `GWOT_MATERIALS`; the showroom `levels/gwot-yard.json` (`tools/levels/gwot-yard.ts`,
   `?levelFile=gwot-yard.json&solo&hour=midday`); the one-page guide is rebuild/play-style-levels/look/read-first.md. QA: `probes.ts look` (tools/qa/look-check.ts, in
   all-quick: the palette has no clashes and no other level carries one of its colours). Seen only on
@@ -57,13 +56,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lived-in rooms; `skinLevel` throws and `probes.ts look` is red on one that does not): wallbreak.ts lets a drawn-only static that hangs OFF the floor fall when what it touches breaks
   (debris, a sound — a run would differ), and never asks one that starts at the floor. A decal on a wall's face is hidden with its wall when the wall is holed by `src/scene/lookTidy.ts`
   (called once a frame by main.ts; picture only; whole with the wall's box, on any level that carries one of the look's paints and no other). The same file has the look's other page-only pass: a GROUND decal goes wet and dry with the
-  ground under it (the storm soaks the lot in place and knows nothing of decals: render-only `Box.wetK` + the ground's finish, `albedo` never written). `leafPaint.ts paintLeaves` (as the game is stood, where its doors are made, on every host,
-  under the switch) paints the door LEAVES of a level that wears the look — outside doors in the level's accent paint (its row in `look.ts LOOK_DOORS`, keyed by the level's own name; without a row the accent is counted off its boxes among blue / green / oxide red, army green where none), inside ones weathered wood or the row's `in`; steel doors and a level with none of the look's paints are left alone (the office carries them today, so its inside doors are wood). Wear is the ground's own colour darker (`SkinTools.tone(floorAt(x, z), k)`), never paler; THE PALETTE'S GROUND IS DARKER THAN ITS WALLS
+  ground under it (the storm soaks the lot in place and knows nothing of decals: render-only `Box.wetK` + the ground's finish, `albedo` never written). `rust/game_rules/src/doors/paint.rs` (as the game is stood, where its doors are made, on every host,
+  under the switch) paints the door LEAVES of a level that wears the look — outside doors in the level's accent paint (its row there, by the level's own name; without a row the accent is counted off its boxes among blue / green / oxide red, army green where none), inside ones weathered wood or the row's `in`; steel doors and a level with none of the look's paints are left alone (the office carries them today, so its inside doors are wood). Wear is the ground's own colour darker (`SkinTools.tone(floorAt(x, z), k)`), never paler; THE PALETTE'S GROUND IS DARKER THAN ITS WALLS
   on purpose (midday exposure flattens earth tones: `gwotPalette.ts`'s ground comment), and a repaint of an unnamed non-steel box must not be a plain grey or white (`steelGrey` would
   make it a steel cabinet — the skin's check throws). THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): on the OFFICE family the page boots the FIRST cast file and tables with the look on (`look.ts setLookPlace(placeOfQuery(q))` in main.ts before the cast is fetched; `lookDress()` = what `castFile()` / `charMatsOf` / `charMatsVersion` ask, `lookOffice()` = `cast.ts officeDress`: of the first cast's defenders only the ones dressed for a building — no straw hat, boonie, bandana, bandolier or vest top), the sneaking suit as on any level; not a knob, and everything headless leaves the place true (`probes.ts cast-look` holds both). THE MEN: a second cast file `public/assets/chars/cast-gwot.gltf` (`tools/chars/build_cast.py --look gwot`; `gltf.ts castFile()`
   picks by the switch — helmets and plate carriers, pakol / turban / shalwar kameez) and `charMaterials.ts CHAR_MATS_LOOK` (`charMatsOf(side)`: MultiCam-toned operators with small pair
-  markings, defenders in muted local dress); dress only — weapons, goggles and kit are the gear part's (`GEAR.on`). THE SNEAKING SUIT (`LOOK.suit`, on with the look; `?suit=0` / `?nosuit` = the issue dress on every mission; the maintainer: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): `src/game/cast.ts sneakSuit(g, c)` — THE one predicate: Sam, and a quiet mission's partner, on any mission that is NOT a squad's loud one (`scenarioRun.ts activeScenario` null or 'quiet': the quiet missions, the plain solo night, Training 1–4 and 7; a room clear / night breach / rescue = the issue dress) — is drawn without the helmet, the back kit and the mesh goggles (`anim/gltf.ts castSuit(cast, mask)`: parts named `helmet` / `kit_*` dropped — the cast has no free part, so the suit IS the operator's own `op_suit`: uniform, vest, boots; `sdfrig.ts fitRigCast` solves those masks ahead of play with the rest) in a third set of rows, `charMaterials.ts SNEAK_SUIT` (one matt black; `charMatsOf(side, suit)`, a trailing `suit` on `slotAlbedo / writeCharPalette / describePalette`; the per-man cache in charLook.ts keys on it; `__charmat.tables.suit`, `__charmat.get('sam').suit`). Asked every frame; looks only (`probes.ts cast-look` holds the parts, the rows, loud vs quiet, both switches; `charmats-off` holds the suit off to ask about the side's own table). Not followed: `?nocharmats` (parts only, his raw tint), the viewer. THE SUIT'S RIFLE IS BLACK (the maintainer, 10-10: "would expect a blacked out rifle build for stealth loadouts"): `rigProps.ts RigOpts.rifleBlack` ← combat.ts handProps asks `sneakSuit` — the 2010s carbine's dark earth stock, grip, handguard, post and laser box are drawn in the bullpup's black polymer on a man in the suit, in his hands and on his back; a loud mission's rifles keep the tan; colours of five boxes only (`cast-look` holds both, and that not a box moves); the dropped `M4_ITEM` is not followed. Known: the box goggles and their mount arm were placed for a helmet's brow and sit on the hairline of a bare head; a pair in the suit differ only by face and shoulder patch. `probes.ts cast` / `charmats` hold both looks (`TPS_LOOK=1`).
-- **Lived-in rooms** (`src/scene/lived.ts`, ONE switch `LIVED.on`: ON in the page — `?lived=0` = every level as it was — OFF in the module and on the frozen harness stand; `TPS_LIVED=1` in
+  markings, defenders in muted local dress); dress only — weapons, goggles and kit are the gear part's (`GEAR.on`). THE SNEAKING SUIT (`LOOK.suit`, on with the look; `?suit=0` / `?nosuit` = the issue dress on every mission; the maintainer: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): `rust/game_rules/src/cast sneak_suit(g, c)` — THE one predicate: Sam, and a quiet mission's partner, on any mission that is NOT a squad's loud one (`scenarioRun.ts activeScenario` null or 'quiet': the quiet missions, the plain solo night, Training 1–4 and 7; a room clear / night breach / rescue = the issue dress) — is drawn without the helmet, the back kit and the mesh goggles (`anim/gltf.ts castSuit(cast, mask)`: parts named `helmet` / `kit_*` dropped — the cast has no free part, so the suit IS the operator's own `op_suit`: uniform, vest, boots; `sdfrig.ts fitRigCast` solves those masks ahead of play with the rest) in a third set of rows, `charMaterials.ts SNEAK_SUIT` (one matt black; `charMatsOf(side, suit)`, a trailing `suit` on `slotAlbedo / writeCharPalette / describePalette`; the per-man cache in charLook.ts keys on it; `__charmat.tables.suit`, `__charmat.get('sam').suit`). Asked every frame; looks only (`probes.ts cast-look` holds the parts, the rows, loud vs quiet, both switches; `charmats-off` holds the suit off to ask about the side's own table). Not followed: `?nocharmats` (parts only, his raw tint), the viewer. THE SUIT'S RIFLE IS BLACK (the maintainer, 10-10: "would expect a blacked out rifle build for stealth loadouts"): `rigProps.ts RigOpts.rifleBlack` ← combat.ts handProps asks `sneakSuit` — the 2010s carbine's dark earth stock, grip, handguard, post and laser box are drawn in the bullpup's black polymer on a man in the suit, in his hands and on his back; a loud mission's rifles keep the tan; colours of five boxes only (`cast-look` holds both, and that not a box moves); the dropped `M4_ITEM` is not followed. Known: the box goggles and their mount arm were placed for a helmet's brow and sit on the hairline of a bare head; a pair in the suit differ only by face and shoulder patch. `probes.ts cast` / `charmats` hold both looks (`TPS_LOOK=1`).
+- **Lived-in rooms** (`tools/levels/lib/lived.ts` says which things are; ONE switch, the game's `lived.on`; the older line: ON in the page — `?lived=0` = every level as it was — OFF in the module and on the frozen harness stand; `TPS_LIVED=1` in
   front of ANY bun tool raises it (the module reads the env itself, so a tool that only parses a level file follows it; headless.ts pins it with the other stand words); a `FROZEN_HOLDS` row, in the
   knob registry, a journal's `env.lived`). The maintainer, 10-10: "the office level is awesome and it has a lot of personality per room, we should makes sure all levels are like that". What furnishes
   a room of another level as the office's rooms are furnished rides in the level FILE and `levelLoad.ts` leaves it out with the switch off: a BOX whose group is `lived` or `lived.<room>`, a PROP,
@@ -85,7 +84,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   yard's packed earth, a car) to the palette paint the box wears in the look file. Asked after the level's `pick`, before the shared rules, the colour
   matched as written, through the same stand-in (`gwotAs`) and the same check that the simulation reads the same of the box. A target that is no row of
   the palette throws. The shared rules had no word for such a colour, so the box kept it and drew flat on the look page.
-  · THE LOOK'S KIT ON AN OLDER FLOOR: a generator on the office kit or the functional kit lays `src/scene/gwotKit.ts` pieces in its lived tier through
+  · THE LOOK'S KIT ON AN OLDER FLOOR: a generator on the office kit or the functional kit lays `tools/levels/lib/gwotKit.ts` pieces in its lived tier through
   `gwotKit(gwotOfOffice(K))` / `gwotKit(gwotOfKit(k, K))`: a round drum, a tyre stack, sandbags, crates, field stones. The skin LEAVES a box, and a
   prop's part, that already wears a palette paint or a stand-in and no paint of the office's (`inLook`); before, it painted them over by the office
   paint each stands for (a blue drum olive, a field stone the house's wall). So on an older level a palette paint comes only from a kit piece, never
@@ -327,7 +326,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   front on shipped on seeds 0 and 2 (3 of 4 and 4 of 4 up). NOT A CLAIM THAT THE TRAP TRAPS: the level is `untuned`, and its owner's own tally has the
   front way winning most runs on shipped; whether the yard should cost more is the level's tuning, not this check's.
 - **A level does not deal the squad's kit; `bun run tools/qa/kit-audit.ts` lists what its mission gets** (2026-10-18). The issued kit and the named
-  squad kits are one table for every mission (`src/game/kit.ts`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
+  squad kits are one table for every mission (`rust/game_rules/src/kit`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
   file adds to it in two ways only: `scenarios.issue.members` (a block of cards by place on the roster, the fields that differ, written against the
   pair's layout; the Team & kit screen then shows no cards, and a level's issue card is put on as written)
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
@@ -351,7 +350,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
   LEVELS STAND on build 8dbdb23, both stands the same: 464 PASS, 24 FAIL, 65 NOTE, and with `--run` 73 of 74 own checks exit 0. THE FAILS: `kit` on all
-  22 rows that take three or four (the issue is one table for five, `game/kit.ts ISSUED`: the squad's stuns, charges and frags ride on the first two
+  22 rows that take three or four (the issue is one table for five, `rust/game_rules/src/kit ISSUED`: the squad's stuns, charges and frags ride on the first two
   teammates, so Blue One at three and both blue men at four carry nothing; the long hall's own card and the two levels that issue wall charges do not
   change it; ONE table's mend, the kit's, turns all 22 green and no level should patch it with a block of its own); `doorway` on the crossing (`box_0069`
   across `gate_ne`) and the glasshouse (`box_0062` across `back`); and the one red own check, `map-check snatch --no-runs` (its footstep zone `hut` lies
@@ -433,7 +432,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   start and the park before and after on the software adapter (the look page as frozen, Chromium 141, the level's night, dry) are all anybody has
   seen. Whether the stones read as stones and the stains as wear at 60 frames, nobody knows.
 - **The level command's `kit` need reads the issue AS WORN, and the levels are green** (10-18; a tool and the skill only: no switch, no game code, no
-  level file). Since the squad's kit is dealt over the men who come (`game/kit.ts KITDEAL`, the bullet "A level does not deal the squad's kit" above),
+  level file). Since the squad's kit is dealt over the men who come (`rust/game_rules/src/kit KITDEAL`, the bullet "A level does not deal the squad's kit" above),
   `tools/qa/level-needs.ts` reads the five cards as a staging wears them: the issue, a level's own cards written over it, then `kitWorn(n, cards)` (dealt
   only while the counted things are still the issue's, as the game deals them), and a man is bare with no pouch filled AND nothing in his big slot
   (`kitdeal-check.ts comesBare`'s test). So a level whose own card changes a stun, a charge or a frag is red again at three and four unless it writes a
@@ -449,7 +448,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   GPU or played, and nobody has gone through the 36 levels by eye against the skill's by-eye items.
 - **The level skill after the shield left the game** (10-18; the skill's words only). Its kit item said a level's own card that hands out a tool the game
   has switched off is dropped whole; with the ballistic shield cut, a card that still says `shield` is REFUSED as the file loads, in words
-  (`src/scene/levelData.ts`: "take the key out (the rest of the card stands)"), and the skill says that. `tools/qa/level-needs.ts` was brought in line by
+  (`tools/levels/lib/levelData.ts`: "take the key out (the rest of the card stands)"), and the skill says that. `tools/qa/level-needs.ts` was brought in line by
   the shield's own step (issue cards are read as written). On build ba34118, both stands: 488 PASS, no FAIL, 65 NOTE; `KITDEAL_BREAK=1` 22 FAIL;
   `NEEDS_BREAK=1` exits 1.
 - **The level skill says where a Team & kit picture stands** (10-18; the skill's words only). Since every way of a `scenarios.kitView` block must anchor on
@@ -468,7 +467,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The level skill asks whether a response team comes (`response`, the sixteenth need of `tools/qa/level-needs.ts`).** The rule and which levels have a
   team are `docs/agents/enemies.md`'s ("The response team is the level's own", "A squad's raid brings a level's team too") and `docs/level-format.md`'s
   (`response`): nothing of them is said again here. The need only asks that a level with a mission row has ANSWERED, from files, standing no floor up.
-  WITH a `scenarios.response` block (the office's is `levels/office.scenarios.ts`'s): its `why` is a sentence (over 40 characters, as
+  WITH a `scenarios.response` block (the office's is `tools/levels/lib/officeScenarios.ts`'s): its `why` is a sentence (over 40 characters, as
   `response-check.ts` asks), and a look twin carries the same block word for word, else FAIL; and a NOTE when no row of the level is one the block
   answers (`qrf.ts live()`: a `raid` block is called only inside a squad's clear that is no rescue, any other only outside every squad mission; the
   office's plain night is no row). WITHOUT one: the level has a line in the tool's own table `NOBODY_COMES` (level, and why nobody comes in a few
@@ -523,7 +522,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switches*): no file places a plate, so what a level owes is plain wall beside its doors and lighting groups that are its circuits; check `probes.ts
   lightswitch`. The snatch level's response block came with the van, and its line left the command's table of levels where nobody comes in the same
   step (not by this one). On build 9f632e9, both stands: 513 PASS, no FAIL, 67 NOTE; both red paths red. Nothing of either was seen on a GPU or played here.
-- **A pane's glass comes from where the level puts it** (2026-10-21; a rule in `src/game/glassbreak.ts`, `GLASSREAL.place`, on in the page and off on the frozen
+- **A pane's glass comes from where the level puts it** (2026-10-21; a rule in `rust/game_rules/src/glassbreak`, `GLASSREAL.place`, on in the page and off on the frozen
   stand: `destruction.md`, *Glass as buildings have it*; no level file touched). Foot under 0.7 m, or a panel of a door = toughened (one round, the sheet drops, the
   opening is walked); from a sill = float (a hole, then daggers); a narrow inside sidelight or a high outside strip = laminated. The level skill's section 3 has
   the rule as a need; `probes.ts glassreal` line 9 holds every level's count of panes by kind, on and off, and a level with new glass adds its row there.
@@ -736,7 +735,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
 - **The lived kit's round pieces are the kits' one round** (dress every level, 11-03; no switch: level data under `LIVED`). A round is written ONE way:
-  `src/scene/gwotKit.ts roundSlabs(r)` holds the octagon's numbers (four slabs 45° apart from 0.2 m, tops stepped 2 mm; two squares under it) and the
+  `tools/levels/lib/gwotKit.ts roundSlabs(r)` holds the octagon's numbers (four slabs 45° apart from 0.2 m, tops stepped 2 mm; two squares under it) and the
   kit's own `round` reads them (no level built with that kit moved: `export.ts --check` on every level). `tools/levels/livedKit.ts round(x, z, y0, y1,
   r, paint, yaw, { lid, ribs, drawn })` and `livedPieces.ts at().round(lx, y0, lz, r, h, paint)` lay it over the office kit; `tyres` and `drumFixed`
   are built with it (each was one square box, which the round rule could not tell from a crate). From 0.2 m the octagon lies inside the square it
@@ -751,7 +750,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one piece.
   CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
   level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
-- **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
+- **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `tools/levels/lib/gwotKit.ts`).
   The maintainer: "as we dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". Each was first written
   by hand in one generator; a thing a second level could use is a kit piece. `kerbStones(x0, z0, x1, z1, paint, pitch)` painted stones a stride apart (or
   at any pitch), the edge of a government yard or a track; `plantBed(x, z, len, wid, yaw, rows)` a kerb of blocks round turned earth with rows of
@@ -771,7 +770,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
   the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
 - **What lies on the ground is the ground's own, and lies where one table says** (the library, 11-04; no switch: the kit, and the level files that
-  follow from it; `src/scene/gwotKit.ts`, `src/scene/gwotPalette.ts`, `tools/levels/livedKit.ts`). Found on the quiet levels' night stills and mended
+  follow from it; `tools/levels/lib/gwotKit.ts`, `src/scene/gwotPalette.ts`, `tools/levels/livedKit.ts`). Found on the quiet levels' night stills and mended
   in no level: three kit pieces read wrong from the play camera.
   · A SCATTER IS ONE PAINT. `rubble(x, z, r, n, mat)` made three stones in ten the mud wall's dark row whatever `mat` was: pale clods among dark gravel,
   mud among offcuts of poplar. Its darker stones are now the row's DARKER ROW where the palette holds one (`gwotPalette.ts GWOT_DARKER`: mudLight → mud →
@@ -806,7 +805,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN ON A GPU, and not at night: the crossing booted on the page under the software renderer at midday (118 of 118 programs, no page or console
   error) and two stills were drawn, its hearth (the ash a darker patch of the lot's dust round the ring of stones) and a scatter of gravel by its east
   wall (every stone gravel). The night stills that found the three faults have not been drawn again.
-- **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `src/scene/gwotKit.ts`).
+- **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `tools/levels/lib/gwotKit.ts`).
   `kerb(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9)` is a run of precast stones 0.3 m wide and 0.14 m high laid end to end, a finger apart
   and none quite in line: the edge of a lot, a road or a loading apron. The run is cut into round(length / len) stones; `gaps` names the stones left
   out, counted from the first end (a broken one, a dropped kerb where wheels cross). Plain statics, walked over (under 0.19 m), lit and shadowed. A
@@ -840,7 +839,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   skill; said and left: the one-line wall test, the plan and lamp list built again per need. On that build the `leak` need notes 29 of 39 levels
   (four training levels have left the tree). Nothing here was seen on a GPU.
   CORRECTED the same evening: the cause above is wrong in one thing, and the skill and the need's words said it too. A mission row's own hour is
-  written over the link (`game/rowset.ts rowSettings`; `?rowset=0` is the link as written), so the maintainer's shot of `tut-plan` was MIDDAY and both
+  written over the link (`rust/game_rules/src/rowset row_settings`; `?rowset=0` is the link as written), so the maintainer's shot of `tut-plan` was MIDDAY and both
   floodlights were out on the photocell: nobody has seen the two floods wash that yard, and its night has not been drawn. What the pictures carry
   (the graphics work's stills on the software renderer, the same frame): at midday, the sun 56 degrees up, a pale wash with or without materials; at
   dusk, 22 degrees, long shadows and walls that hold below white. So in the skill the rule on a low key and the rules on white walls and value steps
@@ -875,7 +874,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
   filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
   THE SECOND STEP (11-05): TWO SOLIDS MOVE, AND THE LIBRARY HOLDS EVERY PIECE. The VAN'S BAY SIDES each ran a centimetre round a tail lamp with a face in the
-  lamp's; a bay side now ENDS at its lamp. The lamp is not moved or resized: a level hangs a light on its centre and `game/carlamps.ts` finds it by its
+  lamp's; a bay side now ENDS at its lamp. The lamp is not moved or resized: a level hangs a light on its centre and `rust/game_rules/src/carlamps` finds it by its
   size (`carShapes.ts vanShapes` says the side's new size). A GATE'S POSTS stood flush in the end of the wall they close (the patch the maintainer saw on
   the pass); a post is now 6 mm fatter each way along the wall than the 0.34 m it stands in, its middle where it was, so what a level caps or lights it
   with stays centred and an opening of 3 m is 2.988 m between the posts. Six millimetres is off the centimetre grid levels are laid on: at a whole
@@ -915,8 +914,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
 - **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
   dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
-  paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
-  `lived-train.ts`. ONE DOOR: a kit returns its pieces through `src/scene/library.ts pieces(kit, { … })`, beside its tools (a raw box, a frame, a paint
+  paints: `tools/levels/lib/gwotKit.ts` (the look's), `tools/levels/lib/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
+  `lived-train.ts`. ONE DOOR: a kit returns its pieces through `tools/levels/lib/library.ts pieces(kit, { … })`, beside its tools (a raw box, a frame, a paint
   table), so the kit's own return says which of its functions are pieces. With nobody watching `pieces` returns the object it was given: no level file, digest
   or frame differs (every `export.ts --check` is as it was). With a watcher (`watchPieces`, tools only) each piece laid is told with its arguments.
   THE CATALOGUE: `bun run tools/levels/library.ts --write` builds every generator under `tools/levels` watched (a look file's `finish` too), lays each piece
@@ -1015,7 +1014,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a yellow line round every top, in the middle where the sun throws shadows off them; the yellow wall cast against boards behind it; a block of two
   rooms in painted block (a skimmed floor and stucco piers; a carpet and one orange wall); one solid orange stair head; a painted pad. Every box says
   its `stuff` (the ten kept stuffs, `docs/agents/render.md`), and walls stand on a half-metre grid so a paver's and a panel's joints land on walls'
-  ends. Its doors are orange gloss outside and white inside (`LOOK_DOORS`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
+  ends. Its doors are orange gloss outside and white inside (`doors/paint.rs`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
   is one paint over 201 m² as the tool counts it since 11-05, 231 when this was written). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
   scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
   a GPU, never played.
@@ -1033,11 +1032,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   HOW IT IS WALKED (11-04, `scenarios.walked`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"): six ways by name, from the
   stair's landing to the lounge's door, the service door and the plant, from the service door to the plant, and through the two rooms. A way's
   ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
-  of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
+  of this level (`rust/game_rules/src/dialogue place_name`) and middles a response sweep may walk to (`rust/game_rules/src/qrf`); no mission is staged on the roof, so
   nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
   ITS ROOMS AT NIGHT (11-05; level data, no switch; the model's side is `docs/agents/render.md`, ONE EXPOSURE AT EVERY HOUR, KNOWN, LEFT). Each
   of the two rooms had a point lamp of 60 over 9 m hung between its pair of ceiling tubes, on top of the tubes, which are lights of their own as
-  in every level of the kit (3.72 each, `game/game.ts`). No other level has a lamp indoors over 28. The lamp alone put 7.9 on the floor under it,
+  in every level of the kit (3.72 each, `rust/game_rules/src/game`). No other level has a lamp indoors over 28. The lamp alone put 7.9 on the floor under it,
   1.75 times what the night's white is made from (`EXPO_LAMP`: the kit's bulb, 26, at 2.4 m), before any bounce, and a night shows a lit room at
   the night's own exposure, which never comes down. SEEN ON A CLOUD NVIDIA CARD, night, doors shut, the man inside: the service room (white on
   every face) burnt white, its floor 245 of 255, a black suit 113, the meter at 99; the lounge (a blue carpet, one orange wall) a washed pale
@@ -1058,7 +1057,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOTEs. NOT SEEN: the lounge by day, dawn, a grey day, the plain page (where a fixture is at its night strength at every hour, so by day the
   rooms lose most of their lamp light there), Metal; never played. The renderer's records of the service room at night from before this
   (`docs/agents/render.md`, THE MIRROR AND THE HIGHLIGHTS) were drawn with the lamp in.
-- **The kits' vehicles say their shapes** (`src/scene/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
+- **The kits' vehicles say their shapes** (`tools/levels/lib/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
   have rounded surfaces? look really blocky right now"; of the trial that drew them, "Yes, build these in" and "geometry looks pretty good"; of the pass's
   lorry before, "some curved surfaces on the truck would go a long way"). Every pickup, van, car, motorbike and lorry a kit builds (`gwotKit.ts pickup /
   van / lorry / motorbike`, `levelKit.ts car`, `officeGen.ts car`) is the stack of plain boxes it was, and each box of the stack SAYS A SHAPE (`shapes.ts`,
@@ -1084,7 +1083,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   TRIM IS DRAWN WHILE ITS BOX IS, AND TO EVERY ENGINE IT IS NOT THERE (`scene/boxes.ts trimDrawn`, asked where the world lists what it draws; the rule's
   bullet above said trim "follows its box out", each engine hiding it for itself: that is gone). Nothing hides, files or restores a piece: its own flags
   never change. And an engine that sweeps the level's things skips `piece`: the destruction lane's items, a blast's furniture and its mouth rule
-  (`game/furnblast.ts`), what hangs on a wall (`game/wallbreak.ts` ghosts). TWO REVIEWS FOUND WHY: a drawn-only wheel arch joined a pickup's wheel to its
+  (`rust/game_rules/src/furnblast`), what hangs on a wall (`rust/game_rules/src/wallbreak` ghosts). TWO REVIEWS FOUND WHY: a drawn-only wheel arch joined a pickup's wheel to its
   bed in the furniture's index (one blast took the bed, the tailgate and the tail lamps with the wheel); lying 6 cm off a wall's face it was thrown by a
   charge on that wall; and hidden, it stood "in the mouth" of the hole, so the bed liner and the crates that rested on it went too. `shapes-check` line
   11 stands four levels on their shapes and plain with the lived things in, holds every engine's list clear of pieces and the furniture box for box to
@@ -1141,7 +1140,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A level's starts and its doors are on a way, and what is laid by hand is drawn over the ways** (the worn paths, 2026-11-05; tools and count
   files only: no level file, no page and no run moves). The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for
   how people walk through the level, its logic, leading the player for game play". The rule that works out where a level is walked is the look task's
-  (`src/scene/ways.ts levelWays`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"). This is what follows on the levels.
+  (`rust/game_rules/src/scene_ways levelWays`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"). This is what follows on the levels.
   THE CHECK: `bun run tools/qa/walked-check.ts [level …] [--write]` (`probes.ts walked`, family `missions`; `level-needs.ts --run` lists it). It asks
   each level AS THE PAGE LOADS IT, the ways' one reader: the lived rooms and the dressing in, said to the loader by word whatever the caller's stand
   (their furniture is on the walk grid), the office with its script; a look twin is its plain file. (1) No way is without a path, no name its own
@@ -1163,14 +1162,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
   dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
   round things were two hand-built trials on the look page (`docs/agents/render.md`, the two "WAS A TRIAL" bullets). They are fourteen pieces of
-  `src/scene/gwotKit.ts` now, laid by `tools/levels/pass.ts`, each stood in the showroom `library-hall`, and the trials' files, address words and
+  `tools/levels/lib/gwotKit.ts` now, laid by `tools/levels/pass.ts`, each stood in the showroom `library-hall`, and the trials' files, address words and
   buttons are gone.
   WHAT IS DONE TO A WALL'S FACE is written once for all four ways a wall can face (`onFace`: a frame whose X runs along the wall and whose Z points out
   of the face; `onStretch` for what is dealt along a stretch a to b, its origin at the end the frame's X runs in from): `boards`, `shutters`,
   `windowBlanket` (a window's dressing), `wallPatch` (a mend with a rough outline, over a dado or a skirt), `spout` (and the streak its water left),
   `beamEnds`, `splitWood`, `ladder`. What stands by it: `plankBench`, `pot`, `bricks`. ROUND THINGS THAT LIE are one box that says `round: 1` (`lying`):
   `pipes`, `log`; `choppingBlock` is the kit's standing round. Snow or dust along a lying round is laid by the one rule for a bowed top
-  (`scene/carShapes.ts layOn`, through the kit's `lay`: a lying round is a bowed top). TRIM IN A PAINT OF ITS OWN says what that paint is made of
+  (`tools/levels/lib/carShapes.ts layOn`, through the kit's `lay`: a lying round is a bowed top). TRIM IN A PAINT OF ITS OWN says what that paint is made of
   (`trimIn`: a log's end is wood, a pipe's bore metal), as a box does.
   A WINDOW'S DRESSING HAS TWO FORMS, `'shut'` and `'open'`, and the level picks. The dress goal's rule, 11-05: "a window a mark watches through, or a
   covered lane crosses, stays see-through" (the maintainer: "we don't want them to feel dumb"). Shut, the boards, a shut leaf and the blanket are real:
@@ -1315,7 +1314,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`tools/levels/gwotSkin.ts`): a `Said` hands its finish to `saidAs`, so its paint knows it, and the box takes the finish of what was picked in the one
   line that lays every pick's: the line that wrote a said paint's roughness beside its word is gone. THE GENERATORS: seventeen lines wrote a word or a
   roughness by hand beside a paint, and say it with the paint now: the office's veneer furniture, couch and sofa (its `K` table), a cabinet, the server
-  room's raised floor and the conference phone (`scene/officeGen.ts`); a server rack's body, laid by the office, the block, the depot and the warehouse
+  room's raised floor and the conference phone (`tools/levels/lib/officeGen.ts`); a server rack's body, laid by the office, the block, the depot and the warehouse
   and now ONE paint named once (`stuff.ts RACK_BLACK`); the warehouse's boiler; a louvre and the breaker panel in `white-roof.ts`. EVERY level file is
   its generator's still, byte for byte (`export.ts --check` on all, `level-export.ts --check` and `--relief --check` for the office): no box, colour,
   finish or word moved, so no base file rides.
@@ -1332,8 +1331,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   PLAY: nothing a run reads moves. The three play-through reads (frozen; shipped with lived rooms off; shipped), seeds 1 and 2, against the step
   before on the same box: 42 of 42 each. The senses' error tool is green on the office on the page's stand (the office's generator is touched; no wall, leaf or lamp moves).
   SEEN by nobody and nothing to see: no picture changes.
-- **FOUR WALL FITTINGS OF A KEPT BUILDING ARE KIT PIECES, AND SO ARE THE TOOLS A HAND PASS LAYS PAINT WITH** (11-05; `src/scene/officeGen.ts`
-  `officeKit`; the painter's tins `TIN` in `src/scene/markingDefaults.ts`; catalogue `docs/library.md`; the pieces stand on the showroom hut's south
+- **FOUR WALL FITTINGS OF A KEPT BUILDING ARE KIT PIECES, AND SO ARE THE TOOLS A HAND PASS LAYS PAINT WITH** (11-05; `tools/levels/lib/officeGen.ts`
+  `officeKit`; the painter's tins `TIN` in `tools/levels/lib/markingDefaults.ts`; catalogue `docs/library.md`; the pieces stand on the showroom hut's south
   face, `tools/levels/library-hall.ts`). They were the white roof's own helpers and are MOVED, not copied: `tools/levels/white-roof.ts` keeps four
   one-line adapters for its own coordinates (a face at a given z), takes its paint tools and its ink, chalk and signal yellow from the kit, and
   `levels/white-roof.json` is byte for byte the file it was. A level's hand pass USES these and copies none of them.
@@ -1371,7 +1370,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the branch on the last.
   A PAINT IS KNOWN BY ITS ARRAY (`madeOf`, `saidAs`): hand each a colour array of its own, never one shared with a tin or with another paint, or the
   second takes the first's word and finish.
-  WHEN A WALL IS BREACHED (`game/wallbreak.ts` `hangers`, not changed): a drawn-only thing a quarter of a metre or more off the floor goes once half
+  WHEN A WALL IS BREACHED (`rust/game_rules/src/wallbreak` `hangers`, not changed): a drawn-only thing a quarter of a metre or more off the floor goes once half
   the wall behind it is open, so a long run of conduit is laid in lengths; a band from the floor STAYS across the hole, as the look kit's painted
   dado and skirt do on every level that has one; and a length of conduit with a `drop` hangs on, because by the game's rule it rests on its own
   branch. One gap for the whole game, not mended here.
@@ -1382,7 +1381,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   has no count file; 86 places before and after on both stands). No mission's level file moves, so no play-through was run for this step alone.
   NEVER SEEN on any adapter as laid on the showroom; on the white roof the pieces draw as they did.
 
-- **THE OFFICE IS HAND-FINISHED** (11-05, the first hand pass; `src/scene/officeGen.ts` "THE HAND PASS", `levels/office.scenarios.ts` `OFFICE_MARKS` and
+- **THE OFFICE IS HAND-FINISHED** (11-05, the first hand pass; `tools/levels/lib/officeGen.ts` "THE HAND PASS", `tools/levels/lib/officeScenarios.ts` `OFFICE_MARKS` and
   `walked`). The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
   the player for game play"; of the look he is after, "it's all quite intentionally dressed"; of the office itself, "a lot of personality per room": added
   to, not replaced. HOW IT WAS READ: the ways field, the level's marks, and twelve scripted runs traced on the page's stand (six of the pair's room clear,
@@ -1437,7 +1436,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ROOM END AT A MARK. Three `walked` rows named the room, and a room's name is the middle of its floor, which a bank of racks stands on: the walk
   grid stepped each way aside to the racks' near face, and the row's comment said "between the racks". They now name a mark, `racks`, on free floor
   at the rack the plain night's drive is pulled from (31 marks). A ROOM'S NAME IS A FAIR END ONLY WHERE THE ROOM'S MIDDLE IS FLOOR. (2) THE FOUR
-  DESK CLUSTERS STAND WHERE ONE LIST SAYS: `levels/office.scenarios.ts DESK_CLUSTERS`, read by the desks' marks and by the generator, which had
+  DESK CLUSTERS STAND WHERE ONE LIST SAYS: `tools/levels/lib/officeScenarios.ts DESK_CLUSTERS`, read by the desks' marks and by the generator, which had
   the same four places written again. Left: the offsets of a desk and its chair inside a cluster are still said twice (the generator's
   `cubicleCluster` and the marks' arithmetic); they are one writing when a mark is the level file's own and the cluster lays its desks' marks.
   (3) THE CATALOGUE COUNTS THE OFFICE AS ITS FILE HAS IT: `tools/levels/library.ts` builds the office with its lived tier (the exporter's word),
@@ -1449,7 +1448,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   without the office's marks, but that level is a SET (its own boxes and doors, its scenarios the kit view's, the room clear's and the issue's
   only): it carries no `walked` row, and the office's block has no set. CHECKS, both stands: `ways-check` (and its break path), `walked-check`,
   `probes.ts level`, both export checks, `library.ts --check`, the exporter's check on the white roof and the showroom, both type checks.
-- **THE OFFICE SAYS IT IS KEPT** (11-05; the builder's `kept: 1` in `src/scene/officeGen.ts`, so `meta.kept` in `levels/office.json` and
+- **THE OFFICE SAYS IT IS KEPT** (11-05; the builder's `kept: 1` in `tools/levels/lib/officeGen.ts`, so `meta.kept` in `levels/office.json` and
   `levels/office-relief.json`; the rule is the look's, `docs/agents/render.md` A LEVEL SAYS HOW KEPT IT IS). The first level to say the word. WHY 1 AND
   NOT PART WAY: it is a let office with a cleaner on contract, and the paint its hand pass laid (door numbers and bay numbers a hand high) was drawn as
   every mark was before the word, rubbed and gone a shade into its wall, which at that size reads as dirt on the picture and not as a number. At 1 a
@@ -1467,7 +1466,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   was two broken strokes), the lobby sign's lines and the bays' numbers are a shade stronger, and nothing else reads as changed. Of the picture's
   pixels 0.1 to 0.6% move by more than 8 of 255 indoors and 1.5% on the lot; two draws of one commit differ by 0.01%. Never seen on an Apple or an
   AMD GPU, and nobody has played it.
-- **NO TWO DRAWN FACES OF THE OFFICE LIE IN ONE PLANE** (11-05; `src/scene/officeGen.ts` `HAIR`; `tools/qa/zfight-check.ts office` went from 8 seen
+- **NO TWO DRAWN FACES OF THE OFFICE LIE IN ONE PLANE** (11-05; `tools/levels/lib/officeGen.ts` `HAIR`; `tools/qa/zfight-check.ts office` went from 8 seen
   patches to none, its 186 noted pairs as they were). The eight were the office's own: the lobby's corner planter, whose plant was exactly its pot's
   footprint and stood 5 cm into it (four sides), and the four desk clusters, where the cross partition met the spine at one height in another cloth
   (four tops). THE MEND is the check's own, a face sunk a hair (4 mm, one named number): the plant's sides stand inside the pot's and the cross
@@ -1533,11 +1532,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   written whole, which is why a new row of the kit's palette makes every look file stale; moving it to the same rule is one step that rewrites those
   files' materials blocks, not taken here. NOT HERE: any second palette. The check makes a small one of its own.
   THREE THINGS A SECOND PALETTE'S AUTHOR MEETS. (a) A LAMP'S LENS IS NOT CLOTHES: a vehicle's head lamps are laid in the kit's own white and its tail
-  lamps in its own red whatever the host hands over, because `game/carlamps.ts` finds a lamp by those two paints (the one rule of the game that still
+  lamps in its own red whatever the host hands over, because `rust/game_rules/src/carlamps` finds a lamp by those two paints (the one rule of the game that still
   knows a thing by a colour; its mend is a word on the box and is the cars'). (b) A TONE THAT LANDS ON ANOTHER ROW'S COLOUR STILL THROWS (`toned`: a
   file's writer names a row by its numbers), but two kit rows that wear ONE row are not each other's clash; the tones are the pieces' own numbers, so
   a palette whose rows sit within 0.006 of a tone of another is the palette's to move. (c) THE PAGE'S OWN LOOK STEPS DO NOT KNOW IT YET: whether a
-  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `leafPaint.ts paintLeaves`' accent, and the checks
+  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `doors/paint.rs`' accent, and the checks
   `look-check` and `wetground-check`), so a level wholly in a second palette is tidied as a plain one and a level partly in it takes the kit's accent
   for its doors. That question wants a word in the level file (which palette it wears) and belongs to the first level that wears one.
   CHECK: `bun run tools/qa/palette-check.ts` (the same on both stands; no game is stood up), three lines, one a thing: every call the two showrooms
@@ -1545,8 +1544,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   part for part the same, every box and part does what it did, the game finds the same lamps, and but for a lens nothing is left in a row of the kit's; a skin handed the paints repaints the boxes the first skin repaints and no others, on the 14 plain levels that have a look file;
   the worn rows. `PALETTE_BREAK=1`, `=2`, `=3` each turn their own line red. Never seen on a GPU: nothing is drawn differently until a level wears one.
 - **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
-  use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
-  only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
+  use a thing: the end of a `walked` way and a script's place, read by name (`rust/game_rules/src/scene_ways`, `rust/game_rules/src/director`). Until now only the office had any, and
+  only as code joined on at load (`tools/levels/lib/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
   (`levelData.ts MarkData`, validated: an id once, `pos` a Vec3, `yaw` a number), loaded to `Level.marks` and written back by `levelToData`, as `volumes`
   are. A GENERATOR RETURNS `marks` ON ITS LEVEL and the exporter writes them; absent = none, and no other file changes. THE OFFICE IS THE FIRST: its
   builder puts `OFFICE_MARKS` (31) on its Level and both its files carry them; a Level's marks are an ordinary key now. An office saved in the editor
@@ -1561,7 +1560,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   those two words (proved file by file with the words struck out) and by nothing else, but for ONE BOX: the compound's mud at the hand pump was laid in
   the asphalt paint for its darkness and says `earth` now (`compound.ts`, `saidAs`; the same box in its look file). No box, colour, finish or number
   moves; no base file rides (`lived-check` holds every one as it stands).
-  WHAT A ROUND GETS, and the step's one line under `src/game`: `game/particleFx.ts STUFF_SURF` gains the row `tarmac: 'concrete'` (the row the cars'
+  WHAT A ROUND GETS, and the step's one line under `src/game`: `rust/game_rules/src/particle_fx STUFF_SURF` gains the row `tarmac: 'concrete'` (the row the cars'
   part asked for; written here and nowhere else). DRY, nothing moves: a lot's paint was concrete to a round by its colour. WET, THE PICTURE OF A HIT
   MOVES, on the page only (the row rides HITSTUFF: `?hitstuff=0`, `TPS_HITSTUFF=1` on the frozen stand): the storm halves the lot's paint and that tone
   read as metal (`weather.ts` and `gwotPalette.ts` say so, "as measured", and both are still true of what the SIMULATION reads, `destruction.ts`), so a
@@ -1623,8 +1622,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keeps `stuff` only: to the rules a tone was never its paint).
   THE LEVEL TOOLS: the exporters give every box whose maker said no word the word its colour had (`tools/levels/doesWas.ts stampDoes`: the old rule,
   FROZEN, with its own copy of the palettes; nothing in `src/` reads it) before a skin repaints anything; a material row says what its NAME says,
-  else what its colour did. `tools/levels/does-bake.ts <file>` brings a file from before forward (on the old barracks it writes the export's file to
-  the byte). So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
+  else what its colour did. No file from before is left: the tool that brought them forward is gone, and a new file comes from its export. So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
   in the file where it can be read. The skin's old refusal ("would change what the simulation reads") is gone with its cause.
   CHECKS: `bun run tools/qa/does-check.ts` (probes.ts `does`, families `destruction`, `look`; both stands; `DOES_BREAK=1` takes the words off and must
   fail): the table; no old reader under `src/`, no renderer file asking what a box does but the snow field, no rule file importing the look; six
@@ -1641,7 +1639,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   42 play-throughs (21 missions, seeds 1 and 2) give the digests of the build before on the frozen stand and on the shipped stand.
   A LEVEL MOVER PINS: both steps that wrote the level files wrote each moved level's base file too (`tools/qa/fixtures/level-base`, the lived check's).
   STILL ASKED OF A PAINT, AND NOT A MATERIAL: which slabs are one round thing is "do they wear the same paint" (`scene/round.ts`, `geoTry.ts`); a
-  vehicle's lamps are found by a size and a paint together (`game/carlamps.ts`: a lamp repainted is no lamp to a round); the snow SHADER knows the
+  vehicle's lamps are found by a size and a paint together (`rust/game_rules/src/carlamps`: a lamp repainted is no lamp to a round); the snow SHADER knows the
   three snow paints by their numbers (`shaders/snow.wgsl`), so a level's snow wears the palette's whites; `scene/lookTidy.ts` asks whether a level
   wears the look by its paints (`gwotPalette.ts lookPaintOf`); the editor's writer names a box's row by its numbers. The editor keeps what a box does
   through a repaint and a cut and has no field to set it by hand.
@@ -1743,10 +1741,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
   `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
   senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.
-- **A level is made with no game loaded** (2026-11-08). `tools/levels`, `tools/level-export.ts` and `tools/levels-api.ts` import nothing of `src/game` or `src/sim` but the call surface's guard in
-  `scene/boxes.ts` and `scene/stuff.ts`, which leaves with the copy of the game. What a level may have at most is `scene/caps.ts` (held to the game's own room by `rust/sim/tests/level_caps.rs`), the
-  dressing's group and switch `scene/dressing.ts`, a vehicle's lamps as the generators write them `scene/carLamps.ts`, the office's floor `scene/officeFloor.ts`, a gun's word `scene/weaponIds.ts`. A
-  level's script is the game's (`game/levelScripts.ts`, by the level's name), not the loader's. Every generator's file is the same, byte for byte, and the validator's answers the same on 1,980
+- **A level is made with no game loaded** (2026-11-08). `tools/levels`, `tools/level-export.ts` and `tools/levels-api.ts` import nothing of the game. What a level may have at most is `tools/levels/lib/caps.ts` (held to the game's own room by `rust/sim/tests/level_caps.rs`), a
+  vehicle's lamps as the generators write them `tools/levels/lib/carLamps.ts`, the office's floor `tools/levels/lib/officeFloor.ts`. A level's script is the game's, by the level's name, not
+  the loader's. FROM 11-09 EVERYTHING ONLY LEVEL MAKING USES IS IN `tools/levels/lib` (the kits, the generators' shapes, the schema and its validator, the loader, the lint), and `tools/qa/tsconfig.json`
+  type-checks `tools/levels` whole. The loader loads the whole file: the lived and dressing tiers are the game's to leave out (`rust/game_start/src/level.rs`), so there is no
+  switch for either in a level tool. A level's leaves are painted by the game alone; the copy of that rule here, its rows and its check are out. Every generator's file is the same, byte for byte, and the validator's answers the same on 1,980
   spoiled levels.
 - **What a level owes is asked of the game itself** (2026-11-08; `rust/game_start/src/bin/levels.rs`, `cargo run --release --bin levels -- second-way|sight|walked|stacks [level …]` in
   `rust/game_start`). The four questions `second-way-check`, `marksight-check`, `walked-check` and `stack-marks-check` asked of the old game's copy, and their rulings, word for word in its head;

@@ -20,7 +20,7 @@
 //!   fire WHERE                          Sam's rifle comes up, the cursor goes to WHERE, one round
 //!   frag WHERE | flash WHERE            a live can lands at WHERE
 //! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `door` (the door nearest that
-//! man: the way to him), `sam`, or `X,Z`.
+//! man: the way to him; with nobody left, the door nearest Sam), `opendoor` (the same of the doors that stand open), `sam`, or `X,Z`.
 //! A line that cannot be done (nobody is left, the menu refuses the order) is counted and the run goes on; a line that was NEVER done on
 //! a floor is named in that run's line with the game's own reason, so a hand is not trusted there for what it only names.
 //!

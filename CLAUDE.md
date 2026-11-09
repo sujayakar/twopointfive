@@ -19,34 +19,24 @@ bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, /s
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
-(cd rust/game_start && cargo test)                        # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
-(cd rust/game_start && cargo run --release --bin gate)    # what a build is held to, natively (`gate pin`, `gate breaks`; README.md there)
+(cd rust/game_start && cargo run --profile gate --bin gate -- tests [BINARY [TEST]])   # the whole native test set; the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+(cd rust/game_start && cargo run --profile gate --bin gate)    # what a build is held to, natively (`gate pin`, `gate breaks`; README.md there)
 bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
 bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
-bun run tools/qa/knobs-check.ts                           # after adding a knob table
-bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; `--check` is red on a stale one
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
 
 ## Rules every session needs
 
-- **No GPU in the cloud.** The headless harness (`tools/qa/`, the whole Game over a Proxy GPU device) cannot see rendering, the GPU
-  light meter, smoke sight lines or audio; a page check there runs on the software adapter. Say what was checked and how, and say
-  "never seen on a GPU" of anything that was not. "Verified" in full also means driven in a real browser with no console / GPU errors.
-- **One stand** (`src/host/profile.ts`). A headless tool stands the game AS THE PAGE OPENS IT, and a check is run once, with no word
-  in front (`TPS_PROFILE=shipped` is accepted and changes nothing). The old FROZEN stand, every newer rule held off (`FROZEN_HOLDS`
-  lists the rows and the word that raises each there), is `TPS_PROFILE=frozen`: kept for the switch cleanup until the off paths are
-  gone, said on stderr by a run that uses it, and no new fixture is recorded on it. A header that says "both stands" is older.
-- **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in its module: so a switch's value is read off the page's
-  stand (`bun run tools/qa/stand-dump.ts`), never off the module's own table. A `FROZEN_HOLDS` row while that list stands; its table
-  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by a tape's recipe (`journal.ts`) so that a recording from
-  before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
-  whose `<NAME>_BREAK=1` path must fail.
-- **The game is Rust** (`rust/`); what is left of `src/game` and `src/sim` only stands a game for the last tools that ask it to, and goes
-  as they do (`bun run tools/draw/held.ts`). Nothing new is written there. No wall clock and no die but the game's own in a rule.
-- **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
-  `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
-  The one exception is a leaf of the cycle, a file with type-only imports (`owner.ts`): it has always evaluated first.
+- **No GPU in the cloud.** The game's tests (`rust/`) see no picture and hear nothing; a page check there runs on the software adapter.
+  Say what was checked and how, and say "never seen on a GPU" of anything that was not. "Verified" in full also means driven in a real
+  browser with no console / GPU errors.
+- **The game is Rust** (`rust/`), and the page draws it: `src/` holds no rule of play, and none is written there (`tools/draw/ban.ts`, the
+  first step of the build). No wall clock and no die but the game's own in a rule. A bullet under `docs/agents/` that names
+  `src/game/<x>.ts` or `src/sim/<x>.ts` tells of the TypeScript the rule came from; the rule is mostly `rust/game_rules/src/<x>` (its
+  name in snake case; `sim_<x>` of src/sim), and where there is no such folder a grep of `rust/` for the rule's own names finds it.
+- **A new rule is a switch.** ON in the game, with an address word that puts it off, and off = the game as it was, by the kept runs
+  (`hold`). It ships with a native test that fails without it.
 - **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). No GPU value reaches
   game code: the Rust game senses for itself.
 - **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder
@@ -94,8 +84,8 @@ Each is the old CLAUDE.md's bullets for that area, word for word (moved 2026-10-
 happened when; the live queue is outside the repo.
 
 - `overview.md` — what the game is, one model for picture and AI, where the module families live, a line per small module, the
-  architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app, the import cycle.
-- `qa.md` — run / build / check in full, the stand and the old one, the knob registry, the gates, driving the page headlessly (hooks, URL flags,
+  architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app.
+- `qa.md` — run / build / check in full, the gates, driving the page headlessly (hooks, URL flags,
   `__stage`, `__ready`), checkpoints + autosave.
 - `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
   long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.
@@ -128,8 +118,8 @@ happened when; the live queue is outside the repo.
   engine replay player, kept runs and the dump.
 - `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
-- `rust.md` — the simulation in Rust: the crate and its build, `src/sim/built.ts`, the one way in, the `RUST` rows, what Rust code owes
-  the game, what holds a moved system to the TypeScript it replaces, gameplay against dressing (`src/game/dress.ts`, the two modules).
+- `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
+  moved out of TypeScript.
 - `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game/src/control/` (the list of rules, adding one).
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),

@@ -15,7 +15,7 @@ first system across (the game's own maths). No rule of play has changed and noth
 **THE CHECKS OF THE TYPESCRIPT COPY AND OF THE BRIDGE ARE GONE (2026-11-08)** (`rust-`, `dress-`, `rollback-`, `dice-` and `men-check`, and tools/blitz's own checks, profilers, the fuzz against the TypeScript tick and the loop through wasm): the copy steps nothing, and what it stands for is held natively (rust/game_start/tests, `hold`). Where a bullet below names one it says what held then.
 **THE TWIN CHECKS ARE GONE (2026-11-08).** `door-`, `falls-`, `item-`, `layer-`, `lights-`, `pane-`, `pose-`, `prop-`, `segment-`, `sense-`, `slab-` and `weather-ident`, `slab-asitwas`, `simstate-check`, `pose-fold`, `hypot-ident`, `ident-pin` and their recordings held a system in Rust to the TypeScript it replaced. That TypeScript is deleted, and each of them stopped with an error or asked nothing. `tools/qa/rust-check.ts` is now `built`, `face`, `maths`, `engines`, `switch`, `stand` and `views` (its `server`, `missions` and `both` halves went too: they compared rows held down, and a row held down is no other game any more). What a system answers is held by the crates' own tests and by the game's digest. A line below that names one of them says how it was held then.
 
-**WHAT IS LEFT OF THE GAME THAT WAS TYPESCRIPT'S, AND WHAT HOLDS IT (2026-11-08).** `bun run tools/draw/held.ts` says which files of src and levels no page that stays is built from, and what holds each (the old page, a check, a level tool, the bridge, a type a staying file still names): `--free` can go now, `--why <file>` is the road, `--doors <kind>` what that kind of holder names and what it would let go of, `--without <path,…>` a cut's worth and who still names it. It does not see a name put together at run time, a folder read whole, or a file that is not TypeScript: the two type checks do, after a cut.
+**THE TYPESCRIPT COPY OF THE GAME IS GONE (2026-11-09).** src/game, src/sim, the animator's TypeScript, the box world's questions, the harness that stood a game headless and the bridge that carried state between the two (tools/blitz) are deleted: no page and no tool held them any more. The game is `rust/` alone; the pages are built from what `bun run tools/draw/held.ts --stays` lists, and held.ts says what holds every other file of src (level making, today). A bullet below that names src/game/<x>.ts, src/sim/<x>.ts, `TPS_` words, the stands or a tool of tools/blitz tells what stood then; a rule's own folder is mostly rust/game_rules/src/<x> in snake case (sim_<x> of src/sim). What the sources may not say (rust/sim's one arithmetic and its statics, the sides, what the module is hashed from) is `bun run tools/qa/rust-rules-check.ts`. What asked a whole game from TypeScript and has no native heir is said by the message of the change that cut it.
 
 **THE VIEW: WHAT THE HUD IS TOLD IS ONE RECORD OF THE RUST GAME'S (2026-11-07).** `rust/game_rules/src/view` `tick_view(g: &Game, seat: &SeatRef) -> TickView` takes the game shared, is about the seat it is handed, depends on the game as its last tick left it and on nothing of the host's, and is kept by nobody in the game: asking it or not is the same run (`rust/game_start/tests/view.rs`, `asking_the_view_writes_nothing`, every part of the state). `face_tick_view(h)` puts its bytes at `face_out`, about the seat the machine shows (`SeatRef`: any seat, none changed over). The page (`src/host/rustgame.ts`) asks after whatever moved the Rust game and keeps the answer till the next apply; a headless tool (`tools/blitz/rust-host.ts`) asks each time, what it has written since the tick sent first. Both read it with `src/view/read.ts`, which `tools/draw/gen.ts` WRITES from the view's declarations (`tools/draw/views.ts`: their TypeScript and how their bytes are read, no table and no book at run time; an ID in one is refused, so it names no row) and hand it over as `game.view` (`src/view/seatview.ts`; NOTHING UNDER `src/view` IMPORTS THE GAME, `bun run tools/qa/view-check.ts`, so that a page with no game reads the same record: a man is named by his character's id, a door by its name). So the HUD and a check read ONE answer. The lesson's section is `TickView.lesson` (`rust/game_rules/src/lesson`, `lesson_view`; see `missions.md`): its step, what the step opens and the frame's words, with each key by its code in brackets for the page to name. TO ADD A SECTION: the struct in `rust/game_types/src/view`, filled in `tick_view` by the rule's own module (the functions the tick runs, as readers: a memo under one goes, a thing the tick needs is made by the tick), `bun run tools/draw/gen.ts`; its blank in `src/view/seatview.ts`; the HUD reads it; the page's TypeScript for it is deleted in the same commit, its call-surface rows with it (`bun run tools/wire/wire.ts drop-call <key>…`), and the checks that asked the deleted functions read the record. First section: the mission's line and place (`mission::objective`, which says whose words they are: `of`), where nine TypeScript functions worded it again on the copy. Radio and spoken lines (`cues::radio_rows`, `cues::bubbles_view`, `chronicle::room_of` as `place`, the seat's man as `me`): the strip's rows, each line on the floor with how it sounds and where it goes (`over`, `overOrEdge`, `edge`: the HUD asks only its own camera whether he is on the screen), and the room the autosave names; a place's name keeps no memo, so it can be asked of a game nobody may write to. WHAT THE PAGE ITSELF SAYS (a save's word, a capture's, a panel's answer) is no line of the game's: `src/view/pagesaid.ts pageSay`, drawn under the radio's rows on the page's clock (the page no longer writes `game.messages`). The kit's column (`kit::kit_view`, `view.kit`): a place for each thing a key brings, the gun that is up as its box shows it, the setup while it is open and the keys it would take, the big slot, his condition beside them; `src/ui/handbox.ts` draws it and imports nothing of the game. The kit screen before a mission is the cards': it still reads TypeScript's tables (`kit.ts`), whose knob closures run only when a switch is written (`page-decides.roots.json`). What the HUD marks and draws of the aim (`view/marks.rs`: `marks`, `aim`, `worn`; tests `rust/game_start/tests/hud_marks.rs`): every man it may mark with his glyphs, tone and whether the fog hides him (`hidden`: a viewer's own picture with the fog lifted is the page's word, `fog.bared`, and shows him all the same), the last sightings, the stuck cameras, the cued grenades, the meters, the white of a stun, the stalk and the wait; the gun's ring and small circle, the 40 mm's word, the arc with where it rests and what it reaches; who wears goggles or carries the big slot's tool. All of it about the seat it is handed. `src/ui/headmark.ts`, `src/game/throwreach.ts` and the page's `closeMarks` are gone (`CLOSE.marks` was settled off: its row stays for the sweep). A RULE THE TICK RUNS AND A HUD IS TOLD HAS ONE BODY: it takes `impl ask::Asker` (a ray, a leaf across a line, the statics in a span, the furniture's ray, the snow's bog), which the tick answers as itself and `WorldAsk` answers with the game shared (`combat::solid_between`, `gunwall::wood_between`, `player::stack_in_way`, `frag::rest_of_throw`). A tick's end now pays the furniture's copy too (`tick_shut`), so the can's roll asks it shared. Known and left: on a snow level, before anything has touched the ground of that level the table of the snow is not on the copy, so a preview rests as on bare ground until then. The squad's words (`orders/hud.rs squad_view`: a line a man, by `status_of` and `cover_tail`, the notes in the order their voices registered; `corner`, squad or none): the seat's own men and his own closeness, as things stand (a set charge names everybody of the team's), so TOO CLOSE keeps nothing by the second and asks `WorldAsk` with the copy standing (a tick's rule calls `stands` first); the quick key's line is kept by the tick for each seat too (`orders/shown.rs`). The throws, the rings, a tap's word and the plan on the floor (`view/throws.rs`, `view/rings.rs`, `view/plan.rs`; tests `rust/game_start/tests/rings.rs`, `throws.rs`): each ordered throw from the order until it leaves the hand and the plan the lit row stands on; the squad's ring is the menu's record, whose rows' words and quick word the tick reads together at the start of each frame's ring input, and as the menu opens or is read again (`orders/words.rs`: `menu.words`, `menu.quick`, no part of the wire), and which row is on which wedge is one function of that record (`squad_orders_seats`), the tick's and the view's; the floor's plan gives each man his own path or the stops of his way, and the HUD asks `game.ask.way` for a leg and keeps the answer by its own clock. THE HUD IN PLAY IMPORTS NO GAME (`bun run tools/qa/view-check.ts` walks `ui/overlay`, `cmdring`, `ringlone`, `bubbles`, `netplace`, `findring`, `planfloor`, `handbox`, `tabcard`, `corner`, `squadthrowviz`, `attentionviz`, `railcard`, `railclear` and all they import, types too): it is handed a `HudSource` and a `HudCam` (`src/view/hud.ts`), the view, the world asked, the picture's clock and where a man is drawn by his id (`at`, `head`). The page that holds a game makes its source in one place (`src/host/hudsource.ts`), and what is the page's and no game's is the source's `page` (the lifted fog, the debug read-out, the save controller's tag). His list and the things on the floor are `view.interact` (`interact/hud.rs`: the rows the tick built, the lit one, the ring, the dots), a held attention `view.attention`, the alarm `view.alarm`, the mission's stage `view.stage`, each man's card `MateLine.kit`, the floor under him `marks.floor`. A number of a rule table the HUD lays out by goes in `view.look` (`view/look.rs`: the ring's by which the game reads a cursor, the plan's, a far line's), so a page holds no second copy of a number a rule reads. Developer pictures that read what only the TypeScript holds (`ui/devhud.ts`: one man's picture of the fight, the wind's field) stay on the page that holds a game and out of the HUD.
 
@@ -87,7 +87,7 @@ it sets an `OptionsGame` (`src/ui/options.ts`), the old page's Menu handing it t
 (`src/host/settings.ts`, `DrawGame.tell`). Left alone for six seconds the title cuts round the floor (`src/host/reel.ts`, the command
 `Aside`; not on a page a script drives, unless its address says `reel`), a save has its picture (`src/host/savepics.ts`, both pages), and Options ▸ Show frame rate is a read-out of the picture's own
 (`src/ui/readout.ts`). The measuring tools (F9, F8, F6, the Benchmark, `?pricelevels`) and the debugger
-(backslash) run there too (`measure.ts`, `drawbench.ts`, `debugger.ts`, `ui/graphicspanel.ts`); the look panel's hour, cover, sun and moon are commands 23 to 26 (`game_rules/src/hours/turns.rs`) and words of the sky's row, and the F8 sweep's two snow rows flip the picture's own snow (`ui/sweepSnow.ts` `SweptSnow`); the Benchmark's player is Rust (`rust/game_run/src/hands_off.rs`: a seat's player, his script async code polled once a tick;
+(backslash) run there too (`measure.ts`, `drawbench.ts`, `debugger.ts`, `ui/graphicspanel.ts`); the look panel's hour, cover, sun and moon are commands 23 to 26 (`game_rules/src/hours/turns.rs`) and words of the sky's row, and the F8 sweep's two snow rows flip the picture's own snow (`ui/sweepSnow.ts` `SweptSnow`); the Benchmark's player is Rust (`rust/game_start/src/hands_off.rs`: a seat's player, his script async code polled once a tick;
 `tools/draw/hands-check.ts`, `HANDS_BREAK=1` fails). A hosted build's records go up from there too
 (`drawcloud.ts`). The HUD is the old page's files (`ui/overlay.ts`, `ui/bubbles.ts`, over a `HudSource`: `src/view/hud.ts`) made by `src/host/drawhud.ts`: it draws where the men's rows have them between ticks, `DrawGame.view()` is read once a tick, Tab's card and a tutorial's hold the world, and the save controller's words and tag come from `face_saves_told`. `play-check` reads the view every tick of every mission and what is said of a save and a load; on the software adapter the two pages' HUD was the same to the pixel over 120 frames of one mission, one seed (texts, marks, dots; not the rings). A run's tape is what the module was handed (`tape/handtape.ts`; `DrawGame.tape`, at its start, its orders, its steps, its hands-off plans, a mark a second), `host/drawplay.ts` walks it and seeks by whole moments (`face_moment`, ten seconds apart, fourteen at most, about 15 MB each), and `?playtape=` is its page (`host/tapepage.ts`; the address words that are the run's and the visit's: `tape/address.ts`); `tools/draw/walk-check.ts` tapes a run with saves, loads, a restart and commands on three levels and walks it, forward and after each seek and after a panic, to the same words of the whole state (`WALK_BREAK=1` fails). A viewer's own picture of a run (the fog off it, a tube or none) is `face_draw_as` (`Drawn::view_as`; the game keeps the uncut list while there is one, `fogofwar/picture.rs keep_raw`), the map's floor and who is on it `face_floor` and `face_map`. How a run is kept there and played again: `replays.md`, the new page's replay. Co-op is on it: `host/drawnet.ts` (net.md). Never seen on a GPU; the Team & kit picture is this page in a frame, standing only (menus.md). The weather, the air, the fires and the snow are the picture's own there (`src/picture/`: `weather.ts` holds them), reading the sections `fires`, `winds`, `gusts`, `heat`, `air`, `roofs`, `feet`, `things`, `blasts`, `snow_words` and `resets`: the rain's disc and drips, the air's field, the fire's flame records and its gas, the snow's field, prints, marks, craters, flakes, wisps and breath. Wet ground is `game_draw::wet`, in the boxes' rows. A blast over the snow reaches both pages by the out event `SnowBlast` (`snow_blast_at`, a no-op since the swap). To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
 
@@ -101,7 +101,7 @@ nothing (`gpu/keep.ts`; `keeppage-check`): a Team & kit picture's boot still on 
 FOR A SCRIPT (`window.__draw`, `__ready`): `run(n, keys, 'none' | 'last' | 'all')` steps exactly n ticks by the page's own hand, whatever the tab; `game.view()`, `map()` (men; doors by name and place), `floor()`, `tally()`, `run()`,
 `debrief()`, `verdict()`, `saves()`, `mark(true)`, `lost`, `ticks`; `input` (keys, pressed, buttons, mouseX / mouseY), `cam.project`, `game.commands` (god, ammo, save, load, restart, knob …).
 
-**THE MARKS ARE THE GAME'S (2026-11-07).** Bullet holes, scorches, scuffs, chips, cracks in glass, dust and rubble on a floor, wall wear and wet prints are one list kept for the game in a slot (`Game.mark_set`, `render_decals/set.rs`): 512 at most, the oldest going first and a mark laid only for the picture before any of play's, each with the key of what made it, a mark that rides a box kept as that box's id and a place in its frame, a print's strength worked out from when it was made. A rule asks (`bullet_mark`, `mess_burst`, `decals_add` …); the asks are answered in their order as the tick's last step, with the world where the tick left it (`marks_settle`); no rule reads a mark, and `hold` holds that. `rust/game_draw/src/marks.rs` writes the buffer `decals.wgsl` reads, and the page sends it when a word moved (`src/draw/marks.ts`): a clone of the game holds its marks, so a load or a rollback is another buffer with nobody told. The list is not on the wire, so a game kept as a file's bytes (`face_keep(h, 1)`) comes back with none. The page with a copy still lays its own from the same out events, and `tools/draw/marks-check.ts` (gone 2026-11-08) held the two to each other word for word (four levels, a fight of 15 s with bullets, cans and door work: every word, 18 to 130 marks, a chip, a scuff or a print seen only by the native tests `tests/marks.rs`), but for what the copy lost when its tick went: a print's drying and look. No switch: the page's rule is the only one. Never seen on a GPU, and a mark drawn from this buffer has not been looked at on any adapter. The level's own look is rows too: `traffic.rs` (the traffic map, made once a level, its ways asked of a copy of the game; always the look's rules, walked ways and the band along long faces: `?look=old` does not reach it), `dust.rs` (the dust's table). `tools/draw/look-check.ts` (gone 2026-11-08) held them to the copy's on seven levels: the map to the byte, every leaf's words. A level's leaves are painted as the game is stood (`doors/paint.rs`, called where the doors are made, and `src/scene/leafPaint.ts` at the same place): the paint is the box's own colour and word from its first moment, so a breach's pieces and a round's chips take it. Its switch is the look's: `k.look.on` is on in the page, and an address with `look=plain` puts it down. `tools/blitz/start-levels.ts` held the rule to the TypeScript's, mission by mission (`look-check` cannot: its Rust game is made from the stand's export), and `tests/marks.rs` holds the pieces. Measured: 229 leaves on 19 levels, each the same to the digit as the rows drew it before; `hold` on one seed, 14 runs of 40 s on seven levels, with the bangs and door hands: only `tab.boxes` moved, and with the colour and word of every box masked out of that part nothing did. `hold` runs with the picture's rows down, so a dressed piece and a chip's colour are held by that native test and not by `hold`. Never seen on a GPU. A wall charge's picture half (`blast_feel/picture.rs`: the fireball, the ring, the pushes, the ceiling's dust) is worked out by the game a stage at its time, its queue kept with the game, and reaches the page as the tick's particles (`MarkSet.thrown`). Its numbers are held by a native test only: the copy's own half needs a particle system the headless host has none of. Never seen on a GPU.
+**THE MARKS ARE THE GAME'S (2026-11-07).** Bullet holes, scorches, scuffs, chips, cracks in glass, dust and rubble on a floor, wall wear and wet prints are one list kept for the game in a slot (`Game.mark_set`, `render_decals/set.rs`): 512 at most, the oldest going first and a mark laid only for the picture before any of play's, each with the key of what made it, a mark that rides a box kept as that box's id and a place in its frame, a print's strength worked out from when it was made. A rule asks (`bullet_mark`, `mess_burst`, `decals_add` …); the asks are answered in their order as the tick's last step, with the world where the tick left it (`marks_settle`); no rule reads a mark, and `hold` holds that. `rust/game_draw/src/marks.rs` writes the buffer `decals.wgsl` reads, and the page sends it when a word moved (`src/draw/marks.ts`): a clone of the game holds its marks, so a load or a rollback is another buffer with nobody told. The list is not on the wire, so a game kept as a file's bytes (`face_keep(h, 1)`) comes back with none. The page with a copy still lays its own from the same out events, and `tools/draw/marks-check.ts` (gone 2026-11-08) held the two to each other word for word (four levels, a fight of 15 s with bullets, cans and door work: every word, 18 to 130 marks, a chip, a scuff or a print seen only by the native tests `tests/marks.rs`), but for what the copy lost when its tick went: a print's drying and look. No switch: the page's rule is the only one. Never seen on a GPU, and a mark drawn from this buffer has not been looked at on any adapter. The level's own look is rows too: `traffic.rs` (the traffic map, made once a level, its ways asked of a copy of the game; always the look's rules, walked ways and the band along long faces: `?look=old` does not reach it), `dust.rs` (the dust's table). `tools/draw/look-check.ts` (gone 2026-11-08) held them to the copy's on seven levels: the map to the byte, every leaf's words. A level's leaves are painted as the game is stood (`doors/paint.rs`, called where the doors are made): the paint is the box's own colour and word from its first moment, so a breach's pieces and a round's chips take it. Its switch is the look's: `k.look.on` is on in the page, and an address with `look=plain` puts it down. `tools/blitz/start-levels.ts` held the rule to the TypeScript's, mission by mission (`look-check` cannot: its Rust game is made from the stand's export), and `tests/marks.rs` holds the pieces. Measured: 229 leaves on 19 levels, each the same to the digit as the rows drew it before; `hold` on one seed, 14 runs of 40 s on seven levels, with the bangs and door hands: only `tab.boxes` moved, and with the colour and word of every box masked out of that part nothing did. `hold` runs with the picture's rows down, so a dressed piece and a chip's colour are held by that native test and not by `hold`. Never seen on a GPU. A wall charge's picture half (`blast_feel/picture.rs`: the fireball, the ring, the pushes, the ceiling's dust) is worked out by the game a stage at its time, its queue kept with the game, and reaches the page as the tick's particles (`MarkSet.thrown`). Its numbers are held by a native test only: the copy's own half needs a particle system the headless host has none of. Never seen on a GPU.
 Checks: `tools/draw/weather-check.ts` (gone 2026-11-08; the numbers against the copy: fires, winds, the air's map, roofs, drip lines, the snow field, every print's bytes; `WEATHER_BREAK=1` fails), `tools/draw/weather-page.cjs` (the page on the software adapter: snow, a crater, a downpour; stills with `--out`), `tools/draw/rows-check.ts` (gone 2026-11-08; `gate draw`) ran both packers on one tick of one game and compares every word (462 ticks of six levels, all equal; `ROWS_BREAK=1` fails; it goes when the
 TypeScript copy does); `tools/draw/play-check.ts` starts every row of the mission list on the new page's game with no page, walks, shoots, saves, loads, restarts and draws between ticks
 (38 missions in 36 s; `PLAY_BREAK=1` fails); `rust/game_start/tests/draw.rs`, `saves.rs` and `fog.rs`; `hold draw` draws every frame of a set of plays, holds the game's words to what they were and prints what each
@@ -116,8 +116,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
   `src/pow10.rs` (the decimal powers as the language reads them, written by `bun run tools/sim/pow10.ts`: the Rust side never parses a decimal). `rust/prim`
   is three functions (√, floor, trunc): the simulation is `no_std` and the core library lacks them. `rust/dress` is the other side of the line (below,
   gameplay and dressing): its own module, `src/dress/built.ts` and `src/dress/dress.ts`.
-  `src/sim/built.ts` is the module's bytes as text, WRITTEN BY `bun run tools/sim/build.ts` and checked in. `src/sim/sim.ts` is the one TypeScript file that
-  loads the module (`sim()`, through `src/sim/load.ts`), names its exports (`SimExports`, `SIM_EXPORTS`, `SIM_ABI`), hands out its memory (`f64()`, `u8()`) and holds the switch table
+  `rust/game_rules/src/sim_built` is the module's bytes as text, WRITTEN BY `bun run tools/sim/build.ts` and checked in. `rust/game_rules/src/sim_sim` is the one TypeScript file that
+  loads the module (`sim()`, through `rust/game_rules/src/sim_load`), names its exports (`SimExports`, `SIM_EXPORTS`, `SIM_ABI`), hands out its memory (`f64()`, `u8()`) and holds the switch table
   `RUST`. Like `src/math`, `src/sim` is below the game: it imports `built.ts` and `src/math` and nothing else.
 - **Nobody needs Rust to play, or to write TypeScript.** The page, the game server (`tools/mp/`), the hosted build and every headless tool load the module
   from `built.ts` as they load any source file. The price: `built.ts` must follow `rust/`. AFTER ANY CHANGE UNDER `rust/`: `bun run tools/sim/build.ts`, and
@@ -137,7 +137,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   it's turned off in this browser. Try another browser." (`sim.ts NO_WASM_WORDS`, `NoWasmError`; a module that fails for another reason says that
   reason as an ordinary fatal). `rust-page.cjs nojit` opens the page with `WebAssembly` taken away and reads the card. Until 2026-11-05 such a page
   played on the TypeScript simulation; the maintainer chose the card on a decision card of that day.
-- **`RUST`: a row a system** (`src/sim/sim.ts`). On = that system of the update runs in the module; off = in TypeScript as it always did. THE TWO ARE THE SAME
+- **`RUST`: a row a system** (`rust/game_rules/src/sim_sim`). On = that system of the update runs in the module; off = in TypeScript as it always did. THE TWO ARE THE SAME
   GAME TO THE BIT, which is what lets a system move at all. So a row is never a rule of play: it joins no pin list and moves no digest. SINCE 2026-11-05 A ROW IS NOT A SWITCH EITHER ("Not switches"): the
   rows of `RUST_ON` are up wherever the game is played, `sim.ts rowsUp` is the one writer in play, the table is in no knob registry, no recording, no
   recipe and no address, and it stays a table only so that a check of the two languages can hold its own row down in its own process until that
@@ -177,10 +177,10 @@ one stops the tool by name, on an address one does nothing and says so in the co
     shipped stand); on the frozen stand, whose lengths are the engine's, the TypeScript answers whatever the row says. That is the rule for every system to
     come that takes a length or an angle. What the fog draws with (`things`, the picture's blocks) is not in the row, and that is where the fog's
     time is: the sight pass was its lines, so the row has no gain of its own. ON where `lines` is (`RUST_ON`): it rides the lines' copy and costs nothing of its own.
-  - `poses` — two things under one row. THE POSES A CHARACTER KEEPS from one tick to the next (`src/anim/skeleton.ts Pose`, made through its animator's
+  - `poses` — two things under one row. THE POSES A CHARACTER KEEPS from one tick to the next (`rust/game_rules/src/anim_skeleton Pose`, made through its animator's
     `PoseSet`: the blend's stages, the layers' own buffers) live in the game's block of the module's memory (`rust/sim/src/poses.rs`, a tenant:
-    `src/game/posehome.ts`; the bullet "State in the module is state of the game"). `Pose.cols` is the floats wherever they are (ten columns, a node a row: the bullet "The data's layout"), asked for at each
-    use and never kept in a field, so the layers of `game/character.ts` (TypeScript still) read and write the same expression either way. And THE POSING
+    `rust/game_rules/src/posehome`; the bullet "State in the module is state of the game"). `Pose.cols` is the floats wherever they are (ten columns, a node a row: the bullet "The data's layout"), asked for at each
+    use and never kept in a field, so the layers of `rust/game_rules/src/character` (TypeScript still) read and write the same expression either way. And THE POSING
     FUNCTIONS (`sampleClip`, `blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`, `setModelRot`, `twoBoneIK`) are asked of `skeleton.rs`. A
     question says where its pose is: in game `g`'s pool, where it is worked on in place, or (`g` = −1: a function's scratch pose, a pose whose block
     stands parked) on the module's BENCH, written there and read back. One body a question in Rust, one export, whichever it is; an answer of "not a
@@ -196,7 +196,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     each tick. Not ported yet: `SkeletonInstance.update` (the twists, the rag doll's
     overrides, the matrices), and the run-forward bones (`PoseFK.rot` / `.pos` are the host's arrays, copied to the bench and back a question).
     OFF EVERYWHERE.
-  - THE ANIMATOR'S LAYERS (once the row `walk`; `game/character.ts CharacterAnimator`: what turns a blend of clips into a man who leans into
+  - THE ANIMATOR'S LAYERS (once the row `walk`; `rust/game_rules/src/character CharacterAnimator`: what turns a blend of clips into a man who leans into
     his walk, breathes, keeps his soles where he put them and holds a rifle steady) run in the module, a layer at a time
     (`rust/sim/src/layers.rs`, a `pub fn` each; the bullet "A layer of the animator" below is how one is written). A LAYER IS WRITTEN ONCE,
     IN RUST. Until 2026-11-05 each was also a TypeScript method (`<name>Own`), with a row of `RUST` that chose between the two and a check that
@@ -295,7 +295,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
       record of 70 blows is one more drill of the run (`BLOWS_BREAK=1`, the coming blow not handed over, is red). A layer that reads a record takes the part it reads, never the record.
     - THE CHECK: `bun run tools/qa/layer-ident.ts` (`rust-check`'s `layers` section runs it). THE BAR IS LOWER THAN IT WAS: with two languages
       every call was run both ways on the same pose and compared; with one, a layer is held to its own earlier answers (`tools/qa/ident-pin.ts`,
-      the bullet "What holds a family once its TypeScript is gone"). A WATCHER (`anim/skeleton.ts LAYERS.watch`, null in play) is shown every
+      the bullet "What holds a family once its TypeScript is gone"). A WATCHER (`rust/game_rules/src/anim_skeleton LAYERS.watch`, null in play) is shown every
       layer as the module leaves it, and the pose's singles, the run-forward bones, the columns the layer may write, the scratch poses it was
       handed and the numbers it answered are folded into THE LAYER'S WORD, with the count of its calls. THE RUN plays `warehouse-four:1`
       and then the drives a mission deals too little of: a quiet walk round a guard (80 s, crouch and close-in coming and going, with and without the knife and with the kit's close-in pose
@@ -388,7 +388,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
       bench and back on every ask, and some `put`s make a new array; the knob list is written whole as
       every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
       stand, a key's width, each layer's own numbers) is written by hand on both sides (the asking method in `character.ts`, the layer in `layers.rs`), held only by the layers' words on the
-      branches a drive reaches. `src/sim/built.ts` is 920 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
+      branches a drive reaches. `rust/game_rules/src/sim_built` is 920 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
       and started by every page. It is the layers' own arithmetic (the module's code section; some 10 KB a layer), and
       no build setting takes it back: measured on a scratch copy, the module is 664 KB at opt-level 3, 633 at 2, 601 at s, 595 at z.
     - NOBODY COMPARED, while there were two to compare: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of
@@ -402,7 +402,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     real state through every road a snapshot takes. Either maths (it works out no length). It moves only a game that HAS a die of its own (the page
     always; the harness with `TPS_SEED`). `g.dice.s` / `.n` read and write whichever place holds them, so a checkpoint file is the same file with the
     row on or off. OFF EVERYWHERE.
-  - THE SENSES, five rows, each a WHOLE QUESTION of the game's asked once where the TypeScript asked its lines one by one (`src/scene/collision.ts`, the
+  - THE SENSES, five rows, each a WHOLE QUESTION of the game's asked once where the TypeScript asked its lines one by one (`rust/game_rules/src/scene_collision`, the
     block headed "THE SENSES IN THE MODULE"; `senseSet(bit)` is the one gate: inside a tick, the copy standing, the row on, `EXACT.on`, and the
     instance's line tests the class's own: a check that puts its own `segmentBlocked` over one instance gets ITS lines, from the TypeScript). Each works its
     lengths and angles out in the module, so each answers only where the game's own maths stand. Each returns "ask the TypeScript" for what it cannot
@@ -410,7 +410,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `…Here`, then answer. What they write to is SCRATCH of one question (the lamps, the blobs, the nav grid's shut cells, a way's waypoints): nothing of the
     game is kept in the module by any of them. The numbers the host shares with these files (doubles a lamp, the answers' codes) are `boxMirror.ts FACE`,
     under the Rust's own names; `rust-check` reads the Rust sources and is red where one differs.
-    - `sight` — an eye on a man (`game/guards.ts eyeContact`: the cone in plan, the lens's elevation, then the line to his chest and, behind a blocked
+    - `sight` — an eye on a man (`rust/game_rules/src/guards eye_contact`: the cone in plan, the lens's elevation, then the line to his chest and, behind a blocked
       chest, to his head) from `sight.rs`. `?rustsight`, `TPS_RUSTSIGHT=1`. Only for an eye whose line passes glass (every eye's does today).
     - `light` — the lamps on a point (`guards.ts lightEstimateAt`) from `light.rs`. The level's own lamps are read where they stand, the rows of the
       lights' part (THE READER, below); the host keeps the gates of the lamps no fixture feeds (enabled, the owner skipped, passing or not), writes
@@ -443,9 +443,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `--both` answered 16.6 million questions twice with none differing; on the page (`rust-page.cjs systems`, headless Chromium, frames not drawn) a
     mission's first 240 frames with these rows raised are the game in TypeScript by digest and by every frame's bits (the smoke row is idle there: the
     page's senses are the renderer's). Nobody has played with one of these rows up.
-  - `doors` — THE FIRST RULE OF THE THINGS: the doors' step (`game/doors.ts Doors.update` and `Door.place` at its end: what was written onto each leaf
+  - `doors` — THE FIRST RULE OF THE THINGS: the doors' step (`rust/game_rules/src/doors Doors.update` and `Door.place` at its end: what was written onto each leaf
     since the last tick, the men and bodies in its swing, its swing, stops, closer, latch and lock's clocks, where its box stands) from
-    `rust/sim/src/doors.rs`, statement for statement. `?rustdoors`, `TPS_RUSTDOORS=1`. The leaves' own numbers are COLUMNS (`src/sim/doorshome.ts DC`,
+    `rust/sim/src/doors.rs`, statement for statement. `?rustdoors`, `TPS_RUSTDOORS=1`. The leaves' own numbers are COLUMNS (`rust/game_rules/src/sim_doorshome DC`,
     48 of them, a door an index), a part of the game's block from the moment the doors are made (bit 4; "State in the module"), on either maths;
     the STEP runs in the module only inside a tick, where the game's own maths stand, the box world's copy stands with the game's own leaves in it, and the
     Game's two floor functions are still the Game's (`Doors.there`). Anywhere else the TypeScript steps the same columns where they are (`updateHere`): a
@@ -456,7 +456,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `bodyR`) are asked of the statics in the module. It writes each leaf's ROW of the box world itself (next bullet but one). OFF EVERYWHERE. The door
     VERBS (`use`, `pull`, `pullTo`, `crack`, `pick`, `kickIn`, `rattle`) are still TypeScript, writing the columns through `Door`'s accessors: they move
     with what calls them (the door tools, the men).
-  - `falls` — WHAT FALLS AND WHAT IT LEAVES (`src/sim/fallshome.ts FallStore`, one a game: `game.falls`): the landings the simulation has scheduled for
+  - `falls` — WHAT FALLS AND WHAT IT LEAVES (`rust/game_rules/src/sim_fallshome FallStore`, one a game: `game.falls`): the landings the simulation has scheduled for
     things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves) and the LITTER map (m² of
     glass in each half-metre cell of the world's floor, which makes a footfall louder and is ground down by it) from `rust/sim/src/falls.rs`: six small
     rules (`schedule`, `deposit`, `due`, `step`, `heard`, `clear`), the store 6,790 doubles of the block (bit 8; a landing is twelve columns, the last the dust it raises). The landings wait in
@@ -464,15 +464,15 @@ one stops the tool by name, on an address one does nothing and says so in the co
     each with its own count and its own memory of when the floor was last told, so one kind's cap, gap or going inert never moves another's; a new kind
     of falling thing is a new list, not a new store. `?rustfalls`,
     `TPS_RUSTFALLS=1`. It works out no length and no angle, so it answers under either maths and on both stands. It is the GAMEPLAY half of broken
-    glass, cut out of `game/shards.ts` (whose plates and spray are dressing under `SHARDS.byFall`, `docs/agents/destruction.md`): `shards.ts` calls
+    glass, cut out of `rust/game_rules/src/shards` (whose plates and spray are dressing under `SHARDS.byFall`, `docs/agents/destruction.md`): `shards.ts` calls
     the store, and the store takes each rule there, here, or both ways (`FALLS.both`). The litter was a `Map` keyed by cell; it is a grid over the
     world's floor now, with the row on or off (glass laid off the slab is not kept: nobody can walk there), which the shards probes hold to the build
     before by digest. A call a footfall on glass and a call a tick with landings waiting: A PROOF AND A FOUNDATION, not a speed-up — it is here so that
     the breaks, when they move, lay their glass and schedule their landings with no crossing. OFF EVERYWHERE.
-  - `props` — THE FURNITURE MEN SHOVE (`game/props.ts PropSystem.update`: every chair, carton, bin and plant coasting on its friction, set going by the
+  - `props` — THE FURNITURE MEN SHOVE (`rust/game_rules/src/props PropSystem.update`: every chair, carton, bin and plant coasting on its friction, set going by the
     men who walk into it and holding back the man it cannot yield to, knocking its neighbours, swept by a swinging leaf, guided through a door frame,
     stopped by the statics, and the scrapes, knocks and castor rolls of all that) from `rust/sim/src/props.rs`, statement for statement. `?rustprops`,
-    `TPS_RUSTPROPS=1`. A thing's own numbers are COLUMNS laid for the cache (`src/sim/propshome.ts PropStore`,
+    `TPS_RUSTPROPS=1`. A thing's own numbers are COLUMNS laid for the cache (`rust/game_rules/src/sim_propshome PropStore`,
     `props.rs Props`: see the data layout below), a part of the game's block from the moment the furniture is made (bit 32), on either maths; the STEP runs in the module only inside a tick, where the
     game's own maths stand and the box world's copy stands with the game's own leaves in it (`PropSystem.there`); anywhere else the TypeScript steps
     the same columns (`updateHere`). Handed in for the call (`handOver`): the level's facts of each thing by row, the men, which of the box world's leaves may sweep (a leaf off its hinges is
@@ -490,12 +490,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
     with none differing; `rollback-check` whole on both stands with the rows up. WHAT IT COSTS A SNAPSHOT, not measured as time: with the row off the
     columns are ONE array of 13,328 bytes and the clock in its head is written every tick, so a snapshot after every tick copies it whole where it
     copied the fields that changed; with the row on they are in the game's block, which is shared a 4 KB piece at a time. (ONE array is the store's
-    field, the words a view asked of it, `src/sim/colstore.ts wordsOf`: two views of one buffer kept as two fields are the same bytes copied twice a
+    field, the words a view asked of it, `rust/game_rules/src/sim_colstore wordsOf`: two views of one buffer kept as two fields are the same bytes copied twice a
     snapshot, since the walk takes every typed array it meets.) Nobody has played with this row up.
-  - `slabs` — A LEAF OFF ITS HINGES, IN THE AIR (`game/doorblast.ts stepSlab`: the loose slab a blast, a charge or a boot at a run sends out of its frame,
+  - `slabs` — A LEAF OFF ITS HINGES, IN THE AIR (`rust/game_rules/src/doorblast step_slab`: the loose slab a blast, a charge or a boot at a run sends out of its frame,
     flying, dragging its foot, toppling, stopped dead by what its rays find, pushed out of what its toppling reaches, slamming flat, sliding out and
     coming to rest clear of every static) from `rust/sim/src/slabs.rs`, statement for statement. `?rustslabs`, `TPS_RUSTSLABS=1`. A slab's numbers are
-    A ROW of the slabs' columns (`src/sim/slabshome.ts SlabStore`, `slabs.rs Slabs`; a part of the game's block from the moment the doors are made, bit 64):
+    A ROW of the slabs' columns (`rust/game_rules/src/sim_slabshome SlabStore`, `slabs.rs Slabs`; a part of the game's block from the moment the doors are made, bit 64):
     152 bytes a row, the eleven doubles a slab in the air reads every substep first, six cold ones, four words. `Door.slab` READS THE ROW AS IT STANDS
     (`doors.ts SlabRow`, read-only by its type: one held across a step is the slab after the step) and is set whole. ONE SLAB A CALL: the host steps them in the order of their
     doors and poses each one's box before the next is stepped, as it always did, so a slab's rays meet the ones before it where this tick left them;
@@ -517,10 +517,10 @@ one stops the tool by name, on an address one does nothing and says so in the co
     POSE (the office, every wooden leaf torn out from both faces, 182,700 steps a side): 162 µs in TypeScript, 67 µs in the module. A tick has a
     slab in the air for a second or two after a blast and at no other time, so this row is a rule moved, not a tick made shorter. Nobody has
     played with this row up.
-  - `items` — WHAT IS THROWN OR DROPPED (`game/throwables.ts Throwables.update`: a can, a grenade, a magazine, a gun out of a dying hand, ageing,
+  - `items` — WHAT IS THROWN OR DROPPED (`rust/game_rules/src/throwables Throwables.update`: a can, a grenade, a magazine, a gun out of a dying hand, ageing,
     falling, meeting walls, leaves and furniture by a ray from its middle, bouncing, handing a chair a share of what it lost, coming to rest, and
     dropping off a thing that moved from under it) from `rust/sim/src/items.rs`, statement for statement. `?rustitems`, `TPS_RUSTITEMS=1`. AN ITEM
-    IS A HANDLE ON A ROW (`throwables.ts Item`, `src/sim/itemshome.ts ItemStore`, `items.rs Items`; a part of the game's block from the moment the pool is made,
+    IS A HANDLE ON A ROW (`throwables.ts Item`, `rust/game_rules/src/sim_itemshome ItemStore`, `items.rs Items`; a part of the game's block from the moment the pool is made,
     bit 128): 184 bytes a row, the twelve doubles read for every row on every tick first, then what a bounce reads and writes, then the fuse, the
     venting and what a magazine holds (other rules' own, carried), six words. `it.pos`, `it.fuse`, `it.settled` read and write the row whoever
     asks; `pos` and `vel` are given as new arrays and taken whole. THE ROWS ARE THE GAME'S LIST IN ITS ORDER (the order is the rule's: a full
@@ -553,11 +553,11 @@ one stops the tool by name, on an address one does nothing and says so in the co
     furniture's, the lines' and the circles' up): no red that the commit before does not have with the same digest. NOT MEASURED: a real page on a GPU, a second seed, more than one player.
 - **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
   functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA. The
-  poses are there now (the `poses` row: a part of `State`, a pool, and nothing in `game/rollback.ts` changed for it); the run-forward bones and each
+  poses are there now (the `poses` row: a part of `State`, a pool, and nothing in `rust/game_rules/src/rollback` changed for it); the run-forward bones and each
   layer's own numbers (its springs, its clocks, its targets) go into the block as the layer that owns them moves, as columns of a character. Then the
   layers, one at a time (the walk and the trunk; the arms and the hands), each held by `tools/qa/pose-ident.ts` and the missions as the functions
   are now. A layer written in Rust is handed the slot and where each pose starts, and asks `skeleton.rs` with no crossing.
-- **A clip is sampled in the module, and a sample finds its place once** (`rust/sim/src/clips.rs`, `skeleton.rs ask_sample`, `anim/skeleton.ts sampleClip`,
+- **A clip is sampled in the module, and a sample finds its place once** (`rust/sim/src/clips.rs`, `skeleton.rs ask_sample`, `rust/game_rules/src/anim_skeleton sample_clip`,
   `ClipSide`; under the `poses` row). THE CLIPS are authored data, not state: a character file's animations are copied into the module once, each as the
   host first samples it (`clip_begin` / `clip_track` / `clip_end`; the host writes a track's times and values where `clip_track` says), outside the
   games' blocks, with no part and no word of the layout: a COPY (`tools/sim/build.ts STATICS`). A clip the table has no room for, or that is not one it
@@ -571,7 +571,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   (`anim/gltf.ts Clip` says so): the memo and the copy are made once and nothing compares them again while a game runs.
   `pose_sample(g, at, nodes, clip, t, looped)` writes straight into the pose where it lives (`g = -1`: the bench); `ask_sample` is the `pub fn` a layer
   written in Rust calls with no crossing. There is NO CLIP PLAYER in `skeleton.ts`: which clip plays and its clocks are fields of the animator
-  (`game/character.ts`) and go into a character's columns with the layer that owns them. ONCE A LINE, in BOTH languages: where a time falls among a
+  (`rust/game_rules/src/character`) and go into a character's columns with the layer that owns them. ONCE A LINE, in BOTH languages: where a time falls among a
   track's keys depends on the track's times alone, and a clip's tracks share theirs (the rig: 7,314 tracks, up to 159 a clip, on at most TWO sets of
   times a clip), so every track is given the number of its LINE (the first track of its clip with the same times, single for single) and a sample
   searches each line once where it searched every track. The same place, so the same pose: this changed the TypeScript the game plays on today, with
@@ -597,7 +597,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   turn 2,798 ns before, 1,916 ns in TypeScript now and 1,592 ns in the module; the walk clip 1,644, 1,407 and 1,162 ns. A tick samples some fifteen, so
   this is under one per cent of a tick either way, below what `tickcost.ts` can tell from noise: NOT measured on a tick. It is groundwork: the layers
   that sample (the walk, the arms) can now do so from Rust.
-- **The box world's copy** (`src/scene/boxMirror.ts`, `rust/sim/src/world.rs`). The rules that move a box (doors, blasts, cuts, glass, props) are still
+- **The box world's copy** (`rust/game_rules/src/scene_box_mirror`, `rust/sim/src/world.rs`). The rules that move a box (doors, blasts, cuts, glass, props) are still
   TypeScript, so a `Box` object is the truth and the module holds a COPY: sixteen doubles a box, its flags, its cut planes, the grid's cells. It is not state
   of the game: nothing is snapshotted, and a copy thrown away is made again from the objects. What makes it safe is that it is PROVEN, not trusted:
   - (the TypeScript side; the Rust game's copy stands between ticks, the bullet near the top) the module is asked only INSIDE A TICK (`Game.stepSeats` → `col.tickOpen()` / `tickShut()`). As a tick opens every static is compared value for value
@@ -739,14 +739,14 @@ one stops the tool by name, on an address one does nothing and says so in the co
     smoke grid's kept copy of the leaves compares against.
 - **A man's state is columns, from one schema** (`src/sim/men/`, `rust/sim/src/men.rs`, `tools/sim/men.ts`, `tools/qa/men-check.ts`; 2026-11-05). Every man of a game (the player,
   a guard, a teammate, a civilian) has a row of the `men` part of the game's block: a Character takes it as he is made (`g.men`, a `MenStore`), and his Guard or Player record reads the
-  same row. `src/sim/men/schema.ts` names each column: its type, whose accessor it is, its group (hot, cold, the animator's), whether a digest reads it. `bun run tools/sim/men.ts` writes
-  `src/sim/men/cols.ts` (the accessors `Character`, `Guard` and `Player` inherit, so a column reads as a field) and `rust/sim/src/men.rs` (the struct of columns; a rule reads
+  same row. `rust/game_rules/src/sim_men_schema` names each column: its type, whose accessor it is, its group (hot, cold, the animator's), whether a digest reads it. `bun run tools/sim/men.ts` writes
+  `rust/game_rules/src/sim_men_cols` (the accessors `Character`, `Guard` and `Player` inherit, so a column reads as a field) and `rust/sim/src/men.rs` (the struct of columns; a rule reads
   `state(g).men.<column>[row]` with no copy), and then `bun run tools/sim/build.ts` builds it. The two sides' hash is held as a store is made. A number a digest reads stays a double:
   a single would round the rules. Rows 64: twice every man a game can hold (`levelfit.ts menHeld`, what a step's hand-over holds, the `manrows` row); a stand past the rows is a mistake that throws by name. A row is his for his life: `manLeaves` frees it and moves his numbers to a store of leavers (the game's side tables may read a man who has gone, as they always did), and a
   `handleOf` word taken before a row changed hands throws by name in `rowOf`. The men move into the block once as a game's first tick opens (the tenant, bit 256) and stay there, whatever the rows of RUST say, so a game's block is
   open from its first tick. A man of no game (a menu's figure, the viewer's, a tool's) has a row of a store of no game (`loneMen`). The part stands with the parts of a fixed length,
   before the pools: smoke and poses stay last because a parked block is one run of bytes to the last word in use (state.rs PARTS). `MEN_BREAK=1` turns every line of the check red.
-- **The level's lights are the module's (`rust/sim/src/lights.rs`, `src/sim/lightshome.ts`; no row, no twin).** What a run's digest reads: each fixture's on, broken, blind until, what a hand left and factor; the mains (active, permanent, until, since, restored at, the timer at the panel); the lamps fixtures feed; a camera's pan, integrator, state and last sighting; a tripwire's trips, last trip, held, cut and sense. ONE WAY IN: `LightHome.in(kind, fixture, numbers)`, and `flip` for a wall switch's circuit, whose rule reads all its fixtures at once. (What the host itself writes into the part: the level's facts as it is built (`add`, `camera`, `laser`, `stand`), a lamp's record (`feed`), and a machine as a file or a fresh encounter has it (`put`). `Fixture` and `Mains` have no setter.) `tools/qa/lights-lint.ts` is red on any other writer, and the compiler holds the rest: `game.ts LightTarget` is `lightshome.ts Fixture`, whose state is getters.
+- **The level's lights are the module's (`rust/sim/src/lights.rs`, `rust/game_rules/src/sim_lightshome`; no row, no twin).** What a run's digest reads: each fixture's on, broken, blind until, what a hand left and factor; the mains (active, permanent, until, since, restored at, the timer at the panel); the lamps fixtures feed; a camera's pan, integrator, state and last sighting; a tripwire's trips, last trip, held, cut and sense. ONE WAY IN: `LightHome.in(kind, fixture, numbers)`, and `flip` for a wall switch's circuit, whose rule reads all its fixtures at once. (What the host itself writes into the part: the level's facts as it is built (`add`, `camera`, `laser`, `stand`), a lamp's record (`feed`), and a machine as a file or a fresh encounter has it (`put`). `Fixture` and `Mains` have no setter.) `tools/qa/lights-lint.ts` is red on any other writer, and the compiler holds the rest: `game.ts LightTarget` is `lightshome.ts Fixture`, whose state is getters.
   - **Ways out are bits on the call's answer, at the place in the tick they always were** (`LIGHT_EV`, `CAM`, `LASER`, `in`'s answer to a trip). What goes with them stays TypeScript: the guards' edge and the die's draws per patrol guard, the errand to the breaker, powerout.ts, words, sounds, the debrief, `sendToLook`. Who is at the panel is an input (`near`); who that is, his hand and his line are the caller's. A camera's picture is an input too (`cameraSee`: the eye test and Sam's meter, handed in as numbers): THE MACHINE NEVER ASKS THE LIGHT.
   - **Dressing reads the simulation.** `updateTargets` calls the step, then `LightHome.paint` copies each row to its `RtLight` and the boxes' emissive, `markGain` and a car lamp's paint are written from the factor. `fixtureBreak.ts`, `moths.ts`, the fog's records read what is there. `settings.emissiveScale` is an input number to the step (a renderer setting a recording carries in `journal.ts EnvSnap`).
   - **The rows are in the order of `engine.lights`, and a row's index is its place among the rows.** READ WHERE THEY STAND: a question about the light on a point and the sweep of the light that comes round take the rows from the block (`light.rs each`, `glow.rs`: THE READER, below), and `guards.ts writeLamps` writes only the lamps that have none. Stood once as the level is built (`LightHome.stand`): `t.light`, each `areaLights`, each beacon's spot, each camera's cone. A lamp with an owner gets no row. No place is stored: a lamp of the question's own is written with how many rows stand before it in the list, which is what keeps the sum's order, and floats do not commute. A row carries both selves of a lamp: the steady one's columns only where its bit is up (`feed` says, from `RtLight.steady`; `step` never touches them), so no order between the step and the feed matters and a restored block is right by itself. Which classes a question leaves out are bits on the row (PASSING, SCREEN). A lamp the module writes must have a row: `stand` is an error by name on a beacon's or a cone's lamp with an owner.
@@ -824,7 +824,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     - **What a step met is said after the step, with the boxes as the step had them.** The slam was said in the middle of the step, with the slab's
       own box out of the dynamic list. Both sides now list what the step met (`SlabMet`: the slam and where, coming to rest, what the settling
       did) and `flySlab` says it once the step is over, the slam with that box out of the list again.
-    - **A store of columns is ONE class** (`src/sim/colstore.ts ColStore`: the game's block and where the family's part of it starts, a swap of two
+    - **A store of columns is ONE class** (`rust/game_rules/src/sim_colstore ColStore`: the game's block and where the family's part of it starts, a swap of two
       rows, the bytes taken and put, the diff in words). `PropStore`, `SlabStore` and `ItemStore` are that plus what their ROWS mean (which are
       live, in what order, which tables say who is where). The next family extends it; the doors' and the falls' stores are older than it and are not
       on it yet (they are parts of the block the same way: "A game's block is taken as the game is made").
@@ -884,7 +884,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   module's maths in `Math`'s place, and ends on the word of the same setup without the row (a whole server and its clients on the row:
   `tools/qa/mpserver-check.ts --setup '{"scenario":"?roomclear&squad4","seed":7,"knobs":{"RUST":{"maths":true}}}'`). `--missions`: five scripted squad
   runs on the server's stand (shipped, the senses on the CPU), each played twice, a row on and off, and the chained raw bits of the state after EVERY update
-  (`game/digest.ts rawBits`) are the same; `--node` plays them under V8. Measured 2026-11-02: 38,634 ticks, every one the same bits, and the five end words
+  (`rust/game_rules/src/digest rawBits`) are the same; `--node` plays them under V8. Measured 2026-11-02: 38,634 ticks, every one the same bits, and the five end words
   are the same under bun and under node. `tools/qa/rust-page.cjs` is the page's half in Chromium: `loads` (the stream in the page, Chrome's V8 against the module, and the module's
   word against bun's), `rows` (a mission's first 240 frames with `?rustmaths` are the game without it, by digest and by every frame's bits), `plain` (the page as a player
   opens it: the rows of `RUST_ON` on, the same game), `systems`, `words` (`?rust<row>=0`), `nojit`.
@@ -921,7 +921,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   WHAT WAS A HAND-BACK IS A THROW BY NAME (`collision.ts handedBack`), each a mistake of the code and none of them content: a sense asked with the
   copy not standing; a sense asked while a check has laid its own line test over the box world; more leaves than a list holds; a pane rule with no
   rows; an eye's line that stops at glass; a line too long to be one, or a point that is no number; a search asked from inside a price; more eyes
-  than the fog's pass holds. (A level the copy cannot hold is refused as it loads, `game/levelfit.ts`; a floor over the search's tables is the
+  than the fog's pass holds. (A level the copy cannot hold is refused as it loads, `rust/game_rules/src/levelfit`; a floor over the search's tables is the
   build's mistake, `NavGrid.there`.) BETWEEN TICKS a sense stands the copy for itself whatever `ANYTIME` says (`lone(true)`): that switch is now
   only the lines' and the circles'.
   The six words stay retired on an address (`sim.ts ROWS_GONE`: `?rustsight=0` is said to do nothing, as `?rustwalk` is), and `rust-check` holds the
@@ -1049,7 +1049,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     26,583 ticks to the bit); `--both` on two runs (2,662,497 answers, none differing, no stale row); `RUST_BREAK=1 --missions --rows fog` red
     on four runs; `typecheck` and `typecheck:qa`. Not run: node, the page, the whole `--both`. `fogofwar.ts` changed by one extracted function
     (`handEyes`), no statement of it moved.
-- **State in the module is state of the game** (`rust/sim/src/state.rs`, `src/sim/state.ts`, `game/rollback.ts`). What a game keeps in the module from
+- **State in the module is state of the game** (`rust/sim/src/state.rs`, `rust/game_rules/src/sim_state`, `rust/game_rules/src/rollback`). What a game keeps in the module from
   one call to the next is ONE BLOCK of bytes a game, and nothing else in the module is state:
   - **Rust.** `state.rs State` is a `#[repr(C)]` struct: a head (the layout's word, the homes) and then A FIELD A FAMILY of the update, each a struct
     of flat fixed-size columns, with its row in `PARTS` (where, how long, a version). Four rules: NO ADDRESS in a block, only indices (it is the same
@@ -1077,7 +1077,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     whole memory. The snapshot counts any it meets (`Snapshot.simViews`, carried on by every take since), `restoreSnapshot` THROWS on such a snapshot
     (in place, its bytes would land on whichever game holds the slot now) and `rollback-check` is red on one. A slot that is not one traps in the module
     (`state.rs state`): it never answers for another game's block.
-  - **A game's block is taken as the game is made** (2026-11-05; `SimState.keep`, `sim/colstore.ts`, the five stores beside it). A family whose state
+  - **A game's block is taken as the game is made** (2026-11-05; `SimState.keep`, `rust/game_rules/src/sim_colstore`, the five stores beside it). A family whose state
     is COLUMNS — the doors, what falls, the furniture, the leaves off their hinges, the thrown things — is made OVER the game's `SimState`
     (`new PropStore(game.sim, …)`: `Game` hands `this.sim` to `FallStore`, `PropSystem`, `Throwables` and `Doors`) and its columns are that family's
     part of the block from the store's first line to the game's last. THE STORE HAS NO ARRAY OF ITS OWN: no `own`, no `into` / `outOf`, no
@@ -1104,7 +1104,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `Game.stepSeats`, inside the tick's own `try`). A system registers `simTenant({ name, bit, wants, into, outOf, tend? })`. `wants(g)` is the system's own
     reason, whole: a system with a TypeScript twin says its row of RUST and that THIS game has such state at all (the die: `RUST.dice` and a die of its
     own, so a game with none is never given a block for it); a rule that lives only in the module says its own switch (the smoke grid, the tenant in
-    `game/sense.ts`, whose `into` is an empty grid and whose `outOf` is zeros, there being no TypeScript copy to move). `tend`, if it has one, is called
+    `rust/game_rules/src/sense`, whose `into` is an empty grid and whose `outOf` is zeros, there being no TypeScript copy to move). `tend`, if it has one, is called
     each tick the system is at home, for what has come or gone since (the poses' is the rule of who is in the pool). So a row may be raised or dropped under a running game, a snapshot
     holds where things were. (A `SimState` nothing was ever kept or moved into has no block at all: an empty take, nothing in a slot. No game is such a one.)
   - **The snapshot** knows a `SimState` by its make (`K_SIM`): taken as the block in 4 KB pieces, a piece unchanged since the last take shared;
@@ -1119,8 +1119,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
        would hold a pointer; a `spare` field wherever the compiler would pad, and a `const` assert that its size is the sum of its fields).
     2. A field of `State` for it in `state.rs`, after the others, and its row in `PARTS` (`offset_of!`, `size_of`, a version to raise whenever the
        columns change). No other `static mut`: scratch of one call is the only other kind, and it needs its row in `tools/sim/build.ts STATICS`.
-    3. Its functions take the slot (`state(g)`) and are exported from `lib.rs`; `SIM_ABI` goes up, and the name joins `SIM_EXPORTS` in `src/sim/sim.ts`.
-    4. TYPESCRIPT: its name in `SIM_PARTS` and a `P_<NAME>` in `src/sim/state.ts`, in the order of `PARTS`.
+    3. Its functions take the slot (`state(g)`) and are exported from `lib.rs`; `SIM_ABI` goes up, and the name joins `SIM_EXPORTS` in `rust/game_rules/src/sim_sim`.
+    4. TYPESCRIPT: its name in `SIM_PARTS` and a `P_<NAME>` in `rust/game_rules/src/sim_state`, in the order of `PARTS`.
     5. A row of `RUST` (off in the module and on both stands; `?rust<name>`, `TPS_RUST<NAME>=1`, the word in `src/host/standEnv.ts STAND_ENV`).
     6. A file that registers `simTenant({ name, bit, wants, into, outOf })` with a bit nobody has used, imported once by `game.ts` (in `src/sim/` when it
        names no game module, like the die's; in `src/game/` when it walks the game, like `posehome.ts`): `into` copies the game's values from the
@@ -1138,11 +1138,11 @@ one stops the tool by name, on an address one does nothing and says so in the co
     lists there, each a Rust name beside the name the TypeScript has: a KNOB by its path in the game's tables (`GAIT_LEAN = "MV.gait.lean"`; read
     `k(GAIT_LEAN)`, a switch `on(…)`), a ROLE by the animator's name for a node of the rig (`SPINE1 = "spine1"`; `role(SPINE1)`), a LIST by the
     animator's name for some nodes to run forward (`FK_LEGS = "fkLegs"`; `list(FK_LEGS)`). The module hands the names out (`knob_addr`, `knob_len`)
-    and the host fills the values in: `src/game/rustknobs.ts` finds each knob's path once, in the registered knob tables (`game/knobs.ts`) or, for a path that starts
+    and the host fills the values in: `rust/game_rules/src/rustknobs` finds each knob's path once, in the registered knob tables (`game/knobs.ts`) or, for a path that starts
     `ANIM.`, in the animator's own tables of authored numbers (`character.ts animTables`: add a table there when a layer reads one that is no knob), and WRITES EVERY
     VALUE AS A TICK OPENS (`Game.stepSeats`, straight after the block is settled and before anything of the tick runs), so a knob turned in the
     panel, by a recording's `applyKnobs`, by a recipe or by a check between two ticks is the module's by the next, and the Rust code of a tick reads
-    what the TypeScript of that tick reads. The roles and lists go with the rig (`anim/skeleton.ts layerSlot`, when another rig comes onto the
+    what the TypeScript of that tick reads. The roles and lists go with the rig (`rust/game_rules/src/anim_skeleton layer_slot`, when another rig comes onto the
     bench). A knob is CONFIG, the same for every game in the process: it is in no game's block and no snapshot (the two tables are `COPY` rows of
     `tools/sim/build.ts STATICS`). RED: a path that is not a number of those tables (an error with its name the first time the list is read, and
     the `list` line of `tools/qa/layer-ident.ts`); a name of the lists that no line of the crate reads (its `read` line); a knob changed between two
@@ -1274,7 +1274,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
 - **THE GRID'S SMOKE AND THE LIGHT UNDER A ROOF, AS THEY STAND** (`rust/sim/src/bricks.rs`, `glow.rs`, `light.rs`; `rust/game_rules/src/sense`). Smoke is density in half-metre cells held in bricks, a part of the
   game's block: stepped ten times a second, fed by the emitters the picture's solver is handed, passing from cell to cell only where nothing solid and no leaf stands between them, drifting with the wind under the open sky
   (`wind::wind_storm_drift`, `Wind.stormShare` for where). A level's plan too large for a grid, or more smoke than bricks, is clear air to a sight line. The light under a roof is swept from the steady lamps a tenth of the
-  plan a step (`SENSE.glow.sweep`); the moon and the sky are read the same way by day and by night (`hours::sun_light`, `dome_light`). The numbers are `SENSE` (`src/game/sense.ts`). Held by `rust/game_start/tests/senses.rs`
+  plan a step (`SENSE.glow.sweep`); the moon and the sky are read the same way by day and by night (`hours::sun_light`, `dome_light`). The numbers are `SENSE` (`rust/game_rules/src/sense`). Held by `rust/game_start/tests/senses.rs`
   and `tools/qa/modelerr.ts`; a tool asks through `senseTool` or `guards.ts lightEstimateAt`, both between ticks and of the Rust game.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
@@ -1434,7 +1434,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the
   picture; the server need not run it, two machines need not agree on it, and it can read the game and never write it.
-  - **The list is a table, `src/game/dress.ts DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up (ONE EXCEPTION: `wetGround`'s step is always taken and
+  - **The list is a table, `rust/game_rules/src/dress DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up (ONE EXCEPTION: `wetGround`'s step is always taken and
     reads its row itself, because with the row down it must put back what it wrote on the statics: `wetGround.ts follow`). Every row
     is up in the page and on both stands. It is not a rule of play: no `FROZEN_HOLDS` line, not a knob table, no recording carries it. The rows: `air`
     (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `wetGround` (the open ground a rain wets, as the renderer's words of the statics: `docs/agents/weather.md`), `fires` (fireDraws; the lamp's flicker is a light and
@@ -1442,7 +1442,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `stature`, `net` and `wind`: sixteen. The pool of rigid pieces and a spent case's landing have no row: every host runs them (below). `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
     DOES YET: the game server still takes every step (measured below; its owner's call).
   - **`tools/qa/dress-check.ts` holds it**: the five comparison missions of `rust-check --missions` (the server's stand: shipped, the senses on the CPU), each
-    played with every row down and with every row up, and the chained raw bits after EVERY update (`game/digest.ts rawBits`), the end and the run digest are
+    played with every row down and with every row up, and the chained raw bits after EVERY update (`rust/game_rules/src/digest rawBits`), the end and the run digest are
     the same. `--each` plays a row at a time (which row, when the set is red); `--rows a,b`; `DRESS_TRACE=<file>` in front of `--run` writes each tick's bits
     by part (`rawBitsParts`), which says what a step touched. `DRESS_BREAK=1` puts a gameplay step down with the rows (the doors) and must fail.
     A ROW THAT WORKS ONLY IN A WEATHER (`rain`, `wetGround`, `wind`) does nothing on a dry night, and the plain run says nothing of it: it is held by
@@ -1482,7 +1482,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     tiers do not play the same game), and its chunks are in the raw bits. Glass: where shards land becomes the litter that makes a footstep louder
     (`shards.ts` underfoot).
   - **In Rust**: `rust/sim` is gameplay, `rust/dress` is dressing, `rust/prim` is for both (`tools/sim/build.ts SIDES`; a crate with no row is red). They are
-    TWO MODULES with a memory each (`src/sim/built.ts`, `src/dress/built.ts`; `src/sim/load.ts` starts either, handing in nothing), so dressing has no road to
+    TWO MODULES with a memory each (`rust/game_rules/src/sim_built`, `src/dress/built.ts`; `rust/game_rules/src/sim_load` starts either, handing in nothing), so dressing has no road to
     the simulation's memory: what it needs of the game is copied in (`src/dress/dress.ts dressIn()`). The build reads the BYTES that ship
     (`tools/sim/wasm.ts`, every instruction decoded): `sides` (no simulation crate links a dressing one, nor the other way), `alone and strict` (neither module
     imports anything; the simulation's code holds no relaxed SIMD and no threads instruction; an instruction the reader does not know is red until somebody
@@ -1513,7 +1513,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - Tried and dropped: fixed SIMD switched on for the whole crate (`+simd128`): no question got faster, nothing in these kernels
     vectorises by itself. A build rule against `memory.grow`: the module has held ONE since its first build (the standard library's
     allocator, linked through `rust/prim` and called by nothing), so the views are held by the length test, not by a rule.
-- **Rows that are on** (2026-11-03; the maintainer, of the release: "let's also get the rust rewrite into this build too"). `src/sim/sim.ts RUST_ON`
+- **Rows that are on** (2026-11-03; the maintainer, of the release: "let's also get the rust rewrite into this build too"). `rust/game_rules/src/sim_sim RUST_ON`
   = the rows that are ON WHERE THE GAME IS PLAYED: `lines`, `circles`, `fog`. The page's boot raises them (`profile.ts pageRows`, from `pageSwitches`), so the
   shipped stand has them and a game server's recipe carries them; the frozen stand holds every row off (`FROZEN_HOLDS` `RUST.lines`, `RUST.circles`,
   `RUST.fog`, made from the list; `TPS_RUST<ROW>=1` raises one). OFF WORDS: `?rust=0` = none of the default rows, the game in TypeScript as it was (a row
@@ -1599,7 +1599,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
 - **One way in** (2026-11-04; the maintainer: "let's get the rust merged asap and delete the typescript"). A row that is on sends its questions to the
   module only where the module can answer; everywhere else the TypeScript still did, quietly, which is why a twin could not be deleted. This is the step
   that finds those places and closes them, a family at a time. NO RULE OF PLAY MOVES: every answer is the same answer, by digest (the 42 on both stands).
-  THE COUNT (`src/sim/sim.ts FELL`, `fell(row, why)`): `TPS_FELL=1` in front of any headless tool counts every question the TypeScript answered while its
+  THE COUNT (`rust/game_rules/src/sim_sim FELL`, `fell(row, why)`): `TPS_FELL=1` in front of any headless tool counts every question the TypeScript answered while its
   row was up and prints `FELL <n> × <row> · <why>` as the tool ends (`FELL none`); a play-through prints the sum of its runs. `TPS_FELL=who` adds the
   first two callers (`who6`: six), `=throw` stops at the first. On the page: `?fell`, read by `window.__sim.fell()`. Off it costs one test at a place that
   was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
@@ -1618,7 +1618,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   many questions proved the copy for themselves and how many windows a question proved. A copy that did not stand because the level does not fit is
   not asked for again until the next tick or window (the TypeScript answers, as it always did there: slower, never wrong). A game's pose pool with no
   room: a layer is written once, in Rust, so a man with a pose outside the module cannot be posed, and `layerSlot` says so by name. It is a mistake
-  and no case of play, because THE POOL HOLDS EVERY MAN A GAME CAN HOLD, by the game's one count (`game/levelfit.ts fitRows`, the row `poses`):
+  and no case of play, because THE POOL HOLDS EVERY MAN A GAME CAN HOLD, by the game's one count (`rust/game_rules/src/levelfit fit_rows`, the row `poses`):
   `menMost(civMost())` men, the number `spawnUnit`, `civilians.ts join` and the seats each refuse one more than, each with every pose his
   animator can make (`PoseSet.most`, which stops a set that makes one more than its owner said; an animator's is 13). A stood game over the row
   is not a game (`stoodOver`, as the constructor ends), and `tools/qa/copyfit-check.ts` reads it for every level on both stands. Today a game
@@ -1648,7 +1648,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     left of the tick, and every later question of that tick, the senses' and the rules' steps among them, was the TypeScript's. It is a debt now, as
     `wrote` is, and the compare that pays it copies the cells first.
   - A RAY OF NO LENGTH meets nothing, said once at the top of `collision.ts raycast` for both walks.
-  - THE STAGE (`anim/skeleton.ts stageOpen`, `stageShut`; `Character.update` and `CharacterAnimator.update` open it). An animator's layers are handed
+  - THE STAGE (`rust/game_rules/src/anim_skeleton stage_open`, `stageShut`; `Character.update` and `CharacterAnimator.update` open it). An animator's layers are handed
     their poses by their places in one pool of the module, so an update's poses must STAND IN A BLOCK. A man of a ticking game has his in the game's
     block. Every other update had none and was posed by the TypeScript: a man posed as he is spawned, before any tick has opened over him; a menu's
     figure, who is in no game; a game whose block another game's tick has parked. Now a set at home has its block bound as the update opens, and a set
@@ -1657,7 +1657,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     longer than the module holds, a layer's clip the module does not hold, a reload of more stations than a path may be, a knife blow of more
     than 4 keys, a big tool's record of more than 64 blows, a table of a throw outside 2 to 16 keys. Each was a quiet "the TypeScript poses this one", and
     the last four were not even counted. None of them happens in the game (the count read none over the 42, and `layer-ident`'s `caps` holds
-    the tables and every gun's reload to their sizes), so each is now a mistake said by name through one check (`anim/skeleton.ts layerFits`;
+    the tables and every gun's reload to their sizes), so each is now a mistake said by name through one check (`rust/game_rules/src/anim_skeleton layer_fits`;
     the row's bullet, "WHO IS ASKED"), but for the big tool's record, which play makes and no table bounds: its layer is handed the two blows it reads
     (`character.ts blowsNear`), so no size is left to it. With the layers' TypeScript gone (2026-11-05) `layerSlot` counts
     nothing: a pose the pool had no room for, a pose not at home and a rig the bench does not hold are each a mistake of whoever asks, thrown by
@@ -1714,7 +1714,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     handed with each walk and are no table of the copy). The weather keeps at most four (`roofsOf`: a level's biggest; the picture's frame has a
     slot each) and a walk is handed four, which were two literals. `weatherKinds.ts MAX_ROOFS`, `itemshome.ts ITEM_ROOFS` and `items.rs MAX_ROOFS`
     are held to one number by `rust-check` (`items`), and the way back is a throw by name.
-  - MORE MEN THAN A STEP IS HANDED CANNOT HAPPEN, BY ARITHMETIC (`game/levelfit.ts menMost`, `handOverMost`, `civMost`, six rows of `fitRows`). The doors'
+  - MORE MEN THAN A STEP IS HANDED CANNOT HAPPEN, BY ARITHMETIC (`rust/game_rules/src/levelfit men_most`, `handOverMost`, `civMost`, six rows of `fitRows`). The doors'
     step is handed 256 contacts and the furniture's 256 men, and each fell back to TypeScript past that. A game holds at once the first seat's
     man and the guards and units (`guards.ts spawnUnit` refuses one more than `MAX_SKINNED`, sixteen, whoever asks), its civilians and the other
     seats' men. CIVILIANS COME INTO A GAME IN ONE PLACE (`civilians.ts join`: the level's own as it is stood up, a rescue's hostages, the man a
@@ -1733,7 +1733,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     plugged, as before); the chair's coasts and its `roll` events to the digit, over 5,760 steps (`CHAIRROLL_BREAK=1`: 4 FAILED, as before).
     No other tool steps a system with no game (`leafway-check` and the level editor make `Doors` to deal swings and step nothing; the model
     viewer's stage lives under the workbench and goes with it).
-  - A BOX WORLD THE COPY CANNOT HOLD CANNOT HAPPEN, AT LOAD OR IN PLAY (`game/levelfit.ts stoodOver`, `breakRoom`; `game/wallbreak.ts
+  - A BOX WORLD THE COPY CANNOT HOLD CANNOT HAPPEN, AT LOAD OR IN PLAY (`rust/game_rules/src/levelfit stood_over`, `breakRoom`; `rust/game_rules/src/wallbreak
     WallBreak.room`, `over`, `piecesSure`; `boxMirror.ts outgrown`). A level that did not fit a table of the copy was not copied and every question
     of it went to TypeScript ("the level does not fit the copy": the box world's own way back, and everybody's). Content is never an error and
     there is nobody to hand a level to, so it is closed in three places, none of which is a bigger table:
@@ -1803,7 +1803,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - ONE WINDOW A CALLER AS A LEVEL IS STOOD UP: `doorswing.ts dealSwings` (every leaf's room: some 1,370 circles on the office), `props.ts settle`
     (829) and `destruction.ts index` (a roof's height a thing: 265) each proved the copy a question. 2,501 lone proofs a load of the office are 38
     (the fixtures' two lines each in `Game`'s constructor, which are not this family's).
-  - A LEVEL TOO BIG FOR A POOL DOES NOT LOAD (`game/levelfit.ts levelOver`, the first statement of `Game`'s constructor). A level of more than 64
+  - A LEVEL TOO BIG FOR A POOL DOES NOT LOAD (`rust/game_rules/src/levelfit level_over`, the first statement of `Game`'s constructor). A level of more than 64
     doors, 128 loose things of furniture (or 256 boxes of them), or 256 sheets of glass was stepped, or judged, in TypeScript without a word. It is
     said now before anything of the level is built, the stores refuse more rows than they have (`doorshome.ts`, `slabshome.ts`, `propshome.ts`),
     and the level validator says the same of the document whole (`levelData.ts`: doors, things, the things' boxes). THE COUNT IS ONE SOURCE:
@@ -1862,7 +1862,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     reads nothing of the module's sum, by the code and by no check. NOT A HAND-BACK AND STILL A LIMIT: THE GRID'S SWEEP OF THE
     LIGHT THAT COMES ROUND writes the level's steady lamps into the same table (`guards.ts steadyLamps`) and takes no more than 256: past that
     the field stands as it was and the bounce light stops, with no word. The most a level has today is 33 (the office; every other level 24 or
-    fewer; 47 counting those not lit). SINCE THE DELETION OF `lampsHere` it is the row `steady` of the levels' fit (`src/game/levelfit.ts`,
+    fewer; 47 counting those not lit). SINCE THE DELETION OF `lampsHere` it is the row `steady` of the levels' fit (`rust/game_rules/src/levelfit`,
     `guards.ts steadyMost`: every lamp nobody carries that is no flash and no beacon's, lit or not), so a level over it is refused as it loads,
     by name. A lamp stood up in play past it still stops the sweep with no word; the sweep reads the lights' own rows next and the limit goes.
     (IT HAS GONE, with THE READER below: the row `steady` and `steadyMost` are out. The sweep's table now carries only steady lamps no fixture
@@ -1994,7 +1994,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
        column beside its source.
     6. WALK ORDER: what a kernel visits together lies together in the order it visits.
     7. Fixed-width SIMD only (the line, above), and a rule of play is not re-defined in singles to get four lanes without the maintainer's word.
-  - **A POSE IS TEN COLUMNS** (`src/anim/skeleton.ts Pose`, `rust/sim/src/skeleton.rs rows`): channel c of node i is `cols[c * rows + i]`, `rows` =
+  - **A POSE IS TEN COLUMNS** (`rust/game_rules/src/anim_skeleton Pose`, `rust/sim/src/skeleton.rs rows`): channel c of node i is `cols[c * rows + i]`, `rows` =
     the nodes rounded up to 4 (55 → 56), where it was `data[i * 10 + c]`. In an array of the pose's own and in the game's block alike (the pool hands
     out `singles(nodes)`, and every pose starts on a 16-byte boundary: `state.rs` asserts the part does). The accessor was RENAMED (`data` → `cols`)
     so that the type check names every reader: a reader left on the old index would have compiled and read another node's numbers. A rotation's
@@ -2030,7 +2030,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     row up, as a player opens it, with the maths alone, and with no WebAssembly). NEVER SEEN ON A GPU: `SkeletonInstance.update` (the skinning
     matrices the picture draws from) was re-indexed, and what holds it is the fold above, not an eye. One seed a run.
 - **A pose's bulk arithmetic in singles** (2026-11-04; the maintainer on 2026-11-03, asked which arithmetic the kernels a pose is blended and sampled by
-  should use: "Singles, plain root for lengths"). THE SWITCH: `src/anim/skeleton.ts POSEMATH.singles`. On, `blendPose` and the step `sampleClip` takes
+  should use: "Singles, plain root for lengths"). THE SWITCH: `rust/game_rules/src/anim_skeleton POSEMATH.singles`. On, `blendPose` and the step `sampleClip` takes
   between two keys are worked in SINGLES, every operation rounded once, and a rotation is made a unit again by the plain root of its squares; off, in
   doubles with the game's compensated length, the build as it was to the bit. A pose's numbers are stored as singles either way, so what moves is their
   LAST PLACE: it is a rule of play, not a row. ON in the page (`?posesingles=0` = doubles), OFF in the module and on the frozen stand
@@ -2081,7 +2081,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   out as columns moves no bit and is the next step. Never seen on a GPU: the picture's skinning reads these poses, a last place apart. Nobody has
   played it. The rule written on a game in the middle of a fight is not held by a check: only before its first tick.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
-  `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
+  `scene/round.ts` loads, and a cube and a power of two written with `**` in `rust/game_rules/src/stalk` and `rust/game_rules/src/showwhy`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.
   Also: `exact.ts log10` gives the exponent exactly for every decimal power that is a normal double (1e-307 … 1e308); for the subnormal ones
   (1e-308 and smaller) its own guard misses by a few 1e-9 and the answer stands a hair off. The Rust port does the same to the bit; nothing in the game takes
@@ -2089,7 +2089,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
 - **Not seen.** Nothing here draws, so nothing here was seen on a GPU; the page check runs the bundle on the software adapter with the frames undrawn. Nobody
   has built the crate on a Mac or on Windows.
 
-- **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
+- **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `rust/game_rules/src/sim_weatherhome`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
 
 - **The TypeScript tick is deleted.** The Rust game (`rust/game`) is the only game that
   steps; there is no word for another (`?rust`, `TPS_GAME=ts` name nothing now), and an address that hosts or joins a co-op game or plays a tape back

@@ -1,10 +1,10 @@
-// THE LEVEL FORMAT'S PLAIN RECORDS: a box, a door, a light, as a level file and a kit view's set write them (the file's whole shape: scene/levelData.ts, which takes them from here).
+// THE LEVEL FORMAT'S PLAIN RECORDS: a box, a door, a light, as a level file and a kit view's set write them (the file's whole shape: tools/levels/lib/levelData.ts, which takes them from here).
 import type { Quat, Vec3 } from '../math/vec';
 import type { MarkingDef } from './markings';
 import type { ShapeForm } from './shapes';
 
 /** Box flags by NAME as they appear in a level file. Only the authored subset: Dynamic / Emissive / AreaLit / Rot are set by the runtime (props, upload,
- *  game.ts area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */
+ *  rust/game_rules/src/game area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */
 export const AUTHORED_FLAGS = ['NoPrimary', 'NoShadow', 'Cutaway', 'Gloss', 'Glass'] as const;   // (Glass: experiment E3 — a pane; boxes.ts BoxFlag.Glass)
 export type FlagName = typeof AUTHORED_FLAGS[number];
 /** One static box (scene/boxes.ts Box, minus everything the runtime owns: owner, the Emissive / AreaLit / Rot / Dynamic bits). */
@@ -32,7 +32,7 @@ export interface BoxData {
   rough?: number; metal?: boolean;
   /** Box.stuff: what the box is made of, where its material's row does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or
    *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
-   *  look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
+   *  look, and what a round's hit looks like: rust/game_rules/src/particle_fx HITSTUFF): no rule of the game reads it. */
   stuff?: string;
   /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
    *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
@@ -56,7 +56,7 @@ export interface BoxData {
  *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
 export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint, finish and word */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.does */ does?: string; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
 export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
-/** An analytic light (scene/level.ts LightDef, every field the renderer reads). `id` is the LightDef.name the game keys targets / panels on. */
+/** An analytic light (tools/levels/lib/level.ts LightDef, every field the renderer reads). `id` is the LightDef.name the game keys targets / panels on. */
 export interface LightData {
   id: string;
   kind: 'point' | 'spot' | 'dir';
@@ -77,5 +77,5 @@ export interface LightData {
   /** BoxData.id of the emissive glow card that represents the fixture (goes dark with the light) */
   fixture?: string;
 }
-/** A hinged leaf in a doorway gap (game/doors.ts DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
-export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (doors.ts DoorDef.swing); absent = dealt from the level: into the room it serves (game/doorswing.ts) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
+/** A hinged leaf in a doorway gap (rust/game_rules/src/doors DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
+export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (rust/game_rules/src/doors DoorDef.swing); absent = dealt from the level: into the room it serves (rust/game_rules/src/doorswing) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (rust/game_rules/src/doors DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }

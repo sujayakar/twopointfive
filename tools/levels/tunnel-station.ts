@@ -7,7 +7,7 @@
 // THE PLAYER IS NOBODY ON THE FLOOR: he is over the squad, and all he has is the view and the squad's command key. So everything here is laid out to be read
 // from above, with room for four men wherever four men are sent: a road long enough to look down, a gateway three metres wide, a yard nine metres deep, rooms
 // seven metres deep with their doors on the walls the view looks at, and two metres of plain wall on each side of every door.
-// FOUR BEATS, one new thing at a time (game/rails.ts locks the rest; its script, cut with the mission, staged the fire):
+// FOUR BEATS, one new thing at a time (rust/game_rules/src/rails locks the rest; its script, cut with the mission, staged the fire):
 //   the road      the squad is behind its two pickups under fire from the roadblock at the tunnel's mouth. Turn the view, zoom it, shift it; then the
 //                 command key on the yard takes the squad through the gate under its own smoke, and the roadblock comes for the gate.
 //   indoors       what is behind a door is not known until it opens (the fog of war is on from the first step). The command key on a door stacks them; the
@@ -36,18 +36,18 @@
 //   z 25.6 - - - - - the plough's bank, the rail, the drop - - - -     +==+
 //
 // THE SNOW IS IN THE FILE (group 'snow.*'), laid by hand as the pass's is and with the same pieces: ground, drifts a man wades, banks that stop him (against
-// a wall, never within 1.4 m of a door), caps on the tops of things, trodden paths, ruts. What FALLS is the weather's (src/game/weatherKinds.ts, by name).
+// a wall, never within 1.4 m of a door), caps on the tops of things, trodden paths, ruts. What FALLS is the weather's (rust/game_rules/src/weather_kinds, by name).
 // THE LIGHT: a thin moon on snow and pools of warm light. ON THE MAINS (the generator in the court; the box on the kitchen's yard wall throws them all): the
 // bulbs of the four rooms, the lamps over the kitchen's and the bunkhouse's doors, the lamp over the gate, the lamps of the tunnel's mouth, the light behind
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
-import { pickupLens, coated } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import { pickupLens, coated } from './lib/carShapes';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { rockOf } from './snowRock';
@@ -80,7 +80,7 @@ export const SKY_PARK: Vec3 = [2.0, 0, 9.0];
 // ---- the road, east: the roadblock (two low walls of sandbags across the lanes), the gun truck in front of the south one, the tunnel behind them ----
 const GUN_TRUCK = { x: 29.2, z: 24.4, yaw: Math.PI - 0.07 };
 const PORTAL_X = 37.6;
-// (the three men of the roadblock are the level's script's: levels/tut-team.script.ts POSTS, behind the sandbags below)
+// (the three men of the roadblock are the level's script's: rust/game_rules/src/script_tut_team POSTS, behind the sandbags below)
 /** THE PLOUGH LORRY, the yard's one big thing: parked across the east half of the yard in front of the bunkhouse, its blade toward the gateway. Local +X is its nose */
 const LORRY = { x: 24.0, z: 15.6, yaw: Math.PI - 0.05 };   // (a lane a man walks on each side of it, never a pocket he is posted in — and it stands in the line from the mains box, and from most of the yard, to the bunkhouse's door: what comes out of that door in the dark is seen first as light round its tail)
 
@@ -174,7 +174,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const zones: SurfacesData['zones'] = [];
 
   // ================================================================ SNOW: the pieces ====
-  // (what each is to a man — scene/collision.ts: a static blocks feet and the nav grid only where it stands over 0.2 m — is said at the head of
+  // (what each is to a man — rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m — is said at the head of
   //  tools/levels/pass.ts, whose pieces these are: ground and cleared earth are thin solid slabs; paths, ruts and slush are decals; a DRIFT tops out under
   //  0.2 m and is waded; a BANK stands over it and stops feet; a CAP is a decal on the top of a thing)
   const lay = (x0: number, z0: number, x1: number, z1: number, m: Mat, y = 0.004) => add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], ...m });
@@ -293,7 +293,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- THE PLOUGH LORRY (KEPT: the yard's one big thing, and what the gate is held from). A two-axle tipper in the roads department's orange, a blade on
   // its nose, grit in its bed. Nose toward local +X ----
   grp('lorry');
-  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw), orange = coated(M.prodOrange);   // (its body says it is a car's coat: scene/carShapes.ts)
+  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw), orange = coated(M.prodOrange);   // (its body says it is a car's coat: lib/carShapes.ts)
   for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
   L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
   L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
@@ -503,7 +503,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const brkLed = add({ c: [BREAKER[0] - 0.18, 1.62, 11.715], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: drawnAs('sheet', [0.3, 0.31, 0.32]) });
-  // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (game/lighting.ts). Four of the five are out of doors, on brackets a
+  // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (rust/game_rules/src/lighting). Four of the five are out of doors, on brackets a
   // man can see from above: the light a blackout is known by here is red sweeping over snow ----
   grp('beacons');
   const beacons: Level['beacons'] = [];
@@ -532,7 +532,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it. The TEA ROOM is where the tunnel's men sit out a storm: rugs and floor cushions round the stove, low
   // tables with the tea on them, the samovar's table, a card table by the window. The KITCHEN is the bread oven, a work table, flour, the water cans. The
   // STORE is what a winter needs: sacks to the beams, fuel, crates, road cones' worth of drums under one dim bulb. The BUNKHOUSE is four cots, a trunk, a felt
@@ -590,7 +590,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
     mission: { serverRoom: { ...STORE }, entryDoor: 'store', rack: { index: 0, front: [27.0, 1.0, 4.6], halfW: 0.3 }, exfilDoor: 'tea', exfilX: DOOR.tea, exfilZ: 12.1, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are
+  // ---- what is underfoot (rust/game_rules/src/floor; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are
   // 'asphalt'; the rooms' beaten earth and slab are 'stone', the rugs 'carpet'. First match wins: rugs, rooms, then the yard's hard patches
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass',

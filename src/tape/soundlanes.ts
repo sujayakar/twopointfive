@@ -252,7 +252,7 @@ export class SoundLanes {
   private timer = 0; private onHide = () => { this.keep(); if (this.spanT) this.keepOpen(); }; private onVis = () => { if (document.hidden) this.onHide(); };
   // ESC: the first press stops a stretch being heard again (a loop too), the next shuts the card; with neither it is not the lanes' key. Read on its KEYUP: the replay
   // bar's keydown listener (bar.ts, made before this one) keeps the page's keys from every later listener. An Esc that a field used (it let go of the keyboard:
-  // main.ts panelWantsEsc, the bar's note box) or that shut the bar's big map is not the lanes' — nothing here stops the event for anyone else.
+  // the bar's note box) or that shut the bar's big map is not the lanes' — nothing here stops the event for anyone else.
   private onFocusOut = (e: FocusEvent) => { if (typedInto(e.target)) this.escTheirs = performance.now(); };   // (a field he types in, never Input's off-screen box on a framed page — host/keymap.ts: focus leaving THAT is no field letting go, and the next Esc is still the lanes')
   private onKeyDown = (e: KeyboardEvent) => { if (e.code === 'Escape') this.escTheirs = performance.now(); };   // (an Esc keydown that gets this far was typed in a field: the bar lets those through)
   private onKeyUp = this.safe((e: KeyboardEvent) => {
@@ -689,7 +689,7 @@ export class SoundLanes {
     if (!this.card) {
       const c = this.card = this.main.appendChild(el('div')); c.id = 'sndcard';   // (the inspector: a column INSIDE the dock, right of the lanes — nothing of the lanes floats over the picture)
       // THE KEYS STAY THE REPLAY'S: a control of the card never keeps the keyboard (a focused slider or button would eat Space, the fly keys, and hand Esc to the game).
-      // A pressed button and a let-go slider give the focus back; the note field keeps it while he types — Enter there is done, Esc lets go (main.ts panelWantsEsc).
+      // A pressed button and a let-go slider give the focus back; the note field keeps it while he types — Enter there is done, Esc lets go.
       c.addEventListener('click', e => { const t = e.target as HTMLElement | null; if (t?.tagName === 'BUTTON') t.blur(); });
       c.addEventListener('scroll', () => this.more(), { passive: true });
       c.addEventListener('keydown', e => { const t = e.target as HTMLElement | null; if (t?.tagName !== 'INPUT') return; e.stopPropagation(); if (e.code === 'Enter' || e.code === 'NumpadEnter') t.blur(); });

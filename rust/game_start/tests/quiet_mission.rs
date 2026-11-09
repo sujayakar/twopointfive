@@ -1,8 +1,9 @@
 //! A QUIET MISSION TO ITS END, AND A SAVE OF ONE.
 mod stealth_ask;
-use game::game::{Game, InteractableKind, Verb};
+use game::game::{InteractableKind, Verb};
 use game::game::MissionStage as Stage;
 use game::savestate::control::{self, Do};
+use game_start::moment::Moment;
 use game_start::play::{dist, Opts, Play};
 use stealth_ask::StealthAsk;
 use std::collections::BTreeMap;
@@ -59,19 +60,14 @@ fn walking_out_before_the_thing_is_taken_ends_nothing() {
 /// A FAILURE MEANS: a load on a quiet mission stands the player on another night than the one he saved.
 #[test]
 fn a_save_on_a_quiet_mission_carries_the_deal() {
-    fn block(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, std::mem::size_of::<sim::state::State>()).to_vec() } }
     for pin in [1, 2, 3] {
         let mut p = bazaar(pin);
-        let mut kept: BTreeMap<String, (Box<Game>, Vec<u8>)> = BTreeMap::new();
-        let back = |p: &mut Play, kept: &mut BTreeMap<String, (Box<Game>, Vec<u8>)>| match control::tick(&mut p.g, 1.0 / 60.0) {
-            Some(Do::Keep { key, .. }) => { let b = block(p.g.sim); kept.insert(key, (p.g.clone(), b)); }
+        let mut kept: BTreeMap<String, Moment> = BTreeMap::new();
+        let back = |p: &mut Play, kept: &mut BTreeMap<String, Moment>| match control::tick(&mut p.g, 1.0 / 60.0) {
+            Some(Do::Keep { key, .. }) => { kept.insert(key, Moment::of(&p.g)); }
             Some(Do::Back { key }) => {
                 let was = control::abandoned(&p.g);
-                let (g, b) = &kept[&key];
-                unsafe { std::ptr::copy_nonoverlapping(b.as_ptr(), sim::state::addr(p.g.sim) as *mut u8, b.len()); }
-                p.g = g.clone();
-                game::scene_collision::unstand(&mut p.g);
-                game::scene_collision::stands(&mut p.g);
+                p.g = kept[&key].stands(p.g.sim);
                 control::put_back(&mut p.g, &key, was);
             }
             _ => {}
