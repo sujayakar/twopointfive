@@ -1,5 +1,5 @@
 // THE REAL-TIME METHOD ON THE SECOND CORE: the same stages, asked of the other rays. What differs is put here and nowhere else.
-import { realtime, bilinear, CHANGES, type UpscalePart } from '../stages/realtime';
+import { realtime, bilinear, taauUp, CHANGES, type UpscalePart } from '../stages/realtime';
 import type { Method, Lab } from '../lab';
 import type { Stage } from '../graph';
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
@@ -47,6 +47,6 @@ export const oneRuleMethods: Record<string, () => Method> = {
   nolimbs: () => oneRule({ name: 'nolimbs', upscale: bilinear, put: p => p.replace('if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit').replace('if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau', 'if (false) { T *= exp(-carryTau') }),
   early: () => oneRule({ name: 'early', upscale: bilinear, put: p => p.replace('lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, t.y, 1e9, 1e9); blk.x = lim.x;') }),
   // leaves gather as any surface does, with rays of their own, in place of reading their cells: by cells from the start, or one by one near by
-  ...Object.fromEntries([['leafrays', 0], ['leafraysnear', 1]].map(([n, k]) => [n, () => oneRule({ name: n as string, upscale: bilinear, leafNear: k as number, edit: s => s.name === 'gather' ? code(s, 'if (p.leaf && folHas(p.x))', 'if (false)') : s.name === 'resolve' ? code(s, 'let e = folLight(p.x, p.n, p.ao.x); if (e.w > 0.0)', 'let e = vec4f(0.0); if (e.w > 0.0)') : s })])),
+  ...Object.fromEntries([['leafrays', 0, bilinear], ['leafraysnear', 1, bilinear], ['onerays', 0, taauUp]].map(([n, k, up]) => [n, () => oneRule({ name: n as string, upscale: up as UpscalePart, leafNear: k as number, edit: s => s.name === 'gather' ? code(s, 'if (p.leaf && folHas(p.x))', 'if (false)') : s.name === 'resolve' ? code(s, 'let e = folLight(p.x, p.n, p.ao.x); if (e.w > 0.0)', 'let e = vec4f(0.0); if (e.w > 0.0)') : s })])),
   one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
   onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };
