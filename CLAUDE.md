@@ -81,19 +81,15 @@ notes and before and after pairs from the game's own text: `docs/agents/writing.
 - `qa.md` — run, build and check; the module; `gate`, `hold`, the checks and page scripts; the address words and `window` hooks; what "verified" means.
 - `missions.md` — the list, each kind of mission staged, won and lost, par, the tutorials and their scripts.
 - `menus.md` — the title, start page, kit, HUD, rings, cards, Options and keys, the debugger.
-- `squad.md` — the orders menu and its keys, every squad order, move-there, four in two pairs and the word, fall in, rear men, throws
-  on order, a teammate works a thing, log lines.
-- `door-tools.md` — open / bang / charge / outside, the threshold, the whole-room rule, doors found shut, entry paths, cans and leaves.
-- `team-feel.md` — the room fight's feel rules and Team feel rows, cleared rooms, corners and lead, night vision, IR lasers, silent or
-  loud, sneaking with Sam.
-- `enemies.md` — difficulty and Hard, defender cues, defender squads and the radio check, covered lanes, QRF, pursuit tactics, the
-  gun-in-a-hold rule, needs, civilians, the calm torch.
+- `squad.md` — the order keys and the ring, every order, who takes it, parts of the squad, following, pace, covering unasked.
+- `door-tools.md` — what the squad does at a door on order: stacks, cans, charges, locks, the entry, corners, after it, what is refused.
+- `team-feel.md` — how teammates fight, look and keep quiet unasked: the room fight, night vision, lights, silent, sneaking.
+- `enemies.md` — defenders, night staff and civilians: senses, states, difficulty, squads, pursuit, nerve, the dark, the response team.
 - `dialogue.md` — who says what, how a line is picked and reaches the screen, door and place names.
 - `stealth.md` — the fog of war, the meters, lights as things, Sam's close work, the wall hold, the whistle, stuck cameras, the wand, devices.
 - `player.md` — Sam's feet, aim, guns, throws, kit, rows; friends in the line; being hit; restarts.
 - `doors.md` — doors and furniture: which way one opens, locks, the boot, a leaf's weight, who works one from where, the level rules.
-- `destruction.md` — wall charges (outer walls, furniture, the safety radius), glass (panes, refraction, fracture, rounds through),
-  decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
+- `destruction.md` — what breaks: rounds, blasts and wall charges on walls, furniture and glass; debris, marks, restarts.
 - `weather.md` — hours, weather kinds, roofs, wind, fire, snow, wet men; what of it moves a rule and what is dress.
 - `levels.md` — the level file, its generators and kits, rooms, marks, lamps, paint and the look, what a level owes and what checks it.
 - `anim.md` — the skeleton, the layers that pose a man, the turn, falls, outfits and materials.
@@ -101,10 +97,10 @@ notes and before and after pairs from the game's own text: `docs/agents/writing.
 - `render-light.md` — direct light, the gather, the cascades, the denoiser, reflections, TAAU and sharp direct, men in rays.
 - `replays.md` — the tape, why a run is the same again, the kept runs, the replay page, saves.
 - `net.md` — two players: the wire, the server, the lobby, seats in the rules; the hosted build and its backend.
-- `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
-  moved out of TypeScript.
-- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game_rules/src/control/` (the list of rules, adding one).
+- `rust.md` — writing Rust here: the crates, determinism, state, borrowing, asking the world, adding anything, leftovers.
+- `ai-architecture.md` — a man as data, the order he is thought in, adding a reaction or an order, where it is going. Read it before adding a behavior.
 - `sounds.md` — how a sound is asked for, its path to the ear, the mixer, the table, the score, the listening pages and sound lanes.
+- `rulings.md` — the maintainer's rulings that stand on no system's page.
 - `writing.md` — how player text is written, by kind of text, on the game's own lines.
 
 Other maps: `STYLE.md` (the look as rules), `docs/level-format.md` (a level file, member by member), `docs/library.md` (every piece and paint a

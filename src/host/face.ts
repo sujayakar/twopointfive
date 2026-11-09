@@ -5,10 +5,14 @@ export type Face = Record<string, (...a: number[]) => number>;
 /** a failure that is told to the player in its own words */
 export class FaceError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 
+/** a browser with WebAssembly turned off cannot run the game at all: said before anything is fetched */
+const NO_WASM = "This game needs WebAssembly, and it's turned off in this browser. Try another browser.";
+
 export interface Fetched { exports: WebAssembly.Exports; bytes: number; fetchMs: number; compileMs: number; /** the file's own name, as its server has it: another module has another */ name?: string }
 /** THE MODULE'S FILE, compiled off the page's thread. The dev server builds it where it is stale and answers 202 with a line to show while it does; a static
  *  host answers the file or 404. */
 export async function fetchFace(say: (line: string) => void): Promise<Fetched> {
+  if (typeof WebAssembly === 'undefined') throw new FaceError(NO_WASM);
   const t0 = performance.now(); let res: Response;
   for (;;) {
     try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new FaceError(`The game's module could not be fetched (${String((e as Error)?.message ?? e)}). Is the dev server still running?`); }
