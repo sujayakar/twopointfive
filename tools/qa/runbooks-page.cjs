@@ -7,35 +7,25 @@
 // `plain` is what makes the others mean something: if it raises no card or moves no store, the stage reached no end, so it always runs first.
 //   PORT=<a dev server's port> node tools/qa/runbooks-page.cjs [benchrun pricerun bench]     (no word: plain and benchrun, a minute and a half each)
 // exit 0 = all of it with no page error · 1 = otherwise. A loss files no par time, so a par best moving is not held here: the page tells the books one thing, win or loss (RunBooks.tell), behind one gate.
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const PORT = process.env.PORT || 5199;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const PAGE = require('./page.cjs').page({ name: 'runbooks-page' }), { check, note: log } = PAGE;
 const MISSION = 'paused&quality=verylow&mute&nocutboxes&cloud=0&levelFile=killhouse.json&roomclear&seed=1&squad=0&difficulty=hard';
 const ARMS = { plain: { q: '' }, benchrun: { q: '&benchrun=0' }, pricerun: { q: '&pricerun=0' }, bench: { q: '&bench', noSession: true } };
 const VERDICTS = 'twopointsix.verdicts', PARBEST = 'twopointsix.parbest';
 // a kept record for each store, so "as they were" is a string that was there and not a store nobody opened
 const KEPT = { [VERDICTS]: JSON.stringify({ 'killhouse-four|standard': { n: 2, s: 2, w: { quiet: { tries: 1, clean: true, secs: 80, wins: 1 } } } }), [PARBEST]: JSON.stringify({ 'killhouse.json|way1|squad4|standard': 5999 }) };
-let red = false;
-const check = (ok, what, detail) => { if (!ok) red = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const READ = ([V, P]) => { const d = window.__draw, r = d.game.run();
   return { begun: r.begun, over: r.over, won: r.won, card: d.pause.up, shown: !!document.querySelector('#menu.on .db'), verdicts: localStorage.getItem(V), parbest: localStorage.getItem(P) }; };
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const asked = process.argv.slice(2), bad = asked.filter(a => !(a in ARMS));
   if (bad.length) { console.log(`no arm '${bad[0]}' (${Object.keys(ARMS).join(' · ')})`); process.exit(1); }
   for (const arm of ['plain', ...(asked.length ? asked.filter(a => a !== 'plain') : ['benchrun'])]) {
-    const A = ARMS[arm], ctx = await browser.newContext({ viewport: { width: 640, height: 360 }, deviceScaleFactor: 1 });
-    await ctx.addInitScript(([kept, noSession]) => { window.__testVisible = true;
+    const A = ARMS[arm], { context: ctx, page, errors, go, ready } = await PAGE.open({ size: [640, 360], errors: { skip: /Failed to load resource/ }, init: [[([kept, noSession]) => { window.__testVisible = true;
       for (const [k, v] of Object.entries(kept)) if (localStorage.getItem(k) === null) localStorage.setItem(k, v);
-      if (noSession) Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('no session store'); } }); }, [KEPT, !!A.noSession]);
-    const page = await ctx.newPage(), errors = [];
-    page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 300)));
-    page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/?${MISSION}${A.q}`, { timeout: 600000 });
+      if (noSession) Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('no session store'); } }); }, [KEPT, !!A.noSession]]] });
+    await go(`${MISSION}${A.q}`, { timeout: 600000 });
     await page.waitForFunction(() => !!window.__ready, null, { timeout: 600000 });
-    await page.evaluate(async () => { await window.__ready; });
+    await ready();
     log(arm, 'ready');
     const step = (n, keys = []) => page.evaluate(([n, keys]) => window.__runFrames(n, 1 / 60, keys, 'none'), [n, keys]);
     await step(60, ['KeyD']);   // his first stride begins the try
@@ -58,7 +48,5 @@ const READ = ([V, P]) => { const d = window.__draw, r = d.game.run();
     check(!errors.length, `${arm}: no page error`, errors.join(' | ') || 'none');
     await ctx.close();
   }
-  await browser.close();
-  console.log(red ? 'runbooks-page: FAIL' : 'runbooks-page: ALL PASS');
-  process.exit(red ? 1 : 0);
+  await PAGE.end(PAGE.fails ? 'runbooks-page: FAIL' : 'runbooks-page: ALL PASS');
 })().catch(e => { console.error(e); process.exit(1); });

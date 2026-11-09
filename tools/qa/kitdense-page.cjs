@@ -12,13 +12,11 @@
 //   · at the largest text size nothing on the card is cut and the pop-up still ends over the foot.
 //   node tools/qa/kitdense-page.cjs [outDir]      env: PORT (the dev server's, default 5199)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Software adapter: nothing here has been seen on a GPU.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || '';
-const PORT = process.env.PORT || 5199;
-let fails = 0; const errors = [];
-const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+const PAGE = require('./page.cjs').page({ name: 'kitdense-page', gpu: false }), { check } = PAGE;
+const errors = [];
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 const KC = '#missions.one #loadout .lo-kit .kc';
 
@@ -44,14 +42,10 @@ const read = () => {
 };
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
+  const browser = await PAGE.launch();
   const open = async (mission, W = 1728, H = 1000, textStep = null) => {
-    const ctx = await browser.newContext({ viewport: { width: W, height: H } });
-    await ctx.addInitScript((step) => { try { if (!sessionStorage.getItem('kd-once')) { sessionStorage.setItem('kd-once', '1'); localStorage.removeItem('twopointsix.kit'); if (step === null) localStorage.removeItem('twopointsix.textsize'); else localStorage.setItem('twopointsix.textsize', String(step)); } } catch { /* no store */ }
-      addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); }, textStep);
-    const page = await ctx.newPage();
-    page.on('pageerror', e => { if (/WebGPU|adapter/i.test(String(e))) return; errors.push(String(e).slice(0, 200)); });
-    await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    const { context: ctx, page, go } = await PAGE.open({ browser, size: [W, H], fatalOff: true, errors: { into: errors, console: false, thrown: /WebGPU|adapter/i }, init: [[(step) => { try { if (!sessionStorage.getItem('kd-once')) { sessionStorage.setItem('kd-once', '1'); localStorage.removeItem('twopointsix.kit'); if (step === null) localStorage.removeItem('twopointsix.textsize'); else localStorage.setItem('twopointsix.textsize', String(step)); } } catch { /* no store */ } }, textStep]] });
+    await go(`loadout=${mission}&paused&mute`, { waitUntil: 'domcontentloaded', timeout: 180000 });
     await page.waitForSelector(`#missions.one.on #loadout .lo-kit .kc`, { timeout: 60000 }); await page.waitForTimeout(600);
     return { ctx, page };
   };
@@ -145,8 +139,6 @@ const read = () => {
       `factor ${tz} · pop-up to ${gun(o, 'primary')?.pop?.b.toFixed(0) ?? '—'}, foot at ${o?.footTop.toFixed(0)}${[...(c?.cut ?? []), ...(o?.cut ?? [])].length ? ' · cut ' + [...c.cut, ...o.cut].join(' | ') : ''}`);
     await ctx.close(); }
 
-  await browser.close();
-  if (errors.length) { fails++; console.log(`- FAIL — page errors\n    ${errors.slice(0, 5).join('\n    ')}`); }
-  console.log(`\n${fails ? `${fails} FAILED` : 'all passed'}`);
-  process.exit(fails ? 1 : 0);
+  if (errors.length) check(false, 'page errors', errors.slice(0, 5).join('\n    '));
+  await PAGE.end(`\n${PAGE.fails ? `${PAGE.fails} FAILED` : 'all passed'}`);
 })().catch(e => { console.error(e); process.exit(1); });

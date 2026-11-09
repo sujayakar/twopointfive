@@ -16,16 +16,14 @@
 //     walkthrough on a regular mission, kept for comparing.
 //   node tools/qa/kitguide-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZES · KITGUIDE_BREAK=1 (the walkthrough and the brief off, the step as it was: must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Pictures of every beat go to outDir.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || '';
-const PORT = process.env.PORT || 5199;
+const PAGE = require('./page.cjs').page({ name: 'kitguide-page', gpu: false }), { check } = PAGE;
 const SIZES = (process.env.SIZES || '1440x900,1353x770,1000x673').split(',').map(s => s.split('x').map(Number));
 const BREAK = process.env.KITGUIDE_BREAK === '1';
 const OFF = BREAK ? '&kitguide=0&kitbrief=0' : '';
-let fails = 0; const errors = [];
-const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+const errors = [];
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 
 /** what the step shows right now, read off the page */
@@ -50,13 +48,11 @@ const apart = (a, b) => !a || !b || a.r <= b.l + 0.5 || b.r <= a.l + 0.5 || a.b 
 const inside = (a, w) => !!a && a.l >= -0.5 && a.t >= -0.5 && a.r <= w.w + 0.5 && a.b <= w.h + 0.5;
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
-  const fresh = async (W, H) => { const ctx = await browser.newContext({ viewport: { width: W, height: H } });
-    await ctx.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }); } catch { /* as it is */ } });   // (this browser stands for a player's: the walkthrough is not played unasked in one a script drives — ui/kitGuide.ts)
-    await ctx.addInitScript(() => addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }));
-    const page = await ctx.newPage(); page.on('pageerror', e => { if (/WebGPU|adapter/i.test(String(e))) return; errors.push(String(e).slice(0, 200)); });
+  const browser = await PAGE.launch();
+  // (the init: this browser stands for a player's: the walkthrough is not played unasked in one a script drives — ui/kitGuide.ts)
+  const fresh = async (W, H) => { const { context: ctx, page } = await PAGE.open({ browser, size: [W, H], fatalOff: true, errors: { into: errors, console: false, thrown: /WebGPU|adapter/i }, init: [() => { try { Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }); } catch { /* as it is */ } }] });
     return { ctx, page }; };
-  const open = async (page, q) => { await page.goto(`http://localhost:${PORT}/?${q}&paused&mute${OFF}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+  const open = async (page, q) => { await page.goto(PAGE.url(`${q}&paused&mute${OFF}`), { waitUntil: 'domcontentloaded', timeout: 180000 });
     await page.waitForSelector('#missions.one.on #loadout .lo-slot.in', { timeout: 60000 }); await page.waitForTimeout(1200); };
   const shot = async (page, name) => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}${BREAK ? '-break' : ''}.png`) }).catch(() => {}); };
 
@@ -97,8 +93,6 @@ const inside = (a, w) => !!a && a.l >= -0.5 && a.t >= -0.5 && a.r <= w.w + 0.5 &
       check(kitTop <= was.kitTop + 0.5, `${at}: a short window: the brief takes no height from the kit (it starts where it did under the name alone)`, `the kit starts at ${kitTop.toFixed(0)} px with the brief, ${was.kitTop.toFixed(0)} px without`); }
     await ctx.close();
   }
-  await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');
-  console.log(fails ? `\n=== kitguide-page: ${fails} FAILED ===` : '\n=== kitguide-page: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error(e); process.exit(2); });
