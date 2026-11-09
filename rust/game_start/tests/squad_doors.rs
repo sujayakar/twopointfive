@@ -63,10 +63,9 @@ fn the_man_who_has_seen_most_of_the_room_goes_in_first() {
     }
 }
 
-/// THE RULE as above, with the order given while the pair is still walking up: the game says who goes first, and it should be he who does.
-/// The game names the man who looked in ("first:… has seen most of the room") and the other, still at a walk from six metres, comes over 0.75 s before him: he gives way to him at the jamb.
+/// THE RULE as above, with the order given while the pair is still walking up: he whom the game names goes first, though the other is nearer the frame and moving.
+/// A FAILURE MEANS: at the frame the nearer of two men of one entry goes first again, whoever was named (before: the man named gave way at the jamb and came over 0.75 s behind).
 #[test]
-#[ignore = "the game: the first man named waits at the jamb while the second, still walking up, goes over 0.75 s ahead"]
 fn the_man_named_first_goes_first_when_the_order_comes_on_the_walk() {
     for s in SEEDS {
         for looker in [0, 1] {

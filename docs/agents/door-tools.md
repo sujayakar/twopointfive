@@ -72,7 +72,8 @@ from an ended order goes on a short fuse (`door_tools_defuse`). A frag has its o
 **The entry** is `door_tools_enter`. Points come from `door_tools_pods`: the level's `door_plan` from that face, else the first floor to each hand, then
 `entry_points_clear_of`. `door_tools_first_in` picks among the men at the front of each file, leaving out the thrower and the rear watcher, by `gun_first` and
 `door_tools_seen_most`. Three or more go in turn off alternate jambs (`gun_turn`, `rear_last`); a man with no point stays out and leaves the order. The queue lets each go
-by `door_path_may_go`. On his point a man works through a known enemy's place (`door_tools_threat_step`), his corners (`door_tools_corner_step`), his sweep or
+by `door_path_may_go`, and of two men of one entry the man named first has the frame (`named_before`).
+On his point a man works through a known enemy's place (`door_tools_threat_step`), his corners (`door_tools_corner_step`), his sweep or
 `door_tools_scan` of unseen floor, then his sector. `door_tools_move_on` and `door_tools_flow_in` send men on to floor nobody has seen. The order ends "in" when they have
 swept it or at `search_cap`, and the lead says the room's call (`squadnet/`).
 
