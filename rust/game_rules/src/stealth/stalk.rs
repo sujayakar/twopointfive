@@ -527,14 +527,6 @@ pub fn stalk_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<G
     g.m.stalk.state.get(seat.player).and_then(|s| s.on)
 }
 
-/// A reset of the floor's men, a load: nothing is stalked.
-pub fn stalk_reset(g: &mut crate::game::Game) {
-    let me = g.player;
-    if let Some(r) = g.m.stalk.state.get_mut(me) {
-        *r = fresh();
-    }
-}
-
 /// The step in's ease, 0‥1 → 0‥1: a quadratic off the mark, then a cubic ease-out joined with one slope.
 pub fn step_ease(u: f64) -> f64 {
     let v = v3::clamp(u, 0.0, 1.0);

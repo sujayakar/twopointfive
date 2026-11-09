@@ -49,10 +49,6 @@ fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut cr
     s.men.get_mut(gd).unwrap()
 }
 
-pub fn picture_reset(g: &mut crate::game::Game) {
-    g.m.picture.states = None;
-}
-
 fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }

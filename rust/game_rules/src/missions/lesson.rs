@@ -405,9 +405,6 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 
 // ---- the checks: what is wrong with a record on this floor. A field's type is the skeleton's now, so a check of a type alone (`typeof t.on`) has nothing to ask
 
-/// lesson.ts num of a number
-fn finite(v: f64) -> bool { v.is_finite() }
-
 
 fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
     use LessonFlag as F;

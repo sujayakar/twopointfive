@@ -114,11 +114,6 @@ fn air_dust_build(g: &mut crate::game::Game) {
     air_dust_send(g);
 }
 
-/// The level as authored again.
-pub fn air_dust_reset(g: &mut crate::game::Game) {
-    air_dust_reseed(g);
-}
-
 /// Once a frame, after the doors and whatever breaks have moved: through the openings as they stand, in the module.
 pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     air_dust_ensure(g);
