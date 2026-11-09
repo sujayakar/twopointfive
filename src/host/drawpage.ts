@@ -268,8 +268,8 @@ async function main(): Promise<void> {
   const books = new RunBooks();   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
-    const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
-    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
+    const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) { events.stands(); return; }
+    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
   };
   anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 

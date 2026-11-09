@@ -1238,7 +1238,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - A TABLE KEPT BESIDE A BLOCK goes by `sim::state::stamp`; `sim::state::put` is the one way a block is written whole (a start, a put-back, a move between slots).
     Before, nothing in Rust moved the stamp, and after a restart the grid's index and the dust's plans were the abandoned try's.
   - WHAT OF THE SKY REACHES A CELL (`hours::SkyReach`) is made from the statics (`World.wrote`) and kept off the wire and out of the words. One sky by hour or by night.
-  - A SAVE KEEPS NO SMOKE IN THE AIR (`face_loaded`), because the picture's is cleared with a load; a kept game put back by a rollback does.
+  - A SAVE KEEPS THE SMOKE IN THE AIR, as a game kept for a rollback does, and the picture of a game put back has the whole of it in its first frame (render.md, A JUMP).
   - WHAT CHANGES FOR A PLAYER: who sees whom goes by neither the graphics setting nor the frame rate; smoke fills the room it is in and stops at a shut door for sight;
     a searching man knows the dark places from the lit ones where there is no picture too (they read 0.5); smoke dims every pair's line, not only room fighters within
     18 m, and each eye asks its own line (it was one answer a pair); the fog shows a man any one of the team sees past the smoke, with no latch of 8 or 30 frames;
