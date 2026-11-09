@@ -412,7 +412,7 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     let now = g.time;
     if g.gd[gd].state == crate::game::GuardState::Dead
         || now - j.last_t > 0.25
-        || now < g.gd[gd].dazzled_until
+        || crate::condition::is_blind(g, g.gd[gd].ch)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
         || !crate::wand::wand_fits(g, j.door)
     {
@@ -464,7 +464,7 @@ mod tests {
     #[test]
     fn lens_out_marks_a_second_feed_only_if_he_knelt() {
         let mut g = Game::blank();
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);

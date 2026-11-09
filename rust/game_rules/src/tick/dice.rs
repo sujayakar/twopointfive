@@ -119,8 +119,8 @@ mod tests {
         let mut g = alloc::boxed::Box::new(Game::blank());
         let mut body = crate::character::Character::blank();
         body.id = 21.0;
-        g.ch.push(crate::character::Character::blank());
-        let c = g.ch.push(body);
+        crate::character::man_new(&mut g, crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, body);
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
@@ -129,7 +129,7 @@ mod tests {
         // …and he is the same man in another row
         let mut again = crate::character::Character::blank();
         again.id = 21.0;
-        let c2 = g.ch.push(again);
+        let c2 = crate::character::man_new(&mut g, again);
         assert_eq!(Who::Body(c2).word(&g), Who::Body(c).word(&g));
         // a squad's number is never a body's, and is its name's
         let mut q = crate::enemysquads::Squad::default();

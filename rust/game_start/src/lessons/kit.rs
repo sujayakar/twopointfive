@@ -172,7 +172,7 @@ async fn deed(b: &Bot, id: &str) {
             b.until(|| b.thrown(ItemKind::Flash), 2.0).await;   // (once it has left his hand: the cursor is the throw's aim until it does)
             b.to([26.8, 0.0, AXIS + 1.5], 4.0).await;
             b.landed(ItemKind::Flash, 3.4).await;
-            if b.seen(|g, s| g.pl[s.player].dazzled_until > g.time) { b.fail(String::from("he stepped aside as the line says and his own stun grenade still blinded him")).await; }
+            if b.seen(|g, s| g.cond[g.pl[s.player].ch].blind_until > g.time) { b.fail(String::from("he stepped aside as the line says and his own stun grenade still blinded him")).await; }
         }
         // the pistol, and INTO the room (a gun in a doorway has no room to come up across the jamb)
         "store" => {

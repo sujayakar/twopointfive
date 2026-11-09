@@ -214,7 +214,7 @@ mod tests {
         let a = g.fa.push(crate::weapons::Firearm { def: in_hand, ..crate::weapons::Firearm::blank() });
         let b = g.fa.push(crate::weapons::Firearm { def: second, ..crate::weapons::Firearm::blank() });
         let route = g.tab.route.push(crate::scene_level::PatrolRoute::default());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.ch[c].muzzle_ahead = 0.5;
         let mut man = crate::game::Guard::blank();
         man.ch = c;

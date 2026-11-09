@@ -405,7 +405,7 @@ mod tests {
         let mut lamp = crate::render_lights::RtLight::default();
         lamp.enabled = true; lamp.intensity = 1.0; lamp.pos = [0.0, 0.0, 0.0]; lamp.dir = [0.0, 0.0, 1.0]; lamp.range = 10.0; lamp.outer_deg = 30.0;
         let l = g.tab.light.push(lamp);
-        let eye = g.ch.push(crate::character::Character::blank());
+        let eye = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.ch[eye].bones.set(crate::character::Bone::Head, [0.0, 0.0, 5.0]);
         let o = man(&mut g, crate::game::GuardState::Patrol);
         g.gd[o].flashlight = l;

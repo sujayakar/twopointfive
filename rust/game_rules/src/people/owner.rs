@@ -90,7 +90,7 @@ mod tests {
     fn stand() -> (alloc::boxed::Box<Game>, GuardId) {
         let mut g = alloc::boxed::Box::new(Game::blank());
         // a man with no row on the block keeps his numbers on his Character, so this needs no block
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.ch[c].man_kept = Some([0.0; 4]);
         let mut man = crate::game::Guard::blank();
         man.ch = c;
@@ -146,7 +146,7 @@ mod tests {
             release(g, m, t.by, 2.0);
         }
         g.time = 5.0;
-        g.gd[m].dazzled_until = 6.0;
+        g.cond[g.gd[m].ch].blind_until = 6.0;
         assert!(TASKERS.iter().all(|t| kept(g, m, t.by) == Some("blind")), "nobody takes a man who cannot see");
     }
 }

@@ -308,7 +308,7 @@ mod tests {
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState, down: Option<crate::game::DownKind>, flat: bool) -> (GuardId, CharId) {
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         if flat { g.ch[c].ragdoll = Some(RagdollId(0)); }
         let mut row = crate::game::Guard::blank();
         row.ch = c;

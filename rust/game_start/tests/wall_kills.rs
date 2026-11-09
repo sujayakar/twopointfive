@@ -25,7 +25,7 @@ fn charged(s: u32, men: &[(usize, [f64; 2])], foe: Option<[f64; 2]>, sam: [f64; 
     (p, c, named)
 }
 fn sam_down(p: &Play) -> bool { p.g.pl[p.g.player].down }
-fn sam_blind(p: &Play) -> bool { p.g.time < p.g.pl[p.g.player].dazzled_until }
+fn sam_blind(p: &Play) -> bool { p.g.time < p.g.cond[p.g.pl[p.g.player].ch].blind_until }
 
 /// THE RULE (the maintainer, 10-19, 0.9 m from a charge he had set: "blowing a wall charge with me right next to it should kill me"): the player at the charge goes down. CONTROL: god mode keeps him up.
 /// A FAILURE MEANS: the charge is a thing to stand beside.

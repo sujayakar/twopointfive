@@ -97,7 +97,7 @@ fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::Leav
     let secs = secs.unwrap_or(0.0);
     if !team_slow(g, gd) { return false; }
     if is_run(why) {
-        if quiet(g, gd) || crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None) { return false; }
+        if quiet(g, gd) || crate::condition::is_hurt(g, g.gd[gd].ch, None) { return false; }
     }
     let until = g.time + secs + FRAME;
     if let Some(was) = g.m.teampace.leave.get(gd) {
@@ -125,7 +125,7 @@ fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// he may run from the grenade he is leaving
 fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None)
+    !crate::condition::is_hurt(g, g.gd[gd].ch, None)
 }
 
 /// the most a teammate's legs may be asked for this frame
@@ -253,7 +253,7 @@ fn team_dash_now(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, least: 
         && (running || g.time - crate::roomfight::room_fight_hot_of(g, gd) < g.k.teampace.dash_hot)
         && !crate::roomfight::room_fight_engaged(g, gd)
         && !quiet(g, gd)
-        && !crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None)
+        && !crate::condition::is_hurt(g, g.gd[gd].ch, None)
         && crate::roomfight::room_fight_room_at(g, p) == crate::roomfight::room_fight_room_at(g, to)
         && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [to[0], 0.45, to[2]], None)
         && (running || crate::picture::exposed_at(g, gd, p, None) >= g.k.teampace.dash_seen)

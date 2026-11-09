@@ -104,7 +104,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
         if turn < bd { bd = turn; best = i as i64; by = y; }
     }
     if best < 0 { search(g, sr).yaw.delete(gd); return false; }
-    if has_over(g, gd) || now < g.gd[gd].dazzled_until { return true; }
+    if has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
     let yaw = y0 + v3::clamp(v3::wrap_angle(by - y0), -scan_rate * dt, scan_rate * dt);
     search(g, sr).yaw.set(gd, yaw);
     let row = &mut g.tab.orders_assignment[a];

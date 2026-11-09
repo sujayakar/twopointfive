@@ -173,7 +173,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         stop_wand(g);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
         stop_wand(g);
-    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || g.time < g.pl[pl].dazzled_until {
+    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || crate::condition::is_blind(g, g.pl[pl].ch) {
         stop_wand(g);
     } else {
         let along = g.dr[d].def.width * 0.5;

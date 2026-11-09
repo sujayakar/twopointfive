@@ -358,7 +358,7 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     if pts.iter().any(|l| v3::dist_xz(p, *l) < duck_min_m) { return false; }   // (inside what it kills at nobody is asked to duck)
     let run = g.k.frag.run_speed;
     let blast = crate::teampace::team_blast_pace(g, gd, run);
-    let speed = crate::condition::condition_pace(g, gd, blast);
+    let speed = crate::condition::condition_pace(g, g.gd[gd].ch, blast);
     let l = pts[0];
     g.stats.squadthrow.ducks += 1;
     let rest: V3 = [l[0], l[1] - 0.25, l[2]];
