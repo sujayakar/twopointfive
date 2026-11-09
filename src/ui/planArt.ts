@@ -190,20 +190,20 @@ export function sheetView(A: PlanArt, W: number, H: number, ext: number[], all: 
   return artView(A, W, H, want, small ? 0 : 11 * (W / 480));
 }
 /** THE SHEET: the model fitted to the canvas round what stands (`ext` = the walls' own extent on the plan, min then max) and every place a team may start
- *  from, a 10 m scale at its foot (true along x), and the way in — the page's accent, its only use on the sheet: a dot where the team stands, `dealt` = a ring
- *  at each. `u` = the canvas's px per px of a 480 px sheet. */
-export function drawSheet(g: CanvasRenderingContext2D, W: number, H: number, A: PlanArt, ext: number[], all: number[][], pts: number[][], dealt: boolean, small = false) {
+ *  from, a 10 m scale at its foot (true along x), and the way in — the page's accent, its only use on the sheet: a dot where the team stands.
+ *  `u` = the canvas's px per px of a 480 px sheet. */
+export function drawSheet(g: CanvasRenderingContext2D, W: number, H: number, A: PlanArt, ext: number[], all: number[][], pts: number[][], small = false) {
   const V = sheetView(A, W, H, ext, all, small);
-  if (small) { drawArt(g, A, V); startMarks(g, V, pts, dealt, W / 210); return; }   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
+  if (small) { drawArt(g, A, V); startMarks(g, V, pts, W / 210); return; }   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
   const u = W / 480, k = V.k, line = Math.max(1, Math.round(u * 0.5));
   drawArt(g, A, V);
   const len = 10 * k, x1 = W - 2 * u, y = H - 3 * u, tick = 3 * u;
   g.fillStyle = 'rgba(214,200,170,0.6)'; g.fillRect(x1 - len, y, len, line * 2); g.fillRect(x1 - len, y - tick, line * 2, tick); g.fillRect(x1 - line * 2, y - tick, line * 2, tick);
   g.font = `${Math.round(9 * u)}px ui-monospace, SFMono-Regular, Menlo, monospace`; g.textAlign = 'right'; g.textBaseline = 'alphabetic'; g.fillStyle = 'rgba(214,200,170,0.8)'; g.fillText('10 M', x1 - len - 4 * u, y + line * 2);
-  startMarks(g, V, pts, dealt, u);
+  startMarks(g, V, pts, u);
 }
-function startMarks(g: CanvasRenderingContext2D, V: ArtView, pts: number[][], dealt: boolean, u: number) {
+function startMarks(g: CanvasRenderingContext2D, V: ArtView, pts: number[][], u: number) {
   const r = 5.5 * u;
   for (const [x, z] of pts) { const px = V.x(x), pz = V.y(z); g.beginPath(); g.arc(px, pz, r + 2.2 * u, 0, Math.PI * 2); g.fillStyle = '#0c0b09'; g.fill();
-    g.beginPath(); g.arc(px, pz, dealt ? r - 1.1 * u : r, 0, Math.PI * 2); if (dealt) { g.strokeStyle = '#f0912e'; g.lineWidth = 2.2 * u; g.stroke(); } else { g.fillStyle = '#f0912e'; g.fill(); } }
+    g.beginPath(); g.arc(px, pz, r, 0, Math.PI * 2); g.fillStyle = '#f0912e'; g.fill(); }
 }

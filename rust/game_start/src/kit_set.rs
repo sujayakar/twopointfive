@@ -44,18 +44,11 @@ fn js_trim(s: &str) -> &str {
     s.trim_matches(white)
 }
 
-/// THE WAY the page will stage, as the game folds the link's `way`: absent / 1 = the level's own (0), N = its Nth, one past the last = the last; 'any' (a dealt way: no picture) = 0.
-pub fn way_of_query(way: Option<&str>, data: &Json) -> usize {
-    let r = data.get("scenarios").get("roomClear");
-    let n = if truthy(r.get("team")) { 1.0 + r.get("starts").items().len() as f64 } else { 1.0 };
-    let w = match way { Some(t) if !t.is_empty() && t.bytes().all(|c| c.is_ascii_digit()) => t.parse::<f64>().unwrap_or(0.0), _ => 0.0 };
-    if w >= 1.0 { (m::min(n, w) - 1.0) as usize } else { 0 }
-}
-/// THE WAY THE PICTURE STAGES, off the whole link: only a room clear stands its team on a way in of its own. A rescue, the night breach, a quiet mission and the solo night have the level's one start:
-/// way 0, whatever `way` the link still carries (a rescue's link with `way=2` laid the second way's pieces under a picture staged on the first).
+/// THE WAY THE PICTURE STAGES, off the whole link: the one the game takes, by the game's own reader, on this level file.
 pub fn way_of_link(q: &Query, data: &Json) -> usize {
-    let room_clear = q.has("roomclear") || (q.has("squad4") && !["nightbreach", "rescue", "quiet"].iter().any(|k| q.has(k)));
-    if room_clear { way_of_query(q.get("way"), data) } else { 0 }
+    let r = data.get("scenarios").get("roomClear");
+    let ways = if truthy(r.get("team")) { 1 + r.get("starts").items().len() } else { 1 };
+    game::roomclear::way_taken(game::roomclear::way_of_address(q), ways)
 }
 /// the set a way names
 #[derive(Clone, Copy, Debug)]

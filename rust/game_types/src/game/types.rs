@@ -422,11 +422,13 @@ pub struct StoodWith {
     pub dry: bool,
     /// a harness game stood plain, whose missions ask the solo card's question by kit_solo_stand
     pub solo_stand: bool,
+    /// the way in asked for: 0 the level's own, k its k-th other, however many the level has (roomclear way_taken)
+    pub way: usize,
 }
 impl StoodWith {
     /// what a game stood with nothing said for it holds: the level's own weather, at the level's own night
     pub fn blank() -> Self {
-        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false }
+        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false, way: 0 }
     }
 }
 impl Default for StoodWith { fn default() -> Self { Self::blank() } }

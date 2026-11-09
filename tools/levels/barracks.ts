@@ -668,7 +668,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const roomClear: StructureData = {
     name: 'the barracks', maxMen: 11,
     team: { sam: START, samYaw: Math.PI, ops: [[37.3, 0, 21.4], [39.1, 0, 21.3], [37.4, 0, 22.8], [38.8, 0, 23.0]], opsYaw: Math.PI },
-    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the north-west corner, outside the galley's
+    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the north-west corner, outside the galley's
     // back door. One man holds the galley; the mess hall is behind it, and from the mess both galleries are taken from their closed ends, not across the yard
     starts: [{ sam: [12.6, 0, 2.0], samYaw: -Math.PI / 2, ops: [[14.0, 0, 1.6], [14.0, 0, 2.6], [15.2, 0, 1.6], [15.2, 0, 2.6]], opsYaw: -Math.PI / 2 }],
     rooms: [
