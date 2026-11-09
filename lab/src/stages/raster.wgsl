@@ -32,3 +32,5 @@ fn inTheWay(w: vec3f, at: vec2f) -> bool { let me = vec3f(frame.tune[6].y, frame
 @fragment fn fsLeaf(v: V) -> @location(0) u32 { if (inTheWay(v.w, v.p.xy)) { discard; } if (abs(v.uv.y) > (1.0 - v.uv.x * v.uv.x) * (1.0 + 0.35 * v.uv.x)) { discard; } return v.id; }
 /** the leaves again, as the sun sees them: four corners each, of the same area */
 @vertex fn vsSun(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> @builtin(position) vec4f { let v = leafVertex(6u + (vi & 3u), vi >> 2u, lists[ii]); let q = sunMap(v.w); return vec4f(q.xy * 2.0 - 1.0, q.z, 1.0); }
+/** and as a torch does */
+@vertex fn vsTorch(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> @builtin(position) vec4f { let v = leafVertex(6u + (vi & 3u), vi >> 2u, lists[ii]); let l = torch.x; let b = basis(lamps[l].n); let e = v.w - lamps[l].at; let z = dot(e, lamps[l].n); return vec4f(vec2f(dot(e, b[0]), dot(e, b[1])) / torchWide(l), 0.1, z); }
