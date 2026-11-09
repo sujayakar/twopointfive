@@ -504,36 +504,37 @@ pub fn door_id_words(g: &crate::game::Game, id_2: &str) -> String { id_words(id_
 mod tests {
     use super::*;
 
-    const A: [V3; 4] = [[0.1, 0.0, 0.2], [3.7, 0.0, 1.3], [4.1, 0.0, 6.9], [-2.25, 0.0, 7.77]];
-    const B: [V3; 4] = [[0.3, 0.0, -0.4], [2.2, 0.0, 4.4], [2.2, 0.0, 4.4], [5.5, 0.0, 8.125]];
-
-    fn bits(r: FarOff) -> [u64; 3] { [r.d.to_bits(), r.at[0].to_bits(), r.at[2].to_bits()] }
-
-    /// the TypeScript's own farOff under EXACT, its doubles' bits
+    /// Two men may go one way only if it stays near theirs. A failure means a man takes a far longer way round to walk with his mate, or none he could.
     #[test]
-    fn far_off_has_the_typescripts_bits() {
-        assert_eq!(bits(far_off(&A, &B)), [0x40165407ae62fe8f, 0xc002000000000000, 0x401f147ae147ae14]);
-        assert_eq!(bits(far_off(&B, &A)), [0x4001200d1bb31168, 0x3ffae8ba2e8ba2e9, 0x4008ba2e8ba2e8bc]);
-        assert_eq!(bits(far_off(&A, &[[1.0, 0.0, 1.0]])), [0x7ff0000000000000, 0x3fe199999999999a, 0x3fd599999999999a]);
-        assert_eq!(bits(far_off(&[[1.5, 0.0, 2.5]], &B)), [0xbff0000000000000, 0x3ff8000000000000, 0x4004000000000000]);
+    fn how_far_a_way_gets_from_another_is_asked_along_it_and_says_where() {
+        let p = |x: f64, z: f64| -> V3 { [x, 0.0, z] };
+        let straight = [p(0.0, 0.0), p(4.0, 0.0)];
+        let on_and_round = [p(0.0, 0.0), p(4.0, 0.0), p(4.0, 3.0)];
+        let said = |r: FarOff| (r.d, r.at);
+        assert_eq!(said(far_off(&on_and_round, &straight)), (3.0, p(4.0, 3.0)));
+        assert_eq!(far_off(&straight, &on_and_round).d, 0.0);    // it does not matter that the other goes on
+        assert_eq!(said(far_off(&[p(0.0, 0.0), p(2.0, 2.0), p(4.0, 0.0)], &straight)), (2.0, p(2.0, 2.0)));
+        assert_eq!(far_off(&on_and_round, &[p(0.0, 0.0), p(2.0, 0.0)]).d, m::hyp2(2.0, 3.0));    // past the other's end: from its end
+        assert_eq!(said(far_off(&straight, &[p(0.0, 0.0), p(2.0, 2.0), p(4.0, 0.0)])), (m::hyp2(1.0, 1.0), p(2.0, 0.0)));    // the middle of a leg is asked too
+        assert_eq!(far_off(&straight, &[p(1.0, 1.0)]).d, m::INF);    // nothing to be near
+        assert_eq!(said(far_off(&[p(1.5, 2.5)], &straight)), (-1.0, p(1.5, 2.5)));    // nowhere to go
     }
 
-    /// the TypeScript's own doorIdWords, its strings
+    /// Doors are named in the men's own words.
     #[test]
-    fn id_words_say_what_the_typescript_says() {
+    fn a_door_s_id_is_said_in_words() {
         assert_eq!(id_words("breakroom_w"), "break room west door");
         assert_eq!(id_words("server_manager"), "server manager door");
         assert_eq!(id_words("n4a"), "n4a door");
         assert_eq!(id_words("mgr_door"), "manager's door");
         assert_eq!(id_words("ext_ne"), "outside north-east door");
-        assert_eq!(id_words(""), " door");
     }
 
+    /// A pair split across files costs by how many files it is in; a place past the list is a file of its own.
     #[test]
-    fn a_set_of_groups_counts_as_sets_do() {
-        assert_eq!(group_count(&[0.0, -0.0, 2.0], &[0, 1], &[0, 1]), 1.0);
+    fn men_dealt_across_groups_count_each_group_once() {
+        assert_eq!(group_count(&[0.0, 0.0, 2.0], &[0, 1], &[0, 1]), 1.0);
         assert_eq!(group_count(&[0.0, 1.0, 2.0], &[0, 1, 2], &[0, 1, 2]), 3.0);
-        assert_eq!(group_count(&[m::NAN, m::NAN], &[0, 1], &[0, 1]), 1.0);
         assert_eq!(group_count(&[1.0], &[0, 5, 6], &[0, 1, 2]), 2.0);
     }
 

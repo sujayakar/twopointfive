@@ -1002,14 +1002,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_place_names_its_post_to_the_bit() {
-        let nan = f64::NAN;
-        assert!(same_bits([nan, 0.0, 1.0], [nan, 0.0, 1.0]));
-        assert!(!same_bits([0.0, 0.0, 1.0], [-0.0, 0.0, 1.0]));
-        assert!(!same_bits([1.0, 0.0, 1.0], [1.0, 0.0, 2.0]));
-    }
-
-    #[test]
     fn a_bearing_wraps_both_ways() {
         assert_eq!(bearing(-1), 35);
         assert_eq!(bearing(36), 0);

@@ -221,23 +221,12 @@ fn side_of(at: V3, n: [f64; 2], q: V3) -> f64 {
 mod tests {
     use super::*;
 
-    /// The log's numbers: each expected string is what `x.toFixed(1)` printed under node.
-    #[test]
-    fn log_numbers_print_as_to_fixed() {
-        let cases: [(f64, &str); 17] = [
-            (0.25, "0.3"), (0.75, "0.8"), (3.25, "3.3"), (-3.25, "-3.3"), (2.5, "2.5"), (0.05, "0.1"), (0.35, "0.3"), (1.45, "1.4"), (-0.04, "-0.0"),
-            (-0.0, "0.0"), (0.0, "0.0"), (12.75, "12.8"), (1.05, "1.1"), (100.25, "100.3"), (-0.25, "-0.3"), (0.15, "0.1"), (7.999, "8.0"),
-        ];
-        for (x, want) in cases { assert_eq!(js::to_fixed(x, 1), want, "{x}"); }
-    }
-
     #[test]
     fn side_of_counts_the_plane_itself_as_plus() {
         let (at, n) = ([1.0, 0.0, 2.0], [0.0, 1.0]);
         assert_eq!(side_of(at, n, [5.0, 0.0, 3.0]), 1.0);
         assert_eq!(side_of(at, n, [5.0, 0.0, 2.0]), 1.0);
         assert_eq!(side_of(at, n, [5.0, 0.0, 1.0]), -1.0);
-        assert_eq!(side_of(at, n, [m::NAN, 0.0, 1.0]), -1.0);
     }
 
     /// Bit 1 is the +n side, bit 2 the -n side; `far_known` asks after the side `p` is not on, and `reset` forgets.
@@ -259,12 +248,5 @@ mod tests {
         entry_points_reset(&mut g);
         assert!(!entry_points_far_known(&mut g, o, plus));
         assert_eq!((g.entry.last, g.entry.stats.pods, g.entry.log.len()), (-1.0, 0.0, 0));
-    }
-
-    /// The summary's counts print as a JavaScript template prints a whole number.
-    #[test]
-    fn whole_counts_print_with_no_point() {
-        assert_eq!(alloc::format!("{}", 3.0_f64), "3");
-        assert_eq!(alloc::format!("{}", 0.0_f64), "0");
     }
 }

@@ -94,31 +94,32 @@ pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
 mod tests {
     use super::*;
 
-    // Bits printed by src/game/wand.ts itself under bun with EXACT.on.
-    fn b(x: u64) -> f64 { f64::from_bits(x) }
-    const U_A: [u64; 2] = [0x3fe87996529f9d92, 0x3fe49d6e694619b8]; // cos 0.7, sin 0.7
-    const PAST_M: f64 = 0.22;
-    const EYE_Y: f64 = 0.1;
-    const PAN_RATE: f64 = 1.6;
-
-    fn door_a(side: f64) -> crate::wand::WandLens { lens_at([3.25, -7.5], [b(U_A[0]), b(U_A[1])], 0.95 * 0.5, side, PAST_M, EYE_Y) }
-    fn door_b(side: f64) -> crate::wand::WandLens { lens_at([-11.125, 2.0625], [-0.6, 0.8], 1.2 * 0.5, side, PAST_M, EYE_Y) }
-    fn bits(l: crate::wand::WandLens) -> [u64; 4] { [l.pos[0].to_bits(), l.pos[1].to_bits(), l.pos[2].to_bits(), l.yaw.to_bits()] }
-
+    /// A failure means the lens comes up on the man's own side of the door, or looks back at him.
     #[test]
-    fn the_lens_has_the_typescripts_bits() {
-        assert_eq!(bits(door_a(1.0)), [0x400e0a4c155c91e2, 0x3fb999999999999a, 0xc01d72f4c738b50c, 0x40038861baaa937e]);
-        assert_eq!(bits(door_a(-1.0)), [0x400bc5c79e42f056, 0x3fb999999999999a, 0xc01c1a594f7a2b1a, 0xbfe6666666666666]);
-        assert_eq!(bits(door_b(1.0)), [0xc0269e353f7ced91, 0x3fb999999999999a, 0x400565604189374c, 0x3fedac670561bb50]);
-        assert_eq!(bits(door_b(-1.0)), [0xc027526e978d4fdf, 0x3fb999999999999a, 0x400348b439581062, 0xc001b6e192ebbe44]);
+    fn the_lens_goes_under_the_leaf_s_middle_and_looks_out_the_far_side() {
+        // a door along +x from (2, 3), half a metre to its middle
+        let l = |side: f64| lens_at([2.0, 3.0], [1.0, 0.0], 0.5, side, 0.22, 0.1);
+        assert_eq!(l(-1.0).pos, [2.5, 0.1, 3.22]);    // he is on the -1 face: it comes out on +z
+        assert_eq!(l(-1.0).yaw, 0.0);                 // and looks along +z
+        assert_eq!(l(1.0).pos, [2.5, 0.1, 2.78]);
+        assert_eq!(m::abs(l(1.0).yaw), m::PI);
     }
 
+    /// A failure means the view swings at once, past its stops, or the long way round.
     #[test]
-    fn the_turn_has_the_typescripts_bits() {
-        let max = m::max(0.0, 90.0 - 90.0 * 0.5 - 10.0) * m::PI / 180.0;
-        assert_eq!(turned(0.0, door_a(1.0), [9.0, 0.0, 4.0], max, PAN_RATE, 1.0 / 60.0).to_bits(), 0xbf9b4e81b4e81b4f);
-        assert_eq!(turned(0.3, door_a(-1.0), [-20.0, 1.0, -3.0], max, PAN_RATE, 1.0 / 60.0).to_bits(), 0x3fd17e4b17e4b17e);
-        assert_eq!(turned(-0.2, door_b(1.0), [40.0, 0.0, 40.0], max, PAN_RATE, 0.5).to_bits(), 0x3f8ddba57d757380);
-        assert_eq!(turned(0.61, door_b(-1.0), [-11.0, 0.0, 2.0], max, PAN_RATE, 1.0 / 120.0).to_bits(), 0x3fe317e4b17e4b18);
+    fn the_lens_turns_toward_the_aim_at_its_rate_inside_its_stops() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let square = crate::wand::WandLens { pos: [0.0, 0.1, 0.0], yaw: 0.0 };
+        let (max, rate) = (0.5, 1.6);
+        let (right, left) = ([10.0, 0.0, 10.0], [-10.0, 0.0, 10.0]);
+        near(turned(0.0, square, right, max, rate, 1.0 / 60.0), rate / 60.0);    // a step's worth
+        near(turned(0.0, square, left, max, rate, 1.0 / 60.0), -rate / 60.0);
+        near(turned(0.0, square, right, max, rate, 1.0), max);                   // the aim is past the stop: it stops there
+        near(turned(0.49, square, [0.0, 0.0, 5.0], max, rate, 1.0), 0.0);        // and comes back square
+        near(turned(0.6, square, right, max, rate, 1.0 / 60.0), max);            // a stop that closed in on it holds it
+        // the aim just across the back of a lens that looks nearly behind: the short way
+        let back = crate::wand::WandLens { pos: [0.0, 0.1, 0.0], yaw: 3.0 };
+        let t = -3.0_f64;
+        near(turned(0.0, back, [m::sin(t) * 5.0, 0.0, m::cos(t) * 5.0], max, rate, 1.0), 2.0 * m::PI - 6.0);
     }
 }

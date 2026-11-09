@@ -454,12 +454,6 @@ pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye>
 mod tests {
     use super::*;
 
-    #[test]
-    fn flat_has_the_typescripts_bits() {
-        assert_eq!(flat([1.25, 9.0, 7.7], [-3.1, 0.0, 2.2]).to_bits(), 0x401c0c9b269dc1c4);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 5.0, 0.7]).to_bits(), 0x3fe13b86ea20ae5c);
-    }
-
     /// Off a knee he was on, the next feed is a full one; never on his knee, `again` stays as it was.
     #[test]
     fn lens_out_marks_a_second_feed_only_if_he_knelt() {

@@ -623,9 +623,7 @@ pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate
 mod tests {
     use super::*;
 
-    // Bits from the TypeScript's own expression, run under node:
-    // [[0.25,0.25,.5],[0.75,0.25,.5],[-0.25,0.25,.5],[-0.75,-0.75,.5],[1.25,0.25,.5],[1.25,1.25,.5],[0.5,1.5,1]]
-    //   .map(([x,z,c]) => !((Math.floor(x/c)|Math.floor(z/c))&1))
+    /// The spots a pocket's throw is tried at. A failure means a room is searched at every spot or at far too few.
     #[test]
     fn the_lattice_is_every_other_cell_each_way_on_both_sides_of_zero() {
         let want = [true, false, false, true, true, true, false];
@@ -648,8 +646,9 @@ mod tests {
         assert_eq!(uniq_plus(Vec::new()), "");
     }
 
+    /// The file is dealt two at a time: a failure means the last man of an odd file brings the game down.
     #[test]
-    fn a_slice_clamps_as_the_language_does() {
+    fn a_pair_off_the_end_of_a_file_is_whoever_is_left() {
         let v = [1, 2, 3];
         assert_eq!(js_slice(&v, 0, 2), vec![1, 2]);
         assert_eq!(js_slice(&v, 2, 4), vec![3]);

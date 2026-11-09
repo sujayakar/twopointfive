@@ -890,18 +890,17 @@ pub(in crate::breakage) fn breaks_studs(g: &mut crate::game::Game, b: &crate::br
 mod tests {
     use super::*;
 
-    fn piece(g: &mut Game, n: usize, side: f64, age: f64) -> DebrisChunkId {
+    fn piece(g: &mut Game, side: f64, age: f64) -> DebrisChunkId {
         let mut b = crate::scene_boxes::Box::default();
         b.h = [side, side / 2.0, side / 4.0];
-        let box_ = BoxId::from_ix(n);
-        *seam_box(g, box_) = b;
+        let box_ = g.tab.boxes.push(b);
         let mut c = crate::debris::Chunk::default();
         c.box_ = box_.into();
         c.age = age;
         g.tab.debris_chunk.push(c)
     }
 
-    /// `[0, 1, 2].sort((i, j) => h[i] - h[j])`: smallest first, ties keep their order
+    /// smallest first, ties keep their order
     #[test]
     fn axes_sort_stably_by_half_extent() {
         assert_eq!(axes_by_size([0.3, 0.1, 0.1]), [1, 2, 0]);
@@ -909,12 +908,11 @@ mod tests {
         assert_eq!(axes_by_size([0.5, 0.2, 0.3]), [1, 2, 0]);
     }
 
-    /// The smallest that may go, the oldest among equals; not one dealt this frame unless nothing else may go
+    /// The pool is full and a new piece needs a place: the smallest that may go, the oldest among equals; not one dealt this frame unless nothing else may go.
     #[test]
-    #[ignore = "needs the table of Box rows: runs once seam_box has a body"]
     fn pick_takes_the_smallest_resting_piece() {
         let mut g = Game::blank();
-        let (big, small_a, small_b, fresh) = (piece(&mut g, 0, 0.5, 1.0), piece(&mut g, 1, 0.1, 1.0), piece(&mut g, 2, 0.1, 2.0), piece(&mut g, 3, 0.01, 0.0));
+        let (big, small_a, small_b, fresh) = (piece(&mut g, 0.5, 1.0), piece(&mut g, 0.1, 1.0), piece(&mut g, 0.1, 2.0), piece(&mut g, 0.01, 0.0));
         let list = [big, small_a, small_b, fresh];
         assert_eq!(breaks_pick(&mut g, &list, &mut |_g, _c| true), 1.0);
         assert_eq!(breaks_pick(&mut g, &list, &mut |_g, c| c != small_a), 2.0);

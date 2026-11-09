@@ -1064,8 +1064,9 @@ mod tests {
         assert_eq!(learned(was, -1.0, None), 1.0);
     }
 
+    /// What a mark says for itself stands; the op's kind and door fill only what it leaves out. `shy: None` is its own word: this door is no longer shied from.
     #[test]
-    fn assign_spread_the_row_wins_over_the_order() {
+    fn a_mark_s_own_order_door_and_shy_win_over_the_op_s() {
         let a = crate::doortools::DoorToolsAssignA { going: String::from("g"), there: String::from("t"), ..Default::default() };
         let m = merged_assign("openClear", DoorId(3), &a);
         assert_eq!(m.order, "openClear");
