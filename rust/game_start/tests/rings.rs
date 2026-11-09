@@ -328,6 +328,10 @@ fn in_a_game_of_two_the_plan_is_the_seats_and_the_others_is_listed_without_its_k
         p.until(20.0, |p| plan(p, 1).own.doors.iter().any(|d| d.key.is_some())).unwrap_or_else(|| panic!("seed {seed}: nothing waits on the second's key: {:?}", plan(&p, 1).own.doors));
         let one = plan(&p, 0);
         assert!(one.others[0].doors.iter().all(|d| d.key.is_none() && d.cap == KeyCap::None), "seed {seed}: the press is its own player's: {:?}", one.others[0].doors);
+        let faint = p.view_of(0).look.plan.others;
+        assert!(faint > 0.0 && faint < 1.0, "seed {seed}: another's plan is drawn weaker than his own: {faint}");
+        p.g.k.plan.others = 0.0;
+        assert!(plan(&p, 0).others.is_empty() && plan(&p, 1).own.doors.iter().any(|d| d.key.is_some()), "seed {seed}: at none it is not listed, and the second's own still is");
     }
 }
 
