@@ -50,14 +50,14 @@ export function tree(boxes: Float64Array, n: number, leaf: number): { root: Tree
   };
   return { root: make(0, n), order, nodes };
 }
-/** lays a tree down; what a leaf says is `leafAt(first, count)`. Returns the root's row (from the store's start) */
-function lay(s: Store, root: TreeNode, kind: string, leafAt: (first: number, count: number) => [number, number], at = -1): number {
-  if (at < 0) at = s.take(2, kind); s.f.set(root.box.subarray(0, 3), at * 4); s.f.set(root.box.subarray(3, 6), at * 4 + 4);
-  if (root.a && root.b) { const c = s.take(4, kind); lay(s, root.a, kind, leafAt, c); lay(s, root.b, kind, leafAt, c + 2); s.u[at * 4 + 3] = s.base + c; s.u[at * 4 + 7] = 0; }
-  else { const [a, b] = leafAt(root.first, root.count); s.u[at * 4 + 3] = a; s.u[at * 4 + 7] = b; }
-  return at;
+/** a tree as rays walk it: an inner node is four rows, both children's boxes and what they are. `what(first, count)` says what a leaf is; returns what the root is */
+function lay(s: Store, node: TreeNode, kind: string, what: (first: number, count: number) => number): number {
+  if (!node.a || !node.b) return what(node.first, node.count);
+  const at = s.take(4, kind); [node.a, node.b].forEach((c, i) => { const r = lay(s, c, kind, what), o = (at + i * 2) * 4; s.f.set(c.box.subarray(0, 3), o); s.u[o + 3] = r; s.f.set(c.box.subarray(3, 6), o + 4); s.u[o + 7] = 0; });
+  return s.base + at;
 }
-// (a leaf's second word: 1..255 = so many triangles (or children) from the first word on; 0 = an inner node, its children at the first word and two rows on)
+/** so many triangles, or children, from the first on (a node's own row is told from it by its top bit) */
+const leaf = (first: number, count: number) => (0x80000000 | (first << 4) | count) >>> 0;
 
 /** a whole mesh: vertices, triangles, what the raster picks clusters by, and a tree for each level a ray may ask for */
 export function packMesh(s: Store, d: Dag): Packed {
@@ -65,13 +65,13 @@ export function packMesh(s: Store, d: Dag): Packed {
   for (const c of d.clusters) for (const v of c.tri) for (let k = 0; k < 3; k++) { const p = P.pos[v * 3 + k]!; if (p < mn[k]!) mn[k] = p; if (p > mx[k]!) mx[k] = p; }
   const st = mn.map((v, k) => Math.max(1e-9, (mx[k]! - v) / 65535)) as V3, header = s.take(4 + RATIOS, 'headers'), q = (v: number, k: number) => Math.round((P.pos[v * 3 + k]! - mn[k]!) / st[k]!), at = (v: number, k: number) => mn[k]! + q(v, k) * st[k]!;
   // ---- each cluster: its triangles in the order of a small tree over them, its vertices once each (triangle i begins with a vertex that begins no other, so that one number tells a triangle)
-  const n = d.clusters.length, rec = s.take(n, 'clusters'), idx = s.take(n * CLUSTER / 4, 'triangles'), sub: number[] = [], cone: Float64Array[] = [];
+  const n = d.clusters.length, rec = s.take(n, 'clusters'), idx = s.take(n * CLUSTER / 4, 'triangles'), sub: number[] = [], subBox: Float64Array[] = [], cone: Float64Array[] = [];
   const local = new Int32Array(P.n).fill(-1), vx = new Float64Array(256), vy = new Float64Array(256), vz = new Float64Array(256), uses = new Int32Array(256), begins = new Int32Array(256), of = new Int32Array(256), L = new Int32Array(CLUSTER * 3), boxes = new Float64Array(CLUSTER * 6), fn = new Float64Array(CLUSTER * 3);
   d.clusters.forEach((c, ci) => {
     const m = c.tri.length / 3; let nv = 0;
     for (let i = 0; i < m * 3; i++) { const g = c.tri[i]!; let v = local[g]!; if (v < 0) { v = local[g] = nv++; of[v] = g; uses[v] = 0; begins[v] = -1; vx[v] = at(g, 0); vy[v] = at(g, 1); vz[v] = at(g, 2); } L[i] = v; uses[v]!++; }
     for (let t = 0; t < m; t++) { const i = L[t * 3]!, j = L[t * 3 + 1]!, k = L[t * 3 + 2]!, o = t * 6; boxes[o] = Math.min(vx[i]!, vx[j]!, vx[k]!) - st[0] * 0.01; boxes[o + 1] = Math.min(vy[i]!, vy[j]!, vy[k]!) - st[1] * 0.01; boxes[o + 2] = Math.min(vz[i]!, vz[j]!, vz[k]!) - st[2] * 0.01; boxes[o + 3] = Math.max(vx[i]!, vx[j]!, vx[k]!) + st[0] * 0.01; boxes[o + 4] = Math.max(vy[i]!, vy[j]!, vy[k]!) + st[1] * 0.01; boxes[o + 5] = Math.max(vz[i]!, vz[j]!, vz[k]!) + st[2] * 0.01; }
-    const tr = tree(boxes, m, LEAF); sub.push(lay(s, tr.root, 'ray trees', (f, k) => [ci * CLUSTER + f, k]));
+    const tr = tree(boxes, m, LEAF); subBox.push(tr.root.box); sub.push(lay(s, tr.root, 'ray trees', (f, k) => leaf(ci * CLUSTER + f, k)));
     // who begins which triangle: greedily, the vertex with the fewest triangles left. Those that begin one come first, in the triangles' order; a triangle left without gets a copy
     const list: number[] = [], first = new Uint8Array(m), slot = new Int32Array(nv).fill(-1);
     for (let t = 0; t < m; t++) { const q = tr.order[t]! * 3; let best = -1, least = 1e9; for (let k = 0; k < 3; k++) { const v = L[q + k]!; if (begins[v]! < 0 && uses[v]! < least) { least = uses[v]!; best = k; } } for (let k = 0; k < 3; k++) uses[L[q + k]!]!--; if (best >= 0) { begins[L[q + best]!] = t; slot[L[q + best]!] = t; } else best = 0; first[t] = best; list.push(L[q + best]!); }
@@ -104,12 +104,9 @@ export function packMesh(s: Store, d: Dag): Packed {
   const index = new Map(d.clusters.map((c, i) => [c, i])), levels: Level[] = [];
   for (let k = 0; k < RATIOS; k++) {
     const e = k === 0 ? 0 : errorFor(d, d.triangles / 2 ** k); if (k > 0 && e <= levels[levels.length - 1]!.error) continue; const cs = cutAt(d, e), tris = cs.reduce((a, c) => a + c.tri.length / 3, 0); if (k > 0 && tris > levels[levels.length - 1]!.triangles * 0.8) continue;
-    const boxes = new Float64Array(cs.length * 6); cs.forEach((c, i) => { const r = sub[index.get(c)!]! * 4; boxes.set(s.f.subarray(r, r + 3), i * 6); boxes.set(s.f.subarray(r + 4, r + 7), i * 6 + 3); });
-    const tr = tree(boxes, cs.length, 1), root = lay(s, tr.root, 'ray trees', () => [0, 0]);
-    // (a leaf of the upper tree is a copy of its cluster's own root)
-    const fill = (node: TreeNode, row: number) => { if (node.a && node.b) { const c = s.u[row * 4 + 3]! - s.base; fill(node.a, c); fill(node.b, c + 2); } else { const from = sub[index.get(cs[tr.order[node.first]!]!)!]! * 4; for (let w = 0; w < 8; w++) s.u[row * 4 + w] = s.u[from + w]!; } }; fill(tr.root, root);
+    const at = cs.map(c => index.get(c)!), boxes = new Float64Array(cs.length * 6); at.forEach((c, i) => boxes.set(subBox[c]!, i * 6)); const tr = tree(boxes, cs.length, 1), root = lay(s, tr.root, 'ray trees', f => sub[at[tr.order[f]!]!]!);
     let sp = 0, sn = 0; for (const c of cs) for (const v of c.tri) { sp += P.spread[v]!; sn++; }
-    levels.push({ error: e, triangles: tris, spread: sp / sn, root: s.base + root });
+    levels.push({ error: e, triangles: tris, spread: sp / sn, root });
   }
   const h = header * 4, whole = around(d.clusters.filter(c => c.level === 0).map(c => c.bound)); s.f.set(mn, h); s.u[h + 3] = levels.length; s.f.set(st, h + 4); s.u[h + 7] = s.base + rec; s.u[h + 8] = s.base + idx; s.u[h + 9] = s.base + top; s.u[h + 10] = tops.length; s.u[h + 11] = n; s.f.set([whole.x, whole.y, whole.z, whole.r], h + 12);
   levels.forEach((l, i) => { s.f[h + 16 + i * 4] = l.error; s.u[h + 17 + i * 4] = l.root; s.u[h + 18 + i * 4] = l.triangles; s.f[h + 19 + i * 4] = l.spread; });
@@ -127,8 +124,8 @@ export function packObject(s: Store, levels: ObjectLevel[], /** the width from w
       for (let a = 0; a < 3; a++) { let lo = c.at[a]!, hi = c.at[a]!; for (let b = 0; b < 3; b++) { const m = c.rot[b]![a]! * c.scale, p = m * c.mesh.mn[b]!, r = m * c.mesh.mx[b]!; lo += Math.min(p, r); hi += Math.max(p, r); } boxes[i * 6 + a] = lo; boxes[i * 6 + 3 + a] = hi; if (lo < mn[a]!) mn[a] = lo; if (hi > mx[a]!) mx[a] = hi; }
     });
     // (leaves name children by where they lie: laid again in the tree's order)
-    const tr = tree(boxes, n, 2), was = s.u.slice((kids + start * 4) * 4, (kids + (start + n) * 4) * 4); tr.order.forEach((src, i) => s.u.set(was.subarray(src * 16, src * 16 + 16), (kids + (start + i) * 4) * 4)); const first = start, root = lay(s, tr.root, 'ray trees', (f, k) => [first + f, k]);
-    const h = (header + 3 + li) * 4; s.f[h] = l.error; s.u[h + 1] = s.base + root; s.u[h + 2] = first; s.u[h + 3] = n; start += n; most = Math.max(most, n);
+    const tr = tree(boxes, n, 2), was = s.u.slice((kids + start * 4) * 4, (kids + (start + n) * 4) * 4); tr.order.forEach((src, i) => s.u.set(was.subarray(src * 16, src * 16 + 16), (kids + (start + i) * 4) * 4)); const first = start, root = lay(s, tr.root, 'ray trees', (f, k) => leaf(first + f, k));
+    const h = (header + 3 + li) * 4; s.f[h] = l.error; s.u[h + 1] = root; s.u[h + 2] = first; s.u[h + 3] = n; start += n; most = Math.max(most, n);
   });
   const h = header * 4; s.u[h] = levels.length; s.u[h + 1] = bits; s.u[h + 2] = s.base + kids; s.u[h + 3] = total; s.f[h + 8] = gone; s.f.set([(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2], h + 4);
   if (total > 1 << (31 - bits)) throw new Error('too many children'); return { row: s.base + header, levels, mn, mx, most };
