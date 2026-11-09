@@ -165,16 +165,9 @@ pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Quer
 }
 
 /// the Training row whose level an address boots
-fn lesson_of_address(q: &crate::query::Query) -> Option<crate::scene_scenarios::ScenarioEntry> {
+pub fn lesson_of_address(q: &crate::query::Query) -> Option<crate::scene_scenarios::ScenarioEntry> {
     let file = q.get("levelFile")?;
     crate::scene_scenario_list::tutorial_missions().into_iter().find(|e| e.level.as_deref() == Some(file))
-}
-
-/// …AND THE DIFFICULTY IT ASKS FOR, before the game is made, on the blank game's own knob tables, as a page reads it: a Training lesson's address reads no lever, as its page
-/// doesn't. It is the address's alone: no host but a page keeps a level.   (src/host/standup.ts difficultyOfAddress)
-pub fn difficulty_of_address(g: &mut crate::game::Game, q: &crate::query::Query) {
-    let plain = lesson_of_address(q).is_some();
-    if let Some(a) = crate::difficulty::difficulty_asked(g, q, plain) { crate::difficulty::difficulty_lay(g, &a); }
 }
 
 /// …AND OF THE STOOD GAME: the mission the address names, staged, then the solo card's question (the plain night, or a quiet mission alone, wears

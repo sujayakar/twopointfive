@@ -20,7 +20,7 @@ Each crate is its own cargo workspace and target folder, but `prim` and `sim` sh
 | `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `sim`, `prim`, `game_derive` |
 | `rust/game_rules/` | the rules; its crate name is `game`. `no_std` | `game_types`, `sim`, `prim` |
 | `rust/game_draw/` | what the picture is told. `no_std` | `game`, `sim` |
-| `rust/game_start/` | a game from a level file, what a host does round a step (`src/host/`: commands, knobs by name, cards, address words); tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
+| `rust/game_start/` | a game from a level file, a host's work round a step (`src/host/`); tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
 | `rust/game_face/` | the module's C calls | all of them |
 
 ## How it works
@@ -195,5 +195,5 @@ Native tests in `rust/game_start/tests/`, and `#[test]`s in `bytes.rs`, `owned.r
 
 ## Not seen
 
-None of this sees a GPU. No check keeps a float method out of `rust/game_rules`. Six dress rows (`air`, `snow`, `rain`, `wet_ground`, `wake`, `men`)
+None of this sees a GPU. No check keeps a float method out of `rust/game_rules`. Six dress rows (`air`, `snow`, `rain`, the wet ground's, `wake`, `men`)
 are read by nothing.

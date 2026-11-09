@@ -2,15 +2,14 @@
 import { keysBoot } from '../../src/host/keymap';
 import { openStartPage, startPage } from '../../src/ui/startpage';
 import { Desk, desk, setDesk, type DeskFace } from '../../src/view/desk';
-import { Commands } from '../../src/draw/commands';
-import { machineBefore } from '../../src/host/machine';
+import { machineKept } from '../../src/host/machine';
 
 const q = new URLSearchParams(location.search);
 keysBoot(q);
 { const { instance } = await WebAssembly.instantiate(await (await fetch('/game_face.wasm')).arrayBuffer());
-  const X = instance.exports as unknown as DeskFace & { memory: WebAssembly.Memory }, C = new Commands();
+  const X = instance.exports as unknown as DeskFace & { memory: WebAssembly.Memory };
   setDesk(new Desk(X, X.memory, (key, text) => { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); }));
-  machineBefore(q, '', C); desk().do(C); }
+  desk().machine(machineKept(), location.search); }
 document.getElementById('menu')?.classList.remove('on');
 openStartPage();
 Object.assign(window, { __cards: { page: startPage, open: openStartPage } });

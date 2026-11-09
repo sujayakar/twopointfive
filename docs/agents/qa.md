@@ -137,8 +137,8 @@ mode, enemies that don't think and unlimited ammunition.
 none. In `rust/game_rules/src/tick/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while
 anybody is alert, searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
 
-What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineBefore`, `machineAfter`). A fresh Playwright
-context has none of it, and a person's browser may. An address word wins over what is kept.
+What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineKept`, `machineAfter`). A fresh Playwright
+context has none of it, and a person's browser may. An address word wins over what is kept (`rust/game_start/src/host/mod.rs`, `lay`), on a native start too.
 
 ## Rules that hold
 

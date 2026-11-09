@@ -126,12 +126,14 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 
 ## The start (`src/stand.rs`)
 
-`stand(level, assets, opts)` makes a game on a host with no picture. A host that hands knob tables and commands first starts by `stand_handed`
+`stand(level, assets, opts)` makes a game on a host with no picture. A host that hands what it has as one run of bytes starts by `stand_handed`
 (`src/handed.rs`), which is what `face_start` calls. In order:
 
+0. **`host::lay`** (`src/host/mod.rs`), alone: what the machine keeps (`StartOpts.kept`, one JSON text across a host) and the address's words, the address always over it.
+   Kept rows and picks, the address's numbers, the level, the levers, the cards, the quiet picks. A lesson keeps no lever, and hard only with `lessonhard`. The desk uses it too.
+
 1. The address's words, where one is handed (`StartOpts.link`), BEFORE the game is made: the game's `address_before_game` (the row's own hour and
-   weather onto the words, the weather the game is born in, the visit's hour), then `difficulty_of_address`, the difficulty it asks for, on this game's
-   own knob tables, unless `StartOpts.difficulty` is false: a host that handed commands has read its address onto them itself. An address that says
+   weather onto the words, the weather the game is born in, the visit's hour). An address that says
    `kitview` first builds the level the kit picture needs and dresses the men for it (`src/kit_stage.rs`).
 2. The block of `rust/sim` the game stands in, zeroed under the layout's word (`stand.rs`).
 3. The character: skeleton, skin, clips, the cast's meshes and variants, from the glTF files' bytes (`gltf.rs`). The page reads the same files for its

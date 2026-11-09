@@ -47,15 +47,14 @@ pub struct StartOpts {
     /// cameras, then the mission. The level file is the caller's to read (the page reads the file the link names, in the look that is on).
     /// Wins over `scenario`
     pub link: Option<String>,
+    /// WHAT THE MACHINE THAT STANDS IT KEEPS (`host::lay`, under the address): nothing, for a host that keeps nothing
+    pub kept: crate::host::kept::Kept,
     /// the rows that only dress the picture up (a page) or down (a host that draws nothing: the moths do not fly, the fixtures do not swing)
     pub dress: bool,
-    /// read the difficulty off `link` (`&hard`, `&enemyai=hard`: `scenario_run::difficulty_of_address`). A host that hands its knob tables has read its own address, and what it
-    /// keeps, onto them, and has laid its recipe over that: such a start says false, or the address's words would be laid over what the host decided
-    pub difficulty: bool,
     /// a mission that the address's words ask for and the game refuses is said (`Stood.refused`) and is no stop: for whoever holds the refusals themselves to something (the gate)
     pub may_refuse: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, difficulty: true, may_refuse: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false } } }
 
 pub use game::standing::Host;
 
@@ -101,25 +100,18 @@ fn place_of(link: &str) -> bool {
 }
 
 /// STAND A GAME on the level file `data` (the file's text, parsed).
-pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(data, assets, o, &mut |_| {}) }
-
-/// … with WHAT THE HOST HAS SET BEFORE A GAME IS MADE laid on the blank game first (`before`): its knob tables as a visitor, a panel or an address
-/// left them. The start reads knobs from its first line (which cast, which furniture, how a thing is rounded), so they are the host's before
-/// anything is read, as they are when the TypeScript stands a game.
-pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn FnMut(&mut Game)) -> Stood {
+pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     let mut g = Box::new(Game::blank());
-    before(&mut g);
+    // (what the machine keeps and what the address says come first: the start reads knobs from its first line, which cast, which furniture, how a thing is rounded)
+    crate::host::lay(&mut g, &o.kept, o.link.as_deref());
     // (THE KIT PICTURE: an address that carries `kitview` builds the level the way needs and dresses the men before they are made; no other start reads a word of it)
     let kit = crate::kit_stage::of_link(o.link.as_deref(), data);
     let data: &Json = kit.as_ref().map_or(data, |k| &k.data);
     if let Some(k) = kit.as_ref() { crate::kit_stage::dress(&mut g, k); }
     // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
-    // own hour and weather onto its words, the weather the game is born in, and the difficulty it asks for
+    // own hour and weather onto its words, and the weather the game is born in
     let mut address = o.link.as_deref().map(game::query::Query::parse);
-    if let Some(q) = address.as_mut() {
-        game::scenario_run::address_before_game(&mut g, q);
-        if o.difficulty { game::scenario_run::difficulty_of_address(&mut g, q); }   // (over `before`'s tables where a host handed none of its own: StartOpts.difficulty)
-    }
+    if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q); }
     born(o.slot);
     g.sim = o.slot;
     // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
