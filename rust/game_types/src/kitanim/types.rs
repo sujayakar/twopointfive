@@ -1,10 +1,10 @@
 //! The types of `kitanim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BeatRow, src/game/kitanim.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BeatRow {
     pub dur: f64,
     pub out: f64,
@@ -27,7 +27,7 @@ impl BeatRow {
 impl Default for BeatRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ReloadKind {
     Dry,
     Empty,
@@ -44,7 +44,7 @@ impl ReloadKind {
 }
 
 /// (TypeScript: inline at src/game/kitanim.ts:86 KITANIM_LOG, src/game/kitanim.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitanimModKITANIMLOGItem {
     pub t: f64,
     pub what: crate::kitanim::KitanimModKITANIMLOGItemWhat,
@@ -69,7 +69,7 @@ impl KitanimModKITANIMLOGItem {
 impl Default for KitanimModKITANIMLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitanimModKITANIMLOGItemWhat {
     Reload,
     Swap,
@@ -221,7 +221,7 @@ impl KitReload {
 impl Default for KitReload { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitanimMod {
     /// (src/game/kitanim.ts:86 KITANIM_LOG)
     pub kitanim_log: Vec<crate::kitanim::KitanimModKITANIMLOGItem>,

@@ -1,10 +1,10 @@
 //! The types of `doze`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DozeWhy {
     Light,
     Alarm,
@@ -29,7 +29,7 @@ impl DozeWhy {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Down,
     Work,
@@ -56,7 +56,7 @@ impl Phase {
 }
 
 /// (TypeScript: Doze, src/game/doze.ts:81)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Doze {
     pub phase: crate::doze::Phase,
     pub wp: f64,
@@ -261,7 +261,7 @@ impl DozeOf {
 impl Default for DozeOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DozeMod {
     /// (src/game/doze.ts:83 REC)
     pub rec: JsMap<GuardId, crate::doze::Doze>,

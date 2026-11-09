@@ -1,10 +1,10 @@
 //! The types of `rescue`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Rescue, src/game/rescue.ts:221)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Rescue {
     pub active: bool,
     pub ops: Vec<GuardId>,
@@ -104,7 +104,7 @@ impl Rescue {
 impl Default for Rescue { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Entry, src/game/rescue.ts:213)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Entry {
     pub ops: Vec<crate::rescue::EntryOpsItem>,
     pub gate: DoorGateId,
@@ -131,7 +131,7 @@ impl Entry {
 impl Default for Entry { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescue.ts:213 Entry.ops, src/game/rescue.ts:213)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EntryOpsItem {
     pub op: DoorOpId,
     pub side: bool,
@@ -154,7 +154,7 @@ impl EntryOpsItem {
 impl Default for EntryOpsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescue.ts:236 Rescue.log, src/game/rescue.ts:236)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueLogItem {
     pub t: f64,
     pub what: String,
@@ -171,7 +171,7 @@ impl RescueLogItem {
 impl Default for RescueLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescue.ts:244 Rescue.result, src/game/rescue.ts:244)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
@@ -196,7 +196,7 @@ impl RescueResult {
 impl Default for RescueResult { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueResultState {
     Lost,
     Rescued,
@@ -211,7 +211,7 @@ impl RescueResultState {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueResultGrade {
     Failed,
     Clean,
@@ -228,7 +228,7 @@ impl RescueResultGrade {
 }
 
 /// (TypeScript: Def, src/game/rescue.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Def {
     pub role: crate::rescue::Role,
     pub in_room: bool,
@@ -267,7 +267,7 @@ impl Def {
 impl Default for Def { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Role {
     Guard,
     Door,
@@ -286,7 +286,7 @@ impl Role {
 }
 
 /// (TypeScript: inline at src/game/rescue.ts:216 Def.mark, src/game/rescue.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DefMark {
     pub pos: V3,
     pub aim_at: V3,
@@ -303,7 +303,7 @@ impl DefMark {
 impl Default for DefMark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DefCrew {
     Empty,
     Cross,
@@ -326,7 +326,7 @@ impl DefCrew {
 }
 
 /// (TypeScript: inline at src/game/rescue.ts:246 Rescue.act, src/game/rescue.ts:246)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueAct {
     pub by: GuardId,
     pub victim: GuardId,
@@ -349,7 +349,7 @@ impl RescueAct {
 impl Default for RescueAct { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueStep {
     Waiting,
     Shouting,
@@ -383,7 +383,7 @@ impl RescueLastOrder {
 impl Default for RescueLastOrder { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescue.ts:262 Rescue.searchA, src/game/rescue.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
     pub face: Option<f64>,
@@ -542,7 +542,7 @@ impl RescueObjective {
 impl Default for RescueObjective { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueMod {
     /// (src/game/rescue.ts:150 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,

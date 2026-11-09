@@ -1,6 +1,6 @@
 //! The types of `seats`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -19,7 +19,7 @@ impl SeatTone {
 }
 
 /// (TypeScript: inline at src/game/seats.ts:48 SEAT_ASKS, src/game/seats.ts:48)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SeatsModSEATASKS {
     pub strict: bool,
     pub shared: bool,
@@ -57,7 +57,8 @@ impl ViewOfBodyC {
 impl Default for ViewOfBodyC { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: seats.ts SEAT_KEYS: what a seat keeps while another seat is on Game; seats::with_seat swaps it)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
+#[bytes(parts)]
 pub struct SeatSet {
     pub seat: SeatId,
     pub player: PlayerId,
@@ -75,6 +76,8 @@ pub struct SeatSet {
     pub nearby: Vec<crate::game::Interactable>,
     pub act: Option<crate::game::Interactable>,
     pub use_door: Option<DoorId>,
+    /// (the host's camera: in no bytes)
+    #[bytes(skip)]
     pub view_proj: Option<crate::game::GameViewProj>,
     pub threat_proximity: f64,
     pub torch_on_t: f64,
@@ -108,7 +111,7 @@ impl SeatSet {
 impl Default for SeatSet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SeatsMod {
     /// (src/game/seats.ts:48 SEAT_ASKS)
     pub seat_asks: crate::seats::SeatsModSEATASKS,

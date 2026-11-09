@@ -1,10 +1,10 @@
 //! The types of `unseen`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: State, src/game/unseen.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub t: f64,
     pub live: bool,
@@ -44,7 +44,7 @@ impl StateHold {
 impl Default for StateHold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/unseen.ts:94 UNSEEN_LOG, src/game/unseen.ts:94)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct UnseenModUNSEENLOGItem {
     pub t: f64,
     pub what: crate::unseen::UnseenModUNSEENLOGItemWhat,
@@ -63,7 +63,7 @@ impl UnseenModUNSEENLOGItem {
 impl Default for UnseenModUNSEENLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum UnseenModUNSEENLOGItemWhat {
     Off,
     On,
@@ -108,7 +108,7 @@ impl UnseenFollow {
 impl Default for UnseenFollow { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct UnseenMod {
     /// (src/game/unseen.ts:94 UNSEEN_LOG)
     pub unseen_log: Vec<crate::unseen::UnseenModUNSEENLOGItem>,

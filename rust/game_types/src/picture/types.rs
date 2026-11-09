@@ -1,6 +1,6 @@
 //! The types of `picture`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// exposedAt asked of many spots at one moment: the man's height asked at, and each live idea (a copy) with its weight, heaviest first, and the places its man may have walked to once first asked (picture.ts exposureAsker)
@@ -10,14 +10,14 @@ pub enum ExposureAsker {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Who {
     Guard(GuardId),
     Player,
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum IdeaHow {
     Heard,
     Seen,
@@ -36,7 +36,7 @@ impl IdeaHow {
 }
 
 /// (TypeScript: Idea, src/game/picture.ts:104)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Idea {
     pub who: crate::picture::Who,
     pub at: V3,
@@ -63,7 +63,7 @@ impl Idea {
 impl Default for Idea { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Pic, src/game/picture.ts:114)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Pic {
     pub owner: Option<GuardId>,
     pub ideas: JsMap<crate::picture::Who, crate::picture::Idea>,
@@ -98,7 +98,7 @@ impl Pic {
 impl Default for Pic { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Step, src/game/picture.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Step {
     pub key: Option<u32>,
     pub mark: V3,
@@ -136,7 +136,7 @@ impl StepKey {
 impl Default for StepKey { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/picture.ts:117)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub men: JsMap<GuardId, crate::picture::Pic>,
     pub sam: crate::picture::Pic,
@@ -161,7 +161,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PictureView, src/game/picture.ts:416)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PictureView {
     pub gd: GuardId,
     pub from: V3,
@@ -184,7 +184,7 @@ impl PictureView {
 impl Default for PictureView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/picture.ts:418 PictureView.ideas, src/game/picture.ts:418)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PictureViewIdeasItem {
     pub who: String,
     pub at: V3,
@@ -213,7 +213,7 @@ impl PictureViewIdeasItem {
 impl Default for PictureViewIdeasItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CoverSpot, src/game/picture.ts:351)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverSpot {
     pub at: V3,
     pub stand: f64,
@@ -417,7 +417,7 @@ impl PictureStepOf {
 impl Default for PictureStepOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PictureMod {
     /// (src/game/picture.ts:118 STATES)
     pub states: Option<crate::picture::State>,

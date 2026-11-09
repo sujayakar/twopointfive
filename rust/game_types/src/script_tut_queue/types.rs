@@ -1,10 +1,10 @@
 //! The frames of levels/tut-queue.script.ts, written by the skeleton's program from the checker. Never edited by hand: a local a body wants across a yield that is not here is a question for the program.
 #![allow(unused_imports, unused_variables, unused_mut)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (levels/tut-queue.script.ts:44-82) the beat 'gun': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueGunFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -29,7 +29,7 @@ pub struct TutQueueGunFrame {
 }
 
 /// (levels/tut-queue.script.ts:88-124) the beat 'gates': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueGatesFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -44,7 +44,7 @@ pub struct TutQueueGatesFrame {
 }
 
 /// (levels/tut-queue.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: alive, isOpen
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutQueueVars {
     pub front: Option<crate::director::DoorRef>,
     pub back: Option<crate::director::DoorRef>,

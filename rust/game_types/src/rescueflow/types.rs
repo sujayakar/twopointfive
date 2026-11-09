@@ -1,10 +1,10 @@
 //! The types of `rescueflow`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum OpenState {
     Held,
     Unknown,
@@ -25,7 +25,7 @@ impl OpenState {
 }
 
 /// (TypeScript: Region, src/game/rescueflow.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Region {
     pub id: String,
     pub rect: crate::scene_scenarios::Rect,
@@ -52,7 +52,7 @@ impl Region {
 impl Default for Region { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueflow.ts:73 Region.hot, src/game/rescueflow.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RegionHotValue {
     pub t: f64,
     pub at: V3,
@@ -69,7 +69,7 @@ impl RegionHotValue {
 impl Default for RegionHotValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Known, src/game/rescueflow.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Known {
     pub o: crate::scene_scenarios::RouteOpening,
     pub region: RescueflowRegionId,
@@ -98,7 +98,7 @@ impl Known {
 impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Job, src/game/rescueflow.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Job {
     pub kind: crate::rescueflow::JobKind,
     pub o: crate::scene_scenarios::RouteOpening,
@@ -129,7 +129,7 @@ impl Job {
 impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum JobKind {
     Cover,
     Corridor,
@@ -144,7 +144,7 @@ impl JobKind {
 }
 
 /// (TypeScript: RescueFlow, src/game/rescueflow.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlow {
     pub knobs: crate::rescueflow::RescueFlowKnobs,
     pub known: Vec<crate::rescueflow::Known>,
@@ -187,7 +187,7 @@ impl RescueFlow {
 impl Default for RescueFlow { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/rescueflow.ts:78 RescueFlow.knobs, src/game/rescueflow.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueFlowKnobs {
     pub abreast: f64,
     pub unpass: f64,
@@ -238,7 +238,7 @@ impl RescueFlowKnobs {
 impl Default for RescueFlowKnobs { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueflow.ts:87 RescueFlow.stats, src/game/rescueflow.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueFlowStats {
     pub takes: f64,
     pub chained: f64,
@@ -263,7 +263,7 @@ impl RescueFlowStats {
 impl Default for RescueFlowStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueflow.ts:94 RescueFlow.corr, src/game/rescueflow.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueFlowCorr {
     pub x: f64,
     pub t: f64,
@@ -280,7 +280,7 @@ impl RescueFlowCorr {
 impl Default for RescueFlowCorr { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueflow.ts:95 RescueFlow.cameIn, src/game/rescueflow.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlowCameIn {
     pub region: String,
     pub o: crate::scene_scenarios::RouteOpening,

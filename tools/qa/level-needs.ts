@@ -1,20 +1,15 @@
 // WHAT A LEVEL NEEDS, ASKED OF A LEVEL — the checker of .claude/skills/level/SKILL.md (the list of everything a level has been seen to need, each item with
-// what was missed when it was learnt). It asks what stands AROUND a level's file: the tables it is registered in, the kit its team is issued, and three
-// things about its boxes that no other check holds. The floor itself (structure, nav, size, the scripted runs) is tools/qa/map-check.ts's, which --run runs.
+// what was missed when it was learnt). It asks what stands AROUND a level's file: the tables it is registered in, and three
+// things about its boxes that no other check holds. The floor itself is the game's own to answer (rust/game_start levels), which --run asks.
 // Read off the level FILES and the tables: no game is stood up, nothing is played.
 //   bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…] [--quiet] [--md out.md] [--json out.json]
 //     name      levels to ask (levels/<name>.json); none = every level file
-//     --run     also run the level's OWN checks as they stand (export --check, map-check --no-runs, level-lint, door-size, second-way-check, marksight-check, walked-check, lived-check,
-//               kitview-plan, level-names-check, floor-order-check, quiet-check, lesson-check), each a line with its exit code, `--jobs` at a time
+//     --run     also run the level's OWN checks as they stand (export --check, level-lint, kitview-plan, floor-order-check, and the native tool's questions), each a line with its exit code, `--jobs` at a time
 //     --skip    needs left out (their names below): to see the exit code of the rest while one is red everywhere
 //     --quiet   FAIL and NOTE lines only, and the tally
 //     --md      a table, a row per level and a column per need, written to a file (the statement of how the levels stand)
 //   NEEDS_BREAK=1 bun run tools/qa/level-needs.ts    the red path: one level is given every gap this tool can see (in memory: nothing is written) and each
 //               must be found: exit 1 = every planted gap was found, 0 = one was MISSED (the line says which)
-//   run it on BOTH stands (TPS_PROFILE=shipped in front): --run's own checks are the stand's. THE NEEDS THEMSELVES ARE ASKED OF THE PAGE AS IT OPENS on
-//               either stand (host/profile.ts pageSwitches with no flag and the kit read with nothing kept, as the shipped stand boots): a rule the
-//               frozen stand holds off would call a man bare whom no player sees bare. `KITDEAL_BREAK=1` in front shows the cards as the table
-//               writes them: red on every row that brings a third man
 // exit 0 = no FAIL · 1 = a FAIL (a NOTE never fails) · 2 = no such level, or an unknown need to skip
 // WHAT IS ASKED (the word in front is the need's name in the table and in the skill):
 //   generator   the file says which generator wrote it, and that generator is in the tree
@@ -44,16 +39,10 @@
 //   moon        one directional light, in `exterior` (the hour's sun goes in at its place)
 //   doorway     no painted band or other wall decal runs across a doorway
 //   roof        no DRAWN slab at ceiling height (the camera cannot see the room under it), and no more roofs than the rain reads (four)
-//   kit         as issued, at every team size the row offers, every man who comes carries something besides his gun. The issue is ONE table for five men
-//               (game/kit.ts), worn shared out over the men who come (KITDEAL, kitWorn), a level's own cards written over the table's first as a
-//               staging does: were the table to leave a man bare this is red on every row that brings him, and the mend is that table's, not a
-//               level's. Bare = no pouch filled and nothing in the big slot.
-//               NOTES for what the issue is for on this floor: locked and steel doors against the door charges issued, frags issued where a frag on
-//               order is refused (a hostage, a man to take), a quiet mission's partner kitted as issued for a loud one
 //   response    a level has a response team only where its file says so (scenarios.response, game/qrf.ts). With the block: its `why` is a sentence,
 //               and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
 //               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
-//               and a call played through, are tools/qa/response-check.ts's
+//               and a call played through, are rust/game_start/tests/response_team.rs's
 //   said        docs/agents names the level (its file, its generator or a row's id) — that a write-up is THERE, not that it is good
 import { resolve } from 'node:path';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -61,14 +50,12 @@ import { ROOT } from './here.ts';
 import { fitPropFootprint } from '../../src/scene/levelLoad.ts';
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
-const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
-const { kitDefault, kitWorn, kitCost, kitTeam, kitLoad, bigOf, SLOTS, KIT_MEMBERS } = await import(`${ROOT}/src/game/kit.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`);
 const { PRESETS } = await import(`${ROOT}/src/ui/quality.ts`);
 const { ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
-const HOURS: Record<string, { lamps: boolean } | undefined> = (await import(`${ROOT}/src/game/hours.ts`)).HOURS;
-const { harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
+/** the hours whose street lamps burn (the photocell's: the game's own hours say the same) */
+const LAMPS_LIT = ['dawn', 'dusk'];
 
 interface Paint { albedo: number[]; rough?: number; metal?: boolean }
 interface Box { id: string; group?: string; c: number[]; h: number[]; yaw?: number; flags?: string[]; material?: string; albedo?: number[]; rough?: number; metal?: boolean | null; markings?: unknown[]; emissive?: unknown; rot?: unknown }
@@ -82,11 +69,11 @@ interface LevelFile { meta?: { generator?: string }; materials?: Record<string, 
 interface Row { id: string; hour?: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
   untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
-interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean; docs: string; /** the five cards as n teammates wear them: the issue with a level's own cards (`block`, by place on the roster) written over it, then dealt over the men who come where the game deals them (game/kit.ts kitWorn, as a staging and ui/loadout.ts read them) */ cards(n: number, block: Record<string, Card>): Card[] }
+interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean; docs: string }
 
 type Mark = 'PASS' | 'FAIL' | 'NOTE';
 interface Line { need: string; mark: Mark; text: string }
-export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'ground', 'leak', 'key', 'lamps', 'moon', 'doorway', 'roof', 'kit', 'response', 'said'] as const;
+export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'ground', 'leak', 'key', 'lamps', 'moon', 'doorway', 'roof', 'response', 'said'] as const;
 
 /** the cap on the men who hold a floor (the balance rule: eleven) */
 const DEFENDERS_MAX = 11;
@@ -353,21 +340,6 @@ export const NOBODY_COMES: Record<string, string> = {
   glasshouse: 'one idea, and it is not this', pass: 'a snowed-in road' };
 /** a `why` shorter than this is not a sentence (the same 40 as response-check.ts's file line) */
 const WHY_MIN = 40;
-/** KIT: who comes with nothing but his gun, as issued, at each size the row offers — the game's own issue cards, priced by the game's own pouches
- *  (game/kit.ts kitCost: a card that fills none carries nothing), with the level's own issue written over them where a staging would put it on
- *  (scenarios.issue's cards as written; never on a lesson's level, whose page plays the plain issue with the block unread) */
-const issueOf = (L: LevelFile): Record<string, Card> => (L.scenarios?.lesson ? {} : (L.scenarios?.issue?.members ?? {}) as Record<string, Card>);
-export function bareMen(L: LevelFile, e: Row, T: Tables): string[] {
-  const issue = issueOf(L), out: string[] = [];
-  for (const c of squadChoices(e) as { n: 0 | 1 | 2 | 3 | 4; ok: boolean }[]) {
-    if (!c.ok || c.n === 0) continue;
-    const names = (rosterOf(c.n) as { name: string }[]).map(m => m.name), bare: string[] = [];
-    const worn = T.cards(c.n, issue);
-    for (let i = 1; i <= c.n; i++) if (kitCost(i, worn[i]).used === 0 && bigOf(worn[i]) === 'none') bare.push(names[i - 1] ?? `teammate ${i}`);   // (tools/qa/kitdeal-check.ts comesBare)
-    if (bare.length) out.push(`you + ${c.n}: ${bare.join(', ')}`);
-  }
-  return out;
-}
 /** the rooms a level names (the room clear's, the rescue's, the quiet spots', its places) */
 function roomsOf(L: LevelFile): { name: string; bounds: Bounds }[] {
   const S = L.scenarios ?? {}, out: { name: string; bounds: Bounds }[] = [];
@@ -431,7 +403,7 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
   { const own = leakLine(L);
     say('leak', own.note ? 'note' : true, own.text); }
   // ---- two lights that face each other across the same ground
-  { const day = rows.length > 0 && rows.every(e => e.hour && e.hour !== 'night' && !HOURS[e.hour]?.lamps), hours = [...new Set(rows.map(e => e.hour))].join(' and ');
+  { const day = rows.length > 0 && rows.every(e => e.hour && e.hour !== 'night' && !LAMPS_LIT.includes(e.hour)), hours = [...new Set(rows.map(e => e.hour))].join(' and ');
     const line = (F: LevelFile) => { const pairs = facingLights(F); return { note: pairs.length > 0, text: pairs.length ? `${pairs.length} pair${pairs.length === 1 ? '' : 's'} of spot lights of like strength face each other across the same ground, so each fills the other's shadows: ${pairs.map(p => `${p.a} and ${p.b} (${p.apart.toFixed(0)} m apart${p.photocell && day ? `; both on the photocell, so out at ${hours}, the hour ${rows.map(e => e.id).join(', ')} plays at and a link to the level opens at (the row's hour is written over the link): only the file's own night, ?rowset=0, has them lit` : ''})`).join('; ')}` : 'no two spot lights of like strength face each other across the same ground' }; };
     const own = line(L);
     say('key', own.note ? 'note' : true, own.text); }
@@ -445,19 +417,6 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
     say('doorway', !across.length, across.length ? across.join('; ') : `no wall decal crosses any of ${F.doors.length} doorways`);
     say('roof', !R.drawn.length, (R.drawn.length ? `a drawn slab at ceiling height hides what is under it: ${R.drawn.join('; ')}` : `${R.n} ceiling slabs, each seen through`));
     if (R.n > 4) say('roof', 'note', `${R.n} slabs at ceiling height: the rain reads the four biggest`); }
-  // ---- the kit as issued
-  const mates = (e: Row) => (squadChoices(e) as { n: number; ok: boolean }[]).some(c => c.ok && c.n > 0);   // (false: a row played alone, no teammate to ask)
-  for (const e of rows) { if (!mates(e)) continue;
-    const bare = bareMen(L, e, T), walls = S.roomClear?.wallCharges, wrote = lesson ? 0 : Object.keys(S.issue?.members ?? {}).length;
-    const ownCards = !wrote ? '' : ' (the level issues its own cards)';
-    say('kit', !bare.length, `${e.id}: ${bare.length ? `as issued, nothing but a gun on ${bare.join(' · ')}` : 'as issued, every man who comes carries something'}${walls ? ` (the level issues ${walls} wall charge${walls > 1 ? 's' : ''} to the squad's bag)` : ''}${ownCards}`);
-    // …and what the issue is FOR on this floor, to be said by whoever makes the level: none of it fails
-    const worn = T.cards(e.squad, issueOf(L)), own = Array.from({ length: e.squad }, (_, k) => kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]), sum = (item: string) => own.reduce((s, l) => s + (l.find(x => x.item === item)?.n ?? 0), 0);
-    if (e.kind === 'quiet' && e.squad > 0 && own[0]?.length) say('kit', 'note', `${e.id}: a quiet mission whose partner comes as issued for a loud one (${own[0].map(l => `${l.n} ${l.item}`).join(', ')}): nothing in the level says otherwise`);
-    if (e.kind === 'rescue' && sum('frags')) say('kit', 'note', `${e.id}: ${sum('frags')} frags are issued where a frag on order is refused near a hostage: say what the squad throws instead`); }
-  { const locked = L.doors.filter(d => d.locked).length, steel = L.doors.filter(d => d.steel).length, squad = rows.filter(e => e.kind !== 'quiet' && mates(e));
-    if (squad.length && (locked || steel)) { const charges = Math.max(...squad.map(e => { const worn = T.cards(e.squad, issueOf(L)); return Array.from({ length: e.squad }, (_, k) => (kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]).find(x => x.item === 'charges')?.n ?? 0).reduce((a, n) => a + n, 0); }));
-      say('kit', 'note', `${locked} locked and ${steel} steel of ${L.doors.length} doors, against ${charges} door charge${charges === 1 ? '' : 's'} as issued (steel takes no charge, hammer or shotgun): say how each is meant to be opened`); } }
   // ---- a response team, or none on purpose
   if (rows.length && !lesson) {
     const R = S.response, none = NOBODY_COMES[name];
@@ -477,33 +436,26 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
 
 /** THE LEVEL'S OWN CHECKS, as they stand in the tree. `some`: the command for these levels (null = none of them is this check's); `all`: the check's own
  *  no-name run, used when every level is asked (it reads every file); `each`: one run a level. */
-interface Own { name: string; some(levels: string[]): string[] | null; all?: string[]; each?: boolean }
+interface Own { name: string; /** a question of the native tool */ native?: boolean; some(levels: string[]): string[] | null; all?: string[]; each?: boolean }
 const OWN: Own[] = [
   { name: 'export --check', each: true, some: ([n]) => { const g = generatorOf(read(n)); return n === 'office' ? ['tools/level-export.ts', '--check'] : g && /^tools\/levels\/[\w-]+\.ts$/.test(g) && existsSync(resolve(ROOT, g)) ? ['tools/levels/export.ts', g.slice(13, -3), '--check'] : null; } },
-  { name: 'map-check', each: true, some: ([n]) => { const S = n === 'office' ? { roomClear: {} } : read(n).scenarios ?? {}; return rowsOf(n).length && (S.roomClear || S.quiet) ? ['tools/qa/map-check.ts', n, '--no-runs'] : null; } },   // (a map with a room clear or a quiet block: a rescue alone is not map-check's)
   { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...l.map(n => `levels/${n}.json`), '--quiet'] },
-  { name: 'door-size', all: ['tools/qa/door-size.ts'], some: l => ['tools/qa/door-size.ts', ...l.map(n => n)] },
-  { name: 'second-way-check', all: ['tools/qa/second-way-check.ts'], some: l => { const f = l.filter(n => rowsOf(n).some(e => e.kind !== 'quiet')); return f.length ? ['tools/qa/second-way-check.ts', ...f.map(n => `${n}.json`)] : null; } },
-  { name: 'marksight-check', all: ['tools/qa/marksight-check.ts'], some: l => ['tools/qa/marksight-check.ts', ...l.map(n => n)] },   // (a level that stands no man with something to watch is named NOT JUDGED and passes)
-  { name: 'walked-check', all: ['tools/qa/walked-check.ts'], some: l => ['tools/qa/walked-check.ts', ...l] },
-  { name: 'lived-check', all: ['tools/qa/lived-check.ts', '--quiet'], some: l => ['tools/qa/lived-check.ts', ...l.map(n => n), '--quiet'] },
   { name: 'kitview-plan', all: ['tools/qa/kitview-plan.ts', '--quiet'], some: l => ['tools/qa/kitview-plan.ts', ...l, '--quiet'] },
-  { name: 'level-names-check', all: ['tools/qa/level-names-check.ts', '--no-play'], some: l => { const f = l.filter(n => !/^office/.test(n) && Object.keys(read(n).scenarios ?? {}).length); return f.length ? ['tools/qa/level-names-check.ts', '--levels', f.join(','), '--no-play'] : null; } },
   { name: 'floor-order-check', all: ['tools/qa/floor-order-check.ts'], some: l => ['tools/qa/floor-order-check.ts', ...l.map(n => `${n}.json`)] },
-  { name: 'quiet-check', all: ['tools/qa/quiet-check.ts'], some: l => { const f = l.filter(n => read(n).scenarios?.quiet); return f.length ? ['tools/qa/quiet-check.ts', ...f.map(n => `${n}.json`)] : null; } },
-  { name: 'lesson-check', all: ['tools/qa/lesson-check.ts'], some: l => { const f = l.filter(n => read(n).scenarios?.lesson); return f.length ? ['tools/qa/lesson-check.ts', ...f] : null; } },
+  // the game's own questions (rust/game_start/src/bin/levels.rs)
+  ...['stands', 'doors', 'second-way', 'sight', 'walked', 'charges', 'names', 'rain'].map(q => ({ name: `levels ${q}`, native: true, all: [q], some: (l: string[]) => [q, ...l] })),
 ];
 async function runOwn(levels: string[], all: boolean, jobs: number): Promise<Line[]> {
-  const cmds: { name: string; args: string[] }[] = [];
+  const cmds: { name: string; args: string[]; native?: boolean }[] = [];
   for (const c of OWN) {
-    if (c.each) for (const l of levels) { const a = c.some([l]); if (a) cmds.push({ name: c.name, args: a }); }
-    else { const a = all && c.all ? c.all : c.some(levels); if (a) cmds.push({ name: c.name, args: a }); }
+    if (c.each) for (const l of levels) { const a = c.some([l]); if (a) cmds.push({ name: c.name, args: a, native: c.native }); }
+    else { const a = all && c.all ? c.all : c.some(levels); if (a) cmds.push({ name: c.name, args: a, native: c.native }); }
   }
   const out: Line[] = new Array(cmds.length); let next = 0;
-  const worker = async () => { for (let i = next++; i < cmds.length; i = next++) { const { name, args } = cmds[i], t = Date.now();
-    const p = Bun.spawn(['bun', 'run', ...args], { cwd: ROOT, env: process.env, stdout: 'pipe', stderr: 'pipe' }), [so, se, rc] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+  const worker = async () => { for (let i = next++; i < cmds.length; i = next++) { const { name, args, native } = cmds[i], t = Date.now();
+    const p = Bun.spawn(native ? ['cargo', 'run', '--release', '--quiet', '--bin', 'levels', '--', ...args] : ['bun', 'run', ...args], { cwd: native ? `${ROOT}/rust/game_start` : ROOT, env: process.env, stdout: 'pipe', stderr: 'pipe' }), [so, se, rc] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
     const said = args.join(' '), tail = `${so}${se}`.trim().split('\n').filter(Boolean).pop()?.slice(0, 160) ?? '';
-    out[i] = { need: name, mark: rc === 0 ? 'PASS' : 'FAIL', text: `bun run ${said.length > 150 ? `${said.slice(0, 150)} …` : said} — exit ${rc} in ${Math.round((Date.now() - t) / 1000)} s${rc === 0 ? '' : `: ${tail}`}` }; } };
+    out[i] = { need: name, mark: rc === 0 ? 'PASS' : 'FAIL', text: `${native ? 'levels' : 'bun run'} ${said.length > 150 ? `${said.slice(0, 150)} …` : said} — exit ${rc} in ${Math.round((Date.now() - t) / 1000)} s${rc === 0 ? '' : `: ${tail}`}` }; } };
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, worker));
   return out;
 }
@@ -519,12 +471,9 @@ if (import.meta.main) {
   for (const n of Object.keys(NOBODY_COMES)) if (!every.includes(n) || !rowsOf(n).length) { console.error(`NOBODY_COMES names '${n}', which is no level with a mission row: take the line out`); process.exit(1); }
   for (const n of todo) if (!files.includes(n)) { console.error(`no level file levels/${n}.json`); process.exit(2); }
   const menu = resolve(ROOT, 'public/assets/menu'), docsDir = resolve(ROOT, 'docs/agents'), stills = JSON.parse(readFileSync(resolve(menu, 'stills.json'), 'utf8')).stills as Record<string, unknown>;
-  if (harnessProfile() !== 'shipped') { pageSwitches(new URLSearchParams('')); kitLoad(null, ''); }   // (the page as it opens, on either stand: see the head of this file; the shipped stand booted so as tools/qa/headless.ts loaded)
-  if (!SLOTS.ok) { console.error('src/game/slots.json was refused as the game loaded it: no kit can be priced, so nothing here is said of a level'); process.exit(1); }
   const T: Tables = { music: (level, kind) => setlistNames(level, kind).own, still: id => Object.hasOwn(stills, id), picture: id => existsSync(resolve(menu, `${id}.jpg`)),
-    cards: (n, block) => { const was = kitTeam(); kitTeam(n); try { return (kitWorn(n, Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...(block[String(j)] ?? {}) }))) as Card[]).map(m => ({ ...m })); } finally { kitTeam(was); } },
     docs: readdirSync(docsDir).filter(f => f.endsWith('.md')).map(f => readFileSync(resolve(docsDir, f), 'utf8')).join('\n') };
-  console.log(`# what a level needs — ${BREAK ? 'the red path' : `${todo.length} level${todo.length > 1 ? 's' : ''}`}, the ${harnessProfile()} stand${SKIP.length ? ` (not asked: ${SKIP.join(', ')})` : ''}`);
+  console.log(`# what a level needs — ${BREAK ? 'the red path' : `${todo.length} level${todo.length > 1 ? 's' : ''}`}${SKIP.length ? ` (not asked: ${SKIP.join(', ')})` : ''}`);
 
   if (BREAK) {
     // one level with every gap this tool can see, planted in memory: each must come back, in the words that say it was THIS gap
@@ -539,8 +488,7 @@ if (import.meta.main) {
     L.lights.push({ id: 'planted_flood_a', kind: 'spot', pos: [30, 3.6, 2], dir: [0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 }, { id: 'planted_flood_b', kind: 'spot', pos: [33, 3.6, 2], dir: [-0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 });   // (two spots that face each other, far from the shelf so that they light nothing of it)
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
-    const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, big: 'none' };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
-    const planted: Tables = { music: () => false, still: () => false, picture: () => false, docs: '', cards: () => Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...bareCard })) };
+    const planted: Tables = { music: () => false, still: () => false, picture: () => false, docs: '' };
     const lines = ask(name, L, [row], planted);
     // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds)
     const blocked = structuredClone(L), other = structuredClone(L); blocked.scenarios!.response = { why: 'because', team: 'the planted team', raid: {} }; other.scenarios!.response = { why: 'because', team: 'another team' };
@@ -594,7 +542,7 @@ if (import.meta.main) {
       generator: { mark: 'FAIL', says: ['not in the tree'] }, row: { mark: 'FAIL', says: ['no `place`', '`blurb` is 5 characters', '12 defenders', 'names 3 ways in', 'squads'] }, music: { mark: 'FAIL', says: ['no row'] },
       picture: { mark: 'FAIL', says: ['planted-row.jpg'] }, 'kit picture': { mark: 'FAIL', says: ['no scenarios.kitView'] }, lived: { mark: 'FAIL', says: ['is bare'] }, floor: { mark: 'NOTE', says: ['no `surfaces`'] },
       key: { mark: 'NOTE', says: ['planted_flood_a and planted_flood_b'] }, leak: { mark: 'NOTE', says: ['1 thing of mirror metal', '1 in planted by planted_bulb, as planted_shelf'] }, lamps: { mark: 'NOTE', says: ['planted_lamp'] }, moon: { mark: 'FAIL', says: ['2 directional'] }, doorway: { mark: 'FAIL', says: ['planted_dado'] }, roof: { mark: 'FAIL', says: ['drawn slab'] },
-      kit: { mark: 'FAIL', says: ['you + 1: ', 'you + 4: '] }, ground: { mark: 'NOTE', says: ['of planted at'] }, response: { mark: 'NOTE', says: ['is not in NOBODY_COMES'] }, said: { mark: 'FAIL', says: ['names neither'] } };
+      ground: { mark: 'NOTE', says: ['of planted at'] }, response: { mark: 'NOTE', says: ['is not in NOBODY_COMES'] }, said: { mark: 'FAIL', says: ['names neither'] } };
     const missed = Object.entries(WANT).flatMap(([need, w]) => { const text = lines.filter(l => l.need === need && l.mark === w.mark).map(l => l.text).join('\n'); return w.says.filter(s => !text.includes(s)).map(s => `${need} ('${s}')`); });
     for (const m of groundMissed) missed.push(`ground (${m})`);
     const mirror = (finish: Partial<Box>) => leakReads(room({ bulb: [22, 14], finish })).some(r => r.id === 'shelf' && r.strong && r.mirror);
@@ -632,7 +580,7 @@ if (import.meta.main) {
   if (RUN) { const lines = await runOwn(todo, !names.length, JOBS); table['(own checks)'] = lines;
     for (const l of lines) { if (l.mark === 'FAIL') fails++; if (!QUIET || l.mark !== 'PASS') console.log(`- ${l.mark} — own check · ${l.need}: ${l.text}`); } }
   console.log(`\n${fails ? `${fails} FAIL` : 'no FAIL'}, ${notes} NOTE over ${todo.length} level${todo.length > 1 ? 's' : ''}${RUN ? '' : ' (the levels\' own checks were not run: --run)'}. What no tool can ask (the idea, the light, the play) is the skill's: .claude/skills/level/SKILL.md`);
-  if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ stand: harnessProfile(), table }, null, 1));
+  if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ table }, null, 1));
   if (MD) {
     const asked = NEEDS.filter(n => !SKIP.includes(n)), cell = (ls: Line[], need: string) => { const m = ls.filter(l => l.need === need); return !m.length ? '·' : m.some(l => l.mark === 'FAIL') ? 'GAP' : m.some(l => l.mark === 'NOTE') ? 'note' : 'ok'; };
     const head = `| level | ${asked.join(' | ')} |\n|---|${asked.map(() => '---').join('|')}|\n`;

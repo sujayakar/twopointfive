@@ -1,10 +1,10 @@
 //! The types of `digin`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Set,
     Idle,
@@ -35,7 +35,7 @@ impl Phase {
 }
 
 /// (TypeScript: Man, src/game/digin.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Man {
     pub far: bool,
     pub owe: f64,
@@ -120,7 +120,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Cue {
     Kick,
     Scrape,
@@ -141,7 +141,7 @@ impl Cue {
 }
 
 /// (TypeScript: RoomSt, src/game/digin.ts:218)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomSt {
     pub room: RoomfightRoomId,
     pub expected: f64,
@@ -180,7 +180,7 @@ impl RoomSt {
 impl Default for RoomSt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: St, src/game/digin.ts:219)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct St {
     pub men: JsMap<GuardId, crate::digin::Man>,
     pub rooms: JsMap<RoomfightRoomId, crate::digin::RoomSt>,
@@ -211,7 +211,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/digin.ts:219 St.wedges, src/game/digin.ts:219)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StWedgesValue {
     pub key_side: f64,
     pub lock_id: String,
@@ -234,7 +234,7 @@ impl StWedgesValue {
 impl Default for StWedgesValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/digin.ts:219 St.fix, src/game/digin.ts:219)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StFix {
     pub at: V3,
     pub t: f64,
@@ -255,7 +255,7 @@ impl StFix {
 impl Default for StFix { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/digin.ts:189 DIGIN_LOG, src/game/digin.ts:189)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DiginModDIGINLOGItem {
     pub t: f64,
     pub who: String,
@@ -274,7 +274,7 @@ impl DiginModDIGINLOGItem {
 impl Default for DiginModDIGINLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/digin.ts:192 DIGIN_SHUT, src/game/digin.ts:192)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DiginModDIGINSHUT {
     pub home: f64,
     pub held: f64,
@@ -435,7 +435,7 @@ impl DigInRefuge {
 impl Default for DigInRefuge { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DiginMod {
     /// (src/game/digin.ts:189 DIGIN_LOG)
     pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,

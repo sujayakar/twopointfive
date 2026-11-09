@@ -38,6 +38,8 @@ export interface MeasuredGame {
   /** its clock, s */
   readonly time?: number;
   readonly fogOfWar?: { readonly on?: boolean; readonly knobs?: { edge?: number } } | null;
+  /** the game's numbers and picks the panel or this machine turned, by name: they go with the settings in a take */
+  readonly turned?: Readonly<Record<string, number | string>>;
 }
 export interface PerfEvent { t: number; frame: number; kind: string; text: string }
 export interface PerfDump {
@@ -270,6 +272,7 @@ export class PerfRecorder {
   private snapSettings(): Record<string, unknown> {
     const S = this.engine.settings as unknown as Record<string, unknown>; const out: Record<string, unknown> = {};
     for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') out[k] = v; }
+    for (const [k, v] of Object.entries(this.game.turned ?? {})) out[k] = v;
     return out;
   }
   /** what became of the take the last stop() delivered (host/savefile.ts): what a note or a card that says where the take went goes by. It moves once

@@ -1,10 +1,10 @@
 //! The types of `director`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured (director.ts EventFilter)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum EventFilter {
     InBox { x0: f64, x1: f64, z0: f64, z1: f64 },
     XAbove { x: f64 },
@@ -14,7 +14,7 @@ pub enum EventFilter {
     Heard { by: crate::director::UnitRef, run_level: f64, run_within: f64, walk_level: f64, walk_within: f64 },
 }
 /// a beat's generator as plain data, so a clone of Game holds where it stands (LiveBeat.it): one arm a beat, its resume point and locals, added by hand with the nine scripts (CHANGES-2 Open 1). Spent: not begun, or closed: it.return() is writing Spent, no script has a finally
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum BeatFrame {
     Spent,
     TutKitHold(crate::script_tut_kit::TutKitHoldFrame),
@@ -69,7 +69,7 @@ pub enum BeatFrame {
     TutTeamOut(crate::script_tut_team::TutTeamOutFrame),
 }
 /// what a c.until asks (CondArm2.test): Script, a test of the beat's own script, answered by beat_test with the beat's frame; Burst, the stimulus.burst's cond at director.ts:1012: no row of r.bursts with this serial and left > 0
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum CondTest {
     Script { id: u32 },
     Burst { serial: u32 },
@@ -81,7 +81,7 @@ pub enum NearWhat {
     Place { p: crate::director::Place },
 }
 /// what a level script's define pass names and its beats read: one arm a script (scriptgen.cjs)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum ScriptVars {
     None,
     TutKit(crate::script_tut_kit::TutKitVars),
@@ -93,7 +93,7 @@ pub enum ScriptVars {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum EventKind {
     Shot,
     Bang,
@@ -124,7 +124,7 @@ impl EventKind {
 }
 
 /// (TypeScript: Director, src/game/director.ts:423)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
@@ -163,7 +163,7 @@ impl Director {
 impl Default for Director { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Manifest, src/game/director.ts:281)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Manifest {
     pub marks: JsMap<String, crate::director::ManifestMarksValue>,
     pub volumes: JsSet<String>,
@@ -203,7 +203,7 @@ impl Manifest {
 impl Default for Manifest { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:282 Manifest.marks, src/game/director.ts:282)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManifestMarksValue {
     pub pos: Option<V3>,
     pub yaw: Option<f64>,
@@ -220,7 +220,7 @@ impl ManifestMarksValue {
 impl Default for ManifestMarksValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PlanKind {
     Breach,
     RoomClear,
@@ -235,7 +235,7 @@ impl PlanKind {
 }
 
 /// (TypeScript: LoadoutSpec, src/game/director.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LoadoutSpec {
     pub team: crate::teams::Team,
     pub weapon: Option<crate::weapons::WeaponId>,
@@ -262,7 +262,7 @@ impl LoadoutSpec {
 impl Default for LoadoutSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ProgramDef, src/game/director.ts:288)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ProgramDef {
     pub name: String,
     pub opts: crate::director::ProgramOpts,
@@ -283,7 +283,7 @@ impl ProgramDef {
 impl Default for ProgramDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ProgramOpts, src/game/director.ts:244)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ProgramOpts {
     pub showcase: Option<bool>,
     pub lower_third: Option<bool>,
@@ -306,7 +306,7 @@ impl ProgramOpts {
 impl Default for ProgramOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:288 ProgramDef.beats, src/game/director.ts:288)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ProgramDefBeatsValue {
     pub fn_: crate::scene_level::LevelScriptFn,
     pub atomic: bool,
@@ -323,7 +323,7 @@ impl ProgramDefBeatsValue {
 impl Default for ProgramDefBeatsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: TriggerDef, src/game/director.ts:287)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TriggerDef {
     pub kind: crate::director::TriggerDefKind,
     pub beat: String,
@@ -354,7 +354,7 @@ impl TriggerDef {
 impl Default for TriggerDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TriggerDefKind {
     Start,
     Enter,
@@ -377,7 +377,7 @@ impl TriggerDefKind {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum TriggerDefWho {
     Sam,
     AnyUnit,
@@ -385,7 +385,7 @@ pub enum TriggerDefWho {
 }
 
 /// (TypeScript: UnitRef, src/game/director.ts:89)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct UnitRef {
     pub id: f64,
     pub callsign: String,
@@ -402,7 +402,7 @@ impl UnitRef {
 impl Default for UnitRef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:284 Manifest.expects, src/game/director.ts:284)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ManifestExpectsItem {
     pub kind: crate::director::ManifestExpectsItemKind,
     pub program: Option<String>,
@@ -429,7 +429,7 @@ impl ManifestExpectsItem {
 impl Default for ManifestExpectsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ManifestExpectsItemKind {
     Order,
     Within,
@@ -469,7 +469,7 @@ impl ManifestSystems {
 impl Default for ManifestSystems { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LintProblem, src/game/director.ts:289)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LintProblem {
     pub level: crate::director::LintProblemLevel,
     pub what: String,
@@ -486,7 +486,7 @@ impl LintProblem {
 impl Default for LintProblem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LintProblemLevel {
     Error,
     Warn,
@@ -501,7 +501,7 @@ impl LintProblemLevel {
 }
 
 /// (TypeScript: LogRow, src/game/director.ts:397)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LogRow {
     pub t: f64,
     pub run: f64,
@@ -528,7 +528,7 @@ impl LogRow {
 impl Default for LogRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LogRowKind {
     Camera,
     Radio,
@@ -561,7 +561,7 @@ impl LogRowKind {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum Json {
     Text(String),
     Num(f64),
@@ -571,7 +571,7 @@ pub enum Json {
 }
 
 /// (TypeScript: inline at src/game/director.ts:428 Director.lastRun, src/game/director.ts:428)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DirectorLastRun {
     pub serial: f64,
     pub name: String,
@@ -592,7 +592,7 @@ impl DirectorLastRun {
 impl Default for DirectorLastRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DirectorFrame, src/game/director.ts:400)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DirectorFrame {
     pub look: Option<V3>,
     pub caption: String,
@@ -619,7 +619,7 @@ impl DirectorFrame {
 impl Default for DirectorFrame { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MarkRef, src/game/director.ts:78)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MarkRef {
     pub kind: crate::director::MarkRefKind,
     pub id: String,
@@ -636,7 +636,7 @@ impl MarkRef {
 impl Default for MarkRef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MarkRefKind {
     Mark,
 }
@@ -649,7 +649,7 @@ impl MarkRefKind {
 }
 
 /// (TypeScript: DoorRef, src/game/director.ts:79)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorRef {
     pub kind: crate::director::DoorRefKind,
     pub id: String,
@@ -666,7 +666,7 @@ impl DoorRef {
 impl Default for DoorRef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoorRefKind {
     Door,
 }
@@ -679,7 +679,7 @@ impl DoorRefKind {
 }
 
 /// (TypeScript: VolumeRef, src/game/director.ts:80)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct VolumeRef {
     pub kind: crate::director::VolumeRefKind,
     pub id: String,
@@ -696,7 +696,7 @@ impl VolumeRef {
 impl Default for VolumeRef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum VolumeRefKind {
     Volume,
 }
@@ -812,7 +812,7 @@ impl VariantRefId {
 }
 
 /// (TypeScript: LoadoutRef, src/game/director.ts:84)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LoadoutRef {
     pub kind: crate::director::LoadoutRefKind,
     pub id: String,
@@ -829,7 +829,7 @@ impl LoadoutRef {
 impl Default for LoadoutRef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LoadoutRefKind {
     Loadout,
 }
@@ -872,7 +872,7 @@ impl DeviceRefKind {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum Place {
     List(V3),
     Mark(crate::director::MarkRef),
@@ -931,7 +931,7 @@ pub enum OrderPatch2AimAt {
 }
 
 /// (TypeScript: EventView, src/game/director.ts:101)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EventView {
     pub kind: crate::director::EventViewKind,
     pub pos: V3,
@@ -958,7 +958,7 @@ impl EventView {
 impl Default for EventView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum EventViewKind {
     Shot,
     Bang,
@@ -991,7 +991,7 @@ impl EventViewKind {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum Cond {
     Arm0(crate::director::CondArm0),
     Arm1(crate::director::CondArm1),
@@ -1002,7 +1002,7 @@ pub enum Cond {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondArm0 {
     pub k: crate::director::CondArm0K,
     pub until: f64,
@@ -1021,7 +1021,7 @@ impl CondArm0 {
 impl Default for CondArm0 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm0K {
     Time,
 }
@@ -1034,7 +1034,7 @@ impl CondArm0K {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:109)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CondArm1 {
     pub k: crate::director::CondArm1K,
     pub due: f64,
@@ -1051,7 +1051,7 @@ impl CondArm1 {
 impl Default for CondArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm1K {
     Frames,
 }
@@ -1064,7 +1064,7 @@ impl CondArm1K {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:110)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondArm2 {
     pub k: crate::director::CondArm2K,
     pub test: crate::director::CondTest,
@@ -1083,7 +1083,7 @@ impl CondArm2 {
 impl Default for CondArm2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm2K {
     Pred,
 }
@@ -1096,7 +1096,7 @@ impl CondArm2K {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:111)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondArm3 {
     pub k: crate::director::CondArm3K,
     pub kind: crate::director::CondArm3Kind,
@@ -1121,7 +1121,7 @@ impl CondArm3 {
 impl Default for CondArm3 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm3K {
     Event,
 }
@@ -1134,7 +1134,7 @@ impl CondArm3K {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm3Kind {
     Shot,
     Bang,
@@ -1167,7 +1167,7 @@ impl CondArm3Kind {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:112)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondArm4 {
     pub k: crate::director::CondArm4K,
     pub name: String,
@@ -1186,7 +1186,7 @@ impl CondArm4 {
 impl Default for CondArm4 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm4K {
     Beat,
 }
@@ -1199,7 +1199,7 @@ impl CondArm4K {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm4State {
     Done,
     Started,
@@ -1214,7 +1214,7 @@ impl CondArm4State {
 }
 
 /// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:113)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondArm5 {
     pub k: crate::director::CondArm5K,
     pub of: Vec<crate::director::Cond>,
@@ -1231,7 +1231,7 @@ impl CondArm5 {
 impl Default for CondArm5 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CondArm5K {
     All,
     Any,
@@ -1246,7 +1246,7 @@ impl CondArm5K {
 }
 
 /// (TypeScript: CondResult, src/game/director.ts:115)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CondResult {
     pub index: f64,
     pub event: Option<crate::director::EventView>,
@@ -1263,7 +1263,7 @@ impl CondResult {
 impl Default for CondResult { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BeatState {
     Done,
     Failed,
@@ -1349,7 +1349,7 @@ impl DrillRefKind {
 }
 
 /// (TypeScript: CameraShotSpec, src/game/director.ts:143)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CameraShotSpec {
     pub look_y: Option<f64>,
     pub track: Option<f64>,
@@ -1558,7 +1558,7 @@ impl DirectorApi {
 impl Default for DirectorApi { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LiveBeat, src/game/director.ts:402)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LiveBeat {
     pub name: String,
     pub it: crate::director::BeatFrame,
@@ -1591,7 +1591,7 @@ impl LiveBeat {
 impl Default for LiveBeat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:402 LiveBeat.flow, src/game/director.ts:402)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LiveBeatFlow {
     pub finish: bool,
 }
@@ -1606,7 +1606,7 @@ impl LiveBeatFlow {
 impl Default for LiveBeatFlow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: UnitRec, src/game/director.ts:403)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct UnitRec {
     pub ref_: crate::director::UnitRef,
     pub gd: GuardId,
@@ -1722,7 +1722,7 @@ impl DrillRun {
 impl Default for DrillRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Shot, src/game/director.ts:410)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Shot {
     pub spec: crate::director::CameraShotSpec,
     pub t: f64,
@@ -1741,7 +1741,7 @@ impl Shot {
 impl Default for Shot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ShowState, src/game/director.ts:411)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShowState {
     pub saved: crate::director::ShowStateSaved,
     pub look: V3,
@@ -1792,7 +1792,7 @@ impl ShowState {
 impl Default for ShowState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:411 ShowState.saved, src/game/director.ts:411)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowStateSaved {
     pub ai: bool,
     pub god: bool,
@@ -1817,7 +1817,7 @@ impl ShowStateSaved {
 impl Default for ShowStateSaved { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:411 ShowStateSaved.cam, src/game/director.ts:411)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowStateSavedCam {
     pub yaw: f64,
     pub pitch: f64,
@@ -1836,7 +1836,7 @@ impl ShowStateSavedCam {
 impl Default for ShowStateSavedCam { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:412 ShowState.chapters, src/game/director.ts:412)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShowStateChaptersItem {
     pub title: String,
     pub dur: f64,
@@ -1853,7 +1853,7 @@ impl ShowStateChaptersItem {
 impl Default for ShowStateChaptersItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:412 ShowState.ending, src/game/director.ts:412)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowStateEnding {
     pub t: f64,
 }
@@ -1868,7 +1868,7 @@ impl ShowStateEnding {
 impl Default for ShowStateEnding { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:415 ShowState.weatherSaved, src/game/director.ts:415)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowStateWeatherSaved {
     pub storm: f64,
     pub rain: f64,
@@ -1885,7 +1885,7 @@ impl ShowStateWeatherSaved {
 impl Default for ShowStateWeatherSaved { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Run, src/game/director.ts:416)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Run {
     pub serial: f64,
     pub name: String,
@@ -1945,7 +1945,7 @@ impl Run {
 impl Default for Run { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:416 Run.signals, src/game/director.ts:416)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunSignalsItem {
     pub name: String,
     pub t: f64,
@@ -1964,7 +1964,7 @@ impl RunSignalsItem {
 impl Default for RunSignalsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:417 Run.bursts, src/game/director.ts:417)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunBurstsItem {
     pub u: crate::director::UnitRef,
     pub at: crate::director::RunBurstsItemAt,
@@ -1996,7 +1996,7 @@ impl RunBurstsItem {
 impl Default for RunBurstsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum RunBurstsItemAt {
     List(V3),
     Unit(crate::director::UnitRef),
@@ -2004,7 +2004,7 @@ pub enum RunBurstsItemAt {
 }
 
 /// (TypeScript: inline at src/game/director.ts:417 RunBurstsItem.cond, src/game/director.ts:417)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunBurstsItemCond {
     pub k: crate::director::RunBurstsItemCondK,
     pub label: String,
@@ -2021,7 +2021,7 @@ impl RunBurstsItemCond {
 impl Default for RunBurstsItemCond { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RunBurstsItemCondK {
     Pred,
 }
@@ -2034,7 +2034,7 @@ impl RunBurstsItemCondK {
 }
 
 /// (TypeScript: inline at src/game/director.ts:419 Run.kicks, src/game/director.ts:419)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunKicksItem {
     pub door: DoorId,
     pub gd: GuardId,
@@ -2055,7 +2055,7 @@ impl RunKicksItem {
 impl Default for RunKicksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:420 Run.objective, src/game/director.ts:420)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunObjective {
     pub text: String,
     pub pos: Option<V3>,

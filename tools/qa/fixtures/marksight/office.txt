@@ -1,4 +1,0 @@
-# how many of 21 lines each man of office has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
-plans.breach.hostiles#0 15
-plans.breach.hostiles#1 12
-plans.breach.hostiles#2 15

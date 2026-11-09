@@ -1,10 +1,10 @@
 //! The types of `quietfog`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum QuietRung {
     Team,
     Own,
@@ -23,7 +23,7 @@ impl QuietRung {
 }
 
 /// (TypeScript: Held, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Held {
     pub cone: Option<crate::quietfog::HeldCone>,
     pub own: Option<crate::quietfog::HeldOwn>,
@@ -43,7 +43,7 @@ impl Held {
 impl Default for Held { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quietfog.ts:147 Held.cone, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HeldCone {
     pub was: Option<bool>,
     pub put: bool,
@@ -60,7 +60,7 @@ impl HeldCone {
 impl Default for HeldCone { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quietfog.ts:147 Held.own, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HeldOwn {
     pub was: bool,
     pub put: bool,
@@ -113,7 +113,7 @@ impl QuietFogRowE {
 impl Default for QuietFogRowE { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietfogMod {
     /// (src/game/quietfog.ts:69 PICK)
     pub pick: Option<crate::quietfog::QuietRung>,

@@ -1,6 +1,6 @@
 //! The types of `lesson`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS (lesson.ts:167-282; a level file's `{ is: '<kind>', … }`, tag from `is`; scenarios.ts:225). Unknown: an `is` no row has, or a word no arm's type holds (empty: a record with no `is`), which never passes (:109). Pace's band is read only by bandCheck: on the page :174 is always true
@@ -61,7 +61,7 @@ impl LessonSnap {
 impl Default for LessonSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Lesson, src/game/lesson.ts:300)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Lesson {
     pub i: f64,
     pub done_at: JsMap<String, f64>,
@@ -84,7 +84,7 @@ impl Lesson {
 impl Default for Lesson { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: StepSeen, src/game/lesson.ts:91)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StepSeen {
     pub t0: f64,
     pub n: JsMap<String, f64>,

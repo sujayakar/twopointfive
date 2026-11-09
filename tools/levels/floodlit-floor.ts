@@ -6,13 +6,15 @@
 // clear pins its defenders to their marks (lighting.ts hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
 // the lights ON and 22 of 24 with them out — the dark stopped mattering. The trial is rebuild/missions/new/floodlit-shed-held.patch in the project files.
-// What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (the yard's
-// tubes need something to amplify — headless the stand-in meter has no moon and no bounce) and a hurricane lantern in each room (so a man who walks in
-// beside one can still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength, 6, is the mission's dial —
-// at 4 the dark cost 11 teammates of 96 over 24 shipped seeds, at 6 it costs 34, at 8 38, and the yard taken lit costs 54 and a third of the runs). No emergency beacons. The MOON is an
-// overcast night's 0.04: the page's meter counts it (probe.wgsl sums kind-2 lights) where the headless stand-in does not, and at the kit's 0.9 the yard
-// with the mains out read about half lit to a bare eye there (floodlit-check asks nvg.ts nvgPlaceLight, which counts the moon, for that reason).
-// CHECKED WITH THE FOUR ONLY: bun run tools/qa/scenario-level-probes.ts levels/floodlit.json --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
+// What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
+// seen, not to see by: at 6, over the sky, it took the gate and the middle of the yard past 0.2) and a hurricane lantern in each room (so a man who walks in beside one can
+// still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength is the mission's dial, 4.5 with the light
+// that comes round counted, which is the 6 the dial was set to when only the direct light was). No emergency beacons. AN OVERCAST NIGHT: the moon is 0.04 and
+// the SKY six tenths of what it was, a clear night's. The light meter counts both, as the picture draws both: under the old sky open ground read 0.19 to a
+// bare eye with no lamp near and the yard 0.13 to 0.25 (the line it is held to is 0.2); under this one it reads 0.02 to 0.15, what it was designed at.
+// MEASURED (`missions floodlit`, 48 seeds, the mains out from the start; of 192 men up at the end, standard / hard): 83 / 75 before, 94 / 99 now, the floor
+// cleared 35 / 33 and 40 / 37 times of 48, the defenders' rounds 410 / 407 and 277 / 280; the mains left on 89 / 70 both. The dark is the better plan again.
+// CHECKED WITH THE FOUR ONLY: levels stands floodlit --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
 // for a pair (a pair crossing the lit yard is wiped on most of that probe's seeds; that is the level's point, not a fault to tune away). WHEN THIS WAS
 // WRITTEN the probe's default seeds were 1,2,3 and seed 2 was red with the four: the last defender left by the store's back door and stood in the dark
 // strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). playthrough.ts's commander hunts him:
@@ -195,12 +197,12 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   }
   // on batteries, and too dim for a bare eye: the mast's red obstruction lamp over the yard, a hurricane lantern in each room
   { const lamp = K.add(k, { c: [21.6, 6.04, 13.42], h: [0.06, 0.06, 0.06], albedo: C.red, emissive: [6, 0.4, 0.2], flags: BoxFlag.NoShadow });
-    k.lights.push({ kind: 'point', pos: [21.6, 6.1, 13.6], dir: [0, -1, 0], color: [1.0, 0.16, 0.1], intensity: 6, range: 34, innerDeg: 0, outerDeg: 180,
+    k.lights.push({ kind: 'point', pos: [21.6, 6.1, 13.6], dir: [0, -1, 0], color: [1.0, 0.16, 0.1], intensity: 2, range: 34, innerDeg: 0, outerDeg: 180,
       name: 'mast_lamp', group: 'battery', enabled: true, volumetric: 0, fixtureBox: lamp, radius: 0.06, mains: false }); }
   for (const [name, x, z, y] of [['lantern_west', 11.2, 10.6, 0.76], ['lantern_hall', 16.5, 7.4, 0], ['lantern_east', 26.9, 11.55, 0.5], ['lantern_store', 29.0, 12.45, 0.5]] as const) {
     K.add(k, { c: [x, y + 0.02, z], h: [0.06, 0.02, 0.06], albedo: C.black });
     const glass = K.add(k, { c: [x, y + 0.13, z], h: [0.04, 0.09, 0.04], albedo: C.white, emissive: [3, 1.8, 0.6], flags: BoxFlag.NoShadow });
-    k.lights.push({ kind: 'point', pos: [x, y + 0.16, z], dir: [0, -1, 0], color: [1.0, 0.6, 0.25], intensity: 6, range: 7, innerDeg: 0, outerDeg: 180,
+    k.lights.push({ kind: 'point', pos: [x, y + 0.16, z], dir: [0, -1, 0], color: [1.0, 0.6, 0.25], intensity: 4.5, range: 7, innerDeg: 0, outerDeg: 180,
       name, group: 'battery', enabled: true, volumetric: 0.1, fixtureBox: glass, radius: 0.05, mains: false });
   }
   K.moon(k, undefined, 0.04);                                                       // an overcast night (see the head)
@@ -266,7 +268,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     playerSpawn: FLOODLIT_START,
     routes: [],
     breaker,
-    sky: { zenith: [0.012, 0.02, 0.04], horizon: [0.03, 0.04, 0.065] },
+    sky: { zenith: [0.007, 0.012, 0.024], horizon: [0.018, 0.024, 0.039] },   // (overcast as its moon is: see the head)
     mission: { serverRoom: { ...FLOODLIT_ROOMS.store.bounds }, entryDoor: 'store', rack: { index: 0, front: rackFront, halfW: 0.33 }, exfilDoor: 'foot_gate', exfilX: 3.5, exfilZ: 21.8, exfilOut: [-1, 0] },
   });
   // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'

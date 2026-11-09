@@ -1,5 +1,4 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
-use game::io::{Io, R};
 use game::kit::{MemberKit, TrimId};
 use game::view::{BriefView, CardRow, CardView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
 use game_run::command::apply;
@@ -16,10 +15,11 @@ fn text(b: &mut Vec<u8>, s: &str) { b.extend_from_slice(&(s.len() as u32).to_le_
 fn head(n: u32, who: u32) -> Vec<u8> { let mut b = n.to_le_bytes().to_vec(); b.extend_from_slice(&who.to_le_bytes()); b }
 
 /// the card's answer, in the bytes that go to the page
+fn answer<T: 'static>(d: &mut Desk, ask: &[u8]) -> T { *d.answer(ask).expect("an ask the desk has").itself().downcast().expect("the answer it is asked for") }
 fn card_bytes(d: &mut Desk, who: u32) -> Vec<u8> { d.ask(&head(CARD, who)).expect("an ask the desk has") }
-fn card(d: &mut Desk, who: u32) -> CardView { CardView::r(&mut R::new(&card_bytes(d, who))) }
+fn card(d: &mut Desk, who: u32) -> CardView { answer(d, &head(CARD, who)) }
 fn all_cards(d: &mut Desk) -> Vec<Vec<u8>> { (0..5).map(|who| card_bytes(d, who)).collect() }
-fn press(d: &mut Desk, ask: &[u8]) -> Pressed { Pressed::r(&mut R::new(&d.ask(ask).expect("an ask the desk has"))) }
+fn press(d: &mut Desk, ask: &[u8]) -> Pressed { answer(d, ask) }
 fn step(d: &mut Desk, who: u32, field: &str, dir: i32) -> Pressed {
     let mut b = head(STEP, who);
     text(&mut b, field);
@@ -123,7 +123,7 @@ fn go(d: &mut Desk, mission: &str, link: &str, issue: &str, walls: u32) -> Press
     press(d, &b)
 }
 fn team_bytes(d: &mut Desk) -> Vec<u8> { d.ask(&TEAM.to_le_bytes()).expect("an ask the desk has") }
-fn team(d: &mut Desk) -> TeamView { TeamView::r(&mut R::new(&team_bytes(d))) }
+fn team(d: &mut Desk) -> TeamView { answer(d, &TEAM.to_le_bytes()) }
 fn size(d: &mut Desk, n: u32) -> Pressed { press(d, &head(SIZE, n)) }
 fn named(d: &mut Desk, id: &str) -> Pressed {
     let mut b = NAMED.to_le_bytes().to_vec();
@@ -239,18 +239,18 @@ fn worded(n: u32, words: &[&str]) -> Vec<u8> {
     b
 }
 fn start_bytes(d: &mut Desk, search: &str) -> Vec<u8> { d.ask(&worded(START, &[search])).expect("an ask the desk has") }
-fn start(d: &mut Desk, search: &str) -> StartView { StartView::r(&mut R::new(&start_bytes(d, search))) }
+fn start(d: &mut Desk, search: &str) -> StartView { answer(d, &worded(START, &[search])) }
 fn sheet_bytes(d: &mut Desk, mission: &str) -> Vec<u8> { d.ask(&worded(SHEET, &[mission])).expect("an ask the desk has") }
-fn sheet(d: &mut Desk, mission: &str) -> SheetView { SheetView::r(&mut R::new(&sheet_bytes(d, mission))) }
+fn sheet(d: &mut Desk, mission: &str) -> SheetView { answer(d, &worded(SHEET, &[mission])) }
 fn set(d: &mut Desk, mission: &str, key: &str, to: &str) -> Pressed { press(d, &worded(SET, &[mission, key, to])) }
-fn word_of(d: &mut Desk, ask: &[u8]) -> String { String::r(&mut R::new(&d.ask(ask).expect("an ask the desk has"))) }
+fn word_of(d: &mut Desk, ask: &[u8]) -> String { answer(d, ask) }
 fn mission_of(d: &mut Desk, search: &str) -> String { word_of(d, &worded(MISSION, &[search])) }
 fn short(d: &mut Desk, id: &str, search: &str, hard: i32) -> String {
     let mut b = worded(SHORT, &[id, search]);
     b.extend_from_slice(&hard.to_le_bytes());
     word_of(d, &b)
 }
-fn next(d: &mut Desk, search: &str) -> ShortView { ShortView::r(&mut R::new(&d.ask(&worded(NEXT, &[search])).expect("an ask the desk has"))) }
+fn next(d: &mut Desk, search: &str) -> ShortView { answer(d, &worded(NEXT, &[search])) }
 fn row<'a>(s: &'a SheetView, key: &str) -> &'a Setting { s.settings.iter().find(|r| r.key == key).unwrap_or_else(|| panic!("no row {key}")) }
 fn lit(s: &SheetView, key: &str) -> Vec<String> { row(s, key).choices.iter().filter(|c| c.on).map(|c| c.id.clone()).collect() }
 /// what a press says this machine keeps under a name: None where it says nothing of it
@@ -263,7 +263,7 @@ fn asked_twice_the_list_and_the_sheet_are_the_same_and_nothing_is_kept_anew() {
         let mut d = Desk::new();
         let kept_before = kept::write(&mut d.g);
         let list = start_bytes(&mut d, address);
-        let ids: Vec<String> = StartView::r(&mut R::new(&list)).rows.iter().map(|r| r.id.clone()).collect();
+        let ids: Vec<String> = start(&mut d, address).rows.iter().map(|r| r.id.clone()).collect();
         let sheets: Vec<Vec<u8>> = ids.iter().map(|id| sheet_bytes(&mut d, id)).collect();
         go(&mut d, &ids[0], "", "", 0);
         let team_first = team_bytes(&mut d);
@@ -465,8 +465,8 @@ fn the_team_works_out_its_own_link_from_the_list_with_the_size_on_it() {
 
 const BRIEF: u32 = 18;
 const SAME: u32 = 19;
-fn brief(d: &mut Desk, search: &str) -> BriefView { BriefView::r(&mut R::new(&d.ask(&worded(BRIEF, &[search])).expect("an ask the desk has"))) }
-fn same(d: &mut Desk, link: &str, page: &str) -> bool { u32::r(&mut R::new(&d.ask(&worded(SAME, &[link, page])).expect("an ask the desk has"))) != 0 }
+fn brief(d: &mut Desk, search: &str) -> BriefView { answer(d, &worded(BRIEF, &[search])) }
+fn same(d: &mut Desk, link: &str, page: &str) -> bool { answer::<u32>(d, &worded(SAME, &[link, page])) != 0 }
 
 #[test]
 fn a_brief_is_the_row_its_address_starts_with_the_team_it_deploys() {

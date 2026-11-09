@@ -1,10 +1,10 @@
 //! The types of `weather`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WeatherSnap, src/game/weather.ts:121)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeatherSnap {
     pub kind: Option<crate::weather_kinds::WeatherKind>,
     pub thunder_until: Option<f64>,
@@ -43,7 +43,7 @@ impl WeatherSnap {
 impl Default for WeatherSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Thunder, src/game/weather.ts:133)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Thunder {
     pub at: f64,
     pub dist_km: f64,
@@ -64,7 +64,7 @@ impl Thunder {
 impl Default for Thunder { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:121 WeatherSnap.stats, src/game/weather.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WeatherSnapStats {
     pub flashes: f64,
     pub thunders: f64,
@@ -83,7 +83,7 @@ impl WeatherSnapStats {
 impl Default for WeatherSnapStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Weather, src/game/weather.ts:135)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Weather {
     pub on: bool,
     pub kind_now: Option<crate::weather_kinds::WeatherKind>,
@@ -134,7 +134,7 @@ impl Weather {
 impl Default for Weather { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Flash, src/game/weather.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Flash {
     pub light: LightId,
     pub stroke: crate::weather::Stroke,
@@ -161,7 +161,7 @@ impl Flash {
 impl Default for Flash { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Stroke, src/game/weather.ts:124)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Stroke {
     pub pulses: Vec<crate::weather::StrokePulsesItem>,
 }
@@ -176,7 +176,7 @@ impl Stroke {
 impl Default for Stroke { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:124 Stroke.pulses, src/game/weather.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StrokePulsesItem {
     pub t0: f64,
     pub amp: f64,
@@ -195,7 +195,7 @@ impl StrokePulsesItem {
 impl Default for StrokePulsesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:191 Weather.stats, src/game/weather.ts:191)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeatherStats {
     pub flashes: f64,
     pub thunders: f64,
@@ -216,7 +216,7 @@ impl WeatherStats {
 impl Default for WeatherStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:191 WeatherStats.lastThunder, src/game/weather.ts:191 WeatherStats.lastThunder)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeatherStatsLastThunder {
     pub at: f64,
     pub dist_km: f64,
@@ -243,7 +243,7 @@ impl WeatherStatsLastThunder {
 impl Default for WeatherStatsLastThunder { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:198 Weather.touched, src/game/weather.ts:198)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WeatherTouchedItem {
     pub box_: BoxId,
     pub albedo: V3,

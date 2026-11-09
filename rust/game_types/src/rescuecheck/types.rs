@@ -1,10 +1,10 @@
 //! The types of `rescuecheck`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Out,
     Back,
@@ -21,7 +21,7 @@ impl Phase {
 }
 
 /// (TypeScript: Out, src/game/rescuecheck.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Out {
     pub gd: GuardId,
     pub about: GuardId,
@@ -54,7 +54,7 @@ impl Out {
 impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RescueCheckEvent, src/game/rescuecheck.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueCheckEvent {
     pub t: f64,
     pub what: crate::rescuecheck::RescueCheckEventWhat,
@@ -75,7 +75,7 @@ impl RescueCheckEvent {
 impl Default for RescueCheckEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueCheckEventWhat {
     Lost,
     Home,
@@ -137,7 +137,7 @@ impl CastItem {
 impl Default for CastItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/rescuecheck.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub next_at: f64,
     pub n: f64,
@@ -174,7 +174,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum StateStage {
     Idle,
     Called,
@@ -191,7 +191,7 @@ impl StateStage {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum StateWordedValue {
     Door,
     Noise,
@@ -358,7 +358,7 @@ impl Goer {
 impl Default for Goer { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescuecheckMod {
     /// (src/game/rescuecheck.ts:80 STATES)
     pub states: Option<crate::rescuecheck::State>,

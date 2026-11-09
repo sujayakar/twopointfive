@@ -1,6 +1,6 @@
 //! The types of `dialogue`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: DialogueSnap, src/game/dialogue.ts:2064)
@@ -122,7 +122,7 @@ impl DialogueSnapAmbient {
 impl Default for DialogueSnapAmbient { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Knowledge {
     None,
     Heard,
@@ -143,7 +143,7 @@ impl Knowledge {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Band {
     Low,
     Mid,
@@ -167,7 +167,7 @@ pub enum StageKey {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Need {
     Shift,
     RollcallLive,
@@ -373,7 +373,7 @@ impl LineOnly {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum IntelKind {
     CheckOn,
     Clearing,
@@ -427,7 +427,7 @@ impl IntelItem {
 impl Default for IntelItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ShapeKey {
     Pedant,
     Selfown,
@@ -825,7 +825,7 @@ impl SamStage {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum SamNeed {
     Knife,
     Blackout,
@@ -852,7 +852,7 @@ impl SamNeed {
 }
 
 /// (TypeScript: SamLine, src/game/dialogue.ts:805)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SamLine {
     pub id: String,
     pub s: crate::dialogue::SamLineS,
@@ -887,7 +887,7 @@ impl SamLine {
 impl Default for SamLine { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SamLineS {
     Press,
     Key,
@@ -912,7 +912,7 @@ impl SamLineS {
 }
 
 /// (TypeScript: SamMemory, src/game/dialogue.ts:928)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SamMemory {
     pub said: JsMap<String, f64>,
     pub last: Option<String>,
@@ -956,14 +956,14 @@ impl SamPick {
 impl Default for SamPick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum Him {
     Text(String),
     Arm1(JsMap<String, String>),
 }
 
 /// (TypeScript: Beat, src/game/dialogue.ts:1267)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Beat {
     pub sam: String,
     pub him: crate::dialogue::Him,
@@ -992,7 +992,7 @@ impl Beat {
 impl Default for Beat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Script, src/game/dialogue.ts:1268)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Script {
     pub id: String,
     pub shape: crate::dialogue::ShapeKey,
@@ -1023,7 +1023,7 @@ impl Script {
 impl Default for Script { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1274 Script.beats, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ScriptBeats {
     pub _3: crate::dialogue::Beat,
     pub _1: crate::dialogue::Beat,
@@ -1063,7 +1063,7 @@ impl RoomLine {
 impl Default for RoomLine { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum HandlerBeat {
     Blackout,
     Drive,
@@ -1090,7 +1090,7 @@ impl HandlerBeat {
 }
 
 /// (TypeScript: RadioState, src/game/dialogue.ts:1713)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RadioState {
     pub run: Option<u32>,
     pub done: JsSet<crate::dialogue::HandlerBeat>,
@@ -1132,7 +1132,7 @@ impl RadioStateRun {
 impl Default for RadioStateRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1713 RadioState.queue, src/game/dialogue.ts:1713)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RadioStateQueueItem {
     pub at: f64,
     pub beat: crate::dialogue::HandlerBeat,
@@ -1149,7 +1149,7 @@ impl RadioStateQueueItem {
 impl Default for RadioStateQueueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1713 RadioState.reply, src/game/dialogue.ts:1713)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RadioStateReply {
     pub at: f64,
     pub text: String,
@@ -1166,7 +1166,7 @@ impl RadioStateReply {
 impl Default for RadioStateReply { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PairTalk, src/game/dialogue.ts:1767)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairTalk {
     pub id: String,
     pub lines: Vec<crate::dialogue::PairTalkLinesItem>,
@@ -1187,7 +1187,7 @@ impl PairTalk {
 impl Default for PairTalk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1767 PairTalk.lines, src/game/dialogue.ts:1767)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairTalkLinesItem {
     pub who: usize,
     pub text: String,
@@ -1206,7 +1206,7 @@ impl PairTalkLinesItem {
 impl Default for PairTalkLinesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AmbientRun, src/game/dialogue.ts:1780)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AmbientRun {
     pub a: GuardId,
     pub b: GuardId,
@@ -1235,7 +1235,7 @@ impl AmbientRun {
 impl Default for AmbientRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1780 AmbientRun.pad, src/game/dialogue.ts:1780)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AmbientRunPad {
     pub code: String,
     pub door: String,
@@ -1279,7 +1279,7 @@ impl HostageMoment {
 }
 
 /// (TypeScript: AmbientState, src/game/dialogue.ts:2000)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AmbientState {
     pub next: f64,
     pub run: Option<crate::dialogue::AmbientRun>,
@@ -5677,7 +5677,7 @@ impl HimOfK {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DialogueMod {
     /// (src/game/dialogue.ts:531 recentByGame)
     pub recent_by_game: Option<JsMap<String, f64>>,

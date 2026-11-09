@@ -1,10 +1,10 @@
 //! The types of `roomfit`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Fit, src/game/roomfit.ts:78)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Fit {
     pub at: V3,
     pub pos: V3,
@@ -62,7 +62,7 @@ impl Threat {
 impl Default for Threat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Watchable, src/game/roomfit.ts:130)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Watchable {
     pub at: V3,
     pub w: f64,

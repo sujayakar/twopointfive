@@ -1,10 +1,10 @@
 //! The types of `squadsmoke`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: State, src/game/squadsmoke.ts:56)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub brought: f64,
     pub cans: f64,
@@ -56,7 +56,7 @@ impl SQUADSMOKE {
 impl Default for SQUADSMOKE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadsmoke.ts:60 SQUADSMOKE_LOG, src/game/squadsmoke.ts:60)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadsmokeModSQUADSMOKELOGItem {
     pub t: f64,
     pub who: String,
@@ -123,7 +123,7 @@ impl SquadSmokeThrower {
 impl Default for SquadSmokeThrower { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadsmokeMod {
     /// (src/game/squadsmoke.ts:57 states)
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,

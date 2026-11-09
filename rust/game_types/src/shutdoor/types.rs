@@ -1,10 +1,10 @@
 //! The types of `shutdoor`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Spot, src/game/shutdoor.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Spot {
     pub pos: V3,
     pub yaw: f64,
@@ -25,7 +25,7 @@ impl Spot {
 impl Default for Spot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Job, src/game/shutdoor.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Job {
     pub door: DoorId,
     pub spot: crate::shutdoor::Spot,
@@ -56,7 +56,7 @@ impl Job {
 impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum JobPhase {
     Go,
     Shut,
@@ -112,7 +112,7 @@ impl K {
 impl Default for K { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shutdoor.ts:54 SHUTDOOR_LOG, src/game/shutdoor.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShutdoorModSHUTDOORLOGItem {
     pub t: f64,
     pub who: String,
@@ -133,7 +133,7 @@ impl ShutdoorModSHUTDOORLOGItem {
 impl Default for ShutdoorModSHUTDOORLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shutdoor.ts:108 spotted, src/game/shutdoor.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShutdoorModSpottedValue {
     pub key: String,
     pub spots: Vec<Option<crate::shutdoor::Spot>>,
@@ -174,7 +174,7 @@ impl PlanArm1 {
 impl Default for PlanArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShutdoorMod {
     /// (src/game/shutdoor.ts:54 SHUTDOOR_LOG)
     pub shutdoor_log: Vec<crate::shutdoor::ShutdoorModSHUTDOORLOGItem>,

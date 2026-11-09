@@ -1,10 +1,10 @@
 //! The types of `break_table`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Breaks, src/game/breakTable.ts:335)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Breaks {
     pub counter: f64,
     pub queue: Vec<DebrisChunkId>,
@@ -39,7 +39,7 @@ pub struct Inside {
 }
 
 /// (TypeScript: inline at src/game/breakTable.ts:529 Breaks.look, src/game/breakTable.ts:529)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksLook {
     pub on: bool,
 }
@@ -54,7 +54,7 @@ impl BreaksLook {
 impl Default for BreaksLook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Mat {
     Carpet,
     Tile,
@@ -246,7 +246,7 @@ impl BreakRowSmall {
 impl Default for BreakRowSmall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BreakMeta, src/game/breakTable.ts:150)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreakMeta {
     pub mat: crate::break_table::Mat,
     pub gen_: f64,

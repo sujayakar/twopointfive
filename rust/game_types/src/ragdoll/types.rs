@@ -1,6 +1,6 @@
 //! The types of `ragdoll`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: RagdollWorld, src/game/ragdoll.ts:17)
@@ -21,7 +21,7 @@ impl RagdollWorld {
 impl Default for RagdollWorld { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Ragdoll, src/game/ragdoll.ts:57)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Ragdoll {
     pub x: Vec<f64>,
     pub px: Vec<f64>,

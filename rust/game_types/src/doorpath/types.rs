@@ -1,10 +1,10 @@
 //! The types of `doorpath`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Walk, src/game/doorpath.ts:83)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Walk {
     pub gd: GuardId,
     pub op: DoorOpId,
@@ -70,7 +70,7 @@ impl Walk {
 impl Default for Walk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorpath.ts:86 Walk.near, src/game/doorpath.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WalkNearItem {
     pub d: DoorId,
     pub angle: f64,
@@ -87,7 +87,7 @@ impl WalkNearItem {
 impl Default for WalkNearItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorPath, src/game/doorpath.ts:113)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorPath {
     pub walks: JsMap<GuardId, crate::doorpath::Walk>,
     pub last_of: JsMap<DoorOpId, crate::doorpath::DoorPathLastOfValue>,
@@ -106,7 +106,7 @@ impl DoorPath {
 impl Default for DoorPath { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/doorpath.ts:116 DoorPath.lastOf, src/game/doorpath.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorPathLastOfValue {
     pub w: Option<(GuardId, u32)>,
     pub n: f64,
@@ -125,7 +125,7 @@ impl DoorPathLastOfValue {
 impl Default for DoorPathLastOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorpath.ts:117 DoorPath.stats, src/game/doorpath.ts:117)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorPathStats {
     pub sent: f64,
     pub walked: f64,

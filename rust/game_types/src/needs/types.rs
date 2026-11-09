@@ -1,10 +1,10 @@
 //! The types of `needs`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum NeedKind {
     Smoke,
     Coffee,
@@ -23,7 +23,7 @@ impl NeedKind {
 }
 
 /// (TypeScript: NeedSpot, src/game/needs.ts:38)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NeedSpot {
     pub kind: crate::needs::NeedKind,
     pub name: String,
@@ -46,7 +46,7 @@ impl NeedSpot {
 impl Default for NeedSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Need, src/game/needs.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Need {
     pub kind: crate::needs::NeedKind,
     pub level: f64,
@@ -69,7 +69,7 @@ impl Need {
 impl Default for Need { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TripPhase {
     Going,
     Telegraph,
@@ -88,7 +88,7 @@ impl TripPhase {
 }
 
 /// (TypeScript: Trip, src/game/needs.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Trip {
     pub kind: crate::needs::NeedKind,
     pub spot: crate::needs::NeedSpot,
@@ -145,7 +145,7 @@ impl Trip {
 impl Default for Trip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NeedMem, src/game/needs.ts:110)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NeedMem {
     pub needs: Vec<crate::needs::Need>,
     pub trip: Option<crate::needs::Trip>,
@@ -313,7 +313,7 @@ impl NEEDSDEFAULTSDwell {
 impl Default for NEEDSDEFAULTSDwell { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/needs.ts:121 floorOf, src/game/needs.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NeedsModFloorOfValue {
     pub last_depart_at: f64,
 }
@@ -328,7 +328,7 @@ impl NeedsModFloorOfValue {
 impl Default for NeedsModFloorOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/needs.ts:126 NEEDS_LOG, src/game/needs.ts:126)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NeedsModNEEDSLOGItem {
     pub t: f64,
     pub who: String,
@@ -482,7 +482,7 @@ impl DeparturePoint {
 impl Default for DeparturePoint { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NeedsMod {
     /// (src/game/needs.ts:111 memOf)
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,

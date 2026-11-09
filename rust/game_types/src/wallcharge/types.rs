@@ -1,10 +1,10 @@
 //! The types of `wallcharge`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's answer kept for the open menu (wallcharge.ts keptWalks): a 'w|' key's length of walk (-1: no way), an 'r|' key's refusal from SquadOrders.reach (None: he can walk it)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum WallChargeWalkAnswer {
     Walk { len: f64 },
     Reach { why: Option<String> },
@@ -23,7 +23,7 @@ pub enum WallChargeFireAsk {
 }
 
 /// (TypeScript: WallSpot, src/game/wallcharge.ts:249)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallSpot {
     pub index: f64,
     pub box_: BoxId,
@@ -52,7 +52,7 @@ impl WallSpot {
 impl Default for WallSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallCharge, src/game/wallcharge.ts:399)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallCharge {
     pub knobs: crate::knobs::WallchargeK,
     pub ops: Vec<WallOpId>,
@@ -75,6 +75,8 @@ pub struct WallCharge {
     pub carried: Option<f64>,
     pub brought: Option<f64>,
     pub free_set: bool,
+    /// (scratch, read by nobody who did not just write it: in no bytes)
+    #[bytes(skip)]
     pub nearby: Vec<i32>,
     pub walks: Option<crate::wallcharge::WallChargeWalks>,
     pub keep: crate::wallcharge::WallChargeKeep,
@@ -119,7 +121,7 @@ impl WallCharge {
 impl Default for WallCharge { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:401 WallCharge.done, src/game/wallcharge.ts:401 WallCharge.done)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeDoneItem {
     pub wall: crate::wallcharge::WallSpot,
     pub men: Vec<GuardId>,
@@ -186,7 +188,7 @@ impl WallChargeDoneItem {
 impl Default for WallChargeDoneItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Wait,
     Place,
@@ -207,7 +209,7 @@ impl Phase {
 }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:269 WallChargeDoneItem.hole, src/game/wallcharge.ts:269)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeDoneItemHole {
     pub du: f64,
     pub half: f64,
@@ -224,7 +226,7 @@ impl WallChargeDoneItemHole {
 impl Default for WallChargeDoneItemHole { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:271 WallChargeDoneItem.queue, src/game/wallcharge.ts:271)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeDoneItemQueueItem {
     pub gd: GuardId,
     pub at: f64,
@@ -245,7 +247,7 @@ impl WallChargeDoneItemQueueItem {
 impl Default for WallChargeDoneItemQueueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Pod, src/game/wallcharge.ts:257)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Pod {
     pub pos: V3,
     pub face: f64,
@@ -270,7 +272,7 @@ impl Pod {
 impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:257 Pod.hold, src/game/wallcharge.ts:257)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PodHold {
     pub face: f64,
     pub watch: V3,
@@ -289,7 +291,7 @@ impl PodHold {
 impl Default for PodHold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallChargeDoneItemStageValue {
     Lane,
     Pod,
@@ -304,7 +306,7 @@ impl WallChargeDoneItemStageValue {
 }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:272 WallChargeDoneItem.beats, src/game/wallcharge.ts:272)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeDoneItemBeatsItem {
     pub t: f64,
     pub what: String,
@@ -321,7 +323,7 @@ impl WallChargeDoneItemBeatsItem {
 impl Default for WallChargeDoneItemBeatsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:402 WallCharge.stats, src/game/wallcharge.ts:402)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeStats {
     pub orders: f64,
     pub set: f64,
@@ -358,7 +360,7 @@ impl WallChargeStats {
 impl Default for WallChargeStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:404 WallCharge.away, src/game/wallcharge.ts:404)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeAwayValue {
     pub c: WallChargeId,
     pub at: V3,
@@ -379,7 +381,7 @@ impl WallChargeAwayValue {
 impl Default for WallChargeAwayValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:405 WallCharge.awayMarks, src/game/wallcharge.ts:405)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeAwayMarksValue {
     pub n: f64,
     pub marks: Vec<V3>,
@@ -404,7 +406,7 @@ impl WallChargeAwayMarksValue {
 impl Default for WallChargeAwayMarksValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:405 WallChargeAwayMarksValue.R, src/game/wallcharge.ts:343)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeAwayMarksValueR {
     pub standoff: f64,
     pub reach: f64,
@@ -423,7 +425,7 @@ impl WallChargeAwayMarksValueR {
 impl Default for WallChargeAwayMarksValueR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:407 WallCharge.log, src/game/wallcharge.ts:407)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeLogItem {
     pub t: f64,
     pub what: String,
@@ -440,7 +442,7 @@ impl WallChargeLogItem {
 impl Default for WallChargeLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:413 WallCharge.sam, src/game/wallcharge.ts:413)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeSam {
     pub wall: crate::wallcharge::WallSpot,
     pub t0: f64,
@@ -459,7 +461,7 @@ impl WallChargeSam {
 impl Default for WallChargeSam { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:819 WallCharge.walks, src/game/wallcharge.ts:819)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallChargeWalks {
     pub menu: u32,
     pub stamp: String,
@@ -478,7 +480,7 @@ impl WallChargeWalks {
 impl Default for WallChargeWalks { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:821 WallCharge.keep, src/game/wallcharge.ts:821)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeKeep {
     pub on: bool,
     pub asks: f64,
@@ -497,7 +499,7 @@ impl WallChargeKeep {
 impl Default for WallChargeKeep { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:1131 WallCharge.lastBlow, src/game/wallcharge.ts:1131)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallChargeLastBlow {
     pub reach: f64,
     pub indoors: bool,
@@ -520,7 +522,7 @@ impl WallChargeLastBlow {
 impl Default for WallChargeLastBlow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SetWallCharge, src/game/wallcharge.ts:252)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SetWallCharge {
     pub wall: crate::wallcharge::WallSpot,
     pub t: f64,
@@ -543,7 +545,7 @@ impl SetWallCharge {
 impl Default for SetWallCharge { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallOp, src/game/wallcharge.ts:258)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallOp {
     pub wall: crate::wallcharge::WallSpot,
     pub men: Vec<GuardId>,
@@ -608,7 +610,7 @@ impl WallOp {
 impl Default for WallOp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallOpStageValue {
     Lane,
     Pod,
@@ -1054,7 +1056,7 @@ impl WallChargeSamJob {
 impl Default for WallChargeSamJob { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallchargeMod {
     /// (src/game/wallcharge.ts:302 skyMemo)
     pub sky_memo: Option<JsMap<crate::Num, f64>>,

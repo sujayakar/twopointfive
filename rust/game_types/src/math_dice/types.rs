@@ -1,10 +1,10 @@
 //! The types of `math_dice`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Die, src/math/dice.ts:11)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Die {
     pub dice: f64,
 }
@@ -19,7 +19,7 @@ impl Die {
 impl Default for Die { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DiceHome, src/math/dice.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DiceHome {
     pub s: f64,
     pub n: f64,
@@ -36,7 +36,7 @@ impl DiceHome {
 impl Default for DiceHome { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SimDice, src/math/dice.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SimDice {
     pub home: Option<crate::math_dice::DiceHome>,
     pub s0: f64,

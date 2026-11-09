@@ -1,7 +1,6 @@
 // WHAT A HOST HANDS THE GAME'S OWN START, as one run of bytes (rust/game_start/src/handed.rs is the reader, and says the layout: a count, then each
 // part as its length and its bytes, every number 32 bits with the little end first). The parts, in order: the level file's text, the address's
-// words (empty: none), the mannequin's gltf and its buffer, the cast's gltf, the look's cast's gltf (each cast empty: none), the knob tables as the
-// host has them (the bridge's bytes of the game's knobs, export.ts `exportPart`; empty: the page's own values, which the Rust game is made with), what
+// words (empty: none), the mannequin's gltf and its buffer, the cast's gltf, the look's cast's gltf (each cast empty: none), what
 // the host does to the game before it is made (its commands, src/draw/commands.ts; empty: nothing).
 // For a tool: the character's files are this checkout's (public/assets). A page fetches the same files and packs them the same way.
 import { readFileSync } from 'node:fs';
@@ -21,7 +20,7 @@ export function characterFiles(root: string): Uint8Array[] {
   return CHARACTER ??= [f('ual/AnimationLibrary_Godot_Standard.gltf'), f('ual/AnimationLibrary_Godot_Standard.bin'), f('chars/cast.gltf'), f('chars/cast-gwot.gltf')];
 }
 /** a start as a tool hands it: the level file's text, the link a mission is started from ('' = the level as its file has it), this checkout's
- *  character, and the host's knob tables where it has turned any (`knobs`: the bridge's bytes of them) */
-export function packStart(root: string, levelText: Uint8Array, link: string, knobs: Uint8Array = new Uint8Array(0)): Uint8Array {
-  return pack([levelText, new TextEncoder().encode(link), ...characterFiles(root), knobs, new Uint8Array(0)]);
+ *  character, and no commands */
+export function packStart(root: string, levelText: Uint8Array, link: string): Uint8Array {
+  return pack([levelText, new TextEncoder().encode(link), ...characterFiles(root), new Uint8Array(0)]);
 }

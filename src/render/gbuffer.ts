@@ -19,7 +19,7 @@ import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP 
 import { LOOK_WITH, LOOK_PAINTED, LOOK_WORDS, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
 import { LookPool } from './lookWorkers';
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
-import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookLayer, lookMip } from './lookTex';
+import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookMip } from './lookTex';
 
 /** the word's fields (common.wgsl boxStuff, look.wgsl lookSurface read the same): the stuff below `moves`, the box's own number × `own`, `owns` of them */
 export const LOOK_WORD = { stuffs: LOOK_WORDS, moves: 32, own: 64, owns: 45 } as const;

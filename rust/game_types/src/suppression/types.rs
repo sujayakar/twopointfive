@@ -1,10 +1,10 @@
 //! The types of `suppression`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Sup, src/game/suppression.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Sup {
     pub v: f64,
     pub kick: f64,
@@ -59,7 +59,7 @@ impl Sup {
 impl Default for Sup { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SupMoment {
     Flinch,
     Friendly,
@@ -114,7 +114,7 @@ impl GuardFireMods {
 impl Default for GuardFireMods { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SuppressionMod {
     /// (src/game/suppression.ts:144 floorLineT)
     pub floor_line_t: Option<f64>,

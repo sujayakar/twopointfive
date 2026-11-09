@@ -1,29 +1,29 @@
 //! The types of `anim_skeleton`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A POSE IS A HANDLE: its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
 pub struct Pose { pub at: u32, pub nodes: u32 }
 impl Pose {
     pub fn blank() -> Self { Pose { at: 0, nodes: 0 } }
 }
 impl Default for Pose { fn default() -> Self { Self::blank() } }
 /// A BODY'S WORLD OF JOINTS (anim/skeleton.ts SkeletonInstance). tmp and local were scratch; ibms and jointViews views of the rig and of joint_data; ownRot was how globalRot's rows were reused without allocating. `joint_data` is what the picture skins with
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SkeletonInstance { pub rig: RigId, pub globals: Vec<crate::v3::m4::Mat4>, pub global_rot: Vec<Quat>, pub joint_data: Vec<f32> }
 impl SkeletonInstance {
     pub fn blank() -> Self { SkeletonInstance { rig: RigId(0), globals: Vec::new(), global_rot: Vec::new(), joint_data: Vec::new() } }
 }
 /// the rig's named nodes and lists, as a layer is handed them (anim/skeleton.ts LayerCast): keys are literals in the code
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LayerCast { pub nodes: JsMap<&'static str, usize>, pub lists: JsMap<&'static str, Vec<i32>>, pub nums: JsMap<&'static str, Vec<f64>> }
 impl LayerCast {
     pub fn blank() -> Self { LayerCast { nodes: JsMap::new(), lists: JsMap::new(), nums: JsMap::new() } }
 }
 /// A POSE THE TYPESCRIPT KEEPS OUTSIDE THE POOL, as the bridge carries it (Game.loose_poses). In Rust every pose lives in the pool: `pose_take_home` gives it a place when a body first needs one.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
 impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
 
@@ -75,7 +75,7 @@ impl ColsOf {
 impl Default for ColsOf { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PoseSet, src/anim/skeleton.ts:160)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PoseSet {
     pub list: Vec<crate::anim_skeleton::Pose>,
     pub most: f64,
@@ -96,7 +96,7 @@ impl PoseSet {
 impl Default for PoseSet { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: ClipSide, src/anim/skeleton.ts:236)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ClipSide {
     pub lines: Vec<u8>,
     /// what the clip store (rust/sim/src/clips.rs) knows this clip by: folded from the clip alone, so the same on every host. On no wire and in no file: it is worked out again where it is 0.
@@ -116,7 +116,7 @@ impl ClipSide {
 impl Default for ClipSide { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: TwistSpec, src/anim/skeleton.ts:394)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TwistSpec {
     pub node: f64,
     pub yaw: f64,
@@ -135,7 +135,7 @@ impl TwistSpec {
 impl Default for TwistSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NodeOverride, src/anim/skeleton.ts:397)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NodeOverride {
     pub rot: Quat,
     pub pos: Option<V3>,
@@ -152,7 +152,7 @@ impl NodeOverride {
 impl Default for NodeOverride { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PoseFK, src/anim/skeleton.ts:494)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PoseFK {
     pub rot: Vec<Quat>,
     pub pos: Vec<V3>,
@@ -266,11 +266,15 @@ impl BuildMaskEntriesItem {
 impl Default for BuildMaskEntriesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimSkeletonMod {
     /// (src/anim/skeleton.ts:21 POSE_BENCH)
+    /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
+    #[bytes(skip)]
     pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
     /// (src/anim/skeleton.ts:33 LAYERS)
+    /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
+    #[bytes(skip)]
     pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     /// (src/anim/skeleton.ts:238 CLIP_SIDE)
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,

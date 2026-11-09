@@ -1,6 +1,6 @@
 //! The types of `kitload`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: KitLoad, src/game/kitload.ts:46)
@@ -21,7 +21,7 @@ impl KitLoad {
 impl Default for KitLoad { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitWorn, src/game/kitload.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitWorn {
     pub ref_mob: f64,
     pub ref_con: f64,
@@ -84,7 +84,7 @@ pub enum LoadCrossWho {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitloadMod {
     /// (src/game/kitload.ts:125 manLoad)
     pub man_load: JsMap<GuardId, crate::kitload::KitWorn>,

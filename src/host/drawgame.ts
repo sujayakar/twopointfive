@@ -96,7 +96,7 @@ export class DrawGame {
     this.lost = null;
     const said = this.commands.take().slice(), seats = o.seats ?? 1;
     this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, commands: said });
-    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, new Uint8Array(0), said], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
+    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, said], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
     const at = this.X.face_alloc(n) >>> 0, b = new Uint8Array(this.memory.buffer, at, n), d = new DataView(this.memory.buffer, at, n); let q = 4;
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
@@ -289,6 +289,8 @@ export class DrawGame {
   turn(name: string, value: number): void { this.turned.set(name, value); this.commands.knob(name, value); }
   turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); for (const [name, word] of this.picked) this.commands.act(name, 0, word); }
   private picked = new Map<string, string>();
+  /** what the panel and this machine have turned and picked, by name: what a play record says */
+  get turnedNow(): Record<string, number | string> { return { ...Object.fromEntries(this.turned), ...Object.fromEntries(this.picked) }; }
   /** one of the panel's picks, for the visit: a restart or a load stands a game that has another, and this is picked again */
   pick(name: string, word: string): void { this.picked.set(name, word); this.commands.act(name, 0, word); }
   /** a name that crosses by its number */

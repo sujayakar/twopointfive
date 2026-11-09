@@ -6,7 +6,7 @@ const SEEDS: [u32; 3] = [1, 2, 3];
 fn stood(seed: u32, seats: u32) -> Play { let mut p = Play::level("kit-yard.json", true, &Opts { seed, seats, ..Default::default() }); p.run(1.0); p }
 /// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
 fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::io::W::new(), Vec::new());
+    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
     game::state_words::state_words(&mut p.g, &mut w, &mut words);
     words.extend(game_start::block::part_hashes(0));
     words
@@ -60,7 +60,7 @@ fn any_cursor_is_answered_and_pointing_changes_nothing() {
             p.pointed(0, mouse);
         }
         let after = words(&mut p);
-        let parts: Vec<&str> = (0..game::state_words::STATE_NAMES.len()).filter(|&i| after[i] != before[i]).map(|i| game::state_words::STATE_NAMES[i]).collect();
+        let parts: Vec<String> = game::state_words::state_names().into_iter().enumerate().filter(|(i, _)| after[*i] != before[*i]).map(|(_, n)| n).collect();
         assert!(parts.is_empty() && before == after, "seed {}: pointing moved {:?}", seed, parts);
     }
 }

@@ -1,6 +1,6 @@
 //! The types of `combat`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// bodyHit's contact: what decides a round whose origin is already inside the man (combat.ts bodyHit). `true` is the parameter's None. Entering = false: the entering hit only. Muzzle = fireWeapon's test. LegCrown = a later leg through glass, ro[1] <= headTop's height (or pos + 1.8). Flight = a ring or a 40 mm round, ro[1] < headTop's height (or pos + 1.75) + radius
@@ -142,7 +142,7 @@ impl DetonateStunRawSam {
 impl Default for DetonateStunRawSam { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CombatMod {
     /// (src/game/combat.ts:100 strayGun)
     pub stray_gun: Option<FirearmId>,

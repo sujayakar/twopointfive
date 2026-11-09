@@ -1,6 +1,6 @@
 //! The types of `difficulty`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what difficulty.ts same() compares: the levers as they stand, or one of the two defenders' tables (difficulty.ts:163). Two of different arms are not the same.
@@ -23,7 +23,7 @@ pub struct DifficultyAsked {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Difficulty {
     Hard,
     Standard,
@@ -55,7 +55,7 @@ impl FogRung {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitRung {
     None,
     Stuns,
@@ -169,7 +169,7 @@ impl FOGOFFRUNG {
 impl Default for FOGOFFRUNG { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/difficulty.ts:145 SET, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DifficultyModSET {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
@@ -190,7 +190,7 @@ impl DifficultyModSET {
 impl Default for DifficultyModSET { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/difficulty.ts:244 HELD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DifficultyModHELD {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
@@ -443,7 +443,7 @@ pub enum DifficultyWordsSquads {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DifficultyMod {
     /// (src/game/difficulty.ts:95 HERE)
     pub here: String,

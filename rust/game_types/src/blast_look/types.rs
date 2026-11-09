@@ -1,10 +1,10 @@
 //! The types of `blast_look`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Seen, src/game/blastLook.ts:148)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Seen {
     pub c: WallChargeId,
     pub t0: f64,
@@ -23,7 +23,7 @@ impl Seen {
 impl Default for Seen { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/blastLook.ts:149)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub seen: Vec<crate::blast_look::Seen>,
     pub queue: Vec<crate::blast_look::StateQueueItem>,
@@ -46,7 +46,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastLook.ts:149 State.queue, src/game/blastLook.ts:149)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateQueueItem {
     pub at: f64,
     pub run: crate::FnField,
@@ -788,7 +788,7 @@ impl BurstOfK {
 impl Default for BurstOfK { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastLookMod {
     /// (src/game/blastLook.ts:150 STATE)
     pub state: JsMap<PlayerId, crate::blast_look::State>,

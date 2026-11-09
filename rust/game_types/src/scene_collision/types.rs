@@ -1,6 +1,6 @@
 //! The types of `scene_collision`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the share of the wind a square metre of the plan has (wind.ts:237 stormDrift): crate::wind::wind_share_under(g, x, z, roofs)
@@ -9,22 +9,22 @@ pub enum GridWindShare {
     Under { roofs: Option<Vec<Vec<f64>>> },
 }
 /// is this point of a pane open (glassbreak.ts:213): glass_break_open_at(g, bi, p), or the burst's view `also` where one is on
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum PaneRule {
     GlassBreak,
 }
 /// what the module's copy judges panes by (glassbreak.ts:213, () => this): g.glassBreak
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum PaneRows {
     GlassBreak,
 }
 /// is this pane open along a walker's whole height (glassbreak.ts:215): glass_break_walkable(g, bi)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum GlassWalkable {
     GlassBreak,
 }
 /// the flags a line of fire passes (winbars.ts:79): BoxFlag.Bar if crate::winbars::bars_live(g), else 0
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FirePass {
     Bars,
 }
@@ -74,7 +74,7 @@ impl GridWind {
 impl Default for GridWind { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StaticCollision, src/scene/collision.ts:141)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StaticCollision {
     pub cells: Vec<Vec<f64>>,
     pub w: f64,
@@ -83,6 +83,8 @@ pub struct StaticCollision {
     pub nav: crate::scene_collision::NavGrid,
     pub sound: crate::scene_collision::SoundPaths,
     pub boxes: Vec<BoxId>,
+    /// (a copy made again from the boxes and lamps: in no bytes)
+    #[bytes(skip)]
     pub mirror: crate::scene_box_mirror::BoxMirror,
     pub windowed: bool,
     pub tilted_at: Vec<f64>,
@@ -90,6 +92,8 @@ pub struct StaticCollision {
     pub pane_rows: Option<crate::scene_collision::PaneRows>,
     pub glass_walkable: Option<crate::scene_collision::GlassWalkable>,
     pub dynamic_boxes: Vec<BoxId>,
+    /// (a copy made again from the boxes and lamps: in no bytes)
+    #[bytes(skip)]
     pub lamp_q: crate::scene_collision::StaticCollisionLampQ,
     pub fire_pass: Option<crate::scene_collision::FirePass>,
 }
@@ -119,7 +123,7 @@ impl StaticCollision {
 impl Default for StaticCollision { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: NavGrid, src/scene/collision.ts:972)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NavGrid {
     pub cell: f64,
     pub w: f64,
@@ -140,7 +144,7 @@ impl NavGrid {
 impl Default for NavGrid { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: SoundPaths, src/scene/collision.ts:925)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SoundPaths {
     pub cache: JsMap<String, crate::scene_collision::SoundPathsCacheValue>,
     pub now: f64,
@@ -159,7 +163,7 @@ impl SoundPaths {
 impl Default for SoundPaths { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/scene/collision.ts:926 SoundPaths.cache, src/scene/collision.ts:926)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SoundPathsCacheValue {
     pub t: f64,
     pub r: crate::scene_collision::Propagation,
@@ -176,7 +180,7 @@ impl SoundPathsCacheValue {
 impl Default for SoundPathsCacheValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Propagation, src/scene/collision.ts:917)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Propagation {
     pub direct: bool,
     pub routed: bool,

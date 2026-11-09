@@ -1,6 +1,6 @@
 //! The types of `props`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: PropContact, src/game/props.ts:24)
@@ -29,7 +29,7 @@ impl PropContact {
 impl Default for PropContact { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PropEvent, src/game/props.ts:25)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PropEvent {
     pub prop: PropId,
     pub sound: crate::props::PropEventSound,
@@ -58,7 +58,7 @@ impl PropEvent {
 impl Default for PropEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PropEventSound {
     Thud,
     Scrape,
@@ -75,7 +75,7 @@ impl PropEventSound {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PropEventRoll {
     Start,
     Stop,
@@ -90,7 +90,7 @@ impl PropEventRoll {
 }
 
 /// (TypeScript: KindTune, src/game/props.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KindTune {
     pub decel: f64,
     pub visc: f64,
@@ -113,7 +113,7 @@ impl KindTune {
 impl Default for KindTune { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Prop, src/game/props.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Prop {
     pub hx: f64,
     pub hz: f64,
@@ -150,7 +150,7 @@ impl Prop {
 impl Default for Prop { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: PropSystem, src/game/props.ts:165)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PropSystem {
     pub props: Vec<PropId>,
     pub all: Vec<PropId>,
@@ -185,9 +185,11 @@ impl PropSystem {
 impl Default for PropSystem { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/props.ts:176 PropSystem.stats, src/game/props.ts:176)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PropSystemStats {
     pub awake: f64,
+    /// (scratch, read by nobody who did not just write it: in no bytes)
+    #[bytes(skip)]
     pub ms: f64,
 }
 impl PropSystemStats {
@@ -202,7 +204,7 @@ impl PropSystemStats {
 impl Default for PropSystemStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/props.ts:192 PropSystem.doorways, src/game/props.ts:192)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PropSystemDoorwaysItem {
     pub cx: f64,
     pub cz: f64,

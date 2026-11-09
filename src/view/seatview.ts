@@ -17,7 +17,7 @@ export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbl
   aim: { ring: null, dot: null, tooClose: false, throw: null },
   worn: [], squad: null, corner: [], throws: [], ring: null, hand: null, empty: null, plan: { own: { men: [], who: [], you: null, doors: [], throws: [], mode: false }, others: [] }, live: false, quiet: null,
   interact: { rows: [], lit: -1, more: 0, open: false, corner: true, ring: null, dots: [] }, alarm: null, stage: 'infiltrate', attention: [],
-  look: { ring: { places: 0, hole: 0, rim: 0, boxX: 0, boxY: 0, lone: { r: 0, h: 0, pad: 0, letter: 0, max: 0, lead: 0 } }, plan: { freshSecs: 0, walkDim: 0, restDim: 0, ringM: 0, sectorM: 0, sectorDeg: 0, reaskSecs: 0, others: 0 }, net: { edge: false, near: 0, edgeIn: 0 }, attention: { ringM: 0, wayReask: 0 }, lineClear: false, markClear: false, back: 'Esc' } };
+  look: { ring: { places: 0, hole: 0, rim: 0, boxX: 0, boxY: 0, lone: { r: 0, h: 0, pad: 0, letter: 0, max: 0, lead: 0 } }, plan: { freshSecs: 0, walkDim: 0, restDim: 0, ringM: 0, sectorM: 0, sectorDeg: 0, reaskSecs: 0, others: 0 }, net: { edge: false, near: 0, edgeIn: 0 }, attention: { ringM: 0, wayReask: 0 }, lineClear: false, markClear: false, back: 'esc' } };
 
 /** what this man wears or carries that the drawer draws */
 export function wornBy(v: TickView, man: number): WornView | undefined { return v.worn.find(w => w.man === man); }
