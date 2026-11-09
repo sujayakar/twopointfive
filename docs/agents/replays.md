@@ -665,3 +665,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   night vision; what a man is at is the debugger's labels. NOT KEPT: a replay of the old kind (shelf or trace) opens nowhere, and one of another build is refused; a replay from a file on disk is
   opened by `?playtape=<address>` alone; the log of a run by itself. The old player (`engineplay.ts`, `tapewalk.ts`, `recipestand.ts`, `shelf.ts`, `game/replaybuf.ts`, `game/runtape.ts`,
   `ui/replaykey.ts`) goes with the old page's code.
+- **A replay of an older version says so** (2026-11-09; `src/tape/module.ts`). A kept run says the module it was played on (the module file's ETag, `host/face.ts`; the dev server gives one). Played on another,
+  the same hands may go another way: the title's list greys it with the reason, and the bar says it from the first frame, then from when the run is no longer what happened. A run kept before it said so is
+  older too. A replay that cannot be played at all (another hand, other characters, gone) is a plain card with its words and a way back (`refused.ts`): no stack, no fatal card, no report.

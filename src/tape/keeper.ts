@@ -15,7 +15,7 @@ export interface KeepSource { since(): { line(sid: string, seq: number, at: stri
   /** piece `seq` could not be kept (a source that can give it again does) */
   missed?(seq: number): void; }
 /** what a visit's row says of it, and whatever else its head line has */
-export interface KeepHead extends Pick<KeptHead, 'url' | 'commit'> { level: { file?: string; scenario?: string }; hands?: number }
+export interface KeepHead extends Pick<KeptHead, 'url' | 'commit'> { level: { file?: string; scenario?: string }; hands?: number; module?: string }
 /** the replay ring's and the run tape's pieces */
 export function ringSource(ring: { since(): KeptPiece | null }): KeepSource {
   let r0 = NaN, rN = 0;
@@ -73,7 +73,7 @@ export class ReplayKeeper {
       if (!this.headKey || sync || seq % HEAD_EVERY === 0) {
         const H = this.o.head(), key = JSON.stringify(H);
         if (key !== this.headKey) { this.headKey = key; head = headLine(this.sid, at, H); }
-        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit; if (H.hands) this.row.hands = true;
+        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit; if (H.hands) this.row.hands = true; if (H.module) this.row.module = H.module;
       }
       text = P.line(this.sid, seq, at);
       this.row.lastAt = at; this.row.seconds = P.seconds;
