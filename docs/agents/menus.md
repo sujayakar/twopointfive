@@ -1031,8 +1031,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   harness's Input has no keyboard), and OFF in the module, so a headless tool, the level editor, the viewer and the workbench keep the
   build's keys whatever the machine has kept; the game page turns it on in `main.ts`'s first line (`keysBoot`). OFF ON THE PAGE:
   `?keybinds=0` (the build's keys and the plain list for the visit, the kept table left alone). KEPT in localStorage `twopointsix.keys`
-  (only rows not as built; cleaned row by row as it is read). PAGE HOOK `__keys` (the module: `bindKey(id, code)`, `resetKeys()`,
-  `keysKept()`, `setKeys()`). WHAT MOVES: the 26 rows of `KEY_ACTS` (W A S D, Shift, C, Q, Space, V, N, R, Z, L, E, 1 to 5, X, B, T, F, G, H,
+  (only rows not as built; cleaned row by row as it is read).
+  WHAT MOVES: the 26 rows of `KEY_ACTS` (W A S D, Shift, C, Q, Space, V, N, R, Z, L, E, 1 to 5, X, B, T, F, G, H,
   the backtick). It is the KEY that moves, not the verb: E still puts away and swaps a hold, V still whistles and is the order menu's wand
   row, the digits are the kit and the menu's rows. H and G (rows of the order menu on letters) got rows on the list so that a key given to
   another row is never theirs unseen. WHAT STAYS: the mouse and the wheel, the camera's Ctrl, and the page's own keys, which no row can take

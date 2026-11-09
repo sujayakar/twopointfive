@@ -21,7 +21,6 @@
 //   rest       slower than sleepV after a floor touch → it lies down and SLEEPS: its normal goes to the surface's tilted by REST_TILT × h² toward a hashed side
 //              (most lie flat, a few are propped on a neighbour or their own bevel) — so a field of litter mirrors a light at many slightly different angles and
 //              only some of it glints at once, and which ones changes as the eye or the torch moves
-import { Vec3, v3 } from '../math/vec';
 import type { ImpulseResponse } from './sheetModel';
 
 /** the shard kind's numbers (particles.ts KIND_DEFAULTS.shard mirrors the first eight; particles_common.wgsl repeats the rest as SHARD_<NAME>) */
@@ -51,15 +50,6 @@ export const SHARD = {
 /** what an impulse (a stun charge, a round beside it, a boot) does to glass litter: lighter than brass, it hops and skitters on (particles.ts impulseResponse.shard) */
 export const SHARD_IMP: ImpulseResponse = { gain: 0.45, upK: 0.5, vMax: 4.5, wake: 0.25 };
 
-export interface ShardState { p: Vec3; v: Vec3; n: Vec3; w: Vec3; size: number; asleep: boolean; age: number; /** floor / wall touches so far (seeds each touch's hashes) */ touches: number; seed: number; }
-
 // the kernel's hash (particles.wgsl pcg / rnd), bit for bit: integer ops only
 export function pcg(v: number): number { const s = (Math.imul(v, 747796405) + 2891336453) >>> 0; const w = Math.imul(((s >>> ((s >>> 28) + 4)) ^ s) >>> 0, 277803737) >>> 0; return ((w >>> 22) ^ w) >>> 0; }
 export function rnd(seed: number, k: number): number { return (pcg((seed ^ Math.imul(k, 0x9E3779B9)) >>> 0) >>> 8) / 16777216; }
-
-
-
-
-
-/** one emit record's numbers as the kernel reads them (render/particles.ts EmitOpts' subset the shard kind uses) */
-export interface ShardSpray { pos: Vec3; dir: Vec3; count: number; speed: number; speedJit: number; spread: number; size: number; sizeJit: number; tumble: number; posJit: number; vadd?: Vec3; seed: number; }

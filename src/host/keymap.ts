@@ -298,4 +298,3 @@ export function bindKey(id: string, code: string): { ok: boolean; why?: 'fixed' 
 export function unbindKey(id: string) { if (!byId.has(id) || !KEYMAP.on || dormant(id)) return; bound.set(id, null); tidy(); rebuild(); keep(); }
 /** every key as built */
 export function resetKeys() { if (!KEYMAP.on || !bound.size) return; bound.clear(); rebuild(); keep(); }
-export function setKeys(v: Record<string, string | null>, write = false) { adopt(v); if (write) keep(); }
