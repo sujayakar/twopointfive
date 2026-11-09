@@ -5,11 +5,10 @@ use game_start::play::{dist, Opts, Play};
 use world_ask::RescueAsk;
 
 /// The office's rescue with no team, Sam out of everybody's sight and unhurt; the men coming for the hostages let run or held off.
-fn floor(s: u32, come: bool) -> Play {
+fn floor(s: u32) -> Play {
     let mut p = Play::mission("office.json", "?levelFile=office.json&rescue&squad=0", &Opts { seed: s, ..Default::default() });
     p.g.god_mode = true;
     p.g.player_invisible = true;
-    p.g.k.rescueflush.on = come;
     p.run(1.0);
     p
 }
@@ -18,7 +17,7 @@ fn floor(s: u32, come: bool) -> Play {
 /// A FAILURE MEANS: the mission ends behind the player's back with the building still full.
 #[test]
 fn the_rescue_does_not_end_in_a_room_just_stood_in() {
-    let mut p = floor(7, false);
+    let mut p = floor(7);
     p.hostage_room_falls(true);
     let mid = p.hostage_room_middle();
     p.sam_put(mid);
@@ -32,7 +31,7 @@ fn the_rescue_does_not_end_in_a_room_just_stood_in() {
 #[test]
 fn the_hostages_are_led_out_and_that_ends_it() {
     for s in [7u32] {
-        let mut p = floor(s, false);
+        let mut p = floor(s);
         p.hostage_room_falls(true);
         let mid = p.hostage_room_middle();
         p.sam_put(mid);
@@ -57,7 +56,7 @@ fn the_hostages_are_led_out_and_that_ends_it() {
 /// A FAILURE MEANS: a rescue has no clock once it has gone loud, or a quiet one has.
 #[test]
 fn once_it_is_loud_the_men_left_come_for_the_hostages() {
-    let mut p = floor(7, true);
+    let mut p = floor(7);
     let (after, gap) = (p.g.k.rescueflush.after_secs, p.g.k.rescueflush.gap_secs);
     p.a_loud_round_at_the_room();
     p.run(0.5);
@@ -75,7 +74,7 @@ fn once_it_is_loud_the_men_left_come_for_the_hostages() {
 /// THE CONTROL: the same men put down without a sound and nothing loud done: past the first word's time nobody is sent and nobody shot.
 #[test]
 fn a_room_taken_quietly_starts_no_clock() {
-    let mut p = floor(7, true);
+    let mut p = floor(7);
     let (after, gap) = (p.g.k.rescueflush.after_secs, p.g.k.rescueflush.gap_secs);
     p.hostage_room_falls(false);
     p.run(after + gap + 2.0);

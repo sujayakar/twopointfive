@@ -11,13 +11,13 @@ fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| 
 fn said_it(p: &Play) -> usize { p.said.iter().filter(|l| l.text.contains("checking the breaker")).count() }
 fn keep_dark(p: &mut Play, secs: f64) { for _ in 0..(secs * 60.0) as usize { p.g.pl[p.g.player].visibility = 0.05; p.frame(); } }
 
-/// THE RULE: the mains are thrown on a room clear, where every defender is held on his mark: nobody is handed the errand, and nobody says he's checking the breaker, then or six seconds on. CONTROL: the office's night shift: a man who can walk is handed it, says it and walks for the panel. (A blackout's other errand, the powerout, has its own test in dark_rooms.rs and is held off here.)
+/// THE RULE: the mains are thrown on a room clear, where every defender is held on his mark: nobody is handed the errand, and nobody says he's checking the breaker, then or six seconds on. CONTROL: the office's night shift: a man who can walk is handed it, says it and walks for the panel. (The floor's own word on a blackout, the powerout, comes later than this asks and is dark_rooms.rs's.)
 /// A FAILURE MEANS: a man says he's off to the breaker and stands there.
 #[test]
 fn the_mains_go_and_no_posted_man_walks() {
     for s in [21u32] {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: s, ..Default::default() });
-        p.g.god_mode = true; p.g.k.powerout.on = false;
+        p.g.god_mode = true;
         p.run(0.2);
         assert!(p.hostiles().iter().all(|&m| p.g.gd[m].hold || p.g.gd[m].pinned), "seed {s}: the staging: a defender is off his mark");
         set_blackout(&mut p.g, 86400.0, SetBlackoutCause::Hand);
