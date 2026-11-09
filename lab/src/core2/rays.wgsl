@@ -129,7 +129,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
   let inv = safeInv(rd); let top = BLK_LO + vec3f(BLK_N) * BRICK; let a = (BLK_LO - ro) * inv; let b = (top - ro) * inv; var t = max(max3(min(a, b)), t0) + 1e-4; let te = min(min3(max(a, b)), t1) - 1e-4; let ahead = select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0));
   for (var i = 0u; i < 192u; i++) {
     if (t >= te || o.tau > 4.6) { break; }
-    let level = select(select(select(0u, 1u, t >= blk.y), 2u, t >= blk.z), 3u, t >= blk.w); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
+    let level = min(TOP, select(select(select(0u, 1u, t >= blk.y), 2u, t >= blk.z), 3u, t >= blk.w)); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
     let w = blkWord(BLK_PAGE, u32(c.x + BLK_N.x * (c.y + BLK_N.y * c.z))); let p = w & 0x7fffffffu;       /* (the top bit: there are leaves in it) */
     if (p == 0u || ((leafOnly || t < blk.x) && (w >> 31u) == 0u)) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;

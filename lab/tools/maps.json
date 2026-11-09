@@ -1,0 +1,27 @@
+[
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"denlin",
+"onelin",
+"onetop2",
+"onetop1",
+"onetop0"
+],
+"paths": 700,
+"name": "ground day",
+"dist": 34,
+"hour": 15.0,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.8,
+"maps": true
+}
+]
