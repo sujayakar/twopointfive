@@ -181,6 +181,18 @@ pub enum SlotKind {
     Frag,
 }
 
+impl SlotKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            SlotKind::Pistol => "pistol",
+            SlotKind::Rifle => "rifle",
+            SlotKind::Smoke => "smoke",
+            SlotKind::Flash => "flash",
+            SlotKind::Frag => "frag",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum GuardState {
     #[default] Patrol,

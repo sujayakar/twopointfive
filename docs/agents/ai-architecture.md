@@ -68,7 +68,7 @@ news), `foe`. Each takes the writer's name. Anybody can read the fields, and no 
 
 `grant_from` is the arbiter: from the top, it runs a rule's `transition`, then asks its `propose`, and the first answer has him. A rule below the
 winner is neither moved nor asked. `record` writes the `Holder` once a tick (`Dead`, `Held`, a rule, `Script`, `Own`) and tells a rule that had him
-and no longer does (`lost`). `Channel` keeps legs, aim and hands apart in the record, but every grant takes all three.
+and no longer does (`lost`). The record keeps legs, aim and hands apart, but every grant takes all three.
 
 **A rule** is `impl Reaction for Rule`. It must write `Ask` and `propose` (which takes `&Game`, so asking changes nothing). It may write `Row`,
 `transition`, `commit` (what his body made of it: `Outcome`) and `lost`.

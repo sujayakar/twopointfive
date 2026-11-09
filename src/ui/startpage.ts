@@ -225,7 +225,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc:has(.kc-row.refused) .kc-row:not(.refused) > .kc-note { display: none !important; }   /* (a refusal's reason outranks the row pointed at, which outranks the row the keys are on) */
 #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / 3; grid-row: 1; justify-content: flex-start; align-self: end; margin: 0 0 4px; padding: 0; border: 0; background: none; gap: 2px; }
 #missions.one #loadout .lo-kit .kc.focus .kc-sets.sel { background: none; }
-/* THE CARD AS A TREE (rust/game_rules/src/kittree): each gun is a tile with what it is good at drawn beside its name (ui/kitCard.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
+/* THE CARD AS A TREE (rust/game_types/src/knobs/kittree.rs): each gun is a tile with what it is good at drawn beside its name (ui/kitCard.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
 #missions.one #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] { grid-column: 1 / 3; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { flex: 0 0 auto; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 40%); align-items: center; min-height: 76px; box-sizing: border-box; }

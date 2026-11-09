@@ -34,7 +34,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `glass/`, `glassbreak/`, `glasspen/`, `glass_pattern/` | a blow on a pane; its breaking; a round through it; the cracks |
 | `shards/`, `shard_model/`, `winbars/` | what a falling piece of glass becomes; a window's bars |
 | `fixture_break/`, `blast_look/`, `blast_feel/`, `dust_look/`, `floormess/` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
-| `marks/`, `render_decals/`, `look_decals/` | who asks for a mark, the list of marks, a mark's look types |
+| `marks/`, `render_decals/` | who asks for a mark, the list of marks |
 | `scene_cut/` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials/`, `scene_stuff/` | `does_of` and `BoxStuff`, the two words a box says |
 

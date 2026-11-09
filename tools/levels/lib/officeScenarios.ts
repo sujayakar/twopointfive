@@ -154,7 +154,7 @@ export const OFFICE_MARKS: MarkDef[] = [
   { name: 'van', pos: [27.7, 0, 26.4] },
 ];
 
-/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (rust/game_rules/src/scene_ways: the look's page wears its floors by the ways field). The level's own ways are the
+/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (rust/game_types/src/scene_ways: the look's page wears its floors by the ways field). The level's own ways are the
  *  night shift's three routes, each team's start to its rooms, and the three outer doors door to door: nobody had said how a desk, the printer, the coffee
  *  or a car is reached, the conference room's door had no way through it, and the plain night's own start had none leaving it. A weight is how many ways a
  *  row counts as beside one lap of a patrol (1). THE DAY: everybody comes up the west stair and signs in; each of the sixteen desks is reached from the
