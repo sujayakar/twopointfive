@@ -17,10 +17,8 @@ use crate::v3::{self, Quat, V3};
 use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 
-/// (src/game/wallwear.ts:58 WallWear.round)
 pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e, ours)); }
 
-/// (src/game/wallwear.ts:88 WallWear.reset)
 pub(super) fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); }
 
 use crate::out_events::{OutEvent, OutParticlesEmit, OutWallWearRound};
@@ -92,7 +90,7 @@ fn own(s: &mut MarkSet, hit: V3) -> Option<usize> {
     None
 }
 
-/// what the wear throws goes to the picture alone, as a tick's particles (particles.ts emit's count)
+/// what the wear throws goes to the picture alone, as a tick's particles
 fn throw(g: &mut Game, kind: PKind, pos: V3, dir: V3, count: f64, o: EmitOpts, ours: bool) -> f64 {
     let n = m::min(m::max(0.0, m::floor(count)), MAX_NEW_PER_FRAME);
     if n > 0.0 { crate::render_decals::thrown(g, OutEvent::ParticlesEmit(OutParticlesEmit { kind, pos, dir, count, o, ours })); }

@@ -1,7 +1,7 @@
 use crate::game::Game;
 use crate::ids::*;
 
-/// Would this player's gun (the one in his hands) start its reload by itself this frame? (autoreload.ts autoReloadDue)
+/// Would this player's gun (the one in his hands) start its reload by itself this frame?
 pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> bool {
     if g.puppet.is_some() || g.pl[pl].equip_t > 0.0 || g.pl[pl].dragging.is_some() { return false; }
     // The chamber, not the rounds: a full magazine under an empty chamber cannot fire.

@@ -10,14 +10,15 @@ The same start and inputs make the same game to the bit on every host.
 
 ## Where the code is
 
-Each crate is its own cargo workspace and target folder, but `prim` and `sim` share `rust/Cargo.toml`.
+Each crate is its own cargo workspace and target folder.
 
 | crate | is | it links |
 |---|---|---|
 | `rust/prim/` | √, floor and trunc, exact by the standard | nothing |
-| `rust/sim/` | hot loops on columns, each game's block. `no_std` | `prim` |
+| `rust/maths/` | the game's own maths and its die. `no_std` | `prim` |
 | `rust/game_derive/` | the `ToBytes` and `Knobs` derives | nothing |
-| `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `sim`, `prim`, `game_derive` |
+| `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `maths`, `prim`, `game_derive` |
+| `rust/sim/` | hot loops, over records and columns; each game's block. `no_std` | `game_types`, `maths`, `prim` |
 | `rust/game_rules/` | the rules; its crate name is `game`. `no_std` | `game_types`, `sim`, `prim` |
 | `rust/game_draw/` | what the picture is told. `no_std` | `game`, `sim` |
 | `rust/game_start/` | a game from a level file; tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
@@ -29,9 +30,9 @@ Each crate is its own cargo workspace and target folder, but `prim` and `sim` sh
 ### What holds determinism
 
 - **The compiler.** A `no_std` crate cannot name a hash map, a thread, a clock or a file.
-- **`tools/qa/rust-rules-check.ts`, over `rust/sim` and `rust/prim` only.** No rounded float method, no `mul_add`, nothing relaxed, no cell or atomic,
+- **`tools/qa/rust-rules-check.ts`, over `rust/sim`, `rust/maths` and `rust/prim` only.** No rounded float method, no `mul_add`, nothing relaxed, no cell or atomic,
   no `std::`, and each `static mut` has a row in `STATICS`. In `rust/game_rules` and `rust/game_types` only the reader holds this.
-- **`m::`.** `m::sin`, `m::atan2`, `m::hyp2`, `m::pow` and the rest are the game's own, from + − × ÷ and √ (`rust/sim/src/maths.rs`), because a
+- **`m::`.** `m::sin`, `m::atan2`, `m::hyp2`, `m::pow` and the rest are the game's own, from + − × ÷ and √ (`rust/maths/`), because a
   library's sine differs by machine. `m::min` and `m::max` fix the answers for NaN and −0. Write these, never a method on `f64`. Do not tidy
   arithmetic that runs: `(a - b) - c` is not `a - (b + c)`.
 - **`js::`.** `JsMap` and `JsSet` walk keys in the order first set, and that order is play. `js::sort_by` is stable. `js::to_i32`, `js::truthy` and
@@ -151,7 +152,7 @@ and neither side may link the other. Inside the rules:
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
-  `game_run/src/words.rs`. A number `rust/sim` reads is also a line in `sim/src/knobs.rs` and in `knobs_to_rust`.
+  `game_run/src/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
 - **A question:** the walk in `rust/sim`; a `&mut Game` form and a shared form (`line_shared`) in `scene_collision.rs`; a method on `WorldAsk`,
   and on `Asker` if a rule needs one body; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.

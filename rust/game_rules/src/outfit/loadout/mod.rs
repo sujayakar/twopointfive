@@ -12,17 +12,17 @@ pub fn squad_of(q: &crate::query::Query, flag4: bool) -> Option<f64> {
     if flag4 && q.has("squad4") { Some(4.0) } else { None }
 }
 
-/// The words for a size: 'solo', 'you + one', 'you + the pair', 'you + three', 'you + four'. (loadout.ts sizeWords)
+/// The words for a size: 'solo', 'you + one', 'you + the pair', 'you + three', 'you + four'.
 pub fn size_words(n: f64) -> String {
     String::from(if n >= 4.0 { "you + four" } else if n == 3.0 { "you + three" } else if n == 2.0 { "you + the pair" } else if n == 1.0 { "you + one" } else { "solo" })
 }
 
-/// The short tag beside a title: 'solo', 'one', 'pair', 'three', 'four'. (loadout.ts sizeTag)
+/// The short tag beside a title: 'solo', 'one', 'pair', 'three', 'four'.
 pub fn size_tag(n: f64) -> &'static str {
     if n >= 4.0 { "four" } else if n == 3.0 { "three" } else if n == 2.0 { "pair" } else if n == 1.0 { "one" } else { "solo" }
 }
 
-/// The link a mission is deployed by at a size: at its own size the link its row loads. (loadout.ts squadSearch)
+/// The link a mission is deployed by at a size: at its own size the link its row loads.
 pub fn squad_search(link: &str, n: f64, own: f64) -> String {
     let mut q = crate::query::Query::parse(crate::query::after_mark(link));
     q.delete("loadout");
@@ -36,7 +36,7 @@ pub fn squad_search(link: &str, n: f64, own: f64) -> String {
     q.bare()
 }
 
-/// `asSquadSize` of a string: one digit once trimmed as the language trims, and a size only if 0 to 4. (loadout.ts:31)
+/// `asSquadSize` of a string: one digit once trimmed as the language trims, and a size only if 0 to 4.
 fn size_of_text(v: &str) -> Option<f64> {
     let mut chars = v.trim_matches(js::is_space).chars();
     let (d, rest) = (chars.next()?, chars.next());

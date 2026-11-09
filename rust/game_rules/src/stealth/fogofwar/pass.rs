@@ -1,4 +1,3 @@
-//! src/game/fogofwar.ts lines 355 to 806
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -10,10 +9,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
-/// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
+/// A box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// Which thing a keyed box belongs to, or -1 for one the rule leaves alone. (fogofwar.ts thingKeyOf)
+/// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
     let k = bx(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
     key_of_mkey(g, k)
@@ -35,19 +34,18 @@ fn key_of_mkey(g: &Game, k: f64) -> f64 {
     sys as f64 * 0x1000000 as f64 + (low >> bits) as f64
 }
 
-/// (fogofwar.ts isProp)
 pub(super) fn is_prop(thing_key: f64) -> bool {
     m::floor(thing_key / 0x1000000 as f64) == PROP_SYS
 }
 
-/// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one. (fogofwar.ts ghostBox)
+/// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one.
 /// (A copy the record keeps until it takes the thing afresh: `box_kept`, and `box_let_go` for the copies before it: thing_take.)
 pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
     let copy = g.tab[s].clone();
     crate::scene_boxes::box_kept(g, copy)
 }
 
-/// What the team's sight lines pass: glass and the statics marked thin. (fogofwar.ts fogThrough)
+/// What the team's sight lines pass: glass and the statics marked thin.
 pub fn fog_through(g: &crate::game::Game) -> f64 {
     let f = crate::scene_boxes::box_flag();
     (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
@@ -288,7 +286,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
 }
 
 /// Who the team is this frame, for the lights' classes and for what the team's own doing shows (`ours_id`): every seat's man and every teammate, and the
-/// light each carries. From here the rule is live (`ours_on`).   (fogofwar.ts FogOfWar.fullBlock, its first half)
+/// light each carries. From here the rule is live (`ours_on`).
 fn fog_of_war_team(g: &mut crate::game::Game) {
     g.fog_of_war.live = true;
     g.engine.lights.fog_team.on = true;
@@ -754,7 +752,7 @@ mod tests {
         assert!(fog_of_war_in_field(&mut g, round, [0.0, 0.0, -5.0]));
     }
 
-    /// A prop's parts share a key, and thing keys sit above 2^24 by system (fogofwar.ts:382).
+    /// A prop's parts share a key, and thing keys sit above 2^24 by system.
     #[test]
     fn is_prop_goes_by_the_system() {
         assert!(is_prop(PROP_SYS * 0x1000000 as f64 + 1234.0));
@@ -778,7 +776,7 @@ mod tests {
             (8.0 * SYS + 35.0, 8.0 * SYS + 35.0),      // debris: a thing by itself
             (7.0 * SYS + (0x5000 + (3 << 5) + 2) as f64, 7.0 * SYS + ((0x5000 + (3 << 5) + 2) >> 5) as f64), // a broken fixture's body
             (7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64, 7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64),        // what came off it
-            (7.0 * SYS + 0x8000 as f64, 7.0 * SYS + 0x8000 as f64),                                          // main.ts's cut test pieces
+            (7.0 * SYS + 0x8000 as f64, 7.0 * SYS + 0x8000 as f64),
         ] { assert_eq!(key_of_mkey(&g, k), want, "mkey {}", k); }
     }
 

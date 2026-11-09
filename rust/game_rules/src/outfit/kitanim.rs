@@ -5,11 +5,11 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
-/// Pushes one row on the module's log, keeping the last 200.   (kitanim.ts note)
+/// Pushes one row on the module's log, keeping the last 200.
 fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
 }
 
-/// Is Sam's left hand free to go up to his goggles? Else it is a nod.   (kitanim.ts nvHandFree)
+/// Is Sam's left hand free to go up to his goggles? Else it is a nod.
 fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -48,7 +48,7 @@ fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// N was pressed and the switch has changed: the goggles go by the left hand, or by a nod.   (kitanim.ts kitNv)
+/// N was pressed and the switch has changed: the goggles go by the left hand, or by a nod.
 pub fn kit_nv(g: &mut crate::game::Game) {
     let p = g.player;
     let hand = nv_hand_free(g);
@@ -57,7 +57,7 @@ pub fn kit_nv(g: &mut crate::game::Game) {
     *g.stats.kitanim.nv.get_or_insert_with(hand, || 0) += 1;
 }
 
-/// The tube is at his eyes: what the picture follows; a flip no longer live is let go of here.   (kitanim.ts kitNvEye)
+/// The tube is at his eyes: what the picture follows; a flip no longer live is let go of here.
 pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -82,7 +82,7 @@ fn big_off_of(b: &crate::character::AnimBigTool) -> crate::character::BigOffB {
     crate::character::BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end }
 }
 
-/// What the game's own rules put in Sam's right hand this frame.   (kitanim.ts kitInHand)
+/// What the game's own rules put in Sam's right hand this frame.
 pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::character::KitItem> {
     let p = seat.player;
     let c = g.pl[p].ch;
@@ -114,7 +114,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     }
 }
 
-/// The rifle hangs in front of him on its sling when not in his hands; a fact of the mission.   (kitanim.ts kitSlingFront)
+/// The rifle hangs in front of him on its sling when not in his hands; a fact of the mission.
 pub fn kit_sling_front(g: &mut crate::game::Game) -> bool {
     if js::truthy(g.k.kitanim.sling) {
         return g.k.kitanim.sling == 1.0;
@@ -125,7 +125,7 @@ pub fn kit_sling_front(g: &mut crate::game::Game) -> bool {
     }
 }
 
-/// How far the rifle in front is swung onto his thighs, eased on the game's clock; None = not in front.   (kitanim.ts kitSlingRest)
+/// How far the rifle in front is swung onto his thighs, eased on the game's clock; None = not in front.
 pub fn kit_sling_rest(g: &mut crate::game::Game) -> Option<f64> {
     if !kit_sling_front(g) {
         return None;
@@ -155,13 +155,13 @@ pub fn kit_sling_rest(g: &mut crate::game::Game) -> Option<f64> {
     Some(s.a)
 }
 
-/// How close a man `d` metres off is: 0 at the close-in mode's edge, 1 in the knife's reach.   (kitanim.ts kitCloseness)
+/// How close a man `d` metres off is: 0 at the close-in mode's edge, 1 in the knife's reach.
 fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
     let mode_m = g.k.close.mode_m;
     m::max(0.0, m::min(1.0, (mode_m - d) / m::max(0.1, mode_m - g.k.kitanim.close_near)))
 }
 
-/// Once a frame from updatePlayer: deals the animator its closeness and runs the equip watch.   (kitanim.ts kitTick)
+/// Once a frame from updatePlayer: deals the animator its closeness and runs the equip watch.
 pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     let late = late.unwrap_or(false);
     let p = g.player;
@@ -261,7 +261,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     g.pl[p].kit_was = Some(cur);
 }
 
-/// A click that came a moment early is kept and put back in this tick's input the frame the thing is in hand.   (kitanim.ts kitClick)
+/// A click that came a moment early is kept and put back in this tick's input the frame the thing is in hand.
 pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -329,7 +329,7 @@ fn owed_word(want: crate::character::KitItem, sel: Option<crate::game::ThrowKind
     }
 }
 
-/// What the drawer shows in his hands this frame: while a swap runs the hand's word replaces the slot's.   (kitanim.ts kitShow)
+/// What the drawer shows in his hands this frame: while a swap runs the hand's word replaces the slot's.
 pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> Option<crate::rig_props::KitDraw> {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -397,13 +397,13 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     kit
 }
 
-/// No errand has the hands: the gun the light rides is up.   (kitanim.ts kitGunUp)
+/// No errand has the hands: the gun the light rides is up.
 pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let c = g.pl[seat.player].ch;
     g.ch[c].anim.kit_hold.is_none()
 }
 
-/// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.   (kitanim.ts kitReload)
+/// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.
 pub fn kit_reload(g: &mut crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
     let c = g.pl[g.player].ch;
     if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() || !crate::character::anim_kit_hands_on(g, c) {
@@ -462,7 +462,7 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
     crate::kitanim::KitReload { kind, row, beat }
 }
 
-/// A reload began on a kitReload plan: counted.   (kitanim.ts kitReloadNote)
+/// A reload began on a kitReload plan: counted.
 pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
     note(g, crate::kitanim::NoteRow {  });

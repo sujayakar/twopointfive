@@ -1,4 +1,3 @@
-//! src/game/destruction.ts lines 1 to 386
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A box's row (`Box.*`). Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+/// A box's row (`Box.*`). Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A word of a box's flags against a mask.
@@ -27,38 +26,38 @@ pub fn chaos_of(g: &crate::game::Game) -> f64 {
     m::max(0.0, m::min(1.0, c))
 }
 
-/// The loud levels' rules are live: a scenario is up.   (destruction.ts loudNow)
+/// The loud levels' rules are live: a scenario is up.
 pub(super) fn loud_now(g: &crate::game::Game) -> bool {
     crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active
 }
 
-/// Impulses at all: chaos above 0 and the switch.   (destruction.ts impulsesOn)
+/// Impulses at all: chaos above 0 and the switch.
 pub(in crate::breakage) fn impulses_on(g: &crate::game::Game) -> bool {
     chaos_of(g) > 0.0 && g.tune.debris_impulses
 }
 
-/// What of the kept knob is the game's: the first value. What a machine kept is the browser's storage, the host's.   (destruction.ts loadChaos)
+/// What of the kept knob is the game's: the first value. What a machine kept is the browser's storage, the host's.
 pub fn load_chaos(g: &mut crate::game::Game) {
     g.tune.chaos = g.k.chaos.def;
 }
 
-/// The impulses' strength scale off the knob.   (destruction.ts impK)
+/// The impulses' strength scale off the knob.
 pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
-/// Under the ceiling slab: the office's footprint less a tile's width.   (destruction.ts indoors)
+/// Under the ceiling slab: the office's footprint less a tile's width.
 fn indoors(p: V3) -> bool {
     p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 23.7
 }
 
-/// The point just over a box's top, where line-of-sight targets aim.   (destruction.ts topOf)
+/// The point just over a box's top, where line-of-sight targets aim.
 pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }
 
-/// The lane's capped log, for the panel and the probes.   (destruction.ts dlog)
+/// The lane's capped log, for the panel and the probes.
 pub(super) fn dlog(g: &mut crate::game::Game, s: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.destruction.destr_log;
@@ -68,12 +67,12 @@ pub(super) fn dlog(g: &mut crate::game::Game, s: &str) {
     }
 }
 
-/// A cap of n() events in any one-second window.   (destruction.ts RateCap.constructor)
+/// A cap of n() events in any one-second window.
 fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
     RateCap { n, ..RateCap::blank() }
 }
 
-/// One more event at time t, if the window has room.   (destruction.ts RateCap.take)
+/// One more event at time t, if the window has room.
 fn rate_cap_take(this: &mut crate::destruction::RateCap, t: f64, k: &crate::knobs::ChaosK) -> bool {
     let n = match this.n {
         RateCapN::Puff => k.puffs_per_sec,
@@ -103,7 +102,7 @@ fn rate_cap_take_n(this: &mut RateCap, t: f64, n: f64) -> bool {
     true
 }
 
-/// The window afresh.   (destruction.ts RateCap.reset)
+/// The window afresh.
 fn rate_cap_reset(this: &mut crate::destruction::RateCap) {
     for x in this.ts.iter_mut() {
         *x = -1e9;
@@ -111,7 +110,7 @@ fn rate_cap_reset(this: &mut crate::destruction::RateCap) {
     this.head = 0.0;
 }
 
-/// Stands the lane up. Built in `g.destr`, since everything it calls reaches it by that path, and handed back for the caller's `g.destr = …`.   (destruction.ts Destruction.constructor)
+/// Stands the lane up. Built in `g.destr`, since everything it calls reaches it by that path, and handed back for the caller's `g.destr = …`.
 pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruction {
     let world = crate::scene_world::world();
     g.destr = Destruction::blank();
@@ -131,7 +130,7 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
     core::mem::replace(&mut g.destr, Destruction::blank())
 }
 
-/// Walks the statics once: what can break, by shape and by its word.   (destruction.ts Destruction.index)
+/// Walks the statics once: what can break, by shape and by its word.
 fn destruction_index(g: &mut crate::game::Game) {
     let world = crate::scene_world::world();
     let boxes_len = g.col.boxes.len();
@@ -273,7 +272,7 @@ fn destruction_index(g: &mut crate::game::Game) {
     }
 }
 
-/// The walk over a copy of the items that takes out what is no destructible; only the entry it stands on is ever deleted.   (destruction.ts Destruction.index, the window's body)
+/// The walk over a copy of the items that takes out what is no destructible; only the entry it stands on is ever deleted.
 fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
     for i in g.destr.items.keys() {
         let (b, kind) = {
@@ -311,7 +310,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
     }
 }
 
-/// The underside of the roof over (x, z), or none under the open sky: five rays a 0.6 m square, remembered per square.   (destruction.ts Destruction.roofY)
+/// The underside of the roof over (x, z), or none under the open sky: five rays a 0.6 m square, remembered per square.
 pub(super) fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f64> {
     let key = crate::Num(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6) + 0.0);
     if let Some(&c) = g.destr.roofs.get(key) {
@@ -333,7 +332,7 @@ pub(super) fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> O
     if y < 0.0 { None } else { Some(y) }
 }
 
-/// Destructibles registered in the 3×3 cells round p, hidden ones left out.   (destruction.ts Destruction.near)
+/// Destructibles registered in the 3×3 cells round p, hidden ones left out.
 pub(super) fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate::destruction::Destructible>) -> Vec<crate::destruction::Destructible> {
     out.clear();
     let world = crate::scene_world::world();
@@ -358,12 +357,12 @@ pub(super) fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate
     out.clone()
 }
 
-/// The destructible at a static's index.   (destruction.ts Destruction.itemOf)
+/// The destructible at a static's index.
 pub fn destruction_item_of(g: &crate::game::Game, i: f64) -> Option<crate::destruction::Destructible> {
     g.destr.items.get(crate::Num(i)).cloned()
 }
 
-/// The heat cell of a point, clamped to the grid.   (destruction.ts Destruction.hidx)
+/// The heat cell of a point, clamped to the grid.
 fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
     let world = crate::scene_world::world();
     let cell = g.k.chaos.cell;
@@ -372,21 +371,21 @@ fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
     z * g.destr.hw + x
 }
 
-/// Adds heat at p and gives the escalation there after it.   (destruction.ts Destruction.stoke)
+/// Adds heat at p and gives the escalation there after it.
 pub(super) fn destruction_stoke(g: &mut crate::game::Game, p: V3, amount: f64, chaos: f64) -> f64 {
     let i = destruction_hidx(g, p) as usize;
     g.destr.heat[i] = (g.destr.heat[i] as f64 + amount) as f32;
     g.destr.heat[i] as f64 * 2.0 * chaos
 }
 
-/// The module's own hashed choice, counting off its serial.   (destruction.ts Destruction.hash)
+/// The module's own hashed choice, counting off its serial.
 pub(super) fn destruction_hash(g: &mut crate::game::Game) -> f64 {
     let s = g.destr.serial;
     g.destr.serial = s + 1.0;
     crate::debris::hash01(s * 2654435761.0)
 }
 
-/// One event out of a cap; a knock-off riding on its group leader's slot is free.   (destruction.ts Destruction.take)
+/// One event out of a cap; a knock-off riding on its group leader's slot is free.
 pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
     if k == DestructionTakeK::Knock && g.destr.free_knocks > 0.0 {
         g.destr.free_knocks -= 1.0;
@@ -428,7 +427,7 @@ fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
     }
 }
 
-/// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.   (destruction.ts Destruction.update)
+/// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.
 pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
     let mut men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel, body: false }).collect();
     if !g.destr.debris.list.is_empty() || !g.destr.edge_look.rubble.is_empty() { destruction_bodies(g, &mut men); }
@@ -508,7 +507,7 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
 }
 
 
-/// The men on their feet this frame, bar a seated civilian.   (destruction.ts Destruction.onFoot)
+/// The men on their feet this frame, bar a seated civilian.
 fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
     for gd in g.guards.iter() {
@@ -524,14 +523,14 @@ fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     men
 }
 
-/// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.   (destruction.ts Destruction.boxes)
+/// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.
 pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::debris::debris_boxes(g, out);
     crate::edge_look::edge_look_boxes(g, out);
     crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)
 }
 
-/// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.   (destruction.ts Destruction.reset)
+/// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.
 pub fn destruction_reset(g: &mut crate::game::Game) {
     for i in g.destr.hidden.keys() {
         let f = *g.destr.hidden.get(i).unwrap();
@@ -568,7 +567,7 @@ pub fn destruction_reset(g: &mut crate::game::Game) {
     crate::furnblast::furniture_reset(g);
 }
 
-/// Nothing tumbling carries over; hidden statics stay hidden.   (destruction.ts Destruction.clearMoving)
+/// Nothing tumbling carries over; hidden statics stay hidden.
 pub fn destruction_clear_moving(g: &mut crate::game::Game) {
     crate::debris::debris_clear(g);
     g.destr.dust_queue.clear();

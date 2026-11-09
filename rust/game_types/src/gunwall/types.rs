@@ -67,9 +67,7 @@ pub struct RaisedLine {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GunwallMod {
-    /// (src/game/gunwall.ts:56 ST)
     pub st: JsMap<CharId, crate::gunwall::St>,
-    /// (src/game/gunwall.ts:72 FIGHT)
     pub fight: Option<crate::gunwall::GunwallModFIGHTValue>,
 }
 
@@ -82,57 +80,39 @@ pub struct GunwallStats {
     pub tucked: i32,
 }
 
-/// (src/game/gunwall.ts:59 STAND_SH)
 pub const STAND_SH: f64 = 1.4;
 
-/// (src/game/gunwall.ts:59 CROUCH_SH)
 pub const CROUCH_SH: f64 = 0.99;
 
-/// (src/game/gunwall.ts:60 TUCK_REACH)
 pub const TUCK_REACH: f64 = 0.235;
 
-/// (src/game/gunwall.ts:61 SH_REST)
 pub const SH_REST: f64 = -0.07;
 
-/// (src/game/gunwall.ts:61 SH_CARRY)
 pub const SH_CARRY: f64 = 0.6;
 
-/// (src/game/gunwall.ts:61 REACH_OVER)
 pub const REACH_OVER: f64 = 0.2;
 
-/// (src/game/gunwall.ts:62 GUN_HALF)
 pub const GUN_HALF: f64 = 0.04;
 
-/// (src/game/gunwall.ts:62 GUN_HALF_LOW)
 pub const GUN_HALF_LOW: f64 = 0.06;
 
-/// (src/game/gunwall.ts:63 SETTLED_M)
 pub const SETTLED_M: f64 = 0.08;
 
-/// (src/game/gunwall.ts:64 HOLD_M)
 pub const HOLD_M: f64 = 0.1;
 
-/// (src/game/gunwall.ts:64 HOLD_RAD)
 pub const HOLD_RAD: f64 = 0.15;
 
-/// (src/game/gunwall.ts:65 HOT_SECS)
 pub const HOT_SECS: f64 = 0.1;
 
-/// (src/game/gunwall.ts:66 FRESH_S)
 pub const FRESH_S: f64 = 0.05;
 
-/// (src/game/gunwall.ts:67 TUCK_HALF)
 pub const TUCK_HALF: f64 = 0.07;
 
-/// (src/game/gunwall.ts:68 TELEPORT_M)
 pub const TELEPORT_M: f64 = 0.25;
 
-/// (src/game/gunwall.ts:69 BREACH_AIM_M)
 pub const BREACH_AIM_M: f64 = 1.4;
 
-/// (src/game/gunwall.ts:70 AT_IN)
 pub const AT_IN: f64 = 0.03;
 
-/// (src/game/gunwall.ts:131 CLEAR_WIDE)
 pub const CLEAR_WIDE: f64 = 0.1;
 

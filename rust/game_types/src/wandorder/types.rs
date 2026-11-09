@@ -58,7 +58,6 @@ pub enum Issue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WandorderMod {
-    /// (src/game/wandorder.ts:58 states)
     pub states: JsMap<PlayerId, crate::wandorder::State>,
 }
 

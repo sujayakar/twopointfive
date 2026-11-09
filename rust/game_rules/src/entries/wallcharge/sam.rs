@@ -1,4 +1,3 @@
-//! src/game/wallcharge.ts lines 1140 to 1235
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A box's row (Box.* in the TypeScript): the index says g.col.boxes[id], but skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
@@ -48,7 +46,7 @@ fn hole_shut(g: &mut Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best:
     }
 }
 
-/// The gap a man fits through nearest the charge, read off the wall as it stands (wallcharge.ts WallCharge.holeAt)
+/// The gap a man fits through nearest the charge, read off the wall as it stands
 pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<crate::wallcharge::WallChargeHoleAt> {
     let t = thick(g, w);
     let (step, r) = (0.125, 2.5);
@@ -72,7 +70,7 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
     best
 }
 
-/// WALLSHOT: the shock with no flash (wallcharge.ts WallCharge.shock)
+/// WALLSHOT: the shock with no flash
 pub(super) fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let now = g.time;
     g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, now + secs);
@@ -88,7 +86,7 @@ pub(super) fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f6
     crate::character::anim_hit(g, c);
 }
 
-/// Flash-blind (wallcharge.ts WallCharge.dazzle)
+/// Flash-blind
 pub(super) fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let now = g.time;
     g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
@@ -103,7 +101,7 @@ pub(super) fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f
     crate::character::anim_hit(g, c);
 }
 
-/// The charge on the wall: a dark slab and a lit tell, one-frame boxes (wallcharge.ts WallCharge.draw)
+/// The charge on the wall: a dark slab and a lit tell, one-frame boxes
 pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let height = g.k.wallcharge.height;
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
@@ -133,32 +131,32 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     g.fx.push(crate::game::GameFxItem { box_: tell, ttl: 1e-3 });
 }
 
-/// Is this set charge the squad's key's to blow: one the squad set, or his own while an order of theirs is on that wall (wallcharge.ts WallCharge.keyIs)
+/// Is this set charge the squad's key's to blow: one the squad set, or his own while an order of theirs is on that wall
 pub fn wall_charge_key_is(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: WallChargeId) -> bool {
     let c = &g.tab.wallcharge_set_wall_charge[c_2];
     c.by != crate::ownblow::SAM_BY
         || seat.wall_charge.ops.iter().any(|&o| same_wall(&g.tab.wallcharge_wall_op[o].wall, &c.wall))
 }
 
-/// The nearest charge his own hands set (wallcharge.ts WallCharge.samSet)
+/// The nearest charge his own hands set
 pub fn wall_charge_sam_set(g: &mut crate::game::Game) -> Option<WallChargeId> {
     if !g.wall_charge.seated { return None; }
     wall_charge_nearest(g, Some(&mut |g: &mut Game, c: WallChargeId| g.tab.wallcharge_set_wall_charge[c].by == crate::ownblow::SAM_BY))
 }
 
-/// Where a set charge sits (wallcharge.ts WallCharge.samAt)
+/// Where a set charge sits
 pub fn wall_charge_sam_at(g: &mut crate::game::Game, c_2: WallChargeId) -> V3 {
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let height = g.k.wallcharge.height;
     wall_pt(g, &w, 0.0, 0.0, Some(height))
 }
 
-/// Who stands inside its radius, in words (wallcharge.ts WallCharge.samWords)
+/// Who stands inside its radius, in words
 pub fn wall_charge_sam_words(g: &mut crate::game::Game, c_2: WallChargeId) -> String {
     wall_charge_close_words(g, Some(c_2), None)
 }
 
-/// Would it put HIM down where he stands (wallcharge.ts WallCharge.samFatal)
+/// Would it put HIM down where he stands
 pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bool {
     if g.god_mode { return false; }
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -169,7 +167,7 @@ pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bo
     v3::dist_xz(p, at) < (if off < -t / 2.0 { g.k.doortools.knock_m } else { g.k.wallkill.near_m })
 }
 
-/// The squad block's lines: what is carried, while this run brought wall charges of its own, and a charge waiting for the trigger: the squad's key for those that are its to blow, the interaction's for his own, a note each, counted apart. (wallcharge.ts WallCharge.hudNotes)
+/// The squad block's lines: what is carried, while this run brought wall charges of its own, and a charge waiting for the trigger: the squad's key for those that are its to blow, the interaction's for his own, a note each, counted apart.
 pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     if !wall_charge_on(g) { return Vec::new(); }
@@ -192,7 +190,7 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     out
 }
 
-/// With the cursor on a partition and Sam at its foot, the marker and its row (wallcharge.ts WallCharge.samRows)
+/// With the cursor on a partition and Sam at its foot, the marker and its row
 pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     g.wall_charge.offered = None;
     g.wall_charge.marker = None;
@@ -267,7 +265,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
     offer(g, it, verbs);
 }
 
-/// The row performed starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off (wallcharge.ts WallCharge.samTick)
+/// The row performed starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off
 pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let pl = g.player;
     let ch = g.pl[pl].ch;
@@ -320,26 +318,26 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     wall_charge_note(g, &alloc::format!("set by the player on wall {}", index));
 }
 
-/// Is Sam setting one right now (wallcharge.ts WallCharge.setting)
+/// Is Sam setting one right now
 pub fn wall_charge_setting(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     seat.wall_charge.sam.is_some()
 }
 
-/// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145 (wallcharge.ts WallCharge.samJob)
+/// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145
 pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
     let height = g.k.wallcharge.height;
     let (wall, at) = match g.wall_charge.sam.as_ref() { Some(s) => (s.wall.clone(), s.at), None => return None };
     Some(WallChargeSamJob { p: wall_pt(g, &wall, 0.0, 0.0, Some(height)), n: wall_n(&wall), at })
 }
 
-/// Broken off, nothing spent; true: there was one to break off (wallcharge.ts WallCharge.cancel)
+/// Broken off, nothing spent; true: there was one to break off
 pub fn wall_charge_cancel(g: &mut crate::game::Game) -> bool {
     if g.wall_charge.sam.is_none() { return false; }
     g.wall_charge.sam = None;
     true
 }
 
-/// The one row while he is at it (wallcharge.ts WallCharge.runningRow)
+/// The one row while he is at it
 pub fn wall_charge_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, f64) -> crate::game::Interactable) -> crate::game::Interactable {
     let s = g.wall_charge.sam.clone().unwrap();
     let height = g.k.wallcharge.height;
@@ -359,7 +357,7 @@ pub fn wall_charge_running_row(g: &mut crate::game::Game, running: &mut dyn FnMu
     running(g, it, crate::game::Verb::Charge, String::from("setting the charge… — Space or a step breaks it off"), progress)
 }
 
-/// A point's x and z (wallcharge.ts xz)
+/// A point's x and z
 fn xz(p: V3) -> [f64; 2] {
     [p[0], p[2]]
 }

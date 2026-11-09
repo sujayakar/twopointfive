@@ -1,4 +1,4 @@
-//! THE FURNITURE MEN SHOVE (src/game/props.ts PropSystem.update) — every chair, carton, bin and plant of a level for one tick: it coasts and comes to rest,
+//! THE FURNITURE MEN SHOVE — every chair, carton, bin and plant of a level for one tick: it coasts and comes to rest,
 //! the men walking into it set it going and are held back by what cannot yield, it knocks into its neighbours, a swinging leaf sweeps it aside, a door frame
 //! guides it through, the statics stop it; and the scrapes and knocks all that makes.
 //!
@@ -11,7 +11,7 @@
 //!   · ROWS ARE DENSE AND IN THE GAME'S OWN ORDER: rows 0 .. n are the things in the level now, in the order the TypeScript's list keeps them (a level's
 //!     own, a thing a blast took out gone from it), and the step walks 0 .. n with no test and no table. A thing is named from outside by its id, which
 //!     does not move: `row[id]` says where it is, `id[row]` who is there. A THING THAT LEAVES (PropSystem.remove) is moved behind the live rows, those
-//!     after it closing up in order; a level put back (reset) is every row its own id again. Both are the host's (src/sim/propshome.ts PropStore): no
+//!     after it closing up in order; a level put back (reset) is every row its own id again. Both are the host's: no
 //!     rule here takes a thing out.
 //!   · A COLUMN A NUMBER, AS NARROW AS IT IS: the lengths, speeds, angles and clocks are doubles (the rules are worked in doubles); the three truths are
 //!     bits of ONE u32 (`flags`); who moved it last is an i32; the two tables u32. Each column starts on a 16-byte boundary and is CAP rows long.
@@ -42,8 +42,6 @@ pub const F_ASLEEP: u32 = 1;
 pub const F_DIRTY: u32 = 2;
 pub const F_ROLLING: u32 = 4;
 
-/// The furniture's part of a game's block (src/sim/propshome.ts PropStore lays its own array out the same, byte for byte; tools/qa/rust-check.ts holds
-/// every offset the TypeScript works out to the one this struct has).
 #[repr(C)]
 pub struct Props {
     /// the system's clock (PropSystem.time)
@@ -74,7 +72,7 @@ pub struct Props {
 }
 const _: () = assert!(size_of::<Props>() == 16 + 11 * CAP * 8 + 4 * CAP * 4);
 const _: () = assert!(offset_of!(Props, x) % 16 == 0 && offset_of!(Props, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/propshome.ts PROP_F64 and PROP_U32 name them the same), for the host to hold its offsets to
+/// the columns in their order, for the host to hold its offsets to
 pub const COLS: [usize; 15] = [
     offset_of!(Props, x),
     offset_of!(Props, z),
@@ -116,7 +114,7 @@ pub const D_REST: usize = 9;
 pub const D_CHAIR: usize = 10;
 pub const NDEF: usize = 11;
 
-// a man (props.ts PropContact), a column each: where he is (in, and out: where the furniture leaves him), how he moves, how big, who, how heavy, eased past
+// a man, a column each: where he is (in, and out: where the furniture leaves him), how he moves, how big, who, how heavy, eased past
 pub const K_X: usize = 0;
 pub const K_Z: usize = 1;
 pub const K_VX: usize = 2;
@@ -135,7 +133,7 @@ pub const Y_UZ: usize = 3;
 pub const Y_HALF: usize = 4;
 pub const NWAY: usize = 5;
 
-// a noise (props.ts PropEvent): the thing, which sound (src/sim/propshome.ts PROP_SOUNDS) and for a roll whether it starts (1) or stops (0), where, who is
+// a noise: the thing, which sound and for a roll whether it starts (1) or stops (0), where, who is
 // blamed, how loud and how fast, and whether the thing was rolling on its castors when it was made
 pub const E_PROP: usize = 0;
 pub const E_SOUND: usize = 1;
@@ -241,7 +239,7 @@ const Y_MIN: f64 = 0.04;
 const NEAR: usize = 256;
 const PI: f64 = core::f64::consts::PI;
 
-/// what two footprints do to each other (props.ts `sat`): the way out for B, how deep, and where they touch
+/// what two footprints do to each other: the way out for B, how deep, and where they touch
 #[derive(Clone, Copy)]
 struct Sat {
     nx: f64,
@@ -250,7 +248,7 @@ struct Sat {
     px: f64,
     pz: f64,
 }
-/// props.ts support: the farthest point of a footprint along (dx, dz), an edge that lies flat giving its middle
+/// The farthest point of a footprint along (dx, dz), an edge that lies flat giving its middle
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn support(cx: f64, cz: f64, cs: f64, sn: f64, hx: f64, hz: f64, dx: f64, dz: f64) -> (f64, f64) {
@@ -271,7 +269,7 @@ fn support(cx: f64, cz: f64, cs: f64, sn: f64, hx: f64, hz: f64, dx: f64, dz: f6
     };
     (cx + cs * su + sn * sv, cz - sn * su + cs * sv)
 }
-/// props.ts satRects: two turned rectangles on the floor, A and B
+/// Two turned rectangles on the floor, A and B
 #[allow(clippy::too_many_arguments)]
 fn sat_rects(ax: f64, az: f64, acs: f64, asn: f64, ahx: f64, ahz: f64, bx: f64, bz: f64, bcs: f64, bsn: f64, bhx: f64, bhz: f64) -> Option<Sat> {
     let (dx, dz) = (bx - ax, bz - az);
@@ -333,7 +331,7 @@ fn sat_rects(ax: f64, az: f64, acs: f64, asn: f64, ahx: f64, ahz: f64, bx: f64, 
     Some(Sat { nx: bnx, nz: bnz, depth: best, px, pz })
 }
 
-/// a man's circle against a thing's footprint (props.ts `cc`): the way out for him, how deep, and the point on the thing
+/// a man's circle against a thing's footprint: the way out for him, how deep, and the point on the thing
 struct Touch {
     nx: f64,
     nz: f64,
@@ -875,7 +873,6 @@ pub fn update(g: usize, w: usize) -> u32 {
         }
     }
     let mut st = Step { s, io, w, enabled: f & F_ENABLED != 0, castor: f & F_CASTOR != 0, n, nc, nl, nw, ev: 0, wrong: false };
-    // (≤ 1/60 s a substep: props.ts update)
     let steps = js_min(4.0, js_max(1.0, js_ceil(dt * 60.0 - 1e-6)));
     let h = dt / steps;
     let mut s = 0.0;
@@ -892,7 +889,7 @@ pub fn update(g: usize, w: usize) -> u32 {
     st.ev as u32
 }
 
-/// THE PASSES OF THE LEVEL'S SETTLE (props.ts PropSystem.settle): authoring overlaps — a chair tucked under a table's edge, a bin grazing a desk's corner —
+/// THE PASSES OF THE LEVEL'S SETTLE: authoring overlaps — a chair tucked under a table's edge, a bin grazing a desk's corner —
 /// are resolved once, silently, as the level is stood up, and where a thing comes to stand is its home.
 pub const SETTLE_PASSES: usize = 12;
 /// PropSystem.settle's passes for the game in slot `g`, over world `w`: every thing against the statics, then thing against thing, SETTLE_PASSES times,

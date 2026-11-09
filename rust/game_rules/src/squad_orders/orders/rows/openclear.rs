@@ -23,7 +23,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     format!("{} and clear{}", verb.as_str(), known)
 }
 
-/// doortools.ts:810
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::row_can_then(g, What::Step, t, men) } else { crate::doortools::row_stackable(g, t, men) }
 }

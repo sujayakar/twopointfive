@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 2111 to 2620
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,34 +6,34 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The item is still in the hand.   (character.ts throwing)
+/// The item is still in the hand.
 pub fn anim_throwing(g: &crate::game::Game, c: CharId) -> bool {
     let t = g.ch[c].anim.throw_t;
     t >= 0.0 && t < THROW_RELEASE + 0.05
 }
-/// The throw one-shot is playing at all.   (character.ts inThrow)
+/// The throw one-shot is playing at all.
 pub fn anim_in_throw(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 }
-/// The throw under way is the free (left) hand's.   (character.ts throwOff)
+/// The throw under way is the free (left) hand's.
 pub fn anim_throw_off(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 && g.ch[c].anim.thr_off }
-/// How much of the pistol's aim clip the pose shows, 0..1.   (character.ts aimShown)
+/// How much of the pistol's aim clip the pose shows, 0..1.
 pub(super) fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
-/// How far the torch is up in the hand that holds it, 0..1.   (character.ts torchUp)
+/// How far the torch is up in the hand that holds it, 0..1.
 pub(super) fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
-/// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
+/// Nothing but the aim or the carry has the gun arm this frame.
 pub(super) fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
     let taken = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || a.act.is_some() || a.kit.is_some() || a.sw.shown || a.hide_held_item || a.throw_t >= 0.0 || a.strike_t >= 0.0
         || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0;
     !(taken || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0)
 }
-/// Seconds into the throw, -1 when not throwing.   (character.ts throwTime)
+/// Seconds into the throw, -1 when not throwing.
 pub fn anim_throw_time(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.throw_t }
-/// A shot's first 0.35 s.   (character.ts shooting)
+/// A shot's first 0.35 s.
 pub(super) fn anim_shooting(g: &crate::game::Game, c: CharId) -> bool {
     let t = g.ch[c].anim.shoot_t;
     t >= 0.0 && t < 0.35
 }
-/// Starts the front kick at a door, unless one is playing.   (character.ts kickDoor)
+/// Starts the front kick at a door, unless one is playing.
 pub fn anim_kick_door(g: &mut crate::game::Game, c: CharId, opts: Option<crate::character::AnimKickDoorOpts>) {
     let a = &mut g.ch[c].anim;
     if a.kick_t < 0.0 {
@@ -47,13 +46,13 @@ pub fn anim_kick_door(g: &mut crate::game::Game, c: CharId, opts: Option<crate::
         };
     }
 }
-/// The kick is playing.   (character.ts kicking)
+/// The kick is playing.
 pub fn anim_kicking(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_t >= 0.0 }
-/// Seconds into the kick, -1 when not kicking.   (character.ts kickTime)
+/// Seconds into the kick, -1 when not kicking.
 pub fn anim_kick_time(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.kick_t }
-/// True for exactly the update in which the sole reached the door.   (character.ts kickImpact)
+/// True for exactly the update in which the sole reached the door.
 pub fn anim_kick_impact(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_hit }
-/// Starts a left-hand signal, unless one is playing.   (character.ts signal)
+/// Starts a left-hand signal, unless one is playing.
 pub fn anim_signal(g: &mut crate::game::Game, c: CharId, kind: crate::character::SignalKind, side: Option<f64>) {
     let side = side.unwrap_or(1.0);
     let mut kind = kind;
@@ -61,33 +60,33 @@ pub fn anim_signal(g: &mut crate::game::Game, c: CharId, kind: crate::character:
     let a = &mut g.ch[c].anim;
     if a.sig_t < 0.0 { a.sig_t = 0.0; a.sig_kind = kind; a.sig_side = side; }
 }
-/// A signal is playing.   (character.ts signalling)
+/// A signal is playing.
 pub fn anim_signalling(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.sig_t >= 0.0 }
-/// His left hand is his own this frame.   (character.ts signalFree)
+/// His left hand is his own this frame.
 pub fn anim_signal_free(g: &crate::game::Game, c: CharId) -> bool {
     if !anim_gun_arm_own(g, c) { return false; }
     let a = &g.ch[c].anim;
     a.kick_t < 0.0 && a.dazzle.is_none() && a.reload_at < 0.0 && a.rl_t < 0.0
         && a.rx.w.x < 0.02 && a.wk.w_l.x < 0.02 && a.dp.w_l.x < 0.02 && !a.nv.as_ref().map_or(false, |n| n.hand)
 }
-/// Starts an idle tell, unless one or a signal is playing.   (character.ts tell)
+/// Starts an idle tell, unless one or a signal is playing.
 pub fn anim_tell(g: &mut crate::game::Game, c: CharId, kind: crate::character::TellKind) {
     let a = &mut g.ch[c].anim;
     if a.tell_t < 0.0 && a.sig_t < 0.0 { a.tell_t = 0.0; a.tell_k = kind; }
 }
-/// Drops a tell where it is.   (character.ts cancelTell)
+/// Drops a tell where it is.
 pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     a.tell_t = -1.0;
     a.tell_shown = 0.0;
 }
-/// The update; every pose of a man stands in his game's block, so there is no stage to open.   (character.ts update)
+/// The update; every pose of a man stands in his game's block, so there is no stage to open.
 pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
 
 // ---- helpers of updateStanding
 
 /// A clip of his rig by its name (`this.clips.Walk_Loop`).
-fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.clips.get(name).unwrap() }
+pub(super) fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.clips.get(name).unwrap() }
 /// A clip's length (`c.Walk_Loop.duration`).
 fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.tab.clip[clip_of(g, c, name)].duration }
 /// `bigOff(this.bigTool)`: the skeleton's parameter is the fields it reads.
@@ -102,8 +101,6 @@ fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f
     a.mvs.arm_l <= 0.0 && a.mvs.ts_t < 0.0 && a.dp.w_l.x < 0.05 && !a.wk.fed && a.wk.shown < 0.05
 }
 
-/// `LAYERS.knobs?.()`: the one thing it holds is rustknobs.ts knobsNow; inside a tick the list is the tick's already.
-fn knobs_now(g: &mut Game) { if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } }
 /// `STANCES[s]`, for a stance that has a shape (not 'none').
 fn stance_shape(s: Stance) -> StanceShape { *stances().get(String::from(s.as_str())).unwrap() }
 /// `SIGNAL_DUR[k]`
@@ -113,7 +110,7 @@ fn tell_secs(k: TellKind) -> f64 { *tell_dur().get(String::from(k.as_str())).unw
 /// `READY[k].knife`
 fn ready_knife(k: ReadyKind) -> bool { ready().get(String::from(k.as_str())).unwrap().knife }
 /// `BLOW.clip[s]`
-fn blow_clip(s: BlowStyle) -> f64 { *blow().clip.get(String::from(s.as_str())).unwrap() }
+fn blow_clip(s: BlowStyle) -> f64 { BLOW.clip.of(s) }
 
 /// One of his masks, for a call that takes `g` beside it.
 #[derive(Clone, Copy)]
@@ -127,7 +124,7 @@ fn blend_masked(g: &mut Game, c: CharId, a: Option<crate::anim_skeleton::Pose>, 
     crate::anim_skeleton::blend_pose(g, a, b, w, Some(&mask), out, singles);
     *mask_of(&mut g.ch[c].anim, k) = mask;
 }
-/// The swap's clock, read off `carry` (`want`: None = undefined, Some(None) = null); not called on a re-bake.   (character.ts:2438-2447)
+/// The swap's clock, read off `carry` (`want`: None = undefined, Some(None) = null); not called on a re-bake.
 fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, shoot_t: f64, draw: f64, stow: f64, dt: f64) {
     match (want, sw.cur) {
         (None, _) => { sw.cur = None; sw.t = -1.0; sw.wait = -1.0; }
@@ -153,11 +150,10 @@ fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, s
     }
 }
 
-/// The animator's whole frame: every layer, in order, over pA; then the pose and the twists.   (character.ts updateStanding)
+/// The animator's whole frame: every layer, in order, over pA; then the pose and the twists.
 fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
-    knobs_now(g);
-    let sn = sneak();
-    let cr = creep();
+    let sn = SNEAK;
+    let cr = &CREEP;
     let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
     let dash_k_stride = g.k.dash.stride;
     let dash_k_rate = g.k.dash.rate;
@@ -283,13 +279,13 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     a.phase = js::rem(a.phase + dt * rate * rev + 100.0, 1.0);
     if g.k.wallsnap.on {   // the wall hold's own step clock, signed along the wall
         if a.stance == Stance::Wall {
-            let st_ = wall_pose().gait.step;
+            let st_ = WALL_POSE.gait.step;
             a.wall_gait = js::rem(a.wall_gait + dt * s * a.stack_side * rev / (2.0 * v3::lerp(st_[0], st_[1], v3::clamp(a.crouch, 0.0, 1.0))) + 100.0, 1.0);
         } else { a.wall_gait = WALL_GAIT_REST; }
     }
     a.idle_t += dt;
     // the linger (deliberate, crouched) and the run's stance linger: the cycle sampled at a phase eased about the true one
-    let rl = run_linger();
+    let rl = RUN_LINGER;
     let four_pi = 4.0 * m::PI;
     let a_l = sn.linger * dl;
     let th = four_pi * (a.phase - a.gait.linger);
@@ -306,7 +302,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     anim_stand_pose(g, c, ph, w_idle, w_walk, w_jog, w_sprint);
     let a = &g.ch[c].anim;
     if a.lg.run > 1e-3 && a.lg.w.x < 0.999 { let (r, sp) = (a.lg.run, a.lg.sprint); anim_run_arms(g, c, p_a, r, sp); }
-    if w_run > 1e-3 && soft_knee().on > 0.5 { anim_soft_knees(g, c, p_a, w_run); }
+    if w_run > 1e-3 && SOFT_KNEE.on > 0.5 { anim_soft_knees(g, c, p_a, w_run); }
     // the run's stance feet pinned to the floor and the ground's speed through each stance window
     let w_pin = if rl.depth > 0.0 { w_run } else { 0.0 };
     let a = &mut g.ch[c].anim;
@@ -703,8 +699,8 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if a.ready.is_some() || a.ready_w > 0.0 || a.rc_t > 0.0 {   // the ready pose: over the carries and the aim clip, under the one-shots below; stood down, eased, by whatever has the arms
         let first = w_hd > 0.003 || w_he > 0.003 || w_lp > 0.003 || kt >= 0.0 || a.throw_t >= 0.0 || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0;
         let held = first || anim_mv_hands(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0;
-        let rb = ready_bare();
-        let (catch_ready_out, way_rate, way_by, way_drop, ready_up_slow) = (g.k.hold.catch.ready_out, rb.way.rate, rb.way.by, rb.way.drop, ready_up().slow);
+        let rb = READY_BARE;
+        let (catch_ready_out, way_rate, way_by, way_drop, ready_up_slow) = (g.k.hold.catch.ready_out, rb.way.rate, rb.way.by, rb.way.drop, READY_UP.slow);
         let grab_secs = g.k.hold.secs.grab;
         let a = &mut g.ch[c].anim;
         let amt = v3::clamp(a.ready_amt, 0.0, 1.0);
@@ -726,7 +722,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         }
         // the reach's clock: on with a live pose whose right hand is free for the knife, and kept on through the knife's own blow
         let on = (want > 0.0 && ready_knife(a.ready_k) && !a.no_knife && !a.grip[1]) || (a.strike_t >= 0.0 && a.strike_leth && !held && a.ready.is_some());
-        a.rc_t = v3::clamp(a.rc_t + (if on { dt / reach().in_ } else { -dt / reach().out }), 0.0, 1.0);
+        a.rc_t = v3::clamp(a.rc_t + (if on { dt / REACH.in_ } else { -dt / REACH.out }), 0.0, 1.0);
         if a.ready_w > 0.003 || a.rc_t > 0.0 {
             let (w, k) = (a.ready_w, a.ready_k);
             anim_ready_layer(g, c, w, k, want > 0.0, dt, y, -p * 0.35);
@@ -860,7 +856,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         anim_hands_pass(g, c, dt, m::max(w_strike, gun), m::max_n(&[w_strike, gun, tor]), gun_r);
         let a = &g.ch[c].anim;
         if a.grip_can && a.grip[1] && a.throw_t < 0.0 {   // a can in the fist
-            let can = hand().can;
+            let can = &HAND.can;
             anim_hand(g, c, p_a, 1.0, &can.curl, can.thumb, None);
         }
     }

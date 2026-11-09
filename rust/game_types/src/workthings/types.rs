@@ -131,7 +131,6 @@ impl Default for WorkNear {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WorkthingsMod {
-    /// (src/game/workthings.ts:136 errands)
     pub errands: Option<crate::workthings::WorkthingsModErrandsValue>,
 }
 

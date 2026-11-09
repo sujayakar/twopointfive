@@ -11,7 +11,7 @@ pub struct StalkK {
     ///  behind him and the stalk is over (93°: a few degrees of grace so a man swaying on his feet does not throw him out)
     #[k(-0.25)] pub begin_cos: f64,
     #[k(-0.05)] pub out_cos: f64,
-    /// m: the point behind his back Sam is walked toward · inside this the hold becomes the grab (under close.ts's reach of 1.05)
+    /// m: the point behind his back Sam is walked toward · inside this the hold becomes the grab
     #[k(0.55)] pub station_m: f64,
     #[k(0.95)] pub grab_m: f64,
     /// m/s: never faster than this · the closing speed on the man at `grabM` · and what each metre beyond it adds
@@ -24,7 +24,7 @@ pub struct StalkK {
     ///  a lunge: off the mark over its first three frames, most of the way inside a third of it, landing gently (stepEase). The grab's own way in covers a
     ///  fifth of the gap in its first FRAME. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own.
     ///  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him (`yankWith`; off, he stays where he landed and the man comes 11 cm into him) — over what is left of
-    ///  the grab: movement across the floor is what the game's camera shows of a grab (the pose's share: character.ts HOLD.yank). Less where something solid
+    ///  the grab: movement across the floor is what the game's camera shows of a grab. Less where something solid
     ///  stands behind the pair (`yankRoom` m kept clear behind Sam); 0 = he is held where he stood.
     #[k(0.3)] pub catch_secs: f64,
     #[k(0.75)] pub catch_m: f64,
@@ -34,7 +34,7 @@ pub struct StalkK {
     #[k(0.4)] pub yank_room: f64,
     #[k(1.35)] pub corner_m: f64,
     #[k(110.0)] pub corner_deg: f64,
-    /// BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck (character.ts flinchFrom, soft) Sam gives when the man turns off his back with
+    /// BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck Sam gives when the man turns off his back with
     ///  the stalk on AND comes on round to face him (Sam inside `joltFace`° of his nose within `joltSecs` s: a patrol's quarter turn is not that) — the whole of it,
     ///  at once, when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was. joltFace 180 = at any turn that ends the stalk.
     ///  `joltAtOnce` = the duck for a turn on the out's own frame with none of brokeDuck's tests: the fifth pass as it was, raised only by journal.ts for a recording of it.

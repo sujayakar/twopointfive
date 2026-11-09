@@ -21,7 +21,7 @@ pub struct WandK {
     #[k(0.22)] pub past_m: f64,
     /// s a man last seen through it keeps his '(?)' where he stood
     #[k(15.0)] pub mark_secs: f64,
-    /// the leaf counts as shut inside this angle of home, rad (doors.ts's own 'home' for a boot is the same 0.05)
+    /// the leaf counts as shut inside this angle of home, rad
     #[k(0.05)] pub shut_rad: f64,
     /// s kept off his spot before he gives it up (a man standing where he must kneel, furniture in the way)
     #[k(2.5)] pub give_up_secs: f64,
@@ -30,7 +30,7 @@ pub struct WandK {
     /// seconds for a teammate's lens to sweep from one end of its arc to the other and back (nobody aims it for him)
     #[k(5.0)] pub sweep_secs: f64,
     /// s from the start of the look (a teammate: from on his mark at the door) to the lens through, with `quick`, where the squat at the door is not drawn
-    ///  (a teammate, the stealth poses off): the kneel's own time. Where it IS drawn the wait is the squat's own `cableIn` (stealthpose.ts) — wandFeedSecs.
+    ///  (a teammate, the stealth poses off): the kneel's own time. Where it IS drawn the wait is the squat's own `cableIn` — wandFeedSecs.
     ///  Never before he is down on his knee (`quickDown`), and for Sam never before both hands are on it, however long putting the gun away takes
     #[k(0.4)] pub quick_secs: f64,
     /// how far down the kneel must be (the animator's crouch, 0‥1) before a quick lens is through

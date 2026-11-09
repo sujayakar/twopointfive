@@ -15,12 +15,12 @@ macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 fn pos_of(g: &Game, h: GuardId) -> V3 { g.ch[g.gd[h].ch].pos }
 fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
 
-/// a man's name in a line, or 'that man'   (pairorders.ts nameOf)
+/// a man's name in a line, or 'that man'
 pub(super) fn name_of(g: &Game, h: GuardId) -> String {
     if g.gd[h].callsign.is_empty() { String::from("that man") } else { g.gd[h].callsign.clone() }
 }
 
-/// where a man is LOOKING on the floor plane: his chest and his head, halved   (pairorders.ts lookOf)
+/// where a man is LOOKING on the floor plane: his chest and his head, halved
 fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
     let l = crate::guards::look_of(g, g.gd[h].ch);
     [l[0], l[2]]
@@ -63,7 +63,7 @@ fn pair_orders_noticed(g: &Game, h: GuardId) -> bool {
     s == crate::game::GuardState::Alert || s == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed
 }
 
-/// the squad block's line while men wait on the mark: who takes whom, and what stands in his way   (pairorders.ts's note)
+/// the squad block's line while men wait on the mark: who takes whom, and what stands in his way
 pub fn pair_orders_mark_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     if !seated_in(g, seat) { return Vec::new(); }
     let rows: Vec<String> = pair_orders_waiting(g, seat).into_iter().map(|(gd, j)| match j.watcher {
@@ -155,7 +155,7 @@ fn pair_orders_note(g: &mut Game, what: &str) {
 }
 
 // ------------------------------------------------------------ the rows
-/// `issue` of the two take rows   (pairorders.ts:211)
+/// `issue` of the two take rows
 pub(crate) fn take_issue(g: &mut Game, mode: crate::pairorders::JobMode, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Some(String::from("nobody there")) };
     // (each mode is one row's)
@@ -188,7 +188,7 @@ pub(crate) fn take_issue(g: &mut Game, mode: crate::pairorders::JobMode, men: &[
     None
 }
 
-/// `issue` of 'watch him'   (pairorders.ts:227)
+/// `issue` of 'watch him'
 pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Some(String::from("nobody there")) };
     for gd in men.iter().copied() {
@@ -204,7 +204,7 @@ pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
     None
 }
 
-/// `issue` of 'hold in the dark'   (pairorders.ts:240)
+/// `issue` of 'hold in the dark'
 pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = match t {
         crate::orders::OrderTarget::Floor(f) => f.at,
@@ -234,7 +234,7 @@ pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Order
     None
 }
 
-/// `can` of the two take rows: there is room at his back and the man can reach it   (pairorders.ts:203 take)
+/// `can` of the two take rows: there is room at his back and the man can reach it
 pub fn row_take_can(g: &mut Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     let crate::orders::OrderTarget::Foe(x) = t else {
         let (now, was) = (String::from("nobody there."), String::from("no man there."));
@@ -275,7 +275,7 @@ pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[Guard
     }
     Ok(())
 }
-/// one of the two take rows   (pairorders.ts:203 take)
+/// one of the two take rows
 fn take_row(g: &mut Game, row: &'static crate::orders::Row, key: f64, ack: [&str; 2]) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(row, crate::orders::OrderDef {
         key: Some(key), targets: vec![crate::orders::TargetKind::Foe],
@@ -532,7 +532,7 @@ fn pair_orders_body_lit(g: &mut Game, o: GuardId, foe: GuardId, at: V3) -> bool 
     m::max(vis, pair_orders_lit_at(g, at)) >= bar
 }
 
-/// inside what `w`'s eyes sweep, with a line to it: the distance, or −1   (pairorders.ts:357 swept)
+/// inside what `w`'s eyes sweep, with a line to it: the distance, or −1
 fn swept_d(g: &mut Game, eye: V3, hb: [f64; 2], l: f64, half: f64, x: f64, y: f64, z: f64) -> f64 {
     let dx = x - eye[0];
     let dz = z - eye[2];
@@ -627,7 +627,7 @@ fn pair_orders_stage(g: &mut Game, foe: GuardId) -> V3 {
     pair_orders_behind(g, foe)
 }
 
-/// the job ends in words, and he stands where he is   (pairorders.ts:391 off)
+/// the job ends in words, and he stands where he is
 fn take_off(g: &mut Game, gd: GuardId, foe: GuardId, name: &str, why: &str, line: Option<&str>, aim: bool) {
     if let Some(l) = line { crate::game::game_say(g, gd, l, None, None); }
     let n = format!("off:{}", why);
@@ -635,7 +635,7 @@ fn take_off(g: &mut Game, gd: GuardId, foe: GuardId, name: &str, why: &str, line
     if aim { let w = format!("covering {}", name); pair_orders_stand(g, gd, &w, Some(foe)); } else { pair_orders_stand(g, gd, "holding", None); }
 }
 
-/// sent from Sam's shoulder, he comes back to it   (pairorders.ts:393 rejoin)
+/// sent from Sam's shoulder, he comes back to it
 fn take_rejoin(g: &mut Game, gd: GuardId, was_following: bool) -> bool {
     if !crate::pairup::pair_up(g, crate::pairup::PairUpRule::Rejoin) || !was_following || g.pl[g.player].down { return false; }
     crate::game::game_say(g, gd, "he's down. on you.", None, None);
@@ -941,7 +941,7 @@ fn pair_orders_clear_of(g: &mut Game, a: V3, b: V3) -> bool {
     !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
-/// the sweep's ring: is this floor watched by a standing man whose look swings (rows: x, z, hx, hz, half)   (pairorders.ts:511 ringAt)
+/// the sweep's ring: is this floor watched by a standing man whose look swings (rows: x, z, hx, hz, half)
 fn ring_at(g: &mut Game, ring: &[[f64; 5]], x: f64, z: f64) -> bool {
     for r in ring.iter() {
         let dx = x - r[0];
@@ -954,7 +954,7 @@ fn ring_at(g: &mut Game, ring: &[[f64; 5]], x: f64, z: f64) -> bool {
     false
 }
 
-/// the length of a walk   (pairorders.ts:520 lenOf)
+/// the length of a walk
 fn len_of(pts: &[V3]) -> f64 {
     let mut d = 0.0;
     let mut i = 1;
@@ -1072,7 +1072,7 @@ fn pair_orders_lit_at(g: &mut Game, p: V3) -> f64 {
     crate::game::game_visibility_of(g, e)
 }
 
-/// the search behind darkSpot   (pairorders.ts:586 find)
+/// the search behind darkSpot
 fn dark_find(g: &mut Game, at: V3) -> Option<V3> {
     if pair_orders_lit_at(g, at) <= g.k.pair.dark_vis { return Some(floor_of(at)); }
     let mut r = 0.5;
@@ -1143,7 +1143,7 @@ mod tests {
     }
 }
 
-/// A teammate on a take job takes no man as a target who has not noticed anybody, nor the man his hands are on.   (pairorders.ts pairPasses)
+/// A teammate on a take job takes no man as a target who has not noticed anybody, nor the man his hands are on.
 pub fn pair_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.pair.on { return false; }
     let j = pair_orders_job_of(g, gd);
@@ -1154,18 +1154,18 @@ pub fn pair_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     !pair_orders_noticed(g, h)
 }
 
-/// A man in the partner's hands finds no body.   (pairorders.ts pairGripBody)
+/// A man in the partner's hands finds no body.
 pub fn pair_grip_body(g: &mut crate::game::Game, h: GuardId) -> bool {
     pair_gripped(g, h)
 }
 
-/// The partner's hands (or spotted.ts's, under pairup's 'hands') are on this man: he sees nobody until they are off.   (pairorders.ts pairGripped)
+/// The partner's hands (or spotted.ts's, under pairup's 'hands') are on this man: he sees nobody until they are off.
 pub fn pair_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
     (g.k.pair.on && pair_orders_gripped(g, h))
         || (crate::pairup::pair_up(g, crate::pairup::PairUpRule::Hands) && crate::spotted::spotted_gripped(g, h))
 }
 
-/// One told to WATCH a man fires no round while that man has not noticed.   (pairorders.ts pairHoldsRound)
+/// One told to WATCH a man fires no round while that man has not noticed.
 pub fn pair_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.pair.on { return false; }
     let a = match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) { Some(a) => a, None => return false };

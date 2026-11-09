@@ -2,8 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// the switch and its numbers: on (?norescuecheck = a rescue's men never miss each other,
-///  as it was) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RESCUECHECK=1 turns it on). UNTUNED by play.
+/// UNTUNED by play.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RescuecheckK {
     /// the first check after the staging, and the gap between checks, s (where in the band: the caller's id and the check's number — no dice)

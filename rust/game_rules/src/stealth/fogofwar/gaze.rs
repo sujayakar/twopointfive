@@ -1,4 +1,3 @@
-//! src/game/fogofwar.ts lines 1 to 355
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,17 +6,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The field every eye has this frame, degrees in plan: the cone's rows under FOG.cone, else fovDeg.   (fogofwar.ts fieldDeg)
+/// The field every eye has this frame, degrees in plan: the cone's rows under FOG.cone, else fovDeg.
 pub fn field_deg(g: &crate::game::Game) -> f64 {
     if g.k.fog.cone { m::min(g.k.fog.fov_deg, g.k.fog.cone_deg) } else { g.k.fog.fov_deg }
 }
 
-/// Its all-round near field, metres.   (fogofwar.ts fieldNear)
+/// Its all-round near field, metres.
 pub fn field_near(g: &crate::game::Game) -> f64 {
     if g.k.fog.cone { g.k.fog.cone_near_m } else { g.k.fog.near_m }
 }
 
-/// Where a man looks, for the cone (unit, in plan): his head, or his aim with a long gun in the shoulder and level.   (fogofwar.ts gazeOf)
+/// Where a man looks, for the cone (unit, in plan): his head, or his aim with a long gun in the shoulder and level.
 pub fn gaze_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     let h = crate::character::character_head_dir(g, c_2);
     let body_yaw = g.ch[c_2].body_yaw;
@@ -57,12 +56,12 @@ fn gaze_from(head_x: f64, head_z: f64, body_yaw: f64, aim: Option<GazeAim>) -> V
     [x, 0.0, z]
 }
 
-/// FOG.eyes as the count the game uses: from five to the room the renderer has; a row that is no number is five.   (fogofwar.ts fogEyeCount)
+/// FOG.eyes as the count the game uses: from five to the room the renderer has; a row that is no number is five.
 pub(super) fn fog_eye_count(v: f64) -> f64 {
     if v.is_nan() { FOG_EYES_WAS } else { m::max(FOG_EYES_WAS, m::min(crate::render_fogofwar::FOG_EYES, m::floor(v))) }
 }
 
-/// The address's words for the fog, read by the Game's constructor. With no page it does nothing, as the TypeScript's catch does; the host owns the address.   (fogofwar.ts fogFlags)
+/// The address's words for the fog, read by the Game's constructor. With no page it does nothing, as the TypeScript's catch does; the host owns the address.
 pub fn fog_flags(g: &crate::game::Game) {}
 
 #[cfg(test)]

@@ -19,25 +19,22 @@ fn or_one(l: f64) -> f64 {
     if l != l || l == 0.0 { 1.0 } else { l }
 }
 
-/// (vec.ts clamp) A NaN stays NaN; the bounds are not ordered first.
+///  A NaN stays NaN; the bounds are not ordered first.
 #[inline]
 pub fn clamp(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
 }
-/// (vec.ts lerp)
 #[inline]
 pub fn lerp(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
 }
-/// (vec.ts smoothstep)
 #[inline]
 pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
     let t = clamp((x - a) / (b - a), 0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
-/// (vec.ts DEG)
 pub const DEG: f64 = m::PI / 180.0;
-/// Wrap an angle to (−π, π]. (vec.ts wrapAngle)
+/// Wrap an angle to (−π, π].
 #[inline]
 pub fn wrap_angle(a: f64) -> f64 {
     let mut a = js::rem(a + m::PI, 2.0 * m::PI);
@@ -46,90 +43,80 @@ pub fn wrap_angle(a: f64) -> f64 {
     }
     a - m::PI
 }
-/// Move angle `a` toward `b` by at most `max_step`, the short way round. (vec.ts approachAngle)
+/// Move angle `a` toward `b` by at most `max_step`, the short way round.
 #[inline]
 pub fn approach_angle(a: f64, b: f64, max_step: f64) -> f64 {
     let d = wrap_angle(b - a);
     if m::abs(d) <= max_step { b } else { a + m::sign(d) * max_step }
 }
-/// (vec.ts damp)
 #[inline]
 pub fn damp(a: f64, b: f64, rate: f64, dt: f64) -> f64 {
     lerp(a, b, 1.0 - m::exp(-rate * dt))
 }
 
-/// (vec.ts v3.make)
 #[inline]
 pub fn make(x: Option<f64>, y: Option<f64>, z: Option<f64>) -> V3 {
     [x.unwrap_or(0.0), y.unwrap_or(0.0), z.unwrap_or(0.0)]
 }
-/// (vec.ts v3.copy) A vector is a value here, so this is `a`; it stays so that a line translates letter for letter. Where the TypeScript copied to
+///  A vector is a value here, so this is `a`; it stays so that a line translates letter for letter. Where the TypeScript copied to
 /// break a share there is nothing to break; where it did NOT copy and two holders share one vector, see the conventions' ALIASING.
 #[inline]
 pub fn copy(a: V3) -> V3 {
     a
 }
-/// (vec.ts v3.add)
 #[inline]
 pub fn add(a: V3, b: V3) -> V3 {
     [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 }
-/// (vec.ts v3.sub)
 #[inline]
 pub fn sub(a: V3, b: V3) -> V3 {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
-/// (vec.ts v3.scale)
 #[inline]
 pub fn scale(a: V3, s: f64) -> V3 {
     [a[0] * s, a[1] * s, a[2] * s]
 }
-/// `a + b × s` (vec.ts v3.mad)
+/// `a + b × s`
 #[inline]
 pub fn mad(a: V3, b: V3, s: f64) -> V3 {
     [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
 }
-/// (vec.ts v3.mul)
 #[inline]
 pub fn mul(a: V3, b: V3) -> V3 {
     [a[0] * b[0], a[1] * b[1], a[2] * b[2]]
 }
-/// (vec.ts v3.dot)
 #[inline]
 pub fn dot(a: V3, b: V3) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
-/// (vec.ts v3.cross)
 #[inline]
 pub fn cross(a: V3, b: V3) -> V3 {
     [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 }
-/// (vec.ts v3.len)
 #[inline]
 pub fn len(a: V3) -> f64 {
     hyp3(a[0], a[1], a[2])
 }
-/// (vec.ts v3.dist)
 #[inline]
 pub fn dist(a: V3, b: V3) -> f64 {
     hyp3(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 }
-/// How far apart on the floor. (vec.ts v3.distXZ)
+/// How far apart on the floor.
 #[inline]
 pub fn dist_xz(a: V3, b: V3) -> f64 {
     hyp2(a[0] - b[0], a[2] - b[2])
 }
-/// The yaw whose forward `[sin, 0, cos]` points along `d`; y ignored. (vec.ts v3.yawOf)
+/// The yaw whose forward `[sin, 0, cos]` points along `d`; y ignored.
 #[inline]
 pub fn yaw_of(d: V3) -> f64 {
     m::atan2(d[0], d[2])
 }
-/// The yaw from one point toward another. (vec.ts v3.yawTo)
+/// The yaw from one point toward another.
 #[inline]
 pub fn yaw_to(from: V3, to: V3) -> f64 {
     m::atan2(to[0] - from[0], to[2] - from[2])
 }
-/// A zero or NaN length divides by 1. (vec.ts v3.normalize)
+/// A zero or NaN length divides by 1.
 #[inline]
 pub fn normalize(a: V3) -> V3 {
     let l = or_one(hyp3(a[0], a[1], a[2]));
@@ -140,39 +127,33 @@ pub fn normalize(a: V3) -> V3 {
 pub fn lerp3(a: V3, b: V3, t: f64) -> V3 {
     [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
 }
-/// (vec.ts v3.min)
 #[inline]
 pub fn min(a: V3, b: V3) -> V3 {
     [m::min(a[0], b[0]), m::min(a[1], b[1]), m::min(a[2], b[2])]
 }
-/// (vec.ts v3.max)
 #[inline]
 pub fn max(a: V3, b: V3) -> V3 {
     [m::max(a[0], b[0]), m::max(a[1], b[1]), m::max(a[2], b[2])]
 }
 
-/// Rotations (vec.ts quat).
+/// Rotations.
 pub mod quat {
     use super::{hyp3, hyp4, lerp, or_one, Quat, V3};
     use crate::m;
 
-    /// (vec.ts quat.ident)
     #[inline]
     pub fn ident() -> Quat {
         [0.0, 0.0, 0.0, 1.0]
     }
-    /// (vec.ts quat.axisAngle)
     #[inline]
     pub fn axis_angle(axis: V3, ang: f64) -> Quat {
         let s = m::sin(ang / 2.0);
         [axis[0] * s, axis[1] * s, axis[2] * s, m::cos(ang / 2.0)]
     }
-    /// (vec.ts quat.yaw)
     #[inline]
     pub fn yaw(ang: f64) -> Quat {
         [0.0, m::sin(ang / 2.0), 0.0, m::cos(ang / 2.0)]
     }
-    /// (vec.ts quat.mul)
     #[inline]
     pub fn mul(a: Quat, b: Quat) -> Quat {
         let [ax, ay, az, aw] = a;
@@ -184,28 +165,25 @@ pub mod quat {
             aw * bw - ax * bx - ay * by - az * bz,
         ]
     }
-    /// (vec.ts quat.conj)
     #[inline]
     pub fn conj(a: Quat) -> Quat {
         [-a[0], -a[1], -a[2], a[3]]
     }
-    /// A zero or NaN length divides by 1. (vec.ts quat.normalize)
+    /// A zero or NaN length divides by 1.
     #[inline]
     pub fn normalize(a: Quat) -> Quat {
         let l = or_one(hyp4(a[0], a[1], a[2], a[3]));
         [a[0] / l, a[1] / l, a[2] / l, a[3] / l]
     }
-    /// (vec.ts quat.dot)
     #[inline]
     pub fn dot(a: Quat, b: Quat) -> f64 {
         a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
     }
-    /// Normalized lerp along the short arc. (vec.ts quat.nlerp)
+    /// Normalized lerp along the short arc.
     pub fn nlerp(a: Quat, b: Quat, t: f64) -> Quat {
         let s = if dot(a, b) < 0.0 { -1.0 } else { 1.0 };
         normalize([lerp(a[0], b[0] * s, t), lerp(a[1], b[1] * s, t), lerp(a[2], b[2] * s, t), lerp(a[3], b[3] * s, t)])
     }
-    /// (vec.ts quat.slerp)
     pub fn slerp(a: Quat, b: Quat, t: f64) -> Quat {
         let mut d = dot(a, b);
         let mut s = 1.0;
@@ -222,7 +200,7 @@ pub mod quat {
         let wb = (m::sin(t * th) / sn) * s;
         [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb, a[3] * wa + b[3] * wb]
     }
-    /// The rotation taking local +X/+Y/+Z to the given orthonormal axes. (vec.ts quat.fromBasis)
+    /// The rotation taking local +X/+Y/+Z to the given orthonormal axes.
     pub fn from_basis(x: V3, y: V3, z: V3) -> Quat {
         let (m00, m10, m20, m01, m11, m21, m02, m12, m22) = (x[0], x[1], x[2], y[0], y[1], y[2], z[0], z[1], z[2]);
         let tr = m00 + m11 + m22;
@@ -241,7 +219,7 @@ pub mod quat {
         };
         normalize(q)
     }
-    /// The short-arc rotation taking unit vector `a` onto unit vector `b`. (vec.ts quat.fromTo)
+    /// The short-arc rotation taking unit vector `a` onto unit vector `b`.
     pub fn from_to(a: V3, b: V3) -> Quat {
         let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
         if d < -0.9999 {
@@ -253,7 +231,6 @@ pub mod quat {
         let c: V3 = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
         normalize([c[0], c[1], c[2], 1.0 + d])
     }
-    /// (vec.ts quat.rotate)
     #[inline]
     pub fn rotate(q: Quat, v: V3) -> V3 {
         let [qx, qy, qz, qw] = q;
@@ -262,7 +239,7 @@ pub mod quat {
     }
 }
 
-/// Matrices, column-major (vec.ts m4): only those the simulation's folders call.
+/// Matrices, column-major: only those the simulation's folders call.
 ///
 /// A `Mat4` STORES singles because the TypeScript's is a Float32Array; THE ARITHMETIC IS IN DOUBLES and each result is rounded once as it is stored,
 /// as a Float32Array does. Working in `f32` would round at every step and give other bits, so every read here is widened (`wide`) and every write
@@ -288,7 +265,6 @@ pub mod m4 {
         d
     }
 
-    /// (vec.ts m4.create)
     #[inline]
     pub fn create() -> Mat4 {
         let mut m = [0.0; 16];
@@ -298,12 +274,11 @@ pub mod m4 {
         m[15] = 1.0;
         m
     }
-    /// (vec.ts m4.copy)
     #[inline]
     pub fn copy(a: &Mat4) -> Mat4 {
         *a
     }
-    /// `a × b`. (vec.ts m4.mul)
+    /// `a × b`.
     pub fn mul(a: &Mat4, b: &Mat4) -> Mat4 {
         let [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = wide(a);
         let mut out = [0.0; 16];
@@ -316,12 +291,11 @@ pub mod m4 {
         }
         out
     }
-    /// (vec.ts m4.fromTRS)
     #[inline]
     pub fn from_trs(t: V3, q: Quat, s: V3) -> Mat4 {
         from_trss(t[0], t[1], t[2], q[0], q[1], q[2], q[3], s[0], s[1], s[2])
     }
-    /// `from_trs` over scalars. (vec.ts m4.fromTRSs)
+    /// `from_trs` over scalars.
     #[allow(clippy::too_many_arguments)]
     pub fn from_trss(tx: f64, ty: f64, tz: f64, x: f64, y: f64, z: f64, w: f64, s0: f64, s1: f64, s2: f64) -> Mat4 {
         let (x2, y2, z2) = (x + x, y + y, z + z);
@@ -346,7 +320,7 @@ pub mod m4 {
             1.0,
         ]
     }
-    /// A `w` of 0 or NaN divides by 1. (vec.ts m4.transformPoint)
+    /// A `w` of 0 or NaN divides by 1.
     #[inline]
     pub fn transform_point(m: &Mat4, p: V3) -> V3 {
         let [x, y, z] = p;
@@ -354,12 +328,11 @@ pub mod m4 {
         let w = or_one(c[3] * x + c[7] * y + c[11] * z + c[15]);
         [(c[0] * x + c[4] * y + c[8] * z + c[12]) / w, (c[1] * x + c[5] * y + c[9] * z + c[13]) / w, (c[2] * x + c[6] * y + c[10] * z + c[14]) / w]
     }
-    /// (vec.ts m4.getTranslation)
     #[inline]
     pub fn get_translation(m: &Mat4) -> V3 {
         [m[12] as f64, m[13] as f64, m[14] as f64]
     }
-    /// `None` where the determinant is 0 or NaN; the TypeScript then leaves `out` as it was, so the caller keeps its old matrix. (vec.ts m4.invert)
+    /// `None` where the determinant is 0 or NaN; the TypeScript then leaves `out` as it was, so the caller keeps its old matrix.
     pub fn invert(a: &Mat4) -> Option<Mat4> {
         let [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = wide(a);
         let (b00, b01, b02, b03) = (a00 * a11 - a01 * a10, a00 * a12 - a02 * a10, a00 * a13 - a03 * a10, a01 * a12 - a02 * a11);
@@ -389,7 +362,7 @@ pub mod m4 {
             ((a20 * b03 - a21 * b01 + a22 * b00) * det) as f32,
         ])
     }
-    /// Right-handed, WebGPU clip depth [0, 1]: near → 0, far → 1. (vec.ts m4.perspective)
+    /// Right-handed, WebGPU clip depth [0, 1]: near → 0, far → 1.
     pub fn perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Mat4 {
         let f = 1.0 / m::tan(fovy / 2.0);
         let mut out = [0.0; 16];
@@ -400,7 +373,6 @@ pub mod m4 {
         out[14] = ((far * near) / (near - far)) as f32;
         out
     }
-    /// (vec.ts m4.lookAt)
     pub fn look_at(eye: V3, target: V3, up: V3) -> Mat4 {
         let z = super::normalize(super::sub(eye, target));
         let x = super::normalize(super::cross(up, z));

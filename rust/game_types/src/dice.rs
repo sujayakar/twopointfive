@@ -1,7 +1,7 @@
 //! THE GAME'S DIE as a value a state can hold: the same stream as rust/sim's (it rolls rust/sim's own function), with the derives a cloned
 //! state needs. `simRandom()` in the TypeScript is `g.dice.roll()` here; a die kept on a record (`Civ.dice`) is this type too.
 use crate::bytes::ToBytes;
-use sim::dice::Dice;
+use maths::dice::Dice;
 use alloc::vec::Vec;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
@@ -15,10 +15,10 @@ impl Die {
     pub const fn new(seed: u32) -> Die {
         Die { n: 0.0, s: seed }
     }
-    /// one draw, uniform in [0, 1)   (dice.ts simRandom / rollOn)
+    /// one draw, uniform in [0, 1)
     pub fn roll(&mut self) -> f64 {
         let mut d = Dice { n: self.n, s: self.s, spare: 0 };
-        let r = sim::dice::roll(&mut d);
+        let r = maths::dice::roll(&mut d);
         self.n = d.n;
         self.s = d.s;
         r

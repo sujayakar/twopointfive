@@ -19,16 +19,13 @@ use alloc::vec::Vec;
 use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 
-/// (src/game/floormess.ts:108 messBurst)
 pub(super) fn mess_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) { let e = OutMessBurst { at, size }; mark_asked(g, Ask::Burst(e)); }
 
-/// (src/game/floormess.ts:115 messWall)
 pub fn mess_wall(g: &mut crate::game::Game, p: V3, n: V3, thick: f64, through: bool) { let e = OutMessWall { p, n, thick, through }; mark_asked(g, Ask::Wall(e)); }
 
-/// (src/game/floormess.ts:123 messOpened)
 pub(super) fn mess_opened(g: &mut crate::game::Game, rect: [f64; 4]) { let e = OutMessOpened { rect }; mark_asked(g, Ask::Opened(e)); }
 
-/// A resting piece the debris pool took: the crushed mark of it where it lay (a pane's fallen cell leaves none), asked by value, since the slot is another's when the tick is done. (src/game/floormess.ts messEvicted)
+/// A resting piece the debris pool took: the crushed mark of it where it lay (a pane's fallen cell leaves none), asked by value, since the slot is another's when the tick is done.
 pub(super) fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let c = &g.tab.debris_chunk[c_2];
     if c.glass.is_some() { return; }

@@ -12,12 +12,12 @@ fn fresh() -> Mem {
     Mem { hold: None, cand: None, lent: None, takes: Vec::new(), tick: -1e9, told_at: -1e9, line: -1, heard_t: -1e9, lent_off: -1e9, owed: -1e9, series: false }
 }
 
-/// His row of the table, made if new; the row itself, to write through. (attention.ts mem)
+/// His row of the table, made if new; the row itself, to write through.
 pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::attention::Mem {
     g.m.attention.mem_of.get_or_insert_with(gd, fresh)
 }
 
-/// The last few endings, for the check. (attention.ts log)
+/// The last few endings, for the check.
 fn log(g: &mut crate::game::Game, gd: GuardId, what: &str, h: crate::attention::LogH) {
     let item = AttentionModATTENTIONLOGItem { what: String::from(what), secs: h.secs };
     let list = &mut g.m.attention.attention_log;
@@ -27,7 +27,7 @@ fn log(g: &mut crate::game::Game, gd: GuardId, what: &str, h: crate::attention::
 
 fn log_h(h: &Hold) -> LogH { LogH { secs: h.secs } }
 
-/// Every line of this file's pools, for the words check. (attention.ts attentionLines)
+/// Every line of this file's pools, for the words check.
 pub fn attention_lines() -> Vec<String> {
     let mut all = wary();
     all.extend(wary_foe());
@@ -41,7 +41,7 @@ pub fn attention_lines() -> Vec<String> {
 /// `g.say(gd, text)` with the rest of its arguments left out.
 fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
 
-/// A line from a pool, never the one he used last. One die. (attention.ts line)
+/// A line from a pool, never the one he used last. One die.
 fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let last = mem(g, gd).line;
     let n = pool.len() as f64;
@@ -54,14 +54,14 @@ fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
 /// Write a changed hold back to his row (`H` is the row's own object in the TypeScript).
 fn set_hold(g: &mut Game, gd: GuardId, h: Option<Hold>) { mem(g, gd).hold = h; }
 
-/// The hold on this man's attention right now, or none: a copy of the row's, so a change goes back by `set_hold`. (attention.ts attentionOf)
+/// The hold on this man's attention right now, or none: a copy of the row's, so a change goes back by `set_hold`.
 pub fn attention_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::attention::Hold> {
     let now = g.time;
     let row = g.m.attention.mem_of.get(gd)?;
     if now - row.tick <= STALE { row.hold } else { None }
 }
 
-/// The cosine of the angle at his eye between the thing that holds him and a man at `p`. (attention.ts offCos)
+/// The cosine of the angle at his eye between the thing that holds him and a man at `p`.
 fn off_cos(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> f64 {
     let c = g.gd[gd].ch;
     let e = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
@@ -83,12 +83,12 @@ fn off_cos(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3)
     (ax * px + az * pz) / pl
 }
 
-/// Is the floor point `p` more than `focusDeg` off the line from him to the thing. (attention.ts outside)
+/// Is the floor point `p` more than `focusDeg` off the line from him to the thing.
 fn outside(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> bool {
     off_cos(g, gd, h, p) < m::cos(g.k.attention.focus_deg * m::PI / 180.0)
 }
 
-/// × the rate at which this man's eye takes in a man standing at `p`. (attention.ts attentionSideK)
+/// × the rate at which this man's eye takes in a man standing at `p`.
 pub(super) fn attention_side_k(g: &crate::game::Game, gd: GuardId, p: V3) -> f64 {
     match attention_of(g, gd) {
         Some(h) if outside(g, gd, h, p) => g.k.attention.side_k,
@@ -96,7 +96,7 @@ pub(super) fn attention_side_k(g: &crate::game::Game, gd: GuardId, p: V3) -> f64
     }
 }
 
-/// A glimpse worth `gain` of a man at `p`: true = it was at the edge of a held eye and writes no fix. (attention.ts attentionAside)
+/// A glimpse worth `gain` of a man at `p`: true = it was at the edge of a held eye and writes no fix.
 pub(super) fn attention_aside(g: &mut crate::game::Game, gd: GuardId, p: V3, gain: f64) -> bool {
     let Some(mut h) = attention_of(g, gd) else { return false };
     if !outside(g, gd, h, p) { return false; }
@@ -117,17 +117,17 @@ pub(super) fn attention_aside(g: &mut crate::game::Game, gd: GuardId, p: V3, gai
     false
 }
 
-/// × a footfall's level at his ear. (attention.ts attentionEarK)
+/// × a footfall's level at his ear.
 pub(super) fn attention_ear_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     attention_of(g, gd).map_or(1.0, |h| h.ears)
 }
 
-/// × any other small noise's level at his ear. (attention.ts attentionNoiseK)
+/// × any other small noise's level at his ear.
 pub(super) fn attention_noise_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     attention_of(g, gd).map_or(1.0, |h| h.noises)
 }
 
-/// A footfall did reach him, placed at `at`: the hold is over and he turns to it. (attention.ts attentionStep)
+/// A footfall did reach him, placed at `at`: the hold is over and he turns to it.
 pub(super) fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let Some(h) = attention_of(g, gd) else { return };
     if h.mode == HoldMode::Lent {
@@ -146,13 +146,13 @@ pub(super) fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     }
 }
 
-/// Did he say he was done inside the last few seconds. (attention.ts attentionTold)
+/// Did he say he was done inside the last few seconds.
 pub(super) fn attention_told(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     g.m.attention.mem_of.get(gd).map_or(false, |row| now - row.told_at < 4.0)
 }
 
-/// A calm man tipped over the 'huh?' line: true = this file's line stands for the 'huh?'. (attention.ts attentionAgain)
+/// A calm man tipped over the 'huh?' line: true = this file's line stands for the 'huh?'.
 pub(super) fn attention_again(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     let memory = g.k.attention.memory_secs;
@@ -163,7 +163,7 @@ pub(super) fn attention_again(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// A small thing reached this man and he placed it at `where_`; attentionTick weighs it. (attention.ts attentionHeard)
+/// A small thing reached this man and he placed it at `where_`; attentionTick weighs it.
 pub(super) fn attention_heard(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, where_: V3) {
     if e.kind == crate::director::EventKind::Step || e.kind == crate::director::EventKind::Glass || e.loud { return; }
     let kind = match e.kind {
@@ -177,14 +177,14 @@ pub(super) fn attention_heard(g: &mut crate::game::Game, gd: GuardId, e: crate::
     mem(g, gd).cand = Some(MemCand { at: [where_[0], 0.0, where_[2]], kind, t });
 }
 
-/// Another file's standing claim on this man's attention, renewed every update it stands. (attention.ts attentionLend)
+/// Another file's standing claim on this man's attention, renewed every update it stands.
 pub(super) fn attention_lend(g: &mut crate::game::Game, gd: GuardId, at: V3, o: Option<crate::attention::AttentionLendO>) {
     let o = o.unwrap_or(AttentionLendO { ears: None, noises: None });
     let lent = MemLent { at: [at[0], 0.0, at[2]], t: g.time, ears: o.ears.unwrap_or(g.k.attention.ear_k), noises: o.noises.unwrap_or(1.0) };
     mem(g, gd).lent = Some(lent);
 }
 
-/// Can this man's attention be held at all this frame. (attention.ts able)
+/// Can this man's attention be held at all this frame.
 fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let calm = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
@@ -198,7 +198,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
-/// Seconds AT the thing a fresh taking of this kind is worth. (attention.ts secsFor)
+/// Seconds AT the thing a fresh taking of this kind is worth.
 fn secs_for(g: &crate::game::Game, kind: crate::attention::DrawKind) -> f64 {
     let k = &g.k.attention;
     match kind {
@@ -209,7 +209,7 @@ fn secs_for(g: &crate::game::Game, kind: crate::attention::DrawKind) -> f64 {
     }
 }
 
-/// The hold is over, for `why`. (attention.ts end)
+/// The hold is over, for `why`.
 fn end(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     let row = mem(g, gd);
     let Some(h) = row.hold else { return };
@@ -218,12 +218,12 @@ fn end(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     log(g, gd, why, log_h(&h));
 }
 
-/// His suspicion is on the held thing while his fix is the thing. (attention.ts attentionTick onIt)
+/// His suspicion is on the held thing while his fix is the thing.
 fn on_it(g: &Game, gd: GuardId, h: &Hold) -> bool {
     g.gd[gd].last_known.map_or(false, |k| v3::dist_xz(k, h.at) <= 0.6)
 }
 
-/// Once a frame for a man on his own senses: break a hold that no longer stands, weigh a small thing that reached him, keep a lent one. (attention.ts attentionTick)
+/// Once a frame for a man on his own senses: break a hold that no longer stands, weigh a small thing that reached him, keep a lent one.
 pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
     let row = mem(g, gd);
@@ -387,7 +387,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// `tellSecs` before the end he says he is done. `h` is the caller's copy of his row's hold: `told` goes to both. (attention.ts tell)
+/// `tellSecs` before the end he says he is done. `h` is the caller's copy of his row's hold: `told` goes to both.
 fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) {
     if h.told || h.until < 0.0 || g.time < h.until - g.k.attention.tell_secs { return; }
     h.told = true;
@@ -409,7 +409,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     }
 }
 
-/// Still walking to his fix: a held attention does not drain under him short of the thing. (attention.ts attentionWalk)
+/// Still walking to his fix: a held attention does not drain under him short of the thing.
 pub(super) fn attention_walk(g: &mut crate::game::Game, gd: GuardId) {
     let Some(h) = attention_of(g, gd) else { return };
     if h.mode != HoldMode::Go || h.until >= 0.0 { return; }
@@ -420,7 +420,7 @@ pub(super) fn attention_walk(g: &mut crate::game::Game, gd: GuardId) {
     { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
 }
 
-/// Arrived at his fix: true = his attention is on the thing and his suspicion stands. (attention.ts attentionDwell)
+/// Arrived at his fix: true = his attention is on the thing and his suspicion stands.
 pub(super) fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(mut h) = attention_of(g, gd) else { return false };
     if h.mode != HoldMode::Go { return false; }
@@ -439,7 +439,7 @@ pub(super) fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// The debug panel's line. (attention.ts attentionSummary)
+/// The debug panel's line.
 fn attention_summary(g: &crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     let mut i = 0;
@@ -659,7 +659,7 @@ mod tests {
 }
 
 /// Each held attention as the floor shows it: the place, how much of its clock is left, and whether the thread to it is the way he will walk: his own path where he has one for this place (a one-point side step
-/// to get unstuck is not his way); else the floor is asked by whoever draws. (attention.ts attentionMarks, attentionWay)
+/// to get unstuck is not his way); else the floor is asked by whoever draws.
 pub fn attention_view(g: &crate::game::Game) -> Vec<crate::view::AttentionLine> {
     let k = &g.k.attention;
     if !k.on || !k.marks { return Vec::new(); }

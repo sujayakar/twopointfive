@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::js::{self, JsMap, JsSet};
 
-/// The doors' columns in the game's block: says how many doors there are and where the part starts; `home` is `g.sim`. (doorshome.ts DoorStore.constructor)
+/// The doors' columns in the game's block: says how many doors there are and where the part starts; `home` is `g.sim`.
 pub(super) fn door_store_new(g: &crate::game::Game, home: crate::Opaque, cap: f64) -> crate::sim_doorshome::DoorStore {
     if cap > DOOR_CAP {
         panic!("a level of {} doors: the game holds {} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)", cap, DOOR_CAP);
@@ -12,7 +12,7 @@ pub(super) fn door_store_new(g: &crate::game::Game, home: crate::Opaque, cap: f6
     DoorStore {  }
 }
 
-/// Where the doors' hand-over tables are and how much they hold, asked once. An index is a byte address / 8. (doorshome.ts doorIo)
+/// Where the doors' hand-over tables are and how much they hold, asked once. An index is a byte address / 8.
 pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
     if let Some(io) = g.m.sim_doorshome.io {
         return io;

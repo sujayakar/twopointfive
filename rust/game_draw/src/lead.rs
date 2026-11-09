@@ -4,7 +4,7 @@
 
 /// a man's place further off than this in one tick was a cut, and he is not flown to it
 const SNAP: f64 = 1.5;
-/// a motion key's kind that is a man's own box (src/scene/boxes.ts MKEY.rig)
+/// a motion key's kind that is a man's own box
 const RIG: u32 = 4;
 
 /// where a man stands: his feet, and the way he aims

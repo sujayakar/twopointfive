@@ -1,4 +1,3 @@
-//! src/game/squadthrow.ts lines 421 to 607
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -46,19 +45,19 @@ fn arc_of(th: &SquadThrower) -> Arc {
     Arc { from: th.from, sol: th.sol.clone(), rest: th.rest }
 }
 
-/// The state's row, made if it is not there; its key, for a write that outlives a call taking `g`. (squadthrow.ts state)
+/// The state's row, made if it is not there; its key, for a write that outlives a call taking `g`.
 fn state_key(g: &mut Game) -> PlayerId {
     state(g);
     crate::seats::view_key(g, &crate::seats::here(g))
 }
 
-/// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
+/// This view's state, the row itself, made if it is not there.
 pub(super) fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.squadthrow.states.get_or_insert_with(k, || State::default())
 }
 
-/// The thing leaves his hand; the count is taken already. (squadthrow.ts throwIt)
+/// The thing leaves his hand; the count is taken already.
 pub(super) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow::Arc, kind: crate::squadthrow::SquadThrowKind, at: V3) {
     let key = state_key(g);
     let c = g.gd[gd].ch;
@@ -97,7 +96,7 @@ pub(super) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squa
     }
 }
 
-/// The squad's order log, in its own words for a floor order. (squadthrow.ts squadLogRow)
+/// The squad's order log, in its own words for a floor order.
 pub(in crate::squad_orders) fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3) {
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
@@ -105,7 +104,7 @@ pub(in crate::squad_orders) fn squad_log_row(g: &mut crate::game::Game, gd: Guar
     g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
 }
 
-/// The assignment that walks him to his throw, under the row's own id. (squadthrow.ts walkTo)
+/// The assignment that walks him to his throw, under the row's own id.
 fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::SquadThrowKind, post: V3, at: V3, arc: Option<&crate::squadthrow::Arc>) -> Option<OrdersAssignmentId> {
     let face = match arc {
         Some(a) => v3::yaw_of(a.sol.v0),
@@ -127,7 +126,7 @@ fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::Squa
     crate::orders::squad_orders_of(g, &crate::seats::here(g), gd)
 }
 
-/// The order's walking case: he is sent to the floor he has a throw from; the can stays in the bag. (squadthrow.ts startWalk)
+/// The order's walking case: he is sent to the floor he has a throw from; the can stays in the bag.
 pub(super) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadThrower, t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) {
     let key = state_key(g);
     let gd = th.gd;
@@ -170,7 +169,7 @@ pub(super) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::
     g.stats.squadthrow.walks += 1;
 }
 
-/// What a man is doing NOW, kept so that he can be handed back to it. (squadthrow.ts squadLend)
+/// What a man is doing NOW, kept so that he can be handed back to it.
 pub(in crate::squad_orders) fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -222,7 +221,7 @@ pub(in crate::squad_orders) fn squad_lend(g: &crate::game::Game, seat: &crate::s
     Lent { mates, gd, t: t.clone(), a: None, home: [p[0], 0.0, p[2]], home_yaw: g.ch[c].body_yaw, back }
 }
 
-/// The throw is made, or will not be: back to where he stood and to what he was doing. (squadthrow.ts squadHandBack)
+/// The throw is made, or will not be: back to where he stood and to what he was doing.
 pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Lent, back: Option<bool>) {
     let back = back.unwrap_or(true);
     let gd = w.gd;
@@ -333,7 +332,7 @@ fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
     true
 }
 
-/// A WALKING THROWER'S FRAME: the rows' `tick`, while he is under the row's id and the fight does not have him. (squadthrow.ts walkTick)
+/// A WALKING THROWER'S FRAME: the rows' `tick`, while he is under the row's id and the fight does not have him.
 pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let key = state_key(g);
     let now = g.time;
@@ -470,7 +469,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     g.stats.squadthrow.walked += 1;
 }
 
-/// The row that opens the page and the page's two: made, not yet on the menu. (squadthrow.ts rows)
+/// The row that opens the page and the page's two: made, not yet on the menu.
 fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
     let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
@@ -494,7 +493,7 @@ fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     out
 }
 
-/// The squad's HUD block: the throw just made. (squadthrow.ts notes)
+/// The squad's HUD block: the throw just made.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     if let Some(w) = g.m.squadthrow.states.get(crate::seats::view_key(g, seat)).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
@@ -504,7 +503,7 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
     Vec::new()
 }
 
-/// The rows on the menu while the switch is on, off it otherwise. (squadthrow.ts sync)
+/// The rows on the menu while the switch is on, off it otherwise.
 fn sync(g: &mut crate::game::Game) {
     let has = g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
     let on = g.k.squadthrow.on;
@@ -532,7 +531,7 @@ fn sync(g: &mut crate::game::Game) {
     }
 }
 
-/// Once a frame after the menu's own input: the rows in step with the switch, and G with a floor menu's first page up turns it to the throws. True: the press was the row's. (squadthrow.ts squadThrowKey)
+/// Once a frame after the menu's own input: the rows in step with the switch, and G with a floor menu's first page up turns it to the throws. True: the press was the row's.
 pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.k.squadthrow.on && !g.m.squadthrow.states.has(key) {

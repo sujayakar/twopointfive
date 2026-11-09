@@ -12,7 +12,6 @@ pub const ORDER: Row = Row {
     ..Row::new("thrWord", label, issue)
 };
 
-/// doortools.ts:935
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     if !squad_orders_big(g, &crate::seats::here(g)) {
         return String::from(if crate::silent::silent_no_cans(g, &crate::seats::here(g)) || crate::doortools::door_tools_word_quiet(g, &crate::seats::here(g)) { "go · step in · no bang" } else { "go · bang the blind pockets, step in" });

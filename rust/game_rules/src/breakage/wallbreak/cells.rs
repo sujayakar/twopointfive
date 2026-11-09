@@ -1,4 +1,3 @@
-//! src/game/wallbreak.ts lines 1 to 463
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,8 +8,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ private helpers
 fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
-/// A box's row (`Box.*`): the one line of this file that says where a box lives. SKELETON-GAP: skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while
-/// index/ids.txt and properties.txt say `g.col.boxes[id]`. With the table the body is one line. Tests have a table of their own, at the foot of this file.
+/// A box's row (`Box.*`): the one line of this file that says where a box lives. Vec<BoxId>` and no table of Box rows, while index/ids.txt and properties.txt say
+/// `g.col.boxes[id]`. With the table the body is one line. Tests have a table of their own, at the foot of this file.
 #[cfg(not(test))]
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// the box a breakable stands in for
@@ -31,27 +30,26 @@ fn word(g: &mut Game, b: BoxId) -> crate::scene_boxes::WordOf {
     let x = seam_box(g, b);
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff: x.stuff, does: x.does })
 }
-/// (materials.ts doesOf of a box)
 fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
     let does = seam_box(g, b).does;
     crate::scene_materials::does_of(g, does)
 }
-/// the pieces standing (wallbreak.ts:203,258 `col.boxes.length - authored`)
+/// the pieces standing
 fn pieces_up(g: &Game) -> f64 { g.col.boxes.len() as f64 - g.destr.walls.authored }
 fn budget_of(chunks: f64) -> crate::break_table::ShedBudget { crate::break_table::ShedBudget { chunks, heap: None, from: None, per: None } }
 
 // ------------------------------------------------------------------ the switch and the plain boxes
-/// Is the engine on: tune.wallBreak not put off. DESTRUCTION.on is settled on. (wallbreak.ts wallBreakOn)
+/// Is the engine on: tune.wallBreak not put off. DESTRUCTION.on is settled on.
 pub fn wall_break_on(g: &crate::game::Game) -> bool { g.tune.wall_break }
 
-/// A box's world bounds. (wallbreak.ts aabbOf)
+/// A box's world bounds.
 pub(super) fn aabb_of(g: &crate::game::Game, b: &crate::scene_boxes::Box) -> crate::wallbreak::AABB {
     let cs = m::abs(m::cos(b.yaw)); let sn = m::abs(m::sin(b.yaw));
     let ex = cs * b.h[0] + sn * b.h[2]; let ez = sn * b.h[0] + cs * b.h[2];
     AABB { x0: b.c[0] - ex, x1: b.c[0] + ex, y0: b.c[1] - b.h[1], y1: b.c[1] + b.h[1], z0: b.c[2] - ez, z1: b.c[2] + ez }
 }
 
-/// Do two bounds overlap on the plan by more than `eps`. (wallbreak.ts overlapXZ)
+/// Do two bounds overlap on the plan by more than `eps`.
 pub(super) fn overlap_xz(a: crate::wallbreak::AABB, b: crate::wallbreak::AABB, eps: Option<f64>) -> bool {
     let eps = eps.unwrap_or(0.01);
     m::min(a.x1, b.x1) - m::max(a.x0, b.x0) > eps && m::min(a.z1, b.z1) - m::max(a.z0, b.z0) > eps

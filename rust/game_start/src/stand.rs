@@ -1,15 +1,15 @@
 //! THE START: a level file and the character's files in, a `Game` the tick can run out. `src/host/standup.ts standGame` on a host with no picture
-//! (`src/host/stub.ts stubHost`, `tools/qa/headless.ts standUp`), in its order:
+//! , in its order:
 //!
-//!   the block of rust/sim the game stands in, zeroed under the layout's word   (sim/state.ts SimState.born)
-//!   the character's rows                                                       (anim/gltf.ts; `gltf.rs`)
-//!   the host: an empty box world and light set         (host/stub.ts)
-//!   the level file read                                                        (tools/levels/lib/levelLoad.ts; `level.rs`)
-//!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
-//!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
-//!   the Game's constructor                                                     (game.ts; `game_new`)
-//!   the state that still moves, at home in the block                           (sim/state.ts settle)
-//!   the host's own Input and camera, the camera on the level's spawn           (headless.ts standUp)
+//!   the block of rust/sim the game stands in, zeroed under the layout's word
+//!   the character's rows
+//!   the host: an empty box world and light set
+//!   the level file read
+//!   the level's marks, its statics into the world, its lights into the set
+//!   the die, seeded: the men's construction dice are its first draws
+//!   the Game's constructor
+//!   the state that still moves, at home in the block
+//!   the host's own Input and camera, the camera on the level's spawn
 //!
 //! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, later a host.
 use crate::gltf::{self, GltfFile};
@@ -27,7 +27,7 @@ pub struct Assets<'a> {
     pub mannequin: GltfFile<'a>,
     /// the cast's meshes (`cast.gltf`); none = everybody is the mannequin
     pub cast: Option<GltfFile<'a>>,
-    /// the cast in the look's dress (`cast-gwot.gltf`), which a game under the look stands on where it is given (gltf.ts castFile)
+    /// the cast in the look's dress (`cast-gwot.gltf`), which a game under the look stands on where it is given
     pub cast_look: Option<GltfFile<'a>>,
 }
 
@@ -73,7 +73,7 @@ fn born(slot: usize) {
     sim::state::put(slot, &[]);
 }
 
-/// the level's statics into the host's box world and its lights into the light set (standup.ts populateHost)
+/// the level's statics into the host's box world and its lights into the light set
 fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
     passes::thin_level(g, boxes, &doors);
@@ -92,7 +92,7 @@ pub fn host_of(g: &Game) -> Option<Host> {
     Some(Host { input, cam, canvas: canvas() })
 }
 
-/// is the level an address boots one of the look's places? The office and what is made of it are not, nor is an address that names no file   (scene/look.ts placeOfQuery)
+/// is the level an address boots one of the look's places? The office and what is made of it are not, nor is an address that names no file
 fn place_of(link: &str) -> bool {
     let q = game::query::Query::parse(link);
     let Some(f) = q.get("levelFile") else { return false };
@@ -113,7 +113,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let kit = crate::kit_stage::of_link(o.link.as_deref(), data);
     let data: &Json = kit.as_ref().map_or(data, |k| &k.data);
     if let Some(k) = kit.as_ref() { crate::kit_stage::dress(&mut g, k); }
-    // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
+    // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it: the row's
     // own hour and weather onto its words, the weather the game is born in, and the difficulty it asks for
     let mut address = o.link.as_deref().map(game::query::Query::parse);
     if let Some(q) = address.as_mut() {
@@ -128,7 +128,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
-    // the host with no picture: an empty world and light set, no skin (stub.ts stubHost)
+    // the host with no picture: an empty world and light set, no skin
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
     game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
@@ -163,7 +163,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     Stood { game: g, host, level: loaded, rig, refused: why }
 }
 
-/// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
+/// ONE FRAME OF A HOST WITH NO PICTURE: the game's update on the host's Input and camera, the camera after the man, the lights'
 /// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {

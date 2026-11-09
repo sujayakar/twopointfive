@@ -8,7 +8,7 @@ pub struct Pod {
     pub pos: V3,
     pub face: f64,
     pub watch: Option<V3>,
-    /// INVENTED: this point was moved off an opening or swapped in (entrypoints.ts:163, :170), read by dealt for the tallies (:172)
+    /// INVENTED: this point was moved off an opening or swapped in, read by dealt for the tallies (:172)
     pub moved: bool,
 }
 
@@ -28,8 +28,6 @@ pub struct EntryPointsStats {
     pub kept: f64,
 }
 
-/// (src/game/entrypoints.ts:65 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/entrypoints.ts:65 CHEST)
 pub const CHEST: f64 = 1.1;

@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// how an emit's particles are born (src/render/particles.ts:96 EmitShape); absent on a record reads as Cone (:471)
+/// how an emit's particles are born; absent on a record reads as Cone (:471)
 #[derive(Clone, Copy, Debug)]
 pub enum EmitShape {
     Cone,
@@ -59,9 +59,7 @@ pub struct ImpulseOpts {
     pub seed: Option<f64>,
 }
 
-/// (src/render/particles.ts:49 RAIN_MAX_BIRTHS)
 pub const RAIN_MAX_BIRTHS: f64 = 640.0;
 
-/// (src/render/particles.ts:53 MAX_NEW_PER_FRAME)
 pub const MAX_NEW_PER_FRAME: f64 = 6144.0;
 

@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use alloc::string::String;
 
-/// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.   (gear.ts plainShort)
+/// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.
 pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     if def.id == crate::weapons::WeaponId::Fn2000 || def.id == crate::weapons::WeaponId::Mk18bare {
         return crate::gear::old_names().rifle;
@@ -15,13 +15,13 @@ pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     def.short.clone()
 }
 
-/// The launcher's sponge round, in the kit's words.   (gear.ts ringTag)
+/// The launcher's sponge round, in the kit's words.
 pub(super) fn ring_tag() -> &'static str { "SPONGE" }
 
-/// The launcher's high-explosive round, in the kit's words.   (gear.ts shellTag)
+/// The launcher's high-explosive round, in the kit's words.
 pub(super) fn shell_tag() -> &'static str { "HE" }
 
-/// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.   (gear.ts gearText)
+/// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.
 pub fn gear_text(g: &crate::game::Game, s: &str) -> String {
     issued_words(s)
 }

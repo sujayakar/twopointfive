@@ -7,12 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// the switches as they stand now   (quiet.ts heldNow)
+/// the switches as they stand now
 fn held_now(g: &mut crate::game::Game) -> crate::quiet::Held {
     crate::quiet::Held { pairup: g.k.pairup.on, pair: g.k.pair.on, sneak: g.k.sneak.on, spotted: g.k.spotted.on, silent: g.k.silent.on, silent_start: g.k.silent.start }
 }
 
-/// the switches written   (quiet.ts heldSet)
+/// the switches written
 fn held_set(g: &mut crate::game::Game, h: crate::quiet::Held) {
     g.k.pairup.on = h.pairup;
     g.k.pair.on = h.pair;
@@ -22,7 +22,7 @@ fn held_set(g: &mut crate::game::Game, h: crate::quiet::Held) {
     g.k.silent.start = h.silent_start;
 }
 
-/// out through this exit: past its point going its own way, inside its width   (quiet.ts outThrough)
+/// out through this exit: past its point going its own way, inside its width
 pub(super) fn out_through(x: &crate::scene_scenarios::QuietExit, p: V3) -> bool {
     let dx = p[0] - x.x;
     let dz = p[2] - x.z;
@@ -31,43 +31,43 @@ pub(super) fn out_through(x: &crate::scene_scenarios::QuietExit, p: V3) -> bool 
     along > 0.0 && along < EXIT_DEPTH && side < x.half_w.unwrap_or(EXIT_HALF_W)
 }
 
-/// a point a stride past the exit, on its own line   (quiet.ts exitPoint)
+/// a point a stride past the exit, on its own line
 pub fn exit_point(x: &crate::scene_scenarios::QuietExit, past: Option<f64>) -> V3 {
     let past = past.unwrap_or(0.9);
     [x.x + x.out[0] * past, 0.0, x.z + x.out[1] * past]
 }
 
-/// a new mission, inert. The constructor's `current()` only ever handed back another Game's switches: the switches are this Game's here   (quiet.ts QuietMission)
+/// a new mission, inert. The constructor's `current()` only ever handed back another Game's switches: the switches are this Game's here
 pub fn quiet_mission_new(g: &crate::game::Game) -> crate::quiet::QuietMission {
     crate::quiet::QuietMission::blank()
 }
 
-/// the start dealt   (quiet.ts QuietMission.start_)
+/// the start dealt
 fn quiet_mission_start_(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
     if !g.quiet.active { return None; }
     let at = g.quiet.deal.start as usize;
     g.quiet.data.as_ref().and_then(|q| q.starts.get(at).cloned())
 }
 
-/// the spot dealt   (quiet.ts QuietMission.spot)
+/// the spot dealt
 pub fn quiet_mission_spot(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietSpot> {
     if !g.quiet.active { return None; }
     let at = g.quiet.deal.spot as usize;
     g.quiet.data.as_ref().and_then(|q| q.spots.get(at).cloned())
 }
 
-/// the ways out   (quiet.ts QuietMission.exits)
+/// the ways out
 pub fn quiet_mission_exits(g: &crate::game::Game) -> Vec<crate::scene_scenarios::QuietExit> {
     if !g.quiet.active { return Vec::new(); }
     match g.quiet.data.as_ref() { Some(q) => q.exits.clone(), None => Vec::new() }
 }
 
-/// what is to be taken   (quiet.ts QuietMission.thing)
+/// what is to be taken
 fn quiet_mission_thing(g: &crate::game::Game) -> String {
     match g.quiet.data.as_ref().and_then(|q| q.thing.as_ref()) { Some(t) => t.clone(), None => String::from("the drive") }
 }
 
-/// the routes manned on this run, by name   (quiet.ts QuietMission.patrol)
+/// the routes manned on this run, by name
 fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
     if !g.quiet.active { return Vec::new(); }
     let q = match g.quiet.data.as_ref() { Some(q) => q, None => return Vec::new() };
@@ -78,7 +78,7 @@ fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
     g.level.routes.iter().map(|&r| g.tab.route[r].name.clone()).collect()
 }
 
-/// why it cannot start right now   (quiet.ts QuietMission.canStart)
+/// why it cannot start right now
 fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<String> {
     let squad = squad.unwrap_or(0.0);
     let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
@@ -97,7 +97,7 @@ fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<
     None
 }
 
-/// Start it: the deal, a fresh encounter on it, the partner beside Sam. The reason when refused or when the staging failed   (quiet.ts QuietMission.start)
+/// Start it: the deal, a fresh encounter on it, the partner beside Sam. The reason when refused or when the staging failed
 pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: Option<f64>) -> Option<String> {
     let squad = squad.unwrap_or(0.0);
     if g.quiet.active { return None; }
@@ -127,7 +127,7 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
     if g.quiet.active { None } else { Some(g.quiet.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
 }
 
-/// Stop it: the partner gone, every route manned, the authored mission and spawn back, a fresh night encounter   (quiet.ts QuietMission.stop)
+/// Stop it: the partner gone, every route manned, the authored mission and spawn back, a fresh night encounter
 fn quiet_mission_stop(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
     g.quiet.active = false;
@@ -139,7 +139,7 @@ fn quiet_mission_stop(g: &mut crate::game::Game) {
     crate::game::game_restart_encounter(g);
 }
 
-/// the level as authored   (quiet.ts QuietMission.putBack)
+/// the level as authored
 fn quiet_mission_put_back(g: &mut crate::game::Game) {
     quiet_mission_unbench(g);
     if let Some(a) = g.quiet.authored.take() {
@@ -149,7 +149,7 @@ fn quiet_mission_put_back(g: &mut crate::game::Game) {
     quiet_mission_rack(g);
 }
 
-/// THE RUN IS OVER: the switches it took put back, each only while it still stands as the run wrote it   (quiet.ts QuietMission.release)
+/// THE RUN IS OVER: the switches it took put back, each only while it still stands as the run wrote it
 fn quiet_mission_release(g: &mut crate::game::Game) {
     if let (Some(w), Some(mine)) = (g.quiet.was, g.quiet.mine) {
         let n = held_now(g);
@@ -162,7 +162,7 @@ fn quiet_mission_release(g: &mut crate::game::Game) {
     g.m.quiet.holder = false;
 }
 
-/// each switch: what stood before the run where it still stands as the run wrote it, else the hand that moved it   (quiet.ts QuietMission.release)
+/// each switch: what stood before the run where it still stands as the run wrote it, else the hand that moved it
 fn released(w: crate::quiet::Held, mine: crate::quiet::Held, n: crate::quiet::Held) -> crate::quiet::Held {
     let keep = |now: bool, ran: bool, was: bool| if now == ran { was } else { now };
     crate::quiet::Held {
@@ -175,7 +175,7 @@ fn released(w: crate::quiet::Held, mine: crate::quiet::Held, n: crate::quiet::He
     }
 }
 
-/// THIS GAME IS THE ONE RUNNING: its own run, if up, takes the switches again. No other Game's run can hold them here: they are this Game's   (quiet.ts QuietMission.current)
+/// THIS GAME IS THE ONE RUNNING: its own run, if up, takes the switches again. No other Game's run can hold them here: they are this Game's
 pub fn quiet_mission_current(g: &mut crate::game::Game) {
     if g.m.quiet.holder { return; }
     if g.quiet.active && js::truthy(g.quiet.squad) {
@@ -189,7 +189,7 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
     }
 }
 
-/// restartEncounter's FIRST act: the deal, written into the level before the fresh Player and Guards read it   (quiet.ts QuietMission.beforeRestart)
+/// restartEncounter's FIRST act: the deal, written into the level before the fresh Player and Guards read it
 pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
     let q = match g.quiet.data.clone() { Some(q) => q, None => return };
@@ -223,7 +223,7 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     g.quiet.benched = off;
 }
 
-/// restartEncounter's last act: Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly   (quiet.ts QuietMission.onEncounterRestart)
+/// restartEncounter's last act: Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly
 pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
     if let Err(e) = stage_or_why(g) {
@@ -234,7 +234,7 @@ pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
     }
 }
 
-/// once a frame: the camera put on a dealt start, the partner told to follow the first tick the orders have him   (quiet.ts QuietMission.tick)
+/// once a frame: the camera put on a dealt start, the partner told to follow the first tick the orders have him
 pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     if !g.quiet.active { return; }
     if let (true, Some(cam)) = (g.quiet.cut, cam) {   // (with no camera the cut waits for a tick that has one)
@@ -255,14 +255,14 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     }
 }
 
-/// `cam.target = v3.copy(p); cam.desired = v3.copy(cam.target)`: a whole write of `desired` is what Seat.takeCut watches for, here by its serial   (quiet.ts:201)
+/// `cam.target = v3.copy(p); cam.desired = v3.copy(cam.target)`: a whole write of `desired` is what Seat.takeCut watches for, here by its serial
 fn cut_lens(lens: &mut crate::camera::FollowCamera, p: V3) {
     lens.target = p;
     lens.desired = p;
     lens.desired_serial = lens.desired_serial.wrapping_add(1);
 }
 
-/// the run in a line   (quiet.ts QuietMission.summary)
+/// the run in a line
 fn quiet_mission_summary(g: &crate::game::Game) -> String {
     if !g.quiet.active || g.quiet.data.is_none() {
         let carries = g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some());
@@ -291,14 +291,14 @@ fn quiet_mission_summary(g: &crate::game::Game) -> String {
     )
 }
 
-/// a line of the mission's own log   (quiet.ts QuietMission.note)
+/// a line of the mission's own log
 fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.quiet.log.push(line);
     if g.quiet.log.len() > 60 { g.quiet.log.drain(0..30); }
 }
 
-/// one deal: the pinned seed's, and with no pin the first of each list   (quiet.ts QuietMission.dealOne)
+/// one deal: the pinned seed's, and with no pin the first of each list
 fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::QuietData) -> crate::quiet::QuietDeal {
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
@@ -307,12 +307,12 @@ fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::Qui
     }
 }
 
-/// `(pin | 0) ^ 0x51ed270b`: a pinned deal's seed   (quiet.ts QuietMission.dealOne)
+/// `(pin | 0) ^ 0x51ed270b`: a pinned deal's seed
 fn pin_seed(pin: f64) -> i32 {
     js::to_i32(pin) ^ 0x51ed270b
 }
 
-/// a pinned deal, off a stream of its own: three draws whatever the lists' lengths   (quiet.ts QuietMission.dealOne)
+/// a pinned deal, off a stream of its own: three draws whatever the lists' lengths
 fn pinned_deal(mut die: crate::dice::Die, starts: usize, spots: usize, sets: Option<usize>) -> crate::quiet::QuietDeal {
     let mut pick = |n: f64| m::min(n - 1.0, m::floor(die.roll() * n));
     let start = pick(starts as f64);
@@ -321,7 +321,7 @@ fn pinned_deal(mut die: crate::dice::Die, starts: usize, spots: usize, sets: Opt
     crate::quiet::QuietDeal { start, spot, patrol: if sets.map_or(false, |n| n > 0) { patrol } else { -1.0 } }
 }
 
-/// the benched routes' men back on the guard list, in route order, torches back in the light set   (quiet.ts QuietMission.unbench)
+/// the benched routes' men back on the guard list, in route order, torches back in the light set
 fn quiet_mission_unbench(g: &mut crate::game::Game) {
     if g.quiet.benched.is_empty() { return; }
     let benched = g.quiet.benched.clone();
@@ -337,7 +337,7 @@ fn quiet_mission_unbench(g: &mut crate::game::Game) {
     g.quiet.benched = Vec::new();
 }
 
-/// what goes dark when the thing comes out: the switchables named for the mission's holder   (quiet.ts QuietMission.rack)
+/// what goes dark when the thing comes out: the switchables named for the mission's holder
 fn quiet_mission_rack(g: &mut crate::game::Game) {
     let n = js::num_str(g.level.mission.rack.index);
     let leds = format!("rack{}_leds", n);
@@ -345,7 +345,7 @@ fn quiet_mission_rack(g: &mut crate::game::Game) {
     g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.sim_lightshome_fixture[t].name; *name == leds || *name == glow }).collect();
 }
 
-/// the staging, for whoever can take its failure   (quiet.ts QuietMission.stage)
+/// the staging, for whoever can take its failure
 fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
     let s = quiet_mission_start_(g).unwrap();
     let pl = g.pl[g.player].ch;
@@ -392,7 +392,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
     Ok(())
 }
 
-/// the free floor nearest a stride behind Sam, walkable from him; else the fault an author is told   (quiet.ts QuietMission.behind)
+/// the free floor nearest a stride behind Sam, walkable from him; else the fault an author is told
 fn behind_or_why(g: &crate::game::Game, s: &crate::scene_scenarios::QuietStart) -> Result<V3, String> {
     let back: V3 = [s.sam[0] - m::sin(s.sam_yaw) * 1.1, 0.0, s.sam[2] - m::cos(s.sam_yaw) * 1.1];
     let mut best: Option<V3> = None;
@@ -417,7 +417,7 @@ fn behind_or_why(g: &crate::game::Game, s: &crate::scene_scenarios::QuietStart) 
     }
 }
 
-/// THE FLOOR A MAN STANDS ON AT A HOLDER'S FACE: the nearest free cell with a clear line to the face and, given the room, inside it   (quiet.ts holderStand)
+/// THE FLOOR A MAN STANDS ON AT A HOLDER'S FACE: the nearest free cell with a clear line to the face and, given the room, inside it
 pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand {
     let e = 0.3;
     let mut best: Option<V3> = None;
@@ -440,7 +440,7 @@ pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::qu
     crate::quiet::HolderStand { pos: best, clear, inside }
 }
 
-/// the quiet mission that is up on this game   (quiet.ts quietOf)
+/// the quiet mission that is up on this game
 pub fn quiet_of(g: &crate::game::Game) -> bool {
     g.quiet.active
 }
@@ -455,7 +455,7 @@ fn bare_of(thing: &str) -> &str {
     thing
 }
 
-/// THE WORDS, off the level's data   (quiet.ts quietWords)
+/// THE WORDS, off the level's data
 pub fn quiet_words(g: &crate::game::Game) -> Option<crate::quiet::QuietWords> {
     if !g.quiet.active { return None; }
     let p = quiet_mission_spot(g).unwrap();
@@ -474,7 +474,7 @@ pub fn quiet_words(g: &crate::game::Game) -> Option<crate::quiet::QuietWords> {
     Some(crate::quiet::QuietWords { place: p.place, holder: p.holder, thing, outs, bare })
 }
 
-/// the exit Sam went out by (the nearest whose line he is past)   (quiet.ts exitTaken)
+/// the exit Sam went out by (the nearest whose line he is past)
 pub(super) fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
     if !g.quiet.active { return None; }
     let mut best = None;
@@ -488,7 +488,7 @@ pub(super) fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_sc
     best
 }
 
-/// the way out nearest `p` on foot-less distance   (quiet.ts nearestExit)
+/// the way out nearest `p` on foot-less distance
 pub(super) fn nearest_exit(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
     if !g.quiet.active { return None; }
     let mut best = None;
@@ -500,29 +500,29 @@ pub(super) fn nearest_exit(g: &crate::game::Game, p: V3) -> Option<crate::scene_
     best
 }
 
-/// a point as a fault line writes it   (quiet.ts checkQuiet `at`)
+/// a point as a fault line writes it
 fn at(p: V3) -> String {
     format!("({}, {})", js::num_str(p[0]), js::num_str(p[2]))
 }
 
-/// free floor, or a fault said   (quiet.ts checkQuiet `free`)
+/// free floor, or a fault said
 fn free(g: &mut crate::game::Game, out: &mut Vec<String>, what: &str, p: V3) -> bool {
     let b = crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]);
     if b { out.push(format!("{} {} is not free floor a man can stand on", what, at(p))); }
     !b
 }
 
-/// a way on foot   (quiet.ts checkQuiet `way`)
+/// a way on foot
 fn way(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::nav_grid_find_path(g, a, b, Some(20000.0), None).map_or(false, |path| !path.is_empty())
 }
 
-/// a route by its name; the last of a name, as a Map built from the list has it   (quiet.ts checkQuiet `routes`)
+/// a route by its name; the last of a name, as a Map built from the list has it
 fn route_named(g: &crate::game::Game, name: &str) -> Option<RouteId> {
     g.level.routes.iter().rev().copied().find(|&r| g.tab.route[r].name == name)
 }
 
-/// THE BLOCK AGAINST THE BUILT FLOOR: what the level file's validator cannot say. `g` is a Game stood up on the level, nothing started; the faults, each a line an author can act on   (quiet.ts checkQuiet)
+/// THE BLOCK AGAINST THE BUILT FLOOR: what the level file's validator cannot say. `g` is a Game stood up on the level, nothing started; the faults, each a line an author can act on
 pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
     let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.clone()) { Some(q) => q, None => return vec![String::from("the level carries no scenarios.quiet block")] };
     let mut out: Vec<String> = Vec::new();
@@ -677,7 +677,7 @@ mod tests {
             (-5.0, 5, 4, Some(2), 4.0, 0.0, 1.0),
             (2147483648.5, 2, 3, Some(0), 1.0, 1.0, -1.0),
         ] {
-            // mulberry32's stream is `Die`'s, draw for draw (dice.ts); `mulberry32` itself is a stub in this crate
+            // mulberry32's stream is `Die`'s, draw for draw; `mulberry32` itself is a stub in this crate
             let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q);
             assert_eq!((d.start, d.spot, d.patrol), (a, b, c), "pin {}", pin);
         }

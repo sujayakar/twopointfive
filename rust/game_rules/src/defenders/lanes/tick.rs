@@ -1,4 +1,3 @@
-//! src/game/lanes.ts lines 367 to 807
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// (lanes.ts:220) the skeleton's SIDE is the word as a &str; a man's team is the enum (notes.md, Skeleton)
 const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
 // ---------------------------------------------------------------- what the TypeScript's language and closures gave
@@ -48,7 +46,7 @@ fn lane_by_id(g: &mut Game, id: f64) -> Option<LanesLaneId> {
     None
 }
 
-/// once a frame, after the room fight's own tick and before anybody walks (lanes.ts lanesTick)
+/// once a frame, after the room fight's own tick and before anybody walks
 pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     use crate::roomfight::DefMode;
     if !live(g) {
@@ -287,7 +285,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// the men held at a lane's mouths, on their feet and with nobody on them (lanes.ts heldAt)
+/// the men held at a lane's mouths, on their feet and with nobody on them
 fn held_at(g: &mut crate::game::Game, l: LanesLaneId) -> Vec<GuardId> {
     let id = g.tab.lanes_lane[l].id;
     let rows: Vec<(GuardId, crate::lanes::StateHeldValue)> = s(g).held.iter().map(|(gd, h)| (gd, *h)).collect();
@@ -300,7 +298,7 @@ fn held_at(g: &mut crate::game::Game, l: LanesLaneId) -> Vec<GuardId> {
 
 /// what backOut's two closures share
 struct BackOut { l: LanesLaneId, m: Option<Vec<u8>>, memo: JsMap<usize, bool>, w: usize }
-/// floor out of every lane he knows, out of this one's guns' sight, not in a doorway (lanes.ts:462 cover)
+/// floor out of every lane he knows, out of this one's guns' sight, not in a doorway
 fn back_cover(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
     if let Some(&v) = b.memo.get(i) { return v; }
     let cell = g.col.nav.cell;
@@ -311,7 +309,7 @@ fn back_cover(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
     b.memo.set(i, v);
     v
 }
-/// every open floor about it is cover too (lanes.ts:464 deep)
+/// every open floor about it is cover too
 fn back_deep(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
     let (w, h) = (b.w as isize, g.col.nav.h as isize);
     let (cx, cz) = ((i % b.w) as isize, (i / b.w) as isize);
@@ -327,7 +325,7 @@ fn back_deep(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
     true
 }
 
-/// a man in a lane's line walks to the nearest floor out of it: false = none in reach (lanes.ts backOut)
+/// a man in a lane's line walks to the nearest floor out of it: false = none in reach
 pub(super) fn back_out(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId) -> bool {
     let d = match def_of(g, gd) { Some(d) => d, None => return false };
     let now = g.time;
@@ -398,10 +396,10 @@ pub(super) fn back_out(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId) -
     true
 }
 
-/// a way round for one man (lanes.ts:491)
+/// a way round for one man
 struct Way { gd: GuardId, cid: f64, len: f64, pin: bool, stop: Option<V3> }
 
-/// GO ROUND: of the men held at a lane's mouths, the one (two of four) with the shortest way to the guns that never shows him to them (lanes.ts round)
+/// GO ROUND: of the men held at a lane's mouths, the one (two of four) with the shortest way to the guns that never shows him to them
 fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].round_at = g.time + 10.0;   // (asked again while there is no way: a real go waits `roundGap`)
     let mask = s(g).mask.clone();
@@ -496,14 +494,14 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     }
     g.tab.lanes_lane[l].round_at = g.time + g.k.lanes.round_gap;
 }
-/// (lanes.ts:520, 525) the first man sent round says so
+///  the first man sent round says so
 fn round_shout(g: &mut Game, gd: GuardId) {
     let text = crate::words::wg(g, &"going around — keep them looking your way!", &"going round — keep them looking your way!");
     say_net(g, gd, text);
     s(g).said_t = g.time;
 }
 
-/// THE CHARGE: a man at a mouth with a stun charge on him and the guns in a throw's reach puts it down the lane (lanes.ts stun)
+/// THE CHARGE: a man at a mouth with a stun charge on him and the guns in a throw's reach puts it down the lane
 fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].stun_at = g.time + 2.0;
     let (id, l_from) = (g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].from);
@@ -546,7 +544,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     note(g, Some(best), &format!("lane {}: a charge down it toward ({}, {})", id, js::to_fixed(land[0], 1), js::to_fixed(land[2], 1)));
 }
 
-/// a stun charge of THEIRS has gone off on a lane's guns with nothing solid between: the lane is theirs for `pushSecs`, and the men on its mouths go (lanes.ts bangs)
+/// a stun charge of THEIRS has gone off on a lane's guns with nothing solid between: the lane is theirs for `pushSecs`, and the men on its mouths go
 fn bangs(g: &mut crate::game::Game) {
     let mut ei = 0usize;
     while ei < g.events.len() {
@@ -611,7 +609,7 @@ fn bangs(g: &mut crate::game::Game) {
     }
 }
 
-/// (lanes.ts:579) where this body stands, if it is by the lane's guns and `eye` has a line to it
+///  where this body stands, if it is by the lane's guns and `eye` has a line to it
 fn manned_at(g: &mut Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     let (pos, near) = (g.ch[c].pos, g.k.lanes.peek_near_m);
     if !g.tab.lanes_lane[l].guns.iter().any(|&q| flat(q, pos) < near) { return None; }
@@ -620,7 +618,7 @@ fn manned_at(g: &mut Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     let chest = g.ch[c].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.1, 0.0]));
     if !seg_blocked(g, eye, chest) { Some(pos) } else { None }
 }
-/// one of the other side, on his feet, that `eye` has a line to within `peekNearM` of where a lane's fire came from: a LINE, so the dark never makes a lane clear (lanes.ts gunsManned)
+/// one of the other side, on his feet, that `eye` has a line to within `peekNearM` of where a lane's fire came from: a LINE, so the dark never makes a lane clear
 pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) -> Option<V3> {
     for pl in crate::seats::men(g) {
         let pc = g.pl[pl].ch;
@@ -640,7 +638,7 @@ pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) ->
     }
     None
 }
-/// has he the PLACE round a gun's spot in view: the spot, and all but one at most of a ring of six a man at the spot could stand on (lanes.ts spotSeen)
+/// has he the PLACE round a gun's spot in view: the spot, and all but one at most of a ring of six a man at the spot could stand on
 pub(super) fn spot_seen(g: &mut crate::game::Game, eye: V3, m: V3) -> bool {
     let c: V3 = [m[0], 1.4, m[2]];
     if seg_blocked(g, eye, c) { return false; }
@@ -652,7 +650,7 @@ pub(super) fn spot_seen(g: &mut crate::game::Game, eye: V3, m: V3) -> bool {
     }
     true
 }
-/// another of his side, fit, has had one of them in sight within 3 s somewhere by the lane's guns (lanes.ts netSees)
+/// another of his side, fit, has had one of them in sight within 3 s somewhere by the lane's guns
 pub(super) fn net_sees(g: &mut crate::game::Game, l: LanesLaneId, but: GuardId) -> bool {
     let near = g.k.lanes.peek_near_m;
     let mut i = 0;
@@ -666,7 +664,7 @@ pub(super) fn net_sees(g: &mut crate::game::Game, l: LanesLaneId, but: GuardId) 
     false
 }
 
-/// of the men this rule holds short of a lane's mouth, the nearest who can step to where it opens, and where he steps to (lanes.ts stepper)
+/// of the men this rule holds short of a lane's mouth, the nearest who can step to where it opens, and where he steps to
 fn stepper(g: &mut crate::game::Game, l: LanesLaneId, skip: Option<&JsSet<GuardId>>, armed: bool, min_gun: Option<f64>) -> Option<crate::lanes::Stepper> {
     let min_gun = min_gun.unwrap_or(0.0);
     let id = g.tab.lanes_lane[l].id;
@@ -746,7 +744,7 @@ fn stepper(g: &mut crate::game::Game, l: LanesLaneId, skip: Option<&JsSet<GuardI
     match (best, to) { (Some(gd), Some(to)) => Some(crate::lanes::Stepper { gd, to }), _ => None }
 }
 
-/// the men sent round to a lane's other side, twice a second: on his way → SET where the guns would first see him; while one is set its men fire down it in turn (lanes.ts flankTick)
+/// the men sent round to a lane's other side, twice a second: on his way → SET where the guns would first see him; while one is set its men fire down it in turn
 fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
     use crate::lanes::FlankPhase;
     let (id, l_from) = (g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].from);
@@ -813,7 +811,7 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
 }
 
 
-/// FIRE FROM AN ANGLE: of the men held on the lane with a burst in his gun and a corner no nearer the guns than `pinMinM`, in turn, one steps to it (lanes.ts pinStart)
+/// FIRE FROM AN ANGLE: of the men held on the lane with a burst in his gun and a corner no nearer the guns than `pinMinM`, in turn, one steps to it
 fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     g.tab.lanes_lane[l].pin_at = g.time + 1.0;   // (asked again soon while nobody is placed for it)
     let id = g.tab.lanes_lane[l].id;
@@ -857,7 +855,7 @@ fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     note(g, Some(gd), &format!("lane {}: steps to his corner toward ({}, {}) to put fire down it", id, js::to_fixed(pick.to[0], 1), js::to_fixed(pick.to[2], 1)));
 }
 
-/// (lanes.ts:701 done) the burst is over: said, a magazine started if it is low, and back
+///  the burst is over: said, a magazine started if it is low, and back
 fn pin_done(g: &mut Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId, fr: crate::lanes::PeekFire, why: &str) {
     let rounds = g.k.lanes.pin_rounds;
     let spent = rounds - fr.n;
@@ -868,7 +866,7 @@ fn pin_done(g: &mut Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId, fr: cr
     if crate::weapons::firearm_rounds_ready(g, w) < rounds && g.gd[gd].reload_t < 0.0 { crate::guards::start_reload_beat(g, gd); }
     peek_back(g, gd, d);
 }
-/// every frame, a man out at his corner to fire down a lane: the moment his muzzle has a line he stops and puts his burst there, wide, then gets back (lanes.ts pinStep)
+/// every frame, a man out at his corner to fire down a lane: the moment his muzzle has a line he stops and puts his burst there, wide, then gets back
 pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId, seen: Option<V3>) {
     let c = g.gd[gd].ch;
     let p = match s(g).peek.get(gd) { Some(&p) => p, None => return };   // (a read of the row: its writes go by the path)
@@ -932,16 +930,16 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
     if fr.n <= 0.0 { pin_done(g, gd, l, d, fr, "his burst is fired"); }
     else if !crate::weapons::firearm_can_fire(g, w) && crate::weapons::firearm_rounds_ready(g, w) == 0.0 { pin_done(g, gd, l, d, fr, "dry"); }
 }
-/// (lanes.ts:697 `F`) the burst, written to the man's row
+///  the burst, written to the man's row
 fn put_fire(g: &mut Game, gd: GuardId, fr: crate::lanes::PeekFire) {
     if let Some(r) = s(g).peek.get_mut(gd) { r.fire = Some(fr); }
 }
 
-/// he has shouted and frag.ts's wind-up has his arm (half a second past its time at the most) (lanes.ts winding)
+/// he has shouted and frag.ts's wind-up has his arm (half a second past its time at the most)
 pub(super) fn winding(g: &crate::game::Game, gd: GuardId, f: crate::lanes::PeekFrag) -> bool {
     f.at.is_some() && crate::frag::frag_winding(g, gd) && g.time < f.until + 0.5
 }
-/// A GRENADE DOWN IT: of the men held on the lane who carry one and may throw this moment, one goes looking for an arc to the middle of where its fire came from (lanes.ts fragOut)
+/// A GRENADE DOWN IT: of the men held on the lane who carry one and may throw this moment, one goes looking for an arc to the middle of where its fire came from
 fn frag_out(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].frag_at = g.time + 2.0;   // (asked again soon while nobody is placed for it)
     if at.is_empty() { return; }
@@ -982,9 +980,9 @@ fn mid_of(l: &crate::lanes::Lane) -> V3 {
     for q in l.guns.iter() { let d = m::hyp2(q[0] - mx, q[2] - mz); if d < bd { bd = d; best = *q; } }
     best
 }
-/// the middle of where a lane's fire came from: of the places its guns fired from, the one nearest their mean (lanes.ts gunsMid)
+/// the middle of where a lane's fire came from: of the places its guns fired from, the one nearest their mean
 fn guns_mid(g: &crate::game::Game, l: LanesLaneId) -> V3 { mid_of(&g.tab.lanes_lane[l]) }
-/// where his feet would be `s` metres on: along the walk he is on (`going`), else straight toward `to`. Edge = a covered lane's floor, or past the end of his walk; None = a wall on the straight line (lanes.ts fragPlace)
+/// where his feet would be `s` metres on: along the walk he is on (`going`), else straight toward `to`. Edge = a covered lane's floor, or past the end of his walk; None = a wall on the straight line
 fn frag_place(g: &mut crate::game::Game, gd: GuardId, to: V3, s: f64, going: bool) -> Option<crate::lanes::FragPlace> {
     use crate::lanes::FragPlace;
     let c = pos_of(g, gd);
@@ -1006,7 +1004,7 @@ fn frag_place(g: &mut crate::game::Game, gd: GuardId, to: V3, s: f64, going: boo
     let mask = mask_of(g, gd);
     if in_mask(g, mask.as_deref(), b) { Some(FragPlace::Edge) } else { Some(FragPlace::List(b)) }
 }
-/// every frame, a man out to put a grenade down a lane: an arc from where he is held, else a place at a time on along his walk; he shouts, throws, goes back (lanes.ts fragStep)
+/// every frame, a man out to put a grenade down a lane: an arc from where he is held, else a place at a time on along his walk; he shouts, throws, goes back
 pub(super) fn frag_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId) {
     let p = match s(g).peek.get(gd) { Some(&p) => p, None => return };
     let mut f = match p.frag { Some(f) => f, None => return };
@@ -1090,7 +1088,7 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
     note(g, Some(gd), &format!("lane {}: {} — {}", id, what, if f.going { "back" } else { "stays" }));
     peek_back(g, gd, d);
 }
-/// A LOOK ROUND THE CORNER: of the men this rule holds short of a quiet lane's mouth, the nearest steps to where it opens and looks down it (lanes.ts peekStart)
+/// A LOOK ROUND THE CORNER: of the men this rule holds short of a quiet lane's mouth, the nearest steps to where it opens and looks down it
 fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     g.tab.lanes_lane[l].peek_at = g.time + 3.0;   // (asked again soon while nobody is placed for it)
     let id = g.tab.lanes_lane[l].id;
@@ -1112,7 +1110,7 @@ fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     note(g, Some(best), &format!("lane {}: quiet {} s — steps to its mouth toward ({}, {}) for a look", id, js::to_fixed(g.time - last_t, 0), js::to_fixed(to[0], 1), js::to_fixed(to[2], 1)));
 }
 
-/// (lanes.ts:818 back) on his way back to where he stood, for pinStep and fragStep. The row is there at every call: only peekStep and lanesReset delete one
+///  on his way back to where he stood, for pinStep and fragStep. The row is there at every call: only peekStep and lanesReset delete one
 fn peek_back(g: &mut Game, gd: GuardId, d: RoomfightDefId) {
     let now = g.time;
     let home = { let r = s(g).peek.get_mut(gd).unwrap(); r.phase = crate::lanes::PeekPhase::Back; r.t = now; r.home };

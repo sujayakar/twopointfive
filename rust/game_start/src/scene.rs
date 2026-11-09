@@ -3,7 +3,7 @@
 //! start stands like any level of `levels/`. So a test's scene is no second way to make a game: it goes in by the level format, through the one
 //! start (`stand.rs`).
 //!
-//! The pieces are the level kit's own (`tools/levels/lib/levelKit.ts`, `doorSize.ts`), size for size: a wall 12 cm thick and 3 m high, a doorway cut for
+//! The pieces are the level kit's own, size for size: a wall 12 cm thick and 3 m high, a doorway cut for
 //! the real door inside a 1.2 m slot (on a walk-grid cell centre), its frame of two jambs, a head and two stops, a bare bulb on its flex.
 //!
 //! WHO STANDS IN A SCENE, one of two ways and never both (the room clear's staging takes every other man off the floor):
@@ -34,7 +34,7 @@ pub enum Axis {
 }
 
 fn r4(v: f64) -> f64 { m::round(v * 1e4) / 1e4 }
-/// THE REAL DOORWAY INSIDE A SLOT (doorSize.ts fitSlot): the gap's two ends, its middle on a walk-grid cell centre where the slot allows
+/// THE REAL DOORWAY INSIDE A SLOT: the gap's two ends, its middle on a walk-grid cell centre where the slot allows
 fn fit_slot(a: f64, bb: f64) -> [f64; 2] {
     let k = sizes();
     let (g, cell, reach) = (k.gap, k.cell, k.reach);
@@ -192,7 +192,7 @@ impl Scene {
             let (c, h) = slab(r.x0, 0.0, r.z0, r.x1, 0.004, r.z1); add("floors", c, h, mat("carpet"), vec![]);
             let (c, h) = slab(r.x0, KIT_H, r.z0, r.x1, KIT_H + 0.2, r.z1); add("ceiling", c, h, mat("ceiling"), vec![("flags", arr(vec![s("NoPrimary")]))]);
         }
-        // walls, with their doorways (levelKit.ts wallX / wallZ)
+        // walls, with their doorways
         let t = WALL_INT;
         for w in self.walls.iter() {
             let mut holes = w.holes.clone();
@@ -206,7 +206,7 @@ impl Scene {
             }
             if cur < w.b { piece(cur, w.b, 0.0, KIT_H); }
         }
-        // each door's frame: two jambs, the head, the two stops that close the sight slots at the hinge and the latch (levelKit.ts door)
+        // each door's frame: two jambs, the head, the two stops that close the sight slots at the hinge and the latch
         let frame = ("albedo", nums(&[0.3, 0.24, 0.17]));
         for d in self.doors.iter() {
             let group = format!("doorframe.{}", d.name);
@@ -220,7 +220,7 @@ impl Scene {
             stop(-0.012, 0.024);
             stop(LEAF_W - 0.004, LEAF_W + 0.012);
         }
-        // the lamps: a flex and a bulb each, the bulb the light's fixture (levelKit.ts bulb)
+        // the lamps: a flex and a bulb each, the bulb the light's fixture
         let mut lights: Vec<Json> = Vec::new();
         if self.moon {
             lights.push(obj(vec![("id", s("moon")), ("kind", s("dir")), ("pos", nums(&[0.0, 0.0, 0.0])), ("dir", nums(&[0.44997750168735945, -0.49997500187484384, -0.7399630027747688])), ("color", nums(&[0.55, 0.7, 1.0])), ("intensity", n(0.9)),

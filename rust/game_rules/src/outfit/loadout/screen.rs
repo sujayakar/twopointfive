@@ -18,7 +18,7 @@ pub struct LoadoutEntry {
     pub only: Option<String>,
 }
 
-/// The solo night's place on the list of missions.   (missions.ts SOLO_NIGHT)
+/// The solo night's place on the list of missions.
 const SOLO_ID: &str = "solo-night";
 
 impl From<ScenarioEntry> for LoadoutEntry {
@@ -33,7 +33,7 @@ impl From<ScenarioEntry> for LoadoutEntry {
     }
 }
 
-/// A mission by its id, off the game's own list.   (loadout.ts entryOfMission)
+/// A mission by its id, off the game's own list.
 pub fn entry_of(id: &str) -> Option<LoadoutEntry> {
     if id == SOLO_ID {
         return Some(LoadoutEntry { id: String::from(SOLO_ID), kind: LoadoutKind::Solo, squad: 0.0, level: None, group: None, only: None });
@@ -61,7 +61,7 @@ const MISSION_KIT: &str = "This mission issues its own kit, whatever this machin
 
 fn is_lesson(e: &LoadoutEntry) -> bool { e.group == Some(MissionGroup::Tutorial) }
 
-/// Which sizes a mission can stage, in the order of the sizes.   (loadout.ts squadChoices)
+/// Which sizes a mission can stage, in the order of the sizes.
 pub(in crate::outfit) fn squad_choices(e: &LoadoutEntry) -> Vec<SquadChoice> {
     SIZES.iter().map(|&n| {
         let no = if is_lesson(e) && n != e.squad { LESSON_ONLY }
@@ -73,7 +73,7 @@ pub(in crate::outfit) fn squad_choices(e: &LoadoutEntry) -> Vec<SquadChoice> {
     }).collect()
 }
 
-/// What a size changes on a kind of mission; `office`: the bundled level, the one with a breach plan.   (loadout.ts noteOf)
+/// What a size changes on a kind of mission; `office`: the bundled level, the one with a breach plan.
 fn note_of(kind: LoadoutKind, n: f64, office: bool, own: f64) -> &'static str {
     use LoadoutKind::{Quiet, Rescue, Solo};
     if kind == Solo { return "Alone on the office floor."; }
@@ -102,7 +102,7 @@ const FOUR: [RosterMan; 4] = [
     RosterMan { name: "Blue Two", pair: PairId::Blue },
 ];
 
-/// The men of a size, in staging order: up to two are the pair, three or four the four-man squad's first three or all of it.   (loadout.ts rosterOf)
+/// The men of a size, in staging order: up to two are the pair, three or four the four-man squad's first three or all of it.
 pub(in crate::outfit) fn roster_of(n: f64) -> &'static [RosterMan] {
     let n = n as usize;
     if n > 2 { &FOUR[..n] } else { &PAIR[..n] }
@@ -113,16 +113,16 @@ fn not_yours(note: &str) -> String { note.replacen("your own kit, and nobody", "
 
 fn joined(note: String, then: &str) -> String { if note.is_empty() { String::from(then) } else { format!("{note} {then}") } }
 
-/// A size's note on a lesson played as issued.   (loadout.ts lessonNote)
+/// A size's note on a lesson played as issued.
 pub(in crate::outfit) fn lesson_note(note: &str) -> String { joined(not_yours(note), LESSON_KIT) }
 
-/// A size's note on a mission that issues its own kit, with who carries what.   (loadout.ts issueNote)
+/// A size's note on a mission that issues its own kit, with who carries what.
 pub fn issue_note(note: &str, who: &str) -> String {
     let said = if who.is_empty() { format!("{MISSION_KIT}.") } else { format!("{MISSION_KIT}: {who}.") };
     joined(not_yours(note), &said)
 }
 
-/// The row is played with the kit as issued, whatever this machine keeps: a lesson.   (loadout.ts kitAsIssued)
+/// The row is played with the kit as issued, whatever this machine keeps: a lesson.
 pub fn kit_as_issued(e: &LoadoutEntry) -> bool { is_lesson(e) }
 
 /// The five sizes a screen with no mission offers: all of them, with nothing to say.

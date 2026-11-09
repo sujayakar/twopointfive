@@ -6,8 +6,8 @@
 //! WHAT IS NOT HERE, AND WHY: rain, snow and wet as they are drawn (rainFx.ts, snowFx.ts, wetGround.ts and the rest: dressing, reading this); the kinds' tables
 //! (weatherKinds.ts: authored numbers handed in when a kind is set); the lot's soaked box (a Box of the host's, which a round's material still reads); a man's
 //! place, head and coat (fields of TypeScript objects, handed over as a call's numbers until the men's columns land); the hour (hours.ts: last, on the lamps' table).
+use game_types::knobs::Knobs;
 use crate::air::Air;
-use crate::knobs::{k, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS};
 use crate::lines;
 use crate::maths::{exp, hypot2, hypot3, pow};
 use crate::state::state;
@@ -53,7 +53,7 @@ pub struct Weather {
 // (a whole number of sixteens: the pools after it start on a 16-byte boundary, state.rs)
 const _: () = assert!(size_of::<Weather>() == 8 * 13 + 8 * ROOFS * 4 + 8 + 8 * THUNDERS * TH + 8 + 8 + size_of::<Air>() && size_of::<Weather>() % 16 == 0);
 
-/// the storm's numbers (weather.ts): seconds between strokes, the lot's soak, the speed of sound, a stroke's own peak
+/// the storm's numbers: seconds between strokes, the lot's soak, the speed of sound, a stroke's own peak
 const SPEED_OF_SOUND: f64 = 343.0;
 const FLASH_PEAK: f64 = 18.0;
 const FLASH_MEAN_GAP: f64 = 11.0;
@@ -152,27 +152,27 @@ pub fn roofs_end(out: &mut [f64]) -> usize {
 // ---- what the weather answers to hearing
 /// Weather.rainBed: the rain's level at a listener, what the mixer plays there and what drowns small noises
 #[inline]
-pub fn rain_bed(w: &Weather, x: f64, z: f64) -> f64 {
+pub fn rain_bed(w: &Weather, x: f64, z: f64, tune: &Knobs) -> f64 {
     if w.rain_rate > 0.001 {
-        (0.35 + 0.65 * w.rain_rate) * (if under_roof(w, x, z) { k(WX_ROOF_BED) } else { 1.0 })
+        (0.35 + 0.65 * w.rain_rate) * (if under_roof(w, x, z) { tune.wx_sim.roof_bed } else { 1.0 })
     } else {
         0.0
     }
 }
 /// Weather.hearMask: the factor (at least 1) a sound's path is stretched by for a listener at (x, z). A number of the ear alone
-pub fn hear_mask(w: &Weather, time: f64, x: f64, z: f64) -> f64 {
+pub fn hear_mask(w: &Weather, time: f64, x: f64, z: f64, tune: &Knobs) -> f64 {
     if w.live == 0.0 {
         return 1.0;
     }
-    let mut m = 1.0 + k(WX_RAIN_K) * rain_bed(w, x, z);
+    let mut m = 1.0 + tune.wx_sim.rain_k * rain_bed(w, x, z, tune);
     if time < w.thunder_until {
-        m += k(WX_THUNDER_K) * (if under_roof(w, x, z) { 0.6 } else { 1.0 });
+        m += tune.wx_sim.thunder_k * (if under_roof(w, x, z) { 0.6 } else { 1.0 });
     }
     m
 }
 
 // ---- what the weather answers to sight
-/// weatherKinds.ts fogTau: the fog's optical depth along a → b, before any roof
+/// The fog's optical depth along a → b, before any roof
 pub fn fog_tau(sigma: f64, h: f64, a: [f64; 3], b: [f64; 3]) -> f64 {
     let l = hypot3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     if !(l > 0.0) {
@@ -276,7 +276,7 @@ pub fn stroke_due(w: &mut Weather, time: f64) -> bool {
 /// Weather.update's thunder and playThunder's dice, one thunder: is thunder `i` due. If it is it leaves the list, its clap may drown the small noises, and four
 /// dice are thrown whoever is listening (the schedule after it never hangs on where the camera was). Into `out`: how far off, the bearing, how loud, the pitch's
 /// die, the three of a remark, and when it was due.
-pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64]) -> bool {
+pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64], tune: &Knobs) -> bool {
     let q = i * TH;
     if !(time >= w.thunders[q]) {
         return false;
@@ -289,8 +289,8 @@ pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64]) -> boo
     out[1] = bearing;
     out[2] = loud;
     out[3] = rnd(w);
-    if w.live != 0.0 && loud > k(WX_THUNDER_LOUD) {
-        w.thunder_until = time + k(WX_THUNDER_SECS);
+    if w.live != 0.0 && loud > tune.wx_sim.thunder_loud {
+        w.thunder_until = time + tune.wx_sim.thunder_secs;
     }
     out[4] = rnd(w);
     out[5] = rnd(w);
@@ -298,7 +298,7 @@ pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64]) -> boo
     out[7] = at;
     true
 }
-/// weather.ts strokeMean: the mean of the stroke's envelope over [a, b], its `n` pulses (t0, amp, tau) in `pulses`
+/// The mean of the stroke's envelope over [a, b], its `n` pulses (t0, amp, tau) in `pulses`
 pub fn stroke_mean(pulses: &[f64], n: usize, a: f64, b: f64) -> f64 {
     if b <= a {
         let mut e = 0.0;
@@ -334,10 +334,10 @@ const SKY_RING: f64 = 0.35;
 const WET_SKY_SECS: f64 = 0.25;
 const SKY_OFFSETS: [[f64; 2]; 5] = [[0.0, 0.0], [SKY_RING, 0.0], [-SKY_RING, 0.0], [0.0, SKY_RING], [0.0, -SKY_RING]];
 
-/// wet.ts openSky: is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of
+/// Is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of
 /// a second a man (`sky_t`, `open`: his, handed in and back). `head`: how high his head is, as the host reads it. → (open, this call asked the rays)
 #[allow(clippy::too_many_arguments)]
-pub fn open_sky(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, x: f64, z: f64, head: f64, sky_t: &mut f64, open: &mut f64) -> (bool, bool) {
+pub fn open_sky(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, x: f64, z: f64, head: f64, sky_t: &mut f64, open: &mut f64, tune: &Knobs) -> (bool, bool) {
     if under_roof(wx, x, z) {
         return (false, false);
     }
@@ -346,7 +346,7 @@ pub fn open_sky(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, x: f64, 
         *sky_t = time;
         let mut covered = 0;
         for o in SKY_OFFSETS.iter() {
-            if lines::solid_line(wo, set, ask, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1]) == Some(true) {
+            if lines::solid_line(wo, set, ask, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], tune) == Some(true) {
                 covered += 1;
             }
         }
@@ -367,12 +367,12 @@ pub const M_ASKED: usize = 6;
 pub const M_LEN: usize = 7;
 /// wet.ts updateWetness, one man. `m` is his coat as above.
 #[allow(clippy::too_many_arguments)]
-pub fn wet_step(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, dt: f64, x: f64, z: f64, head: f64, m: &mut [f64]) {
+pub fn wet_step(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, dt: f64, x: f64, z: f64, head: f64, m: &mut [f64], tune: &Knobs) {
     let rain = js_max(0.0, wx.rain_now);
     let (mut sky_t, mut open) = (m[M_SKY_T], m[M_OPEN]);
     let mut asked = false;
     let wetting = rain > 0.001 && {
-        let (o, a) = open_sky(wx, wo, set, ask, time, x, z, head, &mut sky_t, &mut open);
+        let (o, a) = open_sky(wx, wo, set, ask, time, x, z, head, &mut sky_t, &mut open, tune);
         asked = a;
         o
     };
@@ -380,16 +380,16 @@ pub fn wet_step(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, dt: f64,
     m[M_OPEN] = open;
     m[M_ASKED] = if asked { 1.0 } else { 0.0 };
     let (mut wet, mut beads, mut rate, mut line) = (m[M_WET], m[M_BEADS], m[M_RAIN], m[M_LINE]);
-    let runoff = js_max(k(WET_BEAD_RUNOFF), 0.1);
+    let runoff = js_max(tune.wet.bead_runoff_secs, 0.1);
     if wetting {
         line = f64::INFINITY;
-        let soak = k(WET_SOAK_PER_SEC);
+        let soak = tune.wet.soak_per_sec;
         wet = clamp(wet + soak * (0.4 + 0.6 * rain) * dt, 0.0, 1.0);
         let beads_to = clamp(0.35 + 0.65 * rain, 0.0, 1.0);
         beads = if beads < beads_to { js_min(beads_to, beads + 3.0 * soak * (0.4 + 0.6 * rain) * dt) } else { js_max(beads_to, beads - dt / runoff) };
         rate = rate + (rain - rate) * js_min(1.0, dt * 2.0);
     } else {
-        wet = clamp(wet - k(WET_DRY_PER_SEC) * dt, 0.0, 1.0);
+        wet = clamp(wet - tune.wet.dry_per_sec * dt, 0.0, 1.0);
         beads = clamp(beads - dt / runoff, 0.0, 1.0);
     }
     if wet <= 0.0 && beads <= 0.0 {

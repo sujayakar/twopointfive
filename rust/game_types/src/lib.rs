@@ -203,7 +203,6 @@ pub mod roomfit { pub mod types; pub use types::*; }
 pub mod roomread { pub mod types; pub use types::*; }
 pub mod rowset { pub mod types; pub use types::*; }
 pub mod runner { pub mod types; pub use types::*; }
-pub mod rustknobs { pub mod types; pub use types::*; }
 pub mod samlook { pub mod types; pub use types::*; }
 pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }

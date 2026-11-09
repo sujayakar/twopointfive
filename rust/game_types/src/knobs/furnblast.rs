@@ -23,20 +23,16 @@ pub struct FurnK {
     #[k(0.45)] pub mouth_m: f64,
     /// two calls in one frame within this of each other are one blast (the wall charge's borrowed bang)
     #[k(1.5)] pub merge_m: f64,
-    /// A HOLE A BLAST OPENS CAN BE WALKED THROUGH (mouth(); `on`: raised by the page — src/host/profile.ts pageSwitches, ?holeclear=0 — off here and on the frozen
-    ///  stand, TPS_HOLECLEAR=1): what stands in a body's way in either mouth of the hole — the stretch of the wall open from the floor up, `depth` m out from each
-    ///  face — goes with the blast, WHOEVER OWNS IT: a cover piece the wall shielded from the burst (the stretch of it in the way), a piece of furniture too heavy
-    ///  for the bands above, a thing under a roof that neither engine lists (a counter in white, shelving on legs, a board on the wall), and what rests on them.
-    ///  Never: anything taller than `top` or heavier than `vol` m³, a structure paint other than white, a post (a door frame's jamb), a light's or a fixture's box
-    ///  or what carries one, the mission's own thing, the breaker. `chunks` = rigid pieces a blast's mouths may make on top of the blast's own (out of pieces a
-    ///  thing still goes, as chips). A thing the engines do not list goes WHOLE (a long counter for a short hole). off = whatever stood by the wall stands in it.
-    ///  `snow` (raised by the page — pageSwitches, ?holesnow=0 — off here and on the frozen stand, TPS_HOLESNOW=1; acts only with `on`): LYING SNOW IN A MOUTH GOES
-    ///  TOO — a bank against the wall's foot on a snow level (a box in a snow paint, which reads as the ground to a blast and so as structure here; the pass keeps
-    ///  every bank over 0.2 m clear of its doors because it stops feet, and a charge makes a door anywhere). The maintainer, 10-15, of a wall charge on the pass:
-    ///  "couldn't path through a hole from a wall breach" — two banks at the foot stopped him, the walk grid and the charge's own 'is it a hole' ray ("it held").
-    ///  off = a bank stands in the hole it was blown under. PICTURE: the snow field (render/snowField.ts) is baked at the level's start and still draws its hill.
+    /// A HOLE A BLAST OPENS CAN BE WALKED THROUGH (mouth(); Never: anything taller than `top` or heavier than `vol` m³, a structure paint other than white, a post
+    /// (a door frame's jamb), a light's or a fixture's box or what carries one, the mission's own thing, the breaker. `chunks` = rigid pieces a blast's mouths may
+    /// make on top of the blast's own (out of pieces a thing still goes, as chips). A thing the engines do not list goes WHOLE (a long counter for a short hole).
+    /// off = whatever stood by the wall stands in it. LYING SNOW IN A MOUTH GOES TOO — a bank against the wall's foot on a snow level (a box in a snow paint, which
+    /// reads as the ground to a blast and so as structure here; the pass keeps every bank over 0.2 m clear of its doors because it stops feet, and a charge makes a
+    /// door anywhere). The maintainer, 10-15, of a wall charge on the pass: "couldn't path through a hole from a wall breach" — two banks at the foot stopped him,
+    /// the walk grid and the charge's own 'is it a hole' ray ("it held"). off = a bank stands in the hole it was blown under. PICTURE: the snow field
+    /// (render/snowField.ts) is baked at the level's start and still draws its hill.
     pub mouth: FurnKMouth,
-    /// WHAT HUNG ON THE WALL UNDER A CHARGE (hungGoes; wallcharge.ts WALLCHARGE.hung is its switch): cut into slabs `len` m long (at most `max`) by `strips`; the
+    /// WHAT HUNG ON THE WALL UNDER A CHARGE: cut into slabs `len` m long (at most `max`) by `strips`; the
     ///  slabs within `underM` of the charge along the wall are driven through the hole at `through` m/s (lo, hi), the rest torn off into the room at `back` m/s
     ///  and along the wall at up to `side` m/s, `up` m/s off the floor, tumbling (`spin`, as throwPiece's); a long slab counts as under the charge only with its middle within `holeM` of it; `chunks` = rigid pieces one thing may make (past it,
     ///  splinters); `chips` = splinters thrown back into the room and through, at `chipV` m/s.
@@ -51,18 +47,14 @@ pub struct FurnK {
     #[k(3.6)] pub row_m: f64,
 }
 
-/// A HOLE A BLAST OPENS CAN BE WALKED THROUGH (mouth(); `on`: raised by the page — src/host/profile.ts pageSwitches, ?holeclear=0 — off here and on the frozen
-///  stand, TPS_HOLECLEAR=1): what stands in a body's way in either mouth of the hole — the stretch of the wall open from the floor up, `depth` m out from each
-///  face — goes with the blast, WHOEVER OWNS IT: a cover piece the wall shielded from the burst (the stretch of it in the way), a piece of furniture too heavy
-///  for the bands above, a thing under a roof that neither engine lists (a counter in white, shelving on legs, a board on the wall), and what rests on them.
-///  Never: anything taller than `top` or heavier than `vol` m³, a structure paint other than white, a post (a door frame's jamb), a light's or a fixture's box
-///  or what carries one, the mission's own thing, the breaker. `chunks` = rigid pieces a blast's mouths may make on top of the blast's own (out of pieces a
-///  thing still goes, as chips). A thing the engines do not list goes WHOLE (a long counter for a short hole). off = whatever stood by the wall stands in it.
-///  `snow` (raised by the page — pageSwitches, ?holesnow=0 — off here and on the frozen stand, TPS_HOLESNOW=1; acts only with `on`): LYING SNOW IN A MOUTH GOES
-///  TOO — a bank against the wall's foot on a snow level (a box in a snow paint, which reads as the ground to a blast and so as structure here; the pass keeps
-///  every bank over 0.2 m clear of its doors because it stops feet, and a charge makes a door anywhere). The maintainer, 10-15, of a wall charge on the pass:
-///  "couldn't path through a hole from a wall breach" — two banks at the foot stopped him, the walk grid and the charge's own 'is it a hole' ray ("it held").
-///  off = a bank stands in the hole it was blown under. PICTURE: the snow field (render/snowField.ts) is baked at the level's start and still draws its hill.
+/// A HOLE A BLAST OPENS CAN BE WALKED THROUGH (mouth(); Never: anything taller than `top` or heavier than `vol` m³, a structure paint other than white, a post
+/// (a door frame's jamb), a light's or a fixture's box or what carries one, the mission's own thing, the breaker. `chunks` = rigid pieces a blast's mouths may
+/// make on top of the blast's own (out of pieces a thing still goes, as chips). A thing the engines do not list goes WHOLE (a long counter for a short hole).
+/// off = whatever stood by the wall stands in it. LYING SNOW IN A MOUTH GOES TOO — a bank against the wall's foot on a snow level (a box in a snow paint, which
+/// reads as the ground to a blast and so as structure here; the pass keeps every bank over 0.2 m clear of its doors because it stops feet, and a charge makes a
+/// door anywhere). The maintainer, 10-15, of a wall charge on the pass: "couldn't path through a hole from a wall breach" — two banks at the foot stopped him,
+/// the walk grid and the charge's own 'is it a hole' ray ("it held"). off = a bank stands in the hole it was blown under. PICTURE: the snow field
+/// (render/snowField.ts) is baked at the level's start and still draws its hill.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct FurnKMouth {
     #[k(0.9)] pub depth: f64,
@@ -72,7 +64,7 @@ pub struct FurnKMouth {
     #[k(0.08)] pub base_thick: f64,
 }
 
-/// WHAT HUNG ON THE WALL UNDER A CHARGE (hungGoes; wallcharge.ts WALLCHARGE.hung is its switch): cut into slabs `len` m long (at most `max`) by `strips`; the
+/// WHAT HUNG ON THE WALL UNDER A CHARGE: cut into slabs `len` m long (at most `max`) by `strips`; the
 ///  slabs within `underM` of the charge along the wall are driven through the hole at `through` m/s (lo, hi), the rest torn off into the room at `back` m/s
 ///  and along the wall at up to `side` m/s, `up` m/s off the floor, tumbling (`spin`, as throwPiece's); a long slab counts as under the charge only with its middle within `holeM` of it; `chunks` = rigid pieces one thing may make (past it,
 ///  splinters); `chips` = splinters thrown back into the room and through, at `chipV` m/s.

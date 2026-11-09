@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// The guns a card puts on member i, the one in his hands first.   (kitload.ts gunsOf)
+/// The guns a card puts on member i, the one in his hands first.
 fn guns_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Vec<crate::weapons::WeaponId> {
     let hand = crate::kit::kit_gun(g, m);
     if m.weapon == crate::kit::KitWeapon::Pistol {
@@ -26,7 +26,7 @@ fn guns_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Vec<crat
     }
 }
 
-/// What one gun takes off the two scores, by its row.   (kitload.ts gunLoad)
+/// What one gun takes off the two scores, by its row.
 fn gun_load(g: &crate::game::Game, w: crate::weapons::WeaponId) -> crate::kitload::KitLoad {
     match g.m.weapons.weapons.get(w) {
         Some(d) => crate::kitload::KitLoad {
@@ -37,7 +37,7 @@ fn gun_load(g: &crate::game::Game, w: crate::weapons::WeaponId) -> crate::kitloa
     }
 }
 
-/// A cost plus `n` (default 1) of another; no other, no change.   (kitload.ts add)
+/// A cost plus `n` (default 1) of another; no other, no change.
 fn add(a: [f64; 2], b: Option<[f64; 2]>, n: Option<f64>) -> [f64; 2] {
     let n = n.unwrap_or(1.0);
     match b {
@@ -61,7 +61,7 @@ fn card_count(m: &crate::kit::MemberKit, field: &str) -> f64 {
     js::to_i32(n) as f64
 }
 
-/// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).   (kitload.ts loadShare)
+/// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).
 pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, field: &str) -> Option<crate::kitload::KitLoad> {
     let mut c: [f64; 2] = [0.0, 0.0];
     if field == "weapon" || field == "primary" || field == "secondary" {
@@ -99,7 +99,7 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
     }
 }
 
-/// Member i's two scores for the card `m`: 1 less what every row his card HAS takes.   (kitload.ts loadOf)
+/// Member i's two scores for the card `m`: 1 less what every row his card HAS takes.
 pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> crate::kitload::KitLoad {
     let (mut mob, mut con) = (0.0, 0.0);
     for r in crate::kit::kit_rows(g, i) {
@@ -111,18 +111,18 @@ pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberK
     crate::kitload::KitLoad { mob: v3::clamp(1.0 - mob, 0.0, 1.0), con: v3::clamp(1.0 - con, 0.0, 1.0) }
 }
 
-/// The reference for member i: his own card as issued, to a team of `n`.   (kitload.ts loadRef)
+/// The reference for member i: his own card as issued, to a team of `n`.
 pub(super) fn load_ref(g: &mut crate::game::Game, i: f64, n: Option<f64>) -> crate::kitload::KitLoad {
     let issued = crate::kit::kit_issued_shown(g, i, n);
     load_of(g, i, &issued)
 }
 
-/// A score within a hair of his reference IS it: ×1 exactly.   (kitload.ts snap)
+/// A score within a hair of his reference IS it: ×1 exactly.
 fn snap(x: f64, r: f64) -> f64 {
     if m::abs(x - r) < 1e-9 { r } else { x }
 }
 
-/// What member i wears with the card `m` on him; None with the pouches rule off.   (kitload.ts loadWorn)
+/// What member i wears with the card `m` on him; None with the pouches rule off.
 fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> Option<crate::kitload::KitWorn> {
     if !g.k.slots.on {
         return None;
@@ -132,22 +132,22 @@ fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Op
     Some(crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con })
 }
 
-/// His legs' pace × his reference.   (kitload.ts loadPaceK)
+/// His legs' pace × his reference.
 fn load_pace_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.5, 1.0 + (w.mob - w.ref_mob) * g.k.kitload.pace)
 }
 
-/// The notice he builds in an eye × his reference.   (kitload.ts loadSeenK)
+/// The notice he builds in an eye × his reference.
 fn load_seen_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.seen)
 }
 
-/// His footfall's level × his reference.   (kitload.ts loadHeardK)
+/// His footfall's level × his reference.
 fn load_heard_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.heard)
 }
 
-/// Your card has just gone on this run's Player (None: it came off, or the staging chose his kit itself).   (kitload.ts loadWear)
+/// Your card has just gone on this run's Player (None: it came off, or the staging chose his kit itself).
 pub(super) fn load_wear(g: &mut crate::game::Game, m: Option<&crate::kit::MemberKit>) {
     let worn = match m {
         Some(m) => load_worn(g, 0.0, m, None),
@@ -157,7 +157,7 @@ pub(super) fn load_wear(g: &mut crate::game::Game, m: Option<&crate::kit::Member
     g.pl[p].kit_load = worn;
 }
 
-/// Member i's card has just gone on this teammate, one of `n` who came (None: the staging chose his kit itself).   (kitload.ts loadMan)
+/// Member i's card has just gone on this teammate, one of `n` who came (None: the staging chose his kit itself).
 pub(super) fn load_man(g: &mut crate::game::Game, gd: GuardId, i: f64, m: Option<&crate::kit::MemberKit>, n: Option<f64>) {
     let worn = match m {
         Some(m) => load_worn(g, i, m, n),
@@ -173,7 +173,7 @@ pub(super) fn load_man(g: &mut crate::game::Game, gd: GuardId, i: f64, m: Option
     }
 }
 
-/// What the floor reads for this man; None = nothing weighs on him.   (kitload.ts loadOn)
+/// What the floor reads for this man; None = nothing weighs on him.
 fn load_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadOnWho) -> Option<crate::kitload::KitWorn> {
     match who {
         crate::kitload::LoadOnWho::Player => {
@@ -184,7 +184,7 @@ fn load_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitl
     }
 }
 
-/// × the speed this man's legs may be asked for.   (kitload.ts loadPaceOn)
+/// × the speed this man's legs may be asked for.
 pub fn load_pace_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadPaceOnWho) -> f64 {
     let who = match who {
         crate::kitload::LoadPaceOnWho::Guard(gd) => crate::kitload::LoadOnWho::Guard(gd),
@@ -196,7 +196,7 @@ pub fn load_pace_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: cr
     }
 }
 
-/// × YOUR flat-out run: as much of the pace factor as `sprint` keeps.   (kitload.ts loadSprintOn)
+/// × YOUR flat-out run: as much of the pace factor as `sprint` keeps.
 pub fn load_sprint_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     match load_on(g, seat, crate::kitload::LoadOnWho::Player) {
         Some(w) => 1.0 + (load_pace_k(g, w) - 1.0) * g.k.kitload.sprint,
@@ -204,7 +204,7 @@ pub fn load_sprint_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f6
     }
 }
 
-/// The speed YOUR legs may be asked for.   (kitload.ts samLoadPace)
+/// The speed YOUR legs may be asked for.
 pub fn sam_load_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, speed: f64, sprint: Option<bool>) -> f64 {
     let sprint = sprint.unwrap_or(false);
     match load_on(g, seat, crate::kitload::LoadOnWho::Player) {
@@ -213,7 +213,7 @@ pub fn sam_load_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, speed:
     }
 }
 
-/// The speed an AI man's legs may be asked for; a light card never raises it past `paceTop`. NOT a cap: one call a leg.   (kitload.ts loadPace)
+/// The speed an AI man's legs may be asked for; a light card never raises it past `paceTop`. NOT a cap: one call a leg.
 pub fn load_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
     let w = match load_on(g, seat, crate::kitload::LoadOnWho::Guard(gd)) {
         Some(w) => w,
@@ -222,7 +222,7 @@ pub fn load_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     m::min(speed * load_pace_k(g, w), m::max(speed, g.k.kitload.pace_top))
 }
 
-/// The speed he would be doing with his issue on him, for "is this step a walk's or a run's".   (kitload.ts loadGait)
+/// The speed he would be doing with his issue on him, for "is this step a walk's or a run's".
 pub fn load_gait(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadGaitWho, speed: f64) -> f64 {
     let who = match who {
         crate::kitload::LoadGaitWho::Guard(gd) => crate::kitload::LoadOnWho::Guard(gd),
@@ -235,7 +235,7 @@ pub fn load_gait(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate
     if k == 1.0 { speed } else { speed / k - 1e-6 }
 }
 
-/// × the notice this man builds in an eye that has him.   (kitload.ts loadSeen)
+/// × the notice this man builds in an eye that has him.
 pub fn load_seen(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadSeenWho) -> f64 {
     let who = match who {
         crate::kitload::LoadSeenWho::Guard(gd) => crate::kitload::LoadOnWho::Guard(gd),
@@ -247,7 +247,7 @@ pub fn load_seen(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate
     }
 }
 
-/// × a footfall's level, his.   (kitload.ts loadHeard)
+/// × a footfall's level, his.
 pub fn load_heard(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadHeardWho) -> f64 {
     let who = match who {
         crate::kitload::LoadHeardWho::Guard(gd) => crate::kitload::LoadOnWho::Guard(gd),
@@ -259,7 +259,7 @@ pub fn load_heard(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crat
     }
 }
 
-/// × what a low crossing under an eye costs this man in that eye's notice.   (kitload.ts loadCross)
+/// × what a low crossing under an eye costs this man in that eye's notice.
 pub fn load_cross(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadCrossWho) -> f64 {
     let who = match who {
         crate::kitload::LoadCrossWho::Guard(gd) => crate::kitload::LoadOnWho::Guard(gd),

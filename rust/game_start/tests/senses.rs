@@ -298,7 +298,7 @@ fn a_fire_fights_wisps_leave_room_for_dust() {
 
 
 /// A FAILURE MEANS: asking what light stands on a point changes the game. A page's throw preview asks it for a block of floor at a time, whenever a menu is up, and the host
-/// takes no state back after it (src/view/worldask.ts `light`): a question that writes would part two machines of one game, and a replay from its run.
+/// takes no state back after it: a question that writes would part two machines of one game, and a replay from its run.
 #[test]
 fn asking_the_light_writes_nothing() {
     for seed in [1u32, 2, 3] {

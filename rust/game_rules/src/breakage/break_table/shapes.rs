@@ -7,12 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec, vec::Vec};
 
-/// INVENTED, for BREAK[mat] (src/game/breakTable.ts:61): the row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
+/// INVENTED, for BREAK[mat]: the row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
 pub(super) fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
 
 type P2 = [f64; 2];
 
-/// The row a Surf reads.   (breakTable.ts matOfSurf, SURF_MAT)
+/// The row a Surf reads.
 pub(super) fn mat_of_surf(s: crate::scene_materials::Surf) -> crate::break_table::Mat {
     use crate::scene_materials::Surf;
     match s {
@@ -29,7 +29,7 @@ pub(super) fn mat_of_surf(s: crate::scene_materials::Surf) -> crate::break_table
     }
 }
 
-/// The row a pool chunk reads: by what the lane knows the thing is, else by what its box does.   (breakTable.ts matOf)
+/// The row a pool chunk reads: by what the lane knows the thing is, else by what its box does.
 pub(super) fn mat_of(g: &crate::game::Game, kind: crate::debris::ChunkKind, box_: &crate::break_table::MatOfBox) -> crate::break_table::Mat {
     use crate::debris::ChunkKind;
     use crate::scene_materials::Surf;
@@ -60,7 +60,7 @@ pub(super) fn inside_of(stuff: Option<crate::scene_stuff::BoxStuff>, mat: crate:
     }
 }
 
-/// What a broken edge shows.   (breakTable.ts coreOf)
+/// What a broken edge shows.
 pub(in crate::breakage) fn core_of(inside: crate::break_table::Inside, paint: V3) -> V3 {
     match inside.core {
         Some(c) => c,
@@ -68,7 +68,7 @@ pub(in crate::breakage) fn core_of(inside: crate::break_table::Inside, paint: V3
     }
 }
 
-/// The colour a piece's cut faces show; None = the box's own.   (breakTable.ts faceCore)
+/// The colour a piece's cut faces show; None = the box's own.
 pub(super) fn face_core(inside: crate::break_table::Inside, paint: V3) -> Option<V3> {
     if let Some(c) = inside.core { return Some(v3::copy(c)); }
     match inside.pale {
@@ -77,10 +77,10 @@ pub(super) fn face_core(inside: crate::break_table::Inside, paint: V3) -> Option
     }
 }
 
-/// A point of a range.   (breakTable.ts lerp)
+/// A point of a range.
 pub(super) fn lerp(r: [f64; 2], t: f64) -> f64 { r[0] + (r[1] - r[0]) * t }
 
-/// SLAB: the rectangle with `tears` of its corners broken off, one of them the long tear.   (breakTable.ts slabOutline)
+/// SLAB: the rectangle with `tears` of its corners broken off, one of them the long tear.
 fn slab_outline(l: f64, s: f64, tears: f64, r: &mut dyn FnMut() -> f64) -> Vec<[f64; 2]> {
     let corner: [P2; 4] = [[-l, -s], [l, -s], [l, s], [-l, s]];
     let mut pick = [0usize, 1, 2, 3];
@@ -132,7 +132,7 @@ fn slab_outline(l: f64, s: f64, tears: f64, r: &mut dyn FnMut() -> f64) -> Vec<[
     out
 }
 
-/// WEDGE: the rectangle cut by one line near a diagonal, one half kept; `flip` keeps the other half.   (breakTable.ts wedgeOutline)
+/// WEDGE: the rectangle cut by one line near a diagonal, one half kept; `flip` keeps the other half.
 fn wedge_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64, flip: Option<bool>) -> Vec<[f64; 2]> {
     let flip = flip.unwrap_or(false);
     let which = if r() < 0.5 { 1.0 } else { -1.0 };
@@ -156,7 +156,7 @@ fn wedge_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64, flip: Option<bool>)
     out
 }
 
-/// One broken end of a snapped piece.   (breakTable.ts snappedOutline's `end`)
+/// One broken end of a snapped piece.
 fn snapped_end(sign: f64, l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<P2> {
     let a1 = (20.0 + 20.0 * r()) * RAD;
     let two = r() < 0.55;
@@ -170,7 +170,7 @@ fn snapped_end(sign: f64, l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<P2>
     vec![[sign * (l - m::min((s0 + s) * m::tan(a1), 0.8 * l)), -s], [sign * l, s0], [sign * (l - m::min((s - s0) * m::tan(a2), 0.8 * l)), s]]
 }
 
-/// SNAPPED END: a long piece whose +l end is broken to a point (the −l end too, one time in three).   (breakTable.ts snappedOutline)
+/// SNAPPED END: a long piece whose +l end is broken to a point (the −l end too, one time in three).
 fn snapped_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<[f64; 2]> {
     let mut out = snapped_end(1.0, l, s, r);
     let mut lo: Vec<P2> = if r() < 0.33 { snapped_end(-1.0, l, s, r) } else { vec![[-l, -s], [-l, s]] };
@@ -179,7 +179,7 @@ fn snapped_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<[f64; 2]> 
     out
 }
 
-/// STRIP: a long splinter, both long sides closing toward the +l end.   (breakTable.ts stripOutline)
+/// STRIP: a long splinter, both long sides closing toward the +l end.
 fn strip_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<[f64; 2]> {
     let most = 2.0 * l * m::tan(8.0 * RAD);
     let t0 = m::min(s * (0.55 + 0.4 * r()), most);
@@ -187,7 +187,7 @@ fn strip_outline(l: f64, s: f64, r: &mut dyn FnMut() -> f64) -> Vec<[f64; 2]> {
     vec![[-l, -s], [l, -s + t0], [l, s - t1], [-l, s]]
 }
 
-/// The outline of `shape` in the piece's own (l, s).   (breakTable.ts outlineOf)
+/// The outline of `shape` in the piece's own (l, s).
 fn outline_of(shape: crate::break_table::Shape, l: f64, s: f64, row: &crate::break_table::BreakRow, r: &mut dyn FnMut() -> f64, flip: bool) -> Vec<[f64; 2]> {
     if shape == Shape::Wedge { return wedge_outline(l, s, r, Some(flip)); }
     if shape == Shape::Snapped { return snapped_outline(l, s, r); }
@@ -197,7 +197,7 @@ fn outline_of(shape: crate::break_table::Shape, l: f64, s: f64, row: &crate::bre
     slab_outline(l, s, tears, r)
 }
 
-/// `shape` as a fitted cut box, extruded across `thin`; a lump has 1‥3 corners broken as well. None = nothing left.   (breakTable.ts shapeBox)
+/// `shape` as a fitted cut box, extruded across `thin`; a lump has 1‥3 corners broken as well. None = nothing left.
 pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Shape, thin: f64, half_t: f64, l: f64, s: f64, long_first: bool, row: &crate::break_table::BreakRow, r: &mut dyn FnMut(&mut crate::game::Game) -> f64, flip: Option<bool>) -> Option<crate::break_table::Shaped> {
     let flip = flip.unwrap_or(false);
     let o = {
@@ -249,7 +249,7 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     Some(Shaped { off: [pr.off[0] + f.off[0], pr.off[1] + f.off[1], pr.off[2] + f.off[2]], h: f.h, cut: f.cut })
 }
 
-/// Lays one plane on an open face if the face and the piece still have room and it bites at all.   (breakTable.ts raggedCut's `push`)
+/// Lays one plane on an open face if the face and the piece still have room and it bites at all.
 fn ragged_push(planes: &mut Vec<crate::scene_cut::CutPlane>, mine: &mut f64, per_face: f64, most: f64, f: &OpenFace, h: V3, l: usize, side: f64, th: f64, bite: f64) {
     if *mine >= per_face || planes.len() as f64 >= most || !(bite > 0.004) { return; }
     let axis = f.axis as usize;
@@ -308,7 +308,7 @@ fn ragged_planes(rag: &BreakRowRagged, h: V3, faces: &[OpenFace], most: f64, acr
     planes
 }
 
-/// RAGGED END: the planes for a standing piece's open faces. The record is not fitted: feet and the nav grid keep the box.   (breakTable.ts raggedCut)
+/// RAGGED END: the planes for a standing piece's open faces. The record is not fitted: feet and the nav grid keep the box.
 pub(super) fn ragged_cut(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
     let rag = row.ragged?;
     if faces.is_empty() { return None; }
@@ -335,7 +335,7 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
     v3::normalize([n[0] * s + t[0] * keep, 0.0, n[2] * s + t[2] * keep])
 }
 
-/// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.   (breakTable.ts wallNormal)
+/// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.
 pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
     let (yaw, h, c) = seam_box_numbers(g, b);

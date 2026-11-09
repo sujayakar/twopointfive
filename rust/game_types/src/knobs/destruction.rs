@@ -49,7 +49,7 @@ pub struct ChaosK {
     /// the panel over a beaten zone goes with the tile beside it, and all of it is capped per encounter so a long fight cannot put the whole floor in the dark.
     pub loud: ChaosKLoud,
     /// A BLAST'S PALL (the maintainer, 10-14: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A charge's dust was the
-    ///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge (wallcharge.ts blow → pallWall) and every burst that
+    ///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge and every burst that
     ///  comes through blast() with its chaos (the hand grenade, the 40 mm, a bomb → pallBurst) also raise a PALL — a handful of wide, slow, seconds-long emitters
     ///  into the smoke solver, on the charge's side of the wall and, through the hole, on the far side; in a ring round a burst with a darker column over it — and
     ///  a slow big layer of particle dust with it. The solver's part is real density: every sight line that crosses it reads it, the player's picture and the
@@ -65,12 +65,11 @@ pub struct ChaosK {
     ///  round a burst) living `dustLife` s, `dustSize` m, `dustSpeed`. Measured on the page (docs/agents/destruction.md): hidden across it for 3 to 4 s.
     ///  On (?pall=0 = the dust as it was, ?pall=look = the particle layer alone).
     pub pall: ChaosKPall,
-    /// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). OFF (the module's default, the frozen stand, a
-    ///  recording from before the key): a blast leaves its scorch and the chunks the pool still holds, and the rest of the dust is gone with the air. ON: where a
-    ///  blast's pall stood a pale film of settled dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes
-    ///  round it, none of them across a standing wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of
-    ///  cover that gives under fire leaves a small one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay.
-    ///  ALL OF IT is marks laid only for the picture (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
+    /// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). ON: where a blast's pall stood a pale film of settled
+    /// dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes round it, none of them across a standing
+    /// wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of cover that gives under fire leaves a small
+    /// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture
+    /// (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
     pub mess: ChaosKMess,
 }
 
@@ -159,7 +158,7 @@ pub struct ChaosKLoud {
 }
 
 /// A BLAST'S PALL (the maintainer, 10-14: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A charge's dust was the
-///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge (wallcharge.ts blow → pallWall) and every burst that
+///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge and every burst that
 ///  comes through blast() with its chaos (the hand grenade, the 40 mm, a bomb → pallBurst) also raise a PALL — a handful of wide, slow, seconds-long emitters
 ///  into the smoke solver, on the charge's side of the wall and, through the hole, on the far side; in a ring round a burst with a darker column over it — and
 ///  a slow big layer of particle dust with it. The solver's part is real density: every sight line that crosses it reads it, the player's picture and the
@@ -225,12 +224,11 @@ pub struct ChaosKPallBurst {
     #[k([0.34, 0.33, 0.32])] pub smoke: [f64; 3],
 }
 
-/// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). OFF (the module's default, the frozen stand, a
-///  recording from before the key): a blast leaves its scorch and the chunks the pool still holds, and the rest of the dust is gone with the air. ON: where a
-///  blast's pall stood a pale film of settled dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes
-///  round it, none of them across a standing wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of
-///  cover that gives under fire leaves a small one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay.
-///  ALL OF IT is marks laid only for the picture (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
+/// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). ON: where a blast's pall stood a pale film of settled
+/// dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes round it, none of them across a standing
+/// wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of cover that gives under fire leaves a small
+/// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture
+/// (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKMess {
     /// what STANDS in dust's way is whatever meets the band standY‥clearY (a wall, a pane, a cabinet; not a desk, a sill or a door's header) · how far a film

@@ -1,4 +1,3 @@
-//! src/game/player.ts lines 1282 to 1611
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -44,7 +43,7 @@ fn lose_path(g: &mut Game, gd: GuardId) {
     m_.path_goal_orbit = false;
 }
 
-/// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?   (player.ts stackInWay)
+/// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?
 fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
     let g = a.game();
     let c = g.pl[p].ch;
@@ -64,7 +63,7 @@ fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
     }
 }
 
-/// His gun cannot get a round out this frame (the aim ring's bar). Read only.   (player.ts gunShut)
+/// His gun cannot get a round out this frame (the aim ring's bar). Read only.
 pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) -> bool {
     let g = world.shared();
     let p = seat.player;
@@ -96,7 +95,7 @@ fn stack_hold(g: &mut Game, p: PlayerId) {
     g.pl[p].equip_t = m::max(g.pl[p].equip_t, 1e-3);
 }
 
-/// Stacked on the wall: is the rifle UP this frame? Clicks are held and paid out through input.clicked.   (player.ts stackUp)
+/// Stacked on the wall: is the rifle UP this frame? Clicks are held and paid out through input.clicked.
 pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
     let p = g.player;
     let ws = g.k.wallsnap;
@@ -163,7 +162,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
     true
 }
 
-/// Stacked at an open end: does he step out round it? The signed metres along the wall to stand past his station. `w` is `pl.wall`, read and written there.   (player.ts stackLean)
+/// Stacked at an open end: does he step out round it? The signed metres along the wall to stand past his station. `w` is `pl.wall`, read and written there.
 fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, dir: f64) -> f64 {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
@@ -265,7 +264,7 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
     un(w.lean_dir) * (ws.lean_along + w.lean_more.unwrap_or(0.0)) * l * l * (3.0 - 2.0 * l)
 }
 
-/// One frame of the hold's pose: the take and the landing to the animator; on the stack the stance, the press and the rifle's carriage.   (player.ts wallSnapPose)
+/// One frame of the hold's pose: the take and the landing to the animator; on the stack the stance, the press and the rifle's carriage.
 pub(super) fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -295,7 +294,7 @@ pub(super) fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
     }
 }
 
-/// The camera on the wall: the look-at eased into the room and toward the side he looks; through a stack's step-out it holds still. `w` is `pl.wall`, read and written there.   (player.ts wallSnapCam)
+/// The camera on the wall: the look-at eased into the room and toward the side he looks; through a stack's step-out it holds still. `w` is `pl.wall`, read and written there.
 fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
@@ -354,7 +353,7 @@ fn wall_ease(s: f64, take_t: Option<f64>, ease_pow: f64) -> f64 {
     }
 }
 
-/// One frame on the wall, in place of free movement; false = he has just come off it and the caller moves him as a free man this same frame.   (player.ts moveOnWall)
+/// One frame on the wall, in place of free movement; false = he has just come off it and the caller moves him as a free man this same frame.
 pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -548,7 +547,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     true
 }
 
-/// Silent takedown: lock in on the guard, throw the blow, he drops with a thud only the room hears.   (player.ts startTakedown)
+/// Silent takedown: lock in on the guard, throw the blow, he drops with a thud only the room hears.
 pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::close::CloseKind>, lethal: Option<bool>, loud: Option<bool>) {
     let lethal = lethal.unwrap_or(false);
     let loud = loud.unwrap_or(false);
@@ -609,7 +608,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 
-/// One frame of the takedown: hold station on the man, land the blow at its beat, give control back as it recovers.   (player.ts updateTakedown)
+/// One frame of the takedown: hold station on the man, land the blow at its beat, give control back as it recovers.
 pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
     let Some(td) = g.pl[p].takedown else { return; };
@@ -692,13 +691,13 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     if t > 0.62 { g.pl[p].takedown = None; }
 }
 
-/// Which hold a grab made now would be to begin with.   (player.ts grabVariant)
+/// Which hold a grab made now would be to begin with.
 pub fn grab_variant(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::character::HoldVariant {
     let p = seat.player;
     if crate::game::player_pistol_up(g, p) { crate::character::HoldVariant::Gun } else { crate::character::HoldVariant::Arm }
 }
 
-/// The 'grab him' row: drop whatever the hands had; he is frozen for the beat updateHold's 'grab' phase closes in. From here he is `held`.   (player.ts startGrab)
+/// The 'grab him' row: drop whatever the hands had; he is frozen for the beat updateHold's 'grab' phase closes in. From here he is `held`.
 pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::close::CloseKind>) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -845,7 +844,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     let _ = crate::chronicle::chron_grab(g, gd);
 }
 
-/// N: the goggles' switch, and the tube's picture easing after them.   (player.ts nvKey)
+/// N: the goggles' switch, and the tube's picture easing after them.
 pub(super) fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) {
     let p = g.player;
     if g.pl[p].nv && !crate::kit::kit_you_nvg(g, p) { g.pl[p].nv = false; }

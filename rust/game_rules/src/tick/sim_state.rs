@@ -2,7 +2,7 @@ pub use ::game_types::sim_state::types;
 pub use types::*;
 use alloc::vec::Vec;
 
-/// What rust/sim says of its blocks: length in words, slots, the layout's word, each part's start, length and pool flag.   (state.ts layout)
+/// What rust/sim says of its blocks: length in words, slots, the layout's word, each part's start, length and pool flag.
 fn layout() -> crate::sim_state::Layout {
     let parts = &::sim::state::PARTS;
     let (mut off, mut len, mut pool) = (Vec::new(), Vec::new(), Vec::new());
@@ -21,12 +21,12 @@ fn layout() -> crate::sim_state::Layout {
     }
 }
 
-/// Where part `p` of a block starts, in bytes from the block's own start.   (state.ts simPart)
+/// Where part `p` of a block starts, in bytes from the block's own start.
 pub fn sim_part(p: f64) -> f64 {
     ::sim::state::PARTS[p as usize].off as f64
 }
 
-/// How long part `p` of a block is, in bytes.   (state.ts simPartLen)
+/// How long part `p` of a block is, in bytes.
 fn sim_part_len(p: f64) -> f64 {
     ::sim::state::PARTS[p as usize].len as f64
 }

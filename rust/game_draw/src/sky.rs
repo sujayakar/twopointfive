@@ -32,7 +32,7 @@ section! {
         pub own_horizon: [f32; 3],
         pub kept: f32,
         pub mark_texel: f32,
-        /// the weather in the open air (render/frame.ts WeatherFrame, in its order)
+        /// the weather in the open air
         pub weather: u32,
         pub rain: f32,
         pub snow: f32,

@@ -16,22 +16,18 @@ use alloc::vec::Vec;
 use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 
-/// (src/game/marks.ts:39 bulletMark)
 pub fn bullet_mark(g: &mut crate::game::Game, hit_p: V3, n: V3, s: Option<crate::marks::Surface2>, def: &crate::weapons::WeaponDef) { let e = OutBulletMark { hit_p, n, s, def: def.id }; mark_asked(g, Ask::Bullet(e)); }
 
-/// (src/game/marks.ts:51 bangScorch)
 pub fn bang_scorch(g: &mut crate::game::Game, at: V3) { let e = OutBangScorch { at }; mark_asked(g, Ask::Bang(e)); }
 
-/// (src/game/marks.ts:90 kickScuff)
 pub fn kick_scuff(g: &mut crate::game::Game, d: DoorId, from: V3) { let e = OutKickScuff { d, from }; mark_asked(g, Ask::Kick(e)); }
 
-/// (src/game/marks.ts:104 chipMark)
 pub fn chip_mark(g: &mut crate::game::Game, p: V3, n: V3, s: Option<crate::marks::Surface2>, size: Option<f64>) { let e = OutChipMark { p, n, s, size }; mark_asked(g, Ask::Chip(e)); }
 
 use crate::render_decals::{lay, mark_set, DecalKind, DecalOpts};
 use crate::scene_boxes::{box_flag, Box as WorldBox};
 
-/// col.raycast's index → the box it names: a static by its place in the level's list, a door leaf from 1e6 up.   (marks.ts staticSurface)
+/// col.raycast's index → the box it names: a static by its place in the level's list, a door leaf from 1e6 up.
 pub fn static_surface(g: &crate::game::Game, index: f64) -> Option<crate::marks::Surface2> {
     if index >= 1e6 { return g.col.dynamic_boxes.get((index - 1e6) as usize).map(|b| crate::marks::Surface2 { box_: *b, dynamic: true }); }
     if index < 0.0 { return None; }

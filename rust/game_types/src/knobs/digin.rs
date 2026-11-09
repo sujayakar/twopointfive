@@ -17,7 +17,7 @@ pub struct DiginK {
     ///  go at once, far men get ready, then come): by itself it only takes the hunters away. AS BUILT the way is measured ONCE, when he first hears them, to the
     ///  noise (or the net's fix) that told him: a fight that later moves next door does not release a man judged far, nor claim one judged near
     #[k(0.0)] pub reach_m: f64,
-    /// WITH THE PRESS ON TOO: the man a press leaves to KEEP his room (pressure.ts keepRoom) digs in. Off (hard — difficulty.ts HARD.keeperDigs): he does not,
+    /// WITH THE PRESS ON TOO: the man a press leaves to KEEP his room digs in. Off: he does not,
     ///  from the moment he is left until the fight is reset — he is the press's keeper and nothing more, and its last-man rules send him out by another door when
     ///  the team's boots reach his. MEASURED (The block, the depot, the records building): the keeper is a man who at standard came hunting; dug in he is behind
     ///  the one door a stun canister comes through, and costs the team less than the hunter he was. A man the press has left nowhere (no fight he could go to) still digs in, as ever; a man
@@ -88,9 +88,8 @@ pub struct DiginK {
     #[k(90.0)] pub hold_secs: f64,
     /// dug in on one door, the noise now says another: seconds before he shifts
     #[k(6.0)] pub redig_secs: f64,
-    /// A SET MAN IS NOT LEFT STANDING IN A LANE HIS SIDE KNOWS IS COVERED (lanes.ts: fire that dropped a mate or passed one, called on their net — nothing where
-    ///  the lanes are off, so the frozen stand is as it was). The spot he takes to cover his door is never one in such a lane's line, and a man already set whose
-    ///  spot comes to lie in one — nobody in his own sights — picks again, at most every `laneSecs`: another spot of HIS room on the same door, out of the line.
-    ///  No such spot = he stays where he is, as before; he still does not give the room up (holdSet). false = spots as they were dealt before the rule
+    /// The spot he takes to cover his door is never one in such a lane's line, and a man already set whose spot comes to lie in one — nobody in his own sights —
+    /// picks again, at most every `laneSecs`: another spot of HIS room on the same door, out of the line. No such spot = he stays where he is, as before; he
+    /// still does not give the room up (holdSet). false = spots as they were dealt before the rule
     #[k(2.0)] pub lane_secs: f64,
 }

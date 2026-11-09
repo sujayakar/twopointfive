@@ -5,7 +5,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, vec, vec::Vec};
 
-/// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.   (character.ts blowsNear)
+/// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.
 pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
     let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
     for &blow in &b.blows {
@@ -17,10 +17,10 @@ pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
     near
 }
 
-/// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.   (character.ts layerTablesFit)
+/// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.
 pub(super) fn layer_tables_fit() {
-    let cross_jab = knife_blow();
-    let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", knife_slash().keys.len()), ("back", knife_back().keys.len())];
+    let cross_jab = &KNIFE_BLOW;
+    let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", KNIFE_SLASH.keys.len()), ("back", KNIFE_BACK.keys.len())];
     for (k, n) in blows {
         crate::anim_skeleton::layer_fits(&alloc::format!("the knife's {} blow", k), n as f64, KNIFE_KEYS_MAX, None);
     }
@@ -35,7 +35,7 @@ pub(super) fn layer_tables_fit() {
     }
 }
 
-/// A swing's tables as the module's layer is handed them, by name and in its order: eleven of numbers, then six of vectors. A table the underhand lacks is the overhand's (`T[n] ?? THR[n]`).   (character.ts throwTables)
+/// A swing's tables as the module's layer is handed them, by name and in its order: eleven of numbers, then six of vectors. A table the underhand lacks is the overhand's (`T[n] ?? THR[n]`).
 pub(super) fn throw_tables(low: bool) -> crate::character::ThrowTables {
     let t = thr();
     if !low {
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn knife_keys_hold_the_typescripts_bits() {
         let mut h = FNV;
-        let (kb, slash, back) = (knife_blow(), knife_slash(), knife_back());
+        let (kb, slash, back) = (&KNIFE_BLOW, &KNIFE_SLASH, &KNIFE_BACK);
         let all: [&[BlowKey]; 4] = [&kb.cross.keys, &kb.jab.keys, &slash.keys, &back.keys];
         for keys in all {
             for k in keys {
@@ -115,21 +115,21 @@ mod tests {
     }
 }
 
-/// How long a landed blow or shell is followed through before the tool may start back, s. (character.ts bigRebound)
+/// How long a landed blow or shell is followed through before the tool may start back, s.
 pub fn big_rebound(kind: crate::character::BigReboundKind) -> f64 {
-    let t = crate::character::bigmove();
+    let t = &crate::character::BIGMOVE;
     if kind == crate::character::BigReboundKind::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
 }
 
-/// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow. (character.ts bigOff)
+/// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow.
 pub fn big_off(b: crate::character::BigOffB) -> bool {
     if !(b.t >= 0.0) { return false; }
-    let s = crate::character::bigmove().snug;
+    let s = &crate::character::BIGMOVE.snug;
     if b.end >= 0.0 && b.t >= b.end { return (b.t - b.end) / m::max(1e-3, b.stow) < s.show; }
     b.t >= s.hide * b.equip
 }
 
-/// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax. (character.ts columnEntry)
+/// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax.
 pub(super) fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
     let ox = ro[0] - cx;
     let oz = ro[2] - cz;
@@ -162,18 +162,18 @@ pub(super) fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, 
     t_in
 }
 
-/// The action layer's weight this frame. (character.ts CharacterAnimator.actShown)
+/// The action layer's weight this frame.
 pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.act_w
 }
 
-/// A MOVES reaction has the trunk and head this frame. (character.ts CharacterAnimator.mvBusy)
+/// A MOVES reaction has the trunk and head this frame.
 pub(super) fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }
 
-/// A MOVES reaction that also has his arms: all of them but a soft duck. (character.ts CharacterAnimator.mvHands)
+/// A MOVES reaction that also has his arms: all of them but a soft duck.
 pub(super) fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     (m.fl_t >= 0.0 && !m.fl_soft) || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0

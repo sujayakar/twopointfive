@@ -10,13 +10,13 @@ impl Pose {
     pub fn blank() -> Self { Pose { at: 0, nodes: 0 } }
 }
 impl Default for Pose { fn default() -> Self { Self::blank() } }
-/// A BODY'S WORLD OF JOINTS (anim/skeleton.ts SkeletonInstance). tmp and local were scratch; ibms and jointViews views of the rig and of joint_data; ownRot was how globalRot's rows were reused without allocating. `joint_data` is what the picture skins with
+/// A BODY'S WORLD OF JOINTS. tmp and local were scratch; ibms and jointViews views of the rig and of joint_data; ownRot was how globalRot's rows were reused without allocating. `joint_data` is what the picture skins with
 #[derive(Clone, Debug, ToBytes)]
 pub struct SkeletonInstance { pub rig: RigId, pub globals: Vec<crate::v3::m4::Mat4>, pub global_rot: Vec<Quat>, pub joint_data: Vec<f32> }
 impl SkeletonInstance {
     pub fn blank() -> Self { SkeletonInstance { rig: RigId(0), globals: Vec::new(), global_rot: Vec::new(), joint_data: Vec::new() } }
 }
-/// the rig's named nodes and lists, as a layer is handed them (anim/skeleton.ts LayerCast): keys are literals in the code
+/// the rig's named nodes and lists, as a layer is handed them: keys are literals in the code
 #[derive(Clone, Debug, ToBytes)]
 pub struct LayerCast { pub nodes: JsMap<&'static str, usize>, pub lists: JsMap<&'static str, Vec<i32>>, pub nums: JsMap<&'static str, Vec<f64>> }
 impl LayerCast {
@@ -95,43 +95,23 @@ pub struct BuildMaskEntriesItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AnimSkeletonMod {
-    /// (src/anim/skeleton.ts:21 POSE_BENCH)
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
     #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
-    /// (src/anim/skeleton.ts:33 LAYERS)
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
     #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
-    /// (src/anim/skeleton.ts:238 CLIP_SIDE)
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
 }
 
-/// (src/anim/skeleton.ts:17 BENCH_NODES)
 pub const BENCH_NODES: f64 = 128.0;
 
-/// (src/anim/skeleton.ts:17 BENCH_SLOT)
 pub const BENCH_SLOT: f64 = 1280.0;
 
-/// (src/anim/skeleton.ts:102 LAYER_COLS_AT)
-pub const LAYER_COLS_AT: f64 = 64.0;
-
-/// (src/anim/skeleton.ts:104 HAND_COLS_AT)
-pub const HAND_COLS_AT: f64 = 128.0;
-
-/// (src/anim/skeleton.ts:106 LAYER_KEYS_AT)
-pub const LAYER_KEYS_AT: f64 = 264.0;
-
-/// (src/anim/skeleton.ts:106 LAYER_KEY)
-pub const LAYER_KEY: f64 = 7.0;
-
-/// (src/anim/skeleton.ts:106 LAYER_KEYS_MAX)
 pub const LAYER_KEYS_MAX: f64 = 48.0;
 
-/// (src/anim/skeleton.ts:132 IDENT: a table nothing writes)
 pub fn ident() -> Quat { [0.0, 0.0, 0.0, 1.0] }
 
-/// (src/anim/skeleton.ts:237 LINES)
 pub const LINES: f64 = 8.0;
 impl Default for SkeletonInstance { fn default() -> Self { Self::blank() } }
 impl Default for LayerCast { fn default() -> Self { Self::blank() } }

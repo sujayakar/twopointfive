@@ -41,6 +41,5 @@ pub struct WEARMARK {
     pub max_half: f64,
 }
 
-/// (src/render/decals.ts:96 WEAR_MARK: a table nothing writes)
 pub fn wear_mark() -> crate::render_decals::WEARMARK { crate::render_decals::WEARMARK { look: 3.0, reach0: 0.09, reach1: 0.21, min_half: 0.035, max_half: 0.09 } }
 
