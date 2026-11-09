@@ -28,8 +28,8 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, y, 0.0]) }
 }
 /// The live object (`this.live`): its one home is the drill's own field, which NightBreach writes as play goes.
-fn live_of(g: &mut Game) -> Option<BreachLive> { dr!(g).live }
-/// What a live pair says in place of the show's line (WORDS.on and WORDS.guide settled on).
+fn live_of(g: &mut Game) -> BreachLive { dr!(g).live }
+/// What the pair says in place of the plan's line (WORDS.on and WORDS.guide settled on).
 fn live_text(charge: bool, key: &str, text: &str) -> String {
     let k = String::from(key);
     if !charge { if let Some(s) = live_no_charge().get(k.clone()) { return s.clone(); } }
@@ -80,9 +80,6 @@ fn targets(g: &mut Game, i: usize) -> (Vec<usize>, Vec<usize>) {
     (centre.iter().map(|k| *k as usize).collect(), corner.iter().map(|k| *k as usize).collect())
 }
 fn hostile_dead(g: &mut Game, k: usize) -> bool { match host(g, k) { Some(h) => dead(g, h), None => false } }
-fn clear_leg(g: &mut Game, p: V3, q: V3) -> bool {
-    !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None) && !crate::scene_collision::solid_blocked(g, [p[0], 1.2, p[2]], [q[0], 1.2, q[2]], None)
-}
 fn mk(aim: V3) -> OpFlow {
     OpFlow { st: FlowSt::Wait, t0: 0.0, sweep: crate::squad::Sweep::blank(), aim, q: Vec::new(), on: -1, since: 0.0, n: 0.0, next: 0.0, in_at: f64::NAN, corner_at: f64::NAN, hold_at: f64::NAN }
 }
@@ -92,8 +89,7 @@ fn mk(aim: V3) -> OpFlow {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A drill, not yet started.   (breach.ts BreachDrill.constructor)
-pub fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], opts: Option<crate::breach::BreachDrillNewOpts>) -> crate::breach::BreachDrill {
-    let opts = opts.unwrap_or_default();
+pub fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], live: crate::breach::BreachLive) -> crate::breach::BreachDrill {
     let mut d = BreachDrill::blank();
     d.plan = plan.clone();
     d.a = a;
@@ -103,8 +99,7 @@ pub fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::Breach
     d.aim_b = v3::copy(plan.stack_aim[1]);
     d.flows = [mk(d.aim_a), mk(d.aim_b)];
     d.down_logged = hostiles.iter().map(|_| false).collect();
-    d.guarantee_downs = opts.guarantee_downs.unwrap_or(true);
-    d.live = opts.live;
+    d.live = live;
     d
 }
 
@@ -133,16 +128,15 @@ pub fn breach_drill_once(g: &mut crate::game::Game, key: &str) -> bool {
 
 /// Is there a stun charge in this entry.   (breach.ts BreachDrill.charge)
 pub fn breach_drill_charge(g: &mut crate::game::Game) -> bool {
-    match live_of(g) {
-        None => true,
-        Some(l) => { let b = dr!(g).b; l.stun && !dead(g, b) }
-    }
+    let b = dr!(g).b;
+    live_of(g).stun && !dead(g, b)
 }
 
 /// A line, once, by a living man; live play swaps what the drill cannot know.   (breach.ts BreachDrill.say)
 pub fn breach_drill_say(g: &mut crate::game::Game, gd: GuardId, key: &str, text: &str, radio: Option<bool>) {
     let radio = radio.unwrap_or(false);
-    let text = if live_of(g).is_some() { let charge = breach_drill_charge(g); live_text(charge, key, text) } else { String::from(text) };
+    let charge = breach_drill_charge(g);
+    let text = live_text(charge, key, text);
     if !text.is_empty() && breach_drill_once(g, &alloc::format!("say:{}", key)) && !dead(g, gd) {
         crate::game::game_say(g, gd, &text, Some(radio), None, None);
     }
@@ -195,21 +189,6 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         crate::character::character_update(g, c, 0.0);
         let face = g.ch[c].body_yaw;
         crate::squad::order(g, gd, OP { goal: Some(None), face: Some(Some(face)), stance: Some(Some(St::LowReady)), upper: Some(Some(Up::None)), aim_at: Some(None), light: Some(Some(false)), crouch: Some(Some(false)), ..Default::default() });
-    }
-    if live_of(g).is_none() {
-        let hs = dr!(g).plan.hostiles.clone();
-        for (i, h) in hs.iter().enumerate() {
-            let gd = match dr!(g).hostiles.get(i).copied() { Some(x) => x, None => continue };
-            let c = g.gd[gd].ch;
-            { let to = v3::copy(h.pos); crate::character::pos_replace(g, c, to); }
-            g.ch[c].vel = [0.0, 0.0, 0.0];
-            g.ch[c].aim_yaw = h.yaw;
-            g.ch[c].body_yaw = h.yaw;
-            crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
-            crate::mind::set(g, gd, 0.0, "breach");
-            crate::character::character_update(g, c, 0.0);
-            crate::squad::order(g, gd, OP { goal: Some(None), face: Some(Some(h.yaw)), aim_at: Some(Some(v3::copy(h.aim_at))), stance: Some(Some(St::None)), upper: Some(Some(Up::Aim)), crouch: Some(Some(h.crouch == Some(true))), light: Some(Some(false)), ..Default::default() });
-        }
     }
     if let Some(d) = breach_drill_door(g) { shut(g, d); }
     if let Some(d) = breach_drill_next_door(g) { shut(g, d); }
@@ -265,12 +244,7 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
         crate::teampace::team_fight(g, a, None);
         crate::teampace::team_fight(g, b, None);
     }
-    if live_of(g).is_some() {
-        if breach_drill_casualties(g, t) { return; }
-    } else if dead(g, a) || dead(g, b) {
-        if dr!(g).phase != Phase::Done { dr!(g).phase = Phase::Done; dr!(g).t_done = t; breach_drill_beat(g, "abort"); }
-        return;
-    }
+    if breach_drill_casualties(g, t) { return; }
     if dr!(g).phase == Phase::Done { return; }
     let a_in = adv(g, 0, None);
     let b_in = adv(g, 1, None);
@@ -282,8 +256,7 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
     let (ca, cb) = (g.gd[a].ch, g.gd[b].ch);
     match dr!(g).phase {
         Phase::Wait => {
-            let go = match live_of(g) { Some(l) => l.orders >= 1.0, None => t >= HOLD_OPEN };
-            if go {
+            if live_of(g).orders >= 1.0 {
                 dr!(g).phase = Phase::Approach;
                 breach_drill_beat(g, "go");
                 dr!(g).t_run = t;
@@ -293,7 +266,7 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
         Phase::Approach => {
-            let base = if live_of(g).is_some() { dr!(g).t_run } else { HOLD_OPEN };
+            let base = dr!(g).t_run;
             let stack0 = dr!(g).plan.stack[0];
             if flat(g.ch[ca].pos, stack0) < 3.2 || t > base + 16.0 {
                 dr!(g).phase = Phase::Stack;
@@ -315,8 +288,7 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             let t_set = dr!(g).t_set;
             if !t_set.is_nan() && t > t_set + 0.3 { say!(g, b, "stack2", lines.stack2); }
             let live = live_of(g);
-            let set_hold = live.and_then(|l| l.set_hold).unwrap_or(SET_HOLD);
-            if !t_set.is_nan() && t >= t_set + set_hold && (!crate::character::anim_signalling(g, cb) || t > t_set + set_hold + 0.6) && live.map_or(true, |l| l.orders >= 2.0) {
+            if !t_set.is_nan() && t >= t_set + SET_HOLD && (!crate::character::anim_signalling(g, cb) || t > t_set + SET_HOLD + 0.6) && live.orders >= 2.0 {
                 say!(g, a, "breach1", breach_lines.breach1);
                 dr!(g).t_go = t;
                 dr!(g).phase = Phase::Breach;
@@ -366,41 +338,7 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             breach_drill_tick_hold(g, 0, dt);
             breach_drill_tick_hold(g, 1, dt);
             if tc > 0.3 { let who = if !dead(g, a) { a } else { b }; say!(g, who, "roomClear1", breach_lines.room_clear1); }
-            if live_of(g).is_some() {
-                if tc >= 1.0 { dr!(g).t_done = t; dr!(g).phase = Phase::Done; breach_drill_beat(g, "done"); }
-                return;
-            }
-            if tc >= NEXT_AFTER_CLEAR && dr!(g).t_next.is_nan() {
-                dr!(g).t_next = t;
-                breach_drill_beat(g, "next");
-                say!(g, a, "next1", breach_lines.next1);
-                let (stack, face, side, aims) = (dr!(g).plan.next.stack, dr!(g).plan.next.stack_face, dr!(g).plan.next.stack_side, dr!(g).plan.next.stack_aim);
-                let (aim_a, aim_b) = (dr!(g).aim_a, dr!(g).aim_b);
-                let leg = breach_drill_leg_to(g, b, stack[0]);
-                route_i(g, 1, &leg, OP { speed: Some(Some(2.0)), face: Some(Some(face[0])), strafe: Some(Some(false)), stance: Some(Some(St::Stack)), stack_side: Some(Some(side)), upper: Some(Some(Up::Aim)), aim_at: Some(Some(aim_b)), hot: Some(Some(true)), crouch: Some(Some(false)), ..Default::default() });
-                let leg = breach_drill_leg_to(g, a, stack[1]);
-                route_i(g, 0, &leg, OP { speed: Some(Some(2.3)), face: Some(Some(face[1])), strafe: Some(Some(false)), stance: Some(Some(St::HighReady)), upper: Some(Some(Up::Aim)), aim_at: Some(Some(aim_a)), hot: Some(Some(true)), crouch: Some(Some(false)), ..Default::default() });
-                crate::squad::sweep_start(&mut dr!(g).flows[0].sweep, aim_a, &[aims[1]], t, 1.2);
-                crate::squad::sweep_start(&mut dr!(g).flows[1].sweep, aim_b, &[aims[0]], t, 0.9);
-                dr!(g).phase = Phase::Restack;
-            }
-        }
-        Phase::Restack => {
-            let tn = t - dr!(g).t_next;
-            for i in 0..2 { if dr!(g).flows[i].sweep.active { sweep_tick(g, i, t); } }
-            if tn > 1.6 { let s = dr!(g).plan.breach_lines.radio1.clone(); breach_drill_say(g, a, "radio1", &s, Some(true)); }
-            if dr!(g).t_stacked2.is_nan() && ((a_in && b_in) || tn > RESTACK_CAP) {
-                dr!(g).t_stacked2 = t;
-                breach_drill_beat(g, if a_in && b_in { "stack2" } else { "stack2-late" });
-                if b_in { crate::character::anim_signal(g, cb, crate::character::SignalKind::Squeeze, None); }
-            }
-            let t2 = dr!(g).t_stacked2;
-            if !t2.is_nan() && t >= t2 + RESTACK_HOLD && dr!(g).t_done.is_nan() {
-                dr!(g).t_done = t;
-                dr!(g).phase = Phase::Done;
-                breach_drill_beat(g, "cut");
-                breach_drill_beat(g, "done");
-            }
+            if tc >= 1.0 { dr!(g).t_done = t; dr!(g).phase = Phase::Done; breach_drill_beat(g, "done"); }
         }
         Phase::Done => {}
     }
@@ -437,7 +375,7 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
             let p = g.ch[c].pos;
             crate::particle_fx::kick_dust_fx(g, d, p);
         }
-        if live_of(g).map_or(false, |l| l.loud_boot) && !crate::doors::door_off(g, d) {
+        if !crate::doors::door_off(g, d) {
             let p = crate::doors::door_pos(g, d);
             let time = g.time;
             let serial = g.serial();   // (an event is an object: every heard-once set keys on its serial, and one born with none is "the first again")
@@ -496,19 +434,6 @@ fn tick_bang(g: &mut Game, t: f64) {
         crate::combat::detonate_stun(g, it, Some(false), Some(crate::combat::DetonateStunSam { side: Some(crate::teams::Team::Operative), spare: None }));
         g.guards = all;
         breach_drill_beat(g, "bang");
-        if live_of(g).is_none() {
-            for (i, h) in hs.iter().copied().enumerate() {
-                if dead(g, h) { continue; }
-                let c = g.gd[h].ch;
-                let f = crate::character::character_forward(g, c);
-                let p = g.ch[c].pos;
-                crate::squad::order(g, h, OP { aim_at: Some(Some([p[0] + f[0] * 1.2, 0.1, p[2] + f[2] * 1.2])), upper: Some(Some(Up::Aim)), stance: Some(Some(St::None)), ..Default::default() });
-                if i == 0 {
-                    let (p, y) = (g.ch[c].pos, g.ch[c].body_yaw);
-                    crate::squad::order(g, h, OP { goal: Some(Some([p[0] + 0.35, 0.0, p[2] - 0.3])), strafe: Some(Some(true)), face: Some(Some(y)), speed: Some(Some(0.9)), ..Default::default() });
-                }
-            }
-        }
         breach_drill_muzzles_on_door(g);
         dr!(g).phase = Phase::Enter;
     }
@@ -559,22 +484,6 @@ pub fn breach_drill_inside(g: &mut crate::game::Game, d: f64, y: f64, s: Option<
     [fc[0] + n[0] * d + n[1] * s, y, fc[2] + n[1] * d - n[0] * s]
 }
 
-/// Waypoints to a mark across the room, by the plan's `next.via` lane if the straight leg is not clear.   (breach.ts BreachDrill.legTo)
-pub fn breach_drill_leg_to(g: &mut crate::game::Game, gd: GuardId, mark: V3) -> Vec<V3> {
-    let c = g.gd[gd].ch;
-    let from = g.ch[c].pos;
-    if clear_leg(g, from, mark) { return vec![mark]; }
-    let mut out: Vec<V3> = Vec::new();
-    let mut p = from;
-    let via = dr!(g).plan.next.via.clone().unwrap_or_default();
-    for q in via {
-        if clear_leg(g, p, mark) { break; }
-        if flat(p, q) > 0.6 && (!out.is_empty() || flat(from, q) < flat(from, mark)) { out.push(v3::copy(q)); p = q; }
-    }
-    out.push(mark);
-    out
-}
-
 /// `p` inside the room's authored bounds by at least `m`.   (breach.ts BreachDrill.insideRoom)
 pub fn breach_drill_inside_room(g: &mut crate::game::Game, p: V3, m: f64) -> bool {
     let b = match dr!(g).plan.bounds { Some(b) => b, None => return true };
@@ -603,7 +512,7 @@ pub fn breach_drill_start_flow(g: &mut crate::game::Game, i: usize) {
     let n = fl.into.len();
     let face = v3::yaw_to(fl.into[n.saturating_sub(2)], fl.into[n - 1]);
     route_i(g, i, &fl.into, OP { speed: Some(Some(2.9)), face: Some(Some(face)), strafe: Some(Some(false)), stance: Some(Some(St::None)), upper: Some(Some(Up::Aim)), aim_at: Some(Some(aim)), hot: Some(Some(true)), crouch: Some(Some(false)), ..Default::default() });
-    if live_of(g).map_or(false, |l| l.lights) { crate::squad::order(g, gd, OP { light: Some(Some(true)), ..Default::default() }); }
+    crate::squad::order(g, gd, OP { light: Some(Some(true)), ..Default::default() });
     crate::squad::sweep_start(&mut dr!(g).flows[i].sweep, aim, &[fl.centre[0]], t, 0.9);
 }
 
@@ -692,10 +601,9 @@ pub fn breach_drill_tick_hold(g: &mut crate::game::Game, i: usize, dt: f64) {
     if !breach_drill_staged_exchange(g, i, dt) && dr!(g).flows[i].sweep.active { let t = dr!(g).t; sweep_tick(g, i, t); }
 }
 
-/// Both holding and every hostile down, a beat after; or, the show only, 14 s of entry.   (breach.ts BreachDrill.roomClear)
+/// Both holding and every hostile down, a beat after.
 pub fn breach_drill_room_clear(g: &mut crate::game::Game, te: f64) -> bool {
-    let live = live_of(g).is_some();
-    let own = live && crate::roomfight::room_fight_on(g);
+    let own = crate::roomfight::room_fight_on(g);
     let hs = dr!(g).hostiles.clone();
     let mut all_down = true;
     for h in hs.iter().copied() {
@@ -704,21 +612,11 @@ pub fn breach_drill_room_clear(g: &mut crate::game::Game, te: f64) -> bool {
     }
     let (a, b) = (dr!(g).a, dr!(g).b);
     let (st0, st1) = (dr!(g).flows[0].st, dr!(g).flows[1].st);
-    let holding = if live { (dead(g, a) || st0 == FlowSt::Hold) && (dead(g, b) || st1 == FlowSt::Hold) } else { st0 == FlowSt::Hold && st1 == FlowSt::Hold };
+    let holding = (dead(g, a) || st0 == FlowSt::Hold) && (dead(g, b) || st1 == FlowSt::Hold);
     if holding && all_down {
         let t = dr!(g).t;
         if dr!(g).t_all_done.is_nan() { dr!(g).t_all_done = t; }
         return t > dr!(g).t_all_done + 0.5;
-    }
-    if live { return false; }
-    if te > 14.0 {
-        for (k, h) in hs.iter().copied().enumerate() {
-            if !dead(g, h) && dr!(g).guarantee_downs && !g.gd[h].fled {
-                breach_drill_beat(g, &alloc::format!("guaranteed:{}", k));
-                crate::combat::kill_guard(g, h, [1.0, 0.0, 0.0], Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"));
-            }
-        }
-        return true;
     }
     false
 }
@@ -726,8 +624,7 @@ pub fn breach_drill_room_clear(g: &mut crate::game::Game, te: f64) -> bool {
 /// Is the front of man i's list a living man he has a line to.   (breach.ts BreachDrill.pickable)
 pub fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
     let op = man(g, i);
-    let live = live_of(g).is_some();
-    if live && crate::roomfight::room_fight_on(g) { return crate::roomfight::room_fight_contact(g, op); }
+    if crate::roomfight::room_fight_on(g) { return crate::roomfight::room_fight_contact(g, op); }
     let c = g.gd[op].ch;
     while let Some(k) = dr!(g).flows[i].q.first().copied() {
         let gone = match host(g, k) { Some(h) => dead(g, h) || g.gd[h].fled, None => false };
@@ -735,31 +632,24 @@ pub fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
         dr!(g).flows[i].q.remove(0);
     }
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.6);
-    if live {
-        let q = dr!(g).flows[i].q.clone();
-        let n = dr!(g).hostiles.len();
-        let mut order_ = q.clone();
-        for j in 0..n { if !q.contains(&j) { order_.push(j); } }
-        let mut found = None;
-        for k in order_ {
-            let hk = match host(g, k) { Some(h) => h, None => continue };
-            if dead(g, hk) || g.gd[hk].fled { continue; }
-            let ch = g.gd[hk].ch;
-            let chest = bone_or(g, ch, crate::character::Bone::Chest, 1.1);
-            let energy = crate::glasspen::shot_energy(g, c, None);
-            if !crate::scene_collision::shot_blocked(g, eye, chest, Some(0.02), energy) { found = Some(k); break; }
-        }
-        let k = match found { Some(k) => k, None => return false };
-        let mut nq = vec![k];
-        nq.extend(q.iter().copied().filter(|j| *j != k));
-        dr!(g).flows[i].q = nq;
-        return true;
+    let q = dr!(g).flows[i].q.clone();
+    let n = dr!(g).hostiles.len();
+    let mut order_ = q.clone();
+    for j in 0..n { if !q.contains(&j) { order_.push(j); } }
+    let mut found = None;
+    for k in order_ {
+        let hk = match host(g, k) { Some(h) => h, None => continue };
+        if dead(g, hk) || g.gd[hk].fled { continue; }
+        let ch = g.gd[hk].ch;
+        let chest = bone_or(g, ch, crate::character::Bone::Chest, 1.1);
+        let energy = crate::glasspen::shot_energy(g, c, None);
+        if !crate::scene_collision::shot_blocked(g, eye, chest, Some(0.02), energy) { found = Some(k); break; }
     }
-    let k = match dr!(g).flows[i].q.first().copied() { Some(k) => k, None => return false };
-    let h = host(g, k).unwrap();
-    let ch = g.gd[h].ch;
-    let chest = bone_or(g, ch, crate::character::Bone::Chest, 1.1);
-    !crate::scene_collision::segment_blocked(g, eye, chest, None, None, None)
+    let k = match found { Some(k) => k, None => return false };
+    let mut nq = vec![k];
+    nq.extend(q.iter().copied().filter(|j| *j != k));
+    dr!(g).flows[i].q = nq;
+    true
 }
 
 /// The exchange as staged: the muzzle on a man, the settle, the controlled pair; true while on somebody.   (breach.ts BreachDrill.stagedExchange)
@@ -767,8 +657,7 @@ pub fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64
     let op = man(g, i);
     let c = g.gd[op].ch;
     let t = dr!(g).t;
-    let live = live_of(g).is_some();
-    if live && crate::roomfight::room_fight_on(g) { return crate::roomfight::room_fight_engaged(g, op); }
+    if crate::roomfight::room_fight_on(g) { return crate::roomfight::room_fight_engaged(g, op); }
     if dr!(g).flows[i].st == FlowSt::Wait || dead(g, op) { return false; }
     if dr!(g).flows[i].st == FlowSt::Into { let p = g.ch[c].pos; if !breach_drill_inside_room(g, p, FIRE_INSIDE_M) { return false; } }
     let on = dr!(g).flows[i].on;
@@ -793,7 +682,7 @@ pub fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64
     set_aim(g, i, [v3::damp(aim[0], chest[0], 16.0, dt), v3::damp(aim[1], chest[1], 16.0, dt), v3::damp(aim[2], chest[2], 16.0, dt)]);
     let due = if dr!(g).flows[i].n == 0.0 { dr!(g).flows[i].since + SETTLE } else { dr!(g).flows[i].next };
     let fa = g.gd[op].weapon;
-    if live && t >= due {
+    if t >= due {
         let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
         let def = g.fa[fa].def;
         let energy = crate::glasspen::shot_energy(g, c, Some(def));
@@ -812,10 +701,6 @@ pub fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64
             dr!(g).rounds[i] += 1.0;
             breach_drill_beat(g, &alloc::format!("shot{}", i + 1));
             if dr!(g).flows[i].n >= 2.0 {
-                if !dead(g, h) && dr!(g).guarantee_downs && !g.gd[h].fled {
-                    breach_drill_beat(g, &alloc::format!("guaranteed:{}", on));
-                    crate::combat::kill_guard(g, h, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"));
-                }
                 let f = &mut dr!(g).flows[i];
                 f.q.retain(|k| *k != on as usize);
                 f.on = -1;
