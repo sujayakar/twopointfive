@@ -31,7 +31,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
   var ro = ro0; var rd = rd0; var thr = vec3f(1.0); var L = vec3f(0.0); var cut = cut0; var clear = clear0; var depth = depth0; var spread = spread0; var fp = fp0; var wet = false; gCount = 0u;
   for (var b = 0u; b < most + 6u; b++) {
     if (depth > most) { break; }
-    leafMode = select(1u, 0u, depth < 2u);
+    leafMode = 0u;
     let h = nearest(ro, rd, 1e-3, 2000.0, 0u, cut);
     if (h.gpiece != NOTHING && clear) {           // a pane in the way: some of the paths mirror off it
       let lp = toLocal(h.gpiece, ro + rd * h.gt); let ng = normalize(toWorld(h.gpiece, localNormal(h.gpiece, h.gcode, lp))); let c = abs(dot(ng, rd)); let F = 0.04 + 0.96 * pow(1.0 - c, 5.0);
