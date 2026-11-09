@@ -5,10 +5,11 @@ import { buildBvh, type Bounds, type Bvh } from '../bvh';
 /** what a piece is to a ray */
 export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29 } as const;
 
-/** ONE PIECE: a frame and half extents, cut by up to 8 planes and at most one quadric (A x² + B y² + C z² + D y ≤ 1) */
+/** ONE PIECE: a frame and half extents, cut by up to 8 planes, one quadric (A x² + B y² + C z² + D y ≤ 1) and up to 3 curves: ellipsoids, or cylinders (a radius of 0 is no end), anywhere in its frame.
+ *  Where two of them meet is a crisp edge, as on a car between flank and shoulder */
 export interface Piece {
   at: V3; rot: Rot; half: V3; mat: number; flags: number;
-  quad?: [number, number, number, number]; planes?: [V3, number][];
+  quad?: [number, number, number, number]; planes?: [V3, number][]; curves?: { at: V3; r: V3 }[];
   tint?: V3; lamp?: number; marks?: Mark[]; seed?: number;
   /** what it is a part of */ thing?: { name: string };
   /** what moves it, by name */ rig?: string;
@@ -57,7 +58,7 @@ export function packBend(b: number[], u: Uint32Array, o: number) { for (let i = 
 /** a piece as the shaders read it: three rows world → local, half + flags, quadric, (material | marks, tint, planes, lamp | seed) */
 export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, planeAt: number, markAt: number) {
   for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f[o + k * 4] = r[0]; f[o + k * 4 + 1] = r[1]; f[o + k * 4 + 2] = r[2]; f[o + k * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]); }
-  f.set(p.half, o + 12); u[o + 15] = (p.flags | (p.planes?.length ?? 0)) >>> 0;
+  f.set(p.half, o + 12); u[o + 15] = (p.flags | (p.planes?.length ?? 0) | ((p.curves?.length ?? 0) << 4)) >>> 0;
   if (p.bend) packBend(p.bend, u, o); else f.set(p.quad ?? [0, 0, 0, 0], o + 16);
   const t = p.tint ?? [1, 1, 1], q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
   u[o + 20] = (p.mat | ((p.marks?.length ?? 0) << 8) | (markAt << 12)) >>> 0;

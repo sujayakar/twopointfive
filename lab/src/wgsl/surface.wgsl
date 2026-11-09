@@ -56,6 +56,7 @@ fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }
   if (code == CODE_QUAD) { let q = pieces[k].quad; return normalize(vec3f(q.x * lp.x, q.y * lp.y + 0.5 * q.w, q.z * lp.z)); }
+  if (code >= 16u) { let a = pieces[k].planes + (pieces[k].flags & 15u) + 2u * (code - 16u); return normalize(extra[a].xyz * (lp - extra[a + 1u].xyz)); }
   return extra[pieces[k].planes + code - 7u].xyz;
 }
 /** the normal of a plate of cloth, between its corners' */

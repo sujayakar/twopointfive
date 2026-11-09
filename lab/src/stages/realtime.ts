@@ -80,7 +80,7 @@ function facePoints(lab: Lab): Float32Array {
   const nrm = new Float32Array(1), nu = new Uint32Array(nrm.buffer), oct = (n: V3) => { const s = Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]); let x = n[0] / s, y = n[2] / s; if (n[1] < 0) { const a = (1 - Math.abs(y)) * Math.sign(x || 1), b = (1 - Math.abs(x)) * Math.sign(y || 1); x = a; y = b; } const q = (v: number) => Math.floor((v * 0.5 + 0.5) * 65535 + 0.5) & 0xffff; nu[0] = (q(x) | (q(y) << 16)) >>> 0; return nrm[0]!; };
   const bits: number[] = [], step = 0.30;
   for (const p of solid) {
-    if (p.planes || p.at[1] + p.half[1] < -0.6 || Math.max(...p.half) < 0.12) continue;
+    if (p.planes || p.curves || p.at[1] + p.half[1] < -0.6 || Math.max(...p.half) < 0.12) continue;
     for (let a = 0; a < 3; a++) for (const s of [-1, 1]) {
       const u = (a + 1) % 3, v = (a + 2) % 3, hu = p.half[u]!, hv = p.half[v]!; if (hu * hv < 0.004) continue; const n = [p.rot[a]![0] * s, p.rot[a]![1] * s, p.rot[a]![2] * s] as V3, nuN = Math.max(1, Math.round(2 * hu / step)), nvN = Math.max(1, Math.round(2 * hv / step));
       for (let i = 0; i < nuN; i++) for (let j = 0; j < nvN; j++) { const l: V3 = [0, 0, 0]; l[a] = s * p.half[a]!; l[u] = -hu + 2 * hu * (i + 0.5) / nuN; l[v] = -hv + 2 * hv * (j + 0.5) / nvN; const x = add(p.at, apply(p.rot, l)); if (x[1] < -0.02 || inside(add(x, [n[0] * 0.03, n[1] * 0.03, n[2] * 0.03]), p)) continue; oct(n); out.push(x[0], x[1], x[2], 0); bits.push(nu[0]!); }

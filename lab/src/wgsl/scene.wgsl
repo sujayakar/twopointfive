@@ -104,6 +104,10 @@ fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
     if (abs(den) < 1e-12) { if (num < 0.0) { return false; } continue; }
     let t = num / den; if (den < 0.0) { if (t > tn) { tn = t; code = 7u + i; } } else { tf = min(tf, t); }
   }
+  let nc = (flags >> 4u) & 3u; for (var i = 0u; i < nc; i++) {        // the curves: each one stay of its own
+    let q = extra[(*p).planes + np + 2u * i].xyz; let e = o - extra[(*p).planes + np + 2u * i + 1u].xyz; let A = dot(q * d, d); let B = dot(q * d, e); let C = dot(q * e, e) - 1.0;
+    if (A < 1e-9) { if (C > 0.0) { return false; } continue; } let disc = B * B - A * C; if (disc <= 0.0) { return false; } let s = sqrt(disc); let t0 = (-B - s) / A; if (t0 > tn) { tn = t0; code = 16u + i; } tf = min(tf, (-B + s) / A);
+  }
   if ((flags & WATER) != 0u) {                                       // water: somewhere in its box, where the ray meets the waves
     let a = max(tn, tmin); if (a >= tf) { return false; } let n = 5; let st = (tf - a) / f32(n); var t0 = a; var f0 = o.y + d.y * a - waveHeight(ro.xz + rd.xz * a, frame.misc.x); let above = f0 > 0.0; var found = false;
     for (var i = 1; i <= n; i++) { let t1 = a + st * f32(i); let f1 = o.y + d.y * t1 - waveHeight(ro.xz + rd.xz * t1, frame.misc.x); if ((f1 > 0.0) != above) { var l = t0; var fl = f0; var r = t1; var fr = f1; for (var j = 0; j < 3; j++) { let m = l + (r - l) * clamp(fl / (fl - fr), 0.02, 0.98); let fm = o.y + d.y * m - waveHeight(ro.xz + rd.xz * m, frame.misc.x); if ((fm > 0.0) == above) { l = m; fl = fm; } else { r = m; fr = fm; } } tn = l + (r - l) * clamp(fl / (fl - fr), 0.0, 1.0); found = true; break; } t0 = t1; f0 = f1; }
