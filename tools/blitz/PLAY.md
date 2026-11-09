@@ -66,7 +66,7 @@ as a call when it is made:
 | the scripted player gives an order (`orders.give`) | `face_give` where the face has words for its target (the floor, a door, a man by place); the menu's own `give` on the puppet otherwise, whose rows ask the Rust game (`face_ask`) |
 | a lesson's player picks a row of the nearby list (`selectVerb`) | `face_hostwrite … select_verb` |
 | a lesson's player feeds the light meter (`player.visibility`) | `face_meter`, when the number differs from what the last apply left |
-| the autosave takes a checkpoint (the dress step's `saves.tick`) | `face_checkpoint`; an authored one on a level on rails: `face_stop_program` first |
+| the autosave takes a checkpoint (the dress step's `saves.tick`) | `face_checkpoint` |
 | a question floods a room (`fight.roomAt`) | `face_room_at`, asked of the Rust game FIRST; where it flooded, the puppet takes the whole state and the TypeScript's own ask floods nothing |
 | the host lists the box world (`engine.world.upload`) | the TypeScript's own listing, for the picture (the list of every box and the ray grid are the TypeScript's own on the filtered path); the Rust game lists its own as a tick ends |
 | the host's camera asks the game where to look | `face_follow` after every step |
@@ -121,9 +121,7 @@ is run four times over every row (`face_puppet_warm`) so that the first ticks do
 
 Dispatched every tick since this host. The arm that CHANGES THE GAME is the checkpoint: `CheckpointsKeep` (a rule on a level on rails asks for an
 authored checkpoint) and `CheckpointsRequest` set the save controller's own flags, its tick in the dress step takes the checkpoint off the puppet (its
-snapshot in memory, its chronicle row), and the host makes the same on the Rust side. For an authored one the level's program is stopped on the Rust
-side BEFORE the take (`face_stop_program`), so that the controller finds no program running: a director run the apply made has none of the TypeScript's
-own (director.ts:525 threw on `R.drills`). tut-solo's four authored checkpoints are taken on the reference's ticks with its labels.
+snapshot in memory, its chronicle row), and the host makes the same on the Rust side. tut-solo's four authored checkpoints are taken on the reference's ticks with its labels.
 `HostApiRestartPicture` and `SessionRecorderCut` go to the host's picture and journal and write no game state.
 The harness's stand-ins lack some receivers (`audio.rain`, `smoke.obstaclesChanged`), which the generated dispatcher calls unguarded: such an arm is
 counted and not called again. `WallWearRound` threw (`box.h` undefined: the event's box came back as a row the every-tick apply had made on the puppet and not filled); with the changed-only export the row is whole, the same play (night-breach, die 20942, tick 1293) dispatches it, and no arm threw in 84 + 42 missions (`RH_OUT_SAY=1` says the first throw of any arm with its event).
@@ -365,7 +363,6 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   the team has seen). Belongs on the generated list.
 - **The memo's buffers trimmed** after every filtered export (harness.rs `trim`): `export_puppet` hands its scratch vector to the memo with whatever
   capacity it had. Belongs in the generated export.
-- **`face_stop_program`** before an authored checkpoint's take (harness.rs): belongs with the save controller's port.
 
 ## What does not work on a puppet
 
