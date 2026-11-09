@@ -355,7 +355,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
         if d.role == Role::Roamer && !crewed {
             if d.released { continue; }
             if let Some(f) = f {
-                if g.tab.roomfight_def[f].mode == DefMode::Free {
+                if crate::roomfight::is_loose(g, f) {
                     g.rescue.defs.get_mut(h).unwrap().released = true;
                     let line = format!("released:{}", g.gd[h].callsign);
                     rescue_note(g, &line);
@@ -453,12 +453,12 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
     let pt = rescue_room_point(g, RescueRoomPointWhich::Outside);
     let name = g.gd[h].callsign.clone();
     if d.crew == DefCrew::Empty {
-        if d.in_room || d.released || g.tab.roomfight_def[f].mode == DefMode::Free {
+        if d.in_room || d.released || crate::roomfight::is_loose(g, f) {
             g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
             return false;
         }
         if !(g.time >= g.rescue.alarm_at + (if d.role == Role::Roamer { 0.8 } else { 1.6 })) { return false; }
-        if g.tab.roomfight_def[f].mode != DefMode::Hold || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
+        if !crate::roomfight::at_post(g, f) || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
         let one = g.rescue.hostiles.iter().any(|&o| o != h && alive(g, o) && def_of(g, o).crew == DefCrew::Cross);
         let x = if !(one && d.role == Role::Door) { rescue_crew_cross_spot(g, h, pt, if d.role == Role::Door { 14.0 } else { 9.0 }) } else { None };
         if let Some(x) = x {
@@ -525,7 +525,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
                 }
             }
         }
-        if g.tab.roomfight_def[f].mode == DefMode::Move { return false; }
+        if crate::roomfight::on_leg_of(g, f, crate::owner::by::MISSION) { return false; }
         if in_rect(pos_of(g, h), bounds) {
             let row = g.rescue.defs.get_mut(h).unwrap();
             row.in_room = true; row.crew = DefCrew::In;
@@ -536,12 +536,12 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         }
         return false;
     }
-    if d.released || g.tab.roomfight_def[f].mode == DefMode::Free {
+    if d.released || crate::roomfight::is_loose(g, f) {
         let row = g.rescue.defs.get_mut(h).unwrap();
         row.released = true; row.crew = DefCrew::Out;
         return false;
     }
-    if d.crew == DefCrew::Cross && g.tab.roomfight_def[f].mode == DefMode::Hold {
+    if d.crew == DefCrew::Cross && crate::roomfight::at_post(g, f) {
         if let Some(spot) = d.spot {
             if flat(pos_of(g, h), spot) > 1.2 {
                 g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
@@ -579,7 +579,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
 /// Off his post on the room fight's 'move'. (rescue.ts Rescue.crewMove)
 pub fn rescue_crew_move(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId, goal: V3, by: Option<DoorId>) {
     let pace = g.tune.guard_chase + 0.3;
-    crate::roomfight::send(g, f, crate::roomfight::Leg { by, ..crate::roomfight::Leg::to(goal, pace) }, "rescue");
+    crate::roomfight::send(g, f, crate::roomfight::Leg { by, ..crate::roomfight::Leg::to(goal, pace) }, crate::owner::by::MISSION);
 }
 
 /// The way a man coming for the hostages walks, a point at eye height every metre and a half. (rescue.ts Rescue.crewWay)

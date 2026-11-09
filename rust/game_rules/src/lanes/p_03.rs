@@ -45,7 +45,7 @@ fn peek_back(g: &mut Game, gd: GuardId, d: RoomfightDefId) {
     let home = { let r = s(g).peek.get_mut(gd).unwrap(); r.phase = crate::lanes::PeekPhase::Back; r.t = now; r.home };
     clear_path(g, gd);
     let fast = g.k.lanes.push_fast;
-    crate::pressure::run(g, d, home, None, Some(fast));
+    crate::roomfight::run(g, d, home, None, fast, crate::owner::by::LANE);
 }
 
 /// every frame, a man out for a look: one of them in sight by the guns = the lane stands; a line down it and nobody there for `peekLook` = clear, forgotten, and the men held on it go on together (lanes.ts peekStep)
@@ -70,14 +70,15 @@ pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         }
         return;
     }
-    let off = match dd { Some(_) => !fit(g, gd) || pushing(g, gd), None => true };
+    let away = dd.map_or(false, |d| crate::roomfight::on_leg(g, d) && !crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE));   // (sent elsewhere meanwhile)
+    let off = away || match dd { Some(_) => !fit(g, gd) || pushing(g, gd), None => true };
     if off {
         peek_off(g, gd);
         if let Some(f) = p.frag {   // (blind, folded, or in behind a charge with a grenade errand on him: asked again soon; a man who never left his corner is still held on the lane)
             if let Some(l) = ll {
                 g.tab.lanes_lane[l].frag_at = now + if f.at.is_some() { 6.0 } else { 2.0 };
                 let here = pos_of(g, gd);
-                if dd.is_some() && !f.going && flat(here, p.home) < 0.5 { let lane = g.tab.lanes_lane[l].id; held_on(g, gd, StateHeldValue { lane, t: now, look: p.look, aimed: true, at: here }); }
+                if dd.is_some() && !away && !f.going && flat(here, p.home) < 0.5 { let lane = g.tab.lanes_lane[l].id; held_on(g, gd, StateHeldValue { lane, t: now, look: p.look, aimed: true, at: here }); }
             }
         } else if let Some(l) = ll {   // (no longer this errand's man: the gate has his feet again, and the next look waits its gap)
             let gap = g.k.lanes.peek_gap;
@@ -89,7 +90,7 @@ pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     let d = match dd { Some(d) => d, None => return };
     if ll.is_none() && p.phase != PeekPhase::Back { peek_back(g, gd, d); return; }   // (the lane gone meanwhile: back to where he stood)
     if p.phase == PeekPhase::Back {
-        if mode_of(g, d) == crate::roomfight::DefMode::Move && flat(pos_of(g, gd), p.home) > 0.5 && g.time - p.t < 6.0 { return; }
+        if crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && flat(pos_of(g, gd), p.home) > 0.5 && g.time - p.t < 6.0 { return; }
         peek_off(g, gd);
         let here = pos_of(g, gd);
         if lane_on(g, here, gd).is_some() { return; }   // (stopped in the line: the fight's, and the tick's own way out of a line)
@@ -137,10 +138,10 @@ pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         peek_back(g, gd, d);
         return;
     }
-    if mode_of(g, d) != crate::roomfight::DefMode::Move && now - g.gd[gd].last_seen_t < 1.0 { peek_off(g, gd); g.tab.lanes_lane[l].peek_at = now + gap; return; }   // (a man in his sights somewhere else: the fight has him)
+    if !crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && now - g.gd[gd].last_seen_t < 1.0 { peek_off(g, gd); g.tab.lanes_lane[l].peek_at = now + gap; return; }   // (a man in his sights somewhere else: the fight has him)
     // 'clear' wants the whole of it: the place round EVERY spot in his view, and nobody on their net with eyes on one of them. The spots but not all the floor round them is HALF a look
     let full = all_spots_seen(g, l, eye);
-    let done = mode_of(g, d) != crate::roomfight::DefMode::Move || now - p.t > 8.0;
+    let done = !crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) || now - p.t > 8.0;
     let mut part = !full && done;
     if part {
         let guns = g.tab.lanes_lane[l].guns.clone();
@@ -163,7 +164,7 @@ pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
             let (line_t, to) = (p.line_t, p.to);
             if let Some(r) = s(g).peek.get_mut(gd) { r.line_t = line_t; r.to = to; }
             clear_path(g, gd);
-            crate::pressure::run(g, d, to, None, Some(0.0));
+            crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::LANE);
         }
         if now - p.line_t < g.k.lanes.peek_look { return; }
         if !full {

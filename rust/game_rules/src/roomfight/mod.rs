@@ -13,6 +13,6 @@ pub use line::*;
 pub mod operative;
 pub use operative::*;
 pub mod post;
-pub use post::{back_on, def_of, loose, send, Held, Leg};
+pub use post::{at_post, back_on, def_of, is_loose, loose, on_leg, on_leg_of, run, send, Held, Leg};
 pub mod rooms;
 pub use rooms::*;

@@ -786,7 +786,7 @@ pub fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool 
 pub fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
     match g.m.wallreact.wall_react.minds.get(gd) { Some(mind) if !mind.is_empty() => {} _ => return }
     let d = match crate::roomfight::def_of(g, gd) {
-        Some(d) if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold => d,
+        Some(d) if crate::roomfight::at_post(g, d) => d,
         _ => { g.m.wallreact.wall_react.watching.delete(gd); return; }
     };
     if g.time < g.tab.roomfight_def[d].glance_until { return; }
@@ -1167,7 +1167,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
         g.tab.roomfight_def[d].moved_at = now;
         g.m.wallreact.wall_react.watching.delete(gd);
         let pace = g.tune.guard_chase;
-        crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, "wallreact");
+        crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, crate::owner::By::NOBODY);
         g.fight.stats.took_cover += 1.0;
         let who = g.gd[gd].callsign.clone();
         g.fight.log.push(crate::roomfight::FightNote { t: now, who, what: String::from("his cover is gone: takes cover") });
