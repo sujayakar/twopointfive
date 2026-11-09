@@ -100,7 +100,7 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if a.nv.is_some() { return Some("flipping his goggles"); }
     if a.big_tool.is_some() { return Some("putting his tool back"); }
     if crate::character::anim_kit_busy(g, p.ch) { return Some("changing what is in his hands"); }
-    if g.mission.drive_t >= 0.0 { return Some("pulling the drive"); }
+    if g.mission.drive_t >= 0.0 { return Some("taking something"); }
     if (p.sel.open && !p.sel.ring.as_ref().is_some_and(|r| r.free == Some(true))) || p.sel.down_t >= 0.0 { return Some("choosing an action"); }
     None
 }
@@ -199,12 +199,9 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
     if stage != g.saves.stage_ref {
         let was = core::mem::replace(&mut g.saves.stage_ref, stage);
         if rank(stage) > rank(was) && stage != MissionStage::Done {
-            let w = crate::quiet::quiet_words(g);
-            let label = match (stage, w) {
-                (MissionStage::Drive, Some(w)) => format!("{} reached", w.place),
-                (MissionStage::Drive, None) => String::from("server room reached"),
-                (MissionStage::Exfil, Some(w)) => format!("{} taken", w.bare),
-                (MissionStage::Exfil, None) => String::from("the drive is out"),
+            let label = match stage {
+                MissionStage::Drive => format!("{} reached", g.level.errand.place),
+                MissionStage::Exfil => format!("{} taken", g.level.errand.thing),
                 _ => String::from(stage.as_str()),
             };
             request(g, "stage", &label);

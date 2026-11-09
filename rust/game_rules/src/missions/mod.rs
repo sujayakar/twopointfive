@@ -27,6 +27,5 @@ pub mod script_tut_quiet;
 pub mod script_tut_road;
 pub mod script_tut_team;
 pub mod startfile;
-pub mod takecheck;
 pub mod teamtally;
 pub mod verdict;

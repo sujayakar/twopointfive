@@ -104,12 +104,12 @@ json_struct!(game::scene_level::VolumeDef { name: "id", c: "c", h: "h", yaw: "ya
 json_struct!(game::scene_level::MarkDef { name: "id", pos: "pos" } drops { "yaw": Option<f64> });
 
 /// the one mission thread: a file says one objective of each kind (found by its kind: the file's id for it names nothing in the game)
-pub struct Reach { pub area: game::scene_level_data::Rect, pub door: String }
-json_struct!(Reach { area: "area", door: "door" } drops { "id": String });
-pub struct Drive { pub rack_index: f64, pub front: V3, pub half_w: f64 }
-json_struct!(Drive { rack_index: "rackIndex", front: "front", half_w: "halfW" } drops { "id": String });
-pub struct Exfil { pub door: String, pub x: f64, pub z: f64, pub out: Option<[f64; 2]> }
-json_struct!(Exfil { door: "door", x: "x", z: "z", out: "out" } drops { "id": String });
+pub struct Reach { pub name: Option<String>, pub area: game::scene_scenarios::Rect, pub door: String }
+json_struct!(Reach { name: "name", area: "area", door: "door" } drops { "id": String });
+pub struct Drive { pub name: Option<String>, pub holder: Option<String>, pub rack_index: f64, pub front: V3, pub half_w: f64 }
+json_struct!(Drive { name: "name", holder: "holder", rack_index: "rackIndex", front: "front", half_w: "halfW" } drops { "id": String });
+pub struct Exfil { pub name: Option<String>, pub door: String, pub x: f64, pub z: f64, pub out: Option<[f64; 2]> }
+json_struct!(Exfil { name: "name", door: "door", x: "x", z: "z", out: "out" } drops { "id": String });
 pub struct Mission { pub player_spawn: V3, pub reach: Reach, pub drive: Drive, pub exfil: Exfil }
 impl FromJson for Mission {
     fn from_json(j: &Json, at: &At) -> Self {

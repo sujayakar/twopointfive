@@ -18,12 +18,12 @@ fn bazaar(pin: u32) -> Play {
 /// A FAILURE MEANS: a way out of a quiet level does not end the mission, or ends it early, or the player is told the name of another.
 #[test]
 fn a_quiet_mission_plays_to_its_end_by_each_way_out() {
-    let exits = game::quiet::quiet_mission_exits(&bazaar(11).g);
+    let exits = bazaar(11).g.level.errand.exits.clone();
     assert!(exits.len() >= 2, "the bazaar has more than one way out: {}", exits.len());
     for k in 0..exits.len() {
         let mut p = bazaar(11 + k as u32);
-        let spot = game::quiet::quiet_mission_spot(&p.g).expect("a dealt spot");
-        let exit = game::quiet::quiet_mission_exits(&p.g)[k].clone();
+        let spot = p.g.level.errand.clone();
+        let exit = p.g.level.errand.exits[k].clone();
         p.sam_put(p.free_near([spot.front[0], spot.front[2]], 1.2));
         p.until(3.0, |p| p.mission_stage() != Stage::Infiltrate).unwrap_or_else(|| panic!("exit {k}: at the spot and the mission does not know it"));
         p.cursor_on(spot.front);
@@ -40,13 +40,44 @@ fn a_quiet_mission_plays_to_its_end_by_each_way_out() {
     }
 }
 
+/// THE RULE: the office's own night is the same errand: the room reached, the drive taken from its rack, not done a stride short of the fire exit's line, done a stride past it, each said by its name.
+/// A FAILURE MEANS: the solo night can't be finished, ends early, or tells the player of another room, another thing or another way out than its level's.
+#[test]
+fn the_offices_night_plays_to_its_end() {
+    let mut p = Play::level("office.json", false, &Opts { seed: 5, ..Default::default() });
+    p.g.player_invisible = true;
+    let e = p.g.level.errand.clone();
+    assert_eq!((e.place.as_str(), e.thing.as_str(), e.holder.as_str(), e.outs().as_str()), ("the server room", "the drive", "rack 6", "the fire exit"));
+    p.run(0.2);
+    assert_eq!(p.objective(), "objective ▸ reach the server room");
+    p.sam_put(p.free_near([e.front[0], e.front[2] + 0.6], 0.6));
+    p.until(3.0, |p| p.mission_stage() != Stage::Infiltrate).expect("at the rack and the mission does not know it");
+    let told = |p: &Play, what: &str| assert!(p.g.chronicle.events.iter().any(|e| format!("{e:?}").contains(what)), "the run's record does not say '{what}': {:?}", p.g.chronicle.events);
+    told(&p, "reached the server room");
+    assert!(p.objective().starts_with("objective ▸ take the drive from rack 6"), "{}", p.objective());
+    p.cursor_on(e.front);
+    p.run(0.2);
+    assert!(p.row_taken(InteractableKind::Objective, Verb::Drive), "nothing to take at the rack");
+    p.until(12.0, |p| p.g.mission.pulled).expect("12 s and the drive is not taken");
+    told(&p, "the drive is out of rack 6");
+    assert_eq!(p.objective(), "objective ▸ get out through the fire exit");
+    let exit = &e.exits[0];
+    p.sam_put(p.free_near([exit.x - exit.out[0], exit.z - exit.out[1]], 0.8));
+    p.run(0.5);
+    assert_ne!(p.mission_stage(), Stage::Done, "done a stride short of the line");
+    let past = game::quiet::exit_point(exit, Some(0.9));
+    p.sam_put([past[0], past[2]]);
+    p.until(2.0, |p| p.mission_stage() == Stage::Done).expect("past the fire exit and not done");
+    told(&p, "out through the fire exit");
+}
+
 /// THE RULE: walking out before the thing is taken ends nothing. (The control of the rule above.)
 /// A FAILURE MEANS: the mission can be finished by leaving.
 #[test]
 fn walking_out_before_the_thing_is_taken_ends_nothing() {
     for pin in [5, 6, 7] {
         let mut p = bazaar(pin);
-        let exit = game::quiet::quiet_mission_exits(&p.g)[0].clone();
+        let exit = p.g.level.errand.exits[0].clone();
         let past = game::quiet::exit_point(&exit, Some(0.9));
         p.sam_put([past[0], past[2]]);
         p.run(1.5);

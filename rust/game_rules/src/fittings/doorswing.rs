@@ -488,9 +488,9 @@ fn given_of(g: &Game) -> Given {
         };
         (rs.room.door.clone(), rs.side.as_ref().map(|x| x.door.clone()), rs.room.name.clone(), bounds)
     });
-    let sr = &level.mission.server_room;
+    let sr = &level.errand.area;
     let server_room = crate::doorswing::Rect { x0: sr.x0, x1: sr.x1, z0: sr.z0, z1: sr.z1 };
-    Given { rooms, plans, rescue, entry_door: level.mission.entry_door.clone(), server_room }
+    Given { rooms, plans, rescue, entry_door: level.errand.door.clone(), server_room }
 }
 
 /// dealSwings' `all`: every door dealt in the list's order, each set on the door before the next is asked.
@@ -652,8 +652,8 @@ mod tests {
             clear_plan("split", 2.0, None, None),
             clear_plan("split", -2.0, None, None),
         ]);
-        g.level.mission.entry_door = String::from("entry");
-        (g.level.mission.server_room.x0, g.level.mission.server_room.x1, g.level.mission.server_room.z0, g.level.mission.server_room.z1) = (2.0, 4.0, 15.0, 18.0);
+        g.level.errand.door = String::from("entry");
+        (g.level.errand.area.x0, g.level.errand.area.x1, g.level.errand.area.z0, g.level.errand.area.z1) = (2.0, 4.0, 15.0, 18.0);
         let mut sc = crate::scene_scenarios::LevelScenarios::default();
         let mut rc = crate::scene_scenarios::StructureData::default();
         rc.rooms = vec![room("b", "big", 11.0, 19.0, 8.0, 16.0, "room"), room("a", "small", 7.0, 9.0, 11.0, 14.0, "room")];

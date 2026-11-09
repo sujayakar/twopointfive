@@ -181,7 +181,7 @@ export interface QuietSpot {
   rackIndex: number;
   /** the point on the holder's face (the marker; reach is measured from it) and half its width along that face */
   front: Vec3; halfW: number;
-  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (rust/game_rules/src/missions/takecheck.rs; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
+  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (rust/game_rules/src/missions/mission.rs; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
    *  told — a file out of a safe is missed by no one; only a man who hears it come out comes to look */
   wired?: boolean;
 }

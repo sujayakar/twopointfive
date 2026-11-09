@@ -529,18 +529,15 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         let drive_t = g.mission.drive_t;
         if g.mission.stage == crate::game::MissionStage::Drive {
             let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown.is_none();
-            let qw = crate::quiet::quiet_words(g);
-            let line1 = match &qw {
-                Some(q) => format!("{} · {}", q.holder, q.thing),
-                None => format!("rack {} · the drive", js::num_str(g.level.mission.rack.index + 1.0)),
-            };
-            let mut it = mark(crate::game::InteractableKind::Objective, g.level.mission.rack.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
+            let (holder, thing) = (g.level.errand.holder.clone(), g.level.errand.thing.clone());
+            let line1 = format!("{} · {}", holder, thing);
+            let mut it = mark(crate::game::InteractableKind::Objective, g.level.errand.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
             it.progress = if drive_t >= 0.0 { Some(m::min(1.0, drive_t / crate::consts::DRIVE_SECS)) } else { None };
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
             if drive_t >= 0.0 {
-                it.line2 = format!("{}… {}%  ·  stay on it", if qw.is_some() { "taking" } else { "pulling" }, pct(drive_t / crate::consts::DRIVE_SECS));
+                it.line2 = format!("taking… {}%  ·  stay on it", pct(drive_t / crate::consts::DRIVE_SECS));
             } else if reach && !busy {
-                let text = match &qw { Some(q) => format!("take {} — stay on it", q.thing), None => String::from("pull the drive — stay on it") };
+                let text = format!("take {} — stay on it", thing);
                 verbs.push(row(&it, crate::game::Verb::Drive, &text, ""));
             }
             offer(&mut list, &mut things, it, verbs);

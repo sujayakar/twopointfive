@@ -485,8 +485,6 @@ pub struct TickView {
     pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
-    /// a quiet mission's words for its room, its holder, its thing and its ways out
-    pub quiet: Option<crate::view::QuietView>,
     /// his own list: what the key would do now, and the things it could be done to
     pub interact: crate::view::InteractView,
     /// the alarm's stage (None: calm)
@@ -1241,16 +1239,6 @@ pub struct SeatPlan {
 pub struct PlanView {
     pub own: crate::view::SeatPlan,
     pub others: Vec<crate::view::SeatPlan>,
-}
-
-/// a quiet mission's own words
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct QuietView {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
 }
 
 /// what sort of thing the key is about

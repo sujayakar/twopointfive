@@ -102,8 +102,8 @@ fn ensure_index(g: &mut Game) {
     let mut kept = fixture.clone();
     for &bi in &g.level.breaker.boxes { kept.add(Num(bi)); }
     g.destr.furn.kept = kept;
-    // (Level.mission is always there: every level is built with one, so its front is always a truthy Vec3)
-    let mut fronts: Vec<V3> = vec![g.level.mission.rack.front];
+    // (Level.errand is always there: every level is built with one, so its front is always a truthy Vec3)
+    let mut fronts: Vec<V3> = vec![g.level.errand.front];
     for sp in g.level.spots() { fronts.push(sp.front); }
     g.destr.furn.fronts = fronts;
     let w = crate::scene_world::world();

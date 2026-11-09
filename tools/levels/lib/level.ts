@@ -160,5 +160,7 @@ export interface Level {
    *  to leave by and the x past which you are outside it. */
   mission: { serverRoom: { x0: number; x1: number; z0: number; z1: number }; entryDoor: string; rack: { index: number; front: Vec3; halfW: number }; exfilDoor: string; exfilX: number; exfilZ: number;
     /** the way OUT through the exit, a unit vector on the floor (dx, dz): past (exfilX, exfilZ) going this way is out. Absent = east, [1, 0] — the office's */
-    exfilOut?: [number, number] };
+    exfilOut?: [number, number];
+    /** what they are called, where the level names them: the room, the thing, what it is in, the way out */
+    names?: { place?: string; thing?: string; holder?: string; out?: string } };
 }
