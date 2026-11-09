@@ -99,7 +99,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
           let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, lmax)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { T *= leafLet; if (T.y < 0.02) { return vec3f(0.0); } } }
+          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { return vec3f(0.0); } }
           q++;
         }
       }

@@ -5,8 +5,6 @@
 "tick": 600,
 "samples": 1,
 "methods": [
-"reference",
-"straightref",
 "same2ref",
 "rule1ref",
 "rule0.5ref",
@@ -32,8 +30,6 @@
 "tick": 600,
 "samples": 1,
 "methods": [
-"reference",
-"straightref",
 "same2ref",
 "rule1ref",
 "rule0.5ref",
@@ -60,8 +56,6 @@
 "tick": 600,
 "samples": 1,
 "methods": [
-"reference",
-"straightref",
 "same2ref",
 "rule1ref",
 "rule0.5ref",
@@ -81,8 +75,6 @@
 "tick": 600,
 "samples": 1,
 "methods": [
-"reference",
-"straightref",
 "same2ref",
 "rule1ref",
 "rule0.5ref",
@@ -109,8 +101,6 @@
 "tick": 600,
 "samples": 1,
 "methods": [
-"reference",
-"straightref",
 "same2ref",
 "rule1ref",
 "rule0.5ref",
