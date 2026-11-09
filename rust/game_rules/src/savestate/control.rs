@@ -378,13 +378,13 @@ pub fn kept_of(stood: u32) -> Vec<(String, Kept)> {
     of
 }
 
-/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the tune, the men's kit, the die, whatever hands out a number, the tallies, the settings, the tables as they are now and how far each lens is out. Row numbers go back with the game
+/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the tune, the men's kit, the die, whatever hands out a number, the tallies, the tables as they are now and how far each lens is out. Row numbers go back with the game
 pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, touring: bool, quiet_utility: bool, mission_in_tour: bool,
     tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
     kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
     dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
-    saves_on: bool, stats: crate::game::Stats, settings: crate::root_settings::RenderSettings, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
+    saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
 }
 impl Survivors {
@@ -394,7 +394,7 @@ impl Survivors {
             tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
             kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
             dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
-            saves_on: g.saves.enabled, stats: g.stats.clone(), settings: g.engine.settings.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
+            saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
         }
     }
@@ -405,12 +405,7 @@ impl Survivors {
         g.quiet.pending = self.pending.clone();
         (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice.clone(), self.fx_seed, self.roll_seq, self.event_seq);
         ::sim::state::state(g.sim).dice = unsafe { core::ptr::read(&self.sim_dice) };
-        // (the picture's settings, but the sky and the exposure, which are the hour's, and the hour is the first step's)
-        let new = &g.engine.settings;
-        let hour = (new.sky_zenith, new.sky_horizon, new.haze_density, new.exposure);
-        (g.stats, g.engine.settings, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.settings.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
-        let now = &mut g.engine.settings;
-        (now.sky_zenith, now.sky_horizon, now.haze_density, now.exposure) = hour;
+        (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses
     fn write_over(&self, g: &mut Game) {
