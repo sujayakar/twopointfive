@@ -71,7 +71,8 @@ the rest green; at hard only the last of three or more is green. A squad's `trai
 
 **Squads.** `squads_stage` makes them from the level's `SquadData`, or from rooms when a room clear names none (`squad_deal`). After a thinking beat
 `decide` picks `Barricade`, `Flank` or `Help` by the situation, with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
-beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). `radio_check` finds a drop
+beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). Men called to a room of theirs
+are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`). `radio_check` finds a drop
 nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
 
 **The room fight's other rules.** `consider` and `tick_press` take men to a fight together. `press_keeps_home` keeps a man, `stand_to` is surprise
@@ -162,7 +163,7 @@ Native tests in `rust/game_start/tests/`:
 | `attention.rs`, `night_men.rs`, `men_at_rest.rs`, `smoke_break.rs` | calm men: a far glimpse, a missed man, sleep, trips, smoke |
 | `darkness.rs`, `dark_rooms.rs` | the search; the dark door, lamps, the breaker |
 | `men_under_fire.rs`, `blind.rs`, `cover.rs`, `net_quiet.rs`, `last_men.rs` | nerve, cover, the quiet net, the last few |
-| `squads.rs`, `squads_radio.rs`, `hard.rs`, `hard_handed.rs`, `owner.rs` | squads, Hard by address, the tasker list |
+| `squads.rs`, `squads_radio.rs`, `come_together.rs`, `hard.rs`, `hard_handed.rs`, `owner.rs` | squads, Hard by address, the tasker list |
 | `pursuit.rs`, `held_doorforce.rs`, `held_fragtheirs.rs`, `standoff_held.rs` | two on a fix, a shut door, grenades, a man in Sam's arm |
 | `response_team.rs`, `civilians_held.rs` | what calls the team and its one wave; a civilian |
 
