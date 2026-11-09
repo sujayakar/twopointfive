@@ -107,7 +107,7 @@ fn posted_cover(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
 fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: DoorId) -> Option<GuardId> {
     let fc = g.dr[sd].frame_centre;
     let mut inside: Vec<(GuardId, V3)> = l.iter().map(|&o| (o, pos_of(g, o))).filter(|x| in_rect(x.1, sb)).collect();
-    js::sort_by(&mut inside, |a, b| flat(a.1, fc) - flat(b.1, fc));
+    js::sort_by(&mut inside, |a, b| v3::dist_xz(a.1, fc) - v3::dist_xz(b.1, fc));
     inside.first().map(|x| x.0)
 }
 
@@ -279,7 +279,7 @@ fn rescue_hear(g: &mut crate::game::Game) {
         g.rescue.last_order = o;
         if o.is_some() && hot(g) { rescue_start_clock(g, "order"); }
     }
-    if hot(g) && g.rescue.t0.is_nan() && flat(pl_pos(g, &crate::seats::here(g)), g.k.rescue.sam_at) > 0.6 { rescue_start_clock(g, "move"); }
+    if hot(g) && g.rescue.t0.is_nan() && v3::dist_xz(pl_pos(g, &crate::seats::here(g)), g.k.rescue.sam_at) > 0.6 { rescue_start_clock(g, "move"); }
 }
 
 /// Clock two: who has learned, who is set, the late reaction, the roamers let go.
@@ -436,7 +436,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         let one = g.rescue.hostiles.iter().any(|&o| o != h && alive(g, o) && def_of(g, o).crew == DefCrew::Cross);
         let x = if !(one && d.role == Role::Door) { rescue_crew_cross_spot(g, h, pt, if d.role == Role::Door { 14.0 } else { 9.0 }) } else { None };
         if let Some(x) = x {
-            if flat(x, pos_of(g, h)) > 0.4 {
+            if v3::dist_xz(x, pos_of(g, h)) > 0.4 {
                 rescue_crew_move(g, h, f, x, None);
             } else {
                 crate::mind::set_state(g, h, GuardState::Alert, "rescue");
@@ -458,7 +458,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             let spot = s.door_man.inside.pos;
             let path = if dr.is_some() { let at = pos_of(g, h); crate::scene_collision::nav_grid_find_path(g, at, spot, None, None) } else { None };
             let there = match (&dr, &path) {
-                (Some(_), Some(path)) => !path.is_empty() && !(flat(path[path.len() - 1], spot) > 0.8),
+                (Some(_), Some(path)) => !path.is_empty() && !(v3::dist_xz(path[path.len() - 1], spot) > 0.8),
                 _ => false,
             };
             if !there {
@@ -493,7 +493,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         if let Some(dr) = dr {
             if !crate::doors::door_latched(g, dr) && !crate::doors::door_closing(g, dr) && in_rect(pos_of(g, h), bounds) {
                 let (at, fc) = (pos_of(g, h), g.dr[dr].frame_centre);
-                if flat(at, fc) > 1.1 && flat(at, fc) < 3.0 {
+                if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
                     let who = g.ch[g.gd[h].ch].id;
                     crate::doors::doors_pull_to(g, dr, who);
                 }
@@ -517,7 +517,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
     }
     if d.crew == DefCrew::Cross && crate::roomfight::at_post(g, f) {
         if let Some(spot) = d.spot {
-            if flat(pos_of(g, h), spot) > 1.2 {
+            if v3::dist_xz(pos_of(g, h), spot) > 1.2 {
                 g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
                 { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
                 rescue_note(g, &format!("crew:short:{}", name));
@@ -528,7 +528,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
     { let now = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, now, None); }
     // N !== D.noise0 asks which noise, not where: by its serial
     let at_door = match g.rescue.noise {
-        Some(n) => g.rescue.noise_serial != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
+        Some(n) => g.rescue.noise_serial != d.noise0 && (v3::dist_xz(n, pt) < 3.0 || in_rect(n, bounds)),
         None => false,
     };
     if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && !crate::control::man::blind(g, h) {
@@ -565,7 +565,7 @@ fn rescue_crew_way(g: &mut crate::game::Game, p: V3) -> Vec<V3> {
     let mut q = sam_at;
     let mut t = 0.0;
     for w in path {
-        let l = flat(q, w);
+        let l = v3::dist_xz(q, w);
         while t < l {
             out.push([q[0] + (w[0] - q[0]) * t / l, 1.5, q[2] + (w[2] - q[2]) * t / l]);
             t += 1.5;
@@ -581,7 +581,7 @@ fn rescue_crew_way(g: &mut crate::game::Game, p: V3) -> Vec<V3> {
 fn rescue_crew_legs(g: &mut crate::game::Game, c_2: V3, path: &[V3], bad: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> bool {
     let mut q = c_2;
     for &w in path {
-        let l = flat(q, w);
+        let l = v3::dist_xz(q, w);
         let n = m::max(1.0, m::ceil(l / 0.5));
         let mut i = 1.0;
         while i <= n {
@@ -598,14 +598,14 @@ fn rescue_crew_seen(g: &mut crate::game::Game, p: V3, p_2: V3, near_m: f64) -> f
     let e: V3 = [p[0], 1.5, p[2]];
     let mut n = 0.0;
     for w in rescue_crew_way(g, p_2) {
-        if flat(w, p_2) > near_m && flat(w, p) < 25.0 && !crate::scene_collision::segment_blocked(g, w, e, None, None, None) { n += 1.0; }
+        if v3::dist_xz(w, p_2) > near_m && v3::dist_xz(w, p) < 25.0 && !crate::scene_collision::segment_blocked(g, w, e, None, None, None) { n += 1.0; }
     }
     n
 }
 
 /// Floor in another room with a clear line of fire to two of the places a stack stands.
 fn fires(g: &mut Game, p: V3, pt: V3, out: Option<RoomfightRoomId>, stack: &[V3]) -> bool {
-    let d = flat(p, pt);
+    let d = v3::dist_xz(p, pt);
     if d < 5.0 || d > 14.0 || crate::roomfight::room_fight_room_at(g, p) == out { return false; }
     let mut n = 0;
     for &t in stack {
@@ -644,9 +644,9 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         let mut ix = x0;
         while ix <= x1 {
             let q: V3 = [(ix + 0.5) * cell, 0.0, (iz + 0.5) * cell];
-            let d = flat(q, c);
+            let d = v3::dist_xz(q, c);
             ix += 1.0;
-            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || taken.iter().any(|&t| flat(t, q) < 1.5) { continue; }
+            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || taken.iter().any(|&t| v3::dist_xz(t, q) < 1.5) { continue; }
             let x = rescue_crew_seen(g, q, p, 4.0);
             cand.push((q, x, d));
         }
@@ -660,10 +660,10 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         tries += 1;
         if tried >= 24 { break; }
         let path = match crate::scene_collision::nav_grid_find_path(g, c, k.0, None, None) { Some(path) => path, None => continue };
-        if path.is_empty() || flat(path[path.len() - 1], k.0) > 0.8 { continue; }
+        if path.is_empty() || v3::dist_xz(path[path.len() - 1], k.0) > 0.8 { continue; }
         let mut l = 0.0;
         let mut q = c;
-        for &w in &path { l += flat(q, w); q = w; }
+        for &w in &path { l += v3::dist_xz(q, w); q = w; }
         if l <= walk * 1.4 && !rescue_crew_legs(g, c, &path, &mut |_g: &mut Game, w: V3| in_rect(w, b)) { return Some(k.0); }
     }
     None
@@ -694,15 +694,15 @@ fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId, p:
     if bs == 0.0 { return None; }
     for ci in g.tab.roomfight_room[room].cells.keys() {
         let q: V3 = [(js::rem(ci.0, nav_w) + 0.5) * cell, 0.0, (js::to_i32(ci.0 / nav_w) as f64 + 0.5) * cell];
-        let d = flat(q, c);
+        let d = v3::dist_xz(q, c);
         if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || d > 8.0 { continue; }
         let n = hide_seen(g, q, p, &looks);
         if n > bs || (n == bs && (best.is_none() || d >= bl)) { continue; }
         let path = match crate::scene_collision::nav_grid_find_path(g, c, q, None, None) { Some(path) => path, None => continue };
-        if path.is_empty() || flat(path[path.len() - 1], q) > 0.8 { continue; }
+        if path.is_empty() || v3::dist_xz(path[path.len() - 1], q) > 0.8 { continue; }
         let left = rescue_crew_legs(g, c, &path, &mut |g: &mut Game, w: V3| {
             let at = crate::scene_collision::nav_grid_idx(g, m::floor(w[0] / cell), m::floor(w[2] / cell));
-            !g.tab.roomfight_room[room].cells.has(crate::Num(at)) && flat(w, q) > 0.8
+            !g.tab.roomfight_room[room].cells.has(crate::Num(at)) && v3::dist_xz(w, q) > 0.8
         });
         if left { continue; }
         bs = n;
@@ -882,7 +882,7 @@ fn rescue_search(g: &mut crate::game::Game) {
         let stands = match a {
             Some(a) => {
                 let row = &g.tab.orders_assignment[a];
-                alive(g, o) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(flat(p, post) > 0.6), None => false }
+                alive(g, o) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(v3::dist_xz(p, post) > 0.6), None => false }
                     && in_rect(p, b) && !g.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
             None => false,
@@ -906,7 +906,7 @@ fn rescue_search(g: &mut crate::game::Game) {
         let mid = v3::yaw_to(p, [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]);
         let (mut lo, mut hi) = (0.0, 0.0);
         for c in [[r.x0, r.z0], [r.x1, r.z0], [r.x0, r.z1], [r.x1, r.z1]] {
-            let d = v3::clamp(wrap(v3::yaw_to(p, [c[0], 0.0, c[1]]) - mid), -SEARCH_HALF, SEARCH_HALF);
+            let d = v3::clamp(v3::wrap_angle(v3::yaw_to(p, [c[0], 0.0, c[1]]) - mid), -SEARCH_HALF, SEARCH_HALF);
             lo = m::min(lo, d);
             hi = m::max(hi, d);
         }
@@ -1020,7 +1020,7 @@ pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
         for &h in &g.rescue.hostiles {
             if !alive(g, h) || g.gd[h].held.is_some() || !in_rect(pos_of(g, h), b) { continue; }
             let at = pos_of(g, h);
-            let dists: Vec<f64> = held.iter().map(|&x| flat(x, at)).collect();
+            let dists: Vec<f64> = held.iter().map(|&x| v3::dist_xz(x, at)).collect();
             let d = m::min_n(&dists);
             if d < bd { bd = d; best = Some(h); }
         }
@@ -1043,6 +1043,27 @@ pub fn rescue_last_warning(g: &mut crate::game::Game, d: DoorId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A FAILURE MEANS: F takes the wrong man to the side door: the one nearest it on the floor goes, by both ways across the map and whatever height he stands at; a man outside the room is not asked.
+    #[test]
+    fn the_man_in_the_room_nearest_the_side_door_is_the_one_taken() {
+        let mut g = Game::blank();
+        let d = g.dr.push(crate::doors::Door::blank());
+        g.dr[d].frame_centre = [0.0, 0.0, 0.0];
+        let room = crate::scene_scenarios::Rect { x0: -5.0, x1: 20.0, z0: -5.0, z1: 20.0, ..Default::default() };
+        let mut man = |g: &mut Game, at: V3| {
+            let c = g.ch.push(crate::character::Character::blank());
+            g.ch[c].pos = at;
+            let mut m = crate::game::Guard::blank();
+            m.ch = c;
+            g.gd.push(m)
+        };
+        let (close, level_far, high) = (man(&mut g, [3.0, 0.0, 0.0]), man(&mut g, [1.0, 0.0, 10.0]), man(&mut g, [2.0, 9.0, 0.0]));
+        assert_eq!(near(&g, &[level_far, close], Some(room), d), Some(close), "across the map too");
+        assert_eq!(near(&g, &[close, high], Some(room), d), Some(high), "on the floor");
+        let outside = man(&mut g, [-9.0, 0.0, 0.0]);
+        assert_eq!(near(&g, &[outside], Some(room), d), None);
+    }
 
     fn crew_on_game() -> Game {
         let mut g = Game::blank();
