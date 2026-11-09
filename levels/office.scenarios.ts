@@ -4,9 +4,8 @@
 // every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
 // Plain literals and type-only imports: nothing here is built from another module's exports.
 import type { Vec3 } from '../src/math/vec';
-import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData } from '../src/scene/scenarios';
+import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData, WayHint } from '../src/scene/scenarios';
 import type { MarkDef } from '../src/scene/level';
-import type { WayHint } from '../src/scene/ways';
 
 /** the night breach: Sam beside the pair on the breach plan's approach marks, in the cubicles' south aisle, facing east down it */
 const NIGHT_BREACH: NightBreachData = {

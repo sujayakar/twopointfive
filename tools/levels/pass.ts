@@ -6,7 +6,7 @@
 // north-west) of the walls, the lorry and whatever stands in the open, deeper in the corners; caps lie on the tops of the yard wall, the gate posts, the
 // lorry, the wood, the crates; trodden paths run from the gate to the doors, the ground is cleared to earth at the gate, the tea room's door and the
 // generator, and two ruts run in from the road to the lorry's back wheels. Nothing white lies under a roof: a little grey slush is tracked in at each
-// outside door. What FALLS is the weather's (src/game/weatherKinds.ts, keyed on this level's name) and no part of this file.
+// outside door. What FALLS is the weather's (rust/game_rules/src/weather_kinds, keyed on this level's name) and no part of this file.
 // THE LIGHT is a cold moon on the snow and warm things that burn: the lamp over the gate, a brazier in front of the tea room, bulbs in the tea room, the kitchen and the
 // store (the mains: the generator in the lean-to), a stove's glow in the tea room and the bunk room, the bread oven's in the kitchen, lanterns. The tea
 // room's two windows, the kitchen's and the bunk room's throw their light out onto the snow.

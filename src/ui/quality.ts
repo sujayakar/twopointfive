@@ -381,7 +381,7 @@ export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: n
 const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 /** document.hidden, unless an automation run says the pane is being pumped anyway (`window.__testVisible`): the headless Browser pane reports hidden
  *  even while it renders, which would keep calibration from ever running under test */
-const pageHidden = () => document.hidden && !window.__testVisible;
+const pageHidden = () => document.hidden && !(window as { __testVisible?: boolean }).__testVisible;
 
 /** `?adapt=0` (or off / false) ON THE ADDRESS: THE VISIT OPENS WITH NOTHING ADAPTING. The row 'Hold frame rate' is off, and where the address names no tier,
  *  the tier the page stands on is held as `?quality=` would hold it (Quality.visit below): the ladder makes no move at all (sample() returns on its second
