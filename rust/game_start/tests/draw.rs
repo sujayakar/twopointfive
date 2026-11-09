@@ -164,7 +164,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
         hidden
     };
     p.run(2.0);
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     d.take(&p.g, want::smoke);
     let early = agree(&d, &p, "two seconds in");
     let ways = |d: &Drawn| { let n = |bit: u32| d.smoke.bricks.iter().map(|b| b.open.iter().map(|w| (w & (bit * 0x0101_0101)).count_ones()).sum::<u32>()).sum::<u32>(); [n(1), n(2), n(4), n(8)] };
@@ -208,7 +208,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let mut first = Vec::new();
     for _ in 0..300 { p.frame_shown(|p| { d.take(&p.g, want::events); first = told(&d); }); if !first.is_empty() { break; } }
     assert_eq!(first.len(), 1, "the can's own event");
-    let began = game_start::moment::Moment::of(&p.g);
+    let began = game::savestate::control::Moment::of(&p.g);
     // (the tick that began it, put back: as its host keeps it, with nothing left to say)
     p.g = began.stands(p.g.sim);
     p.g.out.clear();
@@ -217,7 +217,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let at_once = told(&d);
     assert!(at_once.len() == 1 && at_once[0].2 == first[0].2, "put back at the tick it began: {at_once:?}");
     p.run(4.0);
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     let of = lets(&p);
     p.run(3.0);
     p.g = then.stands(p.g.sim);

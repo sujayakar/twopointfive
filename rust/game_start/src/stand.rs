@@ -202,6 +202,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     }
     // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
     game::scene_collision::light_ready(&mut g);
+    game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)
     Stood { game: g, host, level: loaded, rig, refused }
 }
 

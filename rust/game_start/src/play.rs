@@ -60,6 +60,8 @@ pub struct Play {
     pub host: Host,
     /// frames run so far
     pub frames: usize,
+    /// what each step's end told this host (game::savestate::control), until read
+    pub told: Vec<game::savestate::control::Told>,
     /// EVERY LINE A MAN HAS SPOKEN, in order. Read off each man's speech bubble after every frame (`guards::say` writes one for every line it
     /// lets through, whoever asked for it, and none for a line it drops), so a man who speaks twice inside one frame is heard once.
     pub said: Vec<Said>,
@@ -91,7 +93,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -129,6 +131,9 @@ impl Play {
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
         stand::step(&mut self.g, &self.host, DT);
+        let asked = game::savestate::control::asked(&self.g.out);
+        let told = game::savestate::control::after_step(&mut self.g, DT, asked);
+        if told.kept.is_some() || told.back || told.said.is_some() { self.told.push(told); }
         self.frames += 1;
         show(self);
         let out = core::mem::take(&mut self.g.out);

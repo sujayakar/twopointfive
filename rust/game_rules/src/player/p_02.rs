@@ -253,7 +253,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 }
             }
         }
-        crate::game::game_restart(g, said.as_deref());
+        crate::savestate::control::ask_restart(g, said.as_deref());
         return;
     }
     crate::stealthfeed::stealth_feed(g);
