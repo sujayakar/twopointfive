@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A row's digit off its key code: `Digit1` to `Digit9`, else 0.   (orders.ts digitOf)
-pub fn digit_of(code: &str) -> f64 {
+pub(super) fn digit_of(code: &str) -> f64 {
     match code.strip_prefix("Digit").map(str::as_bytes) {
         Some(&[d @ b'1'..=b'9']) => (d - b'0') as f64,
         _ => 0.0,
@@ -90,15 +90,15 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
 // ------------------------------------------------------------ the night breach's owner (orders.ts:630-637)
 
 /// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
-pub fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::squad_orders) fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
 }
 /// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
-pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub(super) fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     if g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
 }
 /// owner 'nightbreach'.status
-pub fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
+pub(super) fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     use crate::nightbreach::NightBreachState as St;
     if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
     let state = crate::nightbreach::night_breach_state(g);
@@ -354,7 +354,7 @@ pub fn squad_orders_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: 
 }
 
 /// The tick's one write of a follower's latched word: `d` is how far he is off his place.   (orders.ts SquadOrders.followWord)
-pub fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId, d: f64) {
+pub(super) fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId, d: f64) {
     let t = g.time;
     let arrived = g.tab.orders_assignment[a].arrived;
     let (far, hold) = (g.k.orders.word_far_m, g.k.orders.word_hold_s);
@@ -369,7 +369,7 @@ pub fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId
 }
 
 /// Is he shown as there: a follower's is the latch, every other order's is `arrived`.   (orders.ts SquadOrders.shownThere)
-pub fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
+pub(super) fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if row.post.is_some() { return row.arrived; }
     match g.m.orders.follow_word.get(a) {
@@ -540,7 +540,7 @@ fn pointed(g: &mut Game) {
     crate::scene_collision::stands(g);
 }
 /// …asked of the game shared, the copy of the boxes standing (`asked` = the walls whose sky was asked, for a rule to keep)
-pub fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
+pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
     let sam = g.ch[g.pl[seat.player].ch].pos;
     let at: V3 = [p[0], 0.0, p[2]];
@@ -607,7 +607,7 @@ fn ray_on_door(ro: V3, rd: V3, c: V3, th: f64, width: f64, height: f64, pad: f64
 }
 
 /// The door a ray is on as drawn: the nearest doorway it crosses with nothing of the scene nearer.   (orders.ts SquadOrders.doorOnRay)
-pub fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
+pub(super) fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
     let t_scene = t_scene.unwrap_or(f64::INFINITY);
     let pad = g.k.orders.door_ray_pad;
     let mut best: Option<DoorId> = None;

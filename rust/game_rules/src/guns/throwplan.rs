@@ -145,7 +145,7 @@ pub fn throw_walls(g: &mut crate::game::Game, at: V3) -> Vec<V3> {
 }
 
 /// The hand a throw at `aim` leaves, for a man stood at `p`: ahead of him toward it, under his head. None: it would be in a wall.   (throwplan.ts handAt)
-pub fn hand_at(g: &mut crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option<V3> {
+fn hand_at(g: &mut crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option<V3> {
     let k = crate::squadsmoke::squadsmoke();
     let d = v3::dist_xz(p, aim);
     let ahead = if d > 1e-3 { k.hand_ahead / d } else { 0.0 };

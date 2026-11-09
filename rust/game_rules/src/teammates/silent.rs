@@ -13,10 +13,10 @@ fn new_state(cast: Vec<GuardId>, since: f64) -> State {
 }
 
 /// the roster's own test for one man   (silent.ts mate)
-pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
+fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
 
 /// the squad of this seat   (silent.ts castOf)
-pub fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
+fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
 
 /// is the squad silent right now   (silent.ts squadSilent)
 pub fn squad_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
@@ -68,7 +68,7 @@ pub fn silent_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// loud has reached this man since the order   (silent.ts reached)
-pub fn reached(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn reached(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let since = match g.m.silent.states.get(key) { Some(s) => s.since, None => return false };
     crate::roomfight::room_fight_hot_for(g, gd) && crate::roomfight::room_fight_hot_of(g, gd) >= since
@@ -86,7 +86,7 @@ pub fn urgent(g: &mut crate::game::Game) -> bool {
 }
 
 /// a walking footfall's base level; None: his usual   (silent.ts silentStep)
-pub fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
+pub(super) fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
     if !under_silence(g, gd) { return crate::unseen::unseen_step(g, gd); }
     let own = if g.k.silent.step > 0.0 {
         match crate::sneak::sneak_step(g, gd) { Some(x) => Some(x), None => Some(g.k.silent.step) }
@@ -144,7 +144,7 @@ pub fn quiet_gun(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the order's own hold on a silent man's round at `h`, nothing counted   (silent.ts ownHold)
-pub fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if reached(g, gd) || quiet_gun(g, gd) { return false; }
     let st = g.gd[h].state;
     !(st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed || urgent(g))
@@ -213,7 +213,7 @@ pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
 
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
-pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
+fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
     let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
         targets: targets(),
         listed: listed(),
@@ -233,7 +233,7 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
 }
 
 /// the word that follows 'loud' on the HUD   (silent.ts loudWord)
-pub fn loud_word(w: Option<&str>) -> String {
+fn loud_word(w: Option<&str>) -> String {
     match w {
         Some(w) if !w.is_empty() => alloc::format!("loud · {}", w),
         _ => String::from("loud"),
@@ -241,7 +241,7 @@ pub fn loud_word(w: Option<&str>) -> String {
 }
 
 /// the rows on the menu, off it with the switch off; work only when that changes   (silent.ts seat)
-pub fn seat(g: &mut crate::game::Game) {
+fn seat(g: &mut crate::game::Game) {
     let go = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::go::ORDER.id);
     let go_digit = match go {
         Some(d) => match &g.tab.orders_order_def[d].hot_key { Some(k) => k.is_empty(), None => true },

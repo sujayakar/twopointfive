@@ -30,7 +30,7 @@ pub enum Damage { None, Leaf, World }
 #[derive(Clone, Copy, Debug)]
 pub struct Row { pub door: Leaf, pub damage: Damage, pub loud: bool, pub team: bool, pub leaf: bool, pub opening: bool, pub rest: f64, pub cap: f64 }
 const fn base(door: Leaf, damage: Damage, rest: f64, cap: f64) -> Row { Row { door, damage, loud: false, team: false, leaf: false, opening: false, rest, cap } }
-pub fn row(a: Act) -> Row {
+pub(super) fn row(a: Act) -> Row {
     match a {
         Act::Gun => Row { loud: true, ..base(Leaf::Shut, Damage::None, K.rest_quiet, K.gun_secs + 9.0) },
         Act::GunDoor => Row { loud: true, ..base(Leaf::Open, Damage::None, K.rest_quiet * 2.0, K.gun_secs + 9.0) },
@@ -90,9 +90,9 @@ pub fn thing(g: &Game, f: &str, i: u32) -> Option<&'static str> {
     }
 }
 /// the man of the open card (member i is the team's [i - 1])
-pub fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
+pub(super) fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
 /// the card asked for, if its man is on the team as it now stands. True: another card.
-pub fn open_card(g: &Game, st: &mut KitStage) -> bool {
+pub(super) fn open_card(g: &Game, st: &mut KitStage) -> bool {
     let n = crate::scenario_run::team_of(g).len() as u32;
     let i = if st.want >= 1 && st.want <= n { st.want } else { 0 };
     if i == st.who { return false; }
@@ -101,7 +101,7 @@ pub fn open_card(g: &Game, st: &mut KitStage) -> bool {
     true
 }
 /// A RESTAGE THE PAGE SHOULD COVER: nothing is directed until it has laid its copy, or half a second of game time from now.
-pub fn ask_veil(g: &Game, st: &mut KitStage) {
+pub(super) fn ask_veil(g: &Game, st: &mut KitStage) {
     if st.veil_asked.is_some() { return; }
     st.veil = st.veil.wrapping_add(1);
     st.veil_asked = Some(g.time);
@@ -1255,7 +1255,7 @@ fn tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 }
 // ------------------------------------------------------------ the director
 /// everything a staging needs before the world is let go: Sam's yaws governed, each man sent to his place from where he stands, the pools as the cards have them
-pub fn live(g: &mut Game, st: &mut KitStage) {
+pub(in crate::outfit) fn live(g: &mut Game, st: &mut KitStage) {
     if st.a.cards.is_empty() { st.a.cards = g.m.kit.kit.members.clone(); }
     if st.who > 0 && actor(g, st).is_none() { st.who = 0; }
     let c = g.pl[g.player].ch;
@@ -1600,7 +1600,7 @@ pub(super) fn pick(st: &mut KitStage, f: Option<&'static str>) {
     if st.a.beat.is_some() { st.a.cut_now = true; }
 }
 /// EACH TICK, BEFORE THE GAME'S STEP. `cmd`'s cursor is the foot of the door already.
-pub fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
+pub(in crate::outfit) fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
     let now = g.time;
     st.a.step_dt = clamp(now - st.a.step_t, 0.0, 0.25);
     st.a.step_t = now;
@@ -1634,7 +1634,7 @@ pub fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
     st.a.hand_due = None;
 }
 /// …AND AFTER IT: Sam's yaws, the thing thrown followed, a can's vent shut off, the hold through Sam's frag
-pub fn after_step(g: &mut Game, st: &mut KitStage) {
+pub(in crate::outfit) fn after_step(g: &mut Game, st: &mut KitStage) {
     let now = g.time;
     let pl = g.player;
     let c = g.pl[pl].ch;

@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// This frame's light readings for a plan: his share of the frame's readings, round-robin over the spots still worth asking about (all of them once those
 /// are done), each kept DARK_WINDOW_SECS, the darkest live one mapped through the meter's own curve.   (guards.ts searchProbes)
-pub fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
     let n = g.gd[gd].search_plan.as_ref().unwrap().spots.len();
     if n == 0 { return; }
     let mut searchers = 0.0;
@@ -78,7 +78,7 @@ pub fn score_spots(g: &mut crate::game::Game, gd: GuardId, walk: Option<&[f32]>)
 }
 
 /// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.   (guards.ts spotTaken)
-pub fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
+fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
     let team = g.gd[gd].team;
     let spacing = SEARCH_SPACING_M;
     for &o in g.guards.iter() {
@@ -92,7 +92,7 @@ pub fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchS
 }
 
 /// On to the best spot still worth it (scored this frame), or the plan is done.   (guards.ts pickNextSpot)
-pub fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     let at = g.ch[g.gd[gd].ch].pos;
     let walk = flood_from(g, at, SEARCH_RADIUS_M * 2.0 + 4.0, Some(true)).metres;   // (his own walk to each, doors and all: round the partitions, not through them)
     let mut own = g.gd[gd].search_plan.take().unwrap();   // (off his row until the line is chosen: the scoring and the tests below read only the OTHER men's plans)
@@ -169,7 +169,7 @@ fn crosses_frame(f: &crate::doorway::RelF, a: V3, b: V3) -> Option<crate::guards
 }
 
 /// Doorways a hunting man goes through, pied or not: his stride since the last frame looked at cutting a frame line. Once a frame at most.   (guards.ts noteDoorCrossings)
-pub fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.ch[g.gd[gd].ch].pos;
     if g.gd[gd].pie_prev_t == g.time { return; }
     if let Some(prev) = g.gd[gd].pie_prev {
@@ -294,7 +294,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
 }
 
 /// Does the man's remaining path still run through this door.   (guards.ts pathCrosses)
-pub fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let mut prev = g.ch[g.gd[gd].ch].pos;
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
@@ -307,7 +307,7 @@ pub fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 }
 
 /// The crossing point of the man's pie (his row) again, off the path as it now runs.   (guards.ts refreshCrossing)
-pub fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
+fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
     let door = g.gd[gd].pieing.as_ref().unwrap().door;
     let mut prev = g.ch[g.gd[gd].ch].pos;
     let mut i = g.gd[gd].path_i;
@@ -324,7 +324,7 @@ pub fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
 
 /// Bend the approach already on his path toward the hinge side: the last mark short of the line slides to 0.42 of the width, and a mark 1.5 m out goes in ahead
 /// of it unless he comes along the wall from the latch side. Only onto free cells he can walk between.   (guards.ts bendApproach)
-pub fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
+fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
     let f = frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
     let bef = |p: V3| ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * sg;

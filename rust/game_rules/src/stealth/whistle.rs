@@ -13,7 +13,7 @@ fn fresh_mem() -> WhistleMem {
 }
 
 /// A man's whistle memory, made on first asking.   (whistle.ts mem)
-pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::whistle::WhistleMem {
+fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::whistle::WhistleMem {
     g.m.whistle.mem_of.get_or_insert_with(gd, fresh_mem)
 }
 
@@ -37,7 +37,7 @@ fn fresh_blower() -> Blower {
 }
 
 /// The seat's player's breath, made on first asking.   (whistle.ts blower)
-pub fn blower<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::whistle::Blower {
+fn blower<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::whistle::Blower {
     let key = g.player;
     g.m.whistle.blower_of.get_or_insert_with(key, fresh_blower)
 }
@@ -92,14 +92,14 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
 }
 
 /// Mouth height off the event's floor position (a crouched man whistles from lower).   (whistle.ts mouthOf)
-pub fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
+fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
     let man = crate::seats::man_by_id(g, e.who.unwrap_or(crate::consts::PLAYER_ID));
     let crouched = man.map_or(false, |p| g.pl[p].crouch);
     [e.pos[0], if crouched { 1.0 } else { 1.55 }, e.pos[2]]
 }
 
 /// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.   (whistle.ts canAnswer)
-pub fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
+fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
     if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
@@ -112,7 +112,7 @@ pub fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
 }
 
 /// Who a whistle reached and which calm man is to answer it, worked out ONCE per event (its serial is the TypeScript's object identity).   (whistle.ts resolve)
-pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f64) -> &'g mut crate::whistle::Resolution {
+fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f64) -> &'g mut crate::whistle::Resolution {
     let key = e.serial;
     if g.m.whistle.res_of.has(key) { return g.m.whistle.res_of.get_mut(key).unwrap(); }
     let mut r = Resolution { hearers: JsMap::new(), responder: None, answered_by: None, t: g.time };
@@ -249,7 +249,7 @@ fn pick_i(r: f64, len: f64, last: f64) -> f64 {
 }
 
 /// A line from the pool, and the place it had written in the man's row.   (whistle.ts pick)
-pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whistle::PickKey) -> String {
+fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whistle::PickKey) -> String {
     let r = crate::dice::draw_of(g, "whistle::pick#1", gd);
     let row = mem(g, gd);
     let last = match key { PickKey::LastLook => row.last_look, PickKey::LastTwice => row.last_twice };

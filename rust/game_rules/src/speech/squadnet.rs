@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// A fresh set of the net's counters. (squadnet.ts newStats)
-pub fn new_stats() -> crate::squadnet::SquadNetStats {
+fn new_stats() -> crate::squadnet::SquadNetStats {
     crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
 }
 

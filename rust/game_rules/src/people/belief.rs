@@ -22,7 +22,7 @@ pub fn uncover(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// His fix is the spot his eyes last had the man. (belief.ts fixAtSight)
-pub fn fix_at_sight(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn fix_at_sight(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].last_known {
         Some(lk) => v3::dist_xz(lk, g.gd[gd].sight_pos) < 0.01,
         None => false,
@@ -30,7 +30,7 @@ pub fn fix_at_sight(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// His fix came from his eyes: the spot they last had the man, or where he worked out that man had gone. (belief.ts fixIsSight)
-pub fn fix_is_sight(g: &crate::game::Game, gd: GuardId) -> bool {
+fn fix_is_sight(g: &crate::game::Game, gd: GuardId) -> bool {
     if fix_at_sight(g, gd) { return true; }
     match (g.gd[gd].last_known, g.gd[gd].led_at) {
         (Some(lk), Some(led)) => v3::dist_xz(lk, led) < 0.01,
@@ -39,7 +39,7 @@ pub fn fix_is_sight(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Where his own eyes have the man, for the rules that ask only that of a man on a post. (belief.ts eyesFix)
-pub fn eyes_fix(g: &crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
+fn eyes_fix(g: &crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
     if fix_is_sight(g, gd) { Some(lk) } else { None }
 }
@@ -51,7 +51,7 @@ pub fn eyes_fix_def(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> Op
 }
 
 /// Where his gun goes with no man to shoot at: his eyes this very tick, else his duty, else his belief. (belief.ts gunPoint)
-pub fn gun_point(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
+pub(super) fn gun_point(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
     let (lk, cv) = (g.gd[gd].last_known, g.gd[gd].covers);
     if cv.is_none() || !g.gd[gd].hold || !g.gd[gd].pinned { return lk; }
     if lk.is_some() && g.time - g.gd[gd].sight_t < 1e-6 && fix_at_sight(g, gd) { lk } else { cv }
@@ -65,7 +65,7 @@ pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
 }
 
 /// What he hears of `at` or before does not write over a word. (belief.ts wordStands)
-pub fn word_stands(g: &crate::game::Game, gd: GuardId, at: f64) -> bool {
+pub(super) fn word_stands(g: &crate::game::Game, gd: GuardId, at: f64) -> bool {
     at <= g.gd[gd].word_t
 }
 

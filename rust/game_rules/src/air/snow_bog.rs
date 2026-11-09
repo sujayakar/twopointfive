@@ -20,7 +20,7 @@ fn run_on(bog: f64, run: f64) -> f64 {
 }
 
 /// What snow each box of the level is, a byte a box, worked out once a level. (snowBog.ts ground)
-pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
+fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
     if let Some(found) = &g.m.snow_bog.ground_of { return found.clone(); }
     let kind = snow_kind();
     let count = g.col.boxes.len();

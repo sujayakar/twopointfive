@@ -26,7 +26,7 @@ fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
 /// m: the emitter radius of a torch
 pub const FLASHLIGHT_RADIUS: f64 = 0.07;
 
-pub fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
+fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
     let key = match (tgt, pt) {
         (Some(gd), _) => Some(LitSeenTgt::Man { gd }),
         (None, Some(_)) => Some(LitSeenTgt::Pt),
@@ -82,7 +82,7 @@ pub fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignm
 }
 
 /// seven directions across a beam about `d`: its axis, four turned about the vertical, one tipped up and one down (guards.ts beamFan)
-pub fn beam_fan(d: V3) -> Vec<V3> {
+fn beam_fan(d: V3) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     for a in [0.0, -0.17, 0.17, -0.33, 0.33] {
         let c = m::cos(a);
@@ -96,7 +96,7 @@ pub fn beam_fan(d: V3) -> Vec<V3> {
 }
 
 /// what one ray of a beam ends on inside `m` of the lens: 3 something that stands, 2 its foot, 1 the ground, 0 nothing (guards.ts rayEnd)
-pub fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
+fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
     let dip = if r[1] < 0.0 { m::max(0.0, (o[1] - FLOOR_TOP) / -r[1]) } else { f64::INFINITY };
     let a = m::min(m, dip);
     if a > 0.0 && crate::scene_collision::segment_blocked(g, o, [o[0] + r[0] * a, o[1] + r[1] * a, o[2] + r[2] * a], None, None, None) {
@@ -114,7 +114,7 @@ pub fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
 }
 
 /// is a beam into a wall: its middle ends on something that stands inside `m`, and no ray runs clear (guards.ts beamWalled)
-pub fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool) -> bool {
+fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool) -> bool {
     for i in 0..fan.len() {
         let e = ray_end(g, o, fan[i], m);
         if e == 0.0 || (i == 0 && !(e == 3.0 || (held && e == 2.0))) {
@@ -125,7 +125,7 @@ pub fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: b
 }
 
 /// where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (guards.ts burnsFrom)
-pub fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
+fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     if crate::scene_collision::segment_blocked(g, held, p, None, None, None) {
         let radius = FLASHLIGHT_RADIUS;
         crate::lighting::lens_clear(g, held, p, radius, None)
@@ -149,7 +149,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
 }
 
 /// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens (guards.ts wallDark)
-pub fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
+pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
     if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || g.gd[gd].state == crate::game::GuardState::Dead {
         return false;
     }
@@ -175,7 +175,7 @@ pub fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bo
 }
 
 /// TORCH.wallLow: a man with a hand torch whose carried beam would end whole on something that stands lets it hang (guards.ts torchLow)
-pub fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let t = g.time;
     let Some(hand) = g.ch[c].bones.get(crate::character::Bone::HandR).copied() else { return false };
@@ -207,7 +207,7 @@ fn place_lit_steady(g: &mut Game, p: V3) -> bool {
 }
 
 /// LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark (guards.ts darkOnLitMan)
-pub fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> bool {
+fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> bool {
     if let Some(was) = g.m.guards.lit_man_seen.get(gd) {
         if was.tgt == tgt && g.time - was.t >= 0.0 && g.time - was.t < 0.25 {
             return was.v;
@@ -463,7 +463,7 @@ fn nav_cell(g: &Game, x: f64, z: f64) -> usize {
 }
 
 /// Dijkstra over the nav grid outward from `from`, in seconds of Sam's sprint; doors cost or stop him unless `keyed` (guards.ts floodFrom)
-pub fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed: Option<bool>) -> crate::guards::FloodFrom {
+pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed: Option<bool>) -> crate::guards::FloodFrom {
     let keyed = keyed.unwrap_or(false);
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * h) as usize;
@@ -566,7 +566,7 @@ fn far_from(p: V3, list: &[Cand], r: f64) -> bool { list.iter().all(|k| v3::dist
 
 /// Deal the spots of the man's plan (his row) round its fix: flood, count what stands about every reached cell, keep the best covered a spacing apart, ask the
 /// line from the fix, take the top spots by cover and a few well-spread cells of open floor.   (guards.ts dealSpots)
-pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
+fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * hn) as usize;
     let fix = g.gd[gd].search_plan.as_ref().unwrap().fix;
@@ -676,7 +676,7 @@ pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
 
 /// The plan for this man's search, on his row: built on its first frame round his fix (his feet if he has none), rebuilt if the fix has moved a couple of
 /// metres, plausibility re-flooded every SEARCH_REFLOOD_SECS.   (guards.ts searchPlanFor)
-pub fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let at = g.ch[c].pos;
     let fix: V3 = match g.gd[gd].last_known { Some(k) => [k[0], 0.0, k[2]], None => [at[0], 0.0, at[2]] };

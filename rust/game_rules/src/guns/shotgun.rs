@@ -23,12 +23,12 @@ pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, wh
 }
 
 /// Where a pellet stopped, if it was not in a man. (shotgun.ts pelletEnd)
-pub fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: V3) {
+pub(super) fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: V3) {
     s.ends.push(crate::shotgun::ShellEndsItem { index, t, at });
 }
 
 /// One pull of a shotgun's trigger: every pellet through fireWeapon, then what the pattern as a whole did. (shotgun.ts fireShell)
-pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
+pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
     let p = def.pellets.unwrap();
     let mut shell = crate::shotgun::Shell { def: def.clone(), i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() };
     g.stats.shotgun.shells += 1;

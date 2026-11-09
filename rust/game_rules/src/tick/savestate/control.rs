@@ -309,7 +309,7 @@ impl Moment {
     }
 }
 /// the box world's copy with it: it stands again, of this moment, before anybody asks
-pub fn whole(g: &mut Game) {
+fn whole(g: &mut Game) {
     crate::scene_collision::unstand(g);
     crate::scene_collision::stands(g);
 }
@@ -521,7 +521,7 @@ pub fn after_step(g: &mut Box<Game>, dt: f64, asked: Vec<crate::out_events::OutE
     told
 }
 /// A save is taken: the chronicle takes its row
-pub fn checkpoint(g: &mut Game, label: &str) {
+fn checkpoint(g: &mut Game, label: &str) {
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Save, Some(label));
 }
 
@@ -532,7 +532,7 @@ pub fn abandoned(g: &Game) -> Abandoned {
     Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug, tune: g.tune.clone() }
 }
 /// There is no game kept under this key any more: it is off the shelf. What the player is told of it.
-pub fn gone(g: &mut Game, key: &str) -> String {
+fn gone(g: &mut Game, key: &str) -> String {
     g.saves.shelf.m.delete(String::from(key));
     String::from("checkpoint: that checkpoint is gone")
 }

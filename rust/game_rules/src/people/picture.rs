@@ -29,7 +29,7 @@ fn ideas_copy(g: &Game, gd: GuardId) -> Option<Vec<Idea>> {
 }
 
 /// the module's state, made if need be: stateOf's literal (picture.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::State {
     if g.m.picture.states.is_none() {
         g.m.picture.states = Some(State {
             men: JsMap::new(),
@@ -42,7 +42,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::Sta
 }
 
 /// a man's picture, made if need be (picture.ts picOf)
-pub fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut crate::picture::Pic {
+fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut crate::picture::Pic {
     let look_secs = g.k.picture.look_secs;
     let s = state_of(g);
     ensure_pic(s, gd, now, look_secs);
@@ -55,17 +55,17 @@ pub fn picture_reset(g: &mut crate::game::Game) {
 }
 
 /// (picture.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// (picture.ts floor)
-pub fn floor(p: V3) -> V3 {
+fn floor(p: V3) -> V3 {
     [p[0], 0.0, p[2]]
 }
 
 /// (picture.ts up)
-pub fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
+fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
     match w {
         Who::Player => !g.pl[g.player].down,
         Who::Guard(o) => g.gd[o].state != crate::game::GuardState::Dead && g.ch[g.gd[o].ch].alive,
@@ -73,7 +73,7 @@ pub fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
 }
 
 /// (picture.ts posOf)
-pub fn pos_of(g: &mut crate::game::Game, w: crate::picture::Who) -> V3 {
+fn pos_of(g: &mut crate::game::Game, w: crate::picture::Who) -> V3 {
     match w {
         Who::Player => g.ch[g.pl[g.player].ch].pos,
         Who::Guard(o) => g.ch[g.gd[o].ch].pos,
@@ -81,7 +81,7 @@ pub fn pos_of(g: &mut crate::game::Game, w: crate::picture::Who) -> V3 {
 }
 
 /// no longer anybody's enemy to place: a unit off the floor, a man who dropped his gun and ran (picture.ts gone)
-pub fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
+fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
     match w {
         Who::Player => false,
         Who::Guard(o) => !g.guards.contains(&o) || g.gd[o].fled,
@@ -89,7 +89,7 @@ pub fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
 }
 
 /// can his eye make anything out AT a place it has a line to: near enough, or lit (picture.ts madeOut)
-pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
+fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
         return true;
     }
@@ -98,12 +98,12 @@ pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 }
 
 /// a man who keeps a picture: a living armed man of an AI side (picture.ts fighter)
-pub fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
+fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
 }
 
 /// the enemies there are for a side, as a list of men and Sam (picture.ts foesOf)
-pub fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> {
+fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> {
     let mut out = Vec::new();
     if team != crate::teams::Team::Player && crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
         out.push(Who::Player);
@@ -136,13 +136,13 @@ fn learn_now(time: f64, p: &mut Pic, who: Who, at: V3, t: f64, how: IdeaHow, by:
 }
 
 /// `p` is the picture's owner: None = Sam's (picture.ts learn)
-pub fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
+fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
     let time = g.time;
     learn_now(time, row!(g, p), who, at, t, how, by);
 }
 
 /// one man's look about him, on his row of the table: every enemy his eye has, the place his senses work from, the believed places he sees empty, the men he knows are down (picture.ts look)
-pub fn look(g: &mut crate::game::Game, gd: GuardId) {
+fn look(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
     g.stats.picture.looks += 1;
     if g.gd[gd].held.is_some() {
@@ -240,7 +240,7 @@ pub fn look(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Sam's own eyes, for the squad's net, on S.sam: a hostile the fog shows him with a line from his head (picture.ts lookSam)
-pub fn look_sam(g: &mut crate::game::Game) {
+fn look_sam(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
     if g.pl[g.player].down {
@@ -298,7 +298,7 @@ pub fn look_sam(g: &mut crate::game::Game) {
 }
 
 /// this frame's gunfire, placed by ear (picture.ts hear)
-pub fn hear(g: &mut crate::game::Game) {
+fn hear(g: &mut crate::game::Game) {
     let now = g.time;
     let mut ei = 0;
     while ei < g.events.len() {
@@ -379,7 +379,7 @@ pub fn hear(g: &mut crate::game::Game) {
 }
 
 /// are two men on one net: a's call reaches b. Each is his picture's owner, None = Sam's: one picture a man, so `a === b` is owner against owner (picture.ts onNet)
-pub fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
+fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
     let bo = match b {
         Some(bo) if a != b => bo,
         _ => return false,
@@ -417,7 +417,7 @@ pub fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> 
 }
 
 /// the calls: what a man has seen or heard for tellSecs reaches his net, and the men he knows are down (picture.ts tell)
-pub fn tell(g: &mut crate::game::Game) {
+fn tell(g: &mut crate::game::Game) {
     let now = g.time;
     let tell_secs = g.k.picture.tell_secs;
     let mut all: Vec<Option<GuardId>> = vec![None];
@@ -543,7 +543,7 @@ pub fn ideas_of(g: &crate::game::Game, gd: GuardId) -> Vec<crate::picture::Idea>
 }
 
 /// what an idea counts for now: whole while fresh, less as it ages, less again once its place was seen empty; 0 = forgotten (picture.ts ideaWeight)
-pub fn idea_weight(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
+fn idea_weight(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
     weight_at(&g.k.picture, g.time, i)
 }
 fn weight_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
@@ -562,7 +562,7 @@ fn weight_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
 }
 
 /// how far the man may have walked since, in metres (picture.ts ideaReach)
-pub fn idea_reach(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
+fn idea_reach(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
     reach_at(&g.k.picture, g.time, i)
 }
 fn reach_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
@@ -571,7 +571,7 @@ fn reach_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
 }
 
 /// the places he may be by now: six ways off the idea at its reach in whole metres, each a straight walk from it (picture.ts maybeOf)
-pub fn maybe_of(g: &crate::game::Game, i: crate::picture::Idea) -> Vec<V3> {
+fn maybe_of(g: &crate::game::Game, i: crate::picture::Idea) -> Vec<V3> {
     let r = m::floor(idea_reach(g, i));
     let mut out = Vec::new();
     if r < 1.0 {
@@ -588,7 +588,7 @@ pub fn maybe_of(g: &crate::game::Game, i: crate::picture::Idea) -> Vec<V3> {
 }
 
 /// hidden only if chest AND head are (picture.ts lineTo)
-pub fn line_to(g: &mut crate::game::Game, from: V3, p: V3, h: f64) -> bool {
+fn line_to(g: &mut crate::game::Game, from: V3, p: V3, h: f64) -> bool {
     if !g.m.picture.viewing {
         g.stats.picture.lines += 1;
     }
@@ -604,7 +604,7 @@ pub fn line_to(g: &mut crate::game::Game, from: V3, p: V3, h: f64) -> bool {
 }
 
 /// (picture.ts exposedTo)
-pub fn exposed_to(g: &mut crate::game::Game, i: crate::picture::Idea, p: V3, h: f64) -> f64 {
+fn exposed_to(g: &mut crate::game::Game, i: crate::picture::Idea, p: V3, h: f64) -> f64 {
     let w = idea_weight(g, i);
     if w <= 0.0 {
         return 0.0;
@@ -826,7 +826,7 @@ pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate
 const N4: [[f64; 2]; 4] = [[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]];
 
 /// where good cover is as far as he knows: floor inside r, beside something solid, no known enemy's line to it; best first (picture.ts coverNear)
-pub fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Option<f64>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>) -> Vec<crate::picture::CoverSpot> {
+fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Option<f64>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>) -> Vec<crate::picture::CoverSpot> {
     let n = n.unwrap_or(6.0);
     let mut ok = ok;
     if ideas_of(g, gd).is_empty() {
@@ -1212,6 +1212,6 @@ mod tests {
 }
 
 /// For the check and a colleague's shots: one man's idea of one enemy (a copy: no caller writes to it).   (picture.ts ideaOf)
-pub fn idea_of(g: &crate::game::Game, gd: GuardId, who: crate::picture::Who) -> Option<crate::picture::Idea> {
+pub(super) fn idea_of(g: &crate::game::Game, gd: GuardId, who: crate::picture::Who) -> Option<crate::picture::Idea> {
     g.m.picture.states.as_ref()?.men.get(gd)?.ideas.get(who).copied()
 }

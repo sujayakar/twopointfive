@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.   (aimweight.ts can)
-pub fn can(g: &mut Game) -> bool {
+fn can(g: &mut Game) -> bool {
     let pl = g.player;
     g.puppet.is_none() && !g.pl[pl].down
 }
@@ -61,7 +61,7 @@ pub fn aim_swing(g: &Game, w: &mut AimSwingW, err: f64, top: f64, dt: f64) -> f6
 }
 
 /// First thing in the player's update: this frame has not weighed his aim yet.   (aimweight.ts aimWeighBegin)
-pub fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
+pub(super) fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
     let w = &mut g.pl[pl].aimw;
     w.was = w.live;
     w.live = false;
@@ -71,7 +71,7 @@ pub fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
 }
 
 /// The plain aim branch's step: turn `aim_yaw` toward the cursor's bearing. False = not weighing (the caller keeps its own ease).   (aimweight.ts aimWeighTurn)
-pub fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
+pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     if !can(g) {
         return false;
     }
@@ -118,7 +118,7 @@ pub fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
 }
 
 /// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.   (aimweight.ts aimWeighShot)
-pub fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
+pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
     if !w.live || w.on {
@@ -135,7 +135,7 @@ pub fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
 }
 
 /// The launcher's release: true = send it now; a load let go of mid-swing waits up to `launch_wait`.   (aimweight.ts aimWeighLaunch)
-pub fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
+pub(super) fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
     let pl = g.player;
     let wait = g.k.aimweight.launch_wait;
     let w = &mut g.pl[pl].aimw;
@@ -156,7 +156,7 @@ pub fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
 }
 
 /// A load owed on a frame the gun is down: the wait's clock runs on. True = still owed.   (aimweight.ts aimWeighLaunchKeep)
-pub fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
+pub(super) fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
     let wait = g.k.aimweight.launch_wait;
     let w = &mut g.pl[pl].aimw;
     if !(w.launch_t > 0.0) {

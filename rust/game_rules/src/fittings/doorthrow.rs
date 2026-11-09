@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
 /// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.   (doorthrow.ts sideOf)
-pub fn side_of(t: crate::teams::Team) -> f64 {
+fn side_of(t: crate::teams::Team) -> f64 {
     if t == crate::teams::Team::Player || t == crate::teams::Team::Operative {
         1.0
     } else if t == crate::teams::Team::Civilian {
@@ -19,7 +19,7 @@ pub fn side_of(t: crate::teams::Team) -> f64 {
 }
 
 /// The guard or civilian whose body has this character id.   (doorthrow.ts manOf)
-pub fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
+fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
     for i in 0..g.guards.len() {
         let x = g.guards[i];
         if g.ch[g.gd[x].ch].id == id_2 {
@@ -36,7 +36,7 @@ pub fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
 }
 
 /// Doors.man: side | MAN_FOLDED | MAN_BRACED | MAN_CALM | MAN_HELD for this id; 0 = nobody the game knows.   (doorthrow.ts doorMan)
-pub fn door_man(g: &mut Game, who: f64) -> f64 {
+pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
     let (again, now) = (g.k.doorthrow.again, g.time);
     let folded_bit = js::to_i32(crate::doors::MAN_FOLDED);
     let braced_bit = js::to_i32(crate::doors::MAN_BRACED);
@@ -75,7 +75,7 @@ pub fn door_man(g: &mut Game, who: f64) -> f64 {
 }
 
 /// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).   (doorthrow.ts teamOf)
-pub fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
+fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
     if crate::seats::is_man_id(g, id_2) {
         return Some(crate::teams::Team::Player);
     }
@@ -124,7 +124,7 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
 }
 
 /// The counters of one throw.   (doorthrow.ts count)
-pub fn count(g: &mut Game, s: crate::doors::DoorStrike) {
+fn count(g: &mut Game, s: crate::doors::DoorStrike) {
     if s.tier == crate::doors::DoorStrikeTier::Boot {
         g.stats.doorthrow.kicked += 1;
     } else {
@@ -136,7 +136,7 @@ pub fn count(g: &mut Game, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf merely opened into him.   (doorthrow.ts startleMan)
-pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
+fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
     }
@@ -182,7 +182,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf slammed or booted into him: folded and blind for the seconds, by the stun charge's two stamps.   (doorthrow.ts throwMan)
-pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
+fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
     }
@@ -238,7 +238,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf slammed or booted into the seat's man.   (doorthrow.ts throwSam)
-pub fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
+fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;
     let secs = if hard { g.k.doorthrow.kick_secs } else { g.k.doorthrow.push_secs };

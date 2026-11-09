@@ -5,13 +5,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// Linear falloff of an impulse: 1 − d/r inside the radius, 0 outside. Not in stubs.json, but impulse_kick reaches it.   (sheetModel.ts impulseFalloff)
-pub fn impulse_falloff(d: f64, r: f64) -> f64 {
+fn impulse_falloff(d: f64, r: f64) -> f64 {
     if !(d < r) || r <= 0.0 { return 0.0; }
     1.0 - m::max(0.0, d) / r
 }
 
 /// The push one impulse gives a thing of response `g_2` at `p`: Δv and the scalar kick, or None when it does nothing.   (sheetModel.ts impulseKick)
-pub fn impulse_kick(imp: crate::sheet_model::ImpulseLike, p: V3, g_2: crate::sheet_model::ImpulseResponse, j: Option<[f64; 2]>) -> Option<crate::sheet_model::ImpulseKick> {
+pub(super) fn impulse_kick(imp: crate::sheet_model::ImpulseLike, p: V3, g_2: crate::sheet_model::ImpulseResponse, j: Option<[f64; 2]>) -> Option<crate::sheet_model::ImpulseKick> {
     if g_2.gain <= 0.0 { return None; }
     let to = v3::sub(p, imp.pos);
     let d = v3::len(to);

@@ -23,21 +23,21 @@ fn fresh() -> St {
 }
 
 /// A man's row, made if new; the row itself is handed back.   (doorway.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorway::St {
+fn state_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorway::St {
     g.m.doorway.states.get_or_insert_with(gd, fresh)
 }
 
 /// Distance on the floor.   (doorway.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
+fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The two sides whose men keep these manners.   (doorway.ts ours)
-pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
+fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     team == crate::teams::Team::Operative || team == crate::teams::Team::Hostile
 }
 
 /// `p` in `d`'s frame's own axes.   (doorway.ts rel)
-pub fn rel(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doorway::Rel {
+fn rel(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doorway::Rel {
     let f = crate::guards::frame_of(g, d);
     let (x, z) = (p[0] - f.hx, p[2] - f.hz);
     Rel { along: x * f.ux + z * f.uz, perp: x * f.nx + z * f.nz, f }
@@ -51,7 +51,7 @@ pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) ->
 }
 
 /// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.   (doorway.ts inSweep)
-pub fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
+fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let r = rel(g, d, p);
     if r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= g.k.doormanners.half { return false; }
@@ -156,7 +156,7 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
 }
 
 /// Is the place at (along, perp) of `d`'s frame behind its open leaf.   (doorway.ts behindLeaf)
-pub fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
+fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let w = g.dr[d].def.width;
     let angle = crate::doors::door_angle(g, d);
@@ -217,7 +217,7 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
-pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
+fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (pos, 0.0);
@@ -241,7 +241,7 @@ pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::
 }
 
 /// His own side about him, living, other than himself: the men, and Sam with the squad.   (doorway.ts friends)
-pub fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
+fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
     for i in 0..g.guards.len() {
@@ -259,7 +259,7 @@ pub fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::Fr
 }
 
 /// Ease `gd` to `p` over open floor, his feet moved; true = there.   (doorway.ts stepTo)
-pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, turn: bool) -> bool {
+fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, turn: bool) -> bool {
     let c = g.gd[gd].ch;
     let at = g.ch[c].pos;
     let (dx, dz) = (p[0] - at[0], p[2] - at[2]);
@@ -282,7 +282,7 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64
 }
 
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.   (doorway.ts spotFree)
-pub fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
+fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[seat.player].down && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
@@ -297,7 +297,7 @@ pub fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.   (doorway.ts jambSpot)
-pub fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
     let (jamb_past, file_gap, jamb_out, apart) = (g.k.doormanners.jamb_past, g.k.doormanners.file_gap, g.k.doormanners.jamb_out, g.k.doormanners.apart);
@@ -325,7 +325,7 @@ pub fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -
 }
 
 /// Does `o`'s walk go through `d` within reach: metres of walk to the line and the face he comes from.   (doorway.ts through)
-pub fn through(g: &mut crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::doorway::Through> {
+fn through(g: &mut crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::doorway::Through> {
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (g.ch[g.gd[o].ch].pos, 0.0);
     let mut i = g.gd[o].path_i;
@@ -718,7 +718,7 @@ pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
 }
 
 /// HE MEANS TO GO THROUGH IT: what is left of his way, or his step to where he is sent, crosses the door's frame.
-pub fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let man = &g.gd[gd];
     let mut a = g.ch[man.ch].pos;
     for &q in man.path.iter().skip(man.path_i) {

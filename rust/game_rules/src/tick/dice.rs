@@ -7,7 +7,7 @@ use crate::ids::*;
 /// A KEYED DRAW for the simulation: uniform in [0, 1), a fixed function of the game's seed, the `site` that asks, the man it is about (`who`: 0
 /// for nobody, else `man`), the tick, and how many times this site has drawn for him this tick. The block's die is still stepped
 /// once a draw, so its count goes on witnessing how many draws a run made; its value is not used.
-pub fn draw(g: &mut Game, site: &'static str, who: u32) -> f64 {
+fn draw(g: &mut Game, site: &'static str, who: u32) -> f64 {
     let old = crate::math_dice::sim_random(g);
     let Some(d) = g.dice.as_ref() else { return old };   // (no die: the host's stream, as before)
     let seed = crate::js::to_u32(d.seed);

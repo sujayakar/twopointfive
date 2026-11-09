@@ -6,9 +6,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// Can a stun show on the player at all: up, no puppet's strings.   (samstun.ts live)
-pub fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
+fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
-pub fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
+fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
     !g.pl[p].down && g.puppet.is_none()
 }
 
@@ -66,7 +66,7 @@ pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: O
 }
 
 /// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
-pub fn sam_blind(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> f64 { man_blind(g, seat.player, now) }
+pub(super) fn sam_blind(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> f64 { man_blind(g, seat.player, now) }
 /// …of one man
 pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
@@ -81,7 +81,7 @@ pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Opti
 }
 
 /// Once a frame right after the down test: what the two states show on him and keep true while they run.   (samstun.ts samStunPose)
-pub fn sam_stun_pose(g: &mut crate::game::Game) {
+pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
     let blind = sam_blind(g, &crate::seats::here(g), None);

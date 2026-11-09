@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// What he watches from the spot: the arc's middle, moved round until his doors sit in his eyes. (netquiet.ts watch)
-pub fn watch(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn watch(g: &mut crate::game::Game, gd: GuardId) {
     let eye_slack = g.k.netquiet.eye_slack;
     let n = g.m.netquiet.state_of.get_mut(gd).unwrap();
     if n.arc > m::PI { n.look = None; return; }

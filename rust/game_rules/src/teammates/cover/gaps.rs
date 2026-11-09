@@ -61,7 +61,7 @@ impl Grid<'_> {
 }
 
 /// The gaps of a nav grid as fresh values, which nothing holds yet: `along_x` lays the runs along x, the caller asks both ways; `solid` says whether a line is shut to sight. (cover.ts gapsOf)
-pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<crate::cover::Opening> {
+pub(super) fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<crate::cover::Opening> {
     let mut solid = solid;
     let (nav_w, nav_h) = (nav.w as i32, nav.h as i32);
     let grid = Grid { nav, along_x, w: if along_x { nav_w } else { nav_h }, h: if along_x { nav_h } else { nav_w }, c: nav.cell };

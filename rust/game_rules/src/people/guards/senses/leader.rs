@@ -6,7 +6,7 @@ use crate::game::GuardState as St;
 use crate::m;
 use crate::V3;
 
-pub fn leader(g: &mut Game, gd: GuardId, lvl: f64) {
+pub(in crate::people) fn leader(g: &mut Game, gd: GuardId, lvl: f64) {
     // lockdown pair: the man he trails has started at something: he takes it as seriously, a step to that man's side of the spot
     if let (true, Some(l)) = (lvl >= 2.0, g.gd[gd].leader) {
         if g.gd[gd].state == St::Patrol && !g.gd[gd].hold && g.gd[l].state == St::Suspicious && g.gd[l].react_t > 0.0 && g.gd[l].last_known.is_some() && g.gd[l].task.is_none() {

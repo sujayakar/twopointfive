@@ -6,7 +6,7 @@ use crate::game::GuardState as St;
 use crate::m;
 use crate::v3::{self, V3};
 
-pub fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool) {
+pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool) {
     // a kicked-in lock seen up close on a calm pass: one look per door
     if staff && g.gd[gd].state == St::Patrol && !g.gd[gd].hold {
         let mut i = 0;

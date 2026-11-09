@@ -15,11 +15,11 @@ unsafe impl Sync for Draws {}
 static DRAWS: Draws = Draws(core::cell::UnsafeCell::new((Vec::new(), 0)));
 
 /// the host's draws for the tick about to run
-pub fn host_draws_set(v: &[f64]) { unsafe { *DRAWS.0.get() = (v.to_vec(), 0); } }
+fn host_draws_set(v: &[f64]) { unsafe { *DRAWS.0.get() = (v.to_vec(), 0); } }
 /// (taken, handed)
-pub fn host_draws_count() -> (usize, usize) { unsafe { let d = &*DRAWS.0.get(); (d.1, d.0.len()) } }
+fn host_draws_count() -> (usize, usize) { unsafe { let d = &*DRAWS.0.get(); (d.1, d.0.len()) } }
 /// one draw off the host's stream; past its end is the Rust tick drawing where the TypeScript's did not
-pub fn host_draw() -> f64 {
+fn host_draw() -> f64 {
     unsafe {
         let d = &mut *DRAWS.0.get();
         if d.1 >= d.0.len() { panic!("bring-up: the Rust tick asks for draw {} off Math.random and the TypeScript tick took {}", d.1 + 1, d.0.len()); }
@@ -110,7 +110,7 @@ pub fn use_dice(g: &mut crate::game::Game) {
 }
 
 /// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.   (dice.ts diceInUse)
-pub fn dice_in_use(g: &crate::game::Game) -> Option<crate::math_dice::SimDice> {
+fn dice_in_use(g: &crate::game::Game) -> Option<crate::math_dice::SimDice> {
     g.dice
 }
 

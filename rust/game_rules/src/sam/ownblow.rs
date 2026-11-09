@@ -16,7 +16,7 @@ pub fn blow_tail(key_is: bool, key: &str, sep: Option<&str>) -> String {
 }
 
 /// The nearest free charge of his own, a door's or a wall's. (ownblow.ts ownSet)
-pub fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
+fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
     if g.door_tools.set.is_empty() && g.wall_charge.set.is_empty() { return None; }
     let p = g.ch[g.pl[g.player].ch].pos;
     let d = crate::doortools::door_tools_sam_set(g);
@@ -42,7 +42,7 @@ pub fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
 }
 
 /// player.ts buildInteractables: the row, or None. (ownblow.ts ownBlowRow)
-pub fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactable> {
+pub(super) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactable> {
     let c = own_set(g)?;
     if !(crate::rails::rails_offers(g, "blow") || crate::rails::rails_offers(g, "charge"))
         || (crate::rails::rails_locks(g, "blow") && crate::rails::rails_locks(g, "word")) { return None; }
@@ -60,7 +60,7 @@ pub fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactab
 }
 
 /// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down. (ownblow.ts ownBlowHeld)
-pub fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
+pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
     if !own_set(g).map_or(false, |c| c.fatal) { return false; }

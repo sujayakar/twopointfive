@@ -24,7 +24,7 @@ fn kept_elsewhere(g: &Game, gd: GuardId) -> bool {
 }
 
 /// HIS EARS AND EYES, every tick, whoever has his body.
-pub fn sense(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Option<Sense> {
+pub(in crate::people::guards) fn sense(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Option<Sense> {
     if kept_elsewhere(g, gd) { return None; }
     let lvl = crate::guards::escalation_of(g);
     if !g.ai_enabled || crate::doze::doze_deaf(g, gd) { return Some(Sense { lvl, eyes: None }); }
@@ -35,7 +35,7 @@ pub fn sense(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Option<Sense> {
 }
 
 /// WHAT HE DOES ABOUT WHAT IS AROUND HIM where nothing has his body: where his man went, a colleague on the floor, the man he trails, a kicked lock.
-pub fn notice(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, s: &Sense) -> Saw {
+pub(in crate::people::guards) fn notice(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, s: &Sense) -> Saw {
     let lvl = s.lvl;
     g.gd[gd].drawn = lvl >= 1.0 || !staff;
     if let Some(eyes) = &s.eyes {
@@ -49,7 +49,7 @@ pub fn notice(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, s: &Se
 }
 
 /// What he does not see fades.
-pub fn fade(g: &mut Game, gd: GuardId, dt: f64, s: &Sense) {
+pub(in crate::people::guards) fn fade(g: &mut Game, gd: GuardId, dt: f64, s: &Sense) {
     match &s.eyes {
         None => calm(g, gd, dt * 0.5),
         Some(e) if !e.seen => {

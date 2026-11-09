@@ -85,14 +85,14 @@ fn up_now(g: &Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> bool
 // ---------------------------------------------------------------- the module's own
 
 /// QA: why a known place was not worth rounds, counted (coverfire.ts no)
-pub fn no(g: &mut crate::game::Game, why: &str) {
+fn no(g: &mut crate::game::Game, why: &str) {
     let w = &mut g.m.coverfire.coverfire_why;
     let n = w.get(String::from(why)).copied().unwrap_or(0.0);
     w.set(String::from(why), n + 1.0);
 }
 
 /// a count, on this game's books and on the checks' (coverfire.ts bump)
-pub fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
+fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
     state_of(g);
     let s = g.m.coverfire.states.as_mut().unwrap();
     let (a, b) = match k {
@@ -115,17 +115,17 @@ pub fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
 }
 
 /// the engine's half: walls and cover give under rounds (coverfire.ts chewLive)
-pub fn chew_live(g: &crate::game::Game) -> bool {
+fn chew_live(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
 /// is the rule running this frame (coverfire.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &mut crate::game::Game) -> bool {
     g.ai_enabled
 }
 
 /// the state: a clock gone back forgets every man; none yet makes one (coverfire.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::State {
     let (time, serial) = (g.time, g.destr.walls.serial);
     if let Some(s) = g.m.coverfire.states.as_mut() {
         if time < s.last_t - 1e-6 {
@@ -152,17 +152,17 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::S
 }
 
 /// a man's row, made if new (coverfire.ts manOf)
-pub fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::coverfire::Man {
+fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::coverfire::Man {
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
 /// distance over the floor (coverfire.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// whose body (coverfire.ts charOf)
-pub fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
+fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
     match who {
         crate::game::Foe::Player => g.pl[crate::seats::faced_man(g, gd)].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
@@ -170,7 +170,7 @@ pub fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> Cha
 }
 
 /// his name (coverfire.ts nameOf)
-pub fn name_of(g: &crate::game::Game, who: crate::game::Foe) -> String {
+fn name_of(g: &crate::game::Game, who: crate::game::Foe) -> String {
     match who {
         crate::game::Foe::Player => String::from("Player"),
         crate::game::Foe::Guard(x) => g.gd[x].callsign.clone(),
@@ -178,7 +178,7 @@ pub fn name_of(g: &crate::game::Game, who: crate::game::Foe) -> String {
 }
 
 /// QA: the run's line of what the rule did (coverfire.ts log)
-pub fn log(g: &mut crate::game::Game, s: &str) {
+fn log(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     let l = &mut g.m.coverfire.coverfire_log;
     l.push(line);
@@ -186,7 +186,7 @@ pub fn log(g: &mut crate::game::Game, s: &str) {
 }
 
 /// this gun's round in the engine's units (coverfire.ts weightOf)
-pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let cls = g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().cls;
     let k = if cls == crate::weapons::WeaponClass::Pistol { g.k.walls.pistol_k } else { 1.0 };
     k * crate::destruction::chaos_of(g) * 2.0
@@ -195,7 +195,7 @@ pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 // ---------------------------------------------------------------- what he knows
 
 /// a sighting of `who` copied into what `gd` knows (coverfire.ts see)
-pub fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
+fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
     let c = char_of(g, gd, who);
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
@@ -217,7 +217,7 @@ pub fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: b
 }
 
 /// a mate's call he acts on becomes a place he knows, and stays a call (coverfire.ts heard)
-pub fn heard(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know) {
+fn heard(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know) {
     let m = man_of(g, gd);
     if let Some(mine) = m.know.iter_mut().find(|x| same_who(x.who, k.who)) {
         if mine.t < k.t {
@@ -233,7 +233,7 @@ pub fn heard(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know) 
 }
 
 /// the places he may spend rounds on, freshest first: his own, then what a mate with eyes on is calling (coverfire.ts known)
-pub fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) -> Vec<crate::coverfire::KnownItem> {
+fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) -> Vec<crate::coverfire::KnownItem> {
     state_of(g);
     let g: &Game = g;   // nothing below writes: the state and the men are read side by side
     let s = g.m.coverfire.states.as_ref().unwrap();
@@ -270,7 +270,7 @@ pub fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Fo
 // ---------------------------------------------------------------- what the line would hit
 
 /// the engine's answer for a round from his gun at `to`: Clear · None = not his to chew · else the piece (coverfire.ts ask)
-pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfire::Ask2> {
+fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfire::Ask2> {
     let c = g.gd[gd].ch;
     let from = crate::guards::shot_origin(g, c);
     let d = v3::sub(to, from);
@@ -397,7 +397,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
 }
 
 /// a free man's sum: is shooting through quicker than walking round (coverfire.ts worth)
-pub fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
+fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
     let mut len = 0.0;
@@ -411,19 +411,19 @@ pub fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> boo
 }
 
 /// rounds he will spend on it: a chew gets slack, a burst through is what it is (coverfire.ts budgetOf)
-pub fn budget_of(g: &crate::game::Game, kind: &str, rounds: f64) -> f64 {
+fn budget_of(g: &crate::game::Game, kind: &str, rounds: f64) -> f64 {
     if kind == "thru" { rounds } else { m::ceil(rounds * g.k.coverfire.slack_k) + g.k.coverfire.slack }
 }
 
 /// a man with no feet of his own to weigh (coverfire.ts stays)
-pub fn stays(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn stays(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].pinned || g.gd[gd].hold || g.gd[gd].script.is_some()
 }
 
 // ---------------------------------------------------------------- the choice
 
 /// May he put a round through what stands between his gun and this known place, and where to; keeps the chew's own books. What it returns is a copy of the row `men[gd].chew`, which is M.chew in the TypeScript: writes go through the row (coverfire.ts choose)
-pub fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, call: bool, seen: bool) -> Option<crate::coverfire::Chew> {
+fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, call: bool, seen: bool) -> Option<crate::coverfire::Chew> {
     let (linger, same_m, lead_m, lead_secs, low_y) = (g.k.coverfire.linger_secs, g.k.coverfire.same_m, g.k.coverfire.lead_m, g.k.coverfire.lead_secs, g.k.coverfire.low_y);
     let (thru_rest, give_secs, walk_ask_secs) = (g.k.wallpen.thru_rest_secs, g.k.coverfire.give_secs, g.k.coverfire.walk_ask_secs);
     let time = g.time;
@@ -666,7 +666,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
 }
 
 /// NOBODY IN HIS SIGHT: the same choice with the room fight's own trigger; true = his gun is on a piece this frame (coverfire.ts coverOp)
-pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
+pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
     if !live(g) { return false; }
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -921,7 +921,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// QA: what `gd` is on this frame (coverfire.ts coverfireOn)
-pub fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
+pub(super) fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
     Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }

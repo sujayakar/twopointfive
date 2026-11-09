@@ -12,7 +12,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-pub fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of levels/tut-queue.script.ts") } }
+fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of levels/tut-queue.script.ts") } }
 
 const GUNNER: &str = "Tango 3";
 const MATE: &str = "Tango 4";
@@ -41,7 +41,7 @@ fn mark(m: &mut crate::director::Manifest, id: &str, pos: V3) -> crate::director
 }
 
 /// The define pass: its names in the script's order. (tut-queue.script.ts script)
-pub fn tut_queue_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_queue::TutQueueVars, String> {
+pub(super) fn tut_queue_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_queue::TutQueueVars, String> {
     let front = crate::director::manifest_door(m, "hall");
     let back = crate::director::manifest_door(m, "hall_back");
     let road_gate = crate::director::manifest_door(m, "gate_e");
@@ -136,7 +136,7 @@ fn too() -> crate::director::Cond {
 }
 
 /// One resume of the beat 'gun': see the numbers in notes.md. (tut-queue.script.ts:44-82)
-pub fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGunFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGunFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{OrderPatch2, RunBurstsItemAt};
     let v = crate::script_tut_queue::tut_queue_vars(g, r).clone();
     let back = v.back.as_ref().unwrap();
@@ -300,7 +300,7 @@ pub fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// The 'gun' beat's c.until tests. (tut-queue.script.ts:44-82)
-pub fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
     let (front, back) = {
         let v = crate::script_tut_queue::tut_queue_vars(g, r);
         (v.front.clone().unwrap(), v.back.clone().unwrap())
@@ -385,7 +385,7 @@ fn walk_on(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, men: &[crate::
 }
 
 /// One resume of the beat 'gates': a resume point a yield. (tut-queue.script.ts:88-124)
-pub fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     let v = crate::script_tut_queue::tut_queue_vars(g, r).clone();
     let road_gate = v.road_gate.as_ref().unwrap();
     let back_gate = v.back_gate.as_ref().unwrap();
@@ -484,7 +484,7 @@ pub fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// The 'gates' beat's c.until tests. (tut-queue.script.ts:88-124)
-pub fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
     match id {
         GATES_INSIDE | GATES_OPEN => {
             for u in left(g, r, &f.men).iter() {

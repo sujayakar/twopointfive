@@ -14,7 +14,7 @@ pub fn guard_set_path(g: &mut crate::game::Game, gd: GuardId, path: Vec<V3>) { l
 pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.col.mirror.slot = slot as f64; }
 
 /// A man easing past furniture: a player crouched and not dashing; anyone else low.   (game.ts quietMan)
-pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
+pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
     match pl {
         Some(p) => g.pl[p].crouch && !g.pl[p].dash,
         None => g.ch[c].anim.crouch > 0.5,
@@ -22,7 +22,7 @@ pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool
 }
 
 /// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.   (game.ts missionRating)
-pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
+fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
     if s.spotted > 0.0 {
         crate::game::MissionRating::Assault
     } else if s.kills == 0.0 && s.alerts == 0.0 && s.bodies == 0.0 {
@@ -41,7 +41,7 @@ pub fn fmt_clock(sec: f64) -> String {
 }
 
 /// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.   (game.ts newMission)
-pub fn new_mission(t0: f64) -> crate::game::Mission {
+pub(super) fn new_mission(t0: f64) -> crate::game::Mission {
     crate::game::Mission {
         stage: crate::game::MissionStage::Infiltrate,
         t0,
@@ -141,7 +141,7 @@ pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
 }
 
 /// Makes a player: his guns first (the field initialisers), then his body. (game.ts Player.constructor)
-pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
+pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
     let has_rifle = has_rifle.unwrap_or(true);
     let seat = seat.unwrap_or(0.0);
     let pistol = crate::weapons::pistol_new(g, None);
@@ -244,7 +244,7 @@ pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// What a man has personally perceived, as an encounter starts. (game.ts newWitness)
-pub fn new_witness() -> crate::game::Witness {
+fn new_witness() -> crate::game::Witness {
     crate::game::Witness {
         heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 },
         peak_awareness: 0.0,
@@ -260,7 +260,7 @@ pub fn new_witness() -> crate::game::Witness {
 }
 
 /// A man's interrogation progress, as an encounter starts. (game.ts newTalk)
-pub fn new_talk(g: &mut crate::game::Game) -> GameTalkId {
+fn new_talk(g: &mut crate::game::Game) -> GameTalkId {
     g.tab.game_talk.push(fresh_talk())
 }
 

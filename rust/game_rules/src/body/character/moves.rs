@@ -13,7 +13,7 @@ fn tuck_to(t: &mut Vec<f64>, w: f64, i: usize, v: f64) {
 }
 
 /// A long carriage's targets pulled toward WALL_TUCK.long by w (0‥1), in place. (character.ts longTuck)
-pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
+pub(super) fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     let w = v3::clamp(gun_wall, 0.0, 1.0);
     let c = lc();
     let wall = wall_tuck();
@@ -32,13 +32,13 @@ pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
 }
 
 /// Is the stagger's fold up: `too` is the figure's own foldToo. (character.ts foldOn)
-pub fn fold_on(g: &Game, too: Option<bool>) -> bool {
+pub(super) fn fold_on(g: &Game, too: Option<bool>) -> bool {
     let too = too.unwrap_or(false);
     g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && too))
 }
 
 /// One part of the motion pass: on? (character.ts mvOn)
-pub fn mv_on(g: &Game, k: crate::character::MvOnK) -> bool {
+pub(super) fn mv_on(g: &Game, k: crate::character::MvOnK) -> bool {
     use crate::character::MvOnK;
     let t = &g.k.moves;
     let v = match k {
@@ -69,7 +69,7 @@ fn q_at(a: &[f32], n: f64) -> f64 {
 }
 
 /// The angle between the rotation at a[i] (its four numbers `s` apart) and the one at b[k‥k+3]. (character.ts qAng)
-pub fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
+pub(super) fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
     let d = m::abs(q_at(a, i) * q_at(b, k) + q_at(a, i + s) * q_at(b, k + 1.0) + q_at(a, i + 2.0 * s) * q_at(b, k + 2.0) + q_at(a, i + 3.0 * s) * q_at(b, k + 3.0));
     if d >= 1.0 { 0.0 } else { 2.0 * m::acos(d) }
 }

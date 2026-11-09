@@ -21,7 +21,7 @@ use crate::render_decals::{mark_asked, Ask};
 pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e, ours)); }
 
 /// (src/game/wallwear.ts:88 WallWear.reset)
-pub fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); }
+pub(super) fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); }
 
 use crate::out_events::{OutEvent, OutParticlesEmit, OutWallWearRound};
 use crate::render_decals::{mark_of, mark_set_mut, wear_mark, DecalKind, MarkSet};
@@ -40,7 +40,7 @@ fn shape(d: &mut crate::render_decals::Mark, s: f64) {
 }
 
 /// A round was counted on a cell of a breakable. `key` names the cell that was hit, `counted` the one the count went to (the same, but for a sill under a standing upper), `frac` that cell's count ÷ what it takes (≥ 1: it goes this frame).
-pub fn wear_round(g: &mut Game, e: &OutWallWearRound, ours: bool) {
+pub(super) fn wear_round(g: &mut Game, e: &OutWallWearRound, ours: bool) {
     if !g.destr.walls.wear.on { return; }
     let w = crate::wallwear::wear();
     if e.frac >= 1.0 { mark_set_mut(g).wear.cells.retain(|c| c.0 != e.counted); return; }   // the cell is gone this frame: what it throws is the break's own (a sill's list is kept: it stands)

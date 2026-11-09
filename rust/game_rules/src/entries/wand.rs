@@ -16,7 +16,7 @@ pub fn wand_offered(g: &crate::game::Game, pl: PlayerId, d: DoorId) -> bool {
 }
 
 /// The wait before the lens is through: the squat's own blend in where it is drawn, else the kneel's. (wand.ts wandFeedSecs)
-pub fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
+fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
     if squat.unwrap_or(false) { g.k.stealthpose.cable_in } else { g.k.wand.quick_secs }
 }
 

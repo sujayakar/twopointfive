@@ -30,17 +30,17 @@ fn rule_args(g: &Game) -> (usize, i32, u32) {
 }
 
 /// A step's tale, from the module's scratch: how far the field moved, the steps taken, the lines asked, the open ways the last step found. (airDust.ts said)
-pub fn said() -> Vec<f64> {
+fn said() -> Vec<f64> {
     crate::sim_weatherhome::wx_out(4.0)
 }
 
 /// The field stands: built now if it is owed. (airDust.ts AirDust.ready)
-pub fn air_dust_ready(g: &mut crate::game::Game) {
+pub(super) fn air_dust_ready(g: &mut crate::game::Game) {
     air_dust_ensure(g);
 }
 
 /// The module's switch. (airDust.ts AirDust.on)
-pub fn air_dust_on(g: &crate::game::Game) -> bool {
+fn air_dust_on(g: &crate::game::Game) -> bool {
     air_read(g).on != 0.0
 }
 
@@ -66,7 +66,7 @@ pub fn air_dust_reseed(g: &mut crate::game::Game) {
 }
 
 /// Builds the field if it is stale. (airDust.ts AirDust.ensure)
-pub fn air_dust_ensure(g: &mut crate::game::Game) {
+fn air_dust_ensure(g: &mut crate::game::Game) {
     if g.air_dust.dirty {
         g.air_dust.dirty = false;
         air_dust_build(g);
@@ -74,7 +74,7 @@ pub fn air_dust_ensure(g: &mut crate::game::Game) {
 }
 
 /// A tale's count into the book. (airDust.ts AirDust.tally)
-pub fn air_dust_tally(g: &mut crate::game::Game, t: &[f64]) {
+fn air_dust_tally(g: &mut crate::game::Game, t: &[f64]) {
     let st = &mut g.air_dust.stats;
     st.steps += t[1];
     st.probes += t[2];
@@ -84,7 +84,7 @@ pub fn air_dust_tally(g: &mut crate::game::Game, t: &[f64]) {
 }
 
 /// The field from nothing, in the module: every roofed cell at the leak, every opening asked, then run on until it stands still. (airDust.ts AirDust.build)
-pub fn air_dust_build(g: &mut crate::game::Game) {
+fn air_dust_build(g: &mut crate::game::Game) {
     let fog = crate::weather::weather_fog(g);
     let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
     let on = has; // (AIRDUST.on is settled true on the page)
@@ -149,7 +149,7 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The renderer's copy brought up to the field; the host takes `gpu` when `stats.sends` moves. (airDust.ts AirDust.send)
-pub fn air_dust_send(g: &mut crate::game::Game) {
+fn air_dust_send(g: &mut crate::game::Game) {
     copy_to_gpu(g);
     let d = &mut g.air_dust;
     d.stats.sends += 1.0;

@@ -14,7 +14,7 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 }
 
 /// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated   (game.ts drawMen)
-pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
+pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
     crate::scene_boxes::box_world_reset_capsules(g);
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
@@ -34,7 +34,7 @@ pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, 
 }
 
 /// what each guard's line to the man he faces has of smoke and weather on it, and how lit each seat's man is   (game.ts lightMeter)
-pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
+pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
     use crate::character::Bone;
     let seats = g.seats.clone(); let one = seats.len() == 1;
     let mut i = 0;
@@ -51,7 +51,7 @@ pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility   (game.ts meterRead)
-pub fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
+fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let [stands, e] = crate::guards::light_on(g, g.pl[pl].ch);
     if !e.is_finite() { return; }
@@ -85,7 +85,7 @@ fn visibility_sum(slope: f64, floor: f64, e: f64) -> f64 {
 }
 
 /// the leaves' step and everything round it: who touches them, what they did to whom   (game.ts updateDoors)
-pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
+pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     use crate::character::Bone;
     use crate::doors::DoorContact;
     use crate::game::GuardState;
@@ -197,7 +197,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// a seat's half of updateDoors, run over its view: the player's own contact on the leaves this frame (none: he is down)   (game.ts doorContact)
-pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> {
+fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> {
     let pl = g.player; let pc = g.pl[pl].ch;
     if g.pl[pl].down { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);
@@ -239,7 +239,7 @@ fn holds(g: &Game, pl: PlayerId, gd: GuardId) -> bool {
 }
 
 /// this frame's verb of his, done (game.ts Game.doorActs)
-pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
+fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
     let act: Option<Interactable> = if g.pl[pl].down { None } else { g.act.clone() };
@@ -401,7 +401,7 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
 }
 
 /// what the leaves did to him once they have swung (game.ts Game.doorAfter)
-pub fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::DoorContact>, bx: f64, bz: f64) {
+fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::DoorContact>, bx: f64, bz: f64) {
     let own: Option<&crate::doors::DoorContact> = own.as_deref();
     let pl = g.player;
     let pc = g.pl[pl].ch;

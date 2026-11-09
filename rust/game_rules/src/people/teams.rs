@@ -39,7 +39,7 @@ fn count_switch(t: &mut TeamsMod, on: bool) {
 }
 
 /// The side a body is on: a player's, or that of the Guard whose body it is ('guard' for a stray).   (teams.ts teamOfChar)
-pub fn team_of_char(g: &mut crate::game::Game, c_2: CharId) -> crate::teams::Team {
+pub(super) fn team_of_char(g: &mut crate::game::Game, c_2: CharId) -> crate::teams::Team {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return Team::Player; }
     g.guards.iter().find(|&&x| g.gd[x].ch == c_2).map_or(Team::Guard, |&x| g.gd[x].team)
 }

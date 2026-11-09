@@ -41,7 +41,7 @@ fn places(g: &Game, c: CharId) -> (usize, usize, usize) {
 // ---- the held gait
 
 /// The held gait's share this frame; sets crV, the speed the root itself made since the last frame. (character.ts CharacterAnimator.creepGait)
-pub fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> f64 {
+pub(super) fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> f64 {
     if g.ch[c].anim.cr_t <= 0.0 && m::abs(g.ch[c].anim.speed) < 0.05 {
         let pl = anim_creep_plant(g, c);
         let a = &mut g.ch[c].anim;
@@ -60,7 +60,7 @@ pub fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> f64 {
 }
 
 /// [walking, crouch-walking]: the phase, mod half a cycle, at which the clip stands widest with both feet down; found once. (character.ts CharacterAnimator.creepPlant)
-pub fn anim_creep_plant(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
+fn anim_creep_plant(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     if let Some(p) = g.ch[c].anim.cr_ph { return p; }
     let walk = *g.ch[c].anim.clips.get("Walk_Loop").unwrap();
     let crouch = *g.ch[c].anim.clips.get("Crouch_Fwd_Loop").unwrap();
@@ -93,7 +93,7 @@ fn creep_plant_find(g: &mut Game, c: CharId, clip: ClipId, off: f64) -> f64 {
 // ---- WATCH
 
 /// WATCH: the slip's body and arm and the look, both points taken through the twist's inverse first. (character.ts CharacterAnimator.watchLayer)
-pub fn anim_watch_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, w_l: f64, w_r: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_watch_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, w_l: f64, w_r: f64, tw_y: f64, tw_p: f64) {
     let un = anim_untwist(g, c, tw_y, tw_p);
     let m_s = match g.ch[c].anim.slip_at { Some(p) => Some(untwist_at(&un, anim_to_model_p(g, c, p))), None => None };
     let m_w = match g.ch[c].anim.watch_at { Some(p) => Some(untwist_at(&un, anim_to_model_p(g, c, p))), None => None };
@@ -119,13 +119,13 @@ fn watch_cols_put(g: &mut Game, c: CharId) {
 }
 
 /// The slip's body: pelvis and trunk; `m` the man he gives room to, in the model. (character.ts CharacterAnimator.watchSlip)
-pub fn anim_watch_slip(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, m: Option<V3>) {
+fn anim_watch_slip(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, m: Option<V3>) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_watch_slip_ask(g, c, slot, dt, free, m);
 }
 
 /// (character.ts CharacterAnimator.watchSlipAsk)
-pub fn anim_watch_slip_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, free: f64, m: Option<V3>) {
+fn anim_watch_slip_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, free: f64, m: Option<V3>) {
     {
         let an = &g.ch[c].anim;
         let a = args();
@@ -139,14 +139,14 @@ pub fn anim_watch_slip_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f
 }
 
 /// The slip's arm, the one on the man's side out low toward him. (character.ts CharacterAnimator.watchArm)
-pub fn anim_watch_arm(g: &mut crate::game::Game, c: CharId, w_l: f64, w_r: f64) {
+fn anim_watch_arm(g: &mut crate::game::Game, c: CharId, w_l: f64, w_r: f64) {
     if !(g.ch[c].anim.wt.sw > 0.003) { return; }
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_watch_arm_ask(g, c, slot, w_l, w_r);
 }
 
 /// (character.ts CharacterAnimator.watchArmAsk)
-pub fn anim_watch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w_l: f64, w_r: f64) {
+fn anim_watch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w_l: f64, w_r: f64) {
     {
         let an = &g.ch[c].anim;
         let (t, f0, f1) = (an.wt, an.hand_fix[0], an.hand_fix[1]);
@@ -159,13 +159,13 @@ pub fn anim_watch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w_l: f
 }
 
 /// The look: the chest a little, the neck, the head. (character.ts CharacterAnimator.watchLook)
-pub fn anim_watch_look(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, m: Option<V3>) {
+fn anim_watch_look(g: &mut crate::game::Game, c: CharId, dt: f64, free: f64, m: Option<V3>) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_watch_look_ask(g, c, slot, dt, free, m);
 }
 
 /// (character.ts CharacterAnimator.watchLookAsk)
-pub fn anim_watch_look_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, free: f64, m: Option<V3>) {
+fn anim_watch_look_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, free: f64, m: Option<V3>) {
     {
         let an = &g.ch[c].anim;
         let gl = an.gaze_local;
@@ -182,7 +182,7 @@ pub fn anim_watch_look_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f
 // ---- the close-in carriage
 
 /// The close-in mode's carriage, weight `w`: the body, then the arms. (character.ts CharacterAnimator.creepLayer)
-pub fn anim_creep_layer(g: &mut crate::game::Game, c: CharId, w: f64, w_l: f64, w_r: f64, tw_y: f64, tw_p: f64, dt: f64) {
+pub(super) fn anim_creep_layer(g: &mut crate::game::Game, c: CharId, w: f64, w_l: f64, w_r: f64, tw_y: f64, tw_p: f64, dt: f64) {
     let (mut w_l, mut w_r) = (w_l, w_r);
     let far = g.k.kit.close.far;
     let an = &g.ch[c].anim;
@@ -206,14 +206,14 @@ pub fn anim_creep_layer(g: &mut crate::game::Game, c: CharId, w: f64, w_l: f64, 
 }
 
 /// Its arms: the shoulders rounded and the hands brought up ahead of the hips by IK on a copy. (character.ts CharacterAnimator.creepArms)
-pub fn anim_creep_arms(g: &mut crate::game::Game, c: CharId, w: f64, w_l: f64, w_r: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64) {
+fn anim_creep_arms(g: &mut crate::game::Game, c: CharId, w: f64, w_l: f64, w_r: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64) {
     anim_sheath_rest_inv(g, c);
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_creep_arms_ask(g, c, slot, w, w_l, w_r, e, cr, ck, cke, ws, ha, hg);
 }
 
 /// (character.ts CharacterAnimator.creepArmsAsk)
-pub fn anim_creep_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, w_l: f64, w_r: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64) {
+fn anim_creep_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, w_l: f64, w_r: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64) {
     let rc = anim_sheath_rest_inv(g, c);
     {
         let an = &g.ch[c].anim;
@@ -229,13 +229,13 @@ pub fn anim_creep_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
 }
 
 /// Its body: the pelvis and the feet, the heft, the bow and the look. Answers [the arms' share of his stride, his surge]. (character.ts CharacterAnimator.creepBody)
-pub fn anim_creep_body(g: &mut crate::game::Game, c: CharId, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64) -> Vec<f64> {
+fn anim_creep_body(g: &mut crate::game::Game, c: CharId, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64) -> Vec<f64> {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_creep_body_ask(g, c, slot, e, free, cr, gw, tw_y, tw_p, dt)
 }
 
 /// (character.ts CharacterAnimator.creepBodyAsk)
-pub fn anim_creep_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64) -> Vec<f64> {
+fn anim_creep_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64) -> Vec<f64> {
     {
         let p0 = g.ch[c].pos;
         let an = &g.ch[c].anim;
@@ -271,7 +271,7 @@ fn creep_cols_put(g: &mut Game, c: CharId) {
 // ---- the stealth poses
 
 /// The arms of the hands-empty crouch. `busy`: something the animator knows has his arms or body. (character.ts CharacterAnimator.stealthLayer)
-pub fn anim_stealth_layer(g: &mut crate::game::Game, c: CharId, dt: f64, busy: bool, crouch_pose: f64, w_move: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_stealth_layer(g: &mut crate::game::Game, c: CharId, dt: f64, busy: bool, crouch_pose: f64, w_move: f64, tw_y: f64, tw_p: f64) {
     if g.ch[c].anim.sp.is_none() {
         g.ch[c].anim.sp = Some(AnimSp { w_a: 0.0, t: 0.0, cr: crouch_pose, fl: 0.0, lead: 0.0, fz: 0.0, sw: 0.0, w_c: 0.0, w_h: 0.0, pic: None, pic_on: false, nod_up: None });
     }
@@ -293,7 +293,7 @@ fn stealth_cols_put(g: &mut Game, c: CharId) {
 }
 
 /// (character.ts CharacterAnimator.stealthLayerAsk)
-pub fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, busy: bool, crouch_pose: f64, w_move: f64, tw_y: f64, tw_p: f64) {
+fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, busy: bool, crouch_pose: f64, w_move: f64, tw_y: f64, tw_p: f64) {
     {
         let an = &g.ch[c].anim;
         let free = an.stealth.as_ref().map_or(false, |f| f.free);
@@ -309,7 +309,7 @@ pub fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt
 }
 
 /// The look under a door with the wand, on a copy of the finished pose that is then made the pose. (character.ts CharacterAnimator.stealthPicture)
-pub fn anim_stealth_picture(g: &mut crate::game::Game, c: CharId, dt: f64) {
+pub(super) fn anim_stealth_picture(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let cable_in = g.k.stealthpose.cable_in;
     let (cable_out, cable_head_out) = { let k = crate::character::stealth().cable; (k.out, k.head_out) };
     let an = &mut g.ch[c].anim;
@@ -336,7 +336,7 @@ pub fn anim_stealth_picture(g: &mut crate::game::Game, c: CharId, dt: f64) {
 }
 
 /// The look under a door itself, on `pic`, by its eased weight e and the head's eh. (character.ts CharacterAnimator.cablePose)
-pub fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) {
+fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_cable_pose_ask(g, c, slot, pic, e, eh);
 }
@@ -358,7 +358,7 @@ fn cable_cols_put(g: &mut Game, c: CharId) {
 }
 
 /// (character.ts CharacterAnimator.cablePoseAsk)
-pub fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) {
+fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) {
     {
         let an = &g.ch[c].anim;
         let gl = an.gaze_local;
@@ -381,7 +381,7 @@ pub fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: 
 // ---- the twist's inverse
 
 /// The chest twist run backwards for a point; fk must be current on the pose asked about. (character.ts CharacterAnimator.untwist)
-pub fn anim_untwist(g: &crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
+fn anim_untwist(g: &crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
     if !js::truthy(tw_y) && !js::truthy(tw_p) { return Untwist::Same; }
     let an = &g.ch[c].anim;
     let (p1, p2, p3) = (an.fk.pos[an.nodes.spine1], an.fk.pos[an.nodes.spine2], an.fk.pos[an.nodes.spine3]);
@@ -412,7 +412,7 @@ fn untwist_at(un: &Untwist, h: V3) -> V3 {
 // ---- the kit swap
 
 /// The swap's frame: both arms by IK on a copy of pA, then the clock. (character.ts CharacterAnimator.kitLayer)
-pub fn anim_kit_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_kit_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tw_y: f64, tw_p: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_kit_layer_ask(g, c, slot, tw_y, tw_p);
     let an = &mut g.ch[c].anim;
@@ -432,7 +432,7 @@ fn kit_cols_put(g: &mut Game, c: CharId) {
 }
 
 /// (character.ts CharacterAnimator.kitLayerAsk)
-pub fn anim_kit_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, tw_y: f64, tw_p: f64) {
+fn anim_kit_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, tw_y: f64, tw_p: f64) {
     let rc = anim_sheath_rest_inv(g, c);
     let kit_rest = g.ch[c].anim.kit_rest;
     let s = crate::rig_props::sling_front_hand(g, None, Some(kit_rest));
@@ -473,13 +473,13 @@ pub fn anim_kit_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, tw_y: 
 // ---- the hold's catch and the ready pose
 
 /// The hold's arm's last word: the left hand put on the hold's target, after the layers that move his trunk. (character.ts CharacterAnimator.catchArm)
-pub fn anim_catch_arm(g: &mut crate::game::Game, c: CharId, x: crate::character::AnimHdFix) {
+fn anim_catch_arm(g: &mut crate::game::Game, c: CharId, x: crate::character::AnimHdFix) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_catch_arm_ask(g, c, slot, x);
 }
 
 /// (character.ts CharacterAnimator.catchArmAsk)
-pub fn anim_catch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, x: crate::character::AnimHdFix) {
+fn anim_catch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, x: crate::character::AnimHdFix) {
     {
         let a = args();
         a[0] = x.w; a[7] = x.pole_w; a[12] = x.rw;
@@ -491,7 +491,7 @@ pub fn anim_catch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, x: cra
 }
 
 /// HOLD.catch, after the layers: the left hand onto the hold's target; with the reach up and no hold, where it has the hand is noted. (character.ts CharacterAnimator.catchFix)
-pub fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
+pub(super) fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
     let x = g.ch[c].anim.hd_fix.take();
     if !g.ch[c].anim.no_knife { g.ch[c].anim.rd_hand_l = None; return; }
     if let Some(x) = x {
@@ -511,7 +511,7 @@ pub fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
 }
 
 /// The ready pose: the trunk, then the arms. Weight `w`; `live` = still asked for. (character.ts CharacterAnimator.readyLayer)
-pub fn anim_ready_layer(g: &mut crate::game::Game, c: CharId, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_ready_layer(g: &mut crate::game::Game, c: CharId, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_ready_layer_ask(g, c, slot, w, kind, live, dt, tw_y, tw_p);
     g.ch[c].anim.ready_shown = w;
@@ -533,7 +533,7 @@ fn rd_cols_put(g: &mut Game, c: CharId) {
 }
 
 /// (character.ts CharacterAnimator.readyLayerAsk)
-pub fn anim_ready_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
+fn anim_ready_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
     let k = crate::character::ready().get(String::from(kind.as_str())).unwrap().clone();
     let wp = match g.ch[c].anim.rd_at { Some(p) => Some(anim_to_model_p(g, c, p)), None => None };
     let rc = anim_sheath_rest_inv(g, c);
@@ -575,7 +575,7 @@ pub fn anim_ready_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f
 }
 
 /// The rest pose's chest turn, inverted: the sheath's frame; found once, off a rest pose of its own. (character.ts CharacterAnimator.sheathRestInv)
-pub fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
+fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
     if let Some(q) = g.ch[c].anim.rc_inv { return q; }
     let rig = g.ch[c].anim.rig;
     let mut f = crate::anim_skeleton::pose_fk_new(g, rig);
@@ -593,7 +593,7 @@ pub fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
 // ---- the takedown
 
 /// A takedown's clocks, ahead of the pose: the move's and the reaction's seconds, the blow's points riding the man, and the crouch they leave. (character.ts CharacterAnimator.takePre)
-pub fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f64) -> f64 {
+pub(super) fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f64) -> f64 {
     let mut cp = cp;
     let t = g.ch[c].anim.tk;
     if g.ch[c].anim.bw.is_none() { g.ch[c].anim.bw_rise = 0.0; }
@@ -636,21 +636,21 @@ pub fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f64) -> 
 }
 
 /// How far into the move's tail he is, 0 to 1; let go of as he walks off. (character.ts CharacterAnimator.blowTail)
-pub fn anim_blow_tail(g: &crate::game::Game, c: CharId, b: &crate::character::BlowRun) -> f64 {
+fn anim_blow_tail(g: &crate::game::Game, c: CharId, b: &crate::character::BlowRun) -> f64 {
     let x = b.end + b.tail;
     let w = crate::character::blow().walk;
     bump(b.t, b.hit + 0.08, b.end + 0.1, x - 0.45, x) * (1.0 - v3::smoothstep(w[0], w[1], m::abs(g.ch[c].anim.speed)))
 }
 
 /// The legs under the blow: he stands into the man. Nothing where he may not rise. (character.ts CharacterAnimator.blowLegs)
-pub fn anim_blow_legs(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun) {
+pub(super) fn anim_blow_legs(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun) {
     if !b.rise { return; }
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_blow_legs_ask(g, c, slot, b);
 }
 
 /// (character.ts CharacterAnimator.blowLegsAsk)
-pub fn anim_blow_legs_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun) {
+fn anim_blow_legs_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun) {
     {
         let a = args();
         a[0] = b.t; a[1] = b.hit; a[2] = b.end; a[3] = b.tail;
@@ -660,14 +660,14 @@ pub fn anim_blow_legs_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
 }
 
 /// The trunk's share of the move, on pA. (character.ts CharacterAnimator.blowTrunk)
-pub fn anim_blow_trunk(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun) {
+pub(super) fn anim_blow_trunk(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun) {
     let tl = if b.tail > 0.0 { anim_blow_tail(g, c, b) } else { 0.0 };
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_blow_trunk_ask(g, c, slot, b, tl);
 }
 
 /// (character.ts CharacterAnimator.blowTrunkAsk)
-pub fn anim_blow_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun, tl: f64) {
+fn anim_blow_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun, tl: f64) {
     {
         let a = args();
         a[0] = b.t; a[1] = b.hit; a[2] = b.end; a[3] = blow_no_of(b.style); a[4] = tl;
@@ -677,13 +677,13 @@ pub fn anim_blow_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &c
 }
 
 /// The arms of the move, by IK on a copy of pA. Returns the layer's weight. (character.ts CharacterAnimator.blowArms)
-pub fn anim_blow_arms(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
+pub(super) fn anim_blow_arms(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_blow_arms_ask(g, c, slot, b, tw_y, tw_p)
 }
 
 /// (character.ts CharacterAnimator.blowArmsAsk)
-pub fn anim_blow_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
+fn anim_blow_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
     let t = anim_to_model_p(g, c, b.at);
     let t2 = match b.at2 { Some(p) => Some(anim_to_model_p(g, c, p)), None => None };
     {
@@ -701,7 +701,7 @@ pub fn anim_blow_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
 }
 
 /// The man a takedown is done to, still on his feet. (character.ts CharacterAnimator.takenLayer)
-pub fn anim_taken_layer(g: &mut crate::game::Game, c: CharId, t: crate::character::AnimTakenLayerT) {
+pub(super) fn anim_taken_layer(g: &mut crate::game::Game, c: CharId, t: crate::character::AnimTakenLayerT) {
     let u = t.t - t.delay;
     if u <= 0.0 { return; }
     let slot = crate::anim_skeleton::layer_slot(g, c);
@@ -709,7 +709,7 @@ pub fn anim_taken_layer(g: &mut crate::game::Game, c: CharId, t: crate::characte
 }
 
 /// (character.ts CharacterAnimator.takenLayerAsk)
-pub fn anim_taken_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: crate::character::AnimTakenLayerAskT, u: f64) {
+fn anim_taken_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: crate::character::AnimTakenLayerAskT, u: f64) {
     {
         let a = args();
         a[0] = u; a[1] = t.off; a[2] = match t.style { TakenStyle::Arch => 0.0, TakenStyle::Hunch => 1.0, TakenStyle::Snap => 2.0 };
@@ -719,7 +719,7 @@ pub fn anim_taken_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: c
 }
 
 /// The knife's blow: the right arm over the punch clip's pose, its clock and its pose. (character.ts CharacterAnimator.knifeBlow)
-pub fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate::character::StrikeKind, dt: f64, total: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate::character::StrikeKind, dt: f64, total: f64, tw_y: f64, tw_p: f64) {
     let kb = crate::character::knife_blow();
     let k = if g.ch[c].anim.kb_slash { crate::character::knife_slash() } else if g.ch[c].anim.kb_back { crate::character::knife_back() } else { match kind { StrikeKind::Cross => kb.cross, StrikeKind::Jab => kb.jab } };
     let t0 = kb.snap * (1.0 - g.ch[c].anim.kb_r0);
@@ -731,13 +731,13 @@ pub fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate::charac
 }
 
 /// The blow's pose, its clock being knifeBlow's: `t` the key time, `t0` the seconds to the hilt. (character.ts CharacterAnimator.knifePose)
-pub fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
+fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_knife_pose_ask(g, c, slot, k, t, t0, total, tw_y, tw_p);
 }
 
 /// (character.ts CharacterAnimator.knifePoseAsk)
-pub fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
+fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let at_p = match g.ch[c].anim.rd_at { Some(p) => Some(anim_to_model_p(g, c, p)), None => None };
     let rc = anim_sheath_rest_inv(g, c);
     {
@@ -761,13 +761,13 @@ pub fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &c
 // ---- lock work, the haul
 
 /// Lock work: the back un-rounded, the head on the lock, both hands at the keyway. (character.ts CharacterAnimator.lockpickLayer)
-pub fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) {
+pub(super) fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_lockpick_layer_ask(g, c, slot, w);
 }
 
 /// (character.ts CharacterAnimator.lockpickLayerAsk)
-pub fn anim_lockpick_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64) {
+fn anim_lockpick_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64) {
     {
         let an = &g.ch[c].anim;
         let (at, gl, f0, f1) = (an.lockpick_at, an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
@@ -781,14 +781,14 @@ pub fn anim_lockpick_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w
 }
 
 /// Both hands on a body: the trunk bows toward the grip, both arms by IK on a copy. (character.ts CharacterAnimator.haulLayer)
-pub fn anim_haul_layer(g: &mut crate::game::Game, c: CharId, w: f64, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_haul_layer(g: &mut crate::game::Game, c: CharId, w: f64, tw_y: f64, tw_p: f64) {
     let h = match g.ch[c].anim.hl_last { Some(h) => h, None => return };
     let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_haul_layer_ask(g, c, slot, h, w, tw_y, tw_p);
 }
 
 /// (character.ts CharacterAnimator.haulLayerAsk)
-pub fn anim_haul_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, h: crate::character::HaulPose, w: f64, tw_y: f64, tw_p: f64) {
+fn anim_haul_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, h: crate::character::HaulPose, w: f64, tw_y: f64, tw_p: f64) {
     let l = anim_to_model_p(g, c, h.l);
     let r = anim_to_model_p(g, c, h.r);
     {
@@ -818,13 +818,13 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 }
 
 /// The controller's world placement to the model space the layers pose in: a point. (character.ts CharacterAnimator.toModelP)
-pub fn anim_to_model_p(g: &crate::game::Game, c: CharId, wp: V3) -> V3 {
+pub(super) fn anim_to_model_p(g: &crate::game::Game, c: CharId, wp: V3) -> V3 {
     let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 
 /// The same for a direction. (character.ts CharacterAnimator.toModelD)
-pub fn anim_to_model_d(g: &crate::game::Game, c: CharId, wd: V3) -> V3 {
+pub(super) fn anim_to_model_d(g: &crate::game::Game, c: CharId, wd: V3) -> V3 {
     to_model_d_of(g.ch[c].anim.body_yaw_in, wd)
 }
 
@@ -837,7 +837,7 @@ pub fn anim_door_hands(g: &crate::game::Game, c: CharId) -> crate::character::An
 }
 
 /// A hand on the door leaf he is pushing open; the free arm only, the weight this layer's own springs. (character.ts CharacterAnimator.doorLayer)
-pub fn anim_door_layer(g: &mut crate::game::Game, c: CharId, dt: f64, intent: f64, armed: bool, tw_y: f64, tw_p: f64) {
+pub(super) fn anim_door_layer(g: &mut crate::game::Game, c: CharId, dt: f64, intent: f64, armed: bool, tw_y: f64, tw_p: f64) {
     let s = &mut g.ch[c].anim.dp;
     let l = match s.last {
         Some(l) => l,

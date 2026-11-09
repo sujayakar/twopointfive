@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// A blank row of counts.   (smokebreak.ts fresh)
-pub fn fresh() -> crate::smokebreak::SmokeBreakStats {
+fn fresh() -> crate::smokebreak::SmokeBreakStats {
     SmokeBreakStats { men: 0.0, lit: 0.0, draws: 0.0, flames: 0.0, embers: 0.0, breaths: 0.0, frames: 0.0 }
 }
 
@@ -25,7 +25,7 @@ pub fn state_of(g: &mut crate::game::Game) -> crate::smokebreak::State {
 }
 
 /// A word's bits, stirred. Everything is modulo 2^32 in the TypeScript too, so u32 arithmetic gives its bits.   (smokebreak.ts mix)
-pub fn mix(x: f64) -> f64 {
+fn mix(x: f64) -> f64 {
     let x0 = js::to_u32(x);
     let mut x = (x0 ^ 61) ^ (x0 >> 16);
     x = x.wrapping_add(x << 3);
@@ -65,12 +65,12 @@ fn hand_of(k: &crate::knobs::SmokebreakK, t: f64) -> HandAt {
 }
 
 /// How far up his hand is asked this second of his smoke (0‥1), and whether the end is at his mouth.   (smokebreak.ts handAt)
-pub fn hand_at(g: &crate::game::Game, t: f64) -> crate::smokebreak::HandAt {
+fn hand_at(g: &crate::game::Game, t: f64) -> crate::smokebreak::HandAt {
     hand_of(&g.k.smokebreak, t)
 }
 
 /// His mouth, off the head joint, and the way his breath leaves it.   (smokebreak.ts mouthOf)
-pub fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
+fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
     let c = c_2;
     let hd = crate::character::character_head_dir(g, c);
     let head = *g.ch[c].bones.get(crate::character::Bone::Head).unwrap();

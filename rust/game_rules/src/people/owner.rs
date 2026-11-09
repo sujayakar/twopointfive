@@ -64,7 +64,7 @@ pub fn kept(g: &Game, gd: GuardId, by: By) -> Option<&'static str> {
 pub fn name_of(by: By) -> Option<&'static str> { TASKERS.iter().find(|t| t.by == by).map(|t| t.name) }
 
 /// who has him, for what reason and since when; None: nobody
-pub fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
+pub(super) fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
     let c = g.gd[gd].ch;
     let top = By(men::man_owner(g, c)).rank();
     let t = TASKERS.iter().find(|t| t.by.rank() == top)?;

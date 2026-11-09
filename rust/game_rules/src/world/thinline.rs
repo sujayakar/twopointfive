@@ -12,7 +12,7 @@ pub fn thin_note(g: &mut crate::game::Game, b: AnyBoxId, hw0: f64, k: f64, r: f6
     b
 }
 /// A box's row is free again: what was noted of the box that stood in it is gone with it (the TypeScript's tables hold their keys weakly).
-pub fn thin_forget(g: &mut crate::game::Game, b: AnyBoxId) {
+pub(super) fn thin_forget(g: &mut crate::game::Game, b: AnyBoxId) {
     if !g.m.thinline.thin.is_empty() { g.m.thinline.thin.delete(b); }
     if !g.m.thinline.air.is_empty() { g.m.thinline.air.delete(b); }
 }

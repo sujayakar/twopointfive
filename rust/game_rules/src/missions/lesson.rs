@@ -34,7 +34,7 @@ fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
 /// a line that names the knife, while there is none: the right click's knockout is the blow (lesson.ts bareLine)
-pub fn bare_line(line: &str) -> String {
+fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
     let s = replace_words(&s, "left click to knife him", "right-click to knock him out");
     replace_words(&s, "left-click to kill him with the knife", "right-click to knock him out")
@@ -62,7 +62,7 @@ fn token_say(row: usize, who: &str, held: bool, bare: bool) -> String {
 }
 
 /// the first letter lower-cased (lesson.ts lower)
-pub fn lower(name: &str) -> String {
+fn lower(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
         // (charAt is one UTF-16 unit: half a surrogate pair lower-cases to itself)
@@ -82,7 +82,7 @@ pub fn lesson_token(name: &str) -> bool {
 }
 
 /// a line's tokens written out; on the page `held` is false and `bare` true when not given (lesson.ts tokenLine)
-pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
+fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     // (held = stalkClickOnly() with NO game: STALK.on && STALK.only && !STALK.key, false on the page · bare = CLOSE.on && CLOSE.noKnife, true on it)
     let (held, bare) = (held.unwrap_or(false), bare.unwrap_or(true));
     if !line.contains('{') { return String::from(line); }
@@ -118,20 +118,20 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 // ---- the tests
 
 /// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none (lesson.ts after)
-pub fn after(log: &[u32], last: Option<u32>) -> usize {
+fn after(log: &[u32], last: Option<u32>) -> usize {
     let mut k = log.len();
     while k > 0 && Some(log[k - 1]) != last { k -= 1; }
     k
 }
 
 /// (lesson.ts inside)
-pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
+fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
 /// the player a lesson is taught to, one seat today (lesson.ts who)
-pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
+fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
-pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
+fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
@@ -139,16 +139,16 @@ pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId)
 }
 
 /// a man no longer on his feet: dead, or out cold (lesson.ts downed)
-pub fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
+fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
 
 /// a teammate on his feet (lesson.ts:127, 269)
 fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead }
 
 /// the one partner of a quiet pair: the first operative unit on his feet (lesson.ts partnerOf)
-pub fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
+fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
 
 /// is `v` within the record's below and above; a kind with neither field has nothing to refuse (lesson.ts band)
-pub fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
+fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
     let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
@@ -173,7 +173,7 @@ fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1,
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
 /// one test asked: lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of)
-pub fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
+fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
         T::In { area } => inside(*area, own_pos(g, &crate::seats::here(g))),
@@ -412,7 +412,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
 /// a row's `below` and `above` (lesson.ts bandCheck)
-pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
+fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
     let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
@@ -681,7 +681,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
 }
 
 /// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
-pub fn lesson_at(g: &crate::game::Game) -> f64 {
+fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
@@ -758,7 +758,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.   (lesson.ts Lesson.advance)
-pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
+fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
     g.lesson.i += 1.0;
@@ -778,7 +778,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
 }
 
 /// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
-pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
+fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
     let last_order = seat.orders.log.last().map(|r| r.serial);
@@ -807,7 +807,7 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
 }
 
 /// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
-pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
+fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;
@@ -877,7 +877,7 @@ pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut
 }
 
 /// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
-pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(super) fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
         || stage == crate::game::MissionStage::Done
@@ -950,7 +950,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 }
 
 /// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
-pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
+fn lesson_note(g: &mut crate::game::Game, s: &str) {
     let row = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.lesson.log.push(row);
     if g.lesson.log.len() > 80 {

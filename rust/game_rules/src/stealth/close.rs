@@ -13,22 +13,22 @@ fn fresh_state() -> crate::close::State {
 }
 
 /// The log of what was taken, the debugger's. (close.ts note)
-pub fn note(g: &crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
+fn note(g: &crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
 }
 
 /// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
-pub fn seated_of(g: &mut crate::game::Game) -> &mut JsMap<GuardId, crate::close::Seat> {
+fn seated_of(g: &mut crate::game::Game) -> &mut JsMap<GuardId, crate::close::Seat> {
     g.m.close.seated.get_or_insert_with(JsMap::new)
 }
 
 /// This seat's close-in state, made if none yet: the row itself. (close.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::close::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::close::State {
     let p = g.player;
     g.m.close.state.get_or_insert_with(p, fresh_state)
 }
 
 /// One window, with its arc's cosine. (close.ts arc)
-pub fn arc(id_2: crate::close::CloseId, kind: crate::close::CloseKind, mid: f64, half: f64, reach: f64, grab: bool, strike: bool) -> crate::close::CloseWindow {
+fn arc(id_2: crate::close::CloseId, kind: crate::close::CloseKind, mid: f64, half: f64, reach: f64, grab: bool, strike: bool) -> crate::close::CloseWindow {
     crate::close::CloseWindow { id: id_2, kind, mid, half, cos_half: m::cos(half), reach, grab, strike }
 }
 
@@ -44,7 +44,7 @@ pub fn close_seated(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The windows round one man as he is now. (close.ts closeWindows)
-pub fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseWindow> {
+fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseWindow> {
     use crate::close::{CloseId as I, CloseKind as K};
     let r = g.k.close.reach;
     let mut out = Vec::new();
@@ -74,7 +74,7 @@ pub fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::Cl
 }
 
 /// The window a bearing falls in; the rear arc goes by the build's own cosine. (close.ts windowAt)
-pub fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::close::CloseWindow> {
+fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::close::CloseWindow> {
     let cb = m::cos(b);
     for w in wins {
         if w.id == crate::close::CloseId::Behind && w.half < m::PI - 1e-6 {
@@ -87,7 +87,7 @@ pub fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::cl
 }
 
 /// Nothing solid and no door leaf between two bodies at chest height. (close.ts clearBetween)
-pub fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
+pub(super) fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
     let a: V3 = [p[0], 1.0, p[2]];
     let b: V3 = [q[0], 1.0, q[2]];
     !crate::scene_collision::solid_blocked(g, a, b, None) && !crate::scene_collision::segment_blocked_dynamic(g, a, b, None)
@@ -255,12 +255,12 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
 }
 
 /// The line that says what the held click does. (close.ts sneakHint)
-pub fn sneak_hint(g: &crate::game::Game) -> String {
+fn sneak_hint(g: &crate::game::Game) -> String {
     String::from("LMB  hold to sneak up on him")
 }
 
 /// This frame's best offer: the nearest man Sam could do something to. (close.ts noteBest)
-pub fn note_best(g: &mut crate::game::Game, o: &crate::close::CloseOffer) {
+fn note_best(g: &mut crate::game::Game, o: &crate::close::CloseOffer) {
     let now = g.time;
     let s = state_of(g);
     if s.t != now { s.t = now; s.best = None; }
@@ -288,7 +288,7 @@ pub fn close_civ_offer(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) {
 }
 
 /// Sam's body says he is in reach: which pose, and what the hand is going for. (close.ts closeReady)
-pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
+fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     use crate::character::{Bone, ReadyKind};
     use crate::close::{CloseKind as K, CloseReady};
     let pl = g.player;
@@ -314,7 +314,7 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
 }
 
 /// Who holds the mode now: the nearest living man in range with nothing solid between. (close.ts modeNow)
-pub fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
+fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
     if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
@@ -469,7 +469,7 @@ pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::Cl
 }
 
 /// A man calm enough to sit. (close.ts calm)
-pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     m.state == crate::game::GuardState::Patrol && m.awareness < 0.3 && m.held.is_none() && m.script.is_none()
 }

@@ -46,7 +46,7 @@ pub fn condition_sup(g: &crate::game::Game, m: crate::condition::Man, v: f64) ->
 }
 
 /// What state a man is in, the stamps read as they stand.   (condition.ts conditionOf)
-pub fn condition_of(g: &crate::game::Game, m: crate::condition::Man) -> crate::condition::Condition {
+fn condition_of(g: &crate::game::Game, m: crate::condition::Man) -> crate::condition::Condition {
     let (down, sup, dazzled_until, stagger_until) = man_marks(g, m);
     Condition {
         shaken: !down && g.tune.suppression && sup >= g.k.suppression.flinch,
@@ -72,7 +72,7 @@ fn man_marks(g: &Game, m: Man) -> (bool, f64, f64, f64) {
 }
 
 /// The panel's line: every man in anything but good order.   (condition.ts conditionSummary)
-pub fn condition_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
+fn condition_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     let mut parts: Vec<String> = Vec::new();
     let me = seat.player;
     let mine = word(condition_of(g, Man::Player(me)));

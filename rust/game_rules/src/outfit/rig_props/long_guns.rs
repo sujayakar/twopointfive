@@ -28,7 +28,7 @@ fn unit_frame() -> Frame {
 }
 
 /// The rifle's base place in the back's frame, slung behind or hung in front. (rigProps.ts slungBase)
-pub fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kSlung, front: bool, rest: Option<f64>) -> crate::rig_props::SlungBase {
+fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kSlung, front: bool, rest: Option<f64>) -> crate::rig_props::SlungBase {
     let (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) = (bone(g, c_2, crate::character::Bone::Hips), bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::UpperArmL), bone(g, c_2, crate::character::Bone::UpperArmR), bone(g, c_2, crate::character::Bone::Spine2));
     let joints = match (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) {
         (Some(_), Some(tl), Some(tr), Some(al), Some(ar), Some(_)) => Some((tl, tr, al, ar)),
@@ -68,7 +68,7 @@ pub fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc
 }
 
 /// How far a rifle hanging in front must swing forward to lie over both thighs as posed. (rigProps.ts slingSwing)
-pub fn sling_swing(g: &crate::game::Game, c_2: CharId, cf: crate::rig_props::Frame, o: V3, z: V3) -> f64 {
+fn sling_swing(g: &crate::game::Game, c_2: CharId, cf: crate::rig_props::Frame, o: V3, z: V3) -> f64 {
     let (thigh_l, thigh_r, shin_l, shin_r) = match (bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::ShinL), bone(g, c_2, crate::character::Bone::ShinR)) {
         (Some(a), Some(b), Some(c), Some(d)) => (a, b, c, d),
         _ => return 0.0,
@@ -107,12 +107,12 @@ fn swing_ang(f: f64, u: f64) -> f64 {
 }
 
 /// The swing a front-slung rifle wants on this pose. (rigProps.ts slingRestWant)
-pub fn sling_rest_want(g: &crate::game::Game, c_2: CharId) -> f64 {
+pub(in crate::outfit) fn sling_rest_want(g: &crate::game::Game, c_2: CharId) -> f64 {
     slung_base(g, c_2, sling_front(), true, None).want
 }
 
 /// The rifle's group frame, in the hands or slung. (rigProps.ts sc20kFrame)
-pub fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::RigSc20k, where_: crate::rig_props::Sc20kFrameWhere, front: Option<bool>, rest: Option<f64>) -> crate::rig_props::Sc20kFrame {
+fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::RigSc20k, where_: crate::rig_props::Sc20kFrameWhere, front: Option<bool>, rest: Option<f64>) -> crate::rig_props::Sc20kFrame {
     let front = front.unwrap_or(false);
     if where_ == Sc20kFrameWhere::Hand {
         let hand = hand_or_muzzle(g, c_2);
@@ -136,12 +136,12 @@ pub fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::
 }
 
 /// The can's place as a bare barrel: the same length to the same muzzle, a finger thick. (rigProps.ts bareBarrel)
-pub fn bare_barrel(can: crate::rig_props::Seg) -> crate::rig_props::Seg {
+fn bare_barrel(can: crate::rig_props::Seg) -> crate::rig_props::Seg {
     Seg { thick: BARE_BARREL, tall: BARE_BARREL, ..can }
 }
 
 /// The rifle's boxes (or its model's), off the right hand or slung, stamped with this man. They are not only a picture: they reach the world's dynamics, which a laser's reach and the cursor's ray read. (rigProps.ts sc20kBoxes)
-pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
+pub(super) fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
     let s: RigSc20k = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
     let where_ = where_.unwrap_or(Sc20kBoxesWhere::Hand);
     let lens = lens.unwrap_or([0.0, 0.0, 0.0]);
@@ -211,7 +211,7 @@ fn stamp_owner(g: &mut Game, c: CharId) {
 }
 
 /// The 2010s carbine's parts (GEAR.on is settled on). (rigProps.ts rifleM4)
-pub fn rifle_m4(g: &crate::game::Game, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::RigM4> {
+pub(super) fn rifle_m4(g: &crate::game::Game, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::RigM4> {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     Some(rig.m4)
 }
@@ -282,7 +282,7 @@ pub fn sc20k_launcher_muzzle(g: &mut crate::game::Game, c_2: CharId, rig: Option
 }
 
 /// The carbine's weapon light: at the lens part, pointing down the bore. (rigProps.ts carbineLightPose)
-pub fn carbine_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::CarbineLightPose {
+fn carbine_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::CarbineLightPose {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let cb = rig.carbine;
     let hand = hand_or_muzzle(g, c_2);
@@ -358,7 +358,7 @@ pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::
 }
 
 /// The sizes of the thing the pack-side rule stands at a pack's side. (rigProps.ts packSideDims)
-pub fn pack_side_dims(g: &crate::game::Game, what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
+fn pack_side_dims(g: &crate::game::Game, what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     if what == PackSideDimsWhat::Hammer {
         let h = bigrig().hammer;
@@ -414,7 +414,7 @@ pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_p
 }
 
 /// …carried into the world by the chest joint's skin matrix. (rigProps.ts packSide)
-pub fn pack_side(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::Frame> {
+fn pack_side(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::Frame> {
     let bind_what = match what {
         PackSideWhat::Hammer => PackSideBindWhat::Hammer,
         PackSideWhat::Shotgun => PackSideBindWhat::Shotgun,

@@ -25,13 +25,13 @@ fn charge_look() -> CHARGELOOK {
 const WALL_FLASH_COLOR: V3 = [1.0, 0.62, 0.25];
 
 /// DESTRUCTION.on && BLAST.on && chaosOf(g) > 0   (blastLook.ts:155 live)
-pub fn live(g: &mut crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
+fn live(g: &mut crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
 
 /// (blastLook.ts:157 near)
-pub fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
+fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 
 /// where a wall charge's borrowed stun burst stands   (blastLook.ts:159 burstAt)
-pub fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
+fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
     let y = 0.5 + crate::effects::bang().height;
     crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y))
 }
@@ -48,7 +48,7 @@ pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// (blastLook.ts:163 blastLookTickRaw)
-pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
@@ -96,7 +96,7 @@ pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// how much of the firing line's run fits: the whole of it over clear floor, the short one where something stands in the way   (blastLook.ts:184 runOf)
-pub fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
+fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
     let k = charge_look();
     let [r0, jog, r1] = k.run;
     let a = crate::wallcharge::wall_pt(g, w, 0.035, 0.05, Some(0.12));
@@ -105,7 +105,7 @@ pub fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64
 }
 
 /// the frame of strip, the blinking lamp, the firing line and its reel: thirteen boxes of the frame   (blastLook.ts:190 chargeBoxes)
-pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<AnyBoxId>) {
+fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<AnyBoxId>) {
     let k = charge_look();
     let w = g.tab.wallcharge_set_wall_charge[s.c].wall.clone();
     let h = g.k.wallcharge.height;
@@ -153,7 +153,7 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
 }
 
 /// the stun charge's flash a wall charge borrowed (detonateStun lit it this frame where spawnBurst put it); None: none burning there   (blastLook.ts:219 flashOf)
-pub fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
+fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
     let b = crate::effects::bang();
     let mut at = burst_at(g, w);
     at[1] += b.light_lift;
@@ -167,14 +167,14 @@ pub fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> O
 }
 
 /// the light meter's own sum, in its own order   (blastLook.ts:225 LUM)
-pub fn lum(r: f64, g_2: f64, b: f64) -> f64 { 0.2126 * r + 0.7152 * g_2 + 0.0722 * b }
+fn lum(r: f64, g_2: f64, b: f64) -> f64 { 0.2126 * r + 0.7152 * g_2 + 0.0722 * b }
 
 /// one representable number up or down (x > 0)   (blastLook.ts:229 nudge)
-pub fn nudge(_g: &crate::game::Game, x: f64, up: bool) -> f64 { let bits = x.to_bits(); f64::from_bits(if up { bits.wrapping_add(1) } else { bits.wrapping_sub(1) }) }
+fn nudge(_g: &crate::game::Game, x: f64, up: bool) -> f64 { let bits = x.to_bits(); f64::from_bits(if up { bits.wrapping_add(1) } else { bits.wrapping_sub(1) }) }
 
 /// WALL_FLASH's hue at `c`'s luminance, the meter's sum kept TO THE BIT: red and blue scaled, green solved for, then green (failing that, blue) walked
 /// one representable number at a time until the sum lands; a colour it cannot land stays as it was.   (blastLook.ts:230 warmOf)
-pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
+fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
     let t = WALL_FLASH_COLOR;
     let l0 = lum(c_2[0], c_2[1], c_2[2]);
     let k = l0 / lum(t[0], t[1], t[2]);
@@ -200,7 +200,7 @@ fn state_mut(g: &mut Game) -> &mut State {
 }
 
 /// this module's own dice: a counter of its own through a hash   (blastLook.ts:153 hashU)
-pub fn hash_u(n: f64) -> f64 {
+fn hash_u(n: f64) -> f64 {
     let mut x = m::imul(js::to_i32(n) ^ (0x9e3779b9u32 as i32), 0x85ebca6bu32 as i32) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0xc2b2ae35u32 as i32) as u32;
@@ -209,23 +209,23 @@ pub fn hash_u(n: f64) -> f64 {
 }
 
 /// (blastLook.ts:156 thick)
-pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
+fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 
 /// is the wall open at the charge (the blast made its hole)? one segment through it at the slab's height   (blastLook.ts:216 holed)
-pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let (h, th) = (g.k.wallcharge.height, thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 
 /// the authored stun sparks as they stand, over what they were when the tables were set: count, speed, life, size   (blastLook.ts:299 scale)
-pub fn scale(g: &mut crate::game::Game) -> crate::blast_look::BurstOfK {
+fn scale(g: &mut crate::game::Game) -> crate::blast_look::BurstOfK {
     let (r, pfx, sp) = (ref_(), g.m.particle_fx.pfx, crate::effects::sparks());
     BurstOfK { n: pfx.bang_sparks / r.sparks, v: sp.speed / r.speed, l: sp.life / r.life, s: pfx.bang_spark_size / r.size }
 }
 
 /// the 'flash' item a burst stands over (`born`: the one born this very frame, else an older one)   (blastLook.ts:258 flashUnder)
-pub fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
+fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
     use crate::throwables as t;
     let h = crate::effects::bang().height;
     let mut i = 0;
@@ -240,12 +240,12 @@ pub fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
 }
 
 /// is this burst a thrown stun can's (its item is older than this frame)?   (blastLook.ts:261 canAt)
-pub fn can_at(g: &mut crate::game::Game, at: V3) -> bool { flash_under(g, at, false) }
+fn can_at(g: &mut crate::game::Game, at: V3) -> bool { flash_under(g, at, false) }
 
 /// Is this burst a door charge's (a 'flash' item born this frame, 0.2 m off the door's frame line and 0.7 of its width along it)? The way the blast goes,
 /// where the room's share starts (ahead of the leaf the charge threw in), where the rest starts. None: not one, or a leaf flung in on its hinges.
 /// (blastLook.ts:268 doorChargeAt)
-pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
+fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
     if !flash_under(g, at, true) { return None; }
     let k = door_sparks();
     let mut i = 0;
@@ -279,7 +279,7 @@ pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crat
 /// particleFx's bangFx, in place of its one spark record: true = the fragments were thrown here (a wall charge's two ways out of the wall, a door
 /// charge's the way the blast goes, a thrown can's along its axis); false = not this module's, and the caller throws its own.
 /// (blastLook.ts:246 blastSparks)
-pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
+pub(super) fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
     crate::seats::first_of(g, &mut |v: &mut crate::game::Game| if blast_sparks_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is)
 }
 fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
@@ -309,7 +309,7 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
 
 /// A door charge's fragments: a flat jet and a low skitter into the room, a share back at the squad's wall, then what is left of the stun's fountain
 /// and its embers.   (blastLook.ts:280 doorBlast)
-pub fn door_blast(g: &mut crate::game::Game, pl: PlayerId, d: crate::blast_look::DoorBlastD) {
+fn door_blast(g: &mut crate::game::Game, pl: PlayerId, d: crate::blast_look::DoorBlastD) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     let (kk, k, n) = (door_sparks(), scale(g), d.into);
     // (count, speed, jit, cone, tilt, life, lifeJit, size, sizeJit), which way, from where
@@ -334,7 +334,7 @@ fn embers_as_fountain(e: &crate::blast_look::STUNSPARKSEmbers) -> crate::blast_l
 }
 
 /// one all-round record of the stun's (its fountain, its embers)   (blastLook.ts:287 burstOf)
-pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) {
+fn burst_of(g: &mut crate::game::Game, pl: PlayerId, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     emit(g, pl, PKind::Spark, at, [0.0, 1.0, 0.0], m::round(r.count * k.n), EmitOpts {
         shape: Some(EmitShape::Burst), speed: r.speed * k.v, speed_jit: Some(r.jit), spread: Some(r.spread), lift: Some(r.lift), life: r.life * k.l, life_jit: Some(r.life_jit), size: r.size * k.s, size_jit: Some(r.size_jit), ..EmitOpts::default()
@@ -344,7 +344,7 @@ pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, at: V3, r: crate::blast
 /// One record. The first of a burst brings no seed: the pool deals it one off its own serial, the one step the fountain's record took. Every later one
 /// brings a seed off this module's counter. `first` goes down once a record was taken (the pool's answer: render_particles `particles_emit`).
 /// (blastLook.ts:293 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {
+fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {
     let mut o = o;
     let first = g.m.blast_look.state.get(pl).map_or(false, |s| s.first);
     if !first {
@@ -359,7 +359,7 @@ pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particl
 /// STAND-IN: THE THREE LATER FANS GO OUT WITH THE FIRST. The TypeScript holds the shower and the chips back a frame and the embers two, on a queue of
 /// closures. There is no such queue here. They are thrown at once, in the order the queue would have run them (so each record's seed is the one it would have
 /// had): one or two frames early. Belongs: a queue row that says which fan, of which wall, and when.   (blastLook.ts:302 wallBlast)
-pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) {
+fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     let (b, h, open, k) = (wall_blast_table(), g.k.wallcharge.height, holed(g, w), scale(g));
     let one = BurstOfK { n: 1.0, v: 1.0, l: 1.0, s: 1.0 };
@@ -390,7 +390,7 @@ pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge
 
 /// A thrown stun can's fragments: two unequal lobes along the can's own axis (effects.ts spawnBurst's draws for this burst's seed: the jets of smoke
 /// go the same two ways), a low fan all round, a small fountain, embers.   (blastLook.ts:320 stunSparks)
-pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
+fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     let (kk, b, k) = (stun_sparks_table(), crate::effects::bang(), scale(g));
     let seed = g.fx_seed - 1.0;

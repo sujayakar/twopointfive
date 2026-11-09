@@ -75,7 +75,7 @@ pub fn thing_wrote(g: &mut crate::game::Game) {
 }
 
 /// The one sentence for a level the game will not load.   (boxMirror.ts tooBig)
-pub fn too_big(name: Option<&str>, why: &str) -> String {
+pub(super) fn too_big(name: Option<&str>, why: &str) -> String {
     // (an empty name is falsy there: no name)
     match name {
         Some(n) if !n.is_empty() => format!("the level '{}' is too big to load: {}", n, why),
@@ -84,7 +84,7 @@ pub fn too_big(name: Option<&str>, why: &str) -> String {
 }
 
 /// What kind of row a box is: rotated, round, cut.   (boxMirror.ts kindOf)
-pub fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
+fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
     let (rot, round, has_cut, cut_len) = {
         let x = &g.tab.boxes[b];
         (x.rot.is_some(), x.round == Some(true), x.cut.is_some(), x.cut.as_ref().map_or(0, |c| c.len()))
@@ -94,7 +94,7 @@ pub fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
 }
 
 /// A static's kind, with the pane rule's answer for it as it stands.   (boxMirror.ts kindAt)
-pub fn kind_at(g: &mut crate::game::Game, b: BoxId, i: f64, cut_on: bool, walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) -> f64 {
+fn kind_at(g: &mut crate::game::Game, b: BoxId, i: f64, cut_on: bool, walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) -> f64 {
     let flags = seam_box(g, b).flags;
     let glass = (js::to_u32(flags) & F_GLASS_) != 0;
     if let Some(walk) = walk {
@@ -222,7 +222,7 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
 }
 
 /// the rows of boxes a question adds, and their cut planes: as the copy's own rows are written
-pub fn rows_of(g: &Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
+pub(super) fn rows_of(g: &Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
     let cut_on = true;
     let (mut rows, mut cuts) = (vec![0.0; boxes.len() * REC_], vec![0.0; boxes.len() * CUT_ROW as usize]);
     for (i, &b) in boxes.iter().enumerate() {
@@ -248,7 +248,7 @@ pub fn box_mirror_tables(g: &mut crate::game::Game) -> JsMap<String, f64> {
 }
 
 /// Reads what each table holds, and where the scratch and the senses' tables are.   (boxMirror.ts BoxMirror.boot)
-pub fn box_mirror_boot(g: &mut crate::game::Game) {
+fn box_mirror_boot(g: &mut crate::game::Game) {
     let cap = |t: f64| sim::world_cap(t as u32) as f64;
     let c = BoxMirrorCaps {
         boxes: cap(T_REC),
@@ -282,7 +282,7 @@ pub fn box_mirror_boot(g: &mut crate::game::Game) {
 /// any of them. A reader asks the module (sim::world_addr and its like) when it reads.
 /// This game's world in the module. True = the world is newly this game's and nothing in it is ours. HELD hands a process's worlds round its games there;
 /// a `Game` here reaches no other game, and `g.sim` is its slot for its life, with as many worlds as slots (world.rs WORLDS, state.rs GAMES).   (boxMirror.ts BoxMirror.take)
-pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
+fn box_mirror_take(g: &mut crate::game::Game) -> bool {
     if g.col.mirror.caps.boxes == 0.0 {
         box_mirror_boot(g);
     }
@@ -298,7 +298,7 @@ pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
 }
 
 /// A TICK OPENS: the copy is made the boxes as they stand.   (boxMirror.ts BoxMirror.open)
-pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, circles: bool, rays: bool) {
+pub(super) fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, circles: bool, rays: bool) {
     g.col.mirror.walk = walk.map(|_| crate::FnField); // (the rule itself is g.col.glass_walkable: kind_at_copy)
     g.col.mirror.glass = glass.cloned();
     let fresh = box_mirror_take(g);
@@ -358,7 +358,7 @@ fn copied(g: &mut Game) {
     g.col.mirror.stood = o.stood;
 }
 /// does the copy stand, the game's own and of this moment, with no debt to pay before a question may read it
-pub fn box_mirror_stands(g: &Game) -> Result<(), &'static str> {
+pub(super) fn box_mirror_stands(g: &Game) -> Result<(), &'static str> {
     let x = &g.col.mirror;
     if !x.live { return Err("no copy of the boxes stands"); }
     if x.stood == 0 || x.stood != world_read(g.sim).stood { return Err("the copy is another game's, or another moment's of this one"); }
@@ -368,7 +368,7 @@ pub fn box_mirror_stands(g: &Game) -> Result<(), &'static str> {
 }
 
 /// The copy is put down.   (boxMirror.ts BoxMirror.shut)
-pub fn box_mirror_shut(g: &mut crate::game::Game) {
+pub(super) fn box_mirror_shut(g: &mut crate::game::Game) {
     let x = &mut g.col.mirror;
     x.block = None;
     if x.live && x.slot >= 0.0 {
@@ -387,7 +387,7 @@ pub fn box_mirror_shut(g: &mut crate::game::Game) {
 }
 
 /// A table too small for the box world as it stands: a throw by name.   (boxMirror.ts BoxMirror.outgrown)
-pub fn box_mirror_outgrown(g: &crate::game::Game, what: &str, has: f64, cap: f64) {
+fn box_mirror_outgrown(g: &crate::game::Game, what: &str, has: f64, cap: f64) {
     let of = g.col.mirror.of.as_deref();
     if g.col.mirror.played {
         let level = match of {
@@ -400,7 +400,7 @@ pub fn box_mirror_outgrown(g: &crate::game::Game, what: &str, has: f64, cap: f64
 }
 
 /// The grid: cell c's statics in the order they were filed, and the tilted statics' own list.   (boxMirror.ts BoxMirror.grid)
-pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, boxes: f64) {
+fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, boxes: f64) {
     let n = w * h;
     let c = g.col.mirror.caps;
     if n > c.cells {
@@ -438,7 +438,7 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
 }
 
 /// Every static against its row; a row that differs (or every row, `all`) written again.   (boxMirror.ts BoxMirror.statics)
-pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
+fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
     let n = boxes.len();
     let s = g.sim;
     let grid = !all && g.col.mirror.grid_over;
@@ -497,34 +497,34 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
 }
 
 /// The plan's rectangle round row `o` as the module has it, said to the smoke's grid.   (boxMirror.ts BoxMirror.gridDirty)
-pub fn box_mirror_grid_dirty(g: &mut crate::game::Game, m: &[f64], o: f64) {
+fn box_mirror_grid_dirty(g: &mut crate::game::Game, m: &[f64], o: f64) {
     let o = o as usize;
     let e = m[o + 3] + m[o + 4] + m[o + 5];
     sim::grid_dirty(g.sim, m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e);
 }
 
 /// The copy's number, for a step of a smoke grid over it: from here a row that is written is said to the grid.   (boxMirror.ts BoxMirror.gridCopy)
-pub fn box_mirror_grid_copy(g: &mut crate::game::Game) -> f64 {
+pub(super) fn box_mirror_grid_copy(g: &mut crate::game::Game) -> f64 {
     g.col.mirror.grid_over = true;
     g.col.mirror.copy
 }
 
 /// This is another copy to a smoke grid.   (boxMirror.ts BoxMirror.gridDrop)
-pub fn box_mirror_grid_drop(g: &mut crate::game::Game) {
+fn box_mirror_grid_drop(g: &mut crate::game::Game) {
     g.m.scene_box_mirror.copies.n += 1.0;
     g.col.mirror.copy = g.m.scene_box_mirror.copies.n;
     g.col.mirror.grid_over = false;
 }
 
 /// A static was written inside the tick: the next question compares them again.   (boxMirror.ts BoxMirror.wrote)
-pub fn box_mirror_wrote(g: &mut crate::game::Game) {
+pub(super) fn box_mirror_wrote(g: &mut crate::game::Game) {
     if g.col.mirror.live {
         box_mirror_debt(g, OWE_BOXES);
     }
 }
 
 /// The next question owes this before the module may answer it.   (boxMirror.ts BoxMirror.debt)
-pub fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
+fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
     let x = &mut g.col.mirror;
     x.owed = ((x.owed as u32) | (what as u32)) as f64;
     if !x.owes {
@@ -536,14 +536,14 @@ pub fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
 }
 
 /// The glass was written with no question of its own between.   (boxMirror.ts BoxMirror.glassWrote)
-pub fn box_mirror_glass_wrote(g: &mut crate::game::Game) {
+pub(super) fn box_mirror_glass_wrote(g: &mut crate::game::Game) {
     if g.col.mirror.live {
         box_mirror_debt(g, OWE_GLASS);
     }
 }
 
 /// The glass itself was hung, or taken down, under a standing copy.   (boxMirror.ts BoxMirror.glassIs)
-pub fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_box_mirror::PaneSource>) {
+pub(super) fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_box_mirror::PaneSource>) {
     if !g.col.mirror.live {
         return;
     }
@@ -552,7 +552,7 @@ pub fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_
 }
 
 /// A static's write is still owed.   (boxMirror.ts BoxMirror.owesBoxes)
-pub fn box_mirror_owes_boxes(g: &crate::game::Game) -> bool {
+fn box_mirror_owes_boxes(g: &crate::game::Game) -> bool {
     ((g.col.mirror.owed as u32) & OWE_BOXES_) != 0
 }
 
@@ -575,7 +575,7 @@ pub fn box_mirror_snow(g: &mut crate::game::Game, kinds: &[u8]) {
 }
 
 /// The compare a question owes after `wrote`: the copy stands again.   (boxMirror.ts BoxMirror.again)
-pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) {
+pub(super) fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) {
     let owed = (g.col.mirror.owed as u32) | (if g.col.mirror.glass_busy > 0.0 { OWE_GLASS_ } else { 0 });
     g.col.mirror.owes = false;
     g.col.mirror.owed = 0.0;
@@ -616,13 +616,13 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
 }
 
 /// The grid was written: the same debt, and the compare that pays it copies the cells again first.   (boxMirror.ts BoxMirror.wroteGrid)
-pub fn box_mirror_wrote_grid(g: &mut crate::game::Game) {
+pub(super) fn box_mirror_wrote_grid(g: &mut crate::game::Game) {
     g.col.mirror.cells_wrote = true;
     box_mirror_wrote(g);
 }
 
 /// The panes' rows for the copy's lines and rays: they stand in the game's block, the rule's own; nothing is copied. With no glass hung, no row stands.   (boxMirror.ts BoxMirror.panes)
-pub fn box_mirror_panes(g: &mut crate::game::Game) {
+fn box_mirror_panes(g: &mut crate::game::Game) {
     let s = g.sim;
     {
         let o = world(s);
@@ -678,14 +678,14 @@ fn sheets_written(g: &mut Game, sh: Vec<f64>) {
 }
 
 /// A burst's view was put on or taken off: the next question owes its rows written.   (boxMirror.ts BoxMirror.viewed)
-pub fn box_mirror_viewed(g: &mut crate::game::Game) {
+pub(super) fn box_mirror_viewed(g: &mut crate::game::Game) {
     if g.col.mirror.live {
         box_mirror_debt(g, OWE_VIEW);
     }
 }
 
 /// The view in hand, its numbers said to the module: a line or a ray there reads each pane's row where it stands.   (boxMirror.ts BoxMirror.viewIn)
-pub fn box_mirror_view_in(g: &mut crate::game::Game) {
+fn box_mirror_view_in(g: &mut crate::game::Game) {
     let v = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_view(g) } else { None };
     g.col.mirror.view_lengths = false;
     let s = g.sim;
@@ -701,17 +701,17 @@ pub fn box_mirror_view_in(g: &mut crate::game::Game) {
 }
 
 /// May a pane's open question be asked of the module now.   (boxMirror.ts BoxMirror.glassIn)
-pub fn box_mirror_glass_in(g: &mut crate::game::Game) -> bool {
+pub(super) fn box_mirror_glass_in(g: &mut crate::game::Game) -> bool {
     g.col.mirror.glass.is_some()
 }
 
 /// Does no answer of it need an angle or a length worked out.   (boxMirror.ts BoxMirror.glassPlain)
-pub fn box_mirror_glass_plain(g: &crate::game::Game) -> bool {
+fn box_mirror_glass_plain(g: &crate::game::Game) -> bool {
     !g.col.mirror.glass_angles && !g.col.mirror.view_lengths
 }
 
 /// THE CHECK'S QUESTION of the panes' copy: how many of its rows are not the game's glass now. With glass hung there is no copy: the row is the state.   (boxMirror.ts BoxMirror.stalePanes)
-pub fn box_mirror_stale_panes(g: &crate::game::Game) -> f64 {
+fn box_mirror_stale_panes(g: &crate::game::Game) -> f64 {
     if g.col.mirror.glass.is_none() {
         return g.col.mirror.glass_n;
     }
@@ -810,7 +810,7 @@ pub fn box_mirror_thing_box(g: &crate::game::Game, at: f64) -> Option<BoxId> {
 }
 
 /// May a rule of the module's step over this world now, with the game's own leaves in list 0 as they stand.   (boxMirror.ts BoxMirror.rules)
-pub fn box_mirror_rules(g: &mut crate::game::Game, dyn_: &[BoxId]) -> bool {
+pub(super) fn box_mirror_rules(g: &mut crate::game::Game, dyn_: &[BoxId]) -> bool {
     {
         let x = &g.col.mirror;
         if !x.live || (x.owes && (x.owed != 0.0 || x.glass_busy == 0.0)) || x.own.as_deref() != Some(dyn_) {

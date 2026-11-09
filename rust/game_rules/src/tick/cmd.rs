@@ -304,13 +304,13 @@ pub fn cmd_from_text(t: &str) -> crate::cmd::PlayerCmd {
 }
 
 /// The word for a number JSON cannot carry; None = the number goes as it is.   (cmd.ts numWord)
-pub fn num_word(_k: &str, x: f64) -> Option<&'static str> {
+fn num_word(_k: &str, x: f64) -> Option<&'static str> {
     if x.is_finite() && x.to_bits() != (-0.0f64).to_bits() { return None; }
     Some(if x != x { "nan" } else if x == 0.0 { "-0" } else if x > 0.0 { "inf" } else { "-inf" })
 }
 
 /// The number a word stands for; None = the string is no such word.   (cmd.ts wordNum)
-pub fn word_num(_k: &str, x: &str) -> Option<f64> {
+fn word_num(_k: &str, x: &str) -> Option<f64> {
     match x {
         "-0" => Some(-0.0),
         "nan" => Some(f64::NAN),
@@ -500,19 +500,19 @@ fn check_record(g: &mut Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (Play
 }
 
 /// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.   (cmd.ts checkCmd)
-pub fn check_cmd(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
+pub(super) fn check_cmd(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
     let r = check_cmd_in(g, raw, near);
     CheckCmd { cmd: r.cmd, fixed: r.fixed }
 }
 
 /// The check itself, on a copy: `raw` is only lent here, so a caller always takes `cmd` from the answer.   (cmd.ts checkCmdIn)
-pub fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
+fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
     let (cmd, fixed) = check_record(g, raw.cloned(), near);
     CheckCmdIn { cmd, fixed }
 }
 
 /// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.   (cmd.ts stillCmd)
-pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
+fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let c = c_2;
     PlayerCmd {
         keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0,
@@ -521,7 +521,7 @@ pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
 }
 
 /// A record as a tick would take it, for code that must leave it as it came: the check on a copy.   (cmd.ts honestCopy)
-pub fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
+pub(super) fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
     check_cmd(g, Some(c_2), near).cmd
 }
 
@@ -541,12 +541,12 @@ fn lens_from(cam: &mut crate::camera::FollowCamera, v: &PlayerCmdView) {
 }
 
 /// A record's view put on a camera of the game's own.   (cmd.ts loadLens)
-pub fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd::PlayerCmdView) {
+pub(super) fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd::PlayerCmdView) {
     lens_from(&mut g.tab.camera[cam], v);
 }
 
 /// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.   (cmd.ts Seat.constructor)
-pub fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
+pub(super) fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     let input = crate::input::input_detached(g);
     let cam = g.tab.camera.push(crate::camera::FollowCamera::blank());
     let mut s = Seat::blank();
@@ -589,13 +589,13 @@ fn load_row(s: &mut Seat, i: &mut crate::input::Input, cam: &mut crate::camera::
 }
 
 /// (cmd.ts Seat.load)
-pub fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
+pub(super) fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
     let (input, cam) = (g.tab.cmd_seat[id].input, g.tab.cmd_seat[id].cam);
     load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], &mut g.tab.camera[cam], c_2);
 }
 
 /// What was handed, once; else a still record of the view it last had (`like`'s before it has had one).   (cmd.ts Seat.handed)
-pub fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
+pub(super) fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let s = &mut g.tab.cmd_seat[id];
     match s.waiting.take() {
         Some(c) => c,
@@ -617,13 +617,13 @@ pub fn seat_swallow(g: &mut crate::game::Game, id: SeatId, bits: f64) {
 }
 
 /// OUTPUT: the look-at a tick cut the seat's camera to, once; None = no cut since the last call (a cut with the same numbers is still a cut).   (cmd.ts Seat.takeCut)
-pub fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3> {
+pub(super) fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3> {
     let cam = g.tab.cmd_seat[id].cam;
     cut_row(&mut g.tab.cmd_seat[id], &g.tab.camera[cam])
 }
 
 /// did this key go down in the step the first seat's record was of
-pub fn seat_pressed(g: &crate::game::Game, key: &str) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key)) }
+pub(super) fn seat_pressed(g: &crate::game::Game, key: &str) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key)) }
 
 /// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.   (cmd.ts Seat.takeCut)
 fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
