@@ -132,7 +132,9 @@ impl Desk {
 fn issue_block(text: &str) -> Option<IssueData> {
     let j = parse(text).ok()?;
     if !matches!(j.get("members"), Json::Obj(..)) { return None; }
-    IssueData::from_json(&j, &At::top(&Faults::default()))
+    let faults = Faults::default();
+    let issue = IssueData::from_json(&j, &At::top(&faults));
+    (faults.count() == 0).then_some(issue)
 }
 
 /// what an ask is answered with: bytes to a page, and to who runs beside the desk the answer itself
