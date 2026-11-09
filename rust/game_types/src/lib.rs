@@ -110,7 +110,6 @@ pub mod furnblast { pub mod types; pub use types::*; }
 pub mod game { pub mod types; pub use types::*; }
 pub mod gear { pub mod types; pub use types::*; }
 pub mod glass { pub mod types; pub use types::*; }
-pub mod glass_pattern { pub mod types; pub use types::*; }
 pub mod glassbreak { pub mod types; pub use types::*; }
 pub mod glasspen { pub mod types; pub use types::*; }
 pub mod guards { pub mod types; pub use types::*; }

@@ -4,6 +4,7 @@
 //!
 //! WHAT IS STATE. The holes (panes.rs `Hole`): a part of the panes' run in the game's block, a row a pane a round has been through.
 use game_types::knobs::Knobs;
+use alloc::vec::Vec;
 use crate::collide;
 use crate::roles::*;
 use crate::lines::{self, line_box, RAY_LEAF};
@@ -18,7 +19,6 @@ const THICK_GLASS_HALF: f64 = 0.05;
 const EXIT_EPS: f64 = 1e-3;
 /// the most panes one flight is followed through (GLASSPEN.maxPanes is under this)
 pub const MAX_CROSS: usize = 16;
-pub const CROSS: usize = 25;
 
 #[derive(Clone, Copy)]
 pub struct Toll {
@@ -190,29 +190,6 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
     let turn_deg = acos(clamp(d[0] * dir_out[0] + d[1] * dir_out[1] + d[2] * dir_out[2], -1.0, 1.0)) * 180.0 / PI;
     Some(Crossing { t: to, bi, at_t: t, at, exit, dir_in: d, dir_out, e_in: e, turn_deg, thru, into })
 }
-/// a crossing as the host reads it
-pub fn write_cross(x: &Crossing, o: &mut [f64]) {
-    o[0] = x.t.ty as f64;
-    o[1] = x.t.n[0];
-    o[2] = x.t.n[1];
-    o[3] = x.t.n[2];
-    o[4] = x.t.cos;
-    o[5] = x.t.take;
-    o[6] = x.t.e_out;
-    o[7] = x.t.hole as u32 as f64;
-    o[8] = x.bi as f64;
-    o[9] = x.at_t;
-    for i in 0..3 {
-        o[10 + i] = x.at[i];
-        o[13 + i] = x.exit[i];
-        o[16 + i] = x.dir_in[i];
-        o[19 + i] = x.dir_out[i];
-    }
-    o[22] = x.e_in;
-    o[23] = x.turn_deg;
-    o[24] = x.thru;
-    // (a crossing is 25 doubles and `into` the last of the path's own list: `path_into`)
-}
 #[inline]
 fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
     lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, c.set, -1, true, out, tune)
@@ -239,18 +216,18 @@ fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) ->
     }
     any
 }
-/// glasspen.ts armThroughGlass, the walk: a man's muzzle already past the glass. → −1: something a round stops in is across the arm (the old rule stands) · else how many panes
-/// took (their crossings → `out`, in order, and the energy left → `left`; none and in a hole: `energy`)
-pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, out: &mut [f64], left: &mut f64, tune: &Knobs) -> i32 {
+/// The walk of a man's arm whose muzzle is already past the glass: the energy left and the panes it took, in order (none and in a hole: `energy`). None: something a
+/// round stops in is across the arm (the old rule stands).
+pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, tune: &Knobs) -> Option<(f64, Vec<Crossing>)> {
     let dd = [muzzle[0] - from[0], muzzle[1] - from[1], muzzle[2] - from[2]];
     let len = hypot3(dd[0], dd[1], dd[2]);
     if len < 1e-3 {
-        return -1;
+        return None;
     }
     let sc = 1.0 / len;
     let rd = [dd[0] * sc, dd[1] * sc, dd[2] * sc];
     let (mut o, mut t0, mut e) = (from, 0.0, energy);
-    let mut n = 0usize;
+    let mut out: Vec<Crossing> = Vec::new();
     let mut k8 = 0;
     while k8 < 8 && t0 < len {
         k8 += 1;
@@ -260,16 +237,16 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
             break;
         }
         if m >= RAY_LEAF {
-            return -1;
+            return None;
         }
         let at = mad(o, rd, h[0]);
-        let to = match pane_toll(c, m as u32, at, dir, e, n, tune) {
+        let to = match pane_toll(c, m as u32, at, dir, e, out.len(), tune) {
             Some(t) => t,
-            None => return -1,
+            None => return None,
         };
         let b = match sheet_box(c, m as usize) {
             Some(b) => b,
-            None => return -1,
+            None => return None,
         };
         let te = match line_box(world(c.w), at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s.1,
@@ -277,27 +254,21 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
         };
         let thru = te + EXIT_EPS;
         let x = Crossing { t: to, bi: m as u32, at_t: t0 + h[0], at, exit: mad(at, rd, thru), dir_in: dir, dir_out: dir, e_in: e, turn_deg: 0.0, thru, into: -1 };
-        write_cross(&x, &mut out[n * CROSS..(n + 1) * CROSS]);
-        n += 1;
+        out.push(x);
         e = to.e_out;
         t0 += h[0] + thru;
         o = mad(at, rd, thru);
     }
-    if n == 0 {
-        if arm_in_hole(c, from, rd, len, tune) {
-            *left = energy;
-            return 0;
-        }
-        return -1;
+    if out.is_empty() {
+        return if arm_in_hole(c, from, rd, len, tune) { Some((energy, out)) } else { None };
     }
-    *left = e;
-    n as i32
+    Some((e, out))
 }
 /// Does a round of `energy` get through every one of the panes a line of fire meets (static, metres along it to where it enters each, nearest first)
-pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes_list: &[f64], energy: f64, tune: &Knobs) -> bool {
+pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes: &[(u32, f64)], energy: f64, tune: &Knobs) -> bool {
     let mut e = energy;
-    for i in 0..panes_list.len() / 2 {
-        match pane_toll(c, panes_list[2 * i] as u32, mad(a, rd, panes_list[2 * i + 1]), rd, e, i, tune) {
+    for (i, &(bi, t)) in panes.iter().enumerate() {
+        match pane_toll(c, bi, mad(a, rd, t), rd, e, i, tune) {
             Some(t) => e = t.e_out,
             None => return false,
         }

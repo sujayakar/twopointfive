@@ -99,6 +99,3 @@ pub struct GlasspenStats {
 
 pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
 
-pub const CROSS: f64 = 25.0;
-
-pub const MAX_CROSS: f64 = 16.0;
