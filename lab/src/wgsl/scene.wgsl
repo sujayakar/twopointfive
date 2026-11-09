@@ -17,7 +17,7 @@ struct Frame {
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
   misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
-  tune: array<vec4f, 7>, more: vec4f,       // how much snow lies, how hard it snows, 0, 0;  // what can be turned while looking (tune.ts)
+  tune: array<vec4f, 7>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };

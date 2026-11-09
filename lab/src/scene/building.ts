@@ -23,7 +23,7 @@ export interface Building { world: World; doors: Door[]; people: Person[]; level
 /** what the air and the water move: a step a tick */
 export interface Mover { step(dt: number, t: number, air: Air): void }
 type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
-const SWELL = 0.08;                                                  // how far the waves may stand off the water's mean
+const SWELL = 0.13;                                                  // how far the waves may stand off the water's mean
 const FL = 3.4, H = 3.2;                                              // floor to floor; clear height
 
 export function makeBuilding(): Building {

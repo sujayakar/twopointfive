@@ -15,7 +15,7 @@ fn cat(uv: vec2f, dim: vec2f) -> vec4f { let p = uv * dim; let c = floor(p - 0.5
   let mean = m1 / 9.0; let sd = sqrt(max(m2 / 9.0 - mean * mean, vec3f(0.0))); let cur = select(mean, acc / max(wa, 1e-6), wa > 1e-4);
   var aux = textureLoad(auxT, nq, 0);
   // where what is seen is smoke, it moves as the smoke does and not as what stands behind it; and it is never the same for long
-  let av = textureSampleLevel(airD, linSamp, so / od, 0.0).xy; let thick = smoothstep(0.15, 0.55, av.y); if (thick > 0.5) { let x = frame.camPos.xyz + camRay(so / od) * av.x; let was = projectPrev(x).xy - project(x).xy; aux.x = was.x; aux.y = was.y; }
+  let av = textureSampleLevel(airD, linSamp, so / od, 0.0).xy; let thick = smoothstep(0.15, 0.55, av.y); if (thick > 0.5) { let x = frame.camPos.xyz + camRay(so / od) * av.x; let was = projectPrev(x - windAt(x) * frame.more.z).xy - project(x).xy; aux.x = was.x; aux.y = was.y; }
   let uv = so / od + aux.xy; var o = cur; var n = 0.0;
   if (all(uv > vec2f(0.0)) && all(uv < vec2f(1.0)) && taauK.y < 0.5) {
     let h0 = cat(uv, od); let lost = bad4(h0); let h = select(h0, vec4f(0.0), lost); let hy = ycc(tm(h.rgb)); let mv = length(aux.xy * od); n = min(h.a, mix(@tune.taau, min(9.0, @tune.taau), max(sat(mv * 0.5), thick)) * taauK.z); let ext = (sd * mix(2.6, 1.0, sat(mv)) + vec3f(0.02, 0.01, 0.01) * mean.x) * 1.1; let dv = hy - mean; let rr = abs(dv) / max(ext, vec3f(1e-5)); let k = max(rr.x, max(rr.y, rr.z)); var hc = hy; if (k > 1.0) { hc = mean + dv / k; n = min(n, @tune.taau / (0.6 + 0.4 * k)); }

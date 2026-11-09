@@ -2,7 +2,11 @@
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outE); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = underWater(unpackPx(textureLoad(surf, full, 0), rd), textureLoad(frontT, full, 0), rd); let who = id.y * dim.x + id.x;
-  if (p.sky || p.kind == 63u) { textureStore(outE, id.xy, vec4f(0.0)); return; }
+  if (p.sky) { textureStore(outE, id.xy, vec4f(0.0)); return; }
+  if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it or the other
+    rngInit(id.xy, 17u); let n = p.n * select(-1.0, 1.0, rnd() < 0.5); let x = p.x + n * (p.rough + 0.003); let c = cacheRead(x, n, rnd2()); let w0 = who * 2u; if (w0 < HITS) { let wants = cacheWants(x, n, false); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(x), octPack(n)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(x, n, l & 1u, l >> 1u), w0); } } } }
+    textureStore(outE, id.xy, vec4f(select(vec3f(0.0), min(c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)), c.n > 0.0), 4.0)); return;
+  }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
   rngInit(id.xy, 17u); leafMode = 2u; let x = p.x + p.ng * 0.004 * (1.0 + p.t * 0.02); var E = vec3f(0.0); var dist = 0.0; let N = u32(@tune.rays);
   for (var k = 0u; k < N; k++) {

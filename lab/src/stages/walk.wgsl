@@ -54,7 +54,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     let V = -rd; if (dot(s.n, V) < 0.02) { s.n = normalize(s.n + V * (0.04 - dot(s.n, V))); }
     let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u;
     if (any(s.glow > vec3f(0.0)) && (clear || !own)) { gained = thr * s.glow; L += gained; }
-    if (s.kind == 63u) { break; }
+    if (s.kind == 63u) { let side = select(-1.0, 1.0, rnd() < 0.5); s.n *= side; s.ng = s.n; s.x += s.n * (s.rough + 0.003); s.rough = 1.0; s.f0 = 0.0; s.kind = 0u; clear = false; fp = 1.0; }
     let glossy = s.rough < 0.25;
     gained = thr * lampsAt(s, V, glossy); L += gained;
     if (water) {

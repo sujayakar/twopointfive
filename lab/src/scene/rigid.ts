@@ -55,7 +55,7 @@ interface Touch { a: Body; b: Body | null; rx: number; ry: number; rz: number; n
 const STEPS = 5;
 export class Bodies {
   readonly all: Body[] = []; private spare: Body[] = []; ms = 0;
-  constructor(private solid: Solid, private pools: Pool[], private people: Person[]) {}
+  ripples: Ripples | null = null; constructor(private solid: Solid, private pools: Pool[], private people: Person[]) {}
   add(b: Body, parked = false) { this.all.push(b); if (parked) { b.parked = true; this.spare.push(b); } return b; }
   /** send one of those kept for it */
   toss(x: V3, v: V3) { const b = this.spare.shift(); if (!b) return; this.spare.push(b); b.put(x, v, [v[2] * 0.6, 1.5, -v[0] * 0.6]); }
@@ -112,7 +112,7 @@ export class Bodies {
     const wind = air.at(b.x), pool = this.pools.find(p => b.x[0] > p.rect[0] - b.reach && b.x[0] < p.rect[2] + b.reach && b.x[2] > p.rect[1] - b.reach && b.x[2] < p.rect[3] + b.reach && b.x[1] - b.reach < p.top + 0.1); let fx = 0, fy = -9.81 * b.m, fz = 0, T: V3 = [0, 0, 0], carried = 0, wet = 0, held = 0;
     for (const c of b.cells) {
       const off = out(b.r, c.at), x = add(b.x, off), v = add(b.v, cross(b.w, off)), A = Math.PI * c.r * c.r; let in_ = 0, f: V3 = [0, 0, 0];
-      if (pool && x[0] > pool.rect[0] && x[0] < pool.rect[2] && x[2] > pool.rect[1] && x[2] < pool.rect[3]) { wave(x[0], x[2], t, this.sea); const y = pool.top + this.sea[0]!, d = Math.max(0, Math.min(2 * c.r, y - (x[1] - c.r))); if (d > 0) { in_ = d / (2 * c.r); const V = Math.PI * d * d * (3 * c.r - d) / 3, up = 1000 * 9.81 * V, [cx, cz] = stir(pool, x[0], x[2]), rel: V3 = [cx - v[0], this.sea[3]! - v[1], cz - v[2]], sp = Math.hypot(...rel), k = in_ * 1000 * A * (0.45 * sp + 0.09); f = [-this.sea[1]! * up + rel[0] * k, up + rel[1] * k * 1.6, -this.sea[2]! * up + rel[2] * k]; carried += 500 * V; held += k; } }
+      if (pool && x[0] > pool.rect[0] && x[0] < pool.rect[2] && x[2] > pool.rect[1] && x[2] < pool.rect[3]) { wave(x[0], x[2], t, this.sea); this.ripples?.at(x[0], x[2], this.sea); const y = pool.top + this.sea[0]!, d = Math.max(0, Math.min(2 * c.r, y - (x[1] - c.r))); if (d > 0) { in_ = d / (2 * c.r); const V = Math.PI * d * d * (3 * c.r - d) / 3; this.ripples?.sink(x[0], x[2], V, Math.max(0.14, c.r * 1.5)); const up = 1000 * 9.81 * V, [cx, cz] = stir(pool, x[0], x[2]), rel: V3 = [cx - v[0], this.sea[3]! - v[1], cz - v[2]], sp = Math.hypot(...rel), k = in_ * 1000 * A * (0.45 * sp + 0.09); f = [-this.sea[1]! * up + rel[0] * k, up + rel[1] * k * 1.6, -this.sea[2]! * up + rel[2] * k]; carried += 500 * V; held += k; } }
       wet += in_; const rw = sub(wind, v), q = (1 - in_) * 0.5 * 1.2 * 0.9 * A * Math.hypot(...rw) * 0.55; f = [f[0] + rw[0] * q, f[1] + rw[1] * q, f[2] + rw[2] * q]; fx += f[0]; fy += f[1]; fz += f[2]; T = add(T, cross(off, f));
     }
     const m = b.m + carried, most = 60; b.wet = wet; const k = Math.min(1, most * b.m / Math.max(1e-9, Math.hypot(fx, fy, fz))); b.force = [fx / m * k, fy / m * k, fz / m * k]; const spin = mul(b.spun(T), b.m / m); b.torque = sub(spin, mul(b.w, wet > 0 ? 2.5 * wet / b.cells.length + 0.2 : 0.25)); void held; void dt;

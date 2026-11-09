@@ -16,7 +16,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
   var c1 = c; if (NARROW == 1 && wn > 2.0) { let k = (m1 * wn - c) / (wn - 1.0); let e = sqrt(max((m2 - c * c) / (wn - 1.0) - k * k, vec4f(0.0))); let most = lum(k.rgb) + mix(3.0, 8.0, dull) * lum(e.rgb) + 0.02; c1 = vec4f(c.rgb * min(1.0, most / max(lum(c.rgb), 1e-4)), c.a); }     // one bright sample alone is held to its neighbours
   let aux = textureLoad(auxT, full, 0); var uv = (vec2f(full) + 0.5) / rdim + aux.xy; var x0 = p.x; let fr = textureLoad(frontT, full, 0); var checkT = p.t; var front = false;
   let ad2 = airAt2(vec2u(id.xy)); let ad = ad2.x; let floats = ad > 0.0 && (ad < p.t - 0.1 || p.sky);      // air that stands off the surface
-  if (floats) { let img = frame.camPos.xyz + rd * ad; let q = projectPrev(img); let now = project(img); uv = (vec2f(full) + 0.5) / rdim + (q.xy - now.xy); }
+  if (floats) { let img = frame.camPos.xyz + rd * ad; let q = projectPrev(img - windAt(img) * frame.more.z); let now = project(img); uv = (vec2f(full) + 0.5) / rdim + (q.xy - now.xy); }
   if (NARROW == 1) {                                               // a mirror's image moves as if it stood behind the surface
     var t = p.t; var rough = p.rough; if (LAYER == 1 && fr.x != 0u) { t = bitcast<f32>(fr.x); rough = 0.02; front = true; } let img = frame.camPos.xyz + rd * (t + min(c.a, 60.0) * (1.0 - smoothstep(0.15, 0.45, rough))); let q = projectPrev(img); let now = project(img); uv = (vec2f(full) + 0.5) / rdim + (q.xy - now.xy);
   }

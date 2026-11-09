@@ -14,6 +14,7 @@ import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
 import { sightStages, sightCode } from './sight';
+import { torchStages, torchCode } from './torches';
 import airlight from './airlight.wgsl' with { type: 'text' };
 import haze from './haze.wgsl' with { type: 'text' };
 import type { Place } from '../scene/place';
@@ -142,7 +143,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
         S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
         ...dVis.stages, ...dT.stages, ...dB.stages, ...dM.stages, ...dS.stages,
-        ...airLightStages(lab, c, cache.lib), S('haze', airLightCode(lab.building.place) + haze, 'half', { surf: 'surf', airLight: 'light' }, { outA: 'haze' }), S('air', air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }),
+        ...airLightStages(lab, c, cache.lib), ...torchStages(lab), S('haze', airLightCode(lab.building.place) + torchCode + haze, 'half', { surf: 'surf', airLight: 'light' }, { outA: 'haze' }, { torchMap: ['torchMap', 'array<f32>', 'read'], torchK: ['torchK', 'array<vec4u, 3>', 'uniform'] }), S('air', air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }),
         S('air history', 'fn airAt2(p: vec2u) -> vec2f { return textureLoad(airD, p, 0).xy; }\nfn airWas(p: vec2u) -> vec2f { return textureLoad(airP, p, 0).xy; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', 'airD@prev': 'airP', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, AIR: 1 }),
         S('air blur', airblur, 'half', { airH: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
         S('tint', tint, 'render', { surf: 'surf', lampU: 'lampU', [dT.result]: 'tone' }, { outT: 'lampT' }),

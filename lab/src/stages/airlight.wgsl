@@ -11,9 +11,9 @@
     { let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); let d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y)); let h = nearest(x, d, 1e-3, 80.0, 0u, 1e9); var B = vec3f(0.0); if (h.piece == NOTHING) { B = skyLod(d, 4.0); } else { let s = surfaceMean(x, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; B = select(s.glow, vec3f(0.0), own) + sentBack(s, false, rnd2(), d); } L += min(B * h.thru, vec3f(12.0)); }
     let k = 1.0 / (n + 1.0); J = finite4(mix(select(vec4f(0.0), J, n > 0.0), vec4f(L, sun), k), 6e4); n = min(n + 1.0, mix(6.0, 48.0, st)); kept[i] = vec4u(pack2x16float(J.xy), pack2x16float(J.zw), u32(n), 0u);
   }
-  // torches, and small lamps out of doors: no dice
+  // small lamps out of doors: no dice (torches: haze.wgsl)
   var T = vec3f(0.0); for (var m = 0u; m < frame.counts.x; m++) {
-    let l = &lamps[m]; if ((*l).on <= 0.0 || (*l).kind == 0u || (inside && (*l).kind != 2u)) { continue; } let d = mid - (*l).at; let r2 = dot(d, d); if (r2 > 324.0 || ((*l).kind == 1u && r2 > 20.0)) { continue; } if ((*l).kind == 2u) { let r = sqrt(r2); if (dot(d, (*l).n) < r * ((*l).cone - 0.25 * AL_H / max(r, 0.3))) { continue; } }
+    let l = &lamps[m]; if (inside || (*l).on <= 0.0 || (*l).kind != 1u) { continue; } let d = mid - (*l).at; let r2 = dot(d, d); if (r2 > 20.0) { continue; }
     let a = aimLamp(m, mid, vec2f(0.5)); let e = a.E * (1.0 / (4.0 * PI)); if (max3(e) < 2e-3) { continue; } T += min(e, vec3f(20.0)) * lum(visible(mid, a.dir, 1e-3, a.dist - 0.06));
   }
   textureStore(outLight, c, vec4f(select(vec3f(0.0), J.rgb, inside) + T * select(1.0, 1.0 + @tune.beams / max(@tune.dust, 1e-3), inside), select(1.0, J.a, inside)));

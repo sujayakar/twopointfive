@@ -17,7 +17,7 @@ export class Player {
   private floor(x: V3): number { const f = this.solid.floor([x[0], this.y, x[2]], 0.05, STEP + 0.25, 0.75); return f ?? this.y - 0.3; }
   /** `yaw` the camera's */
   step(dt: number, yaw: number) {
-    const b = this.body, a = this.asked, s = Math.sin(yaw), c = Math.cos(yaw), l = Math.hypot(a.x, a.z), m = l > 1 ? 1 / l : 1, way: V3 = [(a.x * c - a.z * s) * m, 0, (-a.x * s - a.z * c) * m]; const slope = Math.min(1, Math.abs(this.rise) * 1.1), speed = (a.low ? 1.15 : a.run && !a.up ? 4.3 : a.up ? 1.7 : 2.1) * (1 - 0.38 * slope); b.drive!.go = mul(way, speed); b.drive!.aim = a.aim; b.drive!.ready = a.up || a.fire || this.since < 0.8 ? 1 : 0; b.drive!.low = a.low ? 1 : 0;
+    const b = this.body, a = this.asked, s = Math.sin(yaw), c = Math.cos(yaw), l = Math.hypot(a.x, a.z), m = l > 1 ? 1 / l : 1, way: V3 = [(a.x * c - a.z * s) * m, 0, (-a.x * s - a.z * c) * m]; const slope = Math.min(1, Math.abs(this.rise) * 1.1), speed = (a.low ? 1.15 : a.run && !a.up ? 4.3 : 2.0) * (1 - 0.38 * slope) * (1 - 0.5 * Math.min(1, this.wading / 0.7)); b.drive!.go = mul(way, speed); b.drive!.aim = a.aim; b.drive!.ready = a.up || a.fire || this.since < 0.8 ? 1 : 0; b.drive!.low = a.low ? 1 : 0;
     const was: V3 = [...b.pos]; b.step(dt); this.since += dt;
     // no farther than what stands allows; and down to the floor, or up a step
     let p: V3 = [b.pos[0], this.y, b.pos[2]]; p = this.solid.push(p, R, a.low ? 1.15 : 1.72, STEP); const f = this.solid.floor(p, 0.13, STEP + 0.02, 30); if (f !== null && this.y - f < 0.45 && this.fall === 0) this.y = f; else { this.fall += 9.81 * dt; this.y -= this.fall * dt; if (f !== null && this.y <= f) { this.y = f; b.land(this.fall); this.fall = 0; } if (this.y < -8) { p = [...this.safe]; this.y = this.safe[1]; this.fall = 0; } } if (this.fall === 0) this.safe = [p[0], this.y, p[2]];
@@ -28,5 +28,6 @@ export class Player {
     // a shot
     this.hit = null; for (const q of this.shots) q.age += dt; this.shots = this.shots.filter(q => q.age < 0.5); if (a.fire && this.since > 0.11) { this.since = 0; const z = b.muzzle, aim = a.aim ? norm(sub(a.aim, z.at)) : z.dir, along = clamp(aim[0] * z.dir[0] + aim[1] * z.dir[1] + aim[2] * z.dir[2], -1, 1), dir = along > 0.8 ? aim : z.dir, far = this.solid.ray(z.at, dir, 60, true); this.shots.push({ at: [...z.at], dir, far, age: 0 }); b.recoil(2.4); this.hit = { at: add(z.at, mul(dir, far)), dir }; }
   }
+  /** how deep it stands in water */ wading = 0;
   private safe: V3 = [0, 0, 0]; /** how steep the way has been, as rise over run */ private rise = 0;
 }
