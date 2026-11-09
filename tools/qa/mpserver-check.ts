@@ -82,7 +82,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
   const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NetClient } = await import(`${ROOT}/src/net/client.ts`), { NET, netText } = await import(`${ROOT}/src/net/wire.ts`);
   let now = 0, threw = '';
   const counter = () => ({ n: 0, step() { this.n++; }, word() { return String(this.n); } });
-  const game = counter(), S = new NetServer({ now: () => now, step: () => game.step(), word: () => game.word(), ended: () => null }, { game: 'g', build: 'b1', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 1, commands: '' }, seatKeys: ['k'] });
+  const game = counter(), S = new NetServer({ now: () => now, step: () => game.step(), word: () => game.word(), ended: () => null }, { game: 'g', build: 'b1', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 1, kept: '' }, seatKeys: ['k'] });
   type Link = { conn: { send(t: string): number; close(): void }; C: InstanceType<typeof NetClient>; pump(): void };
   const links: Link[] = [];
   /** a client and its connection: what it sends reaches the server at once, what the server sends is read at the next pump; `drop` = the socket takes this send or not */
@@ -121,12 +121,12 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 }
 
 // ---- the host's settings: games stood here from starts that differ in them alone
-{ const { Commands } = await import(`${ROOT}/src/draw/commands.ts`), { commandText } = await import(`${ROOT}/src/net/start.ts`), M = await import('../mp/stand.ts');
-  const C = new Commands(); C.difficulty(1); const hard = commandText(C.take()), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
-  const gameOf = async (search: string, commands?: string): Promise<string> => { const G = await M.standStart(M.freshStart({ search, seed: 7, commands })); for (let i = 0; i < 30; i++) G.step([idle, idle]); return `${G.word()} ${G.watch()}`; };
-  const AT = '?roomclear&squad4&seats=2', told = await gameOf(AT, hard), again = await gameOf(AT, hard), bare = await gameOf(AT, ''), plain = await gameOf(AT), word = (d: string): string => M.freshStart({ search: `${AT}&difficulty=${d}`, seed: 7 }).commands;
-  const ok = told === again && told !== bare && plain === bare, addressed = word('hard') === hard && word('standard') === '';
-  line(ok && addressed, `settings: a game with the host's command for Hard and one without are two games, the same start twice is one${ok ? '' : ` (NO: ${told} · ${again} · ${bare} · ${plain})`}; with no commands handed over, the address's difficulty is the game's${addressed ? '' : ' (NO)'}`); }
+{ const M = await import('../mp/stand.ts');
+  const hard = '{"hard":true}', idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
+  const gameOf = async (search: string, kept?: string): Promise<string> => { const G = await M.standStart(M.freshStart({ search, seed: 7, kept })); for (let i = 0; i < 30; i++) G.step([idle, idle]); return `${G.word()} ${G.watch()}`; };
+  const AT = '?roomclear&squad4&seats=2', told = await gameOf(AT, hard), again = await gameOf(AT, hard), bare = await gameOf(AT, ''), plain = await gameOf(AT), word = await gameOf(`${AT}&difficulty=hard`), over = await gameOf(`${AT}&difficulty=standard`, hard);
+  const ok = told === again && told !== bare && plain === bare, addressed = word === told && over === bare;
+  line(ok && addressed, `settings: a game on what the host keeps of Hard and one without are two games, the same start twice is one${ok ? '' : ` (NO: ${told} · ${again} · ${bare} · ${plain})`}; the address's difficulty is the game's, and over what is kept${addressed ? '' : ` (NO: ${word} · ${over})`}`); }
 
 // ---- the processes
 type Proc = { stdout: ReadableStream; stderr: ReadableStream; exited: Promise<number>; kill(): void };
@@ -222,7 +222,7 @@ gone = false;   // (the stand-in control plane knows this game again)
   line(h3.seats.length === 2 && clean(one, N2) && clean(two, N2) && one!.word === two!.word && one!.seat === 0 && two!.seat === 1 && one!.moved > 1 && two!.moved > 1 && L3.length === 2 && L3.every(l => l.own > 0),
     `two seats: a room clear of two players, each client in its own seat${h3.seats.length === 2 ? '' : ` (the server stood ${h3.seats.length} seat)`}: over ${N2} ticks the first, 60 to 100 ms away, matched ${one?.wordsOk ?? 0} of ${N2 / 30} state words${one?.bad ? ` (FIRST DIFFERENT after tick ${one.bad.t})` : ''} and the second ${two?.wordsOk ?? 0}${two?.bad ? ` (first different after tick ${two.bad.t})` : ''}; they end on ${one?.word}${one && two && one.word !== two.word ? ` ≠ ${two.word}` : ''}; their men went ${one?.moved ?? 0} m and ${two?.moved ?? 0} m; the server ran ${L3.map(l => l.own).join(' and ')} ticks on the seats' own records`);
   const { cleanName, netText, netParse, NET } = await import('../../src/net/wire.ts'), { NetServer } = await import('../../src/net/server.ts'), over = (n: unknown): string => cleanName((netParse(netText({ n })) as { n: unknown }).n), got: string[] = [];
-  const raw = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, commands: '' }, seatKeys: ['a', 'b'] });
+  const raw = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, kept: '' }, seatKeys: ['a', 'b'] });
   raw.message({ send: t => { got.push(t); return 1; }, close() { /* */ } }, JSON.stringify({ k: 'hello', proto: NET.proto, build: '', game: 'g', key: 'b', name: NAME2 }));
   const told = got.map(t => JSON.parse(t) as { k: string; names?: string[] }).filter(m => m.k === 'state').pop()?.names, none = [7, null, ' \n\t ', '\u3164\u2800', '...'].every(n => cleanName(n) === '');
   const cleaned = JSON.stringify(told) === JSON.stringify(['', NAMES[1]]) && none && cleanName('<b>x</b>') === '<b>x</b>' && cleanName('a\u200bb\u202e') === 'ab' && ['nan', 'inf', 'Ada', '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'].every(n => over(n) === n);
@@ -230,7 +230,7 @@ gone = false;   // (the stand-in control plane knows this game again)
     `names: each seat's player's name reaches both clients, as cleaned, a hello written by hand too${cleaned ? '' : ' (NO)'}: the first heard ${JSON.stringify(one?.names ?? null)}, the second ${JSON.stringify(two?.names ?? null)} (wanted ${JSON.stringify(NAMES)})`);
   // (a seat that became another's: the server asks about a key no seat has, and who sits on the old one is told)
   { type Got = { k: string; code?: string; seat?: number }; const heard = new Map<string, Got[]>(), met = (key: string): string => (heard.get(key) ?? []).filter(m => m.k === 'welcome' || m.k === 'bye').map(m => m.k === 'bye' ? `bye ${m.code}` : `seat ${m.seat}`).join(', ');
-    let asks = 0; const S: InstanceType<typeof NetServer> = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null, ask: async () => { asks++; await sleep(5); S.rekey(['a', 'c']); } }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, commands: '' }, seatKeys: ['a', 'b'] });
+    let asks = 0; const S: InstanceType<typeof NetServer> = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null, ask: async () => { asks++; await sleep(5); S.rekey(['a', 'c']); } }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, kept: '' }, seatKeys: ['a', 'b'] });
     const come = (who: string, key: string) => { const got: Got[] = []; heard.set(who, got); const conn = { send: (t: string) => { got.push(JSON.parse(t) as Got); return 1; }, close() { S.closed(conn); } }; S.message(conn, JSON.stringify({ k: 'hello', proto: NET.proto, build: '', game: 'g', key })); return conn; };
     come('host', 'a'); come('old', 'b'); const before = `${met('old')} (${asks} asked)`; come('new', 'c'); const gone2 = come('gone', 'z'); S.closed(gone2); await sleep(30); come('back', 'b'); await sleep(30);
     line(before === 'seat 1 (0 asked)' && met('host') === 'seat 0' && met('old') === 'seat 1, bye seat' && met('new') === 'seat 1' && met('gone') === '' && met('back') === 'bye seat' && JSON.stringify(S.health().seats) === '[true,true]',

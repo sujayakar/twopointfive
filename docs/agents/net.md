@@ -81,7 +81,8 @@ old one is told.
 
 **The lobby.** One door: `Lobby.seat`. `games:join` gives an open seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
 same one). It waits for the server's address and the page goes to `?net=…&netgame=…&netkey=…`. The link is `?join=<code>`. The host hands over the mission's address with
-`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and his settings as commands (`HOSTED`). Not carried: his kit (both play the kit as issued).
+`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and what his machine keeps (`NetStart.kept`, `HOSTED`). Not carried: his kit (both play the
+kit as issued) and the panel's kept rows and picks.
 
 **The control plane** (`cloud/convex/games.ts`). `games:make` counts a runner's live games and writes the new one in one mutation, so the cap holds. Servers beat to
 `/mp/heartbeat`, and `reap` ends a game whose server never answered, went silent, sat idle or grew too old. A runner answers four calls (`cloud/convex/runners.ts`);

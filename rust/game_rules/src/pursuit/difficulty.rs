@@ -614,8 +614,8 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     Some(DifficultyAsked { level, levers, digin, pressure, cone })
 }
 
-/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; no host of a
-/// Rust start keeps anything, so nothing goes between)
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; what a machine keeps
+/// goes under it: game_start `host::lay`)
 pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
     if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
     for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }

@@ -5,7 +5,7 @@
 //   A RECORD ON THE WIRE (WireCmd) is what a player's hand did, minus what the game works out again for a seat it does not trust (rust/game_rules cmd: the eye, the forward, both
 //   view matrices, from the look-at, the angles, the distance and the lens). EVERY seat of a networked game is such a seat on EVERY machine — the server and each
 //   client, a client's own seat too — so one working makes the view everywhere and about a hundred bytes travel a tick, not a kilobyte.
-//   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, the host's commands), which every machine
+//   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, what the host's machine keeps), which every machine
 //   hands the game's own start in the module.
 // Host-neutral: no DOM, no bun, no game.
 import { numWord, wordNum } from './numtext';

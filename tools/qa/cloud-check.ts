@@ -76,7 +76,7 @@ interface Rig { tape: any; hand: Float64Array; K: any; store: any }
 /** a run on the page that draws, made up: its tape of hands kept (a beat every 300 frames, the last one a flush) as src/host/drawpage.ts and src/tape/run.ts keep one; `mid` is called after every frame */
 async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?: (R: Rig, f: number) => void | Promise<void> } = {}): Promise<Rig> {
   const tape = new HandTape(HAND.count), hand = new Float64Array(HAND.count), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a', level = new Uint8Array([1, 2, 3, 4]);
-  tape.start({ build: 'abc1234', levelName: 'made-up.json', level, words: '', parts: [{ name: 'level', length: level.length, hash: hashOf(level) }], seed: 7, seats: 1, flags: 0, commands: new Uint8Array(0) });
+  tape.start({ build: 'abc1234', levelName: 'made-up.json', level, words: '', parts: [{ name: 'level', length: level.length, hash: hashOf(level) }], seed: 7, seats: 1, flags: 0, kept: '' });
   let now = 0;
   const K = new ReplayKeeper(handSource(() => tape), { sid, store, played: () => tape.ticks > 0,
     head: () => ({ game: 'twopointsix', hands: HANDTAPE.version, url: '?made-up', userAgent: 'probe', level: { file: 'made-up.json', scenario: 'Made up' }, seed: 7, commit: 'abc1234' }),

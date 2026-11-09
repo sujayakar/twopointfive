@@ -1,9 +1,61 @@
-//! THE CARDS AS A MACHINE KEEPS THEM: one text (JSON), read into a game's cards and written from them.
+//! WHAT A MACHINE KEEPS OF HOW IT PLAYS (`Kept`): one record, which crosses as one JSON text and is laid on a game before it is made (`host::lay`). And the cards as a machine keeps them: one text (JSON), read into a game's
+//! cards and written from them.
 use crate::json::{parse, Json};
 use alloc::{format, string::String, vec::Vec};
+use game::difficulty::LeverKey;
 use game::game::Game;
 use game::js::JsMap;
 use game::kit::{self, KitValue, KitWeapon, MemberKit};
+
+/// WHAT A MACHINE KEEPS, and nothing of an address. Each field absent is nothing kept. A rung or a row's name that is none is nothing, as a store's read takes it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Kept {
+    /// hard, or not
+    pub difficulty: Option<bool>,
+    /// the levers moved, each with its rung
+    pub levers: Vec<(LeverKey, String)>,
+    /// the men's cards, as their own text (`read`)
+    pub cards: Option<String>,
+    /// the rung a quiet mission is played under
+    pub quiet_fog: Option<String>,
+    /// the cameras a quiet mission hands out
+    pub quiet_cams: Option<bool>,
+    /// the panel's kept rows, each by its name and as the row shows it (shown.rs)
+    pub rows: Vec<(String, f64)>,
+    /// the panel's picks, each by its action's name and the word picked (actions.rs)
+    pub picks: Vec<(String, String)>,
+}
+
+impl Kept {
+    /// the record in its text: `{"hard":true,"levers":{"fog":"own"},"cards":"…","quietFog":"own","quietCams":false,"rows":{"wind.def":0.5},"picks":{"nerve":"steady"}}`. An empty text keeps
+    /// nothing. A text that is no such record is refused with the field's name.
+    pub fn read(text: &str) -> Result<Kept, String> {
+        let mut out = Kept::default();
+        if text.is_empty() { return Ok(out); }
+        let j = parse(text).map_err(|e| format!("what the machine keeps is no JSON: {e}"))?;
+        let Json::Obj(..) = j else { return Err(String::from("what the machine keeps is no record")) };
+        for (k, v) in j.members() {
+            let wrong = |what: &str| format!("what the machine keeps says `{k}` as no {what}");
+            match k.as_str() {
+                "hard" => out.difficulty = Some(v.bool().ok_or_else(|| wrong("yes or no"))?),
+                "levers" => for (key, rung) in members(v).ok_or_else(|| wrong("record"))? {
+                    let rung = rung.str().ok_or_else(|| wrong("record of words"))?;
+                    if let Some(key) = lever(key) { out.levers.push((key, String::from(rung))); }
+                },
+                "cards" => out.cards = Some(String::from(v.str().ok_or_else(|| wrong("text"))?)),
+                "quietFog" => out.quiet_fog = Some(String::from(v.str().ok_or_else(|| wrong("word"))?)),
+                "quietCams" => out.quiet_cams = Some(v.bool().ok_or_else(|| wrong("yes or no"))?),
+                "rows" => for (name, n) in members(v).ok_or_else(|| wrong("record"))? { out.rows.push((name.clone(), n.num().ok_or_else(|| wrong("record of numbers"))?)); },
+                "picks" => for (name, word) in members(v).ok_or_else(|| wrong("record"))? { out.picks.push((name.clone(), String::from(word.str().ok_or_else(|| wrong("record of words"))?))); },
+                _ => return Err(format!("what the machine keeps has no field `{k}`")),
+            }
+        }
+        Ok(out)
+    }
+}
+
+fn members(j: &Json) -> Option<&[(String, Json)]> { if matches!(j, Json::Obj(..)) { Some(j.members()) } else { None } }
+fn lever(key: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == key) }
 
 /// the name the cards are kept under
 pub const KIT: &str = "twopointsix.kit";

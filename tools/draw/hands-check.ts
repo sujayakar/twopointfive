@@ -27,8 +27,7 @@ for (const S of BENCH_SCENES.filter(s => !only.length || only.includes(s.id))) f
   const words = `?${benchSceneSearch({ ...S, seed }, 0).replace(/^\?/, '')}`, file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
   const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   const follow = (): [number, number, number] => { const o = D.at[Section.view] + View.follow; return [D.f[o], D.f[o + 1], D.f[o + 2]]; };
-  if (S.hard) game.commands.difficulty(1);
-  game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed });
+  game.start({ level: bytes(file), words, kept: S.hard ? '{"hard":true}' : '', mannequin, mannequinBin, cast, castLook, seed });
   cam.aspect = 1280 / 720; cam.target = follow(); cam.rebuild();
   if (S.god) game.commands.god(1);
   if (!BREAK) game.handsOff({ ...S.plan, seed, cap: S.secs });

@@ -154,11 +154,5 @@ fn every_action_runs_and_does_what_it_says() {
         cmd.extend_from_slice(&0u32.to_le_bytes());
         game_start::host::command::apply(&mut p.g, &cmd).unwrap();
         assert_eq!(p.g.ch[c].wet, 1.0, "seed {seed}: an action goes as a command");
-        // an address's words as a command: what the desk is handed
-        let mut cmd = Vec::new();
-        cmd.extend_from_slice(&36u32.to_le_bytes());
-        let t = "?qtwice=0"; cmd.extend_from_slice(&(t.len() as u32).to_le_bytes()); cmd.extend_from_slice(t.as_bytes());
-        game_start::host::command::apply(&mut p.g, &cmd).unwrap();
-        assert_eq!(game_start::host::knobs::get(&p.g, "cmdring.twice"), Some(0.0), "seed {seed}: the words as a command");
     }
 }
