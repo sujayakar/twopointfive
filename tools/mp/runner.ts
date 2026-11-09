@@ -1,4 +1,4 @@
-// THE LOCAL RUNNER: game servers as child processes of the dev server, behind the same three calls every runner answers (cloud/convex/runners.ts says
+// THE LOCAL RUNNER: game servers as child processes of the dev server, behind the same four calls every runner answers (cloud/convex/runners.ts says
 // them: POST start · stop · list · ready, `Authorization: Bearer <key>`). `bun run dev` then plays the whole of co-op's control plane on one machine:
 // the page asks the local backend for a game, the backend asks THIS for a server, this starts `tools/mp/server.ts`, the server sends its heartbeats to
 // the backend, and the backend's reaper stops it through this again. Nothing hosted is touched.

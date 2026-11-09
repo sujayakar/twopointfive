@@ -15,7 +15,7 @@
 //     wear) per slot. Header row 0 `.x` is the SWITCH: 0 = gbuffer.wgsl shades him from CharInst's two tints exactly as it always did.
 // The finish is the lobe the wet coat already has (gbuffer.wgsl packWet → composite.wgsl wetCoatSpec: one GGX lobe per reaching light dimmed by the direct
 // pass's own shadowing + the ambient sheen, no rays, every tier) — a dry slotted pixel packs its slot's (rough, gain) there, a wet one the larger of the two.
-// Secondary hits (bounce, cascades, the light meter, reflections of him) read ONE albedo per shadow proxy: capWeights says how much of each slot each of the
+// Secondary hits (bounce, cascades, reflections of him) read ONE albedo per shadow proxy: capWeights says how much of each slot each of the
 // fifteen proxies carries, so his head reflects as helmet + skin and his legs as trousers (scene/boxes.ts addCharacterCapsules takes the fifteen colours).
 import type { GltfCharacter, MeshData } from '../anim/gltf';
 import type { Vec3 } from '../math/vec';

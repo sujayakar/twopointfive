@@ -66,7 +66,7 @@ export interface RtLight {
    *  (a carried light or a flash that is not the team's: 1 while the full picture is on; else a light like any other) */
   fog?: number;
   /** … a lamp that is OUT but that the team last saw lit: > 0 = uploaded at this intensity as a class-2 light (lit in the picture of the room nobody has looked
-   *  into since), whatever `enabled` / `intensity` say. The game's own readers of the list never see it (they read enabled / intensity; probe.wgsl skips class 2) */
+   *  into since), whatever `enabled` / `intensity` say. The game's own readers of the list never see it (they read enabled / intensity) */
   fogGhost?: number;
   /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (rust/game_rules/src/fogofwar FOG.ours, lightBy): the character who set or threw what made it — a blast's
    *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
@@ -82,8 +82,8 @@ export interface RtLight {
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
 export const LIGHT_FOG_SEEN = 1 << 25, LIGHT_FOG_UNSEEN = 1 << 26;
 /** the kind word's INFRARED bit (common.wgsl LIGHT_IR): a light only an image intensifier sees by — the goggles' illuminators (rust/game_rules/src/irlight), kept in
- *  LightSet.ir and never in `lights`. The picture's passes take it like any light (it is uploaded only while the picture IS the tube's: LightSet.tube); the game's
- *  own readings — probe.wgsl's light meter through evalLightTrue, the cascades the meter reads its bounce from — never do. */
+ *  LightSet.ir and never in `lights`. The picture's passes take it like any light (it is uploaded only while the picture IS the tube's: LightSet.tube); the
+ *  cascades never do (common.wgsl directIrradiance). */
 export const LIGHT_IR = 1 << 27;
 /** the kind word's PORTAL bit (common.wgsl LIGHT_PORTAL; RtLight.portal): an area light that is an OPENING TO THE SKY and not a lamp. What it sends a point is
  *  the sky that point sees through it (common.wgsl skyRadiance in the direction the point looks out by), its shadow rays run on through it to find that sky,
@@ -213,7 +213,7 @@ export class LightSet {
   /** THE LOOK PROTOTYPE's "Real light values" row (render/photometry.ts; engine.ts sets both each frame): the hour's exposure against the night's (1 = a night, or
    *  anywhere but the look page: the upload is word for word what it was) and how far toward the real values the row is turned. By day each light that is not the
    *  hour's own goes up at min(as authored, its real strength × the exposure): photometry.ts lightDayK, by what the light is. Scaled HERE so that the picture, the
-   *  bounce, the beams and the GPU's light meter read one number; `intensity` itself is not touched (the game's own readers of the list see the authored one).
+   *  bounce and the beams read one number; `intensity` itself is not touched (the game's own readers of the list see the authored one).
    *  A lamp remembered in the fog is scaled as a seen one is; an infrared illuminator is not scaled. */
   dayExp = 1; dayAmount = 1;
   /** `own` = THE PICTURE'S OWN LIGHTS for this frame (the look page's daylight at openings, engine.ts lookOpeningLights): handed in, never kept here. This set

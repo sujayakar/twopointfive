@@ -18,7 +18,7 @@ interface Bot { wait(secs: number): void; press(code: string, secs?: number): vo
 interface Script { level: string; words: string; god?: boolean; noAi?: boolean; hands?: HandsOffPlan; play?(B: Bot): void }
 const SCRIPTS: Record<string, Script> = {
   // a stun, a smoke and a frag at his own feet and ahead of him, and the lobby's lamps shot out: nobody thinks, and he cannot be hurt
-  cans: { level: 'office.json', words: '?roomclear&squad4&freshstart=0&seed=1', god: true, noAi: true, play(B) {
+  cans: { level: 'office.json', words: '?roomclear&squad4&seed=1', god: true, noAi: true, play(B) {
     const p = B.at(), ahead = (m: number): Vec3 => [p[0] + m, 0.1, p[2]];
     B.wait(1); B.press('KeyN', 1); B.press('KeyN', 1); B.press('KeyV', 1);
     for (const [key, m] of [['Digit4', 3], ['Digit3', 5], ['Digit5', 9]] as const) { B.press(key, 2.5); B.click(ahead(m), 1, 0.1); B.wait(key === 'Digit4' ? 9 : 5); }

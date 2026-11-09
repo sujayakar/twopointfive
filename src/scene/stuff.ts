@@ -252,7 +252,7 @@ export const coatRough = (word: BoxStuff | undefined): number | undefined => COA
  *  edge would flicker.
  *  `lum` and `rough` ride in the table.
  *  THE SWITCH: SOLIDGLASS.on — ON in the page, OFF in the module. On a GPU page
- *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK). */
+ *  the bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK). */
 export const SOLIDGLASS = { on: false, lum: 0.02, rough: 0.05 };
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
  *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is

@@ -151,5 +151,3 @@ Page scripts, on the software adapter: `bun run tools/qa/pages.ts menus` runs `s
 ## Not seen
 
 No check sees how the kit picture, the reel or the HUD over a real frame look on a GPU.
-
-Known fault: `Overlay.setCaption` and `setTimeline`, with the `#caption` and `#timeline` layers, have no caller.

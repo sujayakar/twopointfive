@@ -78,7 +78,7 @@ export class RadianceCascades {
   staggerUpper = false;
   /** LOSSY option (engine.settings.rcHalfRate): the whole cache at half rate — upper cascades on even frames, c0 + the dice bake on odd ones
    *  (the engine gives such a pair one direction jitter, so c0 merges parents traced with its own directions and the bake decodes c0 with
-   *  them too). Everything downstream just reads a dice volume that is at most a frame older; bounce / light meter / smoke ambient lag a
+   *  them too). Everything downstream just reads a dice volume that is at most a frame older; bounce / smoke ambient lag a
    *  moving light by that much. staggerUpper then counts in pairs (c2+ every fourth frame). */
   halfRate = false;
   /** AMORTIZED UPKEEP (engine.settings.rcAmortize, mirrored every frame; docs/agents/render-light.md, "The cascades"): when on, upper level n re-traces an interleaved
@@ -143,7 +143,7 @@ export class RadianceCascades {
     this.stats = { intervals, bytes };
     this.dice = device.createTexture({ label: 'rcDice', size: [cfg.nx, cfg.ny * 7, cfg.nz], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC });
     this.diceView = this.dice.createView();
-    // previous frame's dice: the bake blends toward it (short EMA) so per-frame direction jitter does not shimmer the bounce / light meter / smoke ambient
+    // previous frame's dice: the bake blends toward it (short EMA) so per-frame direction jitter does not shimmer the bounce / smoke ambient
     this.dicePrev = device.createTexture({ label: 'rcDicePrev', size: [cfg.nx, cfg.ny * 7, cfg.nz], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.dicePrevView = this.dicePrev.createView();
     // solid angles
@@ -226,7 +226,7 @@ export class RadianceCascades {
   encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, timer: GpuTimer, frameIdx: number) {
     // A re-primed cache (invalidateWorld: a rebuilt / prewarmed grid going live, the light rig swapped) under `amortize` first takes BOOST_BAKES extra WHOLE, history-free,
     // untimed bakes in this same command buffer — one bounce order each (see BOOST_BAKES) — then the frame's own, so the field everything downstream reads this frame
-    // (gather, light meter, smoke ambient) is the converged one, not a quarter short. The extra bakes ignore half rate / stagger and leave historyFree up for the frame's
+    // (gather, smoke ambient) is the converged one, not a quarter short. The extra bakes ignore half rate / stagger and leave historyFree up for the frame's
     // own bake to consume. Every rc pass of ONE command buffer sees the sched bytes written LAST for its level (queue.writeBuffer lands before the submit): identical here
     // by construction — blend 1.0 for c0 throughout, and prime ≥ BOOST_BAKES + 1 keeps every upper level at period 1 / phase 0 through the frame's own bake.
     if (this.amortize && this.historyFree) for (; this.boost > 0; this.boost--) this.bake(enc, sceneBG, null, frameIdx);

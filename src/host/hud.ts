@@ -6,14 +6,7 @@ import type { HudCam, HudSource } from '../view/hud';
  *  points, width / height the backing store in device px) */
 export interface View { clientWidth: number; clientHeight: number; width: number; height: number; }
 
-/** a showcase's chapter list for the timeline (rust/game_rules/src/director chapters()) */
-export interface Chapters { list: { title: string; dur: number }[]; i: number; frac: number; }
-
 export interface HudLike {
-  /** the showcase caption + sub-line (empty strings = none) */
-  setCaption(text: string, sub: string): void;
-  /** the showcase timeline (null = none); onPick(k) seeks chapter k */
-  setTimeline(chapters: Chapters | null): void;
   /** everything drawn off the game once a frame (markers, meters, rows, tags…) */
   update(src: HudSource, cam: HudCam, view: View): void;
   /** the interactables' light dots (Tab ▸ toggles it) */

@@ -17,7 +17,7 @@
 //   --check   as-now only: the replayed moves must be the recording's own 'ladder' events (same moves, same order, each within 2.5 s). The ladder's counters at the moment F9 was pressed are
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, costTable, COST, AUTO_LADDER, SCALE_STEP, STANDS_IN, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, visitAdaptive, displayRateOf, presetCost, plan, costTable, COST, AUTO_LADDER, SCALE_STEP, STANDS_IN, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -285,7 +285,6 @@ function selftest(): boolean {
     check(bd.target === 144 && ladderBands(AIM_DISPLAY, 0).target === 60 && ladderBands(120, 0).target === 60, `hold display = the rate seen (144 on a 144 Hz display); until the first frames have said, every aim is 60`);
     check(ladderBands(60, 29).target === 60 && ladderBands(120, 29).target === 60 && ladderBands(AIM_DISPLAY, 40).target === 60 && ladderBands(120, 90).target === 90, `a rate seen under 60 never lowers an aim (a slow machine's own frame rate is not its display): hold 60 seen at 29 = ${ladderBands(60, 29).target}, hold 120 seen at 29 = ${ladderBands(120, 29).target}, seen at 90 = ${ladderBands(120, 90).target}`);
     check(displayRateOf(Array.from({ length: 60 }, (_, i) => [16, 17, 17][i % 3])) === 60 && displayRateOf(Array.from({ length: 60 }, (_, i) => i % 20 === 0 ? 25 : i % 20 === 1 ? 8.4 : 16.67)) === 60 && displayRateOf(Array.from({ length: 60 }, (_, i) => i > 20 && i < 32 ? 8.33 : 14)) === 120, `the display's rate off frame times: 16/17/17 ms timestamps read 60, one short catch-up frame after a long one does not read 120, a second of 8.33 ms frames does`);
-    check(ladderAimOf('asnow') === 0 && ladderAimOf('0') === 0 && ladderAimOf('60') === 60 && ladderAimOf('90') === 90 && ladderAimOf('120') === 120 && ladderAimOf('display') === AIM_DISPLAY && ladderAimOf('75') === null && ladderAimOf('') === null, `?aim= words: asnow (or 0) 0 · 60 · 90 · 120 · display ${AIM_DISPLAY} · anything else refused`);
     // THE PAGE'S DEFAULT is hold 60 (the maintainer's pick of 10-10): what the climb, the cut and the hop work to on a stub with no word of its own
     { const { E, q } = machine(1); check(E.settings.ladderAim === 60 && q.aimState.hold && q.aimState.target === 60, `the default holds 60: settings.ladderAim ${E.settings.ladderAim}, the ladder's target ${q.aimState.target}`); }
     // what the boot's plan picks: the reference machine high at its own start, an M1 / M2 base at the floor, and a pick's scale on the grid or its tier's own start
@@ -613,7 +612,7 @@ function selftest(): boolean {
       const bl = mkS(ON); const rbl = watch(bl, 200, t => A(t < 60 ? 19 : 8), { timed: false }); const blUp = tOf(first(rbl.moves, /shed ↑/));
       check(/shed ↓/.test(steps(rbl.moves)[0] ?? '') && blUp >= SHED.holdSecs && sharpOn(bl), `no GPU timings: off by the rate alone, back at ${blUp.toFixed(0)} s by the rate alone (${HOLD.blindWindows} good windows after the hold-off) — ${words(steps(rbl.moves))}`);
       const an = mkS(ON, { aim: 0 }); const ran = watch(an, 60, t => A(t < 10 ? 11 : 24));
-      check(/shed ↓/.test(steps(ran.moves)[0] ?? ''), `as now (?aim=asnow), 24 ms: the cut under 45 fps lets it go first too — ${words(steps(ran.moves).slice(0, 3))}`);
+      check(/shed ↓/.test(steps(ran.moves)[0] ?? ''), `as now, 24 ms: the cut under 45 fps lets it go first too — ${words(steps(ran.moves).slice(0, 3))}`);
       // (9) what it must NOT touch
       const same = (name: string, mk: (on: boolean) => { q: any; E: any }, k: (t: number) => number, secs = 120, want = (m: string[]) => m.some(x => /↓/.test(x))) => { const a = mk(true), z = mk(false); const ra = watch(a, secs, k), rz = watch(z, secs, k); check(JSON.stringify(ra.moves) === JSON.stringify(rz.moves) && !ra.moves.some(m => /shed/.test(m)) && want(ra.moves) && sharpOn(a) === sharpOn(z), `${name}: the same ${steps(ra.moves).length} moves with the switch on and off, sharp direct ${sharpOn(a) ? 'on' : 'off'}`); };
       same('a preset pinned by hand (High, adaptive resolution) through that fight', on => mkS(on, { auto: false }), fight);
@@ -718,7 +717,7 @@ function selftest(): boolean {
       const d0 = pump(E, q, 5 * 60); laterProgress.pending = 0; const d1 = pump(E, q, 2 * 60);
       check(d0 === 0 && d1 === 1 && q.standsInFor === 0 && q.measuring === false, `they land five seconds in: the measure is taken then, on the settings' own picture (${d0} then ${d1})`); }
   }
-  // (D), (E): the as-now ladder (?aim=asnow), the rules it keeps: cut under 45, restore over 58, starve by the union's floor. Hold 60's own rules are the blocks above
+  // (D), (E): the as-now ladder, the rules it keeps: cut under 45, restore over 58, starve by the union's floor. Hold 60's own rules are the blocks above
   // (D) the runtime ladder must actually CUT when frames are slow — and every cut must be a real cut in pixels (08-10 field dumps: eff sat pinned at the cap for
   //     whole sessions at 33–54 fps while lastChange announced 'adaptive ↓ scale 1.00' — a trailing comment had swallowed the renderScale assignment; and before
   //     08-11 the top of the scale's travel was dead under a HiDPI cap anyway). Also: steps ≥ SCALE_STEP, on the grid, never closer than LADDER.stepCooldown,
@@ -854,7 +853,8 @@ pacedForce = onOff('--paced'); heldForce = onOff('--held'); shedForce = onOff('-
 const files = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 if (!files.length) process.exit(selftest() ? 0 : 1);
 let ok = true;
-const aimArg = opt('--aim') ?? 'all'; const aims = aimArg === 'all' ? [0, 60, 90, 120, AIM_DISPLAY] : aimArg.split(',').map(a => { const v = ladderAimOf(a); if (v === null) { console.error(`--aim ${a}: not one of asnow | 0 | 60 | 90 | 120 | display`); process.exit(2); } return v; });
+const aimOf = (w: string): number | null => { const k = w.trim().toLowerCase(); return k === 'asnow' || k === '0' ? 0 : k === '60' ? 60 : k === '90' ? 90 : k === '120' ? 120 : k === 'display' ? AIM_DISPLAY : null; };
+const aimArg = opt('--aim') ?? 'all'; const aims = aimArg === 'all' ? [0, 60, 90, 120, AIM_DISPLAY] : aimArg.split(',').map(a => { const v = aimOf(a); if (v === null) { console.error(`--aim ${a}: not one of asnow | 0 | 60 | 90 | 120 | display`); process.exit(2); } return v; });
 const hzArg = opt('--hz') ? Number(opt('--hz')) : undefined; if (hzArg !== undefined && !(hzArg >= 24 && hzArg <= 480)) { console.error(`--hz ${opt('--hz')}: a display rate, 24‥480`); process.exit(2); }
 for (const path of files) {
   const d = loadDump(path); const name = path.split('/').pop()!.replace(/\.json$/, '');
