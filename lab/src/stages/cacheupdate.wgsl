@@ -17,14 +17,14 @@ fn oneMore(s: u32) {
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
   if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
   rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); leafMode = 2u; footSolid(CELL, 1.0);
-  // a little about its point, so that a cell is the mean of its patch
+  // a hair about its point (not a hand: beside a wall that would be in it, and floors were a twentieth too dark)
   let bs = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let x = x0 + n * 0.012;
   var sun = 0.0; var E = vec3f(0.0); let cs = select(dot(n, frame.sunDir.xyz), 1.0, every);
   for (var k = 0u; k < 2u; k++) {
     var d: vec3f; var far = 400.0; var e = vec3f(0.0);
     if (k == 0u) { if (cs <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); }
     else { let l = drawLamp(x, n); if (l.x < 0.0) { continue; } let q = aimLamp(u32(l.x), x, rnd2()); d = q.dir; far = q.dist - 0.02; e = q.E * l.y * select(max(dot(n, d), 0.0), 0.25, every); if (max3(e) <= 0.0) { continue; } }
-    let j = rnd2() - 0.5; let T = visible(x + (bs[0] * j.x + bs[1] * j.y) * 0.10, d, 2e-3, far); if (k == 0u) { sun = lum(T); } else { E += min(e * T, vec3f(300.0)); }
+    let j = rnd2() - 0.5; let T = visible(x + (bs[0] * j.x + bs[1] * j.y) * 0.03, d, 2e-3, far); if (k == 0u) { sun = lum(T); } else { E += min(e * T, vec3f(300.0)); }
   }
   let ru = rnd2(); let rp = rnd(); var w = vec4f(0.0); if (every) { let z = ru.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); w = vec4f(r * cos(6.2832 * ru.y), z, r * sin(6.2832 * ru.y), PI); } else { w = wideDir(x, n, ru, rp); }
   if (w.w > 0.0) {
