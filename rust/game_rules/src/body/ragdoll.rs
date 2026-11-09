@@ -141,6 +141,12 @@ fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 
     p
 }
 
+/// The floor under particle i as the rag has met it: what it rests on, else the ground.
+pub fn ragdoll_floor_under(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+    let k = i as usize;
+    if this.cn[k * 3 + 1] > 0.0 { this.x[k * 3 + 1] - RADIUS[k] } else { 0.0 }
+}
+
 /// Collision radius of particle i.
 fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
     RADIUS[i as usize]
