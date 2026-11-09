@@ -54,51 +54,51 @@ fn line_up(g: &mut Game, gd: GuardId, d: DoorId, side: f64, f: crate::handleside
 // ---- the file's functions ----
 
 /// Not under a showcase: its men are choreographed. (handleside.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &mut crate::game::Game) -> bool {
     !g.touring
 }
 
 /// A man's place at a door is his only while he keeps coming for it. (handleside.ts fresh)
-pub fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> bool {
+fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> bool {
     match st { Some(st) => g.time >= st.seen && g.time - st.seen < 0.5, None => false }
 }
 
 /// Which face of the closed leaf `p` is on. (handleside.ts sideAt)
-pub fn side_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+fn side_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
 }
 
 /// How far `p` stands off the frame's line. (handleside.ts offAt)
-pub fn off_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+fn off_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     m::abs((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz)
 }
 
 /// The floor point `along` the leaf from its hinge, `off` it on face `side`. (handleside.ts ptOf)
-pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
+fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
 }
 
 /// The handle, on the floor. (handleside.ts handleAt)
-pub fn handle_at(g: &crate::game::Game, d: DoorId) -> V3 {
+fn handle_at(g: &crate::game::Game, d: DoorId) -> V3 {
     let along = g.dr[d].def.width - g.k.handle.handle_in;
     pt_of(g, d, along, 0.0, 1.0)
 }
 
 /// Distance on the floor. (handleside.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A wall, a sill or a pane between two floor points at shin height: the level's statics only. (handleside.ts walled)
-pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: nothing of the level inside his body there (and, `nav`, on a cell the walkers' grid calls free). (handleside.ts stands)
-pub fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
+fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
     let nav = nav.unwrap_or(false);
     if nav && crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     let mut q: V3 = [p[0], 0.0, p[2]];
@@ -107,7 +107,7 @@ pub fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
 }
 
 /// Is `p` at the handle of d: on the handle half, within reach, and on the face it opens into clear of the sweep. (handleside.ts atHandle)
-pub fn at_handle(g: &crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
+fn at_handle(g: &crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
     let reach = reach.unwrap_or(g.k.handle.reach + 0.05);
     let f = crate::guards::frame_of(g, d);
     let along = along_of(&f, p);
@@ -118,7 +118,7 @@ pub fn at_handle(g: &crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) ->
 }
 
 /// A face's places, found once a face. (handleside.ts faceOf)
-pub fn face_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
+fn face_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
     let swing = crate::doors::door_swing(g, d);
     let stale = match g.m.handleside.faces.get(d) { Some(c) => c.swing != swing, None => true };
     if stale {
@@ -137,7 +137,7 @@ pub fn handle_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<cr
 }
 
 /// Searches a face's floor for its stand and its way through. (handleside.ts findFace)
-pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
+fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
     let k = g.k.handle;
     let w = g.dr[d].def.width;
     let hd = handle_at(g, d);
@@ -207,13 +207,13 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
 }
 
 /// The angle under which a leaf stands in a man's way. (handleside.ts ajarOf)
-pub fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
+fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
     let open = crate::doors::doors_swing_of(g, d).open;
     m::min(g.k.handle.ajar, 0.8 * open)
 }
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already. (handleside.ts wantsHand)
-pub fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
+fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
     if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
     if crate::doors::door_off(g, d) { return false; }
     let latched = crate::doors::door_latched(g, d);
@@ -234,7 +234,7 @@ pub fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
 }
 
 /// The first leaf his walk goes through within `look` metres. (handleside.ts ahead)
-pub fn ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ahead> {
+fn ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ahead> {
     let c = g.gd[gd].ch;
     let look = g.k.handle.look;
     let mut a = g.ch[c].pos;
@@ -260,7 +260,7 @@ pub fn ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ah
 }
 
 /// He lets go of his place at the door. (handleside.ts release)
-pub fn release(g: &mut crate::game::Game, gd: GuardId, rest: bool) {
+fn release(g: &mut crate::game::Game, gd: GuardId, rest: bool) {
     let door = g.m.handleside.states.get(gd).unwrap().door;   // every caller holds his own row
     g.m.handleside.states.delete(gd);
     if g.m.handleside.hands.get(door).copied() == Some(gd) { g.m.handleside.hands.delete(door); }
@@ -271,7 +271,7 @@ pub fn release(g: &mut crate::game::Game, gd: GuardId, rest: bool) {
 }
 
 /// His hand on the leaf from the face it opens into. (handleside.ts pullOpen)
-pub fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
+fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
     let who = g.ch[g.gd[gd].ch].id;
     let quiet = crate::silent::silent_ease(g, gd);
     crate::doors::doors_pull(g, d, who, Some(quiet));
@@ -280,7 +280,7 @@ pub fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
 }
 
 /// His walk through door `d` bent onto the handle half's line; made once. (handleside.ts bend)
-pub fn bend(g: &mut crate::game::Game, gd: GuardId, d: DoorId, a: crate::handleside::BendA, a_2: V3, b: V3) -> bool {
+fn bend(g: &mut crate::game::Game, gd: GuardId, d: DoorId, a: crate::handleside::BendA, a_2: V3, b: V3) -> bool {
     let c = g.ch[g.gd[gd].ch].pos;
     if flat(c, a_2) < 0.3 || off_at(g, d, c) < off_at(g, d, a_2) - 0.05 { return false; }
     let k = a.k;
@@ -296,7 +296,7 @@ pub fn bend(g: &mut crate::game::Game, gd: GuardId, d: DoorId, a: crate::handles
 }
 
 /// He stands still this frame. (handleside.ts halt)
-pub fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
+fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -319,7 +319,7 @@ pub fn handle_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The gate's body: finds him a place at a leaf, or walks and works the one he has. (handleside.ts gate)
-pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: bool) -> bool {
+fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: bool) -> bool {
     use crate::handleside::StPhase;
     if !live(g) { return false; }
     let k = g.k.handle;
@@ -551,7 +551,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
 }
 
 /// The walk from `a` to a place at a handle, or None when that is no short way. (handleside.ts wayTo)
-pub fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
+fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
     let d = flat(a, to);
     if d < 0.5 || crate::scene_collision::nav_grid_walkable(g, a, to) { return Some(vec![to]); }
     let mut p = crate::scene_collision::nav_grid_find_path(g, a, to, Some(1500.0), None)?;
@@ -568,7 +568,7 @@ pub fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
 }
 
 /// A man's feet taken the last of the way onto `to`: true once he stands on it. (handleside.ts stepTo)
-pub fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, strafe: bool, pass: Option<bool>) -> bool {
+fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, strafe: bool, pass: Option<bool>) -> bool {
     let pass = pass.unwrap_or(false);
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -656,7 +656,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
 }
 
 /// Where a door order's lead works the handle from without standing in the opening. (handleside.ts nearStand)
-pub fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
+fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
     let k = g.k.handle;
     let f = crate::guards::frame_of(g, d);
     let hd = handle_at(g, d);

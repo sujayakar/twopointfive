@@ -4,7 +4,7 @@ use crate::m;
 use alloc::{vec, vec::Vec};
 
 /// V8's two-term length: scaled by the largest, squares Kahan-summed. (hyp.ts kahan2)
-pub fn kahan2(a: f64, b: f64) -> f64 {
+fn kahan2(a: f64, b: f64) -> f64 {
     let (x, y) = (m::abs(a), m::abs(b));
     let mut max = 0.0;
     if x > max { max = x; }
@@ -22,7 +22,7 @@ pub fn kahan2(a: f64, b: f64) -> f64 {
 }
 
 /// V8's three-term length. (hyp.ts kahan3)
-pub fn kahan3(a: f64, b: f64, c_2: f64) -> f64 {
+fn kahan3(a: f64, b: f64, c_2: f64) -> f64 {
     let (x, y, z) = (m::abs(a), m::abs(b), m::abs(c_2));
     let mut max = 0.0;
     if x > max { max = x; }
@@ -42,7 +42,7 @@ pub fn kahan3(a: f64, b: f64, c_2: f64) -> f64 {
 }
 
 /// V8's four-term length. (hyp.ts kahan4)
-pub fn kahan4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
+fn kahan4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     let (x, y, z, w) = (m::abs(a), m::abs(b), m::abs(c_2), m::abs(d));
     let mut max = 0.0;
     if x > max { max = x; }
@@ -64,7 +64,7 @@ pub fn kahan4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
 }
 
 /// JavaScriptCore's two-term length: scaled by the largest, squares summed in order. (hyp.ts scaled2)
-pub fn scaled2(a: f64, b: f64) -> f64 {
+fn scaled2(a: f64, b: f64) -> f64 {
     let (x, y) = (m::abs(a), m::abs(b));
     if x == INF || y == INF { return INF; }
     if x != x || y != y { return f64::NAN; }
@@ -77,7 +77,7 @@ pub fn scaled2(a: f64, b: f64) -> f64 {
 }
 
 /// JavaScriptCore's three-term length. (hyp.ts scaled3)
-pub fn scaled3(a: f64, b: f64, c_2: f64) -> f64 {
+fn scaled3(a: f64, b: f64, c_2: f64) -> f64 {
     let (x, y, z) = (m::abs(a), m::abs(b), m::abs(c_2));
     if x == INF || y == INF || z == INF { return INF; }
     if x != x || y != y || z != z { return f64::NAN; }
@@ -91,7 +91,7 @@ pub fn scaled3(a: f64, b: f64, c_2: f64) -> f64 {
 }
 
 /// JavaScriptCore's four-term length. (hyp.ts scaled4)
-pub fn scaled4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
+fn scaled4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     let (x, y, z, w) = (m::abs(a), m::abs(b), m::abs(c_2), m::abs(d));
     if x == INF || y == INF || z == INF || w == INF { return INF; }
     if x != x || y != y || z != z || w != w { return f64::NAN; }
@@ -116,7 +116,7 @@ fn sample_r(s: &mut u32) -> f64 {
 }
 
 /// The trial's inputs: a fixed stream over the magnitudes lengths take and the ones they do not. (hyp.ts sample)
-pub fn sample(n: f64) -> Vec<f64> {
+fn sample(n: f64) -> Vec<f64> {
     let mut s: u32 = 0x9e3779b9;
     let odd: [f64; 19] = [
         0.0, -0.0, 1.0, -1.0, 0.5, 3.0, 4.0, 1e-320, -5e-324, 1.7976931348623157e308, 1e200, -1e-200,
@@ -149,12 +149,12 @@ pub fn sample(n: f64) -> Vec<f64> {
 }
 
 /// The same number, zeros by sign; NaN is NaN. (hyp.ts same)
-pub fn same(a: f64, b: f64) -> bool {
+fn same(a: f64, b: f64) -> bool {
     if a == b { a != 0.0 || 1.0 / a == 1.0 / b } else { a != a && b != b }
 }
 
 /// The Kahan sum for any number of terms: what `Math.hypot` becomes under the game's own maths. (hyp.ts kahanN)
-pub fn kahan_n(v: &[f64]) -> f64 {
+fn kahan_n(v: &[f64]) -> f64 {
     let n = v.len();
     if n == 2 { return kahan2(v[0], v[1]); }
     if n == 3 { return kahan3(v[0], v[1], v[2]); }

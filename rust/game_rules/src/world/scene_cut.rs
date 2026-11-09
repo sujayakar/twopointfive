@@ -25,7 +25,7 @@ pub fn cut_through(p: V3, n: V3) -> crate::scene_cut::CutPlane {
 }
 
 /// The farthest the uncut box reaches along n.   (cut.ts cutSupport)
-pub fn cut_support(h: V3, n: V3) -> f64 {
+fn cut_support(h: V3, n: V3) -> f64 {
     m::abs(n[0]) * h[0] + m::abs(n[1]) * h[1] + m::abs(n[2]) * h[2]
 }
 
@@ -183,7 +183,7 @@ pub fn cut_record(h: V3, planes: &[crate::scene_cut::CutPlane]) -> crate::scene_
 }
 
 /// The cut solid's own bounds in the box's local frame.   (cut.ts cutBounds)
-pub fn cut_bounds(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scene_cut::CutBounds {
+fn cut_bounds(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scene_cut::CutBounds {
     let cut = match cut {
         Some(c) if !c.is_empty() => c,
         _ => return CutBounds { min: [-h[0], -h[1], -h[2]], max: [h[0], h[1], h[2]] },
@@ -283,11 +283,11 @@ pub fn cut_prism(axis: f64, half_t: f64, poly: &[[f64; 2]]) -> crate::scene_cut:
 }
 
 /// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; None = nothing left.   (cut.ts cutClip)
-pub fn cut_clip(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64)> {
+pub(super) fn cut_clip(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64)> {
     cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1).map(|(t0, t1, _)| (t0, t1))
 }
 /// …the interval left and the plane it is entered by (−1 none); None = nothing is left
-pub fn cut_clip_of(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64, f64)> {
+pub(super) fn cut_clip_of(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64, f64)> {
     let (mut t0, mut t1) = (t0, t1);
     let mut k = -1.0;
     let mut i = 0;

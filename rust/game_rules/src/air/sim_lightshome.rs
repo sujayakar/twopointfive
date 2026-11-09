@@ -44,7 +44,7 @@ fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
 }
 
 /// Where the columns stand is the block's own struct here: what is left of the TypeScript's reading of them is that the module and this file agree on how much a part holds. (lightshome.ts columns)
-pub fn columns(g: &crate::game::Game) {
+fn columns(g: &crate::game::Game) {
     let (cols, caps) = (light_cols().len(), light_caps());
     if rs::cap(14) != cols || rs::cap(0) as f64 != caps.targets || rs::cap(1) as f64 != caps.rows || rs::cap(2) as f64 != caps.beacons || rs::cap(3) as f64 != caps.cameras || rs::cap(4) as f64 != caps.lasers {
         panic!("rust/sim lays the lights out as {} columns and the rules as {}", rs::cap(14), cols);
@@ -52,7 +52,7 @@ pub fn columns(g: &crate::game::Game) {
 }
 
 /// A fixture of a game: what the level says of it; its state is in the block. (lightshome.ts Fixture.constructor)
-pub fn fixture_new(g: &mut crate::game::Game, i: f64, st: crate::Opaque, def: &crate::sim_lightshome::FixtureDef) -> FixtureId {
+fn fixture_new(g: &mut crate::game::Game, i: f64, st: crate::Opaque, def: &crate::sim_lightshome::FixtureDef) -> FixtureId {
     let kind = match def.kind {
         FixtureDefKind::Analytic => FixtureKind::Analytic,
         FixtureDefKind::Emissive => FixtureKind::Emissive,
@@ -112,7 +112,7 @@ pub fn fixture_base_intensity(g: &crate::game::Game, id: FixtureId) -> f64 {
 }
 
 /// (lightshome.ts Fixture.stagger)
-pub fn fixture_stagger(g: &crate::game::Game, id: FixtureId) -> f64 {
+fn fixture_stagger(g: &crate::game::Game, id: FixtureId) -> f64 {
     lights_read(g).stagger[fix_i(g, id)]
 }
 
@@ -127,7 +127,7 @@ pub fn mains_permanent(g: &crate::game::Game) -> bool {
 }
 
 /// (lightshome.ts Mains.until)
-pub fn mains_until(g: &crate::game::Game) -> f64 {
+pub(super) fn mains_until(g: &crate::game::Game) -> f64 {
     lights_read(g).until
 }
 
@@ -137,17 +137,17 @@ pub fn mains_since(g: &crate::game::Game) -> f64 {
 }
 
 /// (lightshome.ts Mains.restoredAt)
-pub fn mains_restored_at(g: &crate::game::Game) -> f64 {
+pub(super) fn mains_restored_at(g: &crate::game::Game) -> f64 {
     lights_read(g).restored_at
 }
 
 /// how long a man of theirs has been at the panel (lightshome.ts Mains.fixT)
-pub fn mains_fix_t(g: &crate::game::Game) -> f64 {
+pub(super) fn mains_fix_t(g: &crate::game::Game) -> f64 {
     lights_read(g).fix_t
 }
 
 /// A camera's own machine is the base of its CameraRt: this stands the row, whose other fields camera_rt_new fills. (lightshome.ts CameraMachine.constructor)
-pub fn camera_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque) -> CameraRtId {
+fn camera_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque) -> CameraRtId {
     let mut row = crate::devices::CameraRt::blank();
     row.slot = slot;
     row.st = st;
@@ -175,7 +175,7 @@ pub fn camera_machine_state(g: &crate::game::Game, id: CameraRtId) -> crate::sim
 }
 
 /// (lightshome.ts CameraMachine.reportedAt)
-pub fn camera_machine_reported_at(g: &crate::game::Game, id: CameraRtId) -> f64 {
+fn camera_machine_reported_at(g: &crate::game::Game, id: CameraRtId) -> f64 {
     lights_read(g).cam_reported[cam_slot(g, id)]
 }
 
@@ -186,7 +186,7 @@ pub fn camera_machine_last_seen(g: &crate::game::Game, id: CameraRtId) -> Option
 }
 
 /// a dead camera has been called in, once per death (lightshome.ts CameraMachine.deadCalled)
-pub fn camera_machine_dead_called(g: &crate::game::Game, id: CameraRtId) -> bool {
+fn camera_machine_dead_called(g: &crate::game::Game, id: CameraRtId) -> bool {
     lights_read(g).cam_bits[cam_slot(g, id)] & C_DEAD != 0
 }
 
@@ -210,7 +210,7 @@ pub fn camera_machine_put(g: &crate::game::Game, id: CameraRtId, yaw: f64, phase
 }
 
 /// A tripwire's own machine is the base of its LaserRt: this stands the row, whose other fields laser_rt_new fills. (lightshome.ts LaserMachine.constructor)
-pub fn laser_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque) -> LaserRtId {
+fn laser_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque) -> LaserRtId {
     let mut row = crate::devices::LaserRt::blank();
     row.slot = slot;
     row.st = st;
@@ -233,12 +233,12 @@ pub fn laser_machine_cut(g: &crate::game::Game, id: LaserRtId) -> f64 {
 }
 
 /// (lightshome.ts LaserMachine.deadCalled)
-pub fn laser_machine_dead_called(g: &crate::game::Game, id: LaserRtId) -> bool {
+fn laser_machine_dead_called(g: &crate::game::Game, id: LaserRtId) -> bool {
     lights_read(g).las_bits[las_slot(g, id)] & L_DEAD != 0
 }
 
 /// something is breaking it right now (lightshome.ts LaserMachine.held)
-pub fn laser_machine_held(g: &crate::game::Game, id: LaserRtId) -> bool {
+fn laser_machine_held(g: &crate::game::Game, id: LaserRtId) -> bool {
     lights_read(g).las_bits[las_slot(g, id)] & L_HELD != 0
 }
 
@@ -444,7 +444,7 @@ pub fn light_home_feed(g: &crate::game::Game, l: LightId) {
 }
 
 /// …of a lamp somebody moves each tick (a fire's): only while it burns; out, its record is the picture's alone. (lightshome.ts LightHome.feedBurning)
-pub fn light_home_feed_burning(g: &crate::game::Game, l: LightId) {
+pub(super) fn light_home_feed_burning(g: &crate::game::Game, l: LightId) {
     if g.tab.light[l].enabled {
         light_home_feed(g, l);
         return;
@@ -474,7 +474,7 @@ pub fn light_home_flip(g: &crate::game::Game, targets: &[FixtureId], on: bool, t
 }
 
 /// What the module worked out, to what the picture reads: a lamp's burning, and a beacon's turn. (lightshome.ts LightHome.paint)
-pub fn light_home_paint(g: &mut crate::game::Game) {
+pub(super) fn light_home_paint(g: &mut crate::game::Game) {
     for r in 0..g.light_home.lamps.len() {
         let c = lights_read(g);
         let b = c.row_bits[r];

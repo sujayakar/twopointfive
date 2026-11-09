@@ -66,7 +66,7 @@ fn sent_of(g: &mut Game, q: EnemysquadsSquadId, s: GuardId) -> &mut crate::enemy
     sq!(g, q).sent.iter_mut().find(|x| x.gd == s).unwrap()
 }
 /// drillFollow's and drillBack's ears: a holding man hears the team go on somewhere else, and nobody of the pair (his mates on that door within `reach`) has one of them in sight.   (enemysquads.ts movedOn)
-pub fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId, reach: f64) -> Option<crate::enemysquads::MovedOn> {
+fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId, reach: f64) -> Option<crate::enemysquads::MovedOn> {
     let gd = s;
     let at = def!(g, d).noise_at?;
     let (aim, since) = {
@@ -106,7 +106,7 @@ pub fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d:
     Some(crate::enemysquads::MovedOn { at, pair })
 }
 /// A drilled garrison's pair holding a lost room's other door goes back to its own posts. `s` is his man: the row stays in Q.sent.   (enemysquads.ts back)
-pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId) {
+pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId) {
     let gd = s;
     let k = match squad_drill(g) {
         Some(k) => k,
@@ -224,7 +224,7 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
 }
 
 /// A drilled garrison goes and looks: once a tick the word of the team is kept, and gone quiet a pair is called and sent.   (enemysquads.ts lookOut)
-pub fn look_out(g: &mut crate::game::Game) {
+pub(super) fn look_out(g: &mut crate::game::Game) {
     let k = match squad_drill(g) {
         Some(k) => k,
         None => return,
@@ -463,7 +463,7 @@ fn may_look(g: &mut Game, d: RoomfightDefId, at: V3) -> bool {
 }
 
 /// Is that place in, or within three metres of, the room a holding man's door leads to.   (enemysquads.ts lostRoomHas)
-pub fn lost_room_has(g: &mut crate::game::Game, s: GuardId, at: V3, q: EnemysquadsSquadId) -> bool {
+fn lost_room_has(g: &mut crate::game::Game, s: GuardId, at: V3, q: EnemysquadsSquadId) -> bool {
     let door = match sent_of(g, q, s).door {
         Some(d) => d,
         None => return false,
@@ -496,7 +496,7 @@ fn check_word(name: &str, salt: f64, phases: f64) -> u32 {
     (h ^ js::to_i32(m::floor(phases * 8388607.0))) as u32
 }
 /// The check's own dice, never the game's: seeded off the squad's name and its men's stride phases.   (enemysquads.ts checkDice)
-pub fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
+pub(super) fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
     let salt = salt.unwrap_or(0.0);
     let mut phases = 0.0;
     for x in sq!(g, q).men.iter() {
@@ -506,7 +506,7 @@ pub fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64
     crate::math_dice::die_of(word as f64)
 }
 /// How long till the next check: a squad that has heard of the team counts its men oftener.   (enemysquads.ts checkBeat)
-pub fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
+fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
     let k = g.k.squads;
     let r = &sq!(g, q);
     let alert = if r.news_t > -100.0 || r.contact_t > -100.0 || r.wary == Some(true) { k.check_alert_k } else { 1.0 };
@@ -524,7 +524,7 @@ fn rc_roll(g: &mut Game, q: EnemysquadsSquadId) -> f64 {
     crate::math_dice::roll(&mut rc!(g, q).die)
 }
 /// The squad's check, made on the first asking: the row itself.   (enemysquads.ts rcOf)
-pub fn rc_of<'g>(g: &'g mut crate::game::Game, q: EnemysquadsSquadId) -> &'g mut crate::enemysquads::Check {
+pub(super) fn rc_of<'g>(g: &'g mut crate::game::Game, q: EnemysquadsSquadId) -> &'g mut crate::enemysquads::Check {
     if sq!(g, q).rc.is_none() {
         let mut die = check_dice(g, q, None);
         let first = crate::math_dice::roll(&mut die);
@@ -565,7 +565,7 @@ fn small0_of(g: &Game, q: EnemysquadsSquadId) -> JsMap<GuardId, f64> {
     out
 }
 /// A man of the squad has gone quiet: where he stood, when, and what each mate's ears had counted by then. Nobody is told by it.   (enemysquads.ts wentSilent)
-pub fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>, broke: Option<bool>) {
+pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>, broke: Option<bool>) {
     let at = match at {
         Some(a) => a,
         None => pos(g, m),
@@ -630,7 +630,7 @@ pub fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId,
     note(g, Some(m), &text);
 }
 /// A line of the check on the squad's net: the log's row, the debrief's and the strip's, never his bubble.   (enemysquads.ts onNet)
-pub fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
+pub(super) fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
     let cls = match cls {
         Some(c) => c,
         None => crate::cues::cue_class(text),
@@ -647,7 +647,7 @@ pub fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f6
     crate::game::game_msg(g, &line);
 }
 /// A mate at home has gunfire in his ears with a drop.   (enemysquads.ts heardFire)
-pub fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
+pub(super) fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
     for x in up.iter() {
         let x = *x;
         let at = pos(g, x);
@@ -662,7 +662,7 @@ pub fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardI
     false
 }
 /// When a stun charge, or a door blown in, last reached this man's ears: his Witness counts them and this times them.   (enemysquads.ts bangT)
-pub fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
+fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
     let (bang, last_t) = {
         let h = &g.gd[x].witness.heard;
         (h.bang, h.last_t)
@@ -685,7 +685,7 @@ pub fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
     b.t
 }
 /// A looker's leg: pressure.ts's scripted leg, at the pace of a man going to look.   (enemysquads.ts walk)
-pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
+pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
     crate::pressure::run(g, d, to, None, None);
     let gd = def!(g, d).gd;
     let speed = g.tune.guard_investigate;
@@ -747,7 +747,7 @@ fn idle(g: &mut Game, q: EnemysquadsSquadId, after: f64, poll: bool) -> Option<c
     None
 }
 /// Once a frame for a squad with the switch on: what its men's eyes and ears make of the men who went quiet, and the net's check.   (enemysquads.ts radioCheck)
-pub fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> Option<crate::enemysquads::RadioCheck> {
+pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> Option<crate::enemysquads::RadioCheck> {
     let k = g.k.squads;
     rc_of(g, q);
     rc!(g, q).n += 1.0;
@@ -1224,7 +1224,7 @@ pub fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool)
     }
 }
 /// A man of squad Q set off to look for `who` at `at`: his record, with the post he leaves and how he held it.   (enemysquads.ts looker)
-pub fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
+pub(super) fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
     let row = &def!(g, d);
     let gd = row.gd;
     let man = &g.gd[gd];
@@ -1259,7 +1259,7 @@ pub fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefI
     }
 }
 /// Every looker out for `who` turns for the post he left.   (enemysquads.ts turnBack)
-pub fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
+fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
     let mut i = 0;
     while i < rc!(g, q).look.len() {
         let (x_who, x_back, man) = {
@@ -1287,7 +1287,7 @@ fn look_of(g: &mut Game, q: EnemysquadsSquadId, l: GuardId) -> &mut crate::enemy
     rc!(g, q).look.iter_mut().find(|y| y.gd == l).unwrap()
 }
 /// Back on the post he left, as he held it: wary and no more.   (enemysquads.ts settle)
-pub fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: RoomfightDefId) {
+fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: RoomfightDefId) {
     let gd = def!(g, d).gd;
     let c = &l.calm;
     let roused = c.state == crate::game::GuardState::Alert || c.state == crate::game::GuardState::Search;
@@ -1379,7 +1379,7 @@ fn found(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<Enemysquads
     true
 }
 /// A man out looking, once a frame; true = no longer a looker. `l` is his man: his row stays in the look list, written where it lies.   (enemysquads.ts looks)
-pub fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId) -> bool {
+pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId) -> bool {
     let gd = l;
     let who = look_of(g, q, l).who;
     let dd = def_of(g, gd);
@@ -1598,11 +1598,11 @@ pub fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId) -> bo
 }
 
 /// He has noticed the team by his own bar: 'alert' or 'search', not 'suspicious'.   (enemysquads.ts noticed)
-pub fn noticed(g: &crate::game::Game, m: GuardId) -> bool {
+pub(super) fn noticed(g: &crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Alert || g.gd[m].state == crate::game::GuardState::Search
 }
 /// The trace's row for a sighting the squad does not call. Always false: nothing is called.   (enemysquads.ts glimpse)
-pub fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> bool {
+pub(super) fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> bool {
     let last = g.m.enemysquads.glimpsed.get(m).copied().unwrap_or(-100.0);
     let now = g.time;
     g.m.enemysquads.glimpsed.set(m, now);
@@ -1618,7 +1618,7 @@ pub fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> 
     false
 }
 /// The floor is quiet as far as this squad knows: only then is a call a thing with a length.   (enemysquads.ts callQuiet)
-pub fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
+pub(super) fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
     let r = &sq!(g, q);
     if r.state == SquadState::Contact || r.state == SquadState::Alerted || !(r.contact_t <= -100.0) || !(r.news_t <= -100.0) {
         return false;

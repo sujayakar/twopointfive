@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint. (rigProps.ts frameFrom)
-pub fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Frame {
+pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Frame {
     let up_hint = up_hint.unwrap_or([0.0, 1.0, 0.0]);
     let z = v3::normalize(along);
     let mut y = v3::sub(up_hint, v3::scale(z, v3::dot(up_hint, z)));
@@ -21,12 +21,12 @@ pub fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Fr
 }
 
 /// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is. (rigProps.ts rotAxis)
-pub fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
+pub(super) fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
     if m::abs(ang) < 1e-6 { v } else { v3::quat::rotate(v3::quat::axis_angle(axis, ang), v) }
 }
 
 /// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z). (rigProps.ts applyAdj)
-pub fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
+pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
     let adj = match adj {
         Some(a) => a,
         None => return Frame { o: v3::copy(f.o), x: f.x, y: f.y, z: f.z },
@@ -65,7 +65,7 @@ pub fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>)
 }
 
 /// A new all-zero adjustment. (rigProps.ts ZERO_ADJ)
-pub fn zero_adj() -> crate::rig_props::Adj {
+fn zero_adj() -> crate::rig_props::Adj {
     Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
 }
 
@@ -101,14 +101,14 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Any
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame. (rigProps.ts seg)
-pub fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub(super) fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
     seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
 }
 
 /// seg() with the part's adjustment handed in. (rigProps.ts segAt)
-pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
@@ -138,7 +138,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::ri
 }
 
 /// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down. (rigProps.ts headFlatForward)
-pub fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
+fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
     let hd = crate::character::character_head_dir(g, c_2);
     let flat = m::hyp2(hd[0], hd[2]);
     if flat > 0.2 {

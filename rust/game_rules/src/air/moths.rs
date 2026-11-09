@@ -16,7 +16,7 @@ use alloc::{boxed::Box, vec, vec::Vec};
 use crate::v3::quat;
 
 /// integer hash → [0, 1): the module's dice, every choice off its own serial (src/game/moths.ts:28 h01)
-pub fn h01(x: f64) -> f64 {
+fn h01(x: f64) -> f64 {
     let mut x = m::imul(js::to_i32(x) ^ 0x2545F491, 0x9E3779B1u32 as i32) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0x85EBCA77u32 as i32) as u32;
@@ -24,7 +24,7 @@ pub fn h01(x: f64) -> f64 {
     (x >> 8) as f64 / 16777216.0
 }
 /// (src/game/moths.ts:29 smooth)
-pub fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - a) / (b - a))); t * t * (3.0 - 2.0 * t) }
+fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - a) / (b - a))); t * t * (3.0 - 2.0 * t) }
 
 /// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them. (src/game/moths.ts:37 Moths.constructor)
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {

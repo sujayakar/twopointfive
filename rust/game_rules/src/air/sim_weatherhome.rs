@@ -13,12 +13,12 @@ fn scratch_d() -> &'static [f64] {
 }
 
 /// The module's scratch, as an index of doubles over its memory.   (weatherhome.ts wxScratch)
-pub fn wx_scratch() -> f64 {
+fn wx_scratch() -> f64 {
     (::sim::sim_scratch() as usize >> 3) as f64
 }
 
 /// How many of `boxes` are roofs at all, by the rule roofsOf makes the table with.   (weatherhome.ts roofsCounted)
-pub fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ceiling: f64) -> f64 {
+pub(super) fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ceiling: f64) -> f64 {
     ::sim::weather::roofs_begin();
     for b in boxes {
         ::sim::weather::roofs_box(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], ceiling);
@@ -27,7 +27,7 @@ pub fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ce
 }
 
 /// Copy `n` doubles from the scratch.   (weatherhome.ts wxOut)
-pub fn wx_out(n: f64) -> Vec<f64> {
+pub(super) fn wx_out(n: f64) -> Vec<f64> {
     let m = scratch_d();
     let mut out = Vec::new();
     let mut i = 0usize;

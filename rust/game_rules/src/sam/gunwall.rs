@@ -12,13 +12,13 @@ fn row(g: &mut Game, c: CharId) -> &mut St {
 }
 
 /// His row, made on first asking. (gunwall.ts st)
-pub fn st<'g>(g: &'g mut crate::game::Game, c_2: CharId) -> &'g mut crate::gunwall::St {
+fn st<'g>(g: &'g mut crate::game::Game, c_2: CharId) -> &'g mut crate::gunwall::St {
     let p = g.ch[c_2].pos;
     g.m.gunwall.st.get_or_insert_with(c_2, || St { low: false, t: -1.0, mine: false, hold: None, wood: 0.0, rose: false, px: p[0], pz: p[2], vt: -1.0, vx: 0.0, vz: 0.0 })
 }
 
 /// The floor's fight: a man gone alert or a scripted man with one in his sights, remembered `fightS`. (gunwall.ts fightOn)
-pub fn fight_on(g: &mut crate::game::Game) -> bool {
+fn fight_on(g: &mut crate::game::Game) -> bool {
     let fight_s = g.k.gunwall.fight_s;
     if !(fight_s > 0.0) { return false; }
     let mut f = match g.m.gunwall.fight { Some(f) => f, None => GunwallModFIGHTValue { t: -1.0, until: -1.0 } };
@@ -38,12 +38,12 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
 }
 
 /// A showcase has the floor (the tour, a Director showcase). (gunwall.ts showing)
-pub fn showing(g: &crate::game::Game) -> bool {
+fn showing(g: &crate::game::Game) -> bool {
     g.touring || crate::director::director_showing(g)
 }
 
 /// His frame on `yaw`: forward, right, the gun shoulder over his feet, how crouched (0..1). (gunwall.ts frame)
-pub fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
+fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
     let (s, co) = (m::sin(yaw), m::cos(yaw));
     let f: V3 = [s, 0.0, co];
     let r: V3 = [-co, 0.0, s];
@@ -53,12 +53,12 @@ pub fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall
 }
 
 /// A point off `o` in his frame. (gunwall.ts at)
-pub fn at(o: V3, f: crate::gunwall::AtF, fwd: f64, right: f64, y: f64) -> V3 {
+fn at(o: V3, f: crate::gunwall::AtF, fwd: f64, right: f64, y: f64) -> V3 {
     [o[0] + f.f[0] * fwd + f.r[0] * right, o[1] + y, o[2] + f.f[2] * fwd + f.r[2] * right]
 }
 
 /// His feet's speed over the floor, sampled once a frame by whoever asks first. (gunwall.ts track)
-pub fn track(g: &mut crate::game::Game, c_2: CharId) {
+fn track(g: &mut crate::game::Game, c_2: CharId) {
     let (now, p) = (g.time, g.ch[c_2].pos);
     let s = row(g, c_2);
     if s.vt == now { return; }
@@ -72,12 +72,12 @@ pub fn track(g: &mut crate::game::Game, c_2: CharId) {
 }
 
 /// How fast he closes along `f`, m/s, never negative. (gunwall.ts closing)
-pub fn closing(s: crate::gunwall::St, f: V3) -> f64 {
+fn closing(s: crate::gunwall::St, f: V3) -> f64 {
     m::max(0.0, s.vx * f[0] + s.vz * f[2])
 }
 
 /// The line a raised gun lies along on `yaw`: `a` at the hand end, `b` at the muzzle. (gunwall.ts raisedLine)
-pub fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
+fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
     let o = o.unwrap_or(g.ch[c_2].pos);
     let fr = frame(g, c_2, yaw);
     let af = AtF { f: fr.f, r: fr.r };
@@ -104,7 +104,7 @@ fn hits(g: &mut Game, a: V3, b: V3, most: f64) -> bool {
 }
 
 /// Stood at (x, z) with the long gun in the shoulder on `to`: would the gun, and the first `ahead` metres of its round's way, lie clear? (gunwall.ts gunClearFrom)
-pub fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
+pub(super) fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
     let yaw = m::atan2(to[0] - x, to[2] - z);
     let fr = frame(g, c_2, yaw);
     let py = g.ch[c_2].pos[1];
@@ -120,19 +120,19 @@ pub fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to
 }
 
 /// How far ahead of his feet the low ready leaves the muzzle, untucked. (gunwall.ts lowReach)
-pub fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
+fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
     let ahead = g.ch[c_2].muzzle_ahead;
     if g.ch[c_2].anim.long_gun { 0.145 + 0.7 * ahead } else { 0.241 + 0.74 * ahead }
 }
 
 /// A panel on a → b as a round sees one, counted. (gunwall.ts panel)
-pub fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     g.stats.gunwall.asked += 1;
     wood_between(g, a, b)
 }
 
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through. (gunwall.ts woodBetween)
-pub fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
+pub(super) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
     if !crate::combat::solid_between(q, a, b) { return false; }
     if !crate::glasspen::glass_pen_live(q.game()) { return true; }
     let d = v3::sub(b, a);
@@ -166,7 +166,7 @@ fn held(g: &mut Game, c: CharId, sh: f64, hot: bool, a: V3, b: V3) -> bool {
 }
 
 /// Is the gun he wants up kept down by a wall this frame? (gunwall.ts walledNow)
-pub fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, to: Option<V3>, dt: f64, hot: bool, deep: bool) -> bool {
+fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, to: Option<V3>, dt: f64, hot: bool, deep: bool) -> bool {
     let c = c_2;
     let aim_yaw = g.ch[c].aim_yaw;
     let fr = frame(g, c, aim_yaw);
@@ -221,7 +221,7 @@ pub fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::Gu
 }
 
 /// YOUR BREACH SHOT: where the raised gun's own line meets a lock a shell takes, inside the gun's reach and a stride: that point; else none. (gunwall.ts breachAim)
-pub fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
+pub(super) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
     let aim_yaw = g.ch[c_2].aim_yaw;
     let ml = raised_line(g, c_2, GunUp::Aim, aim_yaw, None);
     let rd = v3::sub(ml.b, ml.a);
@@ -241,7 +241,7 @@ pub fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::Pel
 }
 
 /// This frame's answer for a character, asked once a frame and then remembered. (gunwall.ts gunWalled)
-pub fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crate::gunwall::GunUp>, to: Option<V3>, dt: f64, hot: Option<bool>, deep: Option<bool>) -> bool {
+pub(super) fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crate::gunwall::GunUp>, to: Option<V3>, dt: f64, hot: Option<bool>, deep: Option<bool>) -> bool {
     let (hot, deep) = (hot.unwrap_or(false), deep.unwrap_or(false));
     let now = g.time;
     let s = st(g, c_2);
@@ -350,7 +350,7 @@ pub fn gun_wall_pose(g: &mut crate::game::Game, c_2: CharId) {
 }
 
 /// Sam's pistol: the low ready this rule put him in is taken off again by it and by nobody else. (gunwall.ts gunWallStance)
-pub fn gun_wall_stance(g: &mut crate::game::Game, c_2: CharId, set: bool) {
+pub(super) fn gun_wall_stance(g: &mut crate::game::Game, c_2: CharId, set: bool) {
     if set {
         st(g, c_2);
         if g.ch[c_2].anim.stance == crate::character::Stance::None {

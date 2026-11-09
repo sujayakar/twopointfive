@@ -7,27 +7,27 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec};
 
 /// A man of the defenders or the night staff, no civilian. (flinch.ts staff)
-pub fn staff(g: &crate::game::Game, gd: GuardId) -> bool {
+fn staff(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].civ.is_none() && (g.gd[gd].team == crate::teams::Team::Hostile || g.gd[gd].team == crate::teams::Team::Guard)
 }
 
 /// A man of the room fight's on its own walk carries a script that is not choreography. (flinch.ts fightMan)
-pub fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
+fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
 /// Is the run asked of anybody on this floor now. (flinch.ts runOn)
-pub fn run_on(g: &crate::game::Game) -> bool {
+fn run_on(g: &crate::game::Game) -> bool {
     g.tune.suppression && g.ai_enabled && !g.touring && !g.quiet_utility
 }
 
 /// Does a hostile round that came only `s` m from its muzzle still count here. (flinch.ts flinchInside)
-pub fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
+pub(super) fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
     s >= g.k.flinch.min_travel
 }
 
 /// One round went close to `c`: duck him off it, and count a green man's fire. `gd` = the man, None for the player. (flinch.ts flinchRound)
-pub fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>, near: f64, from: V3, hostile: bool) {
+pub(super) fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>, near: f64, from: V3, hostile: bool) {
     let c = c_2;
     if near < g.k.flinch.least || !hostile || g.quiet_utility { return; }
     match gd {
@@ -56,7 +56,7 @@ fn duck_share(far: f64, least: f64, full: f64, near: f64) -> f64 {
 }
 
 /// Is his body his own to duck with. (flinch.ts free)
-pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let sc = g.gd[gd].script.as_ref().map(|s| s.flinch);
     if g.touring { return sc == Some(Some(true)); }
     let flinch = match sc {
@@ -67,7 +67,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// How much of the duck his training leaves him: a steady defender or night-staff man `steady_k`, anybody else 1. (flinch.ts flinchScale)
-pub fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
+pub(super) fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
     if let Some(man) = gd {
         if staff(g, man) && !g.gd[man].trained && crate::morale::training_of(g, man) == crate::morale::TrainingOf::Steady {
             return g.k.flinch.steady_k;
@@ -77,12 +77,12 @@ pub fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
 }
 
 /// Is he a man the run is asked of at all: a green defender or night-staff man, free. (flinch.ts green)
-pub fn green(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn green(g: &mut crate::game::Game, gd: GuardId) -> bool {
     staff(g, gd) && g.gd[gd].held.is_none() && crate::morale::training_of(g, gd) == crate::morale::TrainingOf::Green
 }
 
 /// Has he a man of his side by him who still has his gun. (flinch.ts mateBy)
-pub fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let eye = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
     let mut i = 0;
@@ -131,7 +131,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// QA: a man's seconds under close fire (0 = none on record). (flinch.ts flinchUnder)
-pub fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
+fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.flinch.state_of.get(gd) { Some(t) => t.under, None => 0.0 }
 }
 

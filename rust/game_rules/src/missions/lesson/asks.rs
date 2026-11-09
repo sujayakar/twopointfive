@@ -34,7 +34,7 @@ fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
 /// a line that names the knife, while there is none: the right click's knockout is the blow (lesson.ts bareLine)
-pub fn bare_line(line: &str) -> String {
+fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
     let s = replace_words(&s, "left click to knife him", "right-click to knock him out");
     replace_words(&s, "left-click to kill him with the knife", "right-click to knock him out")
@@ -62,7 +62,7 @@ fn token_say(row: usize, who: &str, held: bool, bare: bool) -> String {
 }
 
 /// the first letter lower-cased (lesson.ts lower)
-pub fn lower(name: &str) -> String {
+fn lower(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
         // (charAt is one UTF-16 unit: half a surrogate pair lower-cases to itself)
@@ -82,7 +82,7 @@ pub fn lesson_token(name: &str) -> bool {
 }
 
 /// a line's tokens written out; on the page `held` is false and `bare` true when not given (lesson.ts tokenLine)
-pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
+fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     // (held = stalkClickOnly() with NO game: STALK.on && STALK.only && !STALK.key, false on the page · bare = CLOSE.on && CLOSE.noKnife, true on it)
     let (held, bare) = (held.unwrap_or(false), bare.unwrap_or(true));
     if !line.contains('{') { return String::from(line); }
@@ -118,25 +118,25 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 // ---- the tests
 
 /// one test asked: an unknown kind, or a flag no row has (which throws in the TypeScript and is caught there), is never true (lesson.ts passes)
-pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool {
+pub(super) fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool {
     test_ok(g, t, s).unwrap_or(false)
 }
 
 /// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none (lesson.ts after)
-pub fn after(log: &[u32], last: Option<u32>) -> usize {
+pub(super) fn after(log: &[u32], last: Option<u32>) -> usize {
     let mut k = log.len();
     while k > 0 && Some(log[k - 1]) != last { k -= 1; }
     k
 }
 
 /// (lesson.ts inside)
-pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
+fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
 /// the player a lesson is taught to, one seat today (lesson.ts who)
-pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
+pub(super) fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
-pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
+fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
@@ -144,16 +144,16 @@ pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId)
 }
 
 /// a man no longer on his feet: dead, or out cold (lesson.ts downed)
-pub fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
+pub(super) fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
 
 /// a teammate on his feet (lesson.ts:127, 269)
 fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead }
 
 /// the one partner of a quiet pair: the first operative unit on his feet (lesson.ts partnerOf)
-pub fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
+fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
 
 /// is `v` within the record's below and above; a kind with neither field has nothing to refuse (lesson.ts band)
-pub fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
+fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
     let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
@@ -417,7 +417,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
 /// a row's `below` and `above` (lesson.ts bandCheck)
-pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
+fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
     let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }

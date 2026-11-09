@@ -75,7 +75,7 @@ fn way_to(g: &mut Game, from: V3, q: V3, t: RoomfightRoomId, dear: &mut dyn FnMu
     if flat(w0, q) > 0.8 { None } else { Some(l) }
 }
 /// PRESSURE.wayOut: a spot to hold entry `e` of T from that a can through that door does not reach, nearest on foot of the first few that pass. (pressure.ts standOffSpot)
-pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry, dear: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> Option<crate::pressure::StandOffSpot> {
+pub(super) fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry, dear: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> Option<crate::pressure::StandOffSpot> {
     let gd = gd_of(g, d);
     let c_pos = pos_of(g, gd);
     let cs = g.col.nav.cell;
@@ -158,7 +158,7 @@ pub fn run(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, door: Option<
 }
 
 /// PRESSURE.stuns: a man with a charge on him, let go at the fight, takes the door he was put down for as the drill, if their side has something that puts the team in that room. (pressure.ts charge)
-pub fn charge(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId, t: Option<RoomfightRoomId>) -> bool {
+pub(in crate::defenders) fn charge(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId, t: Option<RoomfightRoomId>) -> bool {
     let gd = gd_of(g, d);
     if !(g.k.pressure.stuns > 0.0 && crate::tactics::stuns_of(g, gd) > 0.0) { return false; }
     let cand: Vec<RoomfightRoomId> = match t { Some(x) => vec![x], None => rooms_by(g, d, door) };
@@ -186,7 +186,7 @@ pub fn charge(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId, t: Opt
     true
 }
 /// the rooms a door gives on to, the one he stands in and the one he holds aside. (pressure.ts roomsBy)
-pub fn rooms_by(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) -> Vec<RoomfightRoomId> {
+fn rooms_by(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) -> Vec<RoomfightRoomId> {
     let fr = crate::guards::frame_of(g, door);
     let c = door_centre(g, door);
     let here = pos_of(g, gd_of(g, d));
@@ -202,7 +202,7 @@ pub fn rooms_by(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) -> V
     out
 }
 /// p is in room T or in one of its doorways (a doorway's cells are no room's). (pressure.ts inRoom)
-pub fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
+fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
     let c = cell_of(g, p);
     if in_cells(g, t, c) { return true; }
     let n = g.tab.roomfight_room[t].entries.len();
@@ -213,7 +213,7 @@ pub fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
     false
 }
 /// a man of the team stands in R: the floor's truth, for the counts only. (pressure.ts teamStands)
-pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
+fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
@@ -222,7 +222,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     false
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
-pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
+pub(super) fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) { return false; }
@@ -230,7 +230,7 @@ pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     true
 }
 /// PRESSURE.stunKnown: what their side has to go on that the team is in room T. (pressure.ts teamPlaced)
-pub fn team_placed(g: &mut crate::game::Game, t: RoomfightRoomId) -> crate::pressure::TeamPlaced {
+fn team_placed(g: &mut crate::game::Game, t: RoomfightRoomId) -> crate::pressure::TeamPlaced {
     let mut in_t = -m::INF;
     let mut other = -m::INF;
     let heard: Vec<crate::pressure::StateHeardItem> = state_of(g).heard.clone();   // (put changes nothing of it)
@@ -251,7 +251,7 @@ fn put(g: &mut Game, t: RoomfightRoomId, when: f64, p: V3, in_t: &mut f64, other
     if in_room(g, t, p) { *in_t = m::max(*in_t, when); } else { *other = m::max(*other, when); }
 }
 /// one more thing heard of the team at p (a spot heard from again is the one entry, its time moved on). (pressure.ts heardAt)
-pub fn heard_at(st: &mut crate::pressure::State, t: f64, p: V3) {
+fn heard_at(st: &mut crate::pressure::State, t: f64, p: V3) {
     if let Some(h) = st.heard.iter_mut().find(|x| flat(x.p, p) < 2.0) {
         h.t = m::max(h.t, t);
         h.p = p;
@@ -264,7 +264,7 @@ fn bang_by(g: &mut Game, r: Option<RoomfightRoomId>, c: V3, p: V3) -> bool {
     match r { Some(x) => in_room(g, x, p), None => flat(p, c) < 6.0 }
 }
 /// once a frame while anybody carries a charge: the team's loud doings read off the floor's events; marked doors the team has left let be; the counts of charges gone off. (pressure.ts learn)
-pub fn learn(g: &mut crate::game::Game) {
+pub(super) fn learn(g: &mut crate::game::Game) {
     let now = g.time;
     for i in 0..g.events.len() {
         let e = g.events[i];
@@ -377,7 +377,7 @@ pub fn boots(g: &mut crate::game::Game, gd: GuardId, last: f64) -> f64 {
     g.time
 }
 /// a teammate's boots in his ears, and where they come to him from, by the rule every man's ears use on an enemy's step. (pressure.ts teamBoots)
-pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
+fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let here = pos_of(g, gd);
     let ear = v3::add(here, [0.0, 1.5, 0.0]);
     let mut best: Option<V3> = None;
@@ -394,7 +394,7 @@ pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     best
 }
 /// planted outside a door: that door is what he watches. (pressure.ts watchDoor)
-pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
+fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let room = match df(g, d).room { Some(r) => r, None => return };
     let i = match g.tab.roomfight_room[room].entries.iter().position(|e| e.door == door) { Some(i) => i, None => return };
     let at = g.tab.roomfight_room[room].entries[i].at;
@@ -409,12 +409,12 @@ pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
 }
 
 /// a far fight he placed or was told of, while it is still worth going to. (pressure.ts toldOf)
-pub fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::StateToldValue> {
+fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::StateToldValue> {
     let (now, memory) = (g.time, g.k.pressure.memory_secs);
     match state_of(g).told.get(d) { Some(t) if now - t.t < memory => Some(*t), _ => None }
 }
 /// PRESSURE.byWay: his room and the room being fought over share a door. (pressure.ts nextDoor)
-pub fn next_door(g: &crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
+fn next_door(g: &crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
     let r = match r { Some(r) => r, None => return false };
     let (a, b) = (&g.tab.roomfight_room[r].entries, &g.tab.roomfight_room[t].entries);
     a.iter().any(|e| b.iter().any(|x| x.door == e.door))
@@ -422,7 +422,7 @@ pub fn next_door(g: &crate::game::Game, r: Option<RoomfightRoomId>, t: Roomfight
 #[derive(Clone, Copy)]
 struct Way { e: crate::roomfight::Entry, spot: V3, l: f64 }
 /// a holding man with a fight at a mate's post in his ears: after his own beat he joins the press on that room (or starts it). (pressure.ts consider)
-pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
+pub(super) fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = gd_of(g, d);
     let again = g.k.pressure.again_secs;
     let hold = crate::roomfight::DefMode::Hold;
@@ -646,7 +646,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
 }
 
 /// `m` out of the press. (pressure.ts drop)
-pub fn drop(g: &mut crate::game::Game, m: PressureManId) {
+pub(super) fn drop(g: &mut crate::game::Game, m: PressureManId) {
     let x = &mut g.tab.pressure_man[m];
     x.out = true;
     let d = x.d;
@@ -656,7 +656,7 @@ pub fn drop(g: &mut crate::game::Game, m: PressureManId) {
     st.done_at.set(d, now);
 }
 /// one frame of a press: its men, then its phase. True = it is over. `p` is lent by pressTick, out of st.presses for the call: nothing under this reads st.presses. (pressure.ts tickPress)
-pub fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Press) -> bool {
+pub(super) fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Press) -> bool {
     let mut team_in = false;
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
@@ -963,7 +963,7 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
     false
 }
 /// the last man up in a room does not die at his post: two of the enemy in view, or the team's boots at one door on a floor gone loud, and after his own beat he gives the room up through another. (pressure.ts lastMan)
-pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
+pub(super) fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = gd_of(g, d);
     let c_ch = g.gd[gd].ch;
     let mode_free = crate::roomfight::DefMode::Free;
@@ -1092,7 +1092,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
     note(g, gd, &what);
 }
 /// a last man out of his room, this frame. True = done with him. `o` is lent by pressTick, out of st.outs for the call. (pressure.ts tickOut)
-pub fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) -> bool {
+pub(super) fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) -> bool {
     let d = o.def;
     let gd = gd_of(g, d);
     if !alive(g, d) || !g.fight.defs.contains(&d) { return true; }
@@ -1136,7 +1136,7 @@ pub fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) -> bool
 }
 
 /// boots on doors and charges gone off, as their ears have counted them. (pressure.ts charges)
-pub fn charges(g: &mut crate::game::Game) -> f64 {
+fn charges(g: &mut crate::game::Game) -> f64 {
     let mut n = 0.0;
     for i in 0..g.fight.defs.len() {
         let h = &g.gd[gd_of(g, g.fight.defs[i])].witness.heard;
@@ -1145,7 +1145,7 @@ pub fn charges(g: &mut crate::game::Game) -> f64 {
     n
 }
 /// the fight is on, by what their side can know of it. (pressure.ts fightOn)
-pub fn fight_on(g: &mut crate::game::Game) -> bool {
+pub(super) fn fight_on(g: &mut crate::game::Game) -> bool {
     if charges(g) > 0.0 { return true; }
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
@@ -1156,11 +1156,11 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
     false
 }
 /// the report is heard or called and no room is hit yet. (pressure.ts awaiting)
-pub fn awaiting(g: &mut crate::game::Game) -> bool {
+pub(super) fn awaiting(g: &mut crate::game::Game) -> bool {
     g.k.pressure.warned && state_of(g).warn.map_or(false, |w| w.phase != WarnPhase::Over)
 }
 /// a report was called and a room has since been hit: all hands, for the rest of the fight. (pressure.ts stoodTo)
-pub fn stood_to(g: &mut crate::game::Game) -> bool {
+fn stood_to(g: &mut crate::game::Game) -> bool {
     g.k.pressure.warned && state_of(g).warn.map_or(false, |w| w.call_t >= 0.0 && w.phase == WarnPhase::Over)
 }
 

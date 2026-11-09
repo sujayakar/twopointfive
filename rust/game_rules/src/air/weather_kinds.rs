@@ -27,7 +27,7 @@ fn startable_kind(s: &str) -> Option<WeatherKind> {
 }
 
 /// Is this one of the kinds a level can be started in? (weatherKinds.ts isWeatherKind)
-pub fn is_weather_kind(s: Option<&str>) -> bool {
+fn is_weather_kind(s: Option<&str>) -> bool {
     match s {
         Some(t) => weather_kinds().iter().any(|k| k == t),
         None => false,
@@ -43,7 +43,7 @@ pub fn snow_level(g: &crate::game::Game, name: Option<&str>) -> bool {
 }
 
 /// A kind a checkpoint may carry: one of the row's, or a level's own. (weatherKinds.ts isAnyKind)
-pub fn is_any_kind(g: &crate::game::Game, s: Option<crate::weather_kinds::WeatherKind>) -> bool {
+pub(super) fn is_any_kind(g: &crate::game::Game, s: Option<crate::weather_kinds::WeatherKind>) -> bool {
     match s {
         Some(k) => g.m.weather_kinds.weather_presets.has(k),
         None => false,
@@ -59,7 +59,7 @@ pub fn weather_title(g: &crate::game::Game, k: Option<crate::weather_kinds::Weat
 }
 
 /// The kind's line for the mission list. (weatherKinds.ts weatherWords)
-pub fn weather_words(g: &crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
+fn weather_words(g: &crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
     match k {
         Some(k) => g.m.weather_kinds.weather_presets.get(k).unwrap().words.clone(),
         None => String::from("the level's own weather, as it has always played"),
@@ -93,12 +93,12 @@ pub fn weather_search(search: &str, kind: Option<crate::weather_kinds::WeatherKi
 }
 
 /// `x` in steps of `step`, held to 0‥max. (weatherKinds.ts q)
-pub fn q(x: f64, step: f64, max: f64) -> f64 {
+fn q(x: f64, step: f64, max: f64) -> f64 {
     m::max(0.0, m::min(max, m::round(x / step)))
 }
 
 /// The fog in 32 bits; 0 = none. (weatherKinds.ts packFog)
-pub fn pack_fog(f: Option<crate::weather_kinds::FogSpec>) -> f64 {
+pub(super) fn pack_fog(f: Option<crate::weather_kinds::FogSpec>) -> f64 {
     let f = match f {
         Some(f) if f.sigma > 0.0 => f,
         _ => return 0.0,
@@ -119,7 +119,7 @@ pub fn pack_fog(f: Option<crate::weather_kinds::FogSpec>) -> f64 {
 }
 
 /// The fog's word with its glow (the gain) × k, on the gain's own steps and never to nothing. (weatherKinds.ts fogGlowWord)
-pub fn fog_glow_word(w: f64, k: f64) -> f64 {
+pub(super) fn fog_glow_word(w: f64, k: f64) -> f64 {
     let w = js::to_u32(w);
     if w == 0 || k == 1.0 {
         return w as f64;
@@ -129,7 +129,7 @@ pub fn fog_glow_word(w: f64, k: f64) -> f64 {
 }
 
 /// The numbers the fog's word holds; the simulation reads these, not the preset's. (weatherKinds.ts unpackFog)
-pub fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
+pub(super) fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
     let w = js::to_u32(w);
     if w == 0 {
         return None;
@@ -144,12 +144,12 @@ pub fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
 }
 
 /// Optical depth of the fog along a → b, before any roof: the module's. (weatherKinds.ts fogTau)
-pub fn fog_tau(f: crate::weather_kinds::FogSpec, a: V3, b: V3) -> f64 {
+fn fog_tau(f: crate::weather_kinds::FogSpec, a: V3, b: V3) -> f64 {
     ::sim::weather::fog_tau(f.sigma, f.h, a, b)
 }
 
 /// A roof's footprint in 32 bits, rounded outward; 0 = none. (weatherKinds.ts packRect)
-pub fn pack_rect(r: Option<[f64; 4]>) -> f64 {
+pub(super) fn pack_rect(r: Option<[f64; 4]>) -> f64 {
     let r = match r {
         Some(r) if r[2] > r[0] && r[3] > r[1] => r,
         _ => return 0.0,
@@ -160,7 +160,7 @@ pub fn pack_rect(r: Option<[f64; 4]>) -> f64 {
 }
 
 /// The footprint a roof's word holds. (weatherKinds.ts unpackRect)
-pub fn unpack_rect(w: f64) -> [f64; 4] {
+pub(super) fn unpack_rect(w: f64) -> [f64; 4] {
     let w = js::to_u32(w);
     [(w & 255) as f64 * ROOF_Q, ((w >> 8) & 255) as f64 * ROOF_Q, ((w >> 16) & 255) as f64 * ROOF_Q, (w >> 24) as f64 * ROOF_Q]
 }

@@ -29,7 +29,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
 }
 
 /// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
-pub fn lesson_at(g: &crate::game::Game) -> f64 {
+fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
@@ -107,7 +107,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.   (lesson.ts Lesson.advance)
-pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
+fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
     g.lesson.i += 1.0;
@@ -127,7 +127,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
 }
 
 /// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
-pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
+fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
     let last_order = seat.orders.log.last().map(|r| r.serial);
@@ -156,7 +156,7 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
 }
 
 /// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
-pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
+fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;
@@ -302,7 +302,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 
 
 /// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
-pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
+fn lesson_note(g: &mut crate::game::Game, s: &str) {
     let row = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.lesson.log.push(row);
     if g.lesson.log.len() > 80 {
@@ -311,7 +311,7 @@ pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A step's line as the keys stand.   (lesson.ts lineOf)
-pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
+pub(in crate::missions) fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
 }

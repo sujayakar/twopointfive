@@ -3,7 +3,7 @@ use crate::ids::*;
 use alloc::vec::Vec;
 
 /// Every living one of `men` is handed the menu's own 'fall in' as a scenario stages, unspoken; returns how many took it. (startfile.ts teamStartsFallenIn)
-pub fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) -> f64 {
+pub(super) fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) -> f64 {
     if g.seats.len() > 1 {
         crate::seats::deal_seats(g);
         let mut k = 0.0;

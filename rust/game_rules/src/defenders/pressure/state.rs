@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The answer to where a man who gives ground goes: PRESSURE_HOOKS.fallBackTo is never set, so a room his side dug in, or nothing. (pressure.ts hooked)
-pub fn hooked(g: &mut crate::game::Game, d: RoomfightDefId, why: crate::pressure::HookedWhy, threat: V3) -> Option<crate::pressure::Hooked> {
+pub(super) fn hooked(g: &mut crate::game::Game, d: RoomfightDefId, why: crate::pressure::HookedWhy, threat: V3) -> Option<crate::pressure::Hooked> {
     if g.k.digin.on {
         crate::digin::dig_in_refuge(g, d, threat).map(|r| crate::pressure::Hooked { spot: r.spot, door: r.door })
     } else {
@@ -17,12 +17,12 @@ pub fn hooked(g: &mut crate::game::Game, d: RoomfightDefId, why: crate::pressure
 }
 
 /// All the counts at nought. (pressure.ts newStats)
-pub fn new_stats() -> crate::pressure::StateStats {
+pub(super) fn new_stats() -> crate::pressure::StateStats {
     crate::pressure::StateStats { press_formed: 0.0, press_men: 0.0, press_sieges: 0.0, press_converge: 0.0, press_words: 0.0, press_lone: 0.0, press_arrived: 0.0, press_late: 0.0, press_landed: 0.0, press_cue_first: 0.0, press_heard: 0.0, press_lead: 0.0, flank_sent: 0.0, flank_set: 0.0, flank_arrived: 0.0, flank_late: 0.0, flank_landed: 0.0, flank_cue_first: 0.0, flank_heard: 0.0, flank_lead: 0.0, fb_push: 0.0, fb_last: 0.0, fb_early: 0.0, fb_planted: 0.0, fb_fought: 0.0, fb_told: 0.0, warn_calls: 0.0, warn_stood_down: 0.0, warn_hits: 0.0, warn_lead: 0.0, second_stood: 0.0, second_calls: 0.0, pairs_told: 0.0, pairs_waited: 0.0, pairs_went: 0.0, stun_marked: 0.0, stun_held: 0.0, stun_held_in: 0.0, stun_late: 0.0, stun_off: 0.0, stun_bangs: 0.0, stun_empty: 0.0, last_held: 0.0, look_called: 0.0, look_men: 0.0, look_off: 0.0, }
 }
 
 /// This game's press state, made the first time it is asked for: the row itself. (pressure.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::pressure::State {
+pub(super) fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::pressure::State {
     g.m.pressure.states.get_or_insert_with(|| crate::pressure::State {
         presses: Vec::new(),
         of: JsMap::new(),
@@ -56,34 +56,34 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::pressure::St
 }
 
 /// PRESSURE.wayOut on a floor whose structure asks for it. (pressure.ts wayOut)
-pub fn way_out(g: &crate::game::Game) -> bool {
+pub(super) fn way_out(g: &crate::game::Game) -> bool {
     g.k.pressure.way_out && g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.way_out) == Some(true)
 }
 
 /// The press forms up outside the doors before it goes; `gather` is off on the page and under hard. (pressure.ts forms)
-pub fn forms(g: &crate::game::Game) -> bool {
+pub(super) fn forms(g: &crate::game::Game) -> bool {
     way_out(g)
 }
 
 /// Distance on the floor. (pressure.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A number from a range, on the game's die. (pressure.ts pick)
-pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
+pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     let u = crate::dice::draw_for(g, "pressure::pick#1", who);
     r[0] + u * (r[1] - r[0])
 }
 
 /// (pressure.ts alive)
-pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
+pub(super) fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     g.gd[gd].state != crate::game::GuardState::Dead
 }
 
 /// A line in the fight's log, which keeps its last 400 to 600. (pressure.ts note)
-pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
+pub(super) fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     let note = crate::roomfight::FightNote { t: g.time, who: g.gd[gd].callsign.clone(), what: alloc::format!("[pressure] {}", what) };
     g.fight.log.push(note);
     if g.fight.log.len() > 600 {
@@ -92,13 +92,13 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// The nav grid's cell a point falls in. (pressure.ts cellOf)
-pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
+pub(super) fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
     let cell = g.col.nav.cell;
     crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
 }
 
 /// Where his eyes are: the head bone, or a standing man's height. (pressure.ts eyeOf)
-pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
+pub(super) fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Head) {
         Some(h) => [h[0], h[1], h[2]],
@@ -110,7 +110,7 @@ pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
 }
 
 /// The room of his side's he hears fought over: the nearest post of a mate's in another room to where his ears put the noise. (pressure.ts target)
-pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::Target> {
+pub(super) fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::Target> {
     let noise_at = g.tab.roomfight_def[d].noise_at?;
     let d_room = g.tab.roomfight_def[d].room;
     let mut best = None;
@@ -138,7 +138,7 @@ pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pre
 }
 
 /// Who the press has, for the one record: in a press, or on his beat toward one. Said as its tick ends. (pressure.ts pressSay)
-pub fn press_say(g: &mut crate::game::Game) {
+pub(super) fn press_say(g: &mut crate::game::Game) {
     let press = crate::owner::by::PRESS;
     let on = g.k.pressure.on && g.m.pressure.states.is_some();
     let mut i = 0;
@@ -175,7 +175,7 @@ pub fn press_keeps_home(g: &mut crate::game::Game, d: RoomfightDefId, stop_clock
 }
 
 /// digin.ts asks this too: true = a press has left him to keep his room, and a mate of that room has gone. (pressure.ts pressKeeps)
-pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
+pub(in crate::defenders) fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
     if !g.k.pressure.on {
         return false;
     }
@@ -190,7 +190,7 @@ pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
 }
 
 /// The man left to keep his room still has it to keep: a mate of that room is up. (pressure.ts staysHome)
-pub fn stays_home(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub(super) fn stays_home(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let d_room = g.tab.roomfight_def[d].room;
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -217,7 +217,7 @@ fn dear(g: &mut Game, t: RoomfightRoomId, ix: f64, iz: f64) -> f64 {
 const SPOTS: [[f64; 2]; 9] = [[3.0, 1.6], [3.0, -1.6], [2.4, 1.2], [2.4, -1.2], [1.2, 2.4], [1.2, -2.4], [1.2, 1.7], [1.2, -1.7], [2.6, 0.0]];
 
 /// A spot outside entry `e` of room T, off the door's line, that he can walk to without crossing T. (pressure.ts gatherSpot)
-pub fn gather_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry) -> Option<crate::pressure::GatherSpot> {
+pub(super) fn gather_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry) -> Option<crate::pressure::GatherSpot> {
     let c = g.gd[g.tab.roomfight_def[d].gd].ch;
     let fr = crate::guards::frame_of(g, e.door);
     if way_out(g) {

@@ -62,7 +62,7 @@ fn unseen_of(g: &Game, sr: Option<DoortoolsRoomSearchId>) -> String {
 }
 
 /// rear security while the door is worked (doortools.ts DoorTools.spareRear)
-pub fn door_tools_spare_rear(g: &mut crate::game::Game, op: DoorOpId) {
+pub(super) fn door_tools_spare_rear(g: &mut crate::game::Game, op: DoorOpId) {
     let (men, door, lead, from) = { let r = &o!(g, op); (r.men.clone(), r.door, r.lead, r.from.clone()) };
     crate::orders::squad_orders_spare_rear(g, &men, door, Some(lead), Some(&from));
     let b = match &o!(g, op).lane { Some(l) => o!(g, op).mine.get(l.gd).copied(), None => None };
@@ -70,7 +70,7 @@ pub fn door_tools_spare_rear(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// is a walk to the marks still worth waiting on (doortools.ts DoorTools.waiting)
-pub fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
+fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
     if el >= g.k.doortools.stack_cap { return false; }
     if el < g.k.doortools.still_secs { return true; }
     let men = o!(g, op).men.clone();
@@ -78,14 +78,14 @@ pub fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool 
 }
 
 /// somebody not yet on his mark is held by the fight, or blind (doortools.ts DoorTools.busy)
-pub fn door_tools_busy(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
+fn door_tools_busy(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
     if !(el < g.k.doortools.stack_cap) { return false; }
     let men = o!(g, op).men.clone();
     men.iter().any(|&gd| { let a = o!(g, op).mine.get(gd).copied().unwrap(); !asg!(g, a).arrived && (asg!(g, a).yield_t >= 0.0 || crate::control::man::blind(g, gd)) })
 }
 
 /// the order is over (doortools.ts DoorTools.end)
-pub fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
+pub(super) fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
     let i = match g.door_tools.ops.iter().position(|&x| x == op) { Some(i) => i, None => return };
     g.door_tools.ops.remove(i);
     door_tools_defuse(g, op);
@@ -103,7 +103,7 @@ pub fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
 }
 
 /// a charge order over short of its charge: the men still on it hold on that door (doortools.ts DoorTools.short)
-pub fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
+fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
     let (d, side, men) = { let r = &o!(g, op); (r.door, r.side, r.men.clone()) };
     let c = g.dr[d].frame_centre;
     let open = is_open(g, d) || door_tools_known_open(g, d);
@@ -144,7 +144,7 @@ pub fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
 }
 
 /// the charge came off the door under the men stood off from it (doortools.ts DoorTools.chargeGone)
-pub fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bool) {
+fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bool) {
     let d = o!(g, op).door;
     let lead = o!(g, op).lead;
     let line = if crate::doors::door_off(g, d) { "door's gone. charge went with it." } else { "door's open. charge is off." };
@@ -158,7 +158,7 @@ pub fn door_tools_known_open(g: &mut crate::game::Game, d: DoorId) -> bool {
 }
 
 /// a canister this order threw and has not fired: left to its own short fuse (doortools.ts DoorTools.defuse)
-pub fn door_tools_defuse(g: &mut crate::game::Game, op: DoorOpId) {
+pub(super) fn door_tools_defuse(g: &mut crate::game::Game, op: DoorOpId) {
     let it = o!(g, op).can;
     if let (Some(it), Some(p)) = (it, o!(g, op).pass) {
         if !crate::throwables::item_fired(g, it) {
@@ -179,7 +179,7 @@ pub fn door_tools_defuse(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// one tick of an order: the head, then a case a phase (doortools.ts DoorTools.step)
-pub fn door_tools_step(g: &mut crate::game::Game, op: DoorOpId) {
+pub(super) fn door_tools_step(g: &mut crate::game::Game, op: DoorOpId) {
     let phase = o!(g, op).phase;
     if crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && (phase == Phase::Kick || is_pre(phase)) && door_tools_frag_step(g, op) { return; }
     let d = o!(g, op).door;

@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::character::Bone;
 use crate::v3;
 
-pub fn lead(g: &mut Game, gd: GuardId, c: CharId, fc: Option<CharId>) {
+pub(in crate::people) fn lead(g: &mut Game, gd: GuardId, c: CharId, fc: Option<CharId>) {
     let now = g.time;
     if g.gd[gd].sight_t < now && g.gd[gd].sight_t > g.gd[gd].led_t {
         let fresh = now - g.gd[gd].sight_t < 0.25;

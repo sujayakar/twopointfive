@@ -43,7 +43,7 @@ fn scratch() -> &'static [f64] {
 
 // ---------------------------------------------------------------- the part
 /// The game's row, made if it is not there.   (winbars.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
 /// The one gate: no showcase running.   (winbars.ts barsLive)
 pub fn bars_live(g: &crate::game::Game) -> bool { !g.touring }
@@ -55,7 +55,7 @@ pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
 }
 
 /// The flags a bar this rule took was authored with, or None.   (winbars.ts barFlags0)
-pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
+pub(super) fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
     let s = g.sim;
     for i in 0..::sim::panes::bars_gone(s) as usize {
@@ -118,7 +118,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 }
 
 /// Bar `index` goes: hidden to every question, its pieces thrown the way `dir` from where it was struck. False = gone already or no standing bar.   (winbars.ts breakBar)
-pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
+fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
     let taken = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
         let flags = seam_box(g, b).flags;
@@ -212,14 +212,14 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
 }
 
 /// The level changed where a bar stood: whoever keeps an answer about the level's boxes asks again.   (winbars.ts changed)
-pub fn changed(g: &mut crate::game::Game) {
+fn changed(g: &mut crate::game::Game) {
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
     crate::scene_collision::sound_paths_invalidate(g);
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.   (winbars.ts barsBlast)
-pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
+pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
     if !bars_live(g) || g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];

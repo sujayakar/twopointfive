@@ -32,7 +32,7 @@ fn phase_of(g: &mut Game, gd: GuardId) -> Phase {
 fn prop_at(g: &Game, p: PropId) -> V3 { [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)] }
 
 /// braceInRoom: `to` is his room's floor and the way to it from `from` does not leave the room   (digin.ts wayInRoom)
-pub fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {
+fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {
     if !crate::roomfight::room_fight_in_room(g, Some(room), to) { return false; }
     let a = crate::roomfight::room_fight_free_near(g, from).unwrap_or(from);
     let path = match crate::scene_collision::nav_grid_find_path(g, a, to, Some(6000.0), None) { Some(p) if !p.is_empty() => p, _ => return false };
@@ -43,7 +43,7 @@ pub fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, t
 }
 
 /// braceInRoom: he can push this prop to the door from `q` without leaving his room   (digin.ts pushable)
-pub fn pushable(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, pp: V3, q: V3, stand: V3) -> bool {
+fn pushable(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, pp: V3, q: V3, stand: V3) -> bool {
     if !(flat(q, pp) < 1.6) { return false; }
     if crate::scene_collision::solid_blocked(g, [q[0], 0.45, q[2]], [pp[0], 0.45, pp[2]], None) { return false; }
     let from = pos_of(g, g.tab.roomfight_def[d].gd);
@@ -51,7 +51,7 @@ pub fn pushable(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoo
 }
 
 /// braceInRoom: the best free floor of his room to push this prop toward the door from; None = none   (digin.ts pushSpot)
-pub fn push_spot(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, e: crate::roomfight::Entry, pp: V3, stand: V3) -> Option<V3> {
+fn push_spot(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, e: crate::roomfight::Entry, pp: V3, stand: V3) -> Option<V3> {
     let (dx, dz) = (pp[0] - e.at[0], pp[2] - e.at[2]);
     let dl = js::or(m::hyp2(dx, dz), 1.0);
     let mut cand: Vec<(V3, f64)> = Vec::new();
@@ -73,7 +73,7 @@ pub fn push_spot(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRo
 }
 
 /// furniture for entry `idx` of his room: off to the prop. False = nothing to haul, no time, not that kind of door   (digin.ts startBrace)
-pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt, idx: f64) -> bool {
+fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt, idx: f64) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     if r.wedged >= g.k.digin.wedges { return false; }
     let e = match entry_at(g, r.room, idx) { Some(e) => e, None => return false };
@@ -143,7 +143,7 @@ fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> 
 }
 
 /// he has thought: the room's row, his door, the word, the furniture or the door, or cover   (digin.ts begin)
-pub fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
+fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
     let gd = g.tab.roomfight_def[d].gd;
     let room = g.tab.roomfight_def[d].room.unwrap();
     let now = g.time;
@@ -214,12 +214,12 @@ pub fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin:
 }
 
 /// a wedge HOLDS this entry's door, asked from the inside of the entry   (digin.ts holds)
-pub fn holds(g: &mut crate::game::Game, e: crate::roomfight::Entry) -> bool {
+fn holds(g: &mut crate::game::Game, e: crate::roomfight::Entry) -> bool {
     crate::doors::doors_wedge_holds(g, e.door, [e.at[0] - e.out[0] * 0.8, 0.0, e.at[2] - e.out[1] * 0.8])
 }
 
 /// would he have gone to wedge this entry but for the way its door swings: startBrace's first tests   (digin.ts wouldBrace)
-pub fn would_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
+fn would_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     if r.wedged >= g.k.digin.wedges || !wedgeable(g, e.door) || state_of(g).wedges.has(e.door) { return false; }
     if !crate::enemysquads::squad_may_wedge(g, gd, e.door) { return false; }
@@ -232,7 +232,7 @@ pub fn would_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin
 }
 
 /// a door passed over for the way it swings: counted once a door, said in the log. True = he would have wedged it   (digin.ts away)
-pub fn away(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
+fn away(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
     if !would_brace(g, d, m, r, e) { return false; }
     if !state_of(g).away.has(e.door) {
         state_of(g).away.add(e.door);
@@ -245,7 +245,7 @@ pub fn away(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, 
 }
 
 /// the room's doors after the one they are expected by: the second-likeliest first, then as authored   (digin.ts nextDoors)
-pub fn next_doors(g: &crate::game::Game, r: &crate::digin::RoomSt) -> Vec<f64> {
+fn next_doors(g: &crate::game::Game, r: &crate::digin::RoomSt) -> Vec<f64> {
     let n = g.tab.roomfight_room[r.room].entries.len();
     let mut v: Vec<f64> = (0..n).map(|i| i as f64).filter(|i| *i != r.expected).collect();
     let second = r.second;
@@ -254,7 +254,7 @@ pub fn next_doors(g: &crate::game::Game, r: &crate::digin::RoomSt) -> Vec<f64> {
 }
 
 /// his door standing open toward them: he goes to it and pulls it to, else to cover   (digin.ts shutOrCover)
-pub fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &crate::digin::RoomSt) {
+fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &crate::digin::RoomSt) {
     let gd = g.tab.roomfight_def[d].gd;
     let e = entry_at(g, r.room, m.entry).unwrap();
     let door = e.door;
@@ -275,7 +275,7 @@ pub fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate
 }
 
 /// to the spot that sees his door, off its line if he is one to; `or_stay` false: only if there is a spot to walk to   (digin.ts toCover)
-pub fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &crate::digin::RoomSt, or_stay: Option<bool>) -> bool {
+fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &crate::digin::RoomSt, or_stay: Option<bool>) -> bool {
     let or_stay = or_stay.unwrap_or(true);
     let gd = g.tab.roomfight_def[d].gd;
     let want_deep = wants_deep(g, d, r);
@@ -311,7 +311,7 @@ pub fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::dig
 }
 
 /// he is where he will fight from, his eye on his door   (digin.ts settle)
-pub fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
+fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
     let gd = g.tab.roomfight_def[d].gd;
     m.phase = Phase::Set; m.set_at = g.time; m.also = Some(-1.0); m.also_n = Some(0.0); m.spot = Some(pos_of(g, gd));
     if !m.dug_once { m.dug_once = true; g.stats.digin.dug += 1; }
@@ -324,12 +324,12 @@ pub fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin
 }
 
 /// a man the dig-in has not touched yet   (digin.ts newMan)
-pub fn new_man() -> crate::digin::Man {
+fn new_man() -> crate::digin::Man {
     Man { far: false, owe: 0.0, haul_by: 0.0, deep: false, look: None, tried_deep: false, gathered: false, gather_to: None, dug_once: false, ordered: false, phase: Phase::Idle, until: 0.0, know: [0.0, 0.0, 0.0], know_t: -100.0, room: None, entry: -1.0, brace: -1.0, prop: None, stand: [0.0, 0.0, 0.0], rest: [0.0, 0.0, 0.0], scrape_t: -100.0, set_at: -100.0, spot: None, eyes_t: None, lane_t: None, also: None, also_n: None, home_t: None, home_d: None, home_at: None, hand_t: None, pull_t: None, pushes: None, pull_a: None, stalls: None }
 }
 
 /// he lets go of what he was at; furniture left where it stands is somebody else's to haul   (digin.ts drop)
-pub fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<GuardId>) {
+fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<GuardId>) {
     if let Some(p) = m.prop {
         crate::props::prop_set_vx(g, p, 0.0);
         crate::props::prop_set_vz(g, p, 0.0);
@@ -342,7 +342,7 @@ pub fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<Gua
 }
 
 /// the team in his eyes while his hands were on the furniture or the door: the gun has to come up first   (digin.ts caught)
-pub fn caught(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, what: &str) {
+fn caught(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, what: &str) {
     let range = g.k.digin.caught;
     m.owe = pick(g, crate::dice::Who::Def(d), range);
     g.stats.digin.caught += 1;
@@ -353,7 +353,7 @@ pub fn caught(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin
 }
 
 /// one door wedged: the next likeliest while the room has furniture, doors and its quota left, else to cover   (digin.ts afterWedge)
-pub fn after_wedge(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt) {
+fn after_wedge(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt) {
     let gd = g.tab.roomfight_def[d].gd;
     m.prop = None;
     m.brace = -1.0;
@@ -374,7 +374,7 @@ pub fn after_wedge(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
 }
 
 /// HAULHOME: stopped at his stand with the thing a hand short of the door and his clock running, his hands bring it the rest of the way   (digin.ts bringsHome)
-pub fn brings_home(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt, e: Option<crate::roomfight::Entry>, p: PropId) -> bool {
+fn brings_home(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &mut crate::digin::RoomSt, e: Option<crate::roomfight::Entry>, p: PropId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     let (pos, pp) = (pos_of(g, gd), prop_at(g, p));
     let e = match e { Some(e) => e, None => return false };
@@ -393,7 +393,7 @@ pub fn brings_home(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
 }
 
 /// hauling: the prop is kept a pace ahead of him on his way to the door, then set down against it   (digin.ts haul)
-pub fn haul(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: Option<&mut crate::digin::RoomSt>) {
+fn haul(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: Option<&mut crate::digin::RoomSt>) {
     let gd = g.tab.roomfight_def[d].gd;
     let p = match m.prop { Some(p) if g.props.props.contains(&p) => p, _ => return };
     let c = g.gd[gd].ch;
@@ -450,7 +450,7 @@ fn haul_on(g: &mut Game, d: RoomfightDefId, m: &mut Man, rk: Option<RoomfightRoo
 }
 
 /// roomfight.ts tickDef, every frame for every defender it runs   (digin.ts digInTick)
-pub fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
+pub(in crate::defenders) fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let gd = g.tab.roomfight_def[def].gd;
     if dead(g, gd) || g.rescue.active { return; }                     // the hostage rescue has its own script for these men
     let now = g.time;
@@ -714,7 +714,7 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
 }
 
 /// once a frame: a room all set, the team's first step into a room that dug in, and wedges that have been booted   (digin.ts watch)
-pub fn watch(g: &mut crate::game::Game) {
+fn watch(g: &mut crate::game::Game) {
     let now = g.time;
     for d in state_of(g).wedges.keys() {                              // the wedge found the hard way: the door that would not open IS the cue
         if state_of(g).wedges.get(d).unwrap().kicked || !crate::doors::door_lock_broken(g, d) { continue; }
@@ -799,14 +799,14 @@ pub fn watch(g: &mut crate::game::Game) {
 }
 
 /// roomfight.ts evidence: a door of his room booted in; a man set on a door his room wedged was waiting for exactly that   (digin.ts digInBraced)
-pub fn dig_in_braced(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub(in crate::defenders) fn dig_in_braced(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     if !dig_in_set_on(g, gd, d) { return false; }
     g.stats.digin.steady += 1;
     true
 }
 
 /// the same question with nothing counted: `gd` is set on `d`, a door his room wedged   (digin.ts digInSetOn)
-pub fn dig_in_set_on(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub(in crate::defenders) fn dig_in_set_on(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let s = match g.m.digin.states.as_ref() { Some(s) => s, None => return false };
     if !s.wedges.has(d) { return false; }
     match s.men.get(gd) { Some(x) => x.phase == Phase::Set, None => false }
@@ -826,7 +826,7 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
 }
 
 /// roomfight.ts applyWatch: a man set off the door's line rests his gun on the floor they must cross (writes `pt`)   (digin.ts digInLook)
-pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
+pub(in crate::defenders) fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };
     if m.phase != Phase::Set || !m.deep { return; }
     let look = match m.look { Some(l) => l, None => return };
@@ -835,12 +835,12 @@ pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
 }
 
 /// pressure.ts lastMan: he is SET on his door   (digin.ts digInSet)
-pub fn dig_in_set(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::defenders) fn dig_in_set(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |x| x.phase == Phase::Set)
 }
 
 /// pressure.ts's fall-back seam: a spot beside a man of a room dug in that the team has not reached, and the door he comes in by; None = none   (digin.ts digInRefuge)
-pub fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3) -> Option<crate::digin::DigInRefuge> {
+pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3) -> Option<crate::digin::DigInRefuge> {
     match g.m.digin.states.as_ref() { Some(s) if !s.rooms.is_empty() => {} _ => return None }
     let (gd, my_room) = (g.tab.roomfight_def[def].gd, g.tab.roomfight_def[def].room);
     let pos = pos_of(g, gd);
@@ -896,7 +896,7 @@ pub fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3)
 }
 
 /// flat distance from p to the leg a→b   (digin.ts legDist)
-pub fn leg_dist(p: V3, a: V3, b: V3) -> f64 {
+fn leg_dist(p: V3, a: V3, b: V3) -> f64 {
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l2 = dx * dx + dz * dz;
     let t = if l2 > 0.0 { m::min(1.0, m::max(0.0, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2)) } else { 0.0 };
@@ -904,7 +904,7 @@ pub fn leg_dist(p: V3, a: V3, b: V3) -> f64 {
 }
 
 /// a fresh staging: wedged doors get their own lock back, everything remembered dropped   (digin.ts digInReset)
-pub fn dig_in_reset(g: &mut crate::game::Game) {
+pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
     if g.m.digin.states.is_none() { return; }                         // nothing dug in since the last one: nothing to put back
     for gd in state_of(g).men.keys() { say(g, gd, Phase::Idle); }
     for d in state_of(g).wedges.keys() {

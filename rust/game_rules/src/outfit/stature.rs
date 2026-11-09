@@ -17,7 +17,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec::Vec};
 
 /// (src/game/stature.ts:33 hash01)
-pub fn hash01(n: f64) -> f64 {
+fn hash01(n: f64) -> f64 {
     // (`(n | 0) * 0x9E3779B1` is a product of doubles, then `x ^= x >>> 15` takes it to an int32)
     let mut x = js::to_i32(js::to_i32(n) as f64 * 2654435761.0);
     x ^= ((x as u32) >> 15) as i32;
@@ -27,7 +27,7 @@ pub fn hash01(n: f64) -> f64 {
 }
 
 /// The man's own stature (1 for a player's man, and for everybody with no cast loaded). (src/game/stature.ts:35 statureBase)
-pub fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
@@ -37,7 +37,7 @@ pub fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// Two bodies that must meet: he is in a player's arm, or is the body one hauls. (src/game/stature.ts:42 paired)
-pub fn paired(g: &mut crate::game::Game, c_2: CharId) -> bool {
+fn paired(g: &mut crate::game::Game, c_2: CharId) -> bool {
     for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging { if g.gd[d].ch == c_2 { return true; } } }
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     match rec { Some(r) => g.gd[r].held.is_some(), None => false }
@@ -63,7 +63,7 @@ pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool 
 pub fn stature_of(g: &crate::game::Game, c_2: CharId) -> f64 { g.m.stature.shown.get(c_2).copied().unwrap_or(1.0) }
 
 /// Where a point of the simulation's man is DRAWN: scaled about his feet. (src/game/stature.ts:62 drawnPoint)
-pub fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
+fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
     let s = match s { Some(s) => s, None => stature_of(g, c_2) };
     let f = g.ch[c_2].pos;
     if s == 1.0 { p } else { [f[0] + (p[0] - f[0]) * s, f[1] + (p[1] - f[1]) * s, f[2] + (p[2] - f[2]) * s] }

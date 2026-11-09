@@ -22,7 +22,7 @@ use alloc::{string::String, vec, vec::Vec};
 use crate::v3::quat;
 
 /// integer hash → [0, 1): the module's own dice, keyed by the fixture's place (src/game/fixtureBreak.ts:63 h01)
-pub fn h01(x: f64) -> f64 {
+fn h01(x: f64) -> f64 {
     let mut x = m::imul(js::to_i32(x) ^ 0x68E31DA4, 0x9E3779B1u32 as i32) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0x85EBCA77u32 as i32) as u32;
@@ -33,7 +33,7 @@ pub fn h01(x: f64) -> f64 {
 fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.sim_lightshome_fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
 
 /// 1 = a ceiling panel (the full look), 2 = a lamp with a light of its own (sparks only), 0 = not this lane's. (src/game/fixtureBreak.ts:68 kindOf)
-pub fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
+fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     use crate::sim_lightshome::FixtureKind as K;
     let (interactive, kind, light, n_boxes) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
     if !interactive { return 0.0; }
@@ -46,7 +46,7 @@ pub fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
 }
 
 /// The top of whatever lies under (x, z): the level's statics by one ray down, the furniture by its boxes' footprints. (src/game/fixtureBreak.ts:78 floorAt)
-pub fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
+fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
     let mut y = 0.0;
     if let Some(hit) = crate::scene_collision::raycast(g, [x, from, z], down(), from + 0.5) { if hit.index < 1e6 { y = m::max(0.0, from - hit.t); } }   // (a door leaf's top edge is no floor)
     g.m.fixture_break.floor.on = None;
@@ -66,14 +66,14 @@ pub fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
 
 /// What a fixture lying from (x, z) along (ux, uz) rests on: the highest of three samples down its length, and whether that is flat bare floor.
 /// (src/game/fixtureBreak.ts:90 restOn)
-pub fn rest_on(g: &mut crate::game::Game, x: f64, z: f64, ux: f64, uz: f64, l: f64, from: f64) -> crate::fixture_break::RestOn {
+fn rest_on(g: &mut crate::game::Game, x: f64, z: f64, ux: f64, uz: f64, l: f64, from: f64) -> crate::fixture_break::RestOn {
     let (mut y, mut lo, mut prop) = (0.0, 1e9, false);
     for a in rest_at() { let f = floor_at(g, x + ux * l * a, z + uz * l * a, from); if g.m.fixture_break.floor.on.is_some() { prop = true; } if f > y { y = f; } if f < lo { lo = f; } }
     RestOn { y, flat: y - lo < 0.05 && !prop }
 }
 
 /// Where the blast or the round that just killed it came from, if this frame's events say. (src/game/fixtureBreak.ts:98 causeOf)
-pub fn cause_of(g: &crate::game::Game, at: V3) -> Option<V3> {
+fn cause_of(g: &crate::game::Game, at: V3) -> Option<V3> {
     use crate::director::EventKind as E;
     let n = g.events.len(); let (mut best, mut bd): (Option<V3>, f64) = (None, 12.0);
     let mut i = n as i64 - 1;
@@ -89,7 +89,7 @@ pub fn cause_of(g: &crate::game::Game, at: V3) -> Option<V3> {
 fn state(g: &mut Game) -> &mut State { g.m.fixture_break.state.as_mut().unwrap() }
 
 /// A fixture found broken: its record, its hanging boxes and its loose pieces. (src/game/fixtureBreak.ts:105 add)
-pub fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::fixture_break::Rec {
+fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::fixture_break::Rec {
     let f = g.m.fixture_break.fixlook.clone();
     let sb = if kind == 1.0 { static_box(g, t) } else { None };
     let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.sim_lightshome_fixture[t].pos };
@@ -174,7 +174,7 @@ pub fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> cra
 }
 
 /// The hanging fixture's boxes at the swing's angle `th` (0 = flat under the ceiling, the free end coming down as it grows). (src/game/fixtureBreak.ts:166 pose)
-pub fn pose(g: &mut crate::game::Game, r: &mut crate::fixture_break::Rec) {
+fn pose(g: &mut crate::game::Game, r: &mut crate::fixture_break::Rec) {
     if r.hang.is_empty() { return; }
     let (cs, sn, uh) = (m::cos(r.th), m::sin(r.th), r.uh);
     let d: V3 = [uh[0] * cs, -sn, uh[2] * cs];            // hinge → free end
@@ -192,14 +192,14 @@ pub fn pose(g: &mut crate::game::Game, r: &mut crate::fixture_break::Rec) {
 
 /// The fixture `s` (0‥1) of the way from where it hung to where it lies: the hinge end comes down (a free fall) and across, the long axis skews.
 /// (src/game/fixtureBreak.ts:179 land)
-pub fn land(r: &mut crate::fixture_break::Rec, s: f64) {
+fn land(r: &mut crate::fixture_break::Rec, s: f64) {
     r.hinge = [r.h0[0] + (r.lie[0] - r.h0[0]) * s, r.h0[1] + (r.lie[1] - r.h0[1]) * s * s, r.h0[2] + (r.lie[2] - r.h0[2]) * s];
     let a = r.skew * s; let (cs, sn) = (m::cos(a), m::sin(a)); r.uh = [r.uh0[0] * cs - r.uh0[2] * sn, 0.0, r.uh0[0] * sn + r.uh0[2] * cs];
 }
 
 /// The arc at the torn lead `a` seconds after the light died: 0‥1, and whether a pop or a spit STARTS inside this frame (→ sparks).
 /// (src/game/fixtureBreak.ts:185 glowAt)
-pub fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
+fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
     let f = g.m.fixture_break.fixlook.clone(); let mut gl = 0.0; out.sparks = 0.0;
     for k in 0..f.pops.len() {
         let tk = f.pops[k] * (0.85 + 0.3 * h01(r.seed + 11.0 * k as f64 + 5.0)); if a < tk { break; }
@@ -215,7 +215,7 @@ pub fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64,
 }
 
 /// The seed of the fixture's next emit (its own count, hashed with its place). (src/game/fixtureBreak.ts:194 seedOf)
-pub fn seed_of(r: &mut crate::fixture_break::Rec) -> f64 {
+fn seed_of(r: &mut crate::fixture_break::Rec) -> f64 {
     let e = r.emits; r.emits += 1.0;
     let x = m::imul(js::to_i32((js::to_i32(r.seed) ^ 0x51ED270B) as f64 + e * 7919.0), 0x9E3779B1u32 as i32) as u32;
     if x == 0 { 1.0 } else { x as f64 }

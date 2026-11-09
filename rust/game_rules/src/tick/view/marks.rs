@@ -70,7 +70,7 @@ fn civ_debug(g: &Game, gd: GuardId) -> String {
 }
 
 /// what the HUD marks about `seat`
-pub fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
+pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
     let me = &g.pl[seat.player];
     let row = |gd: GuardId, civ: bool| {
         let (text, tone) = if civ { civ_mark(g, gd) } else { guard_mark(g, gd) };
@@ -107,7 +107,7 @@ fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
 }
 
 /// what the HUD draws of `seat`'s aim
-pub fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
+pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let pl = seat.player;
     let p = &g.pl[pl];
     let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !p.down;
@@ -133,7 +133,7 @@ pub fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
 }
 
 /// who wears or carries what the drawer draws: the goggles of a teammate, the big slot's tool of anybody
-pub fn worn_view(g: &Game) -> Vec<WornView> {
+pub(super) fn worn_view(g: &Game) -> Vec<WornView> {
     let man = |id: f64, gd: Option<GuardId>| {
         let goggles = gd.map_or(false, |gd| crate::nvg::nvg_worn(g, gd));
         let big = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id });

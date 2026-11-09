@@ -39,7 +39,7 @@ pub fn static_surface(g: &crate::game::Game, index: f64) -> Option<crate::marks:
 }
 
 /// 0‥1 from any number (a hash, not a die)
-pub fn unit(x: f64) -> f64 { let t = m::sin(x * 12.9898 + 78.233) * 43758.5453; t - m::floor(t) }
+fn unit(x: f64) -> f64 { let t = m::sin(x * 12.9898 + 78.233) * 43758.5453; t - m::floor(t) }
 
 /// the two in-plane half extents of the face of `b` whose normal is `n` (world). (A box with a rotation takes `n` as its own.)
 fn face_half_extents(b: &WorldBox, n: V3) -> [f64; 2] {
@@ -62,7 +62,7 @@ fn leading_number(s: &str) -> Option<f64> {
 }
 
 /// A round stopped in a surface: a hole sized by its calibre, or, in solid glass that says so, a crack. Flesh, the sky and what `markable` refuses leave nothing.
-pub fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
+pub(super) fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
     let Some(s) = e.s else { return };
     if !markable(&g.tab.boxes[s.box_], e.n) { return; }
     let def = g.m.weapons.weapons.get(e.def).unwrap();
@@ -79,7 +79,7 @@ pub fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
 }
 
 /// Something small and hard met a surface: a pale chip out of the finish.
-pub fn lay_chip(g: &mut Game, e: &OutChipMark) {
+pub(super) fn lay_chip(g: &mut Game, e: &OutChipMark) {
     let Some(s) = e.s else { return };
     if !markable(&g.tab.boxes[s.box_], e.n) { return; }
     lay(g, DecalKind::Chip, e.p, e.n, Some(e.size.unwrap_or(0.013)), &DecalOpts { clamp_to: Some(s.box_), attach: if s.dynamic { Some(s.box_) } else { None }, ..Default::default() });
@@ -88,7 +88,7 @@ pub fn lay_chip(g: &mut Game, e: &OutChipMark) {
 fn count(g: &Game) -> f64 { mark_set(g).map_or(0.0, |s| s.list.len() as f64) }
 
 /// The stun charge went off at `at`: the big scorch on whatever it lay on (a chair's seat: that one rides the chair), and weaker splashes up what stands within a metre.
-pub fn lay_bang(g: &mut Game, at: V3) {
+pub(super) fn lay_bang(g: &mut Game, at: V3) {
     if !g.decals.enabled { return; }
     let from = [at[0], at[1] + 0.25, at[2]];
     let down = [0.0, -1.0, 0.0];
@@ -140,7 +140,7 @@ pub fn lay_bang(g: &mut Game, at: V3) {
 }
 
 /// A boot through the lock of a leaf from `from`'s side: a rubber scuff by the lock at kicking height on that face, riding the leaf as it flies.
-pub fn lay_kick(g: &mut Game, d: DoorId, from: V3) {
+pub(super) fn lay_kick(g: &mut Game, d: DoorId, from: V3) {
     if !g.decals.enabled { return; }
     let side = crate::doors::doors_side(g, d, from);
     let u = crate::doors::door_dir(g, d);

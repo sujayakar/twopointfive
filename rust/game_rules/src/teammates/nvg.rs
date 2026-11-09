@@ -10,7 +10,7 @@ use alloc::{format, vec::Vec};
 // ---- the team's state
 
 /// A team nothing has happened to.   (nvg.ts fresh)
-pub fn fresh() -> crate::nvg::Team {
+fn fresh() -> crate::nvg::Team {
     Team {
         t: -100.0,
         mode: Mode::Off,
@@ -25,7 +25,7 @@ pub fn fresh() -> crate::nvg::Team {
 }
 
 /// One row of the QA log, the last 200.   (nvg.ts note)
-pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
+fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 }
 
 /// Is the team's state this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again).
@@ -72,12 +72,12 @@ pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
 }
 
 /// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.   (nvg.ts tubeSig)
-pub fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
+pub(super) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
     tube_curve(g, e).1
 }
 
 /// A living operative with a unit whose card left him his goggles.   (nvg.ts isMate)
-pub fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
+fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
         && g.gd[gd].state != crate::game::GuardState::Dead
@@ -85,7 +85,7 @@ pub fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// When the other side last gave the team reason to think it knows.   (nvg.ts loudT)
-pub fn loud_t(g: &crate::game::Game) -> f64 {
+fn loud_t(g: &crate::game::Game) -> f64 {
     let t = g.m.nvg.teams.as_ref().unwrap();   // (only the tick and nvgState ask, each with the team in hand)
     let mut last = m::max_n(&[t.hunt_t, t.alarm_t, g.fight.hot_t]);
     for &o in &g.fight.ops {
@@ -115,7 +115,7 @@ fn read_at(g: &mut Game, x: f64, z: f64, tube: bool, lamp: bool, dim: &mut bool,
 }
 
 /// His place, read twice a second: dark to the bare eye, too dark for the tube.   (nvg.ts readPlace)
-pub fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
+fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     if g.time - m.place_t >= 0.0 && g.time - m.place_t < 0.5 {
         return;
     }

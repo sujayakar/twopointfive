@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Hard's drilled defenders: only the night breach by itself, under the press's own switch.   (roomfight.ts drilledOn)
-pub fn drilled_on(g: &crate::game::Game) -> bool {
+pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
     g.k.pressure.on && g.k.pressure.drilled && g.night_breach.active && g.night_breach.layout.is_none()
 }
 
@@ -19,17 +19,17 @@ pub fn drilled_k(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// Distance on the floor.   (roomfight.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A draw of the simulation's die in a range.   (roomfight.ts pick)
-pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
+pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     r[0] + crate::dice::draw_for(g, "roomfight::pick#1", who) * (r[1] - r[0])
 }
 
 /// His head bone, or where it would be.   (roomfight.ts eyeOf)
-pub fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub(super) fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     match g.ch[c_2].bones.get(crate::character::Bone::Head) {
         Some(p) => *p,
         None => v3::add(g.ch[c_2].pos, [0.0, 1.65, 0.0]),
@@ -37,7 +37,7 @@ pub fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 }
 
 /// His chest bone, or where it would be.   (roomfight.ts chestOf)
-pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub(super) fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     match g.ch[c_2].bones.get(crate::character::Bone::Chest) {
         Some(p) => *p,
         None => v3::add(g.ch[c_2].pos, [0.0, 1.1, 0.0]),
@@ -91,7 +91,7 @@ pub(super) fn lane(clear: f64, t: f64, l: f64, point_blank: f64) -> f64 {
 }
 
 /// How fast the player on this body is really getting anywhere; Infinity while not known yet.   (roomfight.ts RoomFight.samSpeedOf)
-pub fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 {
+pub(super) fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 {
     let mut i = 0;
     while i < g.seats.len() {
         let seat = g.seats[i];
@@ -120,7 +120,7 @@ pub fn room_fight_on(g: &crate::game::Game) -> bool {
 }
 
 /// A line of the fight's log, kept to its last few hundred.   (roomfight.ts RoomFight.note)
-pub fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
+pub(in crate::defenders) fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
     let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
     let t = g.time;
     g.fight.log.push(crate::roomfight::FightNote { t, who, what: String::from(what) });
@@ -317,7 +317,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
 }
 
 /// every man as this module found him.   (roomfight.ts stop)
-pub fn room_fight_stop(g: &mut crate::game::Game) {
+fn room_fight_stop(g: &mut crate::game::Game) {
     crate::pressure::press_stop(g); crate::laststand::last_stand_stop(g);
     let mut i = 0;
     while i < g.fight.ops.len() {

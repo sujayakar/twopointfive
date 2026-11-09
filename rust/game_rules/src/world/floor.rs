@@ -10,7 +10,7 @@ fn floor_row(mat: FloorMat) -> FLOORValue {
 }
 
 /// The material under a point on the floor (y ignored): the level's `surfaces` block, or without one the office's map. (floor.ts floorAt)
-pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> crate::floor::FloorMat {
+fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> crate::floor::FloorMat {
     let (x, z) = (p[0], p[2]);
     if let Some(s) = s {
         let b = &s.building;

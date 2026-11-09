@@ -11,7 +11,7 @@ use alloc::string::String;
 pub fn ir_flags(g: &crate::game::Game) {}
 
 /// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds. (irlight.ts kitOf)
-pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
+fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
     g.m.irlight.kits.get_or_insert_with(Kit::default)
 }
 
@@ -21,7 +21,7 @@ fn need_row(g: &mut Game, key: f64) -> &mut Need {
 }
 
 /// A new illuminator: out, nowhere, the flood's shape as the knobs have it. No beam in the haze. (irlight.ts lamp)
-pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
+fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
     let (range, inner_deg, outer_deg) = (g.k.irlight.reach, g.k.irlight.core, g.k.irlight.cone);
     g.tab.light.push(crate::render_lights::RtLight {
         name: String::from(name),
@@ -48,7 +48,7 @@ pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
 }
 
 /// One man's illuminator posed for this frame: at his brow, along his aim, tipped down. (irlight.ts pose)
-pub fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
+fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
     let pos = g.ch[c_2].pos;
     let yaw = g.ch[c_2].aim_yaw;
     let head = match g.ch[c_2].bones.get(crate::character::Bone::Head) {
@@ -79,13 +79,13 @@ pub fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
 }
 
 /// Does the tube make too little of this floor by its own light? By its picture (`show`), not by what shows nothing at all: between the two a man is neither in a flood nor plain without one.
-pub fn dark_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+fn dark_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     let e = crate::nvg::nvg_place_light(g, [x, 1.2, z]);
     crate::nvg::tube_sig(g, e) < g.k.irlight.show
 }
 
 /// Is the floor his flood would fall on too dark? A fan across the cone, each ray to the first wall; FAN_NEED of its readings must be dark. (irlight.ts fanDark)
-pub fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
+fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
     let eye: V3 = [at[0], 1.5, at[2]];
     let mut n = 0.0;
     for off in fan_deg() {
@@ -108,7 +108,7 @@ pub fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
 }
 
 /// How much of his light burns this frame, 0‥1: `at` / `yaw` where his flood starts and looks, `each` the floor under him is read every frame and not on his beat alone. (irlight.ts burn)
-pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool) -> f64 {
+fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool) -> f64 {
     let k_key = crate::Num(key);
     let time = g.time;
     let born = match kit_of(g).need.get(k_key).map(|n| n.t) {
@@ -145,12 +145,12 @@ pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool) -
 }
 
 /// His burns exactly while the picture is the tube's. (irlight.ts samOn)
-pub fn sam_on(g: &crate::game::Game, pl: PlayerId) -> bool {
+fn sam_on(g: &crate::game::Game, pl: PlayerId) -> bool {
     g.pl[pl].nv_amount > 0.5
 }
 
 /// His lamp is out of the list; the renderer's slot memory of it goes with it. (irlight.ts out)
-pub fn out(g: &mut crate::game::Game, l: Option<LightId>) {
+fn out(g: &mut crate::game::Game, l: Option<LightId>) {
     if let Some(l) = l {
         let row = &mut g.tab.light[l];
         row.enabled = false;
@@ -159,7 +159,7 @@ pub fn out(g: &mut crate::game::Game, l: Option<LightId>) {
 }
 
 /// How much of its strength a posed light keeps for what stands in front of it: three rays across the middle of the flood, eased. (irlight.ts nearK)
-pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
+fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
     let near_m = m::max(0.5, g.k.irlight.near_m);
     let mut d = near_m;
     for a in near_yaw() {
@@ -196,7 +196,7 @@ pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
 }
 
 /// (QA) how far a carrier's light stands turned down this frame: 1 not at all, or no reading of his this frame. (irlight.ts irNearOf)
-pub fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
+fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
     let s = g.m.irlight.kits.as_ref().and_then(|kit| kit.near.get(crate::Num(key)).copied());
     match s {
         Some(s) if s.t == g.time => s.k,
@@ -205,7 +205,7 @@ pub fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
 }
 
 /// His reading is over. (irlight.ts drop)
-pub fn drop(g: &mut crate::game::Game, key: f64) {
+fn drop(g: &mut crate::game::Game, key: f64) {
     kit_of(g).need.delete(crate::Num(key));
 }
 
@@ -360,7 +360,7 @@ pub fn ir_light_at(g: &mut crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
 }
 
 /// The infrared light ON a man this frame, as a goggled teammate's tube takes it; asked once a man a frame. (irlight.ts irOnMan)
-pub fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
+pub(super) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
     if g.engine.lights.ir.is_empty() {
         return 0.0;
     }

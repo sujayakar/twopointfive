@@ -60,7 +60,7 @@ pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> 
 }
 
 /// His place read for the switch: 1 lit all down his look, -1 dark here or just ahead, 0 between. (calmtorch.ts placeRead)
-pub fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let x = g.ch[c].pos[0];
     let z = g.ch[c].pos[2];
@@ -92,7 +92,7 @@ pub fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind. (calmtorch.ts calmTorchRuled)
-pub fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
+fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.touring
         && !g.quiet_utility
         && g.gd[gd].unit.is_none()
@@ -163,7 +163,7 @@ pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool 
 }
 
 /// The switch under his thumb, for the player's ears only: no event is filed, nobody hears it. (calmtorch.ts click)
-pub fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
+fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on {
         g.stats.calmtorch.clicks_on += 1;
     } else {

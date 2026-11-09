@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec::Vec};
 
 /// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.   (fire.ts axisAt)
-pub fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
+fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
     axis_with(&g.k.fire, up, wind)
 }
 fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
@@ -22,17 +22,17 @@ fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
 }
 
 /// A new row of the counts: its least and most start at the infinities, not at a blank's zeros.   (fire.ts fresh)
-pub fn fresh() -> crate::fire::FireStats {
+fn fresh() -> crate::fire::FireStats {
     crate::fire::FireStats { fires: 0.0, lit: 0.0, frames: 0.0, cracks: 0.0, lo: m::INF, hi: -m::INF, sum: 0.0, n: 0.0 }
 }
 
 /// The game's row of counts, made if it has none: the row itself, a caller writes through it.   (fire.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireStats {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireStats {
     g.m.fire.states.get_or_insert_with(fresh)
 }
 
 /// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.   (fire.ts fireStats)
-pub fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
+fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
     match g.m.fire.states {
         Some(s) => s,
         None => fresh(),
@@ -40,7 +40,7 @@ pub fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
 }
 
 /// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.   (fire.ts h01)
-pub fn h01(x: f64) -> f64 {
+fn h01(x: f64) -> f64 {
     let mut x = (js::to_i32(x) as u32 ^ 0x2545F491).wrapping_mul(0x9E3779B1);
     x ^= x >> 15;
     x = x.wrapping_mul(0x85EBCA77);
@@ -72,7 +72,7 @@ fn seed_at(p: V3) -> f64 {
 }
 
 /// The cracks of the wood near `time`, the latest first, none older than `back` s.   (fire.ts firePops)
-pub fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
+fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
     pops_with(&g.k.fire, seed, time, back)
 }
 fn pops_with(fk: &crate::knobs::FireK, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
@@ -165,7 +165,7 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).   (fire.ts windAt)
-pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
+fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
     let wl = m::hyp2(wv[0], wv[2]);
@@ -237,7 +237,7 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
 }
 
 /// Out but still lit in the fog's picture: the remembered pool stays a fire's.   (fire.ts held)
-pub fn held(g: &mut crate::game::Game, t: FixtureId) {
+fn held(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
     if g.tab.light[l].steady.is_none() {
@@ -270,7 +270,7 @@ pub fn held(g: &mut crate::game::Game, t: FixtureId) {
 }
 
 /// The lamp back as the level hung it, and nothing said to the steady readers.   (fire.ts plain)
-pub fn plain(g: &mut crate::game::Game, t: FixtureId) {
+fn plain(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
     let lt = &mut g.tab.light[l];

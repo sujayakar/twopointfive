@@ -11,7 +11,7 @@ pub fn input_detached(g: &mut Game) -> InputId {
 }
 
 /// The field initialisers. A real `el`'s sink and listeners are the host's: the row holds neither.   (input.ts Input.constructor)
-pub fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
+fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
@@ -46,12 +46,12 @@ pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
 }
 
 /// Middle button held.   (input.ts Input.mmb)
-pub fn input_mmb(g: &Game, id: InputId) -> bool {
+fn input_mmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 2)
 }
 
 /// Middle button went down this frame.   (input.ts Input.mmbHit)
-pub fn input_mmb_hit(g: &Game, id: InputId) -> bool {
+fn input_mmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 2)
 }
 
@@ -61,7 +61,7 @@ pub fn input_end_frame(g: &mut Game, id: InputId) {
 }
 
 /// Between two game ticks of one drawn frame: the first tick's edges go; what is held stays held, and the camera's travel stays.   (input.ts Input.endTick)
-pub fn input_end_tick(g: &mut Game, id: InputId) {
+fn input_end_tick(g: &mut Game, id: InputId) {
     end_tick(&mut g.tab.input[id])
 }
 

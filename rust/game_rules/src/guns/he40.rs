@@ -39,7 +39,7 @@ pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
-pub fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
+fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     let puppet_target = match &g.puppet {
         Some(p) => p.target,
         None => None,
@@ -182,7 +182,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
 }
 
 /// Keeps a round's end in the capped QA log. (he40.ts logEnd)
-pub fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
+fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
     g.m.he40.he40_log.push(e.clone());
     if g.m.he40.he40_log.len() > 32 {
         g.m.he40.he40_log.remove(0);
@@ -190,7 +190,7 @@ pub fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
 }
 
 /// Armed and stopped: frag.ts's blast, judged from `pt`. (he40.ts burst)
-pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::he40::ShellEndMet) {
+fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::he40::ShellEndMet) {
     let spec = crate::frag::BlastSpec {
         who: g.ch[sh.shooter].id,
         name: Some(String::from("40 mm grenade")),
@@ -203,7 +203,7 @@ pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: cra
 }
 
 /// A dud's velocity coming back off a surface with normal `n`. (he40.ts bounceOff)
-pub fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
+fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
     let vn = v3::dot(v, n);
     let v_n = v3::scale(n, vn);
     let v_t = v3::sub(v, v_n);
@@ -214,7 +214,7 @@ pub fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
 }
 
 /// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears. (he40.ts dud)
-pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet, noise: Option<f64>, who: Option<f64>) {
+fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet, noise: Option<f64>, who: Option<f64>) {
     let noise = noise.unwrap_or(g.k.he40.dud_noise);
     let who = who.unwrap_or(0.0);
     let mut vel = vel;
@@ -432,7 +432,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// A round that had not armed has found a man: he folds or flinches, it never wounds, and it drops at his feet. (he40.ts dudHitsCharacter)
-pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
+fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
     let c = c_2;
     match gd {
         None => {

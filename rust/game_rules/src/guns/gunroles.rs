@@ -55,19 +55,19 @@ fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
 }
 
 /// What his primary is for. (gunroles.ts gunRole)
-pub fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
+fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
     if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)
 }
 
 /// His place through a door. (gunroles.ts rankOf)
-pub fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     rank_row(gun_role(g, gd))
 }
 
 /// The clear floor from his mark toward what he watches, chest high (m). (gunroles.ts lineOf)
-pub fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
+fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
     let dx = to[0] - p[0];
     let dz = to[2] - p[2];
     let l = m::hyp2(dx, dz);
@@ -80,7 +80,7 @@ pub fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
 }
 
 /// A row of the table into a man's hands: nothing for the row he carries or one switched off. (gunroles.ts gunHand)
-pub fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::WeaponId) {
+fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::WeaponId) {
     let held = g.gd[gd].weapon;
     if g.fa[held].def == id_2 || !row(g, id_2).enabled { return; }
     let route = g.gd[gd].route;

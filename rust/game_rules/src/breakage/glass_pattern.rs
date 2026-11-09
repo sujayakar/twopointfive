@@ -8,7 +8,7 @@ use alloc::{vec, vec::Vec};
 const CRACK: Tag = Tag::Num(0.0);
 
 /// The one hash: (seed, a, b) → 24 bits; WGSL repeats it.   (glassPattern.ts gpHash)
-pub fn gp_hash(seed: f64, a: f64, b: f64) -> f64 {
+fn gp_hash(seed: f64, a: f64, b: f64) -> f64 {
     let mut h = (js::to_i32(seed)
         ^ m::imul(js::to_i32(a + 1.0), 0x9E3779B1u32 as i32)
         ^ m::imul(js::to_i32(b + 1.0), 0x85EBCA77u32 as i32)) as u32;
@@ -18,56 +18,56 @@ pub fn gp_hash(seed: f64, a: f64, b: f64) -> f64 {
 }
 
 /// The hash as a share of one.   (glassPattern.ts gpJit)
-pub fn gp_jit(seed: f64, a: f64, b: f64) -> f64 {
+fn gp_jit(seed: f64, a: f64, b: f64) -> f64 {
     gp_hash(seed, a, b) / 16777216.0
 }
 
 /// k into 0‥n.   (glassPattern.ts wrap)
-pub fn wrap(k: f64, n: f64) -> f64 {
+fn wrap(k: f64, n: f64) -> f64 {
     js::rem(js::rem(k, n) + n, n)
 }
 
 /// Where radial k sits, in sectors (k may be −1 ‥ n: the fan wraps).   (glassPattern.ts gpBound)
-pub fn gp_bound(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
+fn gp_bound(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
     k + GP_ANG_JIT * (gp_jit(s.seed, wrap(k, s.n), 7.0) - 0.5)
 }
 
 /// Radial k's bearing.   (glassPattern.ts gpAngle)
-pub fn gp_angle(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
+fn gp_angle(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
     s.rot + 2.0 * m::PI * gp_bound(s, k) / s.n
 }
 
 /// The radius at which chord b (0‥3) meets radial k.   (glassPattern.ts gpRho)
-pub fn gp_rho(s: crate::glass_pattern::GpSite, k: f64, b: f64) -> f64 {
+fn gp_rho(s: crate::glass_pattern::GpSite, k: f64, b: f64) -> f64 {
     s.rho[b as usize] * (GP_RHO_LO + GP_RHO_SPAN * gp_jit(s.seed, wrap(k, s.n), b))
 }
 
 /// Where chord b meets radial k.   (glassPattern.ts gpChordPt)
-pub fn gp_chord_pt(s: crate::glass_pattern::GpSite, k: f64, b: f64) -> [f64; 2] {
+fn gp_chord_pt(s: crate::glass_pattern::GpSite, k: f64, b: f64) -> [f64; 2] {
     let a = gp_angle(s, k);
     let r = gp_rho(s, k, b);
     [s.u + r * m::cos(a), s.v + r * m::sin(a)]
 }
 
 /// How far radial k is drawn into the uncut sheet before the pane runs (m from the site).   (glassPattern.ts gpReach)
-pub fn gp_reach(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
+fn gp_reach(s: crate::glass_pattern::GpSite, k: f64) -> f64 {
     gp_rho(s, k, 2.0) * (1.25 + 2.0 * gp_jit(s.seed, wrap(k, s.n), 9.0)) * m::min(1.6, 0.6 + 0.4 * s.e)
 }
 
 /// Sector s_2 has no middle chord: its two ring pieces are one (band 1).   (glassPattern.ts gpMerged)
-pub fn gp_merged(s: crate::glass_pattern::GpSite, s_2: f64) -> bool {
+fn gp_merged(s: crate::glass_pattern::GpSite, s_2: f64) -> bool {
     gp_jit(s.seed, s_2, 21.0) < s.merge
 }
 
 /// Where sector s_2's branch crack sits, in sectors.   (glassPattern.ts gpSplit)
-pub fn gp_split(s: crate::glass_pattern::GpSite, s_2: f64) -> f64 {
+fn gp_split(s: crate::glass_pattern::GpSite, s_2: f64) -> f64 {
     let b0 = gp_bound(s, s_2);
     let b1 = gp_bound(s, s_2 + 1.0);
     b0 + (b1 - b0) * (GP_SPLIT_LO + GP_SPLIT_SPAN * gp_jit(s.seed, s_2, 23.0))
 }
 
 /// The snap across half h of sector s_2: a line through P, unit normal N away from the site; None = the dagger runs unbroken.   (glassPattern.ts gpCut)
-pub fn gp_cut(s: crate::glass_pattern::GpSite, s_2: f64, h: f64) -> Option<crate::glass_pattern::GpCut> {
+fn gp_cut(s: crate::glass_pattern::GpSite, s_2: f64, h: f64) -> Option<crate::glass_pattern::GpCut> {
     if gp_jit(s.seed, s_2, 27.0 + h) < GP_CUT_NONE {
         return None;
     }
@@ -80,7 +80,7 @@ pub fn gp_cut(s: crate::glass_pattern::GpSite, s_2: f64, h: f64) -> Option<crate
 }
 
 /// Whose territory (u, v) is in: the least power distance (−1 = no sites).   (glassPattern.ts gpNearest)
-pub fn gp_nearest(sites: &[crate::glass_pattern::GpSite], u: f64, v: f64) -> f64 {
+fn gp_nearest(sites: &[crate::glass_pattern::GpSite], u: f64, v: f64) -> f64 {
     let (mut best, mut bd) = (-1.0, m::INF);
     for i in 0..sites.len() {
         let s = sites[i];
@@ -94,12 +94,12 @@ pub fn gp_nearest(sites: &[crate::glass_pattern::GpSite], u: f64, v: f64) -> f64
 }
 
 /// Past the chord a → b (the site is to its left).   (glassPattern.ts beyond)
-pub fn beyond(a: [f64; 2], b: [f64; 2], u: f64, v: f64) -> bool {
+fn beyond(a: [f64; 2], b: [f64; 2], u: f64, v: f64) -> bool {
     (b[0] - a[0]) * (v - a[1]) - (b[1] - a[1]) * (u - a[0]) < 0.0
 }
 
 /// The sector of (u, v) round the site and its position across the fan.   (glassPattern.ts gpSector)
-pub fn gp_sector(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate::glass_pattern::GpSector {
+fn gp_sector(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate::glass_pattern::GpSector {
     let n = s.n;
     let mut t = (m::atan2(v - s.v, u - s.u) - s.rot) / (2.0 * m::PI);
     t = (t - m::floor(t)) * n;
@@ -114,7 +114,7 @@ pub fn gp_sector(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate::glas
 }
 
 /// The sector and band of (u, v) round the site.   (glassPattern.ts gpSectorBand)
-pub fn gp_sector_band(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate::glass_pattern::GpSectorBand {
+fn gp_sector_band(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate::glass_pattern::GpSectorBand {
     let GpSector { s: sec, t } = gp_sector(s, u, v);
     if !beyond(gp_chord_pt(s, sec, 0.0), gp_chord_pt(s, sec + 1.0, 0.0), u, v) {
         return GpSectorBand { s: sec, b: 0.0 };
@@ -135,12 +135,12 @@ pub fn gp_sector_band(s: crate::glass_pattern::GpSite, u: f64, v: f64) -> crate:
 }
 
 /// A piece's number.   (glassPattern.ts gpFid)
-pub fn gp_fid(i: f64, s: f64, b: f64) -> f64 {
+fn gp_fid(i: f64, s: f64, b: f64) -> f64 {
     i * GP_FRAGS_PER_SITE + b * GP_MAX_SECTORS + s
 }
 
 /// A piece's site, band and sector.   (glassPattern.ts gpUnfid)
-pub fn gp_unfid(fid: f64) -> crate::glass_pattern::GpUnfid {
+fn gp_unfid(fid: f64) -> crate::glass_pattern::GpUnfid {
     GpUnfid {
         i: m::floor(fid / GP_FRAGS_PER_SITE),
         b: m::floor(js::rem(fid, GP_FRAGS_PER_SITE) / GP_MAX_SECTORS),
@@ -149,7 +149,7 @@ pub fn gp_unfid(fid: f64) -> crate::glass_pattern::GpUnfid {
 }
 
 /// The piece (u, v) is in: fid, GP_REMAINDER (the uncut sheet), or −1 (no sites).   (glassPattern.ts gpClassify)
-pub fn gp_classify(sites: &[crate::glass_pattern::GpSite], run: bool, u: f64, v: f64) -> f64 {
+fn gp_classify(sites: &[crate::glass_pattern::GpSite], run: bool, u: f64, v: f64) -> f64 {
     let i = gp_nearest(sites, u, v);
     if i < 0.0 {
         return -1.0;
@@ -162,7 +162,7 @@ pub fn gp_classify(sites: &[crate::glass_pattern::GpSite], run: bool, u: f64, v:
 }
 
 /// Sutherland–Hodgman against one half-plane n·p ≤ d; tags[k] names what made the edge pts[k] → pts[k+1].   (glassPattern.ts clip)
-pub fn clip(pts: &[[f64; 2]], tags: &[crate::glass_pattern::Tag], nx: f64, ny: f64, d: f64) -> crate::glass_pattern::Clip {
+fn clip(pts: &[[f64; 2]], tags: &[crate::glass_pattern::Tag], nx: f64, ny: f64, d: f64) -> crate::glass_pattern::Clip {
     if pts.len() < 3 {
         return Clip { pts: Vec::new(), tags: Vec::new() };
     }
@@ -190,7 +190,7 @@ pub fn clip(pts: &[[f64; 2]], tags: &[crate::glass_pattern::Tag], nx: f64, ny: f
 }
 
 /// Where the edge a → b crosses the line n·p = d.   (glassPattern.ts isect)
-pub fn isect(a: [f64; 2], b: [f64; 2], nx: f64, ny: f64, d: f64) -> [f64; 2] {
+fn isect(a: [f64; 2], b: [f64; 2], nx: f64, ny: f64, d: f64) -> [f64; 2] {
     let da = nx * a[0] + ny * a[1] - d;
     let db = nx * b[0] + ny * b[1] - d;
     let t = da / (da - db);
@@ -204,7 +204,7 @@ fn clip_poly(p: &Poly, nx: f64, ny: f64, d: f64) -> Poly {
 }
 
 /// Distance from (u, v) to the line a → b.   (glassPattern.ts lineDist)
-pub fn line_dist(a: [f64; 2], b: [f64; 2], u: f64, v: f64) -> f64 {
+fn line_dist(a: [f64; 2], b: [f64; 2], u: f64, v: f64) -> f64 {
     let (ex, ey) = (b[0] - a[0], b[1] - a[1]);
     m::abs(ex * (v - a[1]) - ey * (u - a[0])) / m::max(1e-6, m::hyp2(ex, ey))
 }
@@ -218,7 +218,7 @@ fn take(d: &mut f64, w: &mut f64, dd: f64, ww: f64) {
 }
 
 /// Nearest drawn crack at (u, v), annealed or laminated (`web`).   (glassPattern.ts gpCrackAt)
-pub fn gp_crack_at(sites: &[crate::glass_pattern::GpSite], run: bool, web: bool, u: f64, v: f64) -> crate::glass_pattern::GpCrack {
+fn gp_crack_at(sites: &[crate::glass_pattern::GpSite], run: bool, web: bool, u: f64, v: f64) -> crate::glass_pattern::GpCrack {
     let i = gp_nearest(sites, u, v);
     if i < 0.0 {
         return GpCrack { d: m::INF, w: 0.0, fid: -1.0 };
@@ -319,7 +319,7 @@ fn xor(seed: f64, k: i32) -> f64 {
 }
 
 /// The centre of clump (c_2, r): its lattice cell's centre, jittered.   (glassPattern.ts gpDiceCentre)
-pub fn gp_dice_centre(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> [f64; 2] {
+fn gp_dice_centre(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> [f64; 2] {
     let du = 2.0 * d.hu / d.cols;
     let dv = 2.0 * d.hv / d.rows;
     [
@@ -329,7 +329,7 @@ pub fn gp_dice_centre(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> [f64
 }
 
 /// The clump (u, v) belongs to (index r × cols + c): the nearest jittered centre among the 3 × 3 cells round its own.   (glassPattern.ts gpDiceClump)
-pub fn gp_dice_clump(d: crate::glass_pattern::GpDice, u: f64, v: f64) -> f64 {
+fn gp_dice_clump(d: crate::glass_pattern::GpDice, u: f64, v: f64) -> f64 {
     let c0 = m::max(0.0, m::min(d.cols - 1.0, m::floor((u + d.hu) / (2.0 * d.hu) * d.cols)));
     let r0 = m::max(0.0, m::min(d.rows - 1.0, m::floor((v + d.hv) / (2.0 * d.hv) * d.rows)));
     let (mut best, mut bd) = (r0 * d.cols + c0, m::INF);
@@ -358,7 +358,7 @@ pub fn gp_dice_key(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> f64 {
 }
 
 /// Clump (c_2, r)'s outline: the cell of its centre among its neighbours', clipped to the pane.   (glassPattern.ts gpDicePoly)
-pub fn gp_dice_poly(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> Vec<[f64; 2]> {
+fn gp_dice_poly(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> Vec<[f64; 2]> {
     let du = 2.0 * d.hu / d.cols;
     let dv = 2.0 * d.hv / d.rows;
     let a = gp_dice_centre(d, c_2, r);
@@ -391,7 +391,7 @@ pub fn gp_dice_poly(d: crate::glass_pattern::GpDice, c_2: f64, r: f64) -> Vec<[f
 }
 
 /// The dice as drawn: distance to the nearest edge of a jittered cellular pattern of cell size `grain` (F2 − F1).   (glassPattern.ts gpDiceEdge)
-pub fn gp_dice_edge(u: f64, v: f64, grain: f64, seed: f64) -> f64 {
+fn gp_dice_edge(u: f64, v: f64, grain: f64, seed: f64) -> f64 {
     let (x, y) = (u / grain, v / grain);
     let (ix, iy) = (m::floor(x), m::floor(y));
     let (mut f1, mut f2) = (m::INF, m::INF);
@@ -419,7 +419,7 @@ fn cr(o: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
 }
 
 /// Convex hull (Andrew's chain), anticlockwise.   (glassPattern.ts gpHull)
-pub fn gp_hull(pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
+fn gp_hull(pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
     let mut p = pts.to_vec();
     js::sort_by(&mut p, |a, b| js::or(a[0] - b[0], a[1] - b[1]));
     if p.len() < 3 {
@@ -446,7 +446,7 @@ pub fn gp_hull(pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
 }
 
 /// A polygon clipped to the pane.   (glassPattern.ts gpClipRect)
-pub fn gp_clip_rect(pts: &[[f64; 2]], hu: f64, hv: f64) -> Vec<[f64; 2]> {
+fn gp_clip_rect(pts: &[[f64; 2]], hu: f64, hv: f64) -> Vec<[f64; 2]> {
     let tags = vec![CRACK; pts.len()];
     let mut p = clip(pts, &tags, 0.0, -1.0, hv);
     p = clip(&p.pts, &p.tags, 1.0, 0.0, hu);

@@ -6,7 +6,7 @@ use crate::m;
 use alloc::boxed::Box;
 
 /// A charge is going on by your own hands.   (workstow.ts samJob)
-pub fn sam_job(g: &mut crate::game::Game) -> bool {
+fn sam_job(g: &mut crate::game::Game) -> bool {
     crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()
 }
 

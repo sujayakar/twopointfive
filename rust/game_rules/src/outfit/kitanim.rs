@@ -6,16 +6,16 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
 /// Pushes one row on the module's log, keeping the last 200.   (kitanim.ts note)
-pub fn note(g: &mut crate::game::Game, row: crate::kitanim::NoteRow) {
+fn note(g: &mut crate::game::Game, row: crate::kitanim::NoteRow) {
 }
 
 /// The kit's part runs: nothing of it under the tour.   (kitanim.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &mut crate::game::Game) -> bool {
     !g.touring
 }
 
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.   (kitanim.ts nvHandFree)
-pub fn nv_hand_free(g: &mut crate::game::Game) -> bool {
+fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     if g.pl[p].down
@@ -171,7 +171,7 @@ pub fn kit_sling_rest(g: &mut crate::game::Game) -> Option<f64> {
 }
 
 /// How close a man `d` metres off is: 0 at the close-in mode's edge, 1 in the knife's reach.   (kitanim.ts kitCloseness)
-pub fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
+fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
     let mode_m = g.k.close.mode_m;
     m::max(0.0, m::min(1.0, (mode_m - d) / m::max(0.1, mode_m - g.k.kitanim.close_near)))
 }

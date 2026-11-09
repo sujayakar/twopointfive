@@ -131,7 +131,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
 }
 
 /// where a span's foot is asked from: a test that begins at the feet begins at the bake's height. UNDERFOOT.on is settled on. (collision.ts footBand)
-pub fn foot_band(g: &crate::game::Game, y0: f64) -> f64 {
+fn foot_band(g: &crate::game::Game, y0: f64) -> f64 {
     if y0 >= FEET_Y && y0 < BAKE_Y { BAKE_Y } else { y0 }
 }
 
@@ -145,7 +145,7 @@ pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
 }
 
 /// the level's rows as the module is told them: 1 they are read, 2 their steady selves. (collision.ts rowsHow)
-pub fn rows_how(r: Option<crate::scene_collision::LampRows>) -> f64 {
+fn rows_how(r: Option<crate::scene_collision::LampRows>) -> f64 {
     match r {
         Some(r) => if r.steady { 3.0 } else { 1.0 },
         None => 0.0,
@@ -220,7 +220,7 @@ pub fn add_static(g: &mut crate::game::Game, b: BoxId, footprint: Option<BoxId>)
 }
 
 /// the cells a static appended over `f` is filed in: x0, x1, z0, z1. (collision.ts StaticCollision.footCells)
-pub fn foot_cells(g: &mut crate::game::Game, f: BoxId) -> [f64; 4] {
+fn foot_cells(g: &mut crate::game::Game, f: BoxId) -> [f64; 4] {
     let (yaw, h, c) = { let r = seam_box(g, f); (r.yaw, r.h, r.c) };
     let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
     let (cs, sn) = (m::abs(m::cos(yaw)), m::abs(m::sin(yaw)));
@@ -302,7 +302,7 @@ fn rows_now(g: &mut Game) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
 }
 
 /// the rows made the boxes as they stand, for whoever opens a stretch of questions. Every row of RUST is on: there is no other side. (collision.ts StaticCollision.stand)
-pub fn stand(g: &mut crate::game::Game) {
+fn stand(g: &mut crate::game::Game) {
     open_copy(g, true);
 }
 
@@ -347,7 +347,7 @@ pub fn rules_panes(g: &crate::game::Game) -> f64 {
 }
 
 /// why the copy is not answering now, for the count of questions the TypeScript took. (collision.ts StaticCollision.fellWhy)
-pub fn fell_why(g: &crate::game::Game) -> String {
+fn fell_why(g: &crate::game::Game) -> String {
     String::from(if standing(g) { "the row was not up when the tick opened" } else { "outside a tick" })
 }
 
@@ -389,7 +389,7 @@ pub fn window<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut 
 }
 
 /// the rows ready for a question: a window's first question proves them, and a debt is paid. (collision.ts StaticCollision.ready)
-pub fn ready(g: &mut crate::game::Game) {
+fn ready(g: &mut crate::game::Game) {
     if !standing(g) && g.col.windowed { lone(g, Some(true)); }
     if g.col.mirror.owes {
         let ids = g.col.boxes.clone();
@@ -400,7 +400,7 @@ pub fn ready(g: &mut crate::game::Game) {
 }
 
 /// a question outside a tick: true = the rows stand for it alone, and the caller shuts them behind it; `must` = whatever ANYTIME says. (collision.ts StaticCollision.lone)
-pub fn lone(g: &mut crate::game::Game, must: Option<bool>) -> bool {
+fn lone(g: &mut crate::game::Game, must: Option<bool>) -> bool {
     if !g.m.scene_collision.anytime.on && !must.unwrap_or(false) { return false; }
     stand(g);
     if !standing(g) { return false; }
@@ -439,13 +439,13 @@ pub fn gather(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0:
 }
 
 /// (collision.ts StaticCollision.gatherAsk)
-pub fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     ready(g);
     gather_here(g, x0, z0, x1, z1, y0, y1, out)
 }
 
 /// TWIN: the module's gather, its list read into `out`. (collision.ts StaticCollision.gatherHere)
-pub fn gather_here(g: &crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+pub(super) fn gather_here(g: &crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let n = sim::collide::gather(w, x0, z0, x1, z1, y0, y1, out.len());
     let list = &sim::world::asking(w).list;
@@ -466,13 +466,13 @@ pub fn circle_touches(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64
 }
 
 /// (collision.ts StaticCollision.circleTouchesAsk)
-pub fn circle_touches_ask(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn circle_touches_ask(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     ready(g);
     circle_touches_here(g, x, z, r, y0, y1, out)
 }
 
 /// TWIN: the module's touches; `out` is left as the two steps leave it (the touching ones, then what the gather put past them). (collision.ts StaticCollision.circleTouchesHere)
-pub fn circle_touches_here(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn circle_touches_here(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let y0 = foot_band(g, y0);
     let cap = if out.len() > sim::world::MAX_LIST { sim::world::MAX_LIST } else { out.len() };
@@ -497,14 +497,14 @@ pub fn collide_circle(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1
 }
 
 /// (collision.ts StaticCollision.collideCircleAsk)
-pub fn collide_circle_ask(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1: f64, iterations: Option<f64>) -> bool {
+fn collide_circle_ask(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1: f64, iterations: Option<f64>) -> bool {
     let iterations = iterations.unwrap_or(3.0);
     ready(g);
     collide_circle_here(g, p, r, y0, y1, iterations)
 }
 
 /// TWIN: the module's push, and where it ended read back. (collision.ts StaticCollision.collideCircleHere)
-pub fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1: f64, iterations: f64) -> bool {
+fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1: f64, iterations: f64) -> bool {
     let w = slot(g);
     let y0 = foot_band(g, y0);
     let hit = sim::collide::circle(w, p[0], p[2], r, y0, y1, js::to_u32(iterations)) != 0;
@@ -538,7 +538,7 @@ pub fn glass_rule(g: &mut crate::game::Game, rule: Option<crate::scene_collision
 }
 
 /// the game's glass as the world's rows read it, or none. (collision.ts StaticCollision.glassPanes)
-pub fn glass_panes(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror::PaneSource> {
+fn glass_panes(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror::PaneSource> {
     match g.col.pane_rows {
         Some(PaneRows::GlassBreak) => {
             let (view, home, sheets) = (crate::glassbreak::glass_break_view(g), crate::glassbreak::glass_break_home(g), crate::glassbreak::glass_break_sheets(g));
@@ -567,7 +567,7 @@ pub fn pane_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool {
 }
 
 /// the pane rule as a question takes it: 0 none, 1 it has one and rows behind it, −1 a rule with no rows. EXACT.on is settled for the module, so no −2. (collision.ts StaticCollision.paneAsk)
-pub fn pane_ask(g: &crate::game::Game) -> f64 {
+fn pane_ask(g: &crate::game::Game) -> f64 {
     if g.col.pane_rule.is_none() {
         0.0
     } else if g.col.pane_rows.is_some() {
@@ -621,7 +621,7 @@ pub fn segment_blocked_dynamic(g: &mut crate::game::Game, a: V3, b: V3, need_fla
 }
 
 /// (collision.ts StaticCollision.segmentBlockedDynamicAsk)
-pub fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need_flags: Option<f64>) -> bool {
+fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need_flags: Option<f64>) -> bool {
     let need = need_flags.unwrap_or(0.0);
     let (d0, d1, d2) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     let len = m::hyp3(d0, d1, d2);
@@ -646,7 +646,7 @@ pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
 }
 
 /// (collision.ts StaticCollision.thingsAsk)
-pub fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsAsk>> {
+fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsAsk>> {
     ready(g);
     if !standing(g) { return None; }
     if !crate::scene_box_mirror::box_mirror_things(g) { return None; }
@@ -732,7 +732,7 @@ pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f
 }
 
 /// (collision.ts StaticCollision.segmentBlockedAsk)
-pub fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
+fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
     ready(g);
     line(g, &Over::OWN, a, b, shrink, through, panes)
@@ -806,7 +806,7 @@ fn raycast_here(g: &mut Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<
 // ---- the senses, the module's alone (rust/sim fog.rs, sight.rs, light.rs, smoke.rs, bricks.rs): what it cannot take is the asker's mistake, by name
 
 /// the copy, standing, for a sense's question → which of the module's lists holds the leaves (−1 none). (collision.ts StaticCollision.sense)
-pub fn sense(g: &mut crate::game::Game, row: &str) -> f64 {
+fn sense(g: &mut crate::game::Game, row: &str) -> f64 {
     ready(g);
     if !standing(g) {
         panic!("{}: asked with no copy of the box world standing ({}): a sense is the Rust module's alone, asked inside a tick or a window (StaticCollision.window)", row, fell_why(g));
@@ -820,7 +820,7 @@ pub fn sense(g: &mut crate::game::Game, row: &str) -> f64 {
 }
 
 /// the pane rule as a sense's question takes it: 0 none, 1 it has one and the copy holds its rows. (collision.ts StaticCollision.sensePanes)
-pub fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
+fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
     if g.col.pane_rule.is_none() { return 0.0; }
     if !crate::scene_box_mirror::box_mirror_glass_in(g) {
         let why = if g.col.pane_rows.is_none() { "it was hung with no rows behind it: glassRule hands the rule and its rows together" } else { "more broken panes, or a view of more panes, than the copy holds" };
@@ -830,7 +830,7 @@ pub fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
 }
 
 /// an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps. (collision.ts StaticCollision.eyeLine)
-pub fn eye_line(g: &crate::game::Game, row: &str, through: f64) {
+fn eye_line(g: &crate::game::Game, row: &str, through: f64) {
     if js::to_u32(through) & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || js::to_u32(through) & sim::world::F_GLASS == 0 {
         panic!("{}: an eye's line passes glass and names only flags the copy keeps (asked through {}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)", row, js::num_str(through));
     }
@@ -879,7 +879,7 @@ pub fn eye_contact(g: &mut crate::game::Game, e: crate::scene_collision::EyeCont
 }
 
 /// (collision.ts StaticCollision.eyeContactAsk)
-pub fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactAskE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> crate::scene_collision::EyeContactAsk {
+fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactAskE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> crate::scene_collision::EyeContactAsk {
     let set = sense(g, "sight") as i32;
     let q = (if e.v_half_deg.is_some() { sim::sight::Q_LENS } else { 0 }) | (if unseen { sim::sight::Q_UNSEEN } else { 0 }) | (if smoked { sim::sight::Q_SMOKED } else { 0 });
     let mut dist = 0.0;
@@ -901,7 +901,7 @@ pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: bool, rows: Option<c
 }
 
 /// no question about the light stands. (collision.ts StaticCollision.lampsOver)
-pub fn lamps_over(g: &mut crate::game::Game) {
+fn lamps_over(g: &mut crate::game::Game) {
     let q = &mut g.col.lamp_q;
     q.on = false;
     q.p = None;
@@ -933,7 +933,7 @@ fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
 }
 
 /// the lamps written so far, asked as a part of the question. (collision.ts StaticCollision.lampsPart)
-pub fn lamps_part(g: &mut crate::game::Game, last: Option<bool>) {
+fn lamps_part(g: &mut crate::game::Game, last: Option<bool>) {
     let mut out = [0.0; 6];
     lamps_part_into(g, last.unwrap_or(false), &mut out);
 }
@@ -969,7 +969,7 @@ pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) {
 }
 
 /// a sound's or a search's question: the leaves' list and the pane rule to ask with. (collision.ts StaticCollision.senseFor)
-pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseForRow) -> crate::scene_collision::SenseFor {
+fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseForRow) -> crate::scene_collision::SenseFor {
     let set = sense(g, row.as_str());
     SenseFor { set, ask: sense_panes(g, row.as_str()) }
 }
@@ -1068,7 +1068,7 @@ pub fn light_ready(g: &mut crate::game::Game) {
 // ---- how a sound reaches a listener
 
 /// (collision.ts SoundPaths.constructor)
-pub fn sound_paths_new(g: &crate::game::Game) -> crate::scene_collision::SoundPaths {
+fn sound_paths_new(g: &crate::game::Game) -> crate::scene_collision::SoundPaths {
     SoundPaths::blank()
 }
 
@@ -1097,7 +1097,7 @@ pub fn sound_paths_propagate(g: &mut crate::game::Game, src: V3, dst: V3, keep: 
 }
 
 /// how a sound at `src` reaches `dst`, from the module's two questions with this file's memory of routed answers between them. (collision.ts SoundPaths.propagateAsk)
-pub fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: bool) -> crate::scene_collision::Propagation {
+fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: bool) -> crate::scene_collision::Propagation {
     let s = sense_for(g, SenseForRow::Sound);
     let (set, ask) = (s.set as i32, s.ask as u32);
     let straight = match heard_straight(g, set, ask, src, dst) {
@@ -1163,7 +1163,7 @@ fn lent<R>(g: &Game, over: &Over, f: impl FnOnce(&sim::world::Over) -> R) -> R {
     f(&sim::world::Over { set, but: &but, open: &over.open, extra: &extra, extra_cut: &extra_cut })
 }
 /// (ask::WorldAsk's line: `through` = the flags it passes)
-pub fn line_shared(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64) -> bool {
+pub(super) fn line_shared(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64) -> bool {
     let len = m::hyp3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     if !(len >= 1e-4) || !(len < 1e6) { return false; }
     let thr = js::to_u32(through);
@@ -1171,7 +1171,7 @@ pub fn line_shared(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, through: f6
     lent(g, over, |v| sim::lines::blocked_over(slot(g), v, a[0], a[1], a[2], b[0], b[1], b[2], len, shrink, thr, word)) == -1
 }
 /// (ask::WorldAsk's ray)
-pub fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
+pub(super) fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     if !(tmax > 0.0) { return None; }
     let mut out = [0.0; 4];
     let k = lent(g, over, |v| sim::lines::ray_over(slot(g), v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, pane_word(g) != 0, &mut out));
@@ -1179,21 +1179,21 @@ pub fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<cr
     Some(Raycast { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
 }
 /// (ask::WorldAsk's leaf: one across a→b; with `need`, one carrying those flags)
-pub fn leaf_shared(g: &Game, a: V3, b: V3, need: Option<f64>) -> bool {
+pub(super) fn leaf_shared(g: &Game, a: V3, b: V3, need: Option<f64>) -> bool {
     let len = m::hyp3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     if !(len >= 1e-4) || !(len < 1e6) { return false; }
     let set = own_set(g);
     set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need.unwrap_or(0.0)), set)
 }
 /// (ask::WorldAsk's furniture: the nearest part met, of a copy that has every write of the furniture; one that could not take them all, or owes one, meets nothing)
-pub fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64, V3)> {
+pub(super) fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64, V3)> {
     if !g.col.mirror.things_ok || g.col.mirror.things_at != g.m.scene_box_mirror.things.n { return None; }
     let mut out = [0.0; 5];
     let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
     if k < 0 { None } else { Some((out[0], [out[1], out[2], out[3]])) }
 }
 /// (ask::WorldAsk's way: the module's plain search, on a grid written to it for the question. A place that is no number has no way, and the game is not to fall for it)
-pub fn way_shared(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
+pub(super) fn way_shared(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
     nav_grid_there(g);
     let n = sim::nav::find_path(slot(g), own_set(g), pane_word(g), g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell, a[0], a[2], b[0], b[2], max_iter);
     if n == sim::nav::NO_WAY || n == sim::nav::ASK_HOST { return None; }
@@ -1202,9 +1202,9 @@ pub fn way_shared(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
 }
 /// (ask::WorldAsk's path of sound: no route is remembered and none is looked up. A place that is no number, or no place of this world, is heard from nowhere: a host asks
 /// it of a sound and a listener of its own, and the game is not to fall for it)
-pub fn heard_shared(g: &Game, src: V3, dst: V3) -> crate::scene_collision::Propagation { heard_shared_by(g, src, dst, |g, find| find(g)) }
+pub(super) fn heard_shared(g: &Game, src: V3, dst: V3) -> crate::scene_collision::Propagation { heard_shared_by(g, src, dst, |g, find| find(g)) }
 /// …and who remembers the ways round, if anybody does (`way`: asks for one, or has it)
-pub fn heard_shared_by(g: &Game, src: V3, dst: V3, way: impl FnOnce(&Game, &dyn Fn(&Game) -> Propagation) -> Propagation) -> crate::scene_collision::Propagation {
+pub(super) fn heard_shared_by(g: &Game, src: V3, dst: V3, way: impl FnOnce(&Game, &dyn Fn(&Game) -> Propagation) -> Propagation) -> crate::scene_collision::Propagation {
     let len = m::hyp3(src[0] - dst[0], src[1] - dst[1], src[2] - dst[2]);
     if !(len < 1e5) { return Propagation { direct: false, routed: false, path_len: 1e5, via: dst, apparent: dst, muffle: 1.0, carry: 0.0 }; }
     let (set, ask) = (own_set(g), pane_word(g));
@@ -1223,7 +1223,7 @@ fn sealed(src: V3, straight: f64) -> Propagation {
 // ---- the walk grid
 
 /// the floor's grid baked: a cell is shut where a guard-sized circle at its centre is pushed. (collision.ts NavGrid.constructor)
-pub fn nav_grid_new(g: &mut crate::game::Game) -> crate::scene_collision::NavGrid {
+fn nav_grid_new(g: &mut crate::game::Game) -> crate::scene_collision::NavGrid {
     let mut nav = NavGrid::blank();
     let wd = crate::scene_world::world();
     let cell = nav.cell;
@@ -1318,7 +1318,7 @@ pub fn nav_grid_find_path(g: &mut crate::game::Game, a: V3, b: V3, max_iter: Opt
 }
 
 /// the grid as it stands, written to the module for one question of its search. A floor larger than its table is the build's mistake, by name. (collision.ts NavGrid.there)
-pub fn nav_grid_there(g: &crate::game::Game) {
+fn nav_grid_there(g: &crate::game::Game) {
     let n = g.col.nav.blocked.len();
     if n > sim::nav::MAX_NAV {
         panic!("the floor's grid has {} cells and a search of the Rust module holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it", n, sim::nav::MAX_NAV);
@@ -1327,7 +1327,7 @@ pub fn nav_grid_there(g: &crate::game::Game) {
 }
 
 /// the way from the module's search; a price is asked of the caller where the search comes to a cell it has none for. (collision.ts NavGrid.findPathAsk)
-pub fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
+fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
     if js::to_u32(max_iter) as f64 != max_iter { panic!("paths: a cap on the search that is no whole number ({})", js::num_str(max_iter)); }
     let mut penalty = penalty;
     let s = sense_for(g, SenseForRow::Paths);
@@ -1364,7 +1364,7 @@ pub fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter:
 }
 
 /// the prices the module's search has asked for, from the caller's function, in the order asked. (collision.ts NavGrid.priceThese)
-pub fn nav_grid_price_these(g: &mut crate::game::Game, k: f64, penalty: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) {
+fn nav_grid_price_these(g: &mut crate::game::Game, k: f64, penalty: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) {
     let nw = g.col.nav.w as u32;
     for i in 0..k as usize {
         let c = get_u32(sim::nav::need_addr(), i);
@@ -1375,7 +1375,7 @@ pub fn nav_grid_price_these(g: &mut crate::game::Game, k: f64, penalty: &mut dyn
 }
 
 /// the free cell nearest by ring to a shut one; with the point that asked, on its own side of the wall. (collision.ts NavGrid.nearestFree)
-pub fn nav_grid_nearest_free(g: &mut crate::game::Game, gx: f64, gz: f64, wx: Option<f64>, wz: Option<f64>) -> Option<[f64; 2]> {
+fn nav_grid_nearest_free(g: &mut crate::game::Game, gx: f64, gz: f64, wx: Option<f64>, wz: Option<f64>) -> Option<[f64; 2]> {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let mut fallback: Option<[f64; 2]> = None;
     let mut extra = 1;
@@ -1430,7 +1430,7 @@ pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// (collision.ts clampi)
-pub fn clampi(x: f64, a: f64, b: f64) -> f64 {
+fn clampi(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
 }
 

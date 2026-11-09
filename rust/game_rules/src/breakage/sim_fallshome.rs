@@ -68,23 +68,23 @@ pub fn fall_store_waiting(g: &crate::game::Game) -> f64 {
 }
 
 /// Landings waiting in list `l`. (fallshome.ts FallStore.waitingIn)
-pub fn fall_store_waiting_in(g: &crate::game::Game, l: f64) -> f64 {
+pub(super) fn fall_store_waiting_in(g: &crate::game::Game, l: f64) -> f64 {
     sim::state::state_read(g.sim).falls.n[l as usize]
 }
 
 /// Has any glass been laid since the map was cleared. (fallshome.ts FallStore.any)
-pub fn fall_store_any(g: &crate::game::Game) -> bool {
+pub(super) fn fall_store_any(g: &crate::game::Game) -> bool {
     sim::state::state_read(g.sim).falls.any != 0.0
 }
 
 /// M² of glass in the cell under (x, z). (fallshome.ts FallStore.at)
-pub fn fall_store_at(g: &crate::game::Game, x: f64, z: f64) -> f64 {
+fn fall_store_at(g: &crate::game::Game, x: f64, z: f64) -> f64 {
     let k = cell(x, z);
     if k == NCELLS { 0.0 } else { sim::state::state_read(g.sim).falls.litter[k as usize] }
 }
 
 /// The cells that hold glass: [cell x, cell z, m²], row by row. (fallshome.ts FallStore.cells)
-pub fn fall_store_cells(g: &crate::game::Game) -> Vec<[f64; 3]> {
+fn fall_store_cells(g: &crate::game::Game) -> Vec<[f64; 3]> {
     let litter = &sim::state::state_read(g.sim).falls.litter;
     let mut out = Vec::new();
     for k in 0..sim::falls::NCELLS {
@@ -96,7 +96,7 @@ pub fn fall_store_cells(g: &crate::game::Game) -> Vec<[f64; 3]> {
 }
 
 /// Landing i that waits in list `l`, by its columns' names. (fallshome.ts FallStore.landing)
-pub fn fall_store_landing(g: &crate::game::Game, i: f64, l: Option<f64>) -> JsMap<crate::sim_fallshome::FallStoreLandingKey, f64> {
+fn fall_store_landing(g: &crate::game::Game, i: f64, l: Option<f64>) -> JsMap<crate::sim_fallshome::FallStoreLandingKey, f64> {
     let l = l.unwrap_or(FALL_GLASS) as usize;
     let p = &sim::state::state_read(g.sim).falls.p[l];
     let mut r = JsMap::default();
@@ -107,7 +107,7 @@ pub fn fall_store_landing(g: &crate::game::Game, i: f64, l: Option<f64>) -> JsMa
 }
 
 /// A landing put on list `l`; the list at `cap`, its glass is laid now and its sound thickens the last landing that has one. (fallshome.ts FallStore.schedule)
-pub fn fall_store_schedule(g: &mut crate::game::Game, t: f64, x: f64, y: f64, z: f64, name: crate::sim_fallshome::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, cap: f64, l: Option<f64>, dust: Option<f64>) -> bool {
+pub(super) fn fall_store_schedule(g: &mut crate::game::Game, t: f64, x: f64, y: f64, z: f64, name: crate::sim_fallshome::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, cap: f64, l: Option<f64>, dust: Option<f64>) -> bool {
     let (l, dust) = (l.unwrap_or(FALL_GLASS), dust.unwrap_or(0.0));
     let n = sound_place(name);
     took_there(g);
@@ -116,7 +116,7 @@ pub fn fall_store_schedule(g: &mut crate::game::Game, t: f64, x: f64, y: f64, z:
 }
 
 /// The landings of list `l` whose time has come, in order: each one's glass laid and the floor told. (fallshome.ts FallStore.due)
-pub fn fall_store_due(g: &mut crate::game::Game, time: f64, level: f64, gap: f64, l: Option<f64>) -> Vec<crate::sim_fallshome::FallDue> {
+pub(super) fn fall_store_due(g: &mut crate::game::Game, time: f64, level: f64, gap: f64, l: Option<f64>) -> Vec<crate::sim_fallshome::FallDue> {
     let Some(l) = list_of(l.unwrap_or(FALL_GLASS)) else { return none() };
     if sim::state::state_read(g.sim).falls.n[l] == 0.0 {
         return none();
@@ -133,7 +133,7 @@ pub fn fall_store_due(g: &mut crate::game::Game, time: f64, level: f64, gap: f64
 }
 
 /// A footfall at (x, z) of hearing level `level`: the level to file, and how much glass was underfoot (0‥1; 0 = no crunch). (fallshome.ts FallStore.step)
-pub fn fall_store_step(g: &mut crate::game::Game, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> crate::sim_fallshome::FallStoreStep {
+pub(super) fn fall_store_step(g: &mut crate::game::Game, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> crate::sim_fallshome::FallStoreStep {
     g.m.sim_fallshome.falls.steps += 1.0;
     took_there(g);
     let mut k = 0.0;
@@ -145,7 +145,7 @@ pub fn fall_store_step(g: &mut crate::game::Game, x: f64, z: f64, level: f64, cr
 }
 
 /// May the floor be told of a landing of list `l` at `time` (one a `gap`, floor-wide)? If so the telling is remembered. (fallshome.ts FallStore.heard)
-pub fn fall_store_heard(g: &mut crate::game::Game, time: f64, gap: f64, l: Option<f64>) -> bool {
+fn fall_store_heard(g: &mut crate::game::Game, time: f64, gap: f64, l: Option<f64>) -> bool {
     let l = l.unwrap_or(FALL_GLASS);
     took_there(g);
     let Some(l) = list_of(l) else { return false };
@@ -153,7 +153,7 @@ pub fn fall_store_heard(g: &mut crate::game::Game, time: f64, gap: f64, l: Optio
 }
 
 /// Nothing waits in list `l` and its memory is new, and with the glass's list no glass lies; `list_only`: the landings alone go. (fallshome.ts FallStore.clear)
-pub fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: Option<f64>) {
+pub(super) fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: Option<f64>) {
     let (list_only, l) = (list_only.unwrap_or(false), l.unwrap_or(FALL_GLASS));
     took_there(g);
     let Some(l) = list_of(l) else { return };
@@ -161,13 +161,13 @@ pub fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: O
 }
 
 /// One rule: in Rust always the module's, so `here` is never run and this file's rules call the module directly. (fallshome.ts FallStore.rule)
-pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &dyn FnMut(&mut crate::game::Game) -> T) -> T {
+fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &dyn FnMut(&mut crate::game::Game) -> T) -> T {
     took_there(g);
     there(g)
 }
 
 /// The cell (x, z) is in, or NCELLS where the world has no floor under it. (fallshome.ts cell)
-pub fn cell(x: f64, z: f64) -> f64 {
+fn cell(x: f64, z: f64) -> f64 {
     let (ix, iz) = (m::floor(x / FALL_CELL), m::floor(z / FALL_CELL));
     if ix >= 0.0 && ix < FALL_CELLS_X && iz >= 0.0 && iz < FALL_CELLS_Z { iz * FALL_CELLS_X + ix } else { NCELLS }
 }

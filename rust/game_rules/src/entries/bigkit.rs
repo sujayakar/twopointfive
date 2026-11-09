@@ -40,7 +40,7 @@ fn rebound_kind(k: crate::game::PlayerKickToolKind) -> crate::character::BigRebo
 }
 
 /// `BIGKIT_BREAK=1`, the check's: never on in the game   (bigkit.ts bigBroken)
-pub fn big_broken() -> bool {
+pub(super) fn big_broken() -> bool {
     BREAK
 }
 
@@ -236,7 +236,7 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
-pub fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
+fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
     match kind {
         BigEquipKind::Hammer => g.k.bigslot.equip_w,
         BigEquipKind::Shotgun => g.k.bigslot.draw_w,
@@ -244,12 +244,12 @@ pub fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f6
 }
 
 /// Seconds to put it back.   (bigkit.ts bigStow)
-pub fn big_stow(g: &crate::game::Game) -> f64 {
+fn big_stow(g: &crate::game::Game) -> f64 {
     g.k.bigslot.stow_w
 }
 
 /// After which a hammer's wind-up may begin (a shell: the same as bigEquip).   (bigkit.ts bigOutBy)
-pub fn big_out_by(g: &crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f64 {
+pub(super) fn big_out_by(g: &crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f64 {
     match kind {
         BigOutByKind::Hammer => {
             let equip = big_equip(g, BigEquipKind::Hammer);
@@ -289,24 +289,24 @@ pub fn sam_big_carry(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> boo
 }
 
 /// The hammer's wind-up (s).   (bigkit.ts bigWind)
-pub fn big_wind(g: &crate::game::Game) -> f64 {
+pub(super) fn big_wind(g: &crate::game::Game) -> f64 {
     g.k.bigslot.heft
 }
 
 /// From one blow to the next: never less than a follow-through and a wind-up.   (bigkit.ts bigSwing)
-pub fn big_swing(g: &crate::game::Game) -> f64 {
+pub(super) fn big_swing(g: &crate::game::Game) -> f64 {
     m::max(g.k.bigslot.swing, crate::character::big_rebound(crate::character::BigReboundKind::Hammer) + g.k.bigslot.heft)
 }
 
 /// The beat is over and his legs are his own, the tool still going back onto him.   (bigkit.ts samBigTail)
-pub fn sam_big_tail(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+fn sam_big_tail(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pid = seat.player;
     let c = g.pl[pid].ch;
     g.ch[c].anim.big_tool.is_some() && !g.pl[pid].kick.as_ref().map_or(false, |k| k.tool.is_some())
 }
 
 /// What is left of the tail (s).   (bigkit.ts samBigLeft)
-pub fn sam_big_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+fn sam_big_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     let c = g.pl[seat.player].ch;
     match &g.ch[c].anim.big_tool {
         Some(b) if b.end >= 0.0 => m::max(0.0, b.end + b.stow - b.t),
@@ -568,7 +568,7 @@ pub fn carries_hammer(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The shotgun comes up off its sling into a teammate's hands; true once it has been up long enough for the shell to go.   (bigkit.ts gunUp)
-pub fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.gd[gd].slung.as_ref().map_or(false, |s| s.out) {
         let own = g.gd[gd].weapon;
         let def = g.fa[own].def;
@@ -605,7 +605,7 @@ pub fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// … and is slung again: his own gun back in his hands, as he put it down.   (bigkit.ts gunDown)
-pub fn gun_down(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn gun_down(g: &mut crate::game::Game, gd: GuardId) {
     let Some(s) = g.gd[gd].slung.as_mut() else { return };
     if !s.out {
         return;
@@ -624,7 +624,7 @@ pub fn gun_down(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// One blow of a teammate's hammer on d; true = the door gave.   (bigkit.ts hammerBlow)
-pub fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, last: bool) -> bool {
+pub(super) fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, last: bool) -> bool {
     let c = g.gd[gd].ch;
     g.stats.bigkit.mate_blows += 1;
     let (pos, id) = (g.ch[c].pos, g.ch[c].id);
@@ -645,7 +645,7 @@ pub fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, last: bool
 }
 
 /// The hammer off a teammate's back; every frame he is its door's man. Returns the record's `t0`: a caller that writes the record does so at `g.gd[gd].big_out`.   (bigkit.ts hammerOut)
-pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 {
+pub(super) fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 {
     if g.gd[gd].big_out.as_ref().map_or(true, |h| h.end >= 0.0) {
         let t0 = g.time;
         g.gd[gd].big_out = Some(crate::game::GuardBigOut { t0, blows: Vec::new(), end: -1.0, at });
@@ -655,7 +655,7 @@ pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 {
 }
 
 /// … and put back: begun now or as the blow just landed is followed through; `hard`, on his back at once.   (bigkit.ts hammerIn)
-pub fn hammer_in(g: &mut crate::game::Game, gd: GuardId, hard: Option<bool>) {
+pub(super) fn hammer_in(g: &mut crate::game::Game, gd: GuardId, hard: Option<bool>) {
     let hard = hard.unwrap_or(false);
     let Some((t0, end)) = g.gd[gd].big_out.as_ref().map(|h| (h.t0, h.end)) else { return };
     if end < 0.0 {
@@ -689,7 +689,7 @@ pub fn big_fired(g: &mut crate::game::Game, c_2: CharId) {
 }
 
 /// Every frame: the animator is told where each man's beat stands; a hammer whose door is no longer his goes back.   (bigkit.ts hammerOutTick)
-pub fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool) {
+pub(super) fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];

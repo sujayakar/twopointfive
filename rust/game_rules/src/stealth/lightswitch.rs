@@ -15,12 +15,12 @@ fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.
 
 // ---------------------------------------------------------------- finding them
 /// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)
-pub fn switches_live(g: &crate::game::Game) -> bool {
+fn switches_live(g: &crate::game::Game) -> bool {
     !g.touring && !crate::director::director_showing(g)
 }
 
 /// Is this fixture one a wall switch works: on the mains and a light of the room. (lightswitch.ts roomLight)
-pub fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
+fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
     let f = &g.tab.sim_lightshome_fixture[t];
     if !f.mains || f.group == "exterior" || f.group == "emergency" { return false; }
     if f.kind == crate::sim_lightshome::FixtureKind::Analytic { return f.light.is_some(); }
@@ -31,7 +31,7 @@ pub fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The room a fixture hangs in: of the floor under it, or of the nearest floor it has a clear line down to. (lightswitch.ts roomOfLight)
-pub fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
+fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
     let pos = g.tab.sim_lightshome_fixture[t].pos;
     let r = crate::cleared::cleared_rooms_room_at(g, pos);
     if js::truthy(r) { return r; }
@@ -51,7 +51,7 @@ pub fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
 }
 
 /// A ray at the level's own boxes, the leaves aside. (lightswitch.ts wallRay)
-pub fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
+fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     crate::scene_collision::raycast_over(g, &crate::ask::Over::statics(), ro, rd, tmax)
 }
 
@@ -65,7 +65,7 @@ fn solid(g: &mut Game, h: &Option<Ray>) -> bool {
 }
 
 /// A plate on the wall behind `stand`, or none: plain solid wall under all of it, room for a man, this room's floor at his back, clear of every leaf. (lightswitch.ts plateOn)
-pub fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorId) -> Option<crate::lightswitch::Plate> {
+fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorId) -> Option<crate::lightswitch::Plate> {
     let (height, stand_m) = (g.k.lightswitch.height, g.k.lightswitch.stand_m);
     let back: V3 = [-n[0], 0.0, -n[2]];
     let (ux, uz) = (n[2], -n[0]);
@@ -109,7 +109,7 @@ pub fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorI
 }
 
 /// The plate a door gives the room on its `side` face: past a jamb along the door's own wall, the latch side first. (lightswitch.ts plateAt)
-pub fn plate_at(g: &mut crate::game::Game, d: DoorId, side: f64, room: f64) -> Option<crate::lightswitch::Plate> {
+fn plate_at(g: &mut crate::game::Game, d: DoorId, side: f64, room: f64) -> Option<crate::lightswitch::Plate> {
     let f = crate::guards::frame_of(g, d);
     let n: V3 = [f.nx * side, 0.0, f.nz * side];
     let (beside, stand_m) = (g.k.lightswitch.beside.clone(), g.k.lightswitch.stand_m);
@@ -124,7 +124,7 @@ pub fn plate_at(g: &mut crate::game::Game, d: DoorId, side: f64, room: f64) -> O
 }
 
 /// Where that wall gives none: the plain wall of the room nearest the door, inside `scanM` of it. (lightswitch.ts plateNear)
-pub fn plate_near(g: &mut crate::game::Game, d: DoorId, room: f64) -> Option<crate::lightswitch::Plate> {
+fn plate_near(g: &mut crate::game::Game, d: DoorId, room: f64) -> Option<crate::lightswitch::Plate> {
     let (scan_m, height, stand_m) = (g.k.lightswitch.scan_m, g.k.lightswitch.height, g.k.lightswitch.stand_m);
     let cs = g.col.nav.cell;
     let c = g.dr[d].frame_centre;
@@ -168,12 +168,12 @@ fn fewest_of(ps: &[Plate], per_room: f64, apart_m: f64) -> Vec<Plate> {
 }
 
 /// Of a circuit's plates, the `perRoom` to keep: the first found, then each time the furthest from those kept, while far enough. (lightswitch.ts fewest)
-pub fn fewest(g: &crate::game::Game, ps: &[crate::lightswitch::Plate]) -> Vec<crate::lightswitch::Plate> {
+fn fewest(g: &crate::game::Game, ps: &[crate::lightswitch::Plate]) -> Vec<crate::lightswitch::Plate> {
     fewest_of(ps, g.k.lightswitch.per_room, g.k.lightswitch.apart_m)
 }
 
 /// Find the level's plates: each room with mains lights, each door of it, a plate a circuit. (lightswitch.ts build)
-pub fn build(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallSwitch> {
+fn build(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallSwitch> {
     let mut lights: JsMap<crate::Num, Vec<FixtureId>> = JsMap::default();
     let targets = g.targets.clone();
     for t in targets {
@@ -245,12 +245,12 @@ fn standing(g: &mut Game, all: &[WallSwitch]) -> Vec<WallSwitch> {
 }
 
 /// The level's geometry serial, moved by every wall blown and by a load that puts one back. (lightswitch.ts geomSerial)
-pub fn geom_serial(g: &mut crate::game::Game) -> f64 {
+fn geom_serial(g: &mut crate::game::Game) -> f64 {
     g.engine.world.geom_serial
 }
 
 /// Is the wall a plate was hung on still behind it. (lightswitch.ts wallStands)
-pub fn wall_stands(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
+fn wall_stands(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
     let (height, stand_m) = (g.k.lightswitch.height, g.k.lightswitch.stand_m);
     let h = wall_ray(g, [sw.stand[0], height, sw.stand[2]], [-sw.n[0], 0.0, -sw.n[2]], stand_m + 0.2);
     match h {
@@ -278,14 +278,14 @@ pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) ->
 }
 
 /// May Sam be planted at a plate for his hand's move: not from a wall hold. (lightswitch.ts plants)
-pub fn plants(g: &crate::game::Game, by: CharId) -> bool {
+fn plants(g: &crate::game::Game, by: CharId) -> bool {
     let Some(s) = crate::seats::seat_of_char(g, Some(by)) else { return false };
     let pl = crate::cmd::seat_man(g, s);
     g.puppet.is_none() && g.pl[pl].wall.is_none()
 }
 
 /// The time his turn to the plate and his step in to it take. (lightswitch.ts turnSecs)
-pub fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
+fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
     let (yaw, pos) = (g.ch[by].body_yaw, g.ch[by].pos);
     let (stand_m, step_pace) = (g.k.handwork.stand_m, g.k.handwork.step_pace);
     let face = m::atan2(-sw.n[0], -sw.n[2]);
@@ -295,7 +295,7 @@ pub fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::Wal
 }
 
 /// What breaks the plant off: he is down, has a man or a body in hand, is folded by a blast, or has been moved off the plate. (lightswitch.ts plantBroken)
-pub fn plant_broken(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::lightswitch::Hand) -> bool {
+fn plant_broken(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::lightswitch::Hand) -> bool {
     let pl = seat.player;
     let p = &g.pl[pl];
     if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
@@ -345,13 +345,13 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
 
 // ---------------------------------------------------------------- Sam's row and its deed
 /// (lightswitch.ts handsFree)
-pub fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
+fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
     let p = &g.pl[pl];
     p.dragging.is_none() && !p.sprinting && p.takedown.is_none() && p.holding.is_none()
 }
 
 /// The plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest. (lightswitch.ts switchNear)
-pub fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate::lightswitch::WallSwitch> {
+fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate::lightswitch::WallSwitch> {
     if !switches_live(g) { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
@@ -416,7 +416,7 @@ pub fn switch_act(g: &mut crate::game::Game, pl: PlayerId, verb: crate::game::Ve
 
 // ---------------------------------------------------------------- once a frame
 /// Can this man put a room's lights back: a living defender on his own feet and his own business. (lightswitch.ts putsBack)
-pub fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
+fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     let man = &g.gd[gd];
     let team = man.team;

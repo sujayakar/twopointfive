@@ -35,7 +35,7 @@ fn said_nag(g: &Game, why: Why) -> String {
 }
 
 /// Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first).   (sneak.ts track)
-pub fn track(g: &mut crate::game::Game) {
+fn track(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
@@ -785,7 +785,7 @@ pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
 }
 
 /// His words over the net. False only when ONE VOICE kept it back (the line is still owed).   (sneak.ts cue)
-pub fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: &str, force: Option<bool>) -> bool {
+fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if line.is_empty() || (!force && g.time - m.cue_t < g.k.sneak.cue_gap && g.time >= m.cue_t) { return true; }
     if g.k.spotted.on && crate::spotted::spotted_mode(g, gd) != crate::spotted::SpottedMode::Calm {

@@ -47,7 +47,7 @@ fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
 
 // ---------------------------------------------------------------- the calls
 /// What this call gets: the way in, how many, how long, off the game's own die.   (qrf.ts dealt)
-pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
+pub(super) fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
     let qrf_eta = g.tune.qrf_eta;
     let r = response_of(g);
     let sandbox = v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0);
@@ -77,7 +77,7 @@ pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate:
 }
 
 /// The silent net: Sam's gunfire heard, then every man of the shift off the net: a radio check, then the team on the silence alone. Whether it asked now.   (qrf.ts silentNet)
-pub fn silent_net(g: &mut crate::game::Game) -> bool {
+fn silent_net(g: &mut crate::game::Game) -> bool {
     if g.qrf.silent_spent { return false; }
     let (mut roster, mut on) = (0, 0);
     for i in 0..g.guards.len() {
@@ -222,7 +222,7 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// T−10: the men exist from here, stood at the muster, the lead's word on the net.   (qrf.ts arriving)
-pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
+fn arriving(g: &mut crate::game::Game, quiet: bool) {
     use crate::qrf::{Phase, QrfState};
     g.qrf.state = QrfState::Arriving;
     g.qrf.said10 = true;
@@ -294,7 +294,7 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
 }
 
 /// Ten seconds out: an enemy now stands at the dealt way's muster: another clear way is taken, and control says so.   (qrf.ts reDeal)
-pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
+fn re_deal(g: &mut crate::game::Game, quiet: bool) {
     let r = match response_of(g) { Some(r) => r, None => return };
     if r.ways.len() < 2 { return; }
     let way = g.qrf.way as usize;
@@ -315,7 +315,7 @@ pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
 }
 
 /// T: the bar goes down, the leaf is thrown open off its real hinge, and they file in.   (qrf.ts deploy)
-pub fn deploy(g: &mut crate::game::Game, quiet: bool) {
+fn deploy(g: &mut crate::game::Game, quiet: bool) {
     g.qrf.state = crate::qrf::QrfState::Deployed;
     g.qrf.deployed_at = g.time;
     g.qrf.phase = crate::qrf::Phase::File;
@@ -339,7 +339,7 @@ pub fn deploy(g: &mut crate::game::Game, quiet: bool) {
 }
 
 /// Throw a shut (or nearly shut) leaf open away from `by` at a kick's pace, breaking nothing.   (qrf.ts flingOpen)
-pub fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
+fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
     use crate::doors::{door_angle, door_pos, door_set_closing, door_set_creak_armed, door_set_last_who, door_set_latched, door_set_quiet_t, door_set_since_bash, door_set_vel, doors_side};
     if m::abs(door_angle(g, d)) > 1.0 { return; }
     let side = doors_side(g, d, pos_of(g, by));
@@ -357,7 +357,7 @@ pub fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
 
 // ---------------------------------------------------------------- the men, every frame
 /// The element's frame: housekeeping, the door pulled to, the tier outside, the phase, then the scripted men's senses.   (qrf.ts tickMen)
-pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
+fn tick_men(g: &mut crate::game::Game, dt: f64) {
     use crate::game::GuardState;
     use crate::qrf::Phase;
     g.qrf.phase_t += dt;
@@ -608,7 +608,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
 }
 
 /// A response man went down since last frame: the nearest of theirs with him in view says so on the net.   (qrf.ts manDown)
-pub fn man_down(g: &mut crate::game::Game) {
+fn man_down(g: &mut crate::game::Game) {
     use crate::game::GuardState;
     let mut theirs = g.qrf.men.clone();
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { theirs.push(r.gd); } }
@@ -656,7 +656,7 @@ pub fn man_down(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- entry
 /// One man through the doorway every FILE_GAP, each to his fan mark facing his sector.   (qrf.ts phaseFile)
-pub fn phase_file(g: &mut crate::game::Game, el: &Vec<GuardId>) {
+fn phase_file(g: &mut crate::game::Game, el: &Vec<GuardId>) {
     let due = m::min(el.len() as f64, m::floor(g.qrf.phase_t / FILE_GAP) + 1.0);
     let mk = marks_of(g).unwrap();
     while g.qrf.filed < due {
@@ -684,7 +684,7 @@ pub fn phase_file(g: &mut crate::game::Game, el: &Vec<GuardId>) {
 }
 
 /// A point `d` along the yaw from `p` at height `y`: where a man's sector looks.   (qrf.ts sectorPoint)
-pub fn sector_point(p: V3, yaw: f64, d: Option<f64>, y: Option<f64>) -> V3 {
+pub(super) fn sector_point(p: V3, yaw: f64, d: Option<f64>, y: Option<f64>) -> V3 {
     let d = d.unwrap_or(5.0);
     let y = y.unwrap_or(1.0);
     [p[0] + m::sin(yaw) * d, y, p[2] + m::cos(yaw) * d]
@@ -692,7 +692,7 @@ pub fn sector_point(p: V3, yaw: f64, d: Option<f64>, y: Option<f64>) -> V3 {
 
 // ---------------------------------------------------------------- targeting
 /// Choose where the element goes next and set it moving. `fresh`: re-read the floor's fix first.   (qrf.ts pickTarget)
-pub fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fresh: bool) {
+pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fresh: bool) {
     use crate::qrf::{Phase, Target, TargetKind};
     let bf = fix_of(g);
     if let Some(b) = bf {
@@ -792,7 +792,7 @@ pub fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fresh: bool
 }
 
 /// The next of the level's named places to walk to: the nearest by the walk from `fix` nobody of theirs has stood on lately.   (qrf.ts sweepNext)
-pub fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate::qrf::Target> {
+fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate::qrf::Target> {
     let (mut best, mut bd) = (None, f64::INFINITY);
     for p in sweep_places(g) {
         let c = match nearest_free(g, p.pos) { Some(c) => c, None => continue };
@@ -809,7 +809,7 @@ pub fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate:
 }
 
 /// The list: the block's own `sweep`, or the quiet block's spots, a raid's quiet rooms and scenarios.places' areas by their middles.   (qrf.ts sweepPlaces)
-pub fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
+fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     use crate::qrf::SweepPlacesItem;
     fn mid(b: &crate::scene_scenarios::Rect) -> V3 { [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0] }
     let mut out: Vec<SweepPlacesItem> = Vec::new();
@@ -840,7 +840,7 @@ pub fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
 }
 
 /// The walk's length from `a` to `b` on the nav grid (Infinity: none).   (qrf.ts pathLen)
-pub fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
     let (mut l, mut q) = (0.0, a);
     for r in p { l += flat(q, r); q = r; }
@@ -848,13 +848,13 @@ pub fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// `p` on the floor, or the nearest free point to it.   (qrf.ts nearestFree)
-pub fn nearest_free(g: &mut crate::game::Game, p: V3) -> Option<V3> {
+pub(super) fn nearest_free(g: &mut crate::game::Game, p: V3) -> Option<V3> {
     if nav_blocked(g, p[0], p[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) }
 }
 
 // ---------------------------------------------------------------- movement as one element
 /// Where the walk to a room ends: a length past the stack marks along the stack line, away from the door.   (qrf.ts approachEnd)
-pub fn approach_end(g: &mut crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> V3 {
+fn approach_end(g: &mut crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> V3 {
     let s = p.stack;
     let u = v3::normalize([s[1][0] - s[0][0], 0.0, s[1][2] - s[0][2]]);
     for k in [1.6, 1.1, 0.6, 0.0] {
@@ -865,7 +865,7 @@ pub fn approach_end(g: &mut crate::game::Game, p: &crate::scene_level::RoomClear
 }
 
 /// The point man takes the leg to the target; each man behind walks to one station point of his own, moved under him.   (qrf.ts startMove)
-pub fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
+fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
     use crate::character::{Stance, UpperMode};
     let lead = el[0];
     g.qrf.phase = crate::qrf::Phase::Move;
@@ -891,19 +891,19 @@ pub fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// His aim point, made on first asking: the row itself.   (qrf.ts aimOf)
-pub fn aim_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
+fn aim_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
     let p = pos_of(g, m);
     g.qrf.aim_pts.get_or_insert_with(m, || [p[0], 1.0, p[2] + 1.0])
 }
 
 /// His station, made on first asking: the row itself.   (qrf.ts stationOf)
-pub fn station_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
+fn station_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
     let p = pos_of(g, m);
     g.qrf.stations.get_or_insert_with(m, || v3::copy(p))
 }
 
 /// The element walking: the trail, the stations down the file, the pace, a fresher fix, and arriving.   (qrf.ts phaseMove)
-pub fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
+fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
     use crate::character::{Stance, UpperMode};
     use crate::qrf::TargetKind;
     let lead = el[0];

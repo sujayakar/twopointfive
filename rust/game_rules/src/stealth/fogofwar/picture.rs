@@ -21,7 +21,7 @@ fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
 /// sees; lit but remembered out = lit only where the team sees. (What a man carries who is not on the team, and every flash not a teammate's own, take
 /// their class from the team's list, which the pass filled: render_lights::light_set_fog_class.)   (fogofwar.ts FogOfWar.fullBlock, its second half)
-pub fn fill(g: &mut crate::game::Game) {
+pub(super) fn fill(g: &mut crate::game::Game) {
     g.fog_picture.full_stats.hidden = 0.0;
     g.fog_picture.full_stats.ghosts = 0.0;
     g.fog_picture.full_stats.held = 0.0;
@@ -66,7 +66,7 @@ pub fn fill(g: &mut crate::game::Game) {
 }
 
 /// The fog has gone off: every class and kept face is taken back off the lights and the lamps.   (fogofwar.ts FogOfWar.fullClear, and the pass's own head)
-pub fn off(g: &mut crate::game::Game) {
+pub(super) fn off(g: &mut crate::game::Game) {
     g.fog_picture.face_recs.clear();
     if !g.fog_of_war.live { return; }
     let mut i = 0;
@@ -83,13 +83,13 @@ pub fn off(g: &mut crate::game::Game) {
 }
 
 /// A fresh encounter: no list kept for a viewer's draw, no lamp's face kept.   (fogofwar.ts FogOfWar.reset, the picture's two)
-pub fn reset(g: &mut crate::game::Game) {
+pub(super) fn reset(g: &mut crate::game::Game) {
     g.fog_picture.raw_at = -1.0;
     g.fog_picture.face_recs.clear();
 }
 
 /// The picture's face of a lamp: its boxes drawn lit or dark through `fog_emit` / `fog_mark`, which the upload alone reads; `lit` None = as it stands.   (fogofwar.ts FogOfWar.lampFace)
-pub fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<bool>) {
+fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<bool>) {
     let rec = if lit == Some(true) { g.fog_picture.face_recs.get(t).cloned() } else { None };
     let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
     let base = g.tab.sim_lightshome_fixture[t].base_emissive;
@@ -123,7 +123,7 @@ fn face_of(on: bool, kept: Option<V3>, base: V3) -> (V3, f64) {
 }
 
 /// A lamp the team knows lit: its face as it glows now is kept, the brightest of the last moments.   (fogofwar.ts FogOfWar.faceSeen)
-pub fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
+fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
     let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
     if boxes.is_empty() { return; }
     let n = boxes.len();

@@ -23,17 +23,17 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
 }
 
 /// Is the moving-feet rule of aimcost.ts in force? Never under a show. (aim.ts moveCost)
-pub fn move_cost(g: &crate::game::Game) -> bool {
+fn move_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
 /// Is the lamp rule of aimcost.ts in force? Never under a show. (aim.ts lampCost)
-pub fn lamp_cost(g: &crate::game::Game) -> bool {
+fn lamp_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
 /// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet. (aim.ts feedFeet)
-pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, on: bool, hold: Option<f64>) {
+fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, on: bool, hold: Option<f64>) {
     let hold = hold.unwrap_or(speed);
     a.speed_sm += (speed - a.speed_sm) * (1.0 - m::exp(-dt / m::max(tau, 1e-3)));
     if !a.speed_sm.is_finite() || a.speed_sm < 1e-4 {
@@ -43,13 +43,13 @@ pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed:
 }
 
 /// What the feet term reads for this shooter right now, m/s. (aim.ts feetOf)
-pub fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
+fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
     let f = m::max(m::hyp2(vel[0], vel[2]), a.speed_sm - steady_pace);
     if on { m::max(f, a.move_sm) * g.k.aimcost.move_k } else { f }
 }
 
 /// Feed one frame of the target into the bookkeeping; true if the bearing jumped. (aim.ts feedTarget)
-pub fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: f64, jump_deg: f64, tau: f64) -> bool {
+fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: f64, jump_deg: f64, tau: f64) -> bool {
     let dx = at[0] - from[0];
     let dz = at[2] - from[2];
     let dist = m::hyp2(dx, dz);
@@ -173,7 +173,7 @@ fn foe_or_player(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// The terms of a guard's cone under the model. (aim.ts guardTerms)
-pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim::GuardTerms {
+fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim::GuardTerms {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
     let s = ai_spread_of(g, gd);
@@ -377,7 +377,7 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
 }
 
 /// The one term Sam's fire sites add to their spread; stamps `last_shot`. (aim.ts samAim)
-pub fn sam_aim(g: &mut crate::game::Game) -> f64 {
+pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);
     if !g.tune.aim_model || g.puppet.is_some() {

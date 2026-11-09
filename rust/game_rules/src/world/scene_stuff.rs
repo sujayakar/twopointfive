@@ -5,7 +5,7 @@ use crate::js::{self, JsMap, JsSet};
 use alloc::{format, string::String};
 
 /// A paint's record with only the words it means: a finish needs its roughness, a metal flag goes with one, 'plain' is no word. (stuff.ts record)
-pub fn record(name: &str, finish: Option<crate::scene_stuff::Finish>, stuff: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::Paint {
+fn record(name: &str, finish: Option<crate::scene_stuff::Finish>, stuff: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::Paint {
     let (rough, metal) = match finish {
         Some(f) if f.rough.is_some() => (f.rough, if f.metal == Some(true) { Some(true) } else { None }),
         _ => (None, None),
@@ -20,7 +20,7 @@ pub fn record(name: &str, finish: Option<crate::scene_stuff::Finish>, stuff: Opt
 }
 
 /// What a paint is, in words, for the refusal's message. (stuff.ts fin)
-pub fn fin(p: &crate::scene_stuff::Paint) -> String {
+fn fin(p: &crate::scene_stuff::Paint) -> String {
     let stuff = match p.stuff {
         Some(s) => s.as_str(),
         None => "plain",

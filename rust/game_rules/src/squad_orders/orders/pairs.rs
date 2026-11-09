@@ -16,7 +16,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 // ------------------------------------------------------------ a walk, asked for a menu
 
 /// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.   (orders.ts SquadOrders.asked)
-pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> crate::orders::SquadOrdersAsked {
+pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> crate::orders::SquadOrdersAsked {
     let at = man_pos(g, gd);
     let cell = g.col.nav.cell;
     let p = g.player;
@@ -48,7 +48,7 @@ pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> cra
 }
 
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.   (orders.ts SquadOrders.hasLine)
-pub fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
+pub(super) fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
     let p = man_pos(g, gd);
     let (at, door) = match t {
         OrderTarget::Floor(x) => (x.at, false),
@@ -83,7 +83,7 @@ fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.   (orders.ts SquadOrders.fileCross)
-pub fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
+fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
     let n = spots.len();
     let gap = g.k.orders.file_queue_gap;
     let cost = g.k.orders.file_queue_cost;
@@ -439,7 +439,7 @@ pub fn prop_penalty_at(g: &crate::game::Game, p: &crate::orders::PropPenalty, ix
 }
 
 /// ORDERS.sameWay: how far way `a` gets from way `b`, asked every half metre of `a`, and where on `a` that is.   (orders.ts farOff)
-pub fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
+pub(super) fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
     let off = |x: f64, z: f64| -> f64 {
         let mut mn = m::INF;
         for i in 1..b.len() {
@@ -472,7 +472,7 @@ pub fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
 // ------------------------------------------------------------ a door's frame and its name
 
 /// How far off a door's frame line a point is (signed: sideOf's sign).   (orders.ts offLine)
-pub fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub(super) fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0])
 }

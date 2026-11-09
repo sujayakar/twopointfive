@@ -56,7 +56,7 @@ fn script_end_state(s: crate::game::GuardState) -> crate::squad::EndGuardScriptS
 }
 
 /// the captor's clock, and the act it ends in: his gun on a hostage, the round, the next man's turn   (rescue.ts Rescue.clock)
-pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
+pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     if g.rescue.t0.is_nan() || rescue_over(g) { return; }
     if let Some(a) = g.rescue.act.clone() {
         let by = a.by;
@@ -168,7 +168,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him   (rescue.ts Rescue.endAct)
-pub fn rescue_end_act(g: &mut crate::game::Game) {
+fn rescue_end_act(g: &mut crate::game::Game) {
     let a = match g.rescue.act.take() {
         Some(a) => a,
         None => return,
@@ -186,7 +186,7 @@ pub fn rescue_end_act(g: &mut crate::game::Game) {
 }
 
 /// the captor's clock moves to a step: noted, and two of the steps told to the player   (rescue.ts Rescue.setStep)
-pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
+fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
     if s == g.rescue.step { return; }
     g.rescue.step = s;
     rescue_note(g, &alloc::format!("step:{}", s.as_str()));
@@ -198,7 +198,7 @@ pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) 
 }
 
 /// the hostages' count, the room secured and held, the run's end   (rescue.ts Rescue.outcome)
-pub fn rescue_outcome(g: &mut crate::game::Game) {
+pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     if rescue_over(g) { return; }
     let mut i = 0;
     while i < g.rescue.hostages.len() {
@@ -264,7 +264,7 @@ pub fn rescue_outcome(g: &mut crate::game::Game) {
 }
 
 /// the hostages' voices: one low line at a time across the room, off no game die   (rescue.ts Rescue.voices)
-pub fn rescue_voices(g: &mut crate::game::Game) {
+pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     let b = room(g);
     let hs = g.rescue.hostages.clone();
     let alive = standing(g, &hs);
@@ -313,7 +313,7 @@ fn next_voice(g: &mut Game, alive: &[GuardId]) -> GuardId {
 }
 
 /// the run's end: the result kept, the act let go, the card's line   (rescue.ts Rescue.end)
-pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
+fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
     let lost = state == RescueEndState::Lost;
     let ops = g.rescue.ops.clone();
     let team = (if g.pl[g.player].down { 0 } else { 1 }) + standing(g, &ops).len();
@@ -358,7 +358,7 @@ pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
 }
 
 /// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds
-pub fn rescue_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::rescue::RescueObjective> {
+pub(in crate::missions) fn rescue_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::rescue::RescueObjective> {
     if !g.rescue.active { return None; }
     let pos: Option<V3> = rescue_bounds(g).map(|r| [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]);
     if let Some(r) = g.rescue.result.clone() {

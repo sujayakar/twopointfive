@@ -8,7 +8,7 @@ use crate::v3::{self, V3};
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 
-pub fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
+pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     let &Sensed { c, staff, dist, pair, dazzled, staggered, .. } = s;
     let Acts { mut move_speed, mut crouch, mut duck, mut pied, .. } = Acts::still();
     let mut upper;

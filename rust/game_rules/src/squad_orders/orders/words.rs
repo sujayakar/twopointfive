@@ -4,7 +4,7 @@
 use crate::game::Game;
 
 /// the menu's words and quick word, read as things are
-pub fn read_words(g: &mut Game) {
+pub(super) fn read_words(g: &mut Game) {
     let Some(m) = g.orders.menu.clone() else { return };
     let mt = super::squad_orders_menu_target(g, &crate::seats::here(g)).unwrap();
     let words = m.rows.iter().map(|&d| super::squad_orders_label_of(g, d, &mt)).collect();

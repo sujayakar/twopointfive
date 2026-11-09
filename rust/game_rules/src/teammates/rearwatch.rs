@@ -73,14 +73,14 @@ fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
 }
 
 /// This view's book, made if it is not yet. (rearwatch.ts bookOf)
-pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
+fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (the literal in the TypeScript is all empty: the same as zeroed)
     g.m.rearwatch.books.get_or_insert_with(key, Book::default)
 }
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
-pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
+fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) {
         return true;
     }
@@ -652,7 +652,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
 }
 
 /// One row of the log, which keeps the newest 200. (rearwatch.ts note)
-pub fn note(b: &mut crate::rearwatch::Book, s: &str) {
+fn note(b: &mut crate::rearwatch::Book, s: &str) {
     b.log.push(String::from(s));
     b.rows += 1.0;
     if b.log.len() > 200 {
@@ -701,7 +701,7 @@ fn walk(g: &mut Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> 
 }
 
 /// A TAKEN ROOM'S OTHER DOOR, KEPT WHILE THE SQUAD LEAVES. (rearwatch.ts roomKeepTick)
-pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
+fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         for m in book!(g, pl).keeps.keys() {
             let_go(g, pl, m, "switched off");
@@ -957,7 +957,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// How far from `a` to `b` on foot: the straight line when nothing stands in it, else the nav grid's path. (rearwatch.ts walkTo)
-pub fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let d = flat(a, b);
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
         return d;
@@ -988,7 +988,7 @@ pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: Gu
 }
 
 /// Somebody not of this stack already has that way. (rearwatch.ts heldByOther)
-pub fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
+fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
     let (od, at) = (g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if let Some(op) = g_2.op {
         if let Some(l) = g.tab.doortools_door_op[op].lane.as_ref() {
@@ -1034,7 +1034,7 @@ pub fn rear_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, front: V3)
 }
 
 /// cover.ts deal(): the way this man is pinned to. (rearwatch.ts rearPinOf)
-pub fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
+pub(super) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let key = crate::seats::view_key(g, seat);
     let b = g.m.rearwatch.books.get(key)?;
     match b.pins.get(gd) {

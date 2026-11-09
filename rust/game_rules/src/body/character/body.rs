@@ -115,7 +115,7 @@ pub fn character_forward(g: &crate::game::Game, id: CharId) -> V3 {
     [m::sin(y), 0.0, m::cos(y)]
 }
 /// (Character.aimDir)
-pub fn character_aim_dir(g: &crate::game::Game, id: CharId) -> V3 {
+fn character_aim_dir(g: &crate::game::Game, id: CharId) -> V3 {
     let (p, y) = (g.ch[id].aim_pitch, g.ch[id].aim_yaw);
     let cp = m::cos(p);
     [m::sin(y) * cp, m::sin(p), m::cos(y) * cp]
@@ -165,7 +165,7 @@ pub fn character_update(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if let Some(st) = lent { crate::posehome::stage_shut(g, id, st); }
 }
 /// The turn, the animator, the skeleton and what is read off it. (Character.updateStanding)
-pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if g.ch[id].ragdoll.is_some() { character_update_ragdoll(g, id, dt); return; }
     if g.ch[id].turn.on && dt > 0.0 { character_turn_weigh(g, id, dt); }
     else {
@@ -221,7 +221,7 @@ pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64)
 }
 
 /// The fist that goes for the hammer goes to it at the side of his pack: the drawn skeleton only. (Character.packSidePass)
-pub fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
+fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
     let (n, sd, w, big_clear, big_grab) = { let an = &g.ch[id].anim; (an.nodes, an.big_side.unwrap(), an.big_at_back, an.big_clear, an.big_grab) };
     {
         let b = &g.ch[id].bones;
@@ -244,7 +244,7 @@ pub fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
     g.ch[id].in_hand_ov = Some(ov);
 }
 /// An arm re-solved so its wrist is at `t`, the hand's rotation `rot`, into `ov` and not the pose. (Character.reachOv)
-pub fn character_reach_ov(g: &crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
+fn character_reach_ov(g: &crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
     let n = g.ch[id].anim.nodes;
     let (i_s, i_e, i_h) = if right { (n.upper_arm_r, n.forearm_r, n.hand_r) } else { (n.upper_arm_l, n.forearm_l, n.hand_l) };
     let (s, e, h) = (node_pos(g, id, i_s), node_pos(g, id, i_e), node_pos(g, id, i_h));
@@ -270,7 +270,7 @@ pub fn character_reach_ov(g: &crate::game::Game, id: CharId, ov: &mut Vec<Option
 // ---- in hand ----
 
 /// The hand that holds a thing put where that thing is, the skeleton posed again over it: bones, gunDir and muzzle were read before. (Character.inHandPass)
-pub fn character_in_hand_pass(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_in_hand_pass(g: &mut crate::game::Game, id: CharId, dt: f64) {
     let n = g.ch[id].anim.nodes;
     let w = g.ch[id].in_hand;
     let mut cur = g.ch[id].in_hand_cur;
@@ -301,7 +301,7 @@ pub fn character_in_hand_pass(g: &mut crate::game::Game, id: CharId, dt: f64) {
 }
 
 /// What the hand does for the thing it holds: this frame's overrides into `ov`, none when the pass has nothing to say. (Character.inHandWord)
-pub fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cur: Option<crate::inhand::InHandWord>, hr: Quat, r: V3, l: V3, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>) {
+fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cur: Option<crate::inhand::InHandWord>, hr: Quat, r: V3, l: V3, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>) {
     let n = g.ch[id].anim.nodes;
     let w = g.ch[id].in_hand;
     let cur = match cur { Some(c) => c, None => { g.ch[id].in_hand_k = 0.0; return; } };
@@ -385,14 +385,14 @@ pub fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cu
 // ---- the turn ----
 
 /// His yaws come round to the AI's wish as a mass. (Character.turnWeigh)
-pub fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) {
     anim_rule_slot(g, id);
     character_turn_weigh_ask(g, id, dt);
 }
 /// where a layer's columns start on the bench's `args`
 const TURN_COLS_AT: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
 /// The bench's arguments, the rule, and his columns back; the column order is Character.turnCols. (Character.turnWeighAsk)
-pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) {
     // LAYERS.knobs?.() is rustknobs' knobsNow: the list again, unless a tick has already handed it
     if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
     {
@@ -443,7 +443,7 @@ pub fn character_joint_under(g: &crate::game::Game, id: CharId, name: &str) -> O
     c.bones.get(k).copied()
 }
 /// The world-space joints off the skeleton's current globals, into `b`. (Character.joints)
-pub fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
+fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
     let n = g.ch[id].anim.nodes;
     let world = g.ch[id].world;
     let rows: [(Bone, usize); 21] = [
@@ -460,7 +460,7 @@ pub fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::
     b.set(Bone::HeadTop, v3::add(head, [0.0, 0.2, 0.0]));
 }
 /// The joints and what is derived from them: chest facing, gun axis, muzzle. (Character.readBones)
-pub fn character_read_bones(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_read_bones(g: &mut crate::game::Game, id: CharId, dt: f64) {
     let n = g.ch[id].anim.nodes;
     if dt > 1e-5 && g.ch[id].bones.has(Bone::Hips) {
         // (a dt-0 re-bake keeps the older sample: it is still one real frame back)
@@ -599,7 +599,7 @@ fn use_shove(g: &mut Game, id: CharId, rag: RagdollId, rg: &crate::ragdoll::RAG,
 }
 
 /// Dead: step the particles, then pose the skeleton off them. A sleeping body costs nothing. (Character.updateRagdoll)
-pub fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
+fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
     let rag_id = g.ch[id].ragdoll.unwrap();
     if g.ch[id].guide.is_some() { character_guide_step(g, id, rag_id, dt); }
     crate::ragdoll::ragdoll_step(g, rag_id, dt);
@@ -708,7 +708,7 @@ fn pin_at(rag: &crate::ragdoll::Ragdoll, fr: &FallFrame, nd: &FallNod, at: &mut 
 fn lean_line(d: V3, deg: f64) -> V3 { [d[0] * m::sin(deg * DEGR), m::cos(deg * DEGR), d[2] * m::sin(deg * DEGR)] }
 
 /// A takedown's fall as a path for the trunk: a frame, and each particle its place in it. (Character.fallGuide)
-pub fn character_fall_guide(g: &mut crate::game::Game, id: CharId, rag: RagdollId, kind: crate::character::FallStyle, f: V3, h: V3, j: f64, side: f64) -> crate::character::FallGuide {
+fn character_fall_guide(g: &mut crate::game::Game, id: CharId, rag: RagdollId, kind: crate::character::FallStyle, f: V3, h: V3, j: f64, side: f64) -> crate::character::FallGuide {
     let rg = crate::ragdoll::rag();
     let from = g.ch[id].fall_from;
     let room = if g.ch[id].fall_tight { 0.2 } else { 1.0 };
@@ -819,7 +819,7 @@ fn fall_guide_of(rag: &crate::ragdoll::Ragdoll, rg: &crate::ragdoll::RAG, kind: 
     FallGuide { t: 0.0, end, pins, release, frame, nod }
 }
 /// A led fall's frame: its pins moved along their paths; let go at the end with the fall's own shove, or at once with none when anything else takes hold of the body. (Character.guideStep)
-pub fn character_guide_step(g: &mut crate::game::Game, id: CharId, rag: RagdollId, dt: f64) {
+fn character_guide_step(g: &mut crate::game::Game, id: CharId, rag: RagdollId, dt: f64) {
     let mut gd = g.ch[id].guide.take().unwrap();
     let t0 = gd.t; gd.t += dt;
     let mut taken = false;
@@ -864,7 +864,7 @@ fn fall_release(g: &mut Game, r: RagdollId, rel: FallRelease) {
 }
 
 /// A man out cold breathes: the skeleton alone posed again, fifteen times a second. (Character.breathFrame)
-pub fn character_breath_frame(g: &mut crate::game::Game, id: CharId, dt: f64, k: crate::character::CharacterBreathFrameK) {
+fn character_breath_frame(g: &mut crate::game::Game, id: CharId, dt: f64, k: crate::character::CharacterBreathFrameK) {
     let nd = g.ch[id].anim.nodes;
     if g.ch[id].br.is_none() {
         let c = &g.ch[id];
@@ -892,7 +892,7 @@ pub fn character_breath_frame(g: &mut crate::game::Game, id: CharId, dt: f64, k:
     skel_rag_pose(g, id);
 }
 /// …and stops: the drive's own overrides back; `pose` = the skeleton put back as it slept. (Character.breathEnd)
-pub fn character_breath_end(g: &mut crate::game::Game, id: CharId, pose: bool) {
+fn character_breath_end(g: &mut crate::game::Game, id: CharId, pose: bool) {
     {
         let c = &mut g.ch[id];
         let b = c.br.take().unwrap();
@@ -1065,7 +1065,7 @@ pub fn pos_replaced(g: &mut crate::game::Game, c: CharId) {
 }
 
 /// `this.posIn`: the array the animator was handed at the last Character.update, as it reads now.
-pub fn anim_pos_in(g: &crate::game::Game, c: CharId) -> V3 {
+pub(super) fn anim_pos_in(g: &crate::game::Game, c: CharId) -> V3 {
     let ch = &g.ch[c];
     if ch.anim.pos_in[0].is_nan() { ch.pos } else { ch.anim.pos_in }
 }

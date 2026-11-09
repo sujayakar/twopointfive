@@ -258,11 +258,11 @@ impl ControlState {
 
 /// this system's state, which the game holds for it and only this module can name (`g.ctl`, crate::owned)
 pub fn state(g: &Game) -> Option<&ControlState> { g.ctl.get() }
-pub fn state_mut(g: &mut Game) -> &mut ControlState { g.ctl.at() }
+pub(super) fn state_mut(g: &mut Game) -> &mut ControlState { g.ctl.at() }
 
 /// THE ARBITER, over `rules` at one stage of a man's frame: ask from the top; the first that answers has him. The caller acts on the answer
 /// and writes the record (`record`).
-pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Listed]) -> Option<(RuleId, Intent)> {
+fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Listed]) -> Option<(RuleId, Intent)> {
     if stage == Stage::Body { state_mut(g).row(gd).declined = 0; }
     for r in rules.iter().filter(|r| r.stage == stage) {
         (r.transition)(g, gd, dt);
@@ -276,17 +276,17 @@ pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Lis
 }
 
 /// the arbiter over the game's list, before anything of his own: the rule that has him and the script his body follows
-pub fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
+pub(super) fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
     match grant_from(g, gd, dt, Stage::Body, RULES)? { (r, Intent::Script(s)) => Some((r, s)), _ => None }
 }
 
 /// the arbiter over the game's list, in his fight: the rule that has him and the cover he takes
-pub fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
+pub(super) fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
     match grant_from(g, gd, dt, Stage::Cover, RULES)? { (r, Intent::Cover(c)) => Some((r, c)), _ => None }
 }
 
 /// WRITE THE RECORD: `to` has every channel of him this tick. Once a tick a man. A rule that had him and no longer does is told (`lost`).
-pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
+pub(super) fn record(g: &mut Game, gd: GuardId, to: Holder) {
     let now = g.time;
     let c = state_mut(g).row(gd);
     let was = c.holder[0];
@@ -307,13 +307,13 @@ pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
 }
 
 /// The end of a man's frame: where no rule and no script took him this tick, his own state had him.
-pub fn settle(g: &mut Game, gd: GuardId) {
+pub(super) fn settle(g: &mut Game, gd: GuardId) {
     let now = g.time;
     if state(g).and_then(|s| s.of(gd)).map_or(true, |c| c.t != now) { record(g, gd, Holder::Own); }
 }
 
 /// tell rule `r` what his body made of its intent
-pub fn commit(g: &mut Game, gd: GuardId, r: RuleId, o: Outcome) { (RULES[r as usize].commit)(g, gd, o) }
+pub(super) fn commit(g: &mut Game, gd: GuardId, r: RuleId, o: Outcome) { (RULES[r as usize].commit)(g, gd, o) }
 
 /// a rule's name, as its line of the list gives it
 pub fn rule_name(r: RuleId) -> &'static str { RULES[r as usize].name }

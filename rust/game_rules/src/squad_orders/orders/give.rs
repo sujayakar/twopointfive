@@ -88,31 +88,31 @@ fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
 fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
 // ---- an order's functions, called through its row (orders/rows/) ----
 /// `d.label(t)`
-pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
+fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
 /// `d.can(S, gd, t)`: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
-pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
+fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     match g.tab.orders_order_def[d].row.can { Some(f) => f(g, gd, t), None => None }
 }
 /// `d.only(S, men, t)`. A row with no `only`: men, as a copy (orders.ts:865, :1006)
-pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
     match g.tab.orders_order_def[d].row.only { Some(f) => f(g, men, t), None => men.to_vec() }
 }
 /// `d.valid(S, t, men)`: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
-pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match g.tab.orders_order_def[d].row.valid { Some(f) => f(g, t, men), None => Ok(()) }
 }
 /// `d.issue(S, men, t, opts)`: Some is the refusal, the string the closure returned (orders.ts:877)
 pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { (g.tab.orders_order_def[d].row.issue)(g, men, t, o) }
 /// the flat ring does not offer the row on this target at all. False with no `gone` (orders.ts:831)
-pub fn order_gone(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
+fn order_gone(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
     g.tab.orders_order_def[d].row.gone.map_or(false, |f| f(g, seat, t, men))
 }
 /// the row stands in for the one its data names now. False with no `when` (orders.ts:819)
-pub fn order_when(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
+fn order_when(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
     g.tab.orders_order_def[d].row.when.map_or(false, |f| f(g, seat, t, men))
 }
 /// `this.people?.ray(ro, rd, max) ?? null`: the man of the other side a cursor ray lands on nearer than `max` (orders.ts:783; the closure is pairorders.ts:162)
-pub fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
+fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
     if seat.orders.people.is_none() || !crate::pairorders::pair_orders_up(g, seat) { return None; }
     let (mut best, mut bt) = (None, max);
     let mut i = 0;
@@ -130,7 +130,7 @@ pub fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatR
 // ---- the bodies ----
 
 /// What the cursor is on, before the whole-squad rule (orders.ts SquadOrders.targetUnderOf)
-pub fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
+pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     if g.puppet.as_ref().map_or(false, |p| p.aim.is_some()) { return target_at(g, seat, seat.aim_point, asked); }
     if let Some(mk) = crate::rails::rails_mark_under(g, now) { return target_at(g, seat, mk, asked); }
     let (u, v) = (now.mouse[0] / m::max(1.0, now.client[0]), now.mouse[1] / m::max(1.0, now.client[1]));
@@ -197,7 +197,7 @@ pub fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view
 }
 
 /// What a cursor ray lands on of the scene, through glass and past the men (orders.ts SquadOrders.sceneHit)
-pub fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
+fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
     let f = crate::scene_boxes::box_flag();
     let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
     if let Some(h) = first {
@@ -247,7 +247,7 @@ pub fn squad_orders_rows_for(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// A ring put up now is one of the flat tree (orders.ts SquadOrders.flatRing)
-pub fn squad_orders_flat_ring(g: &crate::game::Game) -> bool {
+pub(super) fn squad_orders_flat_ring(g: &crate::game::Game) -> bool {
     !crate::rails::rails_live(g) || crate::rails::rails_flat_ring(g)
 }
 
@@ -268,7 +268,7 @@ fn flat_walk(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, men: Optio
 }
 
 /// Every order of the target for a flat ring (orders.ts SquadOrders.flatRows)
-pub fn squad_orders_flat_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
+fn squad_orders_flat_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
     let mut out: Vec<OrdersOrderDefId> = Vec::new();
     let mut seen: JsSet<String> = JsSet::new();
     let who = match men { Some(x) => x.to_vec(), None => recipients_of(g, &crate::seats::here(g), t) };
@@ -285,12 +285,12 @@ pub fn squad_orders_flat_rows(g: &crate::game::Game, seat: &crate::seats::SeatRe
 }
 
 /// The rows of a menu that is up, read afresh (orders.ts SquadOrders.menuRows)
-pub fn squad_orders_menu_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: &crate::orders::Menu, t: &crate::orders::OrderTarget) -> Vec<OrdersOrderDefId> {
+fn squad_orders_menu_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: &crate::orders::Menu, t: &crate::orders::OrderTarget) -> Vec<OrdersOrderDefId> {
     if on(m.flat) { squad_orders_flat_rows(g, seat, t, Some(&m.men)) } else { squad_orders_rows_for(g, seat, t, m.page.as_deref(), Some(&m.men)) }
 }
 
 /// A stand-in row put where the row it stands in for is (orders.ts SquadOrders.seat)
-pub fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId, stood: OrdersOrderDefId) {
+pub(super) fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId, stood: OrdersOrderDefId) {
     let (key, hot, page) = { let s = &g.tab.orders_order_def[stood]; (s.key, s.hot_key.clone(), s.page.clone()) };
     let r = &mut g.tab.orders_order_def[def];
     r.key = key; r.hot_key = hot; r.page = page;
@@ -299,12 +299,12 @@ pub fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId, stood
 }
 
 /// Is the 'wait for my word' row offered under these rows (orders.ts SquadOrders.wordRowOf)
-pub fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
+fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
     matches!(t, OrderTarget::Door(_)) && squad_orders_big(g, &crate::seats::here(g)) && rows.iter().any(|&d| on(g.tab.orders_order_def[d].on_word))
 }
 
 /// The open menu's page that has the 'wait for my word' row (orders.ts SquadOrders.wordPage)
-pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
+fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
     if m.page.is_some() { return None; }
     for &d in &m.rows {
         let opens = g.tab.orders_order_def[d].opens.clone();
@@ -317,7 +317,7 @@ pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The digit the open menu's 'wait for my word' row is on (orders.ts SquadOrders.waitDigit)
-pub fn squad_orders_wait_digit(g: &crate::game::Game, m: &crate::orders::Menu) -> f64 {
+fn squad_orders_wait_digit(g: &crate::game::Game, m: &crate::orders::Menu) -> f64 {
     let k = crate::orders::digit_of(&g.k.orders.wait_key);
     if m.word_row && k <= crate::orders::ORDER_DIGITS && !m.rows.iter().any(|&d| g.tab.orders_order_def[d].key == Some(k)) { k } else { 0.0 }
 }
@@ -462,7 +462,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
 }
 
 /// The line the panel shows for an order given (orders.ts SquadOrders.givenLine)
-pub fn squad_orders_given_line(g: &mut crate::game::Game, def: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> String {
+fn squad_orders_given_line(g: &mut crate::game::Game, def: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> String {
     let label = squad_orders_label_of(g, def, t);
     let said = drop_stock_word(&label).replacen("on your mark", "on my mark", 1);
     let who = squad_orders_who_words(g, &crate::seats::here(g), Some(men));
@@ -694,7 +694,7 @@ pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>, on_word:
 }
 
 /// A page of the open menu → the page it was opened from (orders.ts SquadOrders.pageBack)
-pub fn squad_orders_page_back(g: &mut crate::game::Game) -> bool {
+pub(super) fn squad_orders_page_back(g: &mut crate::game::Game) -> bool {
     let Some(page) = g.orders.menu.as_ref().and_then(|m| m.page.clone()) else { return false };
     let back = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].opens.as_ref() == Some(&page)).and_then(|d| g.tab.orders_order_def[d].page.clone());
     squad_orders_turn(g, back.as_deref(), None);
@@ -735,7 +735,7 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
 }
 
 /// An order of the ring that adds a goal, given by hand to its men alone (orders.ts SquadOrders.partGive)
-pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> {
+pub(super) fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> {
     let n = g.orders.group;
     let no = give(g);
     if g.orders.group != n {
@@ -746,12 +746,12 @@ pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The open menu's target as its men will work it (orders.ts SquadOrders.menuTarget)
-pub fn squad_orders_menu_target(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::orders::OrderTarget> {
+pub(super) fn squad_orders_menu_target(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::orders::OrderTarget> {
     seat.orders.menu.as_ref().map(menu_target_of)
 }
 
 /// The open menu's cheap half, re-read against the floor as it now stands (orders.ts SquadOrders.reread)
-pub fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
+fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
     let Some(t) = g.orders.menu.as_ref().map(|m| m.target.clone()) else { return false };
     if let OrderTarget::None(x) = &t {
         if let Some(man) = x.man {
@@ -778,7 +778,7 @@ pub fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
 }
 
 /// … and the whole of it: each row's why-not as well (orders.ts SquadOrders.refresh)
-pub fn squad_orders_refresh(g: &mut crate::game::Game) {
+pub(super) fn squad_orders_refresh(g: &mut crate::game::Game) {
     if g.orders.menu.is_none() || !squad_orders_reread(g) { return; }
     crate::squadthrow::plan::forget(g);
     let Some(m) = g.orders.menu.clone() else { return };
@@ -836,7 +836,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
 }
 
 /// Is the open menu's list stale now (orders.ts SquadOrders.due)
-pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> bool {
+pub(super) fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> bool {
     if let Some(p) = &m.page {
         if g.orders.defs.iter().any(|&d| { let r = &g.tab.orders_order_def[d]; r.opens.as_ref() == Some(p) && r.stands_in.is_some() }) { return true; }
     }
@@ -855,7 +855,7 @@ pub fn squad_orders_default_for(g: &crate::game::Game, seat: &crate::seats::Seat
 }
 
 /// What T would make of `who` with the cursor on `point` (orders.ts SquadOrders.whoAfterT)
-pub fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate::orders::OrderTarget>, dir: Option<f64>) -> crate::orders::Who {
+fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate::orders::OrderTarget>, dir: Option<f64>) -> crate::orders::Who {
     let dir = dir.unwrap_or(1.0);
     let s = squad_orders_squad(g, &crate::seats::here(g));
     let man = match point { Some(OrderTarget::None(x)) => x.man, _ => None };

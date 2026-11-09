@@ -38,7 +38,7 @@ fn lit_r(r: crate::darkdoor::DarkRoom) -> crate::darkdoor::StandsLitR {
 }
 
 /// one line of a kind from this man, the next of its pool by his own count: spoken, or on the net with the handset's chirp.   (darkdoor.ts bark)
-pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind, radio: bool) {
+fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind, radio: bool) {
     let (_, say, he, they) = *LINES.iter().find(|l| l.0 == kind).unwrap();
     let extra: Pool = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &they, &he) } else { he };
     let mut pool: Vec<&'static str> = Vec::new();
@@ -57,51 +57,51 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineK
 }
 
 /// distance on the floor.   (darkdoor.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
+fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// his chest, or where it would be.   (darkdoor.ts chestOf)
-pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Chest) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.2, p[2]]
 }
 
 /// his head, or where it would be.   (darkdoor.ts headOf)
-pub fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Head) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.6, p[2]]
 }
 
 /// a man this file is about at all: a living defender or a man of the night staff.   (darkdoor.ts ours)
-pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
+fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
     x.state != crate::game::GuardState::Dead && x.civ.is_none() && x.held.is_none() && (x.team == crate::teams::Team::Hostile || x.team == crate::teams::Team::Guard)
 }
 
 /// one of the hostage rescue's cast.   (darkdoor.ts rescued)
-pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
+fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
 
 /// he knows something is out there.   (darkdoor.ts alarmed)
-pub fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
+fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
     st == crate::game::GuardState::Suspicious || st == crate::game::GuardState::Search || st == crate::game::GuardState::Alert
 }
 
 /// nobody's but his own.   (darkdoor.ts own)
-pub fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
     x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.   (darkdoor.ts able)
-pub fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.touring || g.quiet_utility || !ours(g, gd) || !alarmed(g, gd) { return false; }
     !g.gd[gd].trained && own(g, gd)
 }
 
 /// in a fight, what his walk this frame is.   (darkdoor.ts fightWalk)
-pub fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightWalk {
+fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightWalk {
     if crate::teams::foe_down(g, gd) { return FightWalk::Other; }
     if g.time - g.gd[gd].last_seen_t < g.k.darkdoor.seen_secs { return FightWalk::Seen; }
     match (g.gd[gd].path_goal, g.gd[gd].last_known) {
@@ -111,7 +111,7 @@ pub fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightW
 }
 
 /// free to come to a mate, or to go in with one.   (darkdoor.ts canCome)
-pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
+fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
     if !ours(g, o) { return false; }
     let st = g.gd[o].state;
     if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has(g, o, crate::owner::by::NEEDS) { return false; }
@@ -119,7 +119,7 @@ pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
 }
 
 /// his row, made if he has none.   (darkdoor.ts mind; the skeleton's signature hands nothing back: `fear` below is the row)
-pub fn mind(g: &mut crate::game::Game, gd: GuardId) {
+fn mind(g: &mut crate::game::Game, gd: GuardId) {
     g.m.darkdoor.state_of.get_or_insert_with(gd, fresh_fear);
 }
 /// `mind`'s answer in the TypeScript: his row itself, made if he has none. Use it for a few lines and let it go before a call that takes `g`.
@@ -128,14 +128,14 @@ fn fear<'g>(g: &'g mut Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear {
 }
 
 /// is he green: morale's own answer unless `who` overrides.   (darkdoor.ts greenMan)
-pub fn green_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn green_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let who = g.k.darkdoor.who;
     if who != crate::knobs::DarkdoorKWho::Rest { return who == crate::knobs::DarkdoorKWho::All; }
     crate::morale::training_of(g, gd) == crate::morale::TrainingOf::Green
 }
 
 /// the nearest living man of his side inside `pairM` with nothing solid between his eyes and that man's chest.   (darkdoor.ts mateBy)
-pub fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> {
+fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> {
     let mut fit = fit;
     let c = g.gd[gd].ch;
     let eye = head_of(g, c);
@@ -159,7 +159,7 @@ pub fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMu
 }
 
 /// the man to call: of the `mateTry` nearest free to come and not yet dropped, the shortest walk to him inside `mateM`.   (darkdoor.ts freeMate)
-pub fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let k = g.k.darkdoor;
     let p = pos_of(g, gd);
     let tried = fear(g, gd).tried.clone();
@@ -186,7 +186,7 @@ pub fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// the level's rooms as lists of floor cells, dealt once a game (a game has one nav grid).   (darkdoor.ts roomCells)
-pub fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
+fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
     if g.m.darkdoor.cells_of.is_none() {
         g.m.darkdoor.cells_of = Some(JsMap::new());
         let (cell, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
@@ -211,7 +211,7 @@ pub fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
 }
 
 /// is the room dark: `samples` of its floor cells on the meter, kept `askSecs`. Open floor (room 0) is never dark.   (darkdoor.ts darkRoom)
-pub fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkRoom {
+fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkRoom {
     let k = g.k.darkdoor;
     let now_t = g.time;
     if !js::truthy(room) { return crate::darkdoor::DarkRoom { dark: false, mean: 1.0 }; }
@@ -244,7 +244,7 @@ pub fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkR
 }
 
 /// does he stand in the light, against the room ahead.   (darkdoor.ts standsLit)
-pub fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::StandsLitR) -> bool {
+fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::StandsLitR) -> bool {
     let k = g.k.darkdoor;
     let p = pos_of(g, gd);
     let here = crate::calmtorch::place_light(g, p[0], p[2]);
@@ -252,12 +252,12 @@ pub fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::St
 }
 
 /// an open doorway: the leaf off its hinges, or standing `openRad` off its frame.   (darkdoor.ts open)
-pub fn open(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn open(g: &mut crate::game::Game, d: DoorId) -> bool {
     crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.darkdoor.open_rad)
 }
 
 /// the next doorway on his walk inside `reach` metres of path.   (darkdoor.ts doorAhead)
-pub fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<crate::darkdoor::DoorAhead> {
+fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<crate::darkdoor::DoorAhead> {
     let mut run = 0.0;
     let mut a = pos_of(g, gd);
     let mut i = g.gd[gd].path_i;
@@ -285,7 +285,7 @@ pub fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<
 }
 
 /// where he waits: short of the frame, off the middle of the opening; None = nowhere but where he stands.   (darkdoor.ts standSpot)
-pub fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let k = g.k.darkdoor;
     let f = crate::guards::frame_of(g, d);
     let p = pos_of(g, gd);
@@ -311,12 +311,12 @@ pub fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) 
 }
 
 /// is this door one that will not stop him.   (darkdoor.ts passes)
-pub fn passes(s: &crate::darkdoor::Fear, door: f64, t: f64) -> bool {
+fn passes(s: &crate::darkdoor::Fear, door: f64, t: f64) -> bool {
     s.pass.iter().any(|p| p.door == door && t < p.until)
 }
 
 /// this door will not stop him for `againSecs`.   (darkdoor.ts pass)
-pub fn pass(g: &mut crate::game::Game, gd: GuardId, door: f64) {
+fn pass(g: &mut crate::game::Game, gd: GuardId, door: f64) {
     let now = g.time;
     let until = now + g.k.darkdoor.again_secs;
     let s = fear(g, gd);
@@ -325,7 +325,7 @@ pub fn pass(g: &mut crate::game::Game, gd: GuardId, door: f64) {
 }
 
 /// a mate is let go where he is.   (darkdoor.ts drop)
-pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
+fn drop(g: &mut crate::game::Game, gd: GuardId) {
     let s = fear(g, gd);
     s.act = DarkDoorAct::None;
     s.t = 0.0;
@@ -336,7 +336,7 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// the act is over: he is his own man again, and a mate still on his way to him with him.   (darkdoor.ts end)
-pub fn end(g: &mut crate::game::Game, gd: GuardId, unresolved: Option<bool>) {
+fn end(g: &mut crate::game::Game, gd: GuardId, unresolved: Option<bool>) {
     let unresolved = unresolved.unwrap_or(false);
     if let Some(o) = fear(g, gd).other {
         let hit = match g.m.darkdoor.state_of.get(o) { Some(so) => so.other == Some(gd) && so.act == DarkDoorAct::Come, None => false };
@@ -357,7 +357,7 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId, unresolved: Option<bool>) {
 }
 
 /// a mate is told to come: the floor's own walk to a fix, the fix on the man who called.   (darkdoor.ts call)
-pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
+fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     let mp = pos_of(g, m);
     let row = fear(g, m);
     row.act = DarkDoorAct::Come;
@@ -485,7 +485,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
 }
 
 /// one frame at the frame: is the wait over, else his feet. `seen` = a foe in his eyes: the wait's clock stands.   (darkdoor.ts hold)
-pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool) -> Option<f64> {
+fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool) -> Option<f64> {
     let k = g.k.darkdoor;
     let c = g.gd[gd].ch;
     let (door, side) = { let s = fear(g, gd); (s.door, s.side) };
@@ -696,7 +696,7 @@ pub fn dark_door_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// a mate is lost on the way: dropped, and the man who called him calls the next.   (darkdoor.ts lose)
-pub fn lose(g: &mut crate::game::Game, gd: GuardId) {
+fn lose(g: &mut crate::game::Game, gd: GuardId) {
     let call_secs = g.k.darkdoor.call_secs;
     let s = fear(g, gd);
     let (other, act) = (s.other, s.act);

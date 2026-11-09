@@ -117,7 +117,7 @@ pub fn mission_list() -> Vec<Mission> {
 }
 
 /// A mission by its id, cut from the lists or not.
-pub fn mission_by_id(id: &str) -> Option<Mission> {
+fn mission_by_id(id: &str) -> Option<Mission> {
     if id == SOLO_ID { return Some(solo_night()); }
     all_missions().into_iter().find(|e| e.id == id).map(mission_of)
 }

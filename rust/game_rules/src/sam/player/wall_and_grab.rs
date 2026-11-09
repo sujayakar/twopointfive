@@ -45,7 +45,7 @@ fn lose_path(g: &mut Game, gd: GuardId) {
 }
 
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?   (player.ts stackInWay)
-pub fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
+fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
     let g = a.game();
     let c = g.pl[p].ch;
     let pos = g.ch[c].pos;
@@ -97,7 +97,7 @@ fn stack_hold(g: &mut Game, p: PlayerId) {
 }
 
 /// Stacked on the wall: is the rifle UP this frame? Clicks are held and paid out through input.clicked.   (player.ts stackUp)
-pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
+pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
     let p = g.player;
     let ws = g.k.wallsnap;
     if g.pl[p].wall.unwrap().settle < 1.0 {
@@ -165,7 +165,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
 }
 
 /// Stacked at an open end: does he step out round it? The signed metres along the wall to stand past his station. `w` is `pl.wall`, read and written there.   (player.ts stackLean)
-pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, dir: f64) -> f64 {
+fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, dir: f64) -> f64 {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
     if w0.lean.is_none() { return 0.0; }
@@ -267,7 +267,7 @@ pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerI
 }
 
 /// One frame of the hold's pose: the take and the landing to the animator; on the stack the stance, the press and the rifle's carriage.   (player.ts wallSnapPose)
-pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
+pub(super) fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
     let p = g.player;
     let c = g.pl[p].ch;
     let ws = g.k.wallsnap;
@@ -297,7 +297,7 @@ pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
 }
 
 /// The camera on the wall: the look-at eased into the room and toward the side he looks; through a stack's step-out it holds still. `w` is `pl.wall`, read and written there.   (player.ts wallSnapCam)
-pub fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
+fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
     if w0.take_t.is_none() || w0.settle < 1.0 { return; }
@@ -356,7 +356,7 @@ fn wall_ease(s: f64, take_t: Option<f64>, ease_pow: f64) -> f64 {
 }
 
 /// One frame on the wall, in place of free movement; false = he has just come off it and the caller moves him as a free man this same frame.   (player.ts moveOnWall)
-pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool {
+pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     let ws = g.k.wallsnap;
@@ -615,7 +615,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
 }
 
 /// One frame of the takedown: hold station on the man, land the blow at its beat, give control back as it recovers.   (player.ts updateTakedown)
-pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
+pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
     let Some(td) = g.pl[p].takedown else { return; };
     let gd = td.g;
@@ -862,7 +862,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
 }
 
 /// N: the goggles' switch, and the tube's picture easing after them.   (player.ts nvKey)
-pub fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) {
+pub(super) fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) {
     let p = g.player;
     if g.pl[p].nv && !crate::kit::kit_you_nvg(g, p) { g.pl[p].nv = false; }
     let (rifle, pistol) = (g.pl[p].rifle, g.pl[p].pistol);

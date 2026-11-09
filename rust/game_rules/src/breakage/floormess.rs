@@ -20,16 +20,16 @@ use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 
 /// (src/game/floormess.ts:108 messBurst)
-pub fn mess_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) { let e = OutMessBurst { at, size }; mark_asked(g, Ask::Burst(e)); }
+pub(super) fn mess_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) { let e = OutMessBurst { at, size }; mark_asked(g, Ask::Burst(e)); }
 
 /// (src/game/floormess.ts:115 messWall)
 pub fn mess_wall(g: &mut crate::game::Game, p: V3, n: V3, thick: f64, through: bool) { let e = OutMessWall { p, n, thick, through }; mark_asked(g, Ask::Wall(e)); }
 
 /// (src/game/floormess.ts:123 messOpened)
-pub fn mess_opened(g: &mut crate::game::Game, rect: [f64; 4]) { let e = OutMessOpened { rect }; mark_asked(g, Ask::Opened(e)); }
+pub(super) fn mess_opened(g: &mut crate::game::Game, rect: [f64; 4]) { let e = OutMessOpened { rect }; mark_asked(g, Ask::Opened(e)); }
 
 /// A resting piece the debris pool took: the crushed mark of it where it lay (a pane's fallen cell leaves none), asked by value, since the slot is another's when the tick is done. (src/game/floormess.ts messEvicted)
-pub fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {
+pub(super) fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let c = &g.tab.debris_chunk[c_2];
     if c.glass.is_some() { return; }
     let (mat, at) = (c.mat.as_ref().map(|m| m.mat), c.box_);
@@ -114,7 +114,7 @@ fn patch(g: &mut Game, x: f64, z: f64, want: f64, strength: f64, k: f64, heart: 
 }
 
 /// A HEART and its LOBES round (x, z). `face` (a unit x, z) turns the lobes into a fan that way (a charge's side of its wall), else they ring it.
-pub fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Spread, size: f64, face: Option<[f64; 2]>) {
+fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Spread, size: f64, face: Option<[f64; 2]>) {
     let clear_y = g.k.chaos.mess.clear_y;
     let stand_y = g.k.chaos.mess.stand_y;
     // a heart hard against something standing moves off it first: half its reach of room, where there is room
@@ -140,7 +140,7 @@ pub fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Sp
 }
 
 /// A BURST went off at `at`; `size` 1 = the hand grenade's.
-pub fn lay_burst(g: &mut Game, at: V3, size: Option<f64>) {
+pub(super) fn lay_burst(g: &mut Game, at: V3, size: Option<f64>) {
     let K = g.k.chaos.mess;
     if !on(g) || at[1] > K.roof_y { return; }   // (a burst on a roof leaves the room under it alone)
     let b = K.burst;
@@ -148,7 +148,7 @@ pub fn lay_burst(g: &mut Game, at: V3, size: Option<f64>) {
 }
 
 /// A WALL CHARGE went off: `p` on the wall's face at the charge, `n` off that face toward the charge's side, the wall `thick` m, `through` whether it opened a way (the far side's film goes only then).
-pub fn lay_wall(g: &mut Game, p: V3, n: V3, thick: f64, through: bool) {
+pub(super) fn lay_wall(g: &mut Game, p: V3, n: V3, thick: f64, through: bool) {
     if !on(g) { return; }
     let w = g.k.chaos.mess.wall;
     spread(g, p[0] + n[0] * w.out, p[2] + n[2] * w.out, crate::floormess::Spread { core: w.near.core, lobes: w.near.lobes, reach: w.near.reach, lobe: w.near.lobe, strength: w.near.strength }, 1.0, Some([n[0], n[2]]));
@@ -156,7 +156,7 @@ pub fn lay_wall(g: &mut Game, p: V3, n: V3, thick: f64, through: bool) {
 }
 
 /// A wall or a piece of cover OPENED over a rect for a reason that is not a blast's: a small film at its foot, each side of its long line.
-pub fn lay_opened(g: &mut Game, rect: [f64; 4]) {
+pub(super) fn lay_opened(g: &mut Game, rect: [f64; 4]) {
     if !on(g) { return; }
     let f = g.k.chaos.mess.foot;
     let [x0, z0, x1, z1] = rect;
@@ -169,7 +169,7 @@ pub fn lay_opened(g: &mut Game, rect: [f64; 4]) {
 }
 
 /// The debris pool took a resting chunk's slot: the crushed mark of it where it lay.
-pub fn lay_evicted(g: &mut Game, c: &crate::out_events::OutMessEvicted) {
+pub(super) fn lay_evicted(g: &mut Game, c: &crate::out_events::OutMessEvicted) {
     if !on(g) { return; }
     let R = g.k.chaos.mess.rubble;
     let long = m::max(c.h[0], m::max(c.h[1], c.h[2]));

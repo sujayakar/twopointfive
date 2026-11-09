@@ -93,19 +93,19 @@ pub fn door_pick(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::d
 /// (doors.ts Door.pick)
 pub fn door_set_pick(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK, v) }
 /// (doors.ts Door.picking)
-pub fn door_set_picking(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::PICKING, v) }
+pub(in crate::fittings) fn door_set_picking(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::PICKING, v) }
 /// (doors.ts Door.pickIdle)
-pub fn door_pick_idle(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_IDLE) }
+pub(super) fn door_pick_idle(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_IDLE) }
 /// (doors.ts Door.pickIdle)
-pub fn door_set_pick_idle(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_IDLE, v) }
+fn door_set_pick_idle(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_IDLE, v) }
 /// (doors.ts Door.pickClock)
-pub fn door_pick_clock(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_CLOCK) }
+pub(super) fn door_pick_clock(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_CLOCK) }
 /// (doors.ts Door.pickClock)
-pub fn door_set_pick_clock(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_CLOCK, v) }
+pub(super) fn door_set_pick_clock(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_CLOCK, v) }
 /// (doors.ts Door.pickN)
-pub fn door_pick_n(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_N) }
+pub(super) fn door_pick_n(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_N) }
 /// (doors.ts Door.pickN)
-pub fn door_set_pick_n(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_N, v) }
+pub(super) fn door_set_pick_n(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK_N, v) }
 /// (doors.ts Door.rattleT)
 pub fn door_rattle_t(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::RATTLE_T) }
 /// (doors.ts Door.rattleT)
@@ -115,7 +115,7 @@ pub fn door_guard_t(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim
 /// (doors.ts Door.guardT)
 pub fn door_set_guard_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::GUARD_T, v) }
 /// (doors.ts Door.passers)
-pub fn door_set_passers(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PASSERS, v) }
+pub(in crate::fittings) fn door_set_passers(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PASSERS, v) }
 
 /// THE SIDE IT OPENS INTO: the sign of every angle it can stand at; the page's DOORWAY: exitsOut off, leafWay on   (doors.ts Door.swing)
 pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
@@ -123,15 +123,15 @@ pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
     if js::truthy(c) { c } else { door_dealt(g, id) }
 }
 /// (doors.ts Door.dealt)
-pub fn door_dealt(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::DEALT) }
+fn door_dealt(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::DEALT) }
 /// (doors.ts Door.dealt)
-pub fn door_set_dealt(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::DEALT, v) }
+fn door_set_dealt(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::DEALT, v) }
 /// (doors.ts Door.outward)
-pub fn door_set_outward(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OUTWARD, v) }
+fn door_set_outward(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OUTWARD, v) }
 /// (doors.ts Door.clearway)
-pub fn door_clearway(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::CLEARWAY) }
+fn door_clearway(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::CLEARWAY) }
 /// (doors.ts Door.clearway)
-pub fn door_set_clearway(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::CLEARWAY, v) }
+fn door_set_clearway(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::CLEARWAY, v) }
 
 /// its lower stop: one-way, 0 on the side it does not open into   (doors.ts Door.minA)
 pub fn door_min_a(g: &crate::game::Game, id: DoorId) -> f64 {
@@ -147,14 +147,14 @@ pub fn door_pull_t(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim:
 /// (doors.ts Door.pullT)
 pub fn door_set_pull_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PULL_T, v) }
 /// (doors.ts Door.seenVel)
-pub fn door_seen_vel(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::VEL_SEEN) }
+fn door_seen_vel(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::VEL_SEEN) }
 /// (doors.ts Door.swept)
-pub fn door_swept(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::SWEPT) != 0.0 }
+fn door_swept(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::SWEPT) != 0.0 }
 /// (doors.ts Door.swept)
-pub fn door_set_swept(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::SWEPT, v) }
+pub(super) fn door_set_swept(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::SWEPT, v) }
 
 /// who last drove it open and how. A COPY of the columns, where the TypeScript hands the live record: a change is written back whole (`door_set_drive`)   (doors.ts Door.drive)
-pub fn door_drive(g: &crate::game::Game, id: DoorId) -> Option<crate::doors::DoorDrive> {
+fn door_drive(g: &crate::game::Game, id: DoorId) -> Option<crate::doors::DoorDrive> {
     if col(g, id, ::sim::doors::DRIVE) == 0.0 { return None; }
     Some(crate::doors::DoorDrive {
         who: col(g, id, ::sim::doors::DRIVE_WHO),
@@ -171,7 +171,7 @@ pub fn door_drive(g: &crate::game::Game, id: DoorId) -> Option<crate::doors::Doo
     })
 }
 /// a drive that is over leaves nothing: its columns are zeros   (doors.ts Door.drive)
-pub fn door_set_drive(g: &mut crate::game::Game, id: DoorId, v: Option<crate::doors::DoorDrive>) {
+fn door_set_drive(g: &mut crate::game::Game, id: DoorId, v: Option<crate::doors::DoorDrive>) {
     let Some(v) = v else {
         set_col(g, id, ::sim::doors::DRIVE, 0.0);
         for k in ::sim::doors::DRIVE_WHO..=::sim::doors::DRIVE_HIT { set_col(g, id, k, 0.0); }
@@ -192,23 +192,23 @@ pub fn door_set_drive(g: &mut crate::game::Game, id: DoorId, v: Option<crate::do
 }
 
 /// come to rest in its frame by a body's sweep: to, not latched   (doors.ts Door.restsTo)
-pub fn door_rests_to(g: &crate::game::Game, id: DoorId) -> bool {
+pub(super) fn door_rests_to(g: &crate::game::Game, id: DoorId) -> bool {
     door_swept(g, id) && !door_latched(g, id) && door_angle(g, id) == 0.0 && door_vel(g, id) == 0.0
 }
 /// (doors.ts Door.solidT)
-pub fn door_set_solid_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::SOLID_T, v) }
+fn door_set_solid_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::SOLID_T, v) }
 /// (doors.ts Door.pressT)
-pub fn door_set_press_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PRESS_T, v) }
+fn door_set_press_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PRESS_T, v) }
 /// (doors.ts Door.openT)
-pub fn door_set_open_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OPEN_T, v) }
+fn door_set_open_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OPEN_T, v) }
 /// (doors.ts Door.mirrored)
-pub fn door_mirrored(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::MIRRORED) }
+fn door_mirrored(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::MIRRORED) }
 /// (doors.ts Door.mirrored)
-pub fn door_set_mirrored(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::MIRRORED, v) }
+fn door_set_mirrored(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::MIRRORED, v) }
 /// off its hinges: to whoever reads a door, a doorway   (doors.ts Door.off)
 pub fn door_off(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::OFF) != 0.0 }
 /// (doors.ts Door.off)
-pub fn door_set_off(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::OFF, v) }
+pub(in crate::fittings) fn door_set_off(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::OFF, v) }
 
 /// the loose slab while the leaf is off. A COPY of the row as it stands now, where the TypeScript hands a view that reads the row at each field   (doors.ts Door.slab)
 pub fn door_slab(g: &mut crate::game::Game, id: DoorId) -> Option<crate::doors::SlabSeen> {
@@ -241,7 +241,7 @@ fn same_slab(a: &crate::doors::SlabSeen, b: &crate::doors::SlabSeen) -> bool {
         && a.wedged.unwrap_or(0.0).to_bits() == b.wedged.unwrap_or(0.0).to_bits()
 }
 /// sets a row whole, or with None gives the row up. Setting a door's slab to what `door_slab` just answered is nothing   (doors.ts Door.slab)
-pub fn door_set_slab(g: &mut crate::game::Game, id: DoorId, s: Option<crate::doors::SlabSeen>) {
+pub(in crate::fittings) fn door_set_slab(g: &mut crate::game::Game, id: DoorId, s: Option<crate::doors::SlabSeen>) {
     let i = g.dr[id].i;
     let Some(s) = s else { crate::sim_slabshome::slab_store_leave(g, i); return; };
     if let Some(row) = door_slab(g, id) { if same_slab(&s, &row) { return; } }
@@ -251,16 +251,16 @@ pub fn door_set_slab(g: &mut crate::game::Game, id: DoorId, s: Option<crate::doo
 }
 
 /// the rounds' work this leaf has taken   (doors.ts Door.shot)
-pub fn door_shot(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::SHOT) }
+pub(in crate::fittings) fn door_shot(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::SHOT) }
 /// (doors.ts Door.shot)
 pub fn door_set_shot(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::SHOT, v) }
 /// (doors.ts Door.creakArmed)
-pub fn door_creak_armed(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::CREAK_ARMED) != 0.0 }
+pub(super) fn door_creak_armed(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::CREAK_ARMED) != 0.0 }
 /// (doors.ts Door.creakArmed)
 pub fn door_set_creak_armed(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::CREAK_ARMED, v) }
 
 /// a door of the level: its row of the columns set as authored, its boxes made   (doors.ts Door.constructor)
-pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Option<f64>) -> DoorId {
+fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Option<f64>) -> DoorId {
     let index = index.unwrap_or(0.0);
     let mut door = crate::doors::Door::blank();
     door.i = index;
@@ -340,11 +340,11 @@ pub fn door_pos(g: &crate::game::Game, id: DoorId) -> V3 {
     [hinge[0] + u[0] * width * 0.5, 1.0, hinge[1] + u[1] * width * 0.5]
 }
 /// `p` is the kept centre from here on   (doors.ts Door.keptPos)
-pub fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
+pub(super) fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
     g.dr[id].pos_at = p;
 }
 /// the kept centre as it stands, whatever angle the leaf has now   (doors.ts Door.keptAt)
-pub fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
+pub(super) fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
 /// 'Closed enough' that using it means opening it   (doors.ts Door.isClosed)
 pub fn door_is_closed(g: &crate::game::Game, id: DoorId) -> bool { m::abs(door_angle(g, id)) < 0.25 }
 /// (doors.ts Door.dir)
@@ -389,7 +389,7 @@ pub fn door_set_swing(g: &mut crate::game::Game, id: DoorId, s: f64, outward: Op
     door_place(g, id);
 }
 /// One-way: an angle on the side it does not open into is the same opening on the side it does, its velocity turned with it   (doors.ts Door.keep)
-pub fn door_keep(g: &mut crate::game::Game, id: DoorId) {
+fn door_keep(g: &mut crate::game::Game, id: DoorId) {
     if door_angle(g, id) * door_swing(g, id) < 0.0 {
         let (a, lo, hi) = (door_angle(g, id), door_min_a(g, id), door_max_a(g, id));
         door_set_angle(g, id, v3::clamp(-a, lo, hi));
@@ -400,7 +400,7 @@ pub fn door_keep(g: &mut crate::game::Game, id: DoorId) {
     }
 }
 /// an angle (or a turn rate) as this door can have it   (doors.ts Door.sided)
-pub fn door_sided(g: &crate::game::Game, id: DoorId, a: f64) -> f64 {
+fn door_sided(g: &crate::game::Game, id: DoorId, a: f64) -> f64 {
     if a * door_swing(g, id) < 0.0 { -a } else { a }
 }
 /// the leaf's box and handles where its angle stands them   (doors.ts Door.place)
@@ -479,7 +479,7 @@ pub fn doors_pull_face(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
     ((from[0] - hinge[0]) * -m::sin(c) + (from[2] - hinge[1]) * m::cos(c)) * door_swing(g, d) >= 0.0
 }
 /// DOORWAY.frameHolds as it applies right now: no showcase on the stage   (doors.ts Doors.frameRule)
-pub fn doors_frame_rule(g: &crate::game::Game) -> bool { !doors_staged(g) }
+fn doors_frame_rule(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// WOULD THE FRAME HOLD A BOOT thrown at d from `from`   (doors.ts Doors.bootHolds)
 pub fn doors_boot_holds(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
     doors_frame_rule(g) && !door_off(g, d) && g.dr[d].def.steel != Some(true) && m::abs(door_angle(g, d)) < SHUT_HOME && doors_pull_face(g, d, from)
@@ -515,7 +515,7 @@ pub fn door_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: Optio
     (th >= 0.0 && th <= open) || swing_seg(s, x, z, c) <= pad || swing_seg(s, x, z, c + sw * open) <= pad
 }
 /// a showcase / the tour / the attract reel has the stage (game.ts:1200)   (doors.ts Doors.staged)
-pub fn doors_staged(g: &crate::game::Game) -> bool { g.touring }
+fn doors_staged(g: &crate::game::Game) -> bool { g.touring }
 /// DOORSTAY as it applies right now: leaves stay where they are left   (doors.ts Doors.stay)
 pub fn doors_stay(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// does this leaf's hydraulic closer work   (doors.ts Doors.hasCloser)
@@ -538,11 +538,11 @@ pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<
     (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
 }
 /// DOORTHROW as it applies right now: no showcase on the stage   (doors.ts Doors.throws)
-pub fn doors_throws(g: &crate::game::Game) -> bool { !doors_staged(g) }
+pub(super) fn doors_throws(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// would a turn of sign `dir` take d further OPEN (one-way: the way it opens)   (doors.ts Doors.opening)
-pub fn doors_opening(g: &crate::game::Game, d: DoorId, dir: f64) -> bool { dir == door_swing(g, d) }
+pub(super) fn doors_opening(g: &crate::game::Game, d: DoorId, dir: f64) -> bool { dir == door_swing(g, d) }
 /// DOORTHROW: somebody drove d open   (doors.ts Doors.driven)
-pub fn doors_driven(g: &mut crate::game::Game, d: DoorId, who: f64, dir: f64, kind: crate::doors::DoorDriveKind, quiet: bool, rate: f64) {
+pub(super) fn doors_driven(g: &mut crate::game::Game, d: DoorId, who: f64, dir: f64, kind: crate::doors::DoorDriveKind, quiet: bool, rate: f64) {
     let dr = door_drive(g, d);
     let s = if dir >= 0.0 { 1.0 } else { -1.0 };
     let man = crate::doorthrow::door_man(g, who);
@@ -582,7 +582,7 @@ pub fn doors_update(g: &mut crate::game::Game, dt: f64, contacts: &mut Vec<crate
     doors_take_back(g, contacts, n);
 }
 /// the world the step stands in made ready, with the game's own leaves in list 0: nothing to do with no door in the level. In Rust the step is always rust/sim's, so what was a way back to the TypeScript's own step is an assert   (doors.ts Doors.there)
-pub fn doors_there(g: &mut crate::game::Game, contacts: &[crate::doors::DoorContact]) {
+fn doors_there(g: &mut crate::game::Game, contacts: &[crate::doors::DoorContact]) {
     if g.doors.list.is_empty() { return; }
     debug_assert!(contacts.len() <= ::sim::doors::MAXC, "{} contacts at the doors in one step: its hand-over holds {}, and a game holds no more men than that many are of (game/levelfit.ts handOverMost)", contacts.len(), ::sim::doors::MAXC);
     let dyn_ = g.col.dynamic_boxes.clone();
@@ -598,7 +598,7 @@ fn step_io_read() -> &'static ::sim::doors::Io {
     unsafe { &*(::sim::doors::addr(0) as *const ::sim::doors::Io) }
 }
 /// the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed   (doors.ts Doors.handOver)
-pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact], slot: f64) -> f64 {
+fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact], slot: f64) -> f64 {
     let io = step_io();
     let (n, nc) = (g.doors.list.len(), contacts.len());
     let thr = doors_throws(g);

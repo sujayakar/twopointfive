@@ -12,7 +12,7 @@ fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
 /// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
-pub fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
+fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
 
@@ -37,7 +37,7 @@ pub fn doors_coming_home(g: &crate::game::Game, d: DoorId) -> bool {
 }
 
 /// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.   (doors.ts Doors.pull)
-pub fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
+pub(in crate::fittings) fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
     let quiet = quiet.unwrap_or(false);
     if door_off(g, d) { return; }
     if door_latched(g, d) || door_rests_to(g, d) {
@@ -244,7 +244,7 @@ fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCa
 }
 
 /// Told of every leaf that comes off, by whatever road, on the frame it leaves its frame.   (doors.ts Doors.torn)
-pub fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) {
+pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) {
     torn_feed(g, d, who, cause.unwrap_or(crate::doors::DoorsTornCause::Blast));
 }
 

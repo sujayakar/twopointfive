@@ -88,7 +88,7 @@ pub fn empty_word(t: Option<&crate::interact::EmptyThing>) -> String {
 }
 
 /// the movement keys down, a bit each (interact.ts moveMask)
-pub fn move_mask(g: &Game, input: InputId) -> f64 {
+fn move_mask(g: &Game, input: InputId) -> f64 {
     let mut mask = 0i32;
     for (i, k) in MOVE_KEYS.iter().enumerate() {
         if crate::input::input_down(g, input, k) { mask |= 1 << i; }
@@ -117,7 +117,7 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
 }
 
 /// Stop the running sustained verb where it is. True if there was anything to stop. (interact.ts cancelSustained)
-pub fn cancel_sustained(g: &mut Game) -> bool {
+pub(super) fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
     if g.pl[pl].easing.is_some() { g.pl[pl].easing = None; return true; }
     if g.pl[pl].picking.is_some() { crate::player::stop_picking(g, None); return true; }
@@ -150,13 +150,13 @@ pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// Sam's own ring is on (interact.ts ringMode)
-pub fn ring_mode(g: &Game) -> bool { g.puppet.is_none() }
+fn ring_mode(g: &Game) -> bool { g.puppet.is_none() }
 
 /// it is the ring that stays (interact.ts ringStays)
-pub fn ring_stays(g: &Game) -> bool { g.puppet.is_none() }
+fn ring_stays(g: &Game) -> bool { g.puppet.is_none() }
 
 /// a wedge's digit pressed this frame (interact.ts wedgeDigit)
-pub fn wedge_digit(g: &Game, input: InputId) -> bool {
+fn wedge_digit(g: &Game, input: InputId) -> bool {
     let mut d = 1;
     while d as f64 <= g.k.cmdring.wedges {
         if crate::input::input_hit(g, input, &format!("Digit{}", d)) { return true; }
@@ -166,7 +166,7 @@ pub fn wedge_digit(g: &Game, input: InputId) -> bool {
 }
 
 /// a row done by the key, a digit or a click: what updateInteract hands on as Game.act (interact.ts give)
-pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
+fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
     let r = match r { Some(r) => r, None => return };
     if r.kind == crate::game::InteractableKind::Cancel || !r.in_reach || r.verb.is_none() || r.running.unwrap_or(false) || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { return; }
     crate::lightswitch::switch_let_go(g);
@@ -174,7 +174,7 @@ pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first (interact.ts handRingKeys)
-pub fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
+fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
     let mut keys = 0i32;
     let n = m::min(seat.nearby.len() as f64, g.k.cmdring.wedges) as usize;
     for i in 0..n { if wedged(&seat.nearby[i]) { keys |= 1 << (i + 1); } }
@@ -211,7 +211,7 @@ pub fn choosable(rows: &[crate::game::Interactable]) -> bool {
 }
 
 /// the list opened, its cancel row at its foot at once (interact.ts openSelector)
-pub fn open_selector(g: &mut Game) {
+fn open_selector(g: &mut Game) {
     let pl = g.player;
     if g.pl[pl].sel.open { return; }
     g.pl[pl].sel.open = true;
@@ -223,7 +223,7 @@ pub fn open_selector(g: &mut Game) {
 }
 
 /// the list shut, the press itself untouched (interact.ts shutList)
-pub fn shut_list(g: &mut Game) {
+fn shut_list(g: &mut Game) {
     let pl = g.player;
     let ring = g.pl[pl].sel.ring.is_some();
     g.pl[pl].sel.open = false;
@@ -238,7 +238,7 @@ pub fn shut_list(g: &mut Game) {
 }
 
 /// shut the list AND end the press (`spent`: it must also come up before Space arms again) (interact.ts closeSelector)
-pub fn close_selector(g: &mut Game, spent: bool) {
+fn close_selector(g: &mut Game, spent: bool) {
     let pl = g.player;
     shut_list(g);
     g.pl[pl].sel.down_t = -1.0;
@@ -247,7 +247,7 @@ pub fn close_selector(g: &mut Game, spent: bool) {
 }
 
 /// the point his ring stands on: the thing its first row is about where that is near him; else his own body (interact.ts ringSpot)
-pub fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
+fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let p = g.ch[g.pl[seat.player].ch].pos;
     match seat.nearby.iter().find(|r| wedged(r)) {
         Some(h) if v3::dist_xz(h.pos, p) <= RING_THING_M => h.pos,
@@ -256,7 +256,7 @@ pub fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
 }
 
 /// the ring put on its thing (`open`) and kept there. True: the hand has not moved the cursor since the last look. (interact.ts ringOnThing)
-pub fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
     let open = open.unwrap_or(false);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if open {

@@ -8,19 +8,19 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// x held between lo and hi; lo wins a crossed pair.   (shards.ts clampI)
-pub fn clamp_i(x: f64, lo: f64, hi: f64) -> f64 {
+pub(super) fn clamp_i(x: f64, lo: f64, hi: f64) -> f64 {
     m::max(lo, m::min(hi, x))
 }
 
 /// a plate's cut edge: the pane's tint taken k of the way to the edge green.   (shards.ts edgeColour)
-pub fn edge_colour(tint: V3, k: f64) -> V3 {
+pub(super) fn edge_colour(tint: V3, k: f64) -> V3 {
     let q = m::min(1.0, k);
     let e = crate::shards::edge_green();
     [tint[0] + (e[0] - tint[0]) * q, tint[1] + (e[1] - tint[1]) * q, tint[2] + (e[2] - tint[2]) * q]
 }
 
 /// a CUT plate's face colour: dark body in the air, lifted toward the edge at rest, the floor through the tint when opaque at rest.   (shards.ts cutFaceAlbedo)
-pub fn cut_face_albedo(g: &crate::game::Game, tint: V3, under: V3, type_: crate::glasspen::PaneType, resting: bool) -> V3 {
+pub(super) fn cut_face_albedo(g: &crate::game::Game, tint: V3, under: V3, type_: crate::glasspen::PaneType, resting: bool) -> V3 {
     let k = g.k.shards.cut_body;
     if !(k > 0.0) {
         return plate_albedo(tint, under, type_);
@@ -34,7 +34,7 @@ pub fn cut_face_albedo(g: &crate::game::Game, tint: V3, under: V3, type_: crate:
 }
 
 /// a plate seen through: the surface under it × the tint, a little of the glass's grey-green; laminated is milky.   (shards.ts plateAlbedo)
-pub fn plate_albedo(tint: V3, under: V3, type_: crate::glasspen::PaneType) -> V3 {
+pub(super) fn plate_albedo(tint: V3, under: V3, type_: crate::glasspen::PaneType) -> V3 {
     let k = if type_ == crate::glasspen::PaneType::Laminated { 0.45 } else { 0.82 };
     [
         under[0] * tint[0] * k + tint[0] * (1.0 - k) * 0.6,
@@ -44,7 +44,7 @@ pub fn plate_albedo(tint: V3, under: V3, type_: crate::glasspen::PaneType) -> V3
 }
 
 /// the principal in-plane frame of a polygon on a plane of normal n: u along its long side, v across, extents and the middle of its bounds.   (shards.ts frameOf)
-pub fn frame_of(outline: &[V3], centre: V3, n: V3) -> crate::shards::GlassShardsCutPlatesFr {
+pub(super) fn frame_of(outline: &[V3], centre: V3, n: V3) -> crate::shards::GlassShardsCutPlatesFr {
     let t0 = v3::normalize(v3::cross(if m::abs(n[1]) > 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] }, n));
     let b0 = v3::cross(n, t0);
     let (mut cxx, mut cyy, mut cxy) = (0.0, 0.0, 0.0);
@@ -76,7 +76,7 @@ pub fn frame_of(outline: &[V3], centre: V3, n: V3) -> crate::shards::GlassShards
 }
 
 /// twice-signed-area ÷ 2, positive.   (shards.ts polyArea)
-pub fn poly_area(p: &[[f64; 2]]) -> f64 {
+pub(super) fn poly_area(p: &[[f64; 2]]) -> f64 {
     let mut a = 0.0;
     for i in 0..p.len() {
         let q = p[(i + 1) % p.len()];
@@ -86,7 +86,7 @@ pub fn poly_area(p: &[[f64; 2]]) -> f64 {
 }
 
 /// P without repeated points and without points on the straight line between their neighbours.   (shards.ts tidyPoly)
-pub fn tidy_poly(p: &[[f64; 2]]) -> Vec<[f64; 2]> {
+pub(super) fn tidy_poly(p: &[[f64; 2]]) -> Vec<[f64; 2]> {
     let mut q: Vec<[f64; 2]> = Vec::new();
     for &pt in p {
         let keep = match q.last() {
@@ -122,7 +122,7 @@ pub fn tidy_poly(p: &[[f64; 2]]) -> Vec<[f64; 2]> {
 }
 
 /// a polygon's centre of area; the mean of its points when it has none.   (shards.ts polyCentroid)
-pub fn poly_centroid(p: &[[f64; 2]]) -> [f64; 2] {
+pub(super) fn poly_centroid(p: &[[f64; 2]]) -> [f64; 2] {
     let (mut a, mut cx, mut cy) = (0.0, 0.0, 0.0);
     for i in 0..p.len() {
         let (pt, q) = (p[i], p[(i + 1) % p.len()]);
@@ -143,7 +143,7 @@ pub fn poly_centroid(p: &[[f64; 2]]) -> [f64; 2] {
 }
 
 /// the part of convex polygon P on the side n · p ≤ d; fewer than 3 points back = nothing.   (shards.ts clipHalf)
-pub fn clip_half(p: &[[f64; 2]], nx: f64, ny: f64, d: f64) -> Vec<[f64; 2]> {
+pub(super) fn clip_half(p: &[[f64; 2]], nx: f64, ny: f64, d: f64) -> Vec<[f64; 2]> {
     let mut out: Vec<[f64; 2]> = Vec::new();
     for i in 0..p.len() {
         let (a, b) = (p[i], p[(i + 1) % p.len()]);
@@ -160,7 +160,7 @@ pub fn clip_half(p: &[[f64; 2]], nx: f64, ny: f64, d: f64) -> Vec<[f64; 2]> {
 }
 
 /// a cell as the outlines its plates take: itself when a cut record holds its edges, else its two halves across its long side.   (shards.ts cellParts)
-pub fn cell_parts(poly: &[[f64; 2]], half_t: f64, seed: f64) -> Vec<Vec<[f64; 2]>> {
+pub(super) fn cell_parts(poly: &[[f64; 2]], half_t: f64, seed: f64) -> Vec<Vec<[f64; 2]>> {
     if crate::scene_cut::cut_prism(2.0, half_t, poly).dropped == 0.0 {
         return vec![poly.to_vec()];
     }
@@ -181,7 +181,7 @@ pub fn cell_parts(poly: &[[f64; 2]], half_t: f64, seed: f64) -> Vec<Vec<[f64; 2]
 }
 
 /// the box of one cut plate: `poly` in the frame `rot` at `origin` extruded ± halfT; None = a degenerate outline.   (shards.ts cutPlateBox)
-pub fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, poly: &[[f64; 2]], half_t: f64, albedo: V3) -> Option<crate::shards::CutPlateBox> {
+pub(super) fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, poly: &[[f64; 2]], half_t: f64, albedo: V3) -> Option<crate::shards::CutPlateBox> {
     let pr = crate::scene_cut::cut_prism(2.0, half_t, poly);
     if pr.empty || !(pr.h[0] > 1e-4) || !(pr.h[1] > 1e-4) {
         return None;
@@ -204,7 +204,7 @@ pub fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, poly: &[[
 }
 
 /// a polygon's area with its winding's sign.   (shards.ts signedArea)
-pub fn signed_area(p: &[[f64; 2]]) -> f64 {
+fn signed_area(p: &[[f64; 2]]) -> f64 {
     let mut a = 0.0;
     for i in 0..p.len() {
         let q = p[(i + 1) % p.len()];

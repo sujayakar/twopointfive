@@ -77,7 +77,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
 }
 
 /// The rolling chairs' voices, once a step right after the props have moved; nothing in the simulation reads this and no die is drawn. (game.ts Game.rollTick)
-pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
+pub(super) fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
     if g.rolls.is_empty() { return; }
     let voice = crate::game::roll_voice();
     let mut i = g.rolls.len();
@@ -139,7 +139,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
 }
 
 /// A fresh shift: every system's memory of the old one goes, the response team first. (game.ts Game.resetGuards)
-pub fn game_reset_guards(g: &mut crate::game::Game) {
+pub(super) fn game_reset_guards(g: &mut crate::game::Game) {
     crate::powerout::power_out_reset(g);
     crate::rescuecheck::rescue_check_reset(g);
     crate::doze::doze_reset(g, None);
@@ -296,7 +296,7 @@ pub fn game_stand_lights(g: &mut crate::game::Game) {
 }
 
 /// The level as authored: every switch back, every door, the marks, the panes, the debris.   (game.ts resetLevelState)
-pub fn game_reset_level_state(g: &mut crate::game::Game) {
+fn game_reset_level_state(g: &mut crate::game::Game) {
     let targets = g.targets.clone();
     for t in targets {
         let a = crate::sim_lightshome::fixture_authored(g, t);
@@ -319,7 +319,7 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
 }
 
 /// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
-pub fn game_clean_slate(g: &mut crate::game::Game) {
+fn game_clean_slate(g: &mut crate::game::Game) {
     g.alarm.raised_at = -100.0;
     g.alarm.pos = [0.0, 0.0, 0.0];
     let seats = g.seats.clone();
@@ -481,7 +481,7 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
-pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     let me = game_host_seat(g);
     let me_cam = g.tab.cmd_seat[me].cam;
     let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
@@ -503,7 +503,7 @@ pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd
 pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(g.seats[0]) }
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
-pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+pub(in crate::tick) fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
     let mut col_own = crate::scene_collision::AsideOwn::default();
     crate::scene_collision::aside(g, &mut col_own, fn_)

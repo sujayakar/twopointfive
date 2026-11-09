@@ -10,12 +10,12 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
-pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
+pub(super) fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     match dust_asked(g, count, o) { Some((n, o)) => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o), None => 0.0 }
 }
 
 /// How many puffs a site's asking for `count` comes to, and its numbers, by the table; none = no dust at all.
-pub fn dust_asked(g: &crate::game::Game, count: f64, o: crate::render_particles::EmitOpts) -> Option<(f64, crate::render_particles::EmitOpts)> {
+pub(super) fn dust_asked(g: &crate::game::Game, count: f64, o: crate::render_particles::EmitOpts) -> Option<(f64, crate::render_particles::EmitOpts)> {
     let k = g.m.particle_fx.dust;
     let n = dust_count(k.count, count);
     if n <= 0.0 { return None; }
@@ -54,7 +54,7 @@ pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::S
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane. (particleFx.ts saidSurf)
-pub fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
+pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
     let b = b?;
     let stuff = seam_box(g, b).stuff?;
     if is_pane(seam_box(g, b).flags) { return None; }
@@ -63,7 +63,7 @@ pub fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::s
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
 /// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does. (particleFx.ts hitLook)
-pub fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
+pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
     let leaf = hit.prop.is_none() && hit.index.is_some_and(|i| i >= 1e6);
     let st = if hit.prop.is_none() && !leaf { hit.index.and_then(|i| js_ix(g.col.boxes.len(), i)).map(|x| g.col.boxes[x]) } else { None };
     let b: Option<BoxId> = if let Some(p) = hit.prop {
@@ -306,7 +306,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 // ---------------------------------------------------------------- spent cases
 
 /// The empty a row's gun throws, or None. (particleFx.ts casingOf)
-pub fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
+fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
     let c = casing_row(def.id)?;
     Some(c)
 }
@@ -336,7 +336,7 @@ fn casing_row(id: crate::weapons::WeaponId) -> Option<crate::particle_fx::Casing
 }
 
 /// The module's row for this game, made if there is none. (particleFx.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxState {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxState {
     g.m.particle_fx.state.get_or_insert_with(|| crate::particle_fx::FxState { tinks: Vec::new(), n: 0.0 })
 }
 
@@ -386,7 +386,7 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
 }
 
 /// QA: the cases waiting to be heard. (particleFx.ts pendingTinks)
-pub fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::PendingTinksItem> {
+fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::PendingTinksItem> {
     state_of(g).tinks.iter().map(|k| crate::particle_fx::PendingTinksItem { t: k.t, pos: k.pos }).collect()
 }
 

@@ -28,10 +28,10 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
 }
 
 /// The rule is up: the AI runs and no tour has the stage. (doorforce.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled && !g.touring }
+fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled && !g.touring }
 
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load). (doorforce.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
     let now = g.time;
     let s = g.m.doorforce.states.get_or_insert_with(|| State { last_t: now, men: JsMap::new(), kickers: JsMap::new(), boots: JsMap::new() });
     if now < s.last_t - 1e-6 { s.men.clear(); s.kickers.clear(); s.boots.clear(); s.last_t = now; }
@@ -44,15 +44,15 @@ fn new_man() -> Man {
 }
 
 /// A man's row, made if absent. (doorforce.ts manOf)
-pub fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorforce::Man {
+fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorforce::Man {
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
 /// Distance on the floor. (doorforce.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
+fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A line for the panel's log. (doorforce.ts log)
-pub fn log(g: &mut crate::game::Game, s: &str) {
+fn log(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     let l = &mut g.m.doorforce.doorforce_log;
     l.push(line);
@@ -60,18 +60,18 @@ pub fn log(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A man this rule may have: a defender, up, on his own senses. (doorforce.ts defender)
-pub fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
+fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     g.gd[gd].team != crate::teams::Team::Operative && g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive
 }
 
 /// A leaf that is a shut door to a man: hung, home in its frame. (doorforce.ts shut)
-pub fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d)
 }
 
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge. (doorforce.ts behind)
-pub fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
+fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
     let k = g.k.doorforce;
     if !shut(g, d) || flat(g.dr[d].frame_centre, at) > k.behind_m || flat(g.dr[d].frame_centre, from) > k.reach_m { return false; }
     if crate::doors::doors_side(g, d, from) == crate::doors::doors_side(g, d, at) { return false; }
@@ -81,7 +81,7 @@ pub fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V
 }
 
 /// HEARD: the shut door `at` is close behind for a man at `from`, the nearest such to `at`. (doorforce.ts doorBetween)
-pub fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
+fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
     let mut best: Option<DoorId> = None;
     let mut bd = m::INF;
     let mut i = 0;
@@ -96,7 +96,7 @@ pub fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) ->
 }
 
 /// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man. (doorforce.ts doorHiding)
-pub fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
+fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let from: V3 = [pos[0], pos[1] + 1.5, pos[2]];
@@ -112,7 +112,7 @@ pub fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<Doo
 }
 
 /// He has word of an enemy at the far face of `d`: sureness adds (a sighting sets a floor), the place and the time are the newest. (doorforce.ts learn)
-pub fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, seen: bool) {
+fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, seen: bool) {
     let now = g.time;
     let man = man_of(g, gd);
     if let Some(&rest) = man.rest.get(d) { if rest > now { return; } }
@@ -310,7 +310,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// A man's row goes, and the door he had the boot of is free. (doorforce.ts drop)
-pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
+fn drop(g: &mut crate::game::Game, gd: GuardId) {
     let s = state_of(g);
     if let Some(kick) = s.men.get(gd).and_then(|x| x.kick) {
         if s.kickers.get(kick.door) == Some(&gd) { s.kickers.delete(kick.door); }
@@ -331,7 +331,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
 }
 
 /// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it. (doorforce.ts roundFor)
-pub fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
+fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
     if g.dr[d].def.steel == Some(true) || !crate::wallpen::wall_men_live(g) { return None; }
@@ -516,7 +516,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
 }
 
 /// The walk to the boot's spot, the set, the boot. None = it is over: the caller's own branch goes on. (doorforce.ts kickStep)
-pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::KickStep> {
+fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::KickStep> {
     let row = man!(g, gd);
     let kk = row.kick.unwrap();
     let d = kk.door;
@@ -583,7 +583,7 @@ pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crat
 }
 
 /// QA: hand `gd` the record a real sighting of his foe at `at` leaves, `age` seconds old. (doorforce.ts doorForceSaw)
-pub fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
+fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     let t = g.time - age;
     man_of(g, gd).saw = Some(ManSaw { at: [at[0], 0.0, at[2]], t, used: false });

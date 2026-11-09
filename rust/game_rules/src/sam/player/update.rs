@@ -67,7 +67,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
 }
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.   (player.ts freePace)
-pub fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
+fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
     let mut max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.tune.player_sprint }
         else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }

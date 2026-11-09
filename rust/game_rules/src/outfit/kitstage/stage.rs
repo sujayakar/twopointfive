@@ -49,7 +49,7 @@ fn ops(g: &Game) -> Vec<GuardId> { crate::scenario_run::team_of(g).into_iter().f
 
 /// EVERYBODY WHO IS NOT THE TEAM, far off, dark, held, calm and deaf, the level's devices inert, and the alarm a stray noise placed dropped while the floor is at 0. A blast is made inside the step, so the mark
 /// on a man's ears is set past any number an event can get, and renewed here. Answers what it had to put right: men found roused, the alarm's marks dropped.
-pub fn park(g: &mut Game) -> (u32, u32) {
+fn park(g: &mut Game) -> (u32, u32) {
     g.tune.devices = false;
     g.tune.lasers = false;
     for i in 0..g.events.len() { if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); } }
@@ -568,7 +568,7 @@ pub fn keep_base(g: &mut Game) {
 fn block_of(slot: usize) -> Vec<u8> { unsafe { core::slice::from_raw_parts(::sim::state::addr(slot) as *const u8, core::mem::size_of::<::sim::state::State>()).to_vec() } }
 
 /// THE MISSION FROM ITS START and the team staged again, as the cards, the size and the open card now stand.
-pub fn restage(g: &mut Game) {
+fn restage(g: &mut Game) {
     let Some(mut was) = take(g) else { return };
     let Some(base) = was.base.clone() else { was.due = false; g.kit_stage = Some(was); return };
     // (the file's order, as team indexes: every row id the stage holds is dead after this)
@@ -684,7 +684,7 @@ fn write_pin(g: &mut Game, st: &KitStage) {
     crate::camera::follow_camera_set_pin(g, cam, Some(crate::camera::FollowCameraSetPinP { look, yaw, pitch, dist }));
 }
 /// THE CAMERA ON THE MEN, into the host camera's pin.
-pub fn aim(g: &mut Game) {
+fn aim(g: &mut Game) {
     let Some(mut st) = take(g) else { return };
     if !st.none { aim_stage(g, &mut st); }
     g.kit_stage = Some(st);

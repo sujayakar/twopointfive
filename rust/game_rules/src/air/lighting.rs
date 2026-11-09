@@ -73,7 +73,7 @@ pub fn lens_recheck(g: &mut crate::game::Game) {
 }
 
 /// The mains are the business of the side whose building it is.   (lighting.ts theirMains)
-pub fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
+fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
@@ -233,7 +233,7 @@ pub fn end_blackout(g: &mut crate::game::Game) {
 }
 
 /// The mains have come back (the module has said so): what goes with it.   (lighting.ts mainsBack)
-pub fn mains_back(g: &mut crate::game::Game) {
+fn mains_back(g: &mut crate::game::Game) {
     let bp = g.level.breaker.pos;
     crate::audio_iface::game_audio_like_play(g, "powerUp", Some(bp), Some(1.0), None);
     crate::audio_iface::game_audio_like_play(g, "powerUp", None, Some(0.3), None);

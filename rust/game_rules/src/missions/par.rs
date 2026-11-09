@@ -57,7 +57,7 @@ pub fn par_data(g: &Game) -> Option<ParData> {
 pub fn par_started(g: &Game) -> bool { g.par.run == Some(g.mission.serial) && g.par.t0.is_finite() }
 
 /// seconds on the clock now (0 before it starts; held at the end's own time once the room clear has ended)
-pub fn par_secs(g: &Game) -> f64 {
+fn par_secs(g: &Game) -> f64 {
     if !par_started(g) { return 0.0; }
     let t = if g.room_clear.end.is_some() { g.room_clear.end_at } else { g.time };
     m::max(0.0, t - g.par.t0)
@@ -133,7 +133,7 @@ pub fn par_result_now(g: &Game) -> Option<&ParResult> {
 }
 
 /// what leads the room clear's row while the run is on (empty: no par live, or the run is over)
-pub fn par_row(g: &Game) -> String {
+fn par_row(g: &Game) -> String {
     let Some(d) = par_data(g) else { return String::new(); };
     if g.room_clear.end.is_some() { return String::new(); }   // (taken: par_objective words it · wiped: no time)
     if !par_started(g) { return format!("par {} / {} / {} · ", clock(d.gold), clock(d.silver), clock(d.bronze)); }
@@ -150,7 +150,7 @@ pub fn par_row(g: &Game) -> String {
 }
 
 /// the room clear's objective row with the clock on it: the clock FIRST, then the room clear's own words; at the end the result
-pub fn par_objective(g: &Game, text: &str) -> String {
+pub(super) fn par_objective(g: &Game, text: &str) -> String {
     match par_result_now(g) {
         None => { let mut s = par_row(g); s.push_str(text); s }
         Some(r) => format!("structure taken · {} — press shift+enter to restart", r.line.strip_prefix("par ▸ ").unwrap_or(&r.line)),

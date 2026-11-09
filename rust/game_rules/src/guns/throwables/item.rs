@@ -106,7 +106,7 @@ fn set_word(c: &mut sim::items::Items, at: usize, r: usize, v: u32) {
 }
 
 /// The sponge round's three boxes about `c_2`, its length along `rot`'s z, the nose toward +z. (throwables.ts spongeBoxes)
-pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
+pub(in crate::guns) fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
     let s = sponge_item();
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -116,17 +116,17 @@ pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3,
 }
 
 /// A handle on row `r` of the pool's columns (the store is `g.items.store`). (throwables.ts Item.constructor)
-pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
+pub(super) fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
     g.tab.item.push(Item { r, kept: None, side: None, on_bounce: None, clatters: None, hand: None })
 }
 
 /// Which row it stands in, -1 out of the pool. (throwables.ts Item.row)
-pub fn item_row(g: &crate::game::Game, id: ItemId) -> f64 {
+fn item_row(g: &crate::game::Game, id: ItemId) -> f64 {
     if g.tab.item[id].kept.is_none() { g.tab.item[id].r } else { -1.0 }
 }
 
 /// Out of the pool, with its numbers. (throwables.ts Item.leave)
-pub fn item_leave(g: &mut crate::game::Game, id: ItemId) {
+pub(super) fn item_leave(g: &mut crate::game::Game, id: ItemId) {
     if g.tab.item[id].kept.is_none() {
         let r = g.tab.item[id].r;
         let kept = crate::sim_itemshome::item_store_row_out(g, r);
@@ -136,7 +136,7 @@ pub fn item_leave(g: &mut crate::game::Game, id: ItemId) {
 }
 
 /// Its numbers as they stand, by their places. (throwables.ts Item.numbers)
-pub fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
+pub(super) fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
     if let Some(k) = &g.tab.item[id].kept {
         return k.clone();
     }
@@ -145,13 +145,13 @@ pub fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
 }
 
 /// Into row `r`. (throwables.ts Item.stand)
-pub fn item_stand(g: &mut crate::game::Game, id: ItemId, r: f64) {
+pub(super) fn item_stand(g: &mut crate::game::Game, id: ItemId, r: f64) {
     g.tab.item[id].kept = None;
     g.tab.item[id].r = r;
 }
 
 /// A double by its place. (throwables.ts Item.f)
-pub fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -160,7 +160,7 @@ pub fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
 }
 
 /// …and written. (throwables.ts Item.pf)
-pub fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
+fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
     if let Some(k) = &mut g.tab.item[id].kept {
         k[c_2 as usize] = v;
         return;
@@ -170,7 +170,7 @@ pub fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A word by its place. (throwables.ts Item.w)
-pub fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -179,7 +179,7 @@ pub fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
 }
 
 /// …and written: ToUint32 both ways, by `>>> 0` kept and by the Uint32Array's store in a row. (throwables.ts Item.pw)
-pub fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
+fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
     if let Some(k) = &mut g.tab.item[id].kept {
         k[c_2 as usize] = js::to_u32(v) as f64;
         return;
@@ -189,12 +189,12 @@ pub fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A truth: a bit of `flags`. (throwables.ts Item.bit)
-pub fn item_bit(g: &crate::game::Game, id: ItemId, b: f64) -> bool {
+fn item_bit(g: &crate::game::Game, id: ItemId, b: f64) -> bool {
     (js::to_i32(item_w(g, id, ic::FLAGS)) & js::to_i32(b)) != 0
 }
 
 /// …and written. (throwables.ts Item.pbit)
-pub fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
+fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
     let f = js::to_i32(item_w(g, id, ic::FLAGS));
     let b = js::to_i32(b);
     item_pw(g, id, ic::FLAGS, (if on { f | b } else { f & !b }) as f64);
@@ -206,7 +206,7 @@ pub fn item_kind(g: &crate::game::Game, id: ItemId) -> crate::throwables::ItemKi
 }
 
 /// (throwables.ts Item.kind, set)
-pub fn item_set_kind(g: &mut crate::game::Game, id: ItemId, v: crate::throwables::ItemKind) {
+pub(super) fn item_set_kind(g: &mut crate::game::Game, id: ItemId, v: crate::throwables::ItemKind) {
     let at = ITEM_KINDS.iter().position(|k| *k == v).unwrap();
     item_pw(g, id, ic::KIND, at as f64);
 }
@@ -241,7 +241,7 @@ pub fn item_radius(g: &mut crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.radius, set)
-pub fn item_set_radius(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_radius(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::RADIUS, v);
 }
 
@@ -251,7 +251,7 @@ pub fn item_restitution(g: &mut crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.restitution, set)
-pub fn item_set_restitution(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_restitution(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::RESTITUTION, v);
 }
 
@@ -261,7 +261,7 @@ pub fn item_friction(g: &mut crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.friction, set)
-pub fn item_set_friction(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_friction(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::FRICTION, v);
 }
 
@@ -276,7 +276,7 @@ pub fn item_set_yaw(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.spin)
-pub fn item_spin(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_spin(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::SPIN)
 }
 
@@ -296,7 +296,7 @@ pub fn item_set_tumble(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.tumbleRate)
-pub fn item_tumble_rate(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_tumble_rate(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::TUMBLE_RATE)
 }
 
@@ -311,7 +311,7 @@ pub fn item_age(g: &mut crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.age, set)
-pub fn item_set_age(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_age(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::AGE, v);
 }
 
@@ -346,17 +346,17 @@ pub fn item_set_emit_t(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.fill)
-pub fn item_fill(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(super) fn item_fill(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::FILL)
 }
 
 /// (throwables.ts Item.fill, set)
-pub fn item_set_fill(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_fill(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::FILL, v);
 }
 
 /// (throwables.ts Item.heading)
-pub fn item_heading(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_heading(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::HEADING)
 }
 
@@ -366,7 +366,7 @@ pub fn item_set_heading(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.onPose, set)
-pub fn item_set_on_pose(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_on_pose(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::ON_POSE, v);
 }
 
@@ -417,7 +417,7 @@ pub fn item_who(g: &crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.who, set)
-pub fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pw(g, id, ic::WHO, v);
 }
 
@@ -427,7 +427,7 @@ pub fn item_serial(g: &crate::game::Game, id: ItemId) -> f64 {
 }
 
 /// (throwables.ts Item.serial, set)
-pub fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(super) fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pw(g, id, ic::SERIAL, v);
 }
 
@@ -447,7 +447,7 @@ pub fn item_set_on(g: &mut crate::game::Game, id: ItemId, p: Option<PropId>) {
 }
 
 /// A box for an item's part. (throwables.ts itemBox)
-pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
+pub(super) fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
     crate::scene_boxes::box_of_frame(g, c_2, h, yaw, albedo, [0.0, 0.0, 0.0], flags, 0.0, Some(rot), None)
 }
 

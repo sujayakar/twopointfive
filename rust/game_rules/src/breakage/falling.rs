@@ -22,7 +22,7 @@ fn t_of(vy: f64, gravity: f64, h: f64) -> f64 {
 }
 
 /// Where and when something let go at `c` with velocity `v` reaches what is under it, a share `reach_k` of the way sideways. (falling.ts fallOf)
-pub fn fall_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, reach_k: f64, world: crate::falling::FallWorld) -> crate::falling::FallOf {
+pub(super) fn fall_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, reach_k: f64, world: crate::falling::FallWorld) -> crate::falling::FallOf {
     fall_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity, reach_k)
 }
 
@@ -53,7 +53,7 @@ fn fall_along(ray: &mut dyn FnMut(V3, V3, f64) -> Option<f64>, c_2: V3, v: V3, g
 }
 
 /// The same question asked along the arc, for a thing thrown: when and where it comes to lie. (falling.ts flightOf)
-pub fn flight_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, world: crate::falling::FallWorld) -> crate::falling::FlightOf {
+pub(super) fn flight_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, world: crate::falling::FallWorld) -> crate::falling::FlightOf {
     flight_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity)
 }
 

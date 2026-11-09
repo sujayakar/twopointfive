@@ -14,7 +14,7 @@ fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone. (fogofwar.ts thingKeyOf)
-pub fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
+pub(super) fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
     let k = bx(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
     key_of_mkey(g, k)
 }
@@ -36,13 +36,13 @@ fn key_of_mkey(g: &Game, k: f64) -> f64 {
 }
 
 /// (fogofwar.ts isProp)
-pub fn is_prop(thing_key: f64) -> bool {
+pub(super) fn is_prop(thing_key: f64) -> bool {
     m::floor(thing_key / 0x1000000 as f64) == PROP_SYS
 }
 
 /// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one. (fogofwar.ts ghostBox)
 /// (A copy the record keeps until it takes the thing afresh: `box_kept`, and `box_let_go` for the copies before it: thing_take.)
-pub fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
+pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
     let copy = g.tab[s].clone();
     crate::scene_boxes::box_kept(g, copy)
 }
@@ -69,7 +69,7 @@ pub fn fog_of_war_active(g: &crate::game::Game) -> bool {
 }
 
 /// Is this man on the team whose sight it is. (FogOfWar.onTeam)
-pub fn fog_of_war_on_team(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn fog_of_war_on_team(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
 }
 
@@ -97,7 +97,7 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)
-pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
+fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     if !fog_of_war_active(g) {
         // (the fog has gone off since the pass last ran: what the team knew is dropped, and the picture's block with it)
         if g.fog_of_war.live || g.fog_of_war.loaded {
@@ -376,7 +376,7 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
 }
 
 /// A man as an eye: off his head, looking where he looks (`gaze_of`). (FogOfWar.eyeOf)
-pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
+fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
     let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
     let look = gaze_of(g, c_2);
     let p = g.ch[c_2].pos;
@@ -385,7 +385,7 @@ pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar:
 }
 
 /// The player a call is worded for: with two, the first one up. (FogOfWar.caller)
-pub fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
+fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
     if g.seats.len() == 1 { return g.player; }
     match crate::seats::men_up(g).first() {
         Some(&p) => p,
@@ -410,7 +410,7 @@ pub fn fog_of_war_side_of(g: &mut crate::game::Game, p: V3) -> crate::close::Clo
 }
 
 /// The words of one call: in the player's own room the side of him, else the place by the level's room names, behind him said first. (FogOfWar.callWords)
-pub fn fog_of_war_call_words(g: &mut crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
+fn fog_of_war_call_words(g: &mut crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
     let side = fog_of_war_side_of(g, p);
     let there = crate::dialogue::place_name(g, p);
     let me = fog_of_war_caller(g);
@@ -462,7 +462,7 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
 fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(x) }
 
 /// What the cone hides is called: a contact from a teammate's eyes, else a step in his ears. Under cones or own eyes only (hard). (FogOfWar.tellCalls)
-pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
+fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     g.fog_of_war.call_clock += dt;
     let now = g.fog_of_war.call_clock;
     if !(g.k.fog.cone || g.k.fog.own) || g.fog_of_war.eyes.is_empty() || crate::seats::all_down(g) || js::truthy(js::rem(g.fog_of_war.frame_no, CALL_EVERY)) { return; }
@@ -543,13 +543,13 @@ pub fn fog_of_war_reset(g: &mut crate::game::Game) {
 }
 
 /// The fog's own line: anything solid between an eye and a point. (FogOfWar.sightBlocked)
-pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub(super) fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let through = fog_through(g);
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
 /// One eye on one living man, walls and leaves only, inside the eye's field. (FogOfWar.lineToMan)
-pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
+fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
     let pc = g.gd[gd].ch;
     if !fog_of_war_in_field(g, e, chest) { return false; }
     let to = v3::sub(chest, e.pos);
@@ -562,7 +562,7 @@ pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::Fog
 }
 
 /// The eyes with a line to a man (`chest` given) or his body (None), one question to the module: how many × 2^28 + those eyes, four bits each. (FogOfWar.sees)
-pub fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
+fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
     let pc = g.gd[gd].ch;
     let (a, b, kind): (V3, V3, f64) = match chest {
         Some(c) => (c, bone_or(g, pc, crate::character::Bone::Head, 1.6), if g.ch[pc].alive { 3.0 } else { 1.0 }),
@@ -577,7 +577,7 @@ pub fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEy
 }
 
 /// The eyes of a pass handed to the module, each with the field `in_field` holds it to. (FogOfWar.handEyes)
-pub fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
+fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
     crate::scene_collision::sight_open(g, eyes.len() as f64);
     for (k, e) in eyes.iter().enumerate() {
         let fov = match e.fov { Some(f) => f, None => field_deg(g) };
@@ -588,7 +588,7 @@ pub fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::
 }
 
 /// One eye on a body: a clear line to a hand's height over where it lies, inside the eye's field. (FogOfWar.eyeOnBody)
-pub fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId) -> bool {
+fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
     let at = [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]];
@@ -596,7 +596,7 @@ pub fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::Fog
 }
 
 /// Does anybody on the team see this door: a line to the leaf where it stands or where the picture has it. (FogOfWar.doorSeen)
-pub fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) -> bool {
+fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) -> bool {
     let (hinge, w, closed) = { let def = &g.dr[d].def; (def.hinge, def.width, def.closed_dir) };
     let (hx, hz) = (hinge[0], hinge[1]);
     let eyes = g.fog_of_war.eyes.clone();
@@ -703,7 +703,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>)
 }
 
 /// Has the team a look at this fixture: an eye on the floor under it, a line to the fixture itself, or seen floor within two metres that it lights. (FogOfWar.lampSeen)
-pub fn fog_of_war_lamp_seen(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub(super) fn fog_of_war_lamp_seen(g: &mut crate::game::Game, t: FixtureId) -> bool {
     let pos = g.tab.sim_lightshome_fixture[t].pos;
     let (x, y, z) = (pos[0], pos[1], pos[2]);
     if fog_of_war_spot_seen(g, x, z) { return true; }

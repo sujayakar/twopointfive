@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// Is the rule running: a round of the player's is a round to his own men. (fireline.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &mut crate::game::Game) -> bool {
     crate::friendlyfire::ff_live(g)
 }
 
@@ -51,7 +51,7 @@ pub fn fire_line_tick(g: &mut crate::game::Game) {
 }
 
 /// The lane of the player's fire this frame, or None: he is not firing. (fireline.ts laneOf)
-pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
+fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let gun = crate::game::player_gun_in_hand(g, pl);
@@ -73,7 +73,7 @@ pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
 }
 
 /// Is this point of floor inside the lane by its shape alone. (fireline.ts inShape)
-pub fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
+fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     let more = more.unwrap_or(0.0);
     let rx = x - l.m[0];
     let rz = z - l.m[2];
@@ -87,7 +87,7 @@ fn reaches(g: &mut Game, l: Lane, p: V3) -> bool {
 }
 
 /// Would a round reach a man standing here: his chest, or either edge of his column. (fireline.ts inLane)
-pub fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
+fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     if !in_shape(g, l, x, z, more) {
         return false;
     }
@@ -95,7 +95,7 @@ pub fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f
 }
 
 /// How far along the polyline `from` → `pts` (at most `far` of it) the walk first stands where `hit` says; infinity = nowhere. (fireline.ts along)
-pub fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bool) -> f64 {
+fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bool) -> f64 {
     let (mut ax, mut az, mut gone) = (from[0], from[2], 0.0);
     for b in pts {
         let len = m::hyp2(b[0] - ax, b[2] - az);
@@ -123,17 +123,17 @@ pub fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bo
 }
 
 /// Where the walk first comes into the lane. (fireline.ts crossAt)
-pub fn cross_at(g: &mut crate::game::Game, l: crate::fireline::Lane, from: V3, pts: &[V3], far: f64, more: Option<f64>) -> f64 {
+fn cross_at(g: &mut crate::game::Game, l: crate::fireline::Lane, from: V3, pts: &[V3], far: f64, more: Option<f64>) -> f64 {
     along(from, pts, far, &mut |x, z| in_lane(g, l, x, z, more))
 }
 
 /// Where the walk first stands in a doorway. (fireline.ts doorAt)
-pub fn door_at(g: &mut crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64 {
+fn door_at(g: &mut crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64 {
     along(from, pts, far, &mut |x, z| in_doorway(g, x, z))
 }
 
 /// Is this point of floor in a door's opening. (fireline.ts inDoorway)
-pub fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
+fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
@@ -150,7 +150,7 @@ pub fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// The corners of the walk he is on to `goal`: the runner's own path while it is for that goal, else the straight leg if short, else None. (fireline.ts walkOf)
-pub fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
+fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
     let p = g.ch[g.gd[gd].ch].pos;
     if let Some(pg) = g.gd[gd].path_goal {
         if m::hyp2(pg[0] - goal[0], pg[2] - goal[2]) < 0.75 && g.gd[gd].path.len() > g.gd[gd].path_i {
@@ -163,7 +163,7 @@ pub fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> 
 }
 
 /// Would waiting leave him standing in an enemy's line, as far as he knows. (fireline.ts inEnemyLine)
-pub fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
@@ -179,7 +179,7 @@ fn walk_len(from: V3, pts: &[V3]) -> f64 {
 }
 
 /// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None. (fireline.ts wayRound)
-pub fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
+fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
     let p = g.ch[g.gd[gd].ch].pos;
     let berth_m = g.k.fireline.berth_m;
@@ -208,14 +208,14 @@ pub fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lan
 }
 
 /// The rule lets go of him: his wait, if any, is forgotten. The caller returns None. (fireline.ts end)
-pub fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>) {
+fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>) {
     if st.is_some() {
         g.m.fireline.states.delete(gd);
     }
 }
 
 /// He stands: the wait's seconds counted as they pass. (fireline.ts hold)
-pub fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
+fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
     g.stats.fireline.held_s += m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
     g.m.fireline.states.get_mut(gd).unwrap().t = t;

@@ -13,17 +13,17 @@ fn leg_point(p: V3, q: V3, s: f64, l: f64) -> V3 {
 }
 
 /// Marks the address word as read; the reading itself (?fairstart=0) is the host's and sits behind the settled row OPENING.on. (opening.ts readUrl)
-pub fn read_url(g: &mut crate::game::Game) {
+fn read_url(g: &mut crate::game::Game) {
     g.m.opening.url_read = true;
 }
 
 /// Length on the floor. (opening.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// Metres by walking a → b over the nav grid; infinity if there is no way. (opening.ts wayLen)
-pub fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let p = if crate::scene_collision::nav_grid_is_blocked(g, a[0], a[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]).unwrap_or(a) } else { a };
     let q = if crate::scene_collision::nav_grid_is_blocked(g, b[0], b[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, b[0], b[2]).unwrap_or(b) } else { b };
     let path = match crate::scene_collision::nav_grid_find_path(g, p, q, Some(8000.0), None) {
@@ -40,7 +40,7 @@ pub fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route. (opening.ts openingSpot)
-pub fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::OpeningSpot> {
+fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::OpeningSpot> {
     let spawn = g.level.player_spawn;
     let key = alloc::format!("{}|{}|{}|{}", js::num_str(g.k.opening.clear_m), js::num_str(g.k.opening.step_m), js::num_str(spawn[0]), js::num_str(spawn[2]));
     let route = g.gd[gd].route;
@@ -56,7 +56,7 @@ pub fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::ope
 }
 
 /// The first walkable point along his route at least the clear radius from the spawn by walking. (opening.ts findSpot)
-pub fn find_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
+fn find_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
     let route = g.gd[gd].route;
     let pts = g.tab.route[route].points.clone();
     let n = pts.len();

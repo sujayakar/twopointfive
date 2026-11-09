@@ -78,7 +78,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
 }
 
 /// Sam between a teammate's gun and what it is on, or a metre past it: the gun goes to the low ready while he is there. (roomfight.ts samInLine)
-pub fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool {
+pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     let from = shoulder_of(g, c);
@@ -89,7 +89,7 @@ pub fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V
 }
 
 /// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him. (roomfight.ts coverPasses)
-pub fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: RoomfightOpId, h: GuardId) -> bool {
+pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(g, seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {

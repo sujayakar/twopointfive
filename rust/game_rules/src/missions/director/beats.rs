@@ -8,7 +8,7 @@ use alloc::{string::String, vec::Vec};
 // ---- what the by-hand scripts call: the verbs of a level script, which are closures of the TypeScript's D, P, c and q objects. No TypeScript function has these names.
 
 /// INVENTED: B.fn(ctx) at director.ts:586: the beat's frame before its first step. Body by hand, with the nine scripts
-pub fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) -> crate::director::BeatFrame {
+pub(super) fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) -> crate::director::BeatFrame {
     use crate::scene_level::LevelScriptFn as S; use crate::director::BeatFrame as F;
     match (script, beat) {
         (S::Unset, b) => panic!("the beat {} has no script: its script was not dealt (io::deal_scripts), or the blank was read", b),
@@ -66,7 +66,7 @@ pub fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) ->
     }
 }
 /// INVENTED: it.next(b.result) at director.ts:608: one step, reading g.tab.director_live_beat[b].result. Err = it threw (resume fails the beat), Ok(None) = it returned, Ok(Some) = it yielded. Body by hand, with the nine scripts
-pub fn beat_next(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn beat_next(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::BeatFrame as F;
     let got = g.tab.director_live_beat[b].result.clone();
     let mut it = core::mem::replace(&mut g.tab.director_live_beat[b].it, F::Spent);
@@ -126,7 +126,7 @@ pub fn beat_next(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBea
     g.tab.director_live_beat[b].it = it;   // (in the same place: the caller closes a beat that cancelled itself)
     out
 }
-pub fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, id: u32) -> Result<bool, String> {
+pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, id: u32) -> Result<bool, String> {
     use crate::director::BeatFrame as F;
     let mut it = core::mem::replace(&mut g.tab.director_live_beat[b].it, F::Spent);
     let out = match &mut it {
@@ -169,7 +169,7 @@ pub mod util {
 }
 
 /// INVENTED: the define pass of the level this names (the script's `script(D)`), its locals left on the manifest
-pub fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
+pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
     use crate::scene_level::LevelScriptFn as S; use crate::director::ScriptVars as V;
     m.vars = match script {
         S::Unset => return Err(String::from("a level with no script was asked to define one")),

@@ -49,7 +49,7 @@ fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
 }
 
 /// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
-pub fn out_now(g: &crate::game::Game, p: V3) -> bool {
+fn out_now(g: &crate::game::Game, p: V3) -> bool {
     if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
         return exits.iter().any(|x| crate::quiet::out_through(x, p));

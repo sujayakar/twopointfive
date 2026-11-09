@@ -8,23 +8,23 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).   (dialogue.ts forceScript)
-pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {
+fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {
     g.m.dialogue.script_by_talk.delete(talk);
     g.m.dialogue.forced_by_talk.set(talk, id_2.map(String::from));
 }
 
 /// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
-pub fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
+fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
     g.m.dialogue.forced_by_talk.get(talk).cloned()
 }
 
 /// The script of this id.   (dialogue.ts scriptById)
-pub fn script_by_id(id_2: &str) -> Option<crate::dialogue::Script> {
+fn script_by_id(id_2: &str) -> Option<crate::dialogue::Script> {
     scripts().into_iter().find(|sc| sc.id == id_2)
 }
 
 /// The script for this man: the one already dealt, else, at his first exchange only, dealt now: unplayed first, then a stable hash of his callsign.   (dialogue.ts scriptFor)
-pub fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId) -> Option<crate::dialogue::Script> {
+pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId) -> Option<crate::dialogue::Script> {
     if let Some(dealt) = g.m.dialogue.script_by_talk.get(talk) { return dealt.clone(); }
     let mut sc: Option<Script> = None;
     if let Some(id) = g.m.dialogue.forced_by_talk.get(talk).cloned() {
@@ -69,7 +69,7 @@ fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
 }
 
 /// Does this script fit the man and the moment, and does every line it would say to him resolve now.   (dialogue.ts scriptFits)
-pub fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     if sc.t != ctx.t || !sc.k.contains(&ctx.k) { return false; }
     if let Some(band) = &sc.band { if !band.contains(&ctx.band) { return false; } }
     if let Some(needs) = &sc.needs { if needs.iter().any(|n| !fact(ctx, *n)) { return false; } }
@@ -89,12 +89,12 @@ pub fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx:
 }
 
 /// Still his script this press: his knowledge of Sam has not climbed past what it was written for.   (dialogue.ts scriptLive)
-pub fn script_live(sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx) -> bool {
+pub(super) fn script_live(sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx) -> bool {
     sc.k.contains(&ctx.k)
 }
 
 /// The beat for stage `s`: a `room` beat swapped for the room's own menace where the table has the room.   (dialogue.ts beatFor)
-pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx) -> crate::dialogue::Beat {
+pub(super) fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx) -> crate::dialogue::Beat {
     let b = script_beat(sc, s).clone();
     if b.room != Some(true) { return b; }
     if ctx.own_rooms == Some(true) { return b; }
@@ -108,7 +108,7 @@ pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx:
 }
 
 /// The man's line off a beat for this man; `None` if it does not resolve.   (dialogue.ts himOf)
-pub fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
+pub(super) fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
     let (raw, k) = him_raw(b, ctx)?;
     let text = expand(&raw, &ctx_tokens_map(&ctx.tokens))?;
     if text.is_empty() { None } else { Some(HimOf { text }) }

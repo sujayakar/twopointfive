@@ -280,37 +280,37 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
 // ---- the part ----
 
 /// a spot in a key (squadthrow.ts keyOf)
-pub fn key_of(at: V3) -> String {
+fn key_of(at: V3) -> String {
     format!("{},{}", js::to_fixed(at[0], 2), js::to_fixed(at[2], 2))
 }
 
 /// how many are left in the one bag (squadthrow.ts left)
-pub fn left(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
+pub(in crate::squad_orders) fn left(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
     if kind == SquadThrowKind::Frag { g.door_tools.frags } else { g.door_tools.bangs }
 }
 
 /// the order menu's one word for this can (squadthrow.ts word)
-pub fn word(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::Word {
+pub(super) fn word(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::Word {
     if kind == SquadThrowKind::Frag { Word::Frag } else { Word::Bang }
 }
 
 /// the row's words with none left (squadthrow.ts none)
-pub fn none(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::None {
+pub(super) fn none(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::None {
     if kind == SquadThrowKind::Frag { crate::squadthrow::None::NoFragsLeft } else { crate::squadthrow::None::NoBangsLeft }
 }
 
 /// the menu's row of this can (squadthrow.ts rowOf)
-pub fn row_of(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::RowOf {
+pub(super) fn row_of(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::RowOf {
     if kind == SquadThrowKind::Frag { RowOf::FragThere } else { RowOf::StunThere }
 }
 
 /// how far it runs on past its landing: a frag's own, a canister the smoke can's (squadthrow.ts rollOf)
-pub fn roll_of(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> Option<f64> {
+pub(super) fn roll_of(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> Option<f64> {
     if kind == SquadThrowKind::Frag { Some(g.k.squadthrow.frag_roll_k) } else { None }
 }
 
 /// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine (squadthrow.ts handsAtWork)
-pub fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::squad_orders) fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::doortools::Phase as DoorPhase;
     if g.door_tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
     if g.wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
@@ -326,7 +326,7 @@ pub fn squad_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: c
 }
 
 /// … `lob`: each man's worked-out throw too, and a throw that would catch one of ours is passed over for the next man (squadthrow.ts standThrow)
-pub fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, lob: Option<&mut crate::squadthrow::Lob>) -> Option<crate::squadthrow::StandThrow> {
+fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, lob: Option<&mut crate::squadthrow::Lob>) -> Option<crate::squadthrow::StandThrow> {
     let mut lob = lob;
     let mut sorted: Vec<GuardId> = men.to_vec();
     { let r: &Game = &*g; js::sort_by(&mut sorted, |a, b| v3::dist_xz(pos_of(r, *a), at) - v3::dist_xz(pos_of(r, *b), at)); }
@@ -352,7 +352,7 @@ pub fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: cra
 }
 
 /// SQUADTHROW.duck: a man of ours on his feet at `p` is off this frag's line before it bursts (squadthrow.ts fragClears)
-pub fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: Option<f64>, taken: Option<&mut Vec<V3>>) -> bool {
+fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: Option<f64>, taken: Option<&mut Vec<V3>>) -> bool {
     let late = late.unwrap_or(0.0);
     let duck_min_m = g.k.squadthrow.duck_min_m;
     if g.gd[gd].held.is_some() || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) { return false; }
@@ -401,12 +401,12 @@ pub fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], la
 }
 
 /// where a frag would go off: where it rests, and the spot (squadthrow.ts fragPts)
-pub fn frag_pts(rest: V3, at: V3) -> Vec<V3> {
+fn frag_pts(rest: V3, at: V3) -> Vec<V3> {
     vec![[rest[0], at[1] + 0.3, rest[2]], [at[0], at[1] + 0.3, at[2]]]
 }
 
 /// a body at `p` is inside a frag at one of `pts`: the door tools' own test (squadthrow.ts fragIn)
-pub fn frag_in(g: &mut crate::game::Game, pts: &[V3], p: V3, head: Option<f64>, reach: Option<f64>) -> bool {
+fn frag_in(g: &mut crate::game::Game, pts: &[V3], p: V3, head: Option<f64>, reach: Option<f64>) -> bool {
     let head = head.unwrap_or(1.6);
     let reach = match reach { Some(r) => r, None => g.k.frag.wound_m + 1.0 };
     for l in pts {
@@ -421,13 +421,13 @@ pub fn frag_in(g: &mut crate::game::Game, pts: &[V3], p: V3, head: Option<f64>, 
 }
 
 /// where a stun canister would go off: where it rests, and the spot (squadthrow.ts stunPts)
-pub fn stun_pts(rest: V3, at: V3) -> Vec<V3> {
+fn stun_pts(rest: V3, at: V3) -> Vec<V3> {
     let height = crate::effects::bang().height;
     vec![[rest[0], at[1] + 0.055 + height, rest[2]], [at[0], at[1] + 0.055 + height, at[2]]]
 }
 
 /// an eye is caught by a stun canister going off at one of `pts`: detonateStun's tests, each reach slackM long (squadthrow.ts stunIn)
-pub fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bool {
+fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bool {
     let dazzle_radius = crate::effects::bang().dazzle_radius;
     let entry = crate::roomfight::fight_live(g);
     let slack = g.k.squadthrow.slack_m;
@@ -453,7 +453,7 @@ pub fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bo
 }
 
 /// may this man be walked off to a throw: no drill, door tool, wall charge or fight has him, and his order can be handed back (squadthrow.ts mayWalk)
-pub fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+pub(in crate::squad_orders) fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(g, seat, gd);
     if !seat.orders.owners.is_empty() && crate::orders::nightbreach_owns(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
     if seat.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&gd)) || seat.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd)) { return false; }
@@ -474,7 +474,7 @@ pub fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
 }
 
 /// NOBODY HAS A THROW FROM WHERE HE STANDS: the nearest floor one of `men` has one from, by the walk grid (squadthrow.ts walkSpot)
-pub fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, forced: Option<bool>, lob: Option<&mut crate::squadthrow::Lob>) -> Option<crate::squadthrow::SquadThrower> {
+pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, forced: Option<bool>, lob: Option<&mut crate::squadthrow::Lob>) -> Option<crate::squadthrow::SquadThrower> {
     let forced = forced.unwrap_or(false);
     let mut lob = lob;
     let (c, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
@@ -542,7 +542,7 @@ pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
 }
 
 /// the nearest man's straight throw from where he stands, where it catches none of ours
-pub fn squad_throw_now(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Option<SquadThrower> {
+pub(super) fn squad_throw_now(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Option<SquadThrower> {
     let t = squad_thrower(g, men, at, kind)?;
     let th = SquadThrower { gd: t.gd, from: t.from, sol: t.sol, rest: t.rest, post: None };
     if lob_clean(g, &LobClean::Plan { kind, at }, &th) { Some(th) } else { None }
@@ -550,7 +550,7 @@ pub fn squad_throw_now(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind:
 
 /// The plan's own throw made again as things stand: his own from where he now is, or the one from the spot he is to walk to. None: it no longer goes off, or it
 /// would catch one of ours, or his hands are taken.
-pub fn throw_again(g: &mut crate::game::Game, was: &SquadThrower, at: V3, kind: SquadThrowKind) -> Option<SquadThrower> {
+pub(super) fn throw_again(g: &mut crate::game::Game, was: &SquadThrower, at: V3, kind: SquadThrowKind) -> Option<SquadThrower> {
     let gd = was.gd;
     if g.gd[gd].state == crate::game::GuardState::Dead || !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) { return None; }
     let seat = crate::seats::here(g);
@@ -595,7 +595,7 @@ pub fn squad_frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Op
 }
 
 /// the test itself: inside FRAG.woundM + 1, a line by the burst's own exposure or a plain one, from where it rests and from the spot (squadthrow.ts fragCatches)
-pub fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate::squadthrow::FragCatchesMoved>, sam: bool, burst: Option<&crate::squadthrow::FragCatchesBurst>) -> Option<String> {
+fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate::squadthrow::FragCatchesMoved>, sam: bool, burst: Option<&crate::squadthrow::FragCatchesBurst>) -> Option<String> {
     let pts = frag_pts(rest, at);
     let reach = burst.map(|b| b.reach);
     if (sam || sam_near(g, &crate::seats::here(g), &pts)) && !g.pl[g.player].down {
@@ -653,7 +653,7 @@ fn live_in(g: &mut Game, o: GuardId, pts: &[V3], reach: Option<f64>) -> bool {
 }
 
 /// WHO OF OURS A STUN CANISTER GOING OFF THERE WOULD CATCH: 'you' and callsigns (squadthrow.ts squadStunCatches)
-pub fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) -> Vec<String> {
+pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) -> Vec<String> {
     if !crate::effects::flags().dazzle { return Vec::new(); }
     let pts = stun_pts(rest, at);
     let mut out: Vec<String> = Vec::new();
@@ -673,14 +673,14 @@ pub fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) -> Vec<St
 }
 
 /// … is he inside it, where it would go off or at the spot asked for? (squadthrow.ts squadFragOnSam)
-pub fn squad_frag_on_sam(g: &mut crate::game::Game, rest: V3, at: V3) -> bool {
+pub(super) fn squad_frag_on_sam(g: &mut crate::game::Game, rest: V3, at: V3) -> bool {
     if g.pl[g.player].down { return false; }
     let p = sam_pos(g, &crate::seats::here(g));
     frag_in(g, &frag_pts(rest, at), p, None, None)
 }
 
 /// … and never his call inside what it kills at (squadthrow.ts samNear)
-pub fn sam_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, pts: &[V3]) -> bool {
+fn sam_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, pts: &[V3]) -> bool {
     let p = sam_pos(g, seat);
     pts.iter().any(|l| v3::dist_xz(p, *l) < g.k.squadthrow.duck_min_m)
 }

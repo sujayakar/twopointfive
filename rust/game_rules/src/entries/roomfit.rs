@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is. (roomfit.ts wayWords)
-pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
+fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("on the way to {}", p),
         _ => String::from("on the opening"),
@@ -16,7 +16,7 @@ pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
 }
 
 /// A row's words for a watch down a run of floor. (roomfit.ts runWords)
-pub fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
+fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("watching {}", p),
         _ => String::from("watching the far end"),
@@ -24,7 +24,7 @@ pub fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
 }
 
 /// How far `p` is from the stretch a → b in plan, only between its ends. (roomfit.ts offLine)
-pub fn off_line(p: V3, a: V3, b: V3) -> f64 {
+fn off_line(p: V3, a: V3, b: V3) -> f64 {
     let bx = b[0] - a[0];
     let bz = b[2] - a[2];
     let l2 = bx * bx + bz * bz;
@@ -40,7 +40,7 @@ fn front_of(front_k: f64, yaw: f64, front: f64) -> f64 {
 }
 
 /// What there is to watch from the space round `at`, heaviest first. (roomfit.ts threatsOf)
-pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, front: f64, reach: Option<f64>) -> Vec<crate::roomfit::Threat> {
+fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, front: f64, reach: Option<f64>) -> Vec<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     let reach = reach.unwrap_or(k.reach);
     let mut out: Vec<crate::roomfit::Threat> = Vec::new();
@@ -98,7 +98,7 @@ pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: 
 }
 
 /// Has a man stood at `q` a line to it: a door, to just short of its frame and, its leaf open, on into the doorway; else to the point. (roomfit.ts sees)
-pub fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
+fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
     let eye: V3 = [q[0], EYE, q[2]];
     let d = v3::dist_xz(q, t.at);
     if d < 0.3 { return true; }
@@ -124,7 +124,7 @@ pub fn watchables_at(g: &mut crate::game::Game, p: V3, front: f64, reach: f64, b
 }
 
 /// Is `q` in the funnel of this way, on the space's own face of it. (roomfit.ts inFunnel)
-pub fn in_funnel(g: &crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> bool {
+fn in_funnel(g: &crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> bool {
     let k = g.k.roomfit;
     let (o_at, o_half) = { let o = &g.tab.cover_opening[w.o]; (o.at, o.half) };
     let x = q[0] - o_at[0];
@@ -330,7 +330,7 @@ pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3
 }
 
 /// The longest clear run from `q` at eye height that is `sectorDeg` clear of every mate's gun. (roomfit.ts spareRun)
-pub fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
+fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     const B: usize = 16;
     let step = 2.0 * m::PI / (B as f64);
@@ -386,7 +386,7 @@ pub fn fit_groups(fits: &[crate::roomfit::Fit]) -> Vec<f64> {
 }
 
 /// He takes the deal's watch into his order. (roomfit.ts take)
-pub fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit::Fit) {
+fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit::Fit) {
     let row = &mut g.tab.orders_assignment[a];
     row.watch = f.watch.map(v3::copy);
     row.face = Some(match (f.watch, row.post) { (Some(watch), Some(post)) => v3::yaw_to(post, watch), _ => f.face });

@@ -17,11 +17,11 @@ pub fn anim_in_throw(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.th
 /// The throw under way is the free (left) hand's.   (character.ts throwOff)
 pub fn anim_throw_off(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 && g.ch[c].anim.thr_off }
 /// How much of the pistol's aim clip the pose shows, 0..1.   (character.ts aimShown)
-pub fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
+pub(super) fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
 /// How far the torch is up in the hand that holds it, 0..1.   (character.ts torchUp)
-pub fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
+pub(super) fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
 /// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
-pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
+pub(super) fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
     let taken = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || a.act.is_some() || a.kit.is_some() || a.sw.shown || a.hide_held_item || a.throw_t >= 0.0 || a.strike_t >= 0.0
         || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0;
@@ -30,7 +30,7 @@ pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
 /// Seconds into the throw, -1 when not throwing.   (character.ts throwTime)
 pub fn anim_throw_time(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.throw_t }
 /// A shot's first 0.35 s.   (character.ts shooting)
-pub fn anim_shooting(g: &crate::game::Game, c: CharId) -> bool {
+pub(super) fn anim_shooting(g: &crate::game::Game, c: CharId) -> bool {
     let t = g.ch[c].anim.shoot_t;
     t >= 0.0 && t < 0.35
 }
@@ -82,7 +82,7 @@ pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     a.tell_shown = 0.0;
 }
 /// The update; every pose of a man stands in his game's block, so there is no stage to open.   (character.ts update)
-pub fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
+pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
 
 // ---- helpers of updateStanding
 
@@ -154,7 +154,7 @@ fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, s
 }
 
 /// The animator's whole frame: every layer, in order, over pA; then the pose and the twists.   (character.ts updateStanding)
-pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
+fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     knobs_now(g);
     let sn = sneak();
     let cr = creep();

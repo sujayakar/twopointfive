@@ -50,7 +50,7 @@ fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a game tick: the follow itself, or the pin verbatim. (camera.ts FollowCamera.step)
-pub fn follow_camera_step(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
+fn follow_camera_step(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
     step(&mut g.tab.camera[id], dt, follow, aim_point)
 }
 fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
@@ -80,7 +80,7 @@ fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a drawn frame: 'previous' becomes the matrix the last frame was drawn with. (camera.ts FollowCamera.frame)
-pub fn follow_camera_frame(g: &mut Game, id: CameraId) {
+fn follow_camera_frame(g: &mut Game, id: CameraId) {
     frame(&mut g.tab.camera[id])
 }
 fn frame(c: &mut FollowCamera) {
@@ -167,7 +167,7 @@ fn rebuild(c: &mut FollowCamera) {
 }
 
 /// Spectating: every half second, pick the yaw the followed man can be seen from. (camera.ts FollowCamera.autoYaw)
-pub fn follow_camera_auto_yaw(g: &mut Game, id: CameraId, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
+fn follow_camera_auto_yaw(g: &mut Game, id: CameraId, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
     // (`blocked` needs g, so the camera is let go across the search; the level's segment test writes no yaw)
     let yaw = match auto_yaw_due(&mut g.tab.camera[id], dt) {
         Some(yaw) => yaw,

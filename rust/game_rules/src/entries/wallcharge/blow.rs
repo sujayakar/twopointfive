@@ -53,7 +53,7 @@ fn fire_lines(g: &mut Game, wall: &Option<WallSpot>, f: V3, q: V3, stop: bool) -
 }
 fn fire_key(q: V3) -> [crate::Num; 3] { [crate::Num(q[0]), crate::Num(q[1]), crate::Num(q[2])] }
 /// `fire.score(q)`: how much under known fire a place is, 0 = not at all; each place asked once   (wallcharge.ts underFire's `score`)
-pub fn wall_charge_fire_score(g: &mut crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> f64 {
+pub(super) fn wall_charge_fire_score(g: &mut crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> f64 {
     let WallChargeFireAsk::Lines { wall, all, memo, hit } = fire;
     let key = fire_key(q);
     if let Some(&v) = memo.get(key) { return v; }
@@ -125,7 +125,7 @@ pub fn wall_charge_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarg
 }
 
 /// the walks the open menu asks, kept while nothing a walk is judged by has changed   (wallcharge.ts WallCharge.keptWalks)
-pub fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate::wallcharge::WallChargeKept {
+pub(super) fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate::wallcharge::WallChargeKept {
     let p = g.player;
     let mut locks = String::new();
     for d in g.doors.list.clone() {
@@ -144,7 +144,7 @@ pub fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate::wallc
 
 // ------------------------------------------------------------ the order
 /// one man's job on this order, kept as the order's   (wallcharge.ts WallCharge.assign)
-pub fn wall_charge_assign(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, a: &crate::wallcharge::WallChargeAssignA) {
+fn wall_charge_assign(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, a: &crate::wallcharge::WallChargeAssignA) {
     let b = crate::orders::SquadOrdersAssignA {
         post: a.post, going: a.going.clone(), order: a.order.clone().unwrap_or_else(|| String::from(WALL_ORDER)),
         face: a.face, there: a.there.clone(), t0: a.t0, follow: a.follow, watch: a.watch, door: a.door, strafe: a.strafe, stance: a.stance,
@@ -160,7 +160,7 @@ pub fn wall_charge_assign(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, 
 }
 
 /// a man to his stand-off mark, his back to the charge until it has gone   (wallcharge.ts WallCharge.standOff)
-pub fn wall_charge_stand_off(g: &mut crate::game::Game, op: WallOpId, gd: GuardId) {
+fn wall_charge_stand_off(g: &mut crate::game::Game, op: WallOpId, gd: GuardId) {
     let w = o!(g, op).wall.clone();
     let p = *o!(g, op).post.get(gd).unwrap();
     let height = g.k.wallcharge.height;
@@ -225,7 +225,7 @@ pub fn wall_charge_order(g: &mut crate::game::Game, at: V3, who: Option<crate::w
 }
 
 /// the order is over: off the list, nobody left with his back to the wall, onto the done list   (wallcharge.ts WallCharge.end)
-pub fn wall_charge_end(g: &mut crate::game::Game, op: WallOpId, why: &str) {
+pub(super) fn wall_charge_end(g: &mut crate::game::Game, op: WallOpId, why: &str) {
     let i = match g.wall_charge.ops.iter().position(|&x| x == op) { Some(i) => i, None => return };
     g.wall_charge.ops.remove(i);
     let line = format!("end: {}", why);
@@ -277,7 +277,7 @@ fn safe_walk(g: &mut Game, w: &WallSpot, gd: GuardId, q: V3) -> bool {
 }
 
 /// a stand-off mark that has come under known fire is dealt again, once a man   (wallcharge.ts WallCharge.repick)
-pub fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
+fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
     let t = g.time;
     if o!(g, op).close.unwrap_or(false) { return; }
     let rt = o!(g, op).repick_t.unwrap_or(0.0);
@@ -348,7 +348,7 @@ pub fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
 }
 
 /// rear security while they stand off: the man furthest from the charge has his eyes spare   (wallcharge.ts WallCharge.spareRear)
-pub fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
+fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
     let w = o!(g, op).wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
     let live: Vec<(GuardId, OrdersAssignmentId)> = o!(g, op).men.iter().filter_map(|&m| {
@@ -371,7 +371,7 @@ pub fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
 }
 
 /// is a walk to the marks still worth waiting on   (wallcharge.ts WallCharge.waiting)
-pub fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool {
+fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool {
     let (cap, still) = (g.k.doortools.stack_cap, g.k.doortools.still_secs);
     if el >= cap { return false; }
     el < still || o!(g, op).men.iter().any(|&gd| {
@@ -382,7 +382,7 @@ pub fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool
 
 // ------------------------------------------------------------ Sam's key, the frame
 /// the set charge nearest Sam (null: none)   (wallcharge.ts WallCharge.nearest)
-pub fn wall_charge_nearest(g: &mut crate::game::Game, of: Option<&mut dyn FnMut(&mut crate::game::Game, WallChargeId) -> bool>) -> Option<WallChargeId> {
+pub(super) fn wall_charge_nearest(g: &mut crate::game::Game, of: Option<&mut dyn FnMut(&mut crate::game::Game, WallChargeId) -> bool>) -> Option<WallChargeId> {
     let sam = g.ch[g.pl[g.player].ch].pos;
     let mut list: Vec<WallChargeId> = Vec::new();
     match of {
@@ -456,7 +456,7 @@ pub fn wall_charge_tick(g: &mut crate::game::Game) {
 }
 
 /// one order, one frame: the switch on its phase   (wallcharge.ts WallCharge.step)
-pub fn wall_charge_step(g: &mut crate::game::Game, op: WallOpId) {
+fn wall_charge_step(g: &mut crate::game::Game, op: WallOpId) {
     let t = g.time;
     let el = t - o!(g, op).t0;
     let w = o!(g, op).wall.clone();
@@ -643,7 +643,7 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
 }
 
 /// a man on his point inside turns to what he was dealt to hold from it, once   (wallcharge.ts WallCharge.takeHold)
-pub fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, light: Option<bool>) {
+fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, light: Option<bool>) {
     let pod = match o!(g, op).pod.get(gd) { Some(x) => x.clone(), None => return };
     let h = match pod.hold.clone() { Some(h) => h, None => return };
     o!(g, op).pod.get_mut(gd).unwrap().hold = None;
@@ -676,7 +676,7 @@ pub fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardI
 }
 
 /// s the men stand after the blast before the order sends them in   (wallcharge.ts WallCharge.blowWait)
-pub fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
+fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
     let (after, now) = (g.k.wallcharge.after_blow, g.time);
     let h = match o!(g, op).hole { Some(h) => h, None => return after };
     if o!(g, op).men.iter().any(|&m| g.gd[m].dazzled_until > now) { return after; }   // (a man the blast caught: the beat as it was)
@@ -691,7 +691,7 @@ fn nav_free(g: &Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_bloc
 fn pod_has(p: &Pod) -> bool { p.watch.is_some() || p.hold.is_some() }
 
 /// behind the blast: the men nearest the hole first, each through its far mouth to a point of his own inside   (wallcharge.ts WallCharge.enter)
-pub fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
+fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
     let w = o!(g, op).wall.clone();
     let h = o!(g, op).hole.unwrap();
     let tk = thick(g, &w);
@@ -802,7 +802,7 @@ pub fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
 }
 
 /// where he crossed the wall's line; read by the checks and their words only   (wallcharge.ts WallCharge.cross)
-pub fn wall_charge_cross(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, p: V3) {
+fn wall_charge_cross(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, p: V3) {
     let was = o!(g, op).last.get(gd).copied();
     if was == Some(None) { return; }
     let w = o!(g, op).wall.clone();
@@ -831,7 +831,7 @@ fn open_way(g: &mut Game, p: V3, yaw: f64) -> f64 {
 }
 
 /// the way a man on his point inside faces: the way he came unless that is a wall at his chest   (wallcharge.ts WallCharge.lookFrom)
-pub fn wall_charge_look_from(g: &mut crate::game::Game, p: V3, into: f64, want: f64) -> f64 {
+fn wall_charge_look_from(g: &mut crate::game::Game, p: V3, into: f64, want: f64) -> f64 {
     if open_way(g, p, want) >= 2.0 { return want; }
     let mut best = want;
     let mut score = f64::NEG_INFINITY;
@@ -856,7 +856,7 @@ pub fn wall_charge_blow(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
 }
 
 /// Sam inside the reach when it went: knocked along the blast, no round for a beat, his aim open. Never a hit   (wallcharge.ts WallCharge.samCaught)
-pub fn wall_charge_sam_caught(g: &mut crate::game::Game, pl: PlayerId, k: f64, from: V3) {
+fn wall_charge_sam_caught(g: &mut crate::game::Game, pl: PlayerId, k: f64, from: V3) {
     let c = g.pl[pl].ch;
     let along = v3::sub(g.ch[c].pos, from);
     crate::character::anim_hit_from(g, c, Some(along));
@@ -910,7 +910,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
 }
 
 /// the blast itself: the wall, the report, who it catches, and the squad goes in behind it   (wallcharge.ts WallCharge.blowRaw)
-pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pressed: bool) -> Option<crate::wallcharge::WallChargeBlowRaw> {
+fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pressed: bool) -> Option<crate::wallcharge::WallChargeBlowRaw> {
     use crate::game::{DownBy, DownKind, GuardState};
     let c = c_2?;
     let i = g.wall_charge.set.iter().position(|&x| x == c)?;

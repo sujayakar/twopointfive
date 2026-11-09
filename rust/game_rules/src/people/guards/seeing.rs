@@ -25,7 +25,7 @@ pub(crate) fn shot_e(e: &crate::game::GameEvent) -> crate::guards::ShotRelationE
 }
 
 /// How a 'glass' event reaches an ear: from its own point, and from each face of the pane it carries, whichever arrives best. (guards.ts glassHeard)
-pub fn glass_heard(g: &mut crate::game::Game, e: crate::game::GameEvent, ear: V3) -> crate::scene_collision::Propagation {
+pub(in crate::people) fn glass_heard(g: &mut crate::game::Game, e: crate::game::GameEvent, ear: V3) -> crate::scene_collision::Propagation {
     let mut best = crate::weather::hear_path(g, [e.pos[0], e.pos[1] + 1.0, e.pos[2]], ear, None);
     let ears = match e.ears {
         Some(q) if !best.direct => q,
@@ -92,7 +92,7 @@ pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> b
 }
 
 /// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither. (guards.ts shotRelation)
-pub fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
+pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
     let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
     let team = g.gd[gd].team;
     if shooter == team {
@@ -102,7 +102,7 @@ pub fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotR
 }
 
 /// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has. (guards.ts colleagueFirePos)
-pub fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::ColleagueFirePosE) -> Option<V3> {
+pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::ColleagueFirePosE) -> Option<V3> {
     use crate::picture::Who;
     if e.blind == Some(true) {
         let p = match e.to {
@@ -178,7 +178,7 @@ pub fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guar
 }
 
 /// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id. (guards.ts stepIsThreat)
-pub fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
+pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
     let team = g.gd[gd].team;
     if crate::seats::is_man_id(g, who) {
@@ -228,7 +228,7 @@ fn ground_step(row: &mut crate::guards::GuardsModGroundTrackValue, p: V3, now: f
 }
 
 /// × the sight gain for how Sam is moving as this man sees it. (guards.ts motionFactor)
-pub fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
+pub(super) fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let pp = g.ch[g.pl[g.player].ch].pos;
     let v = crate::guards::player_ground_vel(g);
     let lit = g.pl[g.player].visibility;
@@ -236,7 +236,7 @@ pub fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
 }
 
 /// motionFactor's arithmetic for any watched man at `pp` moving at `v`, lit `lit`, `dist` off. (guards.ts motionCore)
-pub fn motion_core(g: &crate::game::Game, gd: GuardId, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
+pub(super) fn motion_core(g: &crate::game::Game, gd: GuardId, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
     let gp = g.ch[g.gd[gd].ch].pos;
     let hunts = hunting(g, gd);
     motion_sum(gp, hunts, pp, v, lit, dist)
@@ -406,7 +406,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 }
 
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke? (guards.ts bodyLit)
-pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
+pub(super) fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];

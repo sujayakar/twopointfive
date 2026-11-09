@@ -43,10 +43,10 @@ fn new_man(t: f64) -> crate::spotted::Man {
 }
 
 /// flat distance (spotted.ts flat)
-pub fn flat(a: &[f64], b: &[f64]) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
+fn flat(a: &[f64], b: &[f64]) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// a man's eyes: the head bone, or 1.6 over his feet (spotted.ts eyeOf)
-pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
+fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     if let Some(h) = g.ch[c].bones.get(crate::character::Bone::Head) { return *h; }
     let p = g.ch[c].pos;
@@ -54,7 +54,7 @@ pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
 }
 
 /// a line from a man's eyes to a body at `q`, asked of the walls and furniture only: no door leaves (spotted.ts inLine)
-pub fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
+fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
     let eye = eye_of(g, h);
     let walls = crate::ask::Over::statics();
     !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None)
@@ -68,7 +68,7 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 }
 
 /// his foe is Sam on his feet, or a live operative (spotted.ts ours)
-pub fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
+fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     match g.gd[h].foe {
         Some(crate::game::Foe::Player) => !g.pl[seat.player].down,
         Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && g.gd[f].state != crate::game::GuardState::Dead,
@@ -77,13 +77,13 @@ pub fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> 
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs` (spotted.ts hasThem)
-pub fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
+fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, seat, h)
 }
 
 /// the switch on, under the silent posture, alive (spotted.ts live)
-pub fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.k.spotted.on && crate::silent::under_silence(g, gd) && g.gd[gd].state != crate::game::GuardState::Dead
 }
 
@@ -94,7 +94,7 @@ pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::S
 }
 
 /// the squad line's word while a silent squad is not yet compromised: any man caught, else any man wary; None: nothing to add (spotted.ts spottedWord)
-pub fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
+pub(super) fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if !g.k.spotted.on || !crate::silent::squad_silent(g, seat) { return None; }
     let mut wary = false;
     for gd in crate::orders::squad_orders_squad(g, seat) {
@@ -131,7 +131,7 @@ pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -
 }
 
 /// an alert / searching man is a danger to one of them now (spotted.ts dangerNow)
-pub fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     if since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, &crate::seats::here(g), h) { return true; }
     let hp = pos(g, h);
@@ -196,7 +196,7 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
 }
 
 /// a change of mode: counted, logged, the spell's fields cleared (spotted.ts set)
-pub fn set(g: &mut crate::game::Game, gd: GuardId, to: crate::spotted::SpottedMode, of: Option<GuardId>) {
+fn set(g: &mut crate::game::Game, gd: GuardId, to: crate::spotted::SpottedMode, of: Option<GuardId>) {
     let t = g.time;
     let r = man(g, gd);
     if r.mode == to { return; }
@@ -211,7 +211,7 @@ pub fn set(g: &mut crate::game::Game, gd: GuardId, to: crate::spotted::SpottedMo
 }
 
 /// a line said once by the man himself, no sooner than `gap` after his last (spotted.ts cue)
-pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>) {
+fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>) {
     let gap = gap.unwrap_or(4.0);
     let t = g.time;
     let r = man(g, gd);
@@ -222,7 +222,7 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>)
 }
 
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)
-pub fn ring(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3, max_m: f64) -> Vec<V3> {
+fn ring(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3, max_m: f64) -> Vec<V3> {
     let sam = sam_pos(g, seat);
     let mut spots = Vec::new();
     let mut r = 0.8;
@@ -242,7 +242,7 @@ pub fn ring(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3, max_m: f
 }
 
 /// between Sam's gun and the man it may be on (spotted.ts inSamsLine)
-pub fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, h: GuardId) -> bool {
+fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, h: GuardId) -> bool {
     let (a, b) = (sam_pos(g, seat), pos(g, h));
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = m::hyp2(dx, dz);
@@ -253,7 +253,7 @@ pub fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, 
 }
 
 /// SUSPICIOUS: where he goes: out of the line if lit in it, else still; Sam past the leash, he follows (spotted.ts hide)
-pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
+fn hide(g: &mut crate::game::Game, gd: GuardId) {
     let k = g.k.spotted;
     let (p, sam) = (pos(g, gd), sam_pos(g, &crate::seats::here(g)));
     let d_sam = flat(&p, &sam);
@@ -326,7 +326,7 @@ pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a round from a man stood at `q` to a body at `hp`, stopped a body's breadth short of it (spotted.ts shotLine)
-pub fn shot_line(g: &mut crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
+fn shot_line(g: &mut crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
     let (dx, dz) = (hp[0] - q[0], hp[2] - q[2]);
     let l = m::hyp2(dx, dz);
     if l < 0.5 { return true; }
@@ -365,7 +365,7 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// `h` has turned to `gd`: roused, a line between them, and his fix on this man or squared up to him (spotted.ts onHim)
-pub fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let st = g.gd[h].state;
     if st != crate::game::GuardState::Suspicious && st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search { return false; }
     let (p, hp) = (pos(g, gd), pos(g, h));
@@ -381,7 +381,7 @@ pub fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
 }
 
 /// AT ARM'S LENGTH: picks the man, closes, and `takeSecs` after his hands are on him the man is out cold (spotted.ts hands)
-pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
+fn hands(g: &mut crate::game::Game, gd: GuardId) {
     let k = g.k.spotted;
     let p = pos(g, gd);
     let t = g.time;
@@ -510,7 +510,7 @@ pub fn spotted_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
 }
 
 /// the men dropped in the last `braceSecs` (spotted.ts fresh). Nothing calls it on the page: SPOTTED.brace is settled off
-pub fn fresh(g: &mut crate::game::Game) -> Vec<crate::spotted::FreshItem> {
+fn fresh(g: &mut crate::game::Game) -> Vec<crate::spotted::FreshItem> {
     let now = g.time;
     let brace_secs = g.k.spotted.brace_secs;
     let d = g.m.spotted.drops.get_or_insert_with(|| SpottedModDropsValue { down: JsSet::new(), at: Vec::new(), seen: false, t: now });

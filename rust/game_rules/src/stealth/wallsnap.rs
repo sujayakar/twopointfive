@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::m;
 
 /// Within 0..1; a NaN stays a NaN. (wallsnap.ts clamp01)
-pub fn clamp01(x: f64) -> f64 {
+fn clamp01(x: f64) -> f64 {
     if x < 0.0 { 0.0 } else if x > 1.0 { 1.0 } else { x }
 }
 
