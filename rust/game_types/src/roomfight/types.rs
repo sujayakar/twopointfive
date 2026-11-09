@@ -1,6 +1,6 @@
 //! The types of `roomfight`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -10,53 +10,27 @@ pub struct Entry {
     pub out: [f64; 2],
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RoomFight {
-    pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
+    #[is({ let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t })] pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
     pub live: bool,
-    pub blind_fire: bool,
+    #[is(true)] pub blind_fire: bool,
     pub blind_rounds: f64,
     pub defs: Vec<RoomfightDefId>,
     pub ops: Vec<RoomfightOpId>,
     pub log: Vec<crate::roomfight::FightNote>,
-    pub stats: crate::roomfight::RoomFightStats,
+    #[is(crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, rallied: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
     pub rooms: Vec<RoomfightRoomId>,
     pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
-    pub fill_mark: Vec<u8>,
+    #[is(alloc::vec![0; 0])] pub fill_mark: Vec<u8>,
     pub called: JsSet<GuardId>,
     pub down_called: JsSet<GuardId>,
-    pub hot_t: f64,
+    #[is(-100.0)] pub hot_t: f64,
     pub reports: Vec<crate::roomfight::RoomFightReportsItem>,
     pub heard_ev: JsSet<u32>,
     pub sams: Vec<crate::roomfight::RoomFightSamsItem>,
     pub drill_said: bool,
 }
-impl RoomFight {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RoomFight {
-            skill: { let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t },
-            live: false,
-            blind_fire: true,
-            blind_rounds: 0.0,
-            defs: Vec::new(),
-            ops: Vec::new(),
-            log: Vec::new(),
-            stats: crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, rallied: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 },
-            rooms: Vec::new(),
-            room_of_cell: JsMap::new(),
-            fill_mark: alloc::vec![0; 0],
-            called: JsSet::new(),
-            down_called: JsSet::new(),
-            hot_t: -100.0,
-            reports: Vec::new(),
-            heard_ev: JsSet::new(),
-            sams: Vec::new(),
-            drill_said: false,
-        }
-    }
-}
-impl Default for RoomFight { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum RoomFightSkillKey {
@@ -134,20 +108,11 @@ pub struct Room {
     pub entries: Vec<crate::roomfight::Entry>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DefMode {
     #[default] Hold,
     Move,
     Free,
-}
-impl DefMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DefMode::Hold => "hold",
-            DefMode::Move => "move",
-            DefMode::Free => "free",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -183,6 +148,8 @@ pub struct Def {
     pub mode: crate::roomfight::DefMode,
     pub move_kind: crate::roomfight::DefMoveKind,
     pub move_t: f64,
+    /// who sent him on the leg he is on, or was on last: a tasker of owner/, `By::NOBODY` the room fight itself
+    pub leg_by: crate::owner::By,
     pub came_by: Option<DoorId>,
     pub stall_at: V3,
     pub stall_t: f64,

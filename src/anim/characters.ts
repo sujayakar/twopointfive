@@ -8,7 +8,7 @@ export const JOINT_STRIDE = 64; // joint slots per character in the jointMats bu
 export const MAX_CHARS = 16;
 /** bytes per CharInst (gbuffer.wgsl): tint.xyz + jointOffset · tint2.xyz + owner · wet (coat, beads, rain, phase) · wetK (bead density, bead size, trail length, roughness wet) ·
  *  wetK2 (roughness dry, darken exponent, darken multiplier, specular gain) · wetK3 (waterline height in bind-pose m above the sole, the wicking band above it, THE CAST'S PART MASK as u32
- *  bits, 0) — the last four rows are the wet-character look (rust/game_rules/src/wet), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
+ *  bits, 0) — the last four rows are the wet-character look (rust/game_rules/src/air/wet.rs), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
  *  is 0 on the mannequin = every vertex drawn, the two tints by matSel, exactly as it always was */
 export const CHAR_INST_BYTES = 96;
 const INST_F32 = CHAR_INST_BYTES / 4;

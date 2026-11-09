@@ -25,7 +25,7 @@ section is what a hosted build keeps on a server, which is also where co-op's ga
 | `src/host/drawnet.ts`, `src/ui/netrows.ts` | `DrawNet`: the page as a client; the debugger's Network page |
 | `tools/mp/server.ts`, `tools/mp/stand.ts`, `tools/mp/runner.ts` | the game server's process; a game with no page; servers as the dev server's children |
 | `tools/mp/lan.ts`, `tools/mp/bot.ts`, `tools/mp/words-diff.ts` | a game by hand on your network; a scripted client; which part two machines differ in |
-| `seats/`, `cmd/`, `walkahead/`, `state_words.rs` | in `rust/game_rules/src/`: each seat's things; a record and its check; the look's walk; a hash a part |
+| `seats.rs`, `cmd.rs`, `walkahead.rs`, `state_words.rs` | in `rust/game_rules/src/`: each seat's things; a record and its check; the look's walk; a hash a part |
 | `rust/game_face/src/net.rs`, `rust/game_draw/src/lead.rs` | the calls a networked host makes; his man drawn ahead |
 
 `PlayerCmd` is in `rust/game_types/src/cmd/`, `SeatSet` and `SeatRef` in `rust/game_types/src/seats/`, the numbers in `CmdcheckK` and `SeatsK`.

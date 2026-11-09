@@ -138,7 +138,7 @@ impl<'a> Rules<'a> {
         if m.grid.is_some_and(|x| x <= 0.0) { self.say("meta.grid", "over 0"); }
         if m.mark_texel.is_some_and(|x| !(0.005..=0.2).contains(&x)) { self.say("meta.markTexel", "metres, 0.005 to 0.2"); }
         if m.kept.is_some_and(|x| !(0.0..=1.0).contains(&x)) { self.say("meta.kept", "a number from 0 to 1"); }
-        for list in ["floors", "boxes", "props", "lights", "switchables", "doors", "routes", "chokepoints", "civilians", "volumes", "marks", "devices", "vents", "beacons"] {
+        for list in ["floors", "boxes", "props", "lights", "switchables", "doors", "routes", "chokepoints", "civilians", "volumes", "marks", "devices", "vents", "hums", "beacons"] {
             self.own(list, data.get(list).items().iter().map(|o| o.peek("id").and_then(Json::str)));
         }
         for (list, of) in [("surfaces.zones", data.get("surfaces").get("zones")), ("mission.objectives", data.get("mission").get("objectives")), ("plans.roomClear", data.get("plans").get("roomClear"))] {
@@ -150,7 +150,7 @@ impl<'a> Rules<'a> {
             if s.ceiling <= 0.0 { self.say(format!("{w}.ceiling"), "over 0"); }
             self.word(&format!("{w}.name"), &s.name);
         }
-        for list in ["boxes", "props", "doors", "chokepoints", "civilians", "volumes", "devices", "vents"] { self.floors(list, data.get(list)); }
+        for list in ["boxes", "props", "doors", "chokepoints", "civilians", "volumes", "devices", "vents", "hums"] { self.floors(list, data.get(list)); }
         for (name, m) in f.materials.iter() {
             let w = format!("materials.{name}");
             if !light(&m.albedo) { self.say(format!("{w}.albedo"), "0 or more"); }
@@ -401,6 +401,12 @@ impl<'a> Rules<'a> {
             in_range("period", v.period.map_or(true, |x| x > 0.0), "seconds, over 0");
             in_range("duty", v.duty.map_or(true, |x| (0.0..=1.0).contains(&x)), "from 0 to 1");
         }
+        most("hums", f.hums.as_ref().map_or(0, |h| h.len()), 16.0, "hums: the mixer holds a voice for each");
+        for (i, h) in f.hums.iter().flatten().enumerate() {
+            let w = named(i, "hums", &h.name);
+            if !(h.level > 0.0 && h.level <= 1.0) { self.say(format!("{w}.level"), "over 0 and at most 1"); }
+            if !(h.radius > 0.0 && h.radius <= 40.0) { self.say(format!("{w}.radius"), "m, over 0 and at most 40"); }
+        }
     }
 
     // ---- the mission's thread, the breaker, the sky, the day
@@ -423,15 +429,6 @@ impl<'a> Rules<'a> {
             let w = format!("{}.box", named(i, "beacons", &b.id));
             self.a_box(&w, &b.box_);
             if self.boxes.contains(b.box_.as_str()) && !self.switched.contains_key(b.box_.as_str()) { self.say(w, format!("'{}' is no switchable's box (the beam goes with that fixture)", b.box_)); }
-        }
-        if let Some(d) = &f.daylight {
-            self.lamp("daylight.sun", &d.sun, &BTreeSet::new());
-            if d.sun.kind != LightDataKind::Dir { self.say("daylight.sun.kind", "dir"); }
-            self.text("daylight.sun.id", &d.sun.id);
-            for (k, l) in [("groupsOn", &d.groups_on), ("groupsOff", &d.groups_off)] { for w in l { self.text(format!("daylight.{k}"), w); } }
-            for id in &d.lights_off { if !self.lights.contains(id.as_str()) { self.say("daylight.lightsOff", format!("no light of the level is called '{id}'")); } }
-            if d.haze < 0.0 { self.say("daylight.haze", "0 or more"); }
-            if d.exposure <= 0.0 { self.say("daylight.exposure", "over 0"); }
         }
     }
 
@@ -464,7 +461,7 @@ impl<'a> Rules<'a> {
         }
         if let Some(r) = &s.room_clear { self.room_clear(r, s); }
         if let Some(q) = &s.quiet { self.quiet(q); }
-        if let Some(l) = &s.lesson { self.lesson(l); }
+        if let Some(l) = &s.lesson { self.lesson(l, s); }
         if let Some(p) = &s.par {
             if !(p.gold > 0.0 && p.gold < p.silver && p.silver < p.bronze) { self.say("scenarios.par", "gold under silver under bronze, seconds over 0"); }
             if p.loss_secs < 0.0 { self.say("scenarios.par.lossSecs", "seconds, 0 or more"); }
@@ -607,8 +604,25 @@ impl<'a> Rules<'a> {
         for (k, l) in [("phones", &q.phones), ("wayouts", &q.wayouts)] { for (i, s) in l.iter().flatten().enumerate() { stand(format!("{w}.{k}[{i}]"), s, false); } }
     }
 
-    /// the shapes alone: whether a test's doors, lights and areas are there is `lesson::check_lesson`'s, against the built floor
-    fn lesson(&self, l: &LessonData) {
+    /// a step's test: what no deed could ever answer, and a door, a room or a route this file has not. (A light and a man the mission stands: `tests/lessons.rs` asks of those)
+    fn lesson_test(&self, at: &str, t: &game::lesson::LessonTest, s: &LevelScenarios) {
+        use game::lesson::LessonTest as T;
+        let door = |d: &str| if !self.doors.contains(d) { self.say(at, format!("no door of the level is called '{d}'")); };
+        match t {
+            T::In { area: r } | T::Body { area: r } | T::Squad { area: r, .. } => if !(r.x0 < r.x1 && r.z0 < r.z1) { self.say(at, format!("an area that holds nothing: {r:?}")); },
+            T::Near { r: Some(r), .. } if *r <= 0.0 => self.say(at, format!("no man can be nearer than {r}")),
+            T::Men { down: Some(n) } if *n < 1.0 => self.say(at, "down: how many, at least one"),
+            T::Door { door: d, .. } | T::StackOn { door: d, .. } => door(d),
+            T::Stacks { doors, .. } => doors.iter().for_each(|d| door(d)),
+            T::Did { what, on: Some(d), .. } => { if !what.starts_with("order:") { self.say(at, format!("on: an order is given on a door, and '{what}' is none")); } door(d); }
+            T::Taken { room } => if !s.room_clear.as_ref().is_some_and(|c| c.rooms.iter().any(|r| r.id == *room)) { self.say(at, format!("no room of the level is called '{room}'")); },
+            T::Calm { route: Some(n) } => if !self.f.routes.iter().any(|r| r.name.as_deref().unwrap_or(&r.id) == n) { self.say(at, format!("no route of the level is called '{n}'")); },
+            T::All { of } | T::Any { of } => { if of.is_empty() { self.say(at, "a list of no tests"); } for x in of { self.lesson_test(at, x, s); } }
+            _ => {}
+        }
+    }
+
+    fn lesson(&self, l: &LessonData, s: &LevelScenarios) {
         let w = "scenarios.lesson";
         self.text(format!("{w}.title"), &l.title);
         if let Some(r) = &l.rails {
@@ -621,6 +635,7 @@ impl<'a> Rules<'a> {
             let at = named(i, &format!("{w}.steps"), &t.id);
             self.text(format!("{at}.id"), &t.id);
             self.text(format!("{at}.line"), &t.line);
+            self.lesson_test(&format!("{at}.done"), &t.done, s);
             if !ids.insert(&t.id) { self.say(&at, "the id is another step's already"); }
             for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line), ("pageLine", &t.page_line),
                 ("flatLine", &t.flat_line), ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }

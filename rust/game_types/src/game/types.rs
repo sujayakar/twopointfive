@@ -1,22 +1,13 @@
 //! The types of `game`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ThrowKind {
     #[default] Smoke,
     Flash,
     Frag,
-}
-impl ThrowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ThrowKind::Smoke => "smoke",
-            ThrowKind::Flash => "flash",
-            ThrowKind::Frag => "frag",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -68,7 +59,7 @@ pub struct Interactable {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum InteractableKind {
     #[default] Cam,
     Guard,
@@ -83,26 +74,8 @@ pub enum InteractableKind {
     Charge,
     Cancel,
 }
-impl InteractableKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            InteractableKind::Cam => "cam",
-            InteractableKind::Guard => "guard",
-            InteractableKind::Breaker => "breaker",
-            InteractableKind::Door => "door",
-            InteractableKind::Light => "light",
-            InteractableKind::Body => "body",
-            InteractableKind::Objective => "objective",
-            InteractableKind::Held => "held",
-            InteractableKind::Wall => "wall",
-            InteractableKind::Switch => "switch",
-            InteractableKind::Charge => "charge",
-            InteractableKind::Cancel => "cancel",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Verb {
     Push,
     Hammer,
@@ -135,44 +108,8 @@ pub enum Verb {
     Lead,
     Stay,
 }
-impl Verb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Verb::Push => "push",
-            Verb::Hammer => "hammer",
-            Verb::Rattle => "rattle",
-            Verb::Pick => "pick",
-            Verb::Unlock => "unlock",
-            Verb::Kick => "kick",
-            Verb::Code => "code",
-            Verb::Drive => "drive",
-            Verb::Charge => "charge",
-            Verb::Cancel => "cancel",
-            Verb::Pull => "pull",
-            Verb::Ease => "ease",
-            Verb::Nocode => "nocode",
-            Verb::Wand => "wand",
-            Verb::Breach => "breach",
-            Verb::Grab => "grab",
-            Verb::Question => "question",
-            Verb::Choke => "choke",
-            Verb::Whip => "whip",
-            Verb::Comply => "comply",
-            Verb::Drag => "drag",
-            Verb::Drop => "drop",
-            Verb::BreakerOff => "breakerOff",
-            Verb::BreakerOn => "breakerOn",
-            Verb::Blow => "blow",
-            Verb::TakeCam => "takeCam",
-            Verb::LightsOff => "lightsOff",
-            Verb::LightsOn => "lightsOn",
-            Verb::Lead => "lead",
-            Verb::Stay => "stay",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SlotKind {
     #[default] Pistol,
     Rifle,
@@ -181,19 +118,7 @@ pub enum SlotKind {
     Frag,
 }
 
-impl SlotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlotKind::Pistol => "pistol",
-            SlotKind::Rifle => "rifle",
-            SlotKind::Smoke => "smoke",
-            SlotKind::Flash => "flash",
-            SlotKind::Frag => "frag",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum GuardState {
     #[default] Patrol,
     Suspicious,
@@ -201,48 +126,19 @@ pub enum GuardState {
     Search,
     Dead,
 }
-impl GuardState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardState::Patrol => "patrol",
-            GuardState::Suspicious => "suspicious",
-            GuardState::Alert => "alert",
-            GuardState::Search => "search",
-            GuardState::Dead => "dead",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownKind {
     #[default] Shot,
     Struck,
     Choked,
 }
-impl DownKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownKind::Shot => "shot",
-            DownKind::Struck => "struck",
-            DownKind::Choked => "choked",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,
     Player,
     World,
-}
-impl DownBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownBy::Guard => "guard",
-            DownBy::Player => "player",
-            DownBy::World => "world",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -271,24 +167,13 @@ pub struct WitnessHeard {
     pub last_t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum WitnessAlertedBy {
     Body,
     Held,
     Radio,
     Sound,
     Sight,
-}
-impl WitnessAlertedBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessAlertedBy::Body => "body",
-            WitnessAlertedBy::Held => "held",
-            WitnessAlertedBy::Radio => "radio",
-            WitnessAlertedBy::Sound => "sound",
-            WitnessAlertedBy::Sight => "sight",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -323,24 +208,13 @@ pub struct WitnessSawHeld {
     pub who: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum MissionStage {
     #[default] Drive,
     Infiltrate,
     Exfil,
     Done,
     Failed,
-}
-impl MissionStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionStage::Drive => "drive",
-            MissionStage::Infiltrate => "infiltrate",
-            MissionStage::Exfil => "exfil",
-            MissionStage::Done => "done",
-            MissionStage::Failed => "failed",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -433,7 +307,7 @@ impl StoodWith {
 }
 impl Default for StoodWith { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Game {
     /// what this game was stood with
@@ -445,7 +319,7 @@ pub struct Game {
     #[bytes(skip)]
     pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
-    pub player: PlayerId,
+    #[is(PlayerId(0))] pub player: PlayerId,
     pub guards: Vec<GuardId>,
     pub civilians: Vec<GuardId>,
     pub targets: Vec<FixtureId>,
@@ -455,18 +329,18 @@ pub struct Game {
     pub dice: Option<crate::math_dice::SimDice>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub men: crate::Opaque,
+    #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::sim_lightshome::LightHome,
     pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::sim_fallshome::FallStore,
-    pub ai_enabled: bool,
+    #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
     pub show_debug: bool,
-    pub spectate: f64,
+    #[is(-1.0)] pub spectate: f64,
     pub player_invisible: bool,
     pub threat_proximity: f64,
-    pub torch_on_t: f64,
+    #[is(-100.0)] pub torch_on_t: f64,
     pub aim_point: V3,
     pub aim_target: Option<FixtureId>,
     pub aim_guard: Option<GuardId>,
@@ -474,13 +348,12 @@ pub struct Game {
     pub dyn_boxes: Vec<AnyBoxId>,
     pub rings: Vec<crate::launcher::Ring>,
     pub shells: Vec<crate::he40::Shell>,
-    pub fn2000: bool,
+    #[is(true)] pub fn2000: bool,
     pub doors: crate::doors::Doors,
     pub door_deals: Vec<crate::doorswing::SwingDeal>,
     pub props: crate::props::PropSystem,
     pub use_door: Option<DoorId>,
     pub reach_interior: Option<Vec<u8>>,
-    pub touring: bool,
     pub hover: Option<crate::game::Interactable>,
     pub interactables: Vec<crate::game::Interactable>,
     pub nearby: Vec<crate::game::Interactable>,
@@ -493,25 +366,22 @@ pub struct Game {
     pub called_in: bool,
     pub stood_down: bool,
     pub escalation: f64,
-    pub escalation_t: f64,
-    pub alarm: crate::game::GameAlarm,
+    #[is(-1.0)] pub escalation_t: f64,
+    #[is(crate::game::GameAlarm { episode: false, pos: [0.0, 0.0, 0.0], placed: false, apart_t: 0.0, raised_at: -100.0 })] pub alarm: crate::game::GameAlarm,
     pub clearing: Option<crate::squad::Clearing>,
     pub clear_rooms: f64,
     pub cleared_at: JsMap<String, f64>,
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub decals: crate::render_decals::Decals,
     pub weather: crate::weather::Weather,
-    pub fx_seed: f64,
+    #[is(1.0)] pub fx_seed: f64,
     pub ocp_cooldown: f64,
-    pub last_sting_t: f64,
+    #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    pub mission: crate::game::Mission,
+    #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
     pub devices: crate::devices::Devices,
@@ -560,13 +430,13 @@ pub struct Game {
     #[bytes(skip)]
     pub saves: crate::savestate::Checkpoints,
     pub rack_targets: Vec<FixtureId>,
-    pub tune: crate::game::GameTune,
+    #[is(crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true })] pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
     pub level: crate::scene_level::Level,
-    pub rig: RigId,
+    #[is(RigId(0))] pub rig: RigId,
     pub smoke: crate::smoke_types::SmokeSystemLike,
-    pub quiet_utility: bool,
-    pub mission_in_tour: bool,
+    /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
+    pub aside: bool,
     /// (the host's camera: in no bytes)
     #[bytes(skip)]
     pub view_proj: Option<crate::game::GameViewProj>,
@@ -575,7 +445,7 @@ pub struct Game {
     pub restart_cut: bool,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
-    pub seat: SeatId,
+    #[is(SeatId(0))] pub seat: SeatId,
     pub seats: Vec<SeatId>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
@@ -591,7 +461,7 @@ pub struct Game {
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// INVENTED: what g.serial() deals
-    pub serial_next: u32,
+    #[is(1)] pub serial_next: u32,
     /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
     /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
@@ -622,7 +492,7 @@ pub struct Game {
     /// the other tables of things
     pub tab: Tabs,
     /// the knob tables, at the page's values
-    pub k: crate::knobs::Knobs,
+    #[is(crate::knobs::Knobs::page())] pub k: crate::knobs::Knobs,
     /// each module's own state
     pub m: Mods,
     /// the counters kept for the checks
@@ -634,175 +504,22 @@ pub struct Game {
     #[bytes(skip)]
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
-    pub ctl: crate::owned::Owned,
+    #[is(crate::owned::Owned::new())] pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub mark_set: crate::owned::Owned,
+    #[is(crate::owned::Owned::new())] pub mark_set: crate::owned::Owned,
     /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
     /// (made from the statics: in no bytes)
     #[bytes(skip)]
-    pub ray_grid: crate::owned::Owned,
+    #[is(crate::owned::Owned::new())] pub ray_grid: crate::owned::Owned,
     /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub feel: crate::owned::Owned,
+    #[is(crate::owned::Owned::new())] pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
-impl Game {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Game {
-            stood: crate::game::StoodWith::blank(),
-            solo_card: false,
-            kit_stage: None,
-            col: crate::scene_collision::StaticCollision::blank(),
-            player: PlayerId(0),
-            guards: Vec::new(),
-            civilians: Vec::new(),
-            targets: Vec::new(),
-            events: Vec::new(),
-            search_probe_n: 0.0,
-            time: 0.0,
-            dice: None,
-            men: crate::Opaque,
-            light_home: crate::sim_lightshome::LightHome::blank(),
-            pose_sets: Vec::new(),
-            falls: crate::sim_fallshome::FallStore::blank(),
-            ai_enabled: true,
-            god_mode: false,
-            infinite_ammo: false,
-            show_debug: false,
-            spectate: -1.0,
-            player_invisible: false,
-            threat_proximity: 0.0,
-            torch_on_t: -100.0,
-            aim_point: [0.0, 0.0, 0.0],
-            aim_target: None,
-            aim_guard: None,
-            aim_friend: None,
-            dyn_boxes: Vec::new(),
-            rings: Vec::new(),
-            shells: Vec::new(),
-            fn2000: true,
-            doors: crate::doors::Doors::blank(),
-            door_deals: Vec::new(),
-            props: crate::props::PropSystem::blank(),
-            use_door: None,
-            reach_interior: None,
-            touring: false,
-            hover: None,
-            interactables: Vec::new(),
-            nearby: Vec::new(),
-            aim_snap: None,
-            act: None,
-            puppet: None,
-            tmp_v: [0.0, 0.0, 0.0],
-            called_in: false,
-            stood_down: false,
-            escalation: 0.0,
-            escalation_t: -1.0,
-            alarm: crate::game::GameAlarm { episode: false, pos: [0.0, 0.0, 0.0], placed: false, apart_t: 0.0, raised_at: -100.0 },
-            clearing: None,
-            clear_rooms: 0.0,
-            cleared_at: JsMap::new(),
-            beacons: Vec::new(),
-            items: crate::throwables::Throwables::blank(),
-            fx: Vec::new(),
-            sparks: crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } },
-            tracers: crate::tracers::Tracers::blank(),
-            decals: crate::render_decals::Decals::blank(),
-            weather: crate::weather::Weather::blank(),
-            fx_seed: 1.0,
-            ocp_cooldown: 0.0,
-            last_sting_t: -100.0,
-            event_seq: 0.0,
-            mission: crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } },
-            chronicle: crate::chronicle::Chronicle::blank(),
-            qrf: crate::qrf::Qrf::blank(),
-            devices: crate::devices::Devices::blank(),
-            destr: crate::destruction::Destruction::blank(),
-            wind: crate::wind::Wind::blank(),
-            air_dust: crate::air_dust::AirDust::blank(),
-            moths: crate::moths::Moths::blank(),
-            glass_break: crate::glassbreak::GlassBreak::blank(),
-            shards: crate::shards::GlassShards::blank(),
-            director: crate::director::Director::blank(),
-            host_cam: None,
-            host_input: None,
-            night_breach: crate::nightbreach::NightBreach::blank(),
-            quiet: crate::quiet::QuietMission::blank(),
-            lesson: crate::lesson::Lesson::blank(),
-            rails: crate::rails::Rails::blank(),
-            par: crate::par::Par::blank(),
-            recap: crate::deathrecap::Recap::blank(),
-            verdict: crate::verdict::Verdict::blank(),
-            room_clear: crate::roomclear::RoomClearScenario::blank(),
-            orders: crate::orders::SquadOrders::blank(),
-            fog_of_war: crate::fogofwar::FogOfWar::blank(),
-            fog_picture: crate::fogofwar::FogPicture::blank(),
-            fight: crate::roomfight::RoomFight::blank(),
-            cues: crate::cues::Cues::blank(),
-            squad_net: crate::squadnet::SquadNet::blank(),
-            cover: crate::cover::Cover::blank(),
-            entry: crate::entrypoints::EntryPoints::blank(),
-            cleared: crate::cleared::ClearedRooms::blank(),
-            rescue: crate::rescue::Rescue::blank(),
-            door_tools: crate::doortools::DoorTools::blank(),
-            pair: crate::pairorders::PairOrders::blank(),
-            work: crate::workthings::WorkThings::blank(),
-            wall_charge: crate::wallcharge::WallCharge::blank(),
-            door_path: crate::doorpath::DoorPath::blank(),
-            saves: crate::savestate::Checkpoints::blank(),
-            rack_targets: Vec::new(),
-            tune: crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true },
-            engine: crate::host_api::HostApi::default(),
-            level: crate::scene_level::Level::default(),
-            rig: RigId(0),
-            smoke: crate::smoke_types::SmokeSystemLike::default(),
-            quiet_utility: false,
-            mission_in_tour: false,
-            view_proj: None,
-            rolls: Vec::new(),
-            roll_seq: 0.0,
-            restart_cut: false,
-            seat: SeatId(0),
-            seats: Vec::new(),
-            local_seat: None,
-            ticking: false,
-            alone_own: crate::game::AsideOwn::blank(),
-            cmd_buf: None,
-            door_owns: Vec::new(),
-            door_was: Vec::new(),
-            door_hand_recs: JsMap::new(),
-            serial_next: 1,
-            in_cast: false,
-            box_frame_rows: Vec::new(),
-            box_frame_free: Vec::new(),
-            loose_poses: Vec::new(),
-            out: Vec::new(),
-            view_depth: 0,
-            ch: Tab::new(),
-            dr: Tab::new(),
-            gd: Tab::new(),
-            pl: Tab::new(),
-            cv: Tab::new(),
-            fa: Tab::new(),
-            tab: Tabs::blank(),
-            k: crate::knobs::Knobs::page(),
-            m: Mods::blank(),
-            stats: Stats::blank(),
-            sim: 0,
-            ctl: crate::owned::Owned::new(),
-            ray_grid: crate::owned::Owned::new(),
-            mark_set: crate::owned::Owned::new(),
-            feel: crate::owned::Owned::new(),
-            keyed: crate::dice::Keyed::default(),
-        }
-    }
-}
-impl Default for Game { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GamePuppet {
@@ -922,19 +639,10 @@ pub struct Roll {
     pub voice: f64,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Blank)]
 pub struct AsideOwn {
     pub lens: Option<CameraId>,
 }
-impl AsideOwn {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        AsideOwn {
-            lens: None,
-        }
-    }
-}
-impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GameDoorHandRecsValue {
@@ -943,7 +651,6 @@ pub struct GameDoorHandRecsValue {
     pub t0: f64,
     pub crack: bool,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub move_: Option<bool>,
 }
 
@@ -953,34 +660,17 @@ pub enum Foe {
     Player,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PairId {
     #[default] Red,
     Blue,
 }
-impl PairId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairId::Red => "red",
-            PairId::Blue => "blue",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Temperament {
     #[default] Steady,
     Nervy,
     Hard,
-}
-impl Temperament {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Temperament::Steady => "steady",
-            Temperament::Nervy => "nervy",
-            Temperament::Hard => "hard",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -990,21 +680,21 @@ pub enum MissionRating {
     Assault,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
-    pub ch: CharId,
+    #[is(CharId(0))] pub ch: CharId,
     pub crouch: bool,
     pub aim_held: bool,
-    pub last_fire_t: f64,
+    #[is(-10.0)] pub last_fire_t: f64,
     pub fire_cd: f64,
     pub backpedal: bool,
     pub sprinting: bool,
     pub dash: bool,
     pub friend_low: bool,
-    pub friend_t: f64,
-    pub shoved: [f64; 2],
-    pub shoved_t: f64,
-    pub shoved_from: [f64; 2],
+    #[is(-10.0)] pub friend_t: f64,
+    #[is([0.0, 0.0])] pub shoved: [f64; 2],
+    #[is(-1.0)] pub shoved_t: f64,
+    #[is([0.0, 0.0])] pub shoved_from: [f64; 2],
     pub haul: Option<crate::hands::Haul>,
     pub door_move: Option<crate::hands::DoorMove>,
     pub dragging: Option<GuardId>,
@@ -1022,30 +712,30 @@ pub struct Player {
     pub hit_flash: f64,
     /// his hands were on a man last frame (the partner's word goes as they first are)
     pub pair_hands_was: bool,
-    pub stagger_until: f64,
-    pub dazzled_until: f64,
+    #[is(-1.0)] pub stagger_until: f64,
+    #[is(-1.0)] pub dazzled_until: f64,
     pub dazzled_at: Option<V3>,
     pub stun_posed: bool,
-    pub hurt_at: f64,
-    pub door_bash_at: f64,
+    #[is(-1.0)] pub hurt_at: f64,
+    #[is(-10.0)] pub door_bash_at: f64,
     pub door_bash_lean: f64,
-    pub door_rip_until: f64,
+    #[is(-1.0)] pub door_rip_until: f64,
     pub door_kick_tail: bool,
     pub door_head: f64,
-    pub door_head_t: f64,
+    #[is(-1.0)] pub door_head_t: f64,
     pub sup: crate::suppression::Sup,
     pub aim: crate::aim::AimState,
     pub aimw: crate::aimweight::AimWeight,
-    pub hits_left: f64,
+    #[is(1.0)] pub hits_left: f64,
     pub down: bool,
-    pub pistol: FirearmId,
+    #[is(FirearmId(0))] pub pistol: FirearmId,
     pub ocp: crate::weapons::Ocp,
-    pub canisters: f64,
-    pub flashbangs: f64,
-    pub frags: f64,
-    pub slot: crate::game::SlotKind,
-    pub throw_kind: crate::game::ThrowKind,
-    pub rifle: FirearmId,
+    #[is(4.0)] pub canisters: f64,
+    #[is(2.0)] pub flashbangs: f64,
+    #[is(2.0)] pub frags: f64,
+    #[is(crate::game::SlotKind::Pistol)] pub slot: crate::game::SlotKind,
+    #[is(crate::game::ThrowKind::Smoke)] pub throw_kind: crate::game::ThrowKind,
+    #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
     pub setup: Option<crate::game::PlayerSetup>,
@@ -1055,10 +745,10 @@ pub struct Player {
     pub kit_was: Option<Option<crate::character::KitItem>>,
     pub kit_can: Option<crate::game::ThrowKind>,
     pub launch_held: Option<crate::weapons::RifleAttachment>,
-    pub kit_owed: f64,
+    #[is(-1.0)] pub kit_owed: f64,
     pub kit_owed_for: Option<crate::game::PlayerKitOwedFor>,
     pub sling_rest: Option<crate::game::PlayerSlingRest>,
-    pub holstered: bool,
+    #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
     pub coding: Option<DoorId>,
@@ -1066,15 +756,15 @@ pub struct Player {
     pub breaker_move: Option<crate::game::PlayerBreakerMove>,
     pub hand_wait: f64,
     pub near_sel: i32,
-    pub near_key: String,
-    pub sel: crate::game::PlayerSel,
-    pub pace: f64,
+    #[is(String::from(""))] pub near_key: String,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
-    pub light: LightId,
+    #[is(LightId(0))] pub light: LightId,
     pub throw_eaten: bool,
     pub throw_held: bool,
-    pub held_kind: crate::game::ThrowKind,
+    #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
     pub throw_preview: Option<crate::throwables::ThrowSolution>,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
     pub easing: Option<DoorId>,
@@ -1085,7 +775,7 @@ pub struct Player {
     pub f_held: bool,
     pub wand: bool,
     pub wanding: Option<crate::wand::Wanding>,
-    pub big_kit: crate::kit::BigKit,
+    #[is(crate::kit::BigKit::None)] pub big_kit: crate::kit::BigKit,
     pub kit_load: Option<crate::kitload::KitWorn>,
     pub cams: Vec<StickyCamId>,
     pub cam_seq: f64,
@@ -1094,122 +784,10 @@ pub struct Player {
     pub wall: Option<crate::player::WallHold>,
     pub safe: Option<V3>,
     pub step_phase: f64,
-    pub step_travel: f64,
+    #[is(1.0)] pub step_travel: f64,
     pub step_owed: f64,
-    pub step_at: f64,
+    #[is(-1.0)] pub step_at: f64,
 }
-impl Player {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Player {
-            ch: CharId(0),
-            crouch: false,
-            aim_held: false,
-            last_fire_t: -10.0,
-            fire_cd: 0.0,
-            backpedal: false,
-            sprinting: false,
-            dash: false,
-            friend_low: false,
-            friend_t: -10.0,
-            shoved: [0.0, 0.0],
-            shoved_t: -1.0,
-            shoved_from: [0.0, 0.0],
-            haul: None,
-            door_move: None,
-            dragging: None,
-            drag_yaw: 0.0,
-            drag_noise_t: 0.0,
-            drag_stuck_t: 0.0,
-            noise: 0.0,
-            takedown: None,
-            holding: None,
-            catch_due: None,
-            bubble: None,
-            speed_sm: 0.0,
-            visibility: 0.0,
-            irradiance: 0.0,
-            hit_flash: 0.0,
-            pair_hands_was: false,
-            stagger_until: -1.0,
-            dazzled_until: -1.0,
-            dazzled_at: None,
-            stun_posed: false,
-            hurt_at: -1.0,
-            door_bash_at: -10.0,
-            door_bash_lean: 0.0,
-            door_rip_until: -1.0,
-            door_kick_tail: false,
-            door_head: 0.0,
-            door_head_t: -1.0,
-            sup: crate::suppression::Sup::blank(),
-            aim: crate::aim::AimState::blank(),
-            aimw: crate::aimweight::AimWeight::blank(),
-            hits_left: 1.0,
-            down: false,
-            pistol: FirearmId(0),
-            ocp: crate::weapons::Ocp::blank(),
-            canisters: 4.0,
-            flashbangs: 2.0,
-            frags: 2.0,
-            slot: crate::game::SlotKind::Pistol,
-            throw_kind: crate::game::ThrowKind::Smoke,
-            rifle: FirearmId(0),
-            has_rifle: false,
-            equip_t: 0.0,
-            setup: None,
-            setup_hand: None,
-            setup_key: None,
-            rifle_gone: false,
-            kit_was: None,
-            kit_can: None,
-            launch_held: None,
-            kit_owed: -1.0,
-            kit_owed_for: None,
-            sling_rest: None,
-            holstered: true,
-            keys: JsSet::new(),
-            codes: JsSet::new(),
-            coding: None,
-            code_t: 0.0,
-            breaker_move: None,
-            hand_wait: 0.0,
-            near_sel: 0,
-            near_key: String::from(""),
-            sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None },
-            pace: 1.0,
-            nv: false,
-            nv_amount: 0.0,
-            light: LightId(0),
-            throw_eaten: false,
-            throw_held: false,
-            held_kind: crate::game::ThrowKind::Smoke,
-            throw_preview: None,
-            pending_throw: None,
-            easing: None,
-            ease_stall_t: 0.0,
-            ease_best: 0.0,
-            picking: None,
-            kick: None,
-            f_held: false,
-            wand: false,
-            wanding: None,
-            big_kit: crate::kit::BigKit::None,
-            kit_load: None,
-            cams: Vec::new(),
-            cam_seq: 0.0,
-            charging: None,
-            work_stow: None,
-            wall: None,
-            safe: None,
-            step_phase: 0.0,
-            step_travel: 1.0,
-            step_owed: 0.0,
-            step_at: -1.0,
-        }
-    }
-}
-impl Default for Player { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlayerTakedown {
@@ -1402,20 +980,11 @@ pub struct GuardTaskArm0 {
     pub pos: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum GuardTaskArm0Kind {
     #[default] Breaker,
     Device,
     Rack,
-}
-impl GuardTaskArm0Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardTaskArm0Kind::Breaker => "breaker",
-            GuardTaskArm0Kind::Device => "device",
-            GuardTaskArm0Kind::Rack => "rack",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1434,16 +1003,16 @@ pub struct UnitInfo {
     pub seat: Option<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Guard {
-    pub ch: CharId,
-    pub state: crate::game::GuardState,
+    #[is(CharId(0))] pub ch: CharId,
+    #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
-    pub team: crate::teams::Team,
+    #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
     /// may name a man who has left: a GuardId stays readable, tables never shrink
-    pub foe: Option<crate::game::Foe>,
+    #[is(Some(crate::game::Foe::Player))] pub foe: Option<crate::game::Foe>,
     pub faces: Option<f64>,
-    pub route: RouteId,
+    #[is(RouteId(0))] pub route: RouteId,
     pub unit: Option<crate::game::UnitInfo>,
     pub civ: Option<CivId>,
     pub trained: bool,
@@ -1456,9 +1025,9 @@ pub struct Guard {
     pub awareness: f64,
     /// written whole. doze.ts:244 asks whether a new fix was written: see fix_stamp
     pub last_known: Option<V3>,
-    pub last_seen_t: f64,
+    #[is(-100.0)] pub last_seen_t: f64,
     pub covers: Option<V3>,
-    pub word_t: f64,
+    #[is(-100.0)] pub word_t: f64,
     pub led_at: Option<V3>,
     pub hold: bool,
     pub pinned: bool,
@@ -1470,44 +1039,44 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    pub witness: crate::game::Witness,
-    pub talk: GameTalkId,
+    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 })] pub witness: crate::game::Witness,
+    #[is(GameTalkId(0))] pub talk: GameTalkId,
     pub keys: JsSet<String>,
-    pub missed_at: f64,
+    #[is(-1.0)] pub missed_at: f64,
     pub missing_raised: bool,
     pub muzzle_down: bool,
     pub muzzle_clear_t: f64,
-    pub muzzle_eval_t: f64,
-    pub line_bark_t: f64,
+    #[is(-1.0)] pub muzzle_eval_t: f64,
+    #[is(-100.0)] pub line_bark_t: f64,
     pub line_in_t: f64,
     pub line_side: f64,
-    pub line_gain: f64,
+    #[is(-1.0)] pub line_gain: f64,
     pub line_step_m: f64,
     pub line_stuck_t: f64,
     pub line_fail: Option<crate::game::GuardLineFail>,
-    pub leader_seen_t: f64,
+    #[is(-1.0)] pub leader_seen_t: f64,
     pub leader_seen_pos: V3,
     pub body_visits: f64,
-    pub body_visit_t: f64,
+    #[is(-1.0)] pub body_visit_t: f64,
     pub body_remarked: bool,
     pub body_closed: bool,
     pub body_fan: f64,
     pub body_duty: Option<crate::game::GuardBodyDuty>,
     pub dropped: Option<ItemId>,
-    pub handle_gate_t: f64,
+    #[is(f64::NEG_INFINITY)] pub handle_gate_t: f64,
     pub stays_in_rooms: bool,
     pub fled: bool,
-    pub gun_lost_at: f64,
-    pub torch_lost_at: f64,
+    #[is(-1.0)] pub gun_lost_at: f64,
+    #[is(-1.0)] pub torch_lost_at: f64,
     /// compared by identity in doorway.ts, doorpath.ts, guards.ts: see path_serial
     pub path: Vec<V3>,
     pub path_i: usize,
     pub repath_t: f64,
     /// guards.ts asks whether the back-off laid it: see path_goal_orbit
     pub path_goal: Option<V3>,
-    pub weapon: FirearmId,
-    pub fire_cd: f64,
-    pub reload_t: f64,
+    #[is(FirearmId(0))] pub weapon: FirearmId,
+    #[is(1.0)] pub fire_cd: f64,
+    #[is(-1.0)] pub reload_t: f64,
     pub carbine: bool,
     pub sup: crate::suppression::Sup,
     pub aim: crate::aim::AimState,
@@ -1515,49 +1084,49 @@ pub struct Guard {
     pub search_t: f64,
     pub look_phase: f64,
     pub speed: f64,
-    pub flashlight: LightId,
+    #[is(LightId(0))] pub flashlight: LightId,
     pub sweep: f64,
-    pub beam_dir: V3,
+    #[is([0.0, -0.3, 1.0])] pub beam_dir: V3,
     pub step_phase: f64,
-    pub heard_up_to: f64,
-    pub smoke_trans: f64,
-    pub light_dead_until: f64,
-    pub died_at: f64,
+    #[is(-1.0)] pub heard_up_to: f64,
+    #[is(1.0)] pub smoke_trans: f64,
+    #[is(-1.0)] pub light_dead_until: f64,
+    #[is(-1.0)] pub died_at: f64,
     pub slung: Option<crate::game::GuardSlung>,
     pub second: Option<crate::game::GuardSecond>,
     pub big_out: Option<crate::game::GuardBigOut>,
     pub work_stow: Option<crate::game::GuardWorkStow>,
-    pub light_lit_at_loss: bool,
+    #[is(true)] pub light_lit_at_loss: bool,
     pub dazzled_at: Option<V3>,
-    pub dazzled_until: f64,
-    pub stagger_until: f64,
-    pub door_down_until: f64,
-    pub hurt_at: f64,
+    #[is(-1.0)] pub dazzled_until: f64,
+    #[is(-1.0)] pub stagger_until: f64,
+    #[is(-1.0)] pub door_down_until: f64,
+    #[is(-1.0)] pub hurt_at: f64,
     pub saw_player_this_frame: bool,
     pub last_pos: V3,
     pub stuck_t: f64,
     pub stuck_n: f64,
     pub saw_foe_this_frame: bool,
-    pub killer_id: f64,
-    pub saw_body_t: f64,
+    #[is(-1.0)] pub killer_id: f64,
+    #[is(-100.0)] pub saw_body_t: f64,
     pub leader_still_t: f64,
-    pub alert_best: f64,
+    #[is(1000000000.0)] pub alert_best: f64,
     pub alert_stall_t: f64,
     pub alert_ref: Option<V3>,
     pub chase_t: f64,
     pub shot_blocked_t: f64,
     pub sight_pos: V3,
     pub sight_vel: V3,
-    pub sight_t: f64,
-    pub led_t: f64,
-    pub fix_t: f64,
+    #[is(-100.0)] pub sight_t: f64,
+    #[is(-100.0)] pub led_t: f64,
+    #[is(-100.0)] pub fix_t: f64,
     pub fix_ref: Option<V3>,
     pub search_plan: Option<crate::guards::SearchPlan>,
     pub pieing: Option<crate::guards::Pieing>,
     pub pie_last: Option<DoorId>,
-    pub pie_last_t: f64,
+    #[is(-100.0)] pub pie_last_t: f64,
     pub pie_prev: Option<V3>,
-    pub pie_prev_t: f64,
+    #[is(-100.0)] pub pie_prev_t: f64,
     pub standoff: Option<GuardsStandoffId>,
     pub stall_ref: Option<V3>,
     pub stall_t: f64,
@@ -1577,144 +1146,6 @@ pub struct Guard {
     /// INVENTED: path_goal is the very point the standoff laid (guards.ts)
     pub path_goal_orbit: bool,
 }
-impl Guard {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Guard {
-            ch: CharId(0),
-            state: crate::game::GuardState::Patrol,
-            callsign: String::new(),
-            team: crate::teams::Team::Guard,
-            foe: Some(crate::game::Foe::Player),
-            faces: None,
-            route: RouteId(0),
-            unit: None,
-            civ: None,
-            trained: false,
-            skill: None,
-            visibility: 0.0,
-            irradiance: 0.0,
-            route_i: 0,
-            wp: 0,
-            wait: 0.0,
-            awareness: 0.0,
-            last_known: None,
-            last_seen_t: -100.0,
-            covers: None,
-            word_t: -100.0,
-            led_at: None,
-            hold: false,
-            pinned: false,
-            god: false,
-            held: None,
-            bubble: None,
-            bubble_next: Vec::new(),
-            found: false,
-            down_kind: None,
-            down_by: None,
-            witness: crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 },
-            talk: GameTalkId(0),
-            keys: JsSet::new(),
-            missed_at: -1.0,
-            missing_raised: false,
-            muzzle_down: false,
-            muzzle_clear_t: 0.0,
-            muzzle_eval_t: -1.0,
-            line_bark_t: -100.0,
-            line_in_t: 0.0,
-            line_side: 0.0,
-            line_gain: -1.0,
-            line_step_m: 0.0,
-            line_stuck_t: 0.0,
-            line_fail: None,
-            leader_seen_t: -1.0,
-            leader_seen_pos: [0.0, 0.0, 0.0],
-            body_visits: 0.0,
-            body_visit_t: -1.0,
-            body_remarked: false,
-            body_closed: false,
-            body_fan: 0.0,
-            body_duty: None,
-            dropped: None,
-            handle_gate_t: f64::NEG_INFINITY,
-            stays_in_rooms: false,
-            fled: false,
-            gun_lost_at: -1.0,
-            torch_lost_at: -1.0,
-            path: Vec::new(),
-            path_i: 0,
-            repath_t: 0.0,
-            path_goal: None,
-            weapon: FirearmId(0),
-            fire_cd: 1.0,
-            reload_t: -1.0,
-            carbine: false,
-            sup: crate::suppression::Sup::blank(),
-            aim: crate::aim::AimState::blank(),
-            react_t: 0.0,
-            search_t: 0.0,
-            look_phase: 0.0,
-            speed: 0.0,
-            flashlight: LightId(0),
-            sweep: 0.0,
-            beam_dir: [0.0, -0.3, 1.0],
-            step_phase: 0.0,
-            heard_up_to: -1.0,
-            smoke_trans: 1.0,
-            light_dead_until: -1.0,
-            died_at: -1.0,
-            slung: None,
-            second: None,
-            big_out: None,
-            work_stow: None,
-            light_lit_at_loss: true,
-            dazzled_at: None,
-            dazzled_until: -1.0,
-            stagger_until: -1.0,
-            door_down_until: -1.0,
-            hurt_at: -1.0,
-            saw_player_this_frame: false,
-            last_pos: [0.0; 3],
-            stuck_t: 0.0,
-            stuck_n: 0.0,
-            saw_foe_this_frame: false,
-            killer_id: -1.0,
-            saw_body_t: -100.0,
-            leader_still_t: 0.0,
-            alert_best: 1000000000.0,
-            alert_stall_t: 0.0,
-            alert_ref: None,
-            chase_t: 0.0,
-            shot_blocked_t: 0.0,
-            sight_pos: [0.0, 0.0, 0.0],
-            sight_vel: [0.0, 0.0, 0.0],
-            sight_t: -100.0,
-            led_t: -100.0,
-            fix_t: -100.0,
-            fix_ref: None,
-            search_plan: None,
-            pieing: None,
-            pie_last: None,
-            pie_last_t: -100.0,
-            pie_prev: None,
-            pie_prev_t: -100.0,
-            standoff: None,
-            stall_ref: None,
-            stall_t: 0.0,
-            script: None,
-            task: None,
-            drawn: false,
-            leader: None,
-            follow_t: 0.0,
-            follow_goal: [0.0, 0.0, 0.0],
-            post: None,
-            fix_stamp: 0,
-            path_serial: 0,
-            path_goal_orbit: false,
-        }
-    }
-}
-impl Default for Guard { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardSkill {
@@ -1916,7 +1347,7 @@ impl Game {
 }
 
 /// the tables of things that are not at Game's top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Tabs {
     pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
@@ -1982,66 +1413,9 @@ impl core::ops::Index<AnyBoxId> for Tabs {
 impl core::ops::IndexMut<AnyBoxId> for Tabs {
     #[inline] fn index_mut(&mut self, id: AnyBoxId) -> &mut Self::Output { match id { AnyBoxId::World(b) => &mut self.boxes[b], AnyBoxId::Frame(b) => &mut self.frame_boxes[b] } }
 }
-impl Tabs {
-    pub fn blank() -> Self {
-        Tabs {
-            boxes: Tab::new(),
-            frame_boxes: Tab::new(),
-            clip: Tab::new(),
-            anim_gltf_mesh_data: Tab::new(),
-            anim_gltf_cast_variant: Tab::new(),
-            anim_gltf_cast_info: Tab::new(),
-            rig: Tab::new(),
-            pose_set: Tab::new(),
-            ragdoll: Tab::new(),
-            props_prop: Tab::new(),
-            input: Tab::new(),
-            camera: Tab::new(),
-            item: Tab::new(),
-            debris_chunk: Tab::new(),
-            cmd_seat: Tab::new(),
-            light: Tab::new(),
-            sim_lightshome_fixture: Tab::new(),
-            devices_camera_rt: Tab::new(),
-            devices_laser_rt: Tab::new(),
-            wallbreak_breakable: Tab::new(),
-            furnblast_member: Tab::new(),
-            wind_wind_source: Tab::new(),
-            doortools_door_op: Tab::new(),
-            orders_assignment: Tab::new(),
-            doortools_room_search: Tab::new(),
-            doortools_word: Tab::new(),
-            doortools_door_gate: Tab::new(),
-            doortools_known_threat: Tab::new(),
-            doortools_set_charge: Tab::new(),
-            orders_order_def: Tab::new(),
-            roomfight_def: Tab::new(),
-            roomfight_room: Tab::new(),
-            cover_opening: Tab::new(),
-            wallreact_breach: Tab::new(),
-            tactics_role: Tab::new(),
-            tactics_plan: Tab::new(),
-            tactics_danger_rec: Tab::new(),
-            lanes_lane: Tab::new(),
-            pressure_man: Tab::new(),
-            stickycam_sticky_cam: Tab::new(),
-            rescueflow_region: Tab::new(),
-            squad_room_clear: Tab::new(),
-            director_run: Tab::new(),
-            roomfight_op: Tab::new(),
-            wallcharge_wall_op: Tab::new(),
-            wallcharge_set_wall_charge: Tab::new(),
-            route: Tab::new(),
-            enemysquads_squad: Tab::new(),
-            director_live_beat: Tab::new(),
-            guards_standoff: Tab::new(),
-            game_talk: Tab::new(),
-        }
-    }
-}
 
 /// each module's top-level state: g.m.<module>
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Mods {
     /// (the process's: in no bytes)
@@ -2164,7 +1538,6 @@ pub struct Mods {
     pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
-    pub takedown: crate::takedown::TakedownMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
     pub pairup: crate::pairup::PairupMod,
@@ -2203,145 +1576,6 @@ pub struct Mods {
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub render_frame: crate::render_frame::RenderFrameMod,
-}
-impl Mods {
-    pub fn blank() -> Self {
-        Mods {
-            math_side: crate::math_side::MathSideMod::blank(),
-            math_exact: crate::math_exact::MathExactMod::blank(),
-            scene_markings: crate::scene_markings::SceneMarkingsMod::blank(),
-            scene_materials: crate::scene_materials::SceneMaterialsMod::blank(),
-            scene_stuff: crate::scene_stuff::SceneStuffMod::blank(),
-            thinline: crate::thinline::ThinlineMod::blank(),
-            scene_look: crate::scene_look::SceneLookMod::blank(),
-            anim_gltf: crate::anim_gltf::AnimGltfMod::blank(),
-            sim_sim: crate::sim_sim::SimSimMod::blank(),
-            sim_propshome: crate::sim_propshome::SimPropshomeMod::blank(),
-            scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod::blank(),
-            scene_collision: crate::scene_collision::SceneCollisionMod::blank(),
-            anim_skeleton: crate::anim_skeleton::AnimSkeletonMod::blank(),
-            packside: crate::packside::PacksideMod::blank(),
-            rig_props: crate::rig_props::RigPropsMod::blank(),
-            character: crate::character::CharacterMod::blank(),
-            sim_doorshome: crate::sim_doorshome::SimDoorshomeMod::blank(),
-            sim_slabshome: crate::sim_slabshome::SimSlabshomeMod::blank(),
-            teams: crate::teams::TeamsMod::blank(),
-            opening: crate::opening::OpeningMod::blank(),
-            weather_kinds: crate::weather_kinds::WeatherKindsMod::blank(),
-            kitload: crate::kitload::KitloadMod::blank(),
-            holdfire: crate::holdfire::HoldfireMod::blank(),
-            picture: crate::picture::PictureMod::blank(),
-            destruction_switch: crate::destruction_switch::DestructionSwitchMod::blank(),
-            dress: crate::dress::DressMod::blank(),
-            sim_fallshome: crate::sim_fallshome::SimFallshomeMod::blank(),
-            edge_look: crate::edge_look::EdgeLookMod::blank(),
-            wallbreak: crate::wallbreak::WallbreakMod::blank(),
-            furnblast: crate::furnblast::FurnblastMod::blank(),
-            doorblast: crate::doorblast::DoorblastMod::blank(),
-            fire: crate::fire::FireMod::blank(),
-            winbars: crate::winbars::WinbarsMod::blank(),
-            destruction: crate::destruction::DestructionMod::blank(),
-            wind: crate::wind::WindMod::blank(),
-            glasspen: crate::glasspen::GlasspenMod::blank(),
-            doorway: crate::doorway::DoorwayMod::blank(),
-            nightbreach: crate::nightbreach::NightbreachMod::blank(),
-            handleside: crate::handleside::HandlesideMod::blank(),
-            doornames: crate::doornames::DoornamesMod::blank(),
-            runner: crate::runner::RunnerMod::blank(),
-            netquietfeed: crate::netquietfeed::NetquietfeedMod::blank(),
-            netquiet: crate::netquiet::NetquietMod::blank(),
-            laststand: crate::laststand::LaststandMod::blank(),
-            stackroom: crate::stackroom::StackroomMod::blank(),
-            rearwatch: crate::rearwatch::RearwatchMod::blank(),
-            coverfire: crate::coverfire::CoverfireMod::blank(),
-            wallreact: crate::wallreact::WallreactMod::blank(),
-            tactics: crate::tactics::TacticsMod::blank(),
-            lanes: crate::lanes::LanesMod::blank(),
-            digin: crate::digin::DiginMod::blank(),
-            pressure: crate::pressure::PressureMod::blank(),
-            difficulty: crate::difficulty::DifficultyMod::blank(),
-            stickycam: crate::stickycam::StickycamMod::blank(),
-            quietfog: crate::quietfog::QuietfogMod::blank(),
-            calmtorch: crate::calmtorch::CalmtorchMod::blank(),
-            powerout: crate::powerout::PoweroutMod::blank(),
-            darkfoe: crate::darkfoe::DarkfoeMod::blank(),
-            whistle: crate::whistle::WhistleMod::blank(),
-            attention: crate::attention::AttentionMod::blank(),
-            doze: crate::doze::DozeMod::blank(),
-            needs: crate::needs::NeedsMod::blank(),
-            gunwall: crate::gunwall::GunwallMod::blank(),
-            lightswitch: crate::lightswitch::LightswitchMod::blank(),
-            stalk: crate::stalk::StalkMod::blank(),
-            darkdoor: crate::darkdoor::DarkdoorMod::blank(),
-            startle: crate::startle::StartleMod::blank(),
-            flinch: crate::flinch::FlinchMod::blank(),
-            rescue: crate::rescue::RescueMod::blank(),
-            rescuecheck: crate::rescuecheck::RescuecheckMod::blank(),
-            seenwalk: crate::seenwalk::SeenwalkMod::blank(),
-            wet: crate::wet::WetMod::blank(),
-            he40: crate::he40::He40Mod::blank(),
-            samlook: crate::samlook::SamlookMod::blank(),
-            irlight: crate::irlight::IrlightMod::blank(),
-            nvg: crate::nvg::NvgMod::blank(),
-            irlaser: crate::irlaser::IrlaserMod::blank(),
-            gunhold: crate::gunhold::GunholdMod::blank(),
-            unseen: crate::unseen::UnseenMod::blank(),
-            squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
-            squad40: crate::squad40::Squad40Mod::blank(),
-            squadthrow: crate::squadthrow::SquadthrowMod::blank(),
-            smokebreak: crate::smokebreak::SmokebreakMod::blank(),
-            showwhy: crate::showwhy::ShowwhyMod::blank(),
-            cmd: crate::cmd::CmdMod::blank(),
-            fireline: crate::fireline::FirelineMod::blank(),
-            doorforce: crate::doorforce::DoorforceMod::blank(),
-            rustknobs: crate::rustknobs::RustknobsMod::blank(),
-            glassbreak: crate::glassbreak::GlassbreakMod::blank(),
-            glass: crate::glass::GlassMod::blank(),
-            wallpen: crate::wallpen::WallpenMod::blank(),
-            suppression: crate::suppression::SuppressionMod::blank(),
-            enemysquads: crate::enemysquads::EnemysquadsMod::blank(),
-            morale: crate::morale::MoraleMod::blank(),
-            doortools: crate::doortools::DoortoolsMod::blank(),
-            shotgun: crate::shotgun::ShotgunMod::blank(),
-            player: crate::player::PlayerMod::blank(),
-            close: crate::close::CloseMod::blank(),
-            takedown: crate::takedown::TakedownMod::blank(),
-            spotted: crate::spotted::SpottedMod::blank(),
-            pairorders: crate::pairorders::PairordersMod::blank(),
-            pairup: crate::pairup::PairupMod::blank(),
-            sneak: crate::sneak::SneakMod::blank(),
-            silent: crate::silent::SilentMod::blank(),
-            cast: crate::cast::CastMod::blank(),
-            stature: crate::stature::StatureMod::blank(),
-            blast_feel: crate::blast_feel::BlastFeelMod::blank(),
-            combat: crate::combat::CombatMod::blank(),
-            scene_level_load: crate::scene_level_load::SceneLevelLoadMod::blank(),
-            snow_bog: crate::snow_bog::SnowBogMod::blank(),
-            sim_itemshome: crate::sim_itemshome::SimItemshomeMod::blank(),
-            frag: crate::frag::FragMod::blank(),
-            teampace: crate::teampace::TeampaceMod::blank(),
-            squad: crate::squad::SquadMod::blank(),
-            quiet: crate::quiet::QuietMod::blank(),
-            workthings: crate::workthings::WorkthingsMod::blank(),
-            lighting: crate::lighting::LightingMod::blank(),
-            hours: crate::hours::HoursMod::blank(),
-            chronicle: crate::chronicle::ChronicleMod::blank(),
-            kit: crate::kit::KitMod::blank(),
-            wandorder: crate::wandorder::WandorderMod::blank(),
-            fogofwar: crate::fogofwar::FogofwarMod::blank(),
-            guards: crate::guards::GuardsMod::blank(),
-            dialogue: crate::dialogue::DialogueMod::blank(),
-            civilians: crate::civilians::CiviliansMod::blank(),
-            orders: crate::orders::OrdersMod::blank(),
-            wallcharge: crate::wallcharge::WallchargeMod::blank(),
-            blast_look: crate::blast_look::BlastLookMod::blank(),
-            particle_fx: crate::particle_fx::ParticleFxMod::blank(),
-            shutdoor: crate::shutdoor::ShutdoorMod::blank(),
-            fixture_break: crate::fixture_break::FixtureBreakMod::blank(),
-            weapons: crate::weapons::WeaponsMod::blank(),
-            render_frame: crate::render_frame::RenderFrameMod::blank(),
-        }
-    }
 }
 
 /// each module's counters: g.stats.<module>

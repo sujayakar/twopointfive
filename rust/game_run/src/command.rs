@@ -108,10 +108,10 @@ commands! {
     19 QuietFog { rung: &str } = |g, rung| game::quietfog::quiet_fog_kept(g, rung);
     /// the cameras a quiet mission hands out, as this machine keeps them
     20 QuietCams { on: u32 } = |g, on| game::quietfog::quiet_cams_kept(g, on != 0);
-    /// nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and what is done is none of the mission's, the log's or the alarm's; 0 puts a fresh
+    /// nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and nothing is the mission's, the log's or the alarm's (`aside`); 0 puts a fresh
     /// encounter back
     21 Aside { on: u32, x: f64, z: f64 } = |g, on, x, z| {
-        (g.quiet_utility, g.touring, g.player_invisible) = (on != 0, on != 0, on != 0);
+        (g.aside, g.player_invisible) = (on != 0, on != 0);
         if on == 0 { game::game::game_restart(g); }
         else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
     };

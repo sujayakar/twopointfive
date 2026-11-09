@@ -20,15 +20,15 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
 | `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
-| `scenario_run/` | the one way from an address to a staged game; what is up; quit |
-| `roomclear/`, `squaddeal/` | rooms, marks and the two ends; squads cut along a house whose file names none |
-| `nightbreach/`, `breach/` | the staging a room clear stands on; F's drill |
-| `rescue/`, `rescueend/` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
-| `rescueflow/`, `rescuecheck/`, `rescueflush/` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
-| `quiet/`, `quietfog/`, `takecheck/` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission/` | the stealth stages, the run's counts, the one objective line (`objective`) |
-| `verdict/`, `par/` | how a run ended, latched; the medal clock |
-| `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
+| `scenario_run.rs` | the one way from an address to a staged game; what is up; quit |
+| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none |
+| `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
+| `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
+| `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
+| `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
+| `mission.rs` | the stealth stages, the run's counts, the one objective line (`objective`) |
+| `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
+| `lesson.rs`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
 
 The table of missions is `scenarios`, `quiet_missions` and `tutorial_missions` in `rust/game_types/src/scene_scenario_list/rows.rs`, and there is no other: the page asks the desk
@@ -71,10 +71,10 @@ in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; wal
 Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
 
-**How it ended** (`ended` in `verdict/b_01.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
+**How it ended** (`ended` in `verdict.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
 The objective line is one read, first speaker wins: script, lesson, room clear with its par, rescue, night breach, stages.
 
-**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/player/p_02.rs`). Inside
+**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/sam/player/update.rs`). Inside
 `game_restart_encounter`, the first act is the quiet deal and the last is each scenario's staging again. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
 carries the quiet deal, the lesson's step and a script's place in its beat.
 
@@ -98,7 +98,7 @@ spared on one knee (`rails_spare`). While steps remain, a room clear ends only b
 checks it against the level, and a bad one isn't armed. `rails_start_program` starts the program named `tutorial` at each run; `director_tick` resumes its beats. A beat is a step function over a plain
 frame (`BeatFrame`, `beat_next`), yielding a `Cond`, so it saves whole. A `cue` reaches a beat as the signal `lesson:<cue>`, and a beat says it has played out as `done:<name>` (`rails_cued`).
 
-**The breach drill** (`breach_drill_tick`): wait, approach, stack, breach, kick, bang, enter, clear, restack. `stage_checked` starts one where the level has `plans.breach` and there are two
+**The breach drill** (`breach_drill_tick`): wait, approach, stack, breach, kick, bang, enter, clear. `stage_checked` starts one where the level has `plans.breach` and there are two
 teammates. Only `office.json` has that plan. Elsewhere every teammate is the order menu's from the start.
 
 ## Rules that hold
@@ -111,6 +111,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
   should have it".
 - **A tutorial has a level of its own.** "each tutorial level should have its own awesome level".
 - **A step moves on when the thing is done,** never on a timer, and a key isn't named before its step opens it (`rails_hushes`).
+- **A step's test is known, or the read refuses the level,** saying the level, the step and the word (`LessonTest`).
 - **A cut row stays a row.** "let's also remove "night breach" since it's unnecessary now": no list draws it, and its address and checks still stage it.
 - **A level has no rooms in code.** `check_structure`, `check_squads`, `check_rescue` and `check_quiet` hold the file's rooms and marks to the built floor.
 
@@ -118,11 +119,11 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 
 - **A number:** `rust/game_types/src/knobs/` (`roomclear.rs`, `rescue.rs`, `rescueend.rs`, `rails.rs`, `squaddeal.rs`), or `?knob.rescue.resolve_secs=40`. Medal times: the level.
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
-  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
+  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. The gate's `played` rows, `missions.rs` and `coop.rs` find a room clear themselves (`room_clear_files`).
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
 - **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
-- **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
+- **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
 
 ## What holds it
@@ -148,6 +149,5 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 ## Not seen
 
 - **The other ways in** have stood only natively: nobody has played one on a GPU.
-- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. The Director's show path (`director_enter_show`) has no script. `set_daylight` is
-  only ever called to turn daylight off, so `level.daylight` is never seen.
+- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

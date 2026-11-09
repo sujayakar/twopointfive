@@ -1,6 +1,6 @@
 //! The types of `tactics`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man's price list for nav.findPath, fixed when asked: a cell of his side's dangerous doorways costs door_mult, a cell of his flank's avoid-set at least CORRIDOR_COST, any other 1 (tactics.ts tacticsPenalty)
@@ -9,20 +9,11 @@ pub enum TacticsPenalty {
     Cells { w: f64, door_idx: Option<JsSet<crate::Num>>, door_mult: f64, avoid: Option<JsSet<crate::Num>> },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RoleKind {
     #[default] Second,
     Presser,
     Flanker,
-}
-impl RoleKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoleKind::Second => "second",
-            RoleKind::Presser => "presser",
-            RoleKind::Flanker => "flanker",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -147,18 +138,10 @@ pub struct Gate {
     pub thrower: Option<GuardId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum GateRole {
     #[default] Lead,
     Second,
-}
-impl GateRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GateRole::Lead => "lead",
-            GateRole::Second => "second",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -236,20 +219,12 @@ pub struct TacticsLook {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TacticsMod {
     /// (src/game/tactics.ts:149 states)
     pub states: Option<crate::tactics::TState>,
     /// (src/game/tactics.ts:156 kit)
     pub kit: JsMap<GuardId, crate::tactics::TacticsModKitValue>,
-}
-impl TacticsMod {
-    pub fn blank() -> Self {
-        TacticsMod {
-            states: None,
-            kit: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `frag`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -213,18 +213,10 @@ pub struct OwnBangE {
     pub who: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WindUp {
     Own,
     Arc,
-}
-impl WindUp {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindUp::Own => "own",
-            WindUp::Arc => "arc",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -236,7 +228,7 @@ pub enum FragThrowAt {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FragMod {
     /// (src/game/frag.ts:210 FRAG_LOG)
     pub frag_log: Vec<crate::frag::BlastReport>,
@@ -252,19 +244,6 @@ pub struct FragMod {
     pub books: Option<Vec<crate::frag::Live>>,
     /// (src/game/frag.ts:820 defBooks)
     pub def_books: Option<crate::frag::DefBook>,
-}
-impl FragMod {
-    pub fn blank() -> Self {
-        FragMod {
-            frag_log: Vec::new(),
-            frag_why: JsMap::new(),
-            walls_for: None,
-            torn: None,
-            warned: JsMap::new(),
-            books: None,
-            def_books: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

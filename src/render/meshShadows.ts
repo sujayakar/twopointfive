@@ -9,7 +9,7 @@
 //   [NODE_BASE + (k·N + i)·2 + 0]        node i of character k: (aabbMin.xyz as bits, skip)         skip = next node when this one is missed / done
 //   [NODE_BASE + (k·N + i)·2 + 1]                               (aabbMax.xyz as bits, triStart | triCount << 24)   count 0 = internal (children i+1 and topo.right)
 //   [TRI_BASE + (k·T + t)·3 + j]         corner j of triangle t of character k, skinned this frame: (pos.xyz as bits, 0)
-// k is the character's index in this frame's capsule list = its skin instance (rust/game_rules/src/game writes both from one list; scene.charBounds[k] culls it,
+// k is the character's index in this frame's capsule list = its skin instance (rust/game_rules/src/tick/game writes both from one list; scene.charBounds[k] culls it,
 // capsules[k·capsPerChar] carries its owner id). N ≈ 9k, T ≈ 13.7k: 281 KB of nodes + 644 KB of corners per character, ×8 slots ≈ 7.4 MB.
 // The node region is initialised for all slots with the real links and inside-out boxes, so a slot that has never been refit is a valid EMPTY
 // tree (the walk terminates on any slot, whatever the frame's character count).

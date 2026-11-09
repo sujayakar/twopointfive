@@ -1,4 +1,4 @@
-// THE KIT'S COLUMN: A STRIP OF WHAT THE KEYS BRING AND THE BOX OF WHAT IS IN HIS HANDS. Everything it says is the game's (game.view.kit, rust/game_rules/src/kit
+// THE KIT'S COLUMN: A STRIP OF WHAT THE KEYS BRING AND THE BOX OF WHAT IS IN HIS HANDS. Everything it says is the game's (game.view.kit, rust/game_rules/src/outfit/kit
 // `kit_view`); this file holds how it looks and imports nothing of the game.
 // The maintainer, 10-22, of Chaos Theory's panel: "scct had a really compact current equipment screen, probably too compact for us but we can aspire to it".
 //   A STRIP of the places, each where it is whatever is selected: its key and what the key brings (a gun's name and rounds ready, the cans

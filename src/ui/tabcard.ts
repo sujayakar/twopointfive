@@ -20,7 +20,7 @@ export interface TabCard {
   /** what the squad carries between them and what waits on him, as the block's notes word it ('charges 2 · bangs 3') */
   carry: string[];
 }
-/** An objective that lists ('clear the structure: ✓ the guard hut · [the store] · the workshop' — rust/game_rules/src/roomclear: a tick is a room taken, brackets the one
+/** An objective that lists ('clear the structure: ✓ the guard hut · [the store] · the workshop' — rust/game_rules/src/missions/roomclear.rs: a tick is a room taken, brackets the one
  *  being called) as its sentence and its list; any other as its sentence alone. */
 export function objectiveList(text: string): { goal: string; items: TabCard['items'] } {
   const cut = text.indexOf(': '), parts = cut < 0 ? [] : text.slice(cut + 2).split(' · ').map(x => x.trim()).filter(Boolean);
@@ -33,11 +33,11 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
   const O = objectiveParts(objective), L = O?.label === 'objective' ? objectiveList(O.text) : { goal: O?.text ?? '', items: [] };
   return { label: O?.label ?? '', note: O?.note ?? '', goal: L.goal, items: L.items, men, who, carry };
 }
-/** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (rust/game_rules/src/doortools),
+/** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (rust/game_rules/src/entries/doortools),
  *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
 export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
 /** the mission's line in the player's keys */
-export const objectiveWords = (view: TickView): string => { const m = view.mission; return m?.of === 'lesson' ? capsPlain(m.text) : keyText(m?.text ?? ''); };
+export const objectiveWords = (view: TickView): string => { const m = view.mission; return m.of === 'lesson' ? capsPlain(m.text) : keyText(m.text); };
 /** the card of a view as it stands: the squad in its order, each man's line as the view words it (what he is doing and what he covers) and the card he was staged with in a line
  *  (a mission that issues its own kit stages its own cards); the block's title and its plain notes (view.squad; no notes where a lesson's frame keeps
  *  them back). Every key named is named as the page has it (keymap.ts keyText). */

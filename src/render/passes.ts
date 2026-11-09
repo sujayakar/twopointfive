@@ -17,7 +17,7 @@ import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the composite and of every volumetric march (the kernels that bind the place field)
 import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
-import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (rust/game_rules/src/fire): compiled into the composite, ahead of its own text
+import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (rust/game_rules/src/air/fire.rs): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import { SPLIT_TEXEL_BYTES, splitGatherSrc, splitRefused } from './gatherSplit';   // THE GATHER IS TWO PROGRAMS, made from its own texts (the one-kernel gather and the row that chose between them are gone)
 import { reportErrorLine, reportWarningLine } from '../cloud/report';   // (the reporter, a leaf that imports nothing: a line it is given prints as it did and is one of the visit's records)
@@ -37,7 +37,7 @@ import { TexturePool, TargetOps, texBytes } from './texpool';
 import { capUsage } from './framecap';
 import { Denoiser, dnTravel, DN_STRIDES } from './denoise';
 import type { Box } from '../scene/boxes';
-import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (rust/game_rules/src/fogofwar): one in-place pass over the composite while its switch is on — nothing while off
+import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (rust/game_rules/src/stealth/fogofwar): one in-place pass over the composite while its switch is on — nothing while off
 import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off
 
 const CS = GPUShaderStage.COMPUTE, FS = GPUShaderStage.FRAGMENT;
@@ -65,8 +65,8 @@ const TAAU_PARAM_BYTES = 128;   // struct TaauParams in taau.wgsl: mat4 (64) + 3
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
 const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
-/** one open fire as the composite draws it (rust/game_rules/src/fire makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; rust/game_rules/src/fire FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
+/** one open fire as the composite draws it (rust/game_rules/src/air/fire.rs makes them; shaders/fire.wgsl FireRec) */
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 
@@ -269,7 +269,7 @@ export class LightingPasses {
    *  (reflect.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
    *  Picture only: read off the list the picture is drawn from (what the fog of war hid or an infrared beam nobody's tube shows is not in it). Count 0 = the pass as it was. */
   private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_SEG_BYTES / 4); private beamN = -1;
-  /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (rust/game_rules/src/thinline → its bead or null) is handed over
+  /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (rust/game_rules/src/world/thinline.rs → its bead or null) is handed over
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
    *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), how far a stuff's own `mirrors` stands in for a plain coat's (the look's Pressed panels row, 0‥1; 0 on a page without the look), 0). Nothing here writes a box. */
@@ -297,7 +297,7 @@ export class LightingPasses {
     this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
     return hide.size ? hide : null;
   }
-  /** THE OPEN FIRES (rust/game_rules/src/fire → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
+  /** THE OPEN FIRES (rust/game_rules/src/air/fire.rs → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
    *  each one's flame, coals and drawn smoke along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
   private fireData = new Float32Array((16 + FIRE_MAX * FIRE_REC) / 4); private fireN = -1;
   setFires(list: readonly FireRecord[] | null | undefined) {
@@ -311,7 +311,7 @@ export class LightingPasses {
       F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = r.soot ?? 0; F[o + 15] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
-  /** … and THE LOOK'S NUMBERS every fire is drawn with (rust/game_rules/src/fire FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
+  /** … and THE LOOK'S NUMBERS every fire is drawn with (rust/game_rules/src/air/fire.rs FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
   private fireLook = new Float32Array(FIRE_LOOK_FLOATS); private fireLookSet = false;
   setFireLook(look: ArrayLike<number> | null | undefined) {
     if (!look) return;

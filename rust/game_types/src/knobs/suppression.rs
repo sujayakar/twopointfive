@@ -64,6 +64,6 @@ pub struct SuppressionK {
     #[k(2.0)] pub pair_secs: f64,
     #[k(20.0)] pub floor_line_secs: f64,
     /// ---- Sam (§4.3 — the one mechanical effect in this lane; the look and the sound are R4's)
-    /// extra cone on Sam's round per unit of HIS s (radians: dead-on at 0, ± ~2° at full — a torso at 8 m mostly). Not under the tour's puppet: its scripted double-taps land.
+    /// extra cone on Sam's round per unit of HIS s (radians: dead-on at 0, ± ~2° at full — a torso at 8 m mostly). Not under a puppet.
     #[k(0.07)] pub sam_spread: f64,
 }

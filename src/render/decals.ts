@@ -20,9 +20,9 @@
 //   [REC0, +3·CAP)            the records, 3 vec4 each: (pos.xyz, radius) (normal.xyz, param) (tangent.xyz, bits(kind3 | attached1 | seed12 | box16))
 //                             (box16 = the box an attached mark rides, DECAL_ANY_BOX for a world-fixed one, or — kind glassHit — the static index of ITS pane)
 //
-// Kind 'wetprint' (rust/game_rules/src/wet): a wet shoe print, param = how wet — the one kind whose record is EDITED after the fact (rust/game_rules/src/wet lowers param as it
+// Kind 'wetprint' (rust/game_rules/src/air/wet.rs): a wet shoe print, param = how wet — the one kind whose record is EDITED after the fact (rust/game_rules/src/air/wet.rs lowers param as it
 // dries and calls touch(); remove() retires it before the ring would).
-// Kind 'damage' with param ≥ WEAR_MARK.look (rust/game_rules/src/wallwear): a WALL-WEAR mark — a round's own 'bullet' record EDITED in place (kind, pos, radius, param; touch())
+// Kind 'damage' with param ≥ WEAR_MARK.look (rust/game_rules/src/breakage/wallwear.rs): a WALL-WEAR mark — a round's own 'bullet' record EDITED in place (kind, pos, radius, param; touch())
 // into what a breakable shows before it gives. See WEAR_MARK below; decals.wgsl wearMark draws it.
 // Kind 'glassHit' (E3 × E1): a round's hole + crack star on a glass pane. Panes are in no raster, so the g-buffer's decalSurface skips the kind outright; it is
 // composite.wgsl that evaluates it (glassMarks in decals.wgsl) at the point the view ray crosses the pane, from the same cell lists, and modulates the pane's
@@ -41,7 +41,7 @@ export interface Decal {
   kind: DecalKind;
   /** world placement (re-derived every sync for an attached decal): centre on the surface, unit face normal, unit in-plane tangent (the scuff's direction; the noise's orientation otherwise) */
   pos: Vec3; n: Vec3; t: Vec3;
-  /** bounding / shape radius (m); kind parameter (bullet: calibre scale, scorch: soot intensity 0‥1, scuff: streak length m, chip: unused, glassHit: impact strength 0‥1, wetprint: how wet 0‥1 — rust/game_rules/src/wet lowers it as the print dries); 12-bit look seed; running number */
+  /** bounding / shape radius (m); kind parameter (bullet: calibre scale, scorch: soot intensity 0‥1, scuff: streak length m, chip: unused, glassHit: impact strength 0‥1, wetprint: how wet 0‥1 — rust/game_rules/src/air/wet.rs lowers it as the print dries); 12-bit look seed; running number */
   radius: number; param: number; seed: number; serial: number;
   /** glassHit only: the static (level) index of the pane it is on — the shader draws it on that pane alone; −1 otherwise */
   pane: number;
@@ -77,7 +77,7 @@ export interface DecalOpts {
 const CELLS = WORLD.gridW * WORLD.gridH;
 const CELLS_V4 = Math.ceil(CELLS / 4);
 export const DECAL_CAP = 512;          // live decals (ring: the oldest goes)
-export const DECAL_LIST_CAP = 4096;    // cell-list entries in all (most decals sit in ≤ 4 cells; a floor film of settled dust — rust/game_rules/src/floormess, up to ~1.8 m — in up to 25)
+export const DECAL_LIST_CAP = 4096;    // cell-list entries in all (most decals sit in ≤ 4 cells; a floor film of settled dust — rust/game_rules/src/breakage/floormess.rs, up to ~1.8 m — in up to 25)
 export const DECAL_MAX_PER_CELL = 48;  // newest-N kept per cell: bounds the per-pixel loop where somebody empties magazines into one square metre
 const LIST_V4 = DECAL_LIST_CAP / 4;
 const CELL0 = 1, LIST0 = CELL0 + CELLS_V4, REC0 = LIST0 + LIST_V4;
@@ -88,7 +88,7 @@ export const DECAL_BYTES = TOTAL_V4 * 16;
  *  timer's noise floor — the reported delta ÷ N is the honest per-fragment figure. 1 = production. */
 export const decalDebug = { repeat: 1 };
 /** WGSL consts for render/shaders/decals.wgsl: the layout above + the caps (prepended by gbuffer.ts next to the scene prelude) */
-/** WALL-WEAR marks (rust/game_rules/src/wallwear writes them, decals.wgsl decalSurface / wearMark reads them — these numbers are the contract, emitted into the shader by
+/** WALL-WEAR marks (rust/game_rules/src/breakage/wallwear.rs writes them, decals.wgsl decalSurface / wearMark reads them — these numbers are the contract, emitted into the shader by
  *  decalWgslConsts): kind 'damage', param = look + material (0 plaster · 1 wood · 2 cardboard / fabric) + strength 0‥0.999. A mark's reach on a face (m) =
  *  reach0 + reach1 × strength. A THROUGH mark (a partition of half thickness minHalf‥maxHalf) sits on the wall's mid-plane with radius hypot(half, reach): the
  *  shader recovers the half thickness from the two and paints ONLY surfaces lying on the wall's two face planes (± faceTol), entry look on the one toward the
@@ -105,9 +105,9 @@ const DEFAULTS: Record<DecalKind, { radius: number; param: number }> = {
   scorch: { radius: 0.75, param: 1 },      // soot disc, intensity 1
   scuff: { radius: 0.1, param: 0.16 },     // (radius is re-derived from the streak length below)
   chip: { radius: 0.013, param: 1 },
-  glassHit: { radius: 0.12, param: 1 },  // the crack star's reach from the hole (rust/game_rules/src/glass draws 0.075‥0.2 off the hit's seed)
-  wetprint: { radius: 0.17, param: 1 },  // a wet shoe print (rust/game_rules/src/wet wet_footfall): the sole fits inside 17 cm of its centre; param = how wet, aged toward 0
-  damage: { radius: 0.05, param: 0.8 },   // the destruction lane's marks (rust/game_rules/src/destruction): floor(param) = the look — 0 a DENT in sheet metal, 1 a SHRED in fabric, 2 a CRACK in a dark screen, 6 a FILM of settled dust, 7 / 8 the RUBBLE a chunk leaves (rust/game_rules/src/floormess; 3‥5 are the wall wear's) — fract(param) = strength
+  glassHit: { radius: 0.12, param: 1 },  // the crack star's reach from the hole (rust/game_rules/src/breakage/glass.rs draws 0.075‥0.2 off the hit's seed)
+  wetprint: { radius: 0.17, param: 1 },  // a wet shoe print (rust/game_rules/src/air/wet.rs wet_footfall): the sole fits inside 17 cm of its centre; param = how wet, aged toward 0
+  damage: { radius: 0.05, param: 0.8 },   // the destruction lane's marks (rust/game_rules/src/breakage/destruction): floor(param) = the look — 0 a DENT in sheet metal, 1 a SHRED in fabric, 2 a CRACK in a dark screen, 6 a FILM of settled dust, 7 / 8 the RUBBLE a chunk leaves (rust/game_rules/src/breakage/floormess.rs; 3‥5 are the wall wear's) — fract(param) = strength
 };
 const SCUFF_HALF_W = 0.016;
 
@@ -119,7 +119,8 @@ export const MARKSIT = { on: false };
 export class Decals {
   /** live decals, oldest first (the ring drops from the front) */
   readonly list: Decal[] = [];
-  /** off: add() records nothing, frame() uploads nothing, the engine keeps FrameFlags.Decals down — the buffer stays exactly as it was (settings.decals mirrors in here) */
+  /** off (the picture's settings.decals, written here by the engine): frame() uploads nothing and the engine keeps FrameFlags.Decals down, so the buffer stays exactly as it was.
+   *  The list stands: the marks are the game's, whatever a picture shows */
   enabled = true;
   /** the header's fourth word as last UPLOADED (MARKSIT above): the table moved since = one more build and upload */
   private sat = false;
@@ -138,9 +139,8 @@ export class Decals {
   get count() { return this.list.length; }
 
   /** Leave a mark of `kind` centred at `pos` on a surface whose outward normal is `normal` (world). `size` overrides the kind's radius (the scuff's LENGTH goes in
-   *  opts.param). Returns the decal, or null when decals are off. Never touches Math.random: the look seed counts. */
+   *  opts.param). Returns the decal, or null where the list takes no such mark. Never touches Math.random: the look seed counts. */
   add(kind: DecalKind, pos: Vec3, normal: Vec3, size?: number, opts: DecalOpts = {}): Decal | null {
-    if (!this.enabled) return null;
     const n = v3.normalize(normal);
     let t = opts.tangent ? v3.sub(opts.tangent, v3.scale(n, v3.dot(opts.tangent, n))) : perpendicular(n);
     if (v3.len(t) < 1e-4) t = perpendicular(n); t = v3.normalize(t);
@@ -165,7 +165,7 @@ export class Decals {
   }
 
   clear() { if (this.list.length) { this.list.length = 0; this.dirty = true; } }
-  /** take one decal out before the ring gets to it (rust/game_rules/src/wet retires dried footprints); true if it was live */
+  /** take one decal out before the ring gets to it (rust/game_rules/src/air/wet.rs retires dried footprints); true if it was live */
   remove(d: Decal): boolean { const i = this.list.indexOf(d); if (i < 0) return false; this.list.splice(i, 1); this.dirty = true; return true; }
   /** a record was edited in place (a print's `param` lowered as it dries): rebuild + upload on the next frame */
   touch() { this.dirty = true; }
@@ -238,7 +238,7 @@ export class Decals {
   words(): Uint32Array { return this.u32.slice(0); }
 }
 
-// ---- box frames (the same conventions as boxes.ts rayBox / rust/game_rules/src/props: local +X → world (cos yaw, 0, −sin yaw), local +Z → (sin yaw, 0, cos yaw); Box.rot when present)
+// ---- box frames (the same conventions as boxes.ts rayBox / rust/game_rules/src/fittings/props.rs: local +X → world (cos yaw, 0, −sin yaw), local +Z → (sin yaw, 0, cos yaw); Box.rot when present)
 function toLocal(b: Box, v: Vec3, point: boolean): Vec3 {
   const d: Vec3 = point ? v3.sub(v, b.c) : v3.copy(v);
   if (b.rot) return quat.rotate(quat.conj(b.rot), d);

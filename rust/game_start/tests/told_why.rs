@@ -181,10 +181,13 @@ fn night(s: u32, squad: &str) -> Play {
     p.run(0.5);
     p
 }
+/// the word key, pressed
+fn f(p: &mut Play) { p.key_down("KeyF"); p.frame(); p.key_up("KeyF"); p.frame(); }
 fn sends_in(p: &mut Play, s: u32) {
-    game::nightbreach::night_breach_order(&mut p.g).unwrap_or_else(|| panic!("seed {s}: no stack"));
+    f(p);
     p.until(40.0, |p| game::nightbreach::night_breach_state(&p.g) == NightBreachState::Set).unwrap_or_else(|| panic!("seed {s}: never set: {}", p.roll()));
-    game::nightbreach::night_breach_order(&mut p.g).unwrap_or_else(|| panic!("seed {s}: no go"));
+    f(p);
+    assert!(game::nightbreach::night_breach_state(&p.g) != NightBreachState::Set, "seed {s}: no go");
 }
 
 /// THE RULE: a drill past calling off refuses the order, in the mouth of a man on it. CONTROL: before the word the same order is taken, with no such line.
@@ -296,7 +299,7 @@ fn rescue(s: u32, squad: u32, set: f64) -> Play {
     p.run(0.3);
     p
 }
-fn hostage_door(p: &Play) -> DoorId { let d = game::rescue::rescue_data(&p.g).expect("the rescue").room.door; p.door(&d) }
+fn hostage_door(p: &Play) -> DoorId { let d = p.g.level.scenarios.as_ref().and_then(|s| s.rescue.clone()).expect("the rescue").room.door; p.door(&d) }
 
 /// THE RULE: F on the hostage room with a charge going on, or men already at the door, is answered by the man at it.
 /// A FAILURE MEANS: F does nothing and nothing says why.
@@ -378,9 +381,9 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
         p.sam_put(mid);
         for &m in &men { p.man_stands(m, mid); }
         p.frame();
-        assert!(game::rescue::rescue_order_door(&mut p.g).is_some(), "seed {s}: the order");
+        f(&mut p);
         p.run(1.5);   // (the man's "on you." came first in that frame, and this waits its turn on his bubble)
-        assert!(p.said.iter().any(|l| men.contains(&l.who) && l.text.starts_with("one bang left. it goes in the ") && l.text.ends_with(" door.")), "seed {s}: two doors, one can: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
+        assert!(p.said.iter().any(|l| men.contains(&l.who) && l.text.starts_with("one bang left. it's going in the ") && l.text.ends_with(" door.")), "seed {s}: two doors, one can: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
         drop(p);
 
         let mut p = night(s, "2");
@@ -388,7 +391,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
         p.g.door_tools.bangs = 0.0;
         sends_in(&mut p, s);
         p.frame();
-        assert!(said_by_one_of(&p, &men, none) || !game::nightbreach::night_breach_order(&mut p.g).is_some() && p.said_it(none), "seed {s}: the breach: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
+        assert!(said_by_one_of(&p, &men, none), "seed {s}: the breach: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
     }
 }
 
@@ -402,7 +405,7 @@ fn a_failed_drill_is_said_by_a_living_man() {
             p.sam_unhurt();
             p.g.player_invisible = true;
             p.run(0.5);
-            game::nightbreach::night_breach_order(&mut p.g).unwrap_or_else(|| panic!("seed {s}, {how}: no stack"));
+            f(&mut p);
             p.run(1.0);
             assert!(no_team_line(&p, "down at the door"), "seed {s}, {how}: the control");
             let ops = game::nightbreach::night_breach_drill_ops(&p.g);
@@ -550,7 +553,7 @@ fn quiet_with_a_partner(s: u32) -> Play {
     p
 }
 
-/// THE RULE: a civilian Sam puts down is said by a teammate, dead or breathing, by the game's own word for her. CONTROLS: down by somebody else: no such line; alone: nothing, and no row, for nothing was pressed.
+/// THE RULE: a civilian Sam puts down is said by a teammate, dead or breathing. CONTROLS: down by somebody else: no such line; alone: nothing, and no row, for nothing was pressed.
 /// A FAILURE MEANS: the player goes on as if nothing happened to her until the end card.
 #[test]
 fn a_civilian_put_down_is_said_by_a_teammate() {
@@ -574,10 +577,9 @@ fn a_civilian_put_down_is_said_by_a_teammate() {
         let m = p.g.civilians[0];
         let men = p.men();
         let cid = p.g.gd[m].civ.unwrap();
-        let she = p.g.cv[cid].she.clone();
         p.falls_as(m, DownKind::Struck, true, DownBy::Player);
         p.frame();
-        assert!(said_by_one_of(&p, &men, &format!("civilian's out. {she}'s breathing.")), "seed {s}: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
+        assert!(said_by_one_of(&p, &men, "civilian's out. still breathing."), "seed {s}: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
         drop(p);
 
         let mut p = office(s);

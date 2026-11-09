@@ -1,6 +1,6 @@
 //! The types of `scene_boxes`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -43,7 +43,7 @@ pub struct Box {
     pub dress: Option<bool>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
     pub dynamics: Vec<AnyBoxId>,
@@ -62,10 +62,10 @@ pub struct BoxWorld {
     pub mat_data: Vec<f32>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub geo_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub geo_buf: crate::Opaque,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub mat_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub mat_buf: crate::Opaque,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub cell_start: Vec<u32>,
@@ -74,22 +74,22 @@ pub struct BoxWorld {
     pub items: Vec<u32>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub cell_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub cell_buf: crate::Opaque,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub item_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub item_buf: crate::Opaque,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub info_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub info_buf: crate::Opaque,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub info_data: Vec<u32>,
+    #[is(alloc::vec![0; 640])] pub info_data: Vec<u32>,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub visible_sent: Vec<u32>,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub capsule_data: Vec<f32>,
+    #[is(alloc::vec![0.0; 1920])] pub capsule_data: Vec<f32>,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub capsule_count: f64,
@@ -98,60 +98,25 @@ pub struct BoxWorld {
     pub char_count: f64,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub capsule_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub capsule_buf: crate::Opaque,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub visible: Vec<u32>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub visible_buf: crate::Opaque,
+    #[is(crate::Opaque)] pub visible_buf: crate::Opaque,
     pub geom_serial: f64,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub cut_on: bool,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub cut_data: Vec<f32>,
+    #[is(alloc::vec![0.0; 0])] pub cut_data: Vec<f32>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub device: crate::Opaque,
+    #[is(crate::Opaque)] pub device: crate::Opaque,
     pub glass_open: Option<crate::scene_collision::PaneRule>,
 }
-impl BoxWorld {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        BoxWorld {
-            statics: Vec::new(),
-            dynamics: Vec::new(),
-            undrawn: None,
-            max_boxes: 0.0,
-            geo_f32: Vec::new(),
-            geo_u32: Vec::new(),
-            mat_data: Vec::new(),
-            geo_buf: crate::Opaque,
-            mat_buf: crate::Opaque,
-            cell_start: Vec::new(),
-            items: Vec::new(),
-            cell_buf: crate::Opaque,
-            item_buf: crate::Opaque,
-            info_buf: crate::Opaque,
-            info_data: alloc::vec![0; 640],
-            visible_sent: Vec::new(),
-            capsule_data: alloc::vec![0.0; 1920],
-            capsule_count: 0.0,
-            char_count: 0.0,
-            capsule_buf: crate::Opaque,
-            visible: Vec::new(),
-            visible_buf: crate::Opaque,
-            geom_serial: 0.0,
-            cut_on: false,
-            cut_data: alloc::vec![0.0; 0],
-            device: crate::Opaque,
-            glass_open: None,
-        }
-    }
-}
-impl Default for BoxWorld { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldUndrawn {

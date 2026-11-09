@@ -23,20 +23,6 @@ pub enum TakeFallHow {
     Kill,
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
-pub struct TakedownMod {
-    /// (src/game/takedown.ts:162 BREATHING)
-    pub breathing: bool,
-}
-impl TakedownMod {
-    pub fn blank() -> Self {
-        TakedownMod {
-            breathing: false,
-        }
-    }
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct TakedownStats {

@@ -3,7 +3,7 @@
 
     python3 tools/blitz/sweeps/seat-tick.py [--json FILE]
 
-A game of two runs the world's lines of the tick (game/p_06.rs, outside `in_seat`) with the first seat standing, so such a function answers for the first player
+A game of two runs the world's lines of the tick (game/tick.rs, outside `in_seat`) with the first seat standing, so such a function answers for the first player
 alone. Found by names (a name mentioned is taken as called), so it over-reaches and misses a call through a stored function. Left out: the seats' own machinery
 (seat-ref.py KEEP), the arm of a one-seat test (`one_book`, `seats.len() == 1`), and what is handed to `in_seat`, `with_seat` and their like.
 Two lists: functions only the world's lines reach, and the calls from those into a function that a seat's own loop reaches too.
@@ -56,7 +56,7 @@ def match(t, i, a, b):
 Fn = collections.namedtuple('Fn', 'mod name file line body start params')
 fns = []; by_name = collections.defaultdict(list)
 for p in sorted(glob.glob(RULES + '/**/*.rs', recursive=True)):
-    rel = os.path.relpath(p, RULES); mod = rel.split(os.sep)[0].removesuffix('.rs')
+    rel = os.path.relpath(p, RULES); mod = (rel.split(os.sep) + [''])[1].removesuffix('.rs')
     t = blank(open(p, encoding='utf-8').read())
     for m in re.finditer(r'\bfn\s+([a-z_0-9]+)\s*(<[^(]*>)?\s*\(', t):
         par = match(t, m.end() - 1, '(', ')')

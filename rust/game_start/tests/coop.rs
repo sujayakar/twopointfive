@@ -78,8 +78,8 @@ fn each_players_pair_is_through_a_locked_door() {
 /// fog let the last of them be drawn.)
 #[test]
 fn a_game_of_two_holds_no_more_men_than_the_picture_draws() {
-    for level in ["office.json", "barracks.json", "block.json", "compound.json", "warehouse.json", "depot.json", "records.json"] {
-        let p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, seats: 2, ..Default::default() });
+    for level in game_start::play::room_clear_files() {
+        let p = Play::mission(&level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, seats: 2, ..Default::default() });
         let men = p.g.seats.len() + p.g.guards.len() + p.g.civilians.len();
         assert!(men as f64 <= game::anim_characters::MAX_CHARS, "{level}: {men} men for a picture of {}", game::anim_characters::MAX_CHARS);
     }

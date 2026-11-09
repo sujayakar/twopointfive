@@ -1,6 +1,6 @@
 //! The types of `doze`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -70,7 +70,7 @@ pub enum WakeWhy {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DozeMod {
     /// (src/game/doze.ts:83 REC)
     pub rec: JsMap<GuardId, crate::doze::Doze>,
@@ -79,23 +79,11 @@ pub struct DozeMod {
     /// (src/game/doze.ts:87 PULLS)
     pub pulls: Option<Vec<[f64; 2]>>,
     /// (src/game/doze.ts:87 PULLS_M)
-    pub pulls_m: f64,
+    #[is(-1.0)] pub pulls_m: f64,
     /// (src/game/doze.ts:87 PULLS_E)
-    pub pulls_e: f64,
+    #[is(-1.0)] pub pulls_e: f64,
     /// (src/game/doze.ts:117 LEFT)
     pub left: Option<JsMap<FixtureId, f64>>,
-}
-impl DozeMod {
-    pub fn blank() -> Self {
-        DozeMod {
-            rec: JsMap::new(),
-            said: None,
-            pulls: None,
-            pulls_m: -1.0,
-            pulls_e: -1.0,
-            left: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -15,7 +15,7 @@ export class FollowCamera {
   pos: Vec3 = [0, 0, 0]; forward: Vec3 = [0, 0, -1];
   aspect = 16 / 9;
   /** Optional world-space nudge added to the follow point (before smoothing): the player controller sets it while Sam peeks round the end of the wall he is
-   *  pressed to (rust/game_rules/src/player move_on_wall — a point past the corner and a little out from the wall), null the rest of the time. Nothing else reads or writes it. */
+   *  pressed to (rust/game_rules/src/sam/player move_on_wall — a point past the corner and a little out from the wall), null the rest of the time. Nothing else reads or writes it. */
   peekOffset: Vec3 | null = null;
 
   /** Automation only: a fixed framing that update() applies verbatim — look-at, yaw, pitch, distance, no damping, no aim lead, no peek
@@ -36,7 +36,7 @@ export class FollowCamera {
     this.rebuild();
   }
 
-  /** A PICTURE-ONLY KICK (rust/game_rules/src/blast_feel writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
+  /** A PICTURE-ONLY KICK (rust/game_rules/src/breakage/blast_feel writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
    *  (src/host/drawpage.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever else reads the camera — the aim ray, WASD's basis, the on-screen tests — reads it as it was without the kick, to the bit (rebuild() from the same
    *  look-at, angles and distance gives the same matrices). */
   kick: Vec3 | null = null;

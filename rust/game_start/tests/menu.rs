@@ -1,4 +1,4 @@
-//! A ROW OF THE MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED (rust/game_rules/src/orders/p_02.rs `squad_orders_row`).
+//! A ROW OF THE MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED (rust/game_rules/src/squad_orders/orders/menu.rs `squad_orders_row`).
 //!
 //! What this holds. Modules list their rows again as the game goes: the door tools when the squad's roster changes or a held door's page is
 //! rebuilt, the big tools when the man with the hammer falls. Each listing used to push a new row and leave the old one in the table, so the

@@ -53,7 +53,7 @@ pub struct TwogearsK {
 ///  the walk's 1.55 and the run), each footfall at `loud` (the crouch walk's is 0.125, the walk's 0.26, a run's 0.6: quicker than walking and heard further
 ///  than walking, a good deal less than running), and it is no sneak (unseen.ts samSneaks). The sprint is the standing man's: [C] first. He is not
 ///  `sprinting` — his hands are still his own (a door, a switch, a grab) — and a hold on left click (stalk.ts) is the creep whatever Shift says, as before.
-///  A body in tow is let go of, as a sprint's is. Not under a puppet or a tour (their Shift is the old one). Off = Shift stands him up, as it did.
+///  A body in tow is let go of, as a sprint's is. Not under a puppet (its Shift is the old one). Off = Shift stands him up, as it did.
 ///  The page turns it on (?crouchrun=0 puts it back); off here and on the frozen stand (TPS_CROUCHRUN=1). Its look: character.ts DASH.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct CrouchrunK {

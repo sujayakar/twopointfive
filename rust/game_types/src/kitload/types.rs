@@ -1,6 +1,6 @@
 //! The types of `kitload`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -54,16 +54,9 @@ pub enum LoadCrossWho {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct KitloadMod {
     /// (src/game/kitload.ts:125 manLoad)
     pub man_load: JsMap<GuardId, crate::kitload::KitWorn>,
-}
-impl KitloadMod {
-    pub fn blank() -> Self {
-        KitloadMod {
-            man_load: JsMap::new(),
-        }
-    }
 }
 

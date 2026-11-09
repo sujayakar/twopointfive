@@ -22,7 +22,7 @@ import type { WindGpuSource } from '../smoke/types';
 import { WIND_GPU_MAX } from '../smoke/types';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
 import particlesCommon from './shaders/particles_common.wgsl' with { type: 'text' };
-import windFieldSrc from './shaders/wind_field.wgsl' with { type: 'text' };   // THE wind field (rust/game_rules/src/wind): the same text the smoke solver compiles — the update kernel's windAir sums it
+import windFieldSrc from './shaders/wind_field.wgsl' with { type: 'text' };   // THE wind field (rust/game_rules/src/air/wind.rs): the same text the smoke solver compiles — the update kernel's windAir sums it
 import particlesSrc from './shaders/particles.wgsl' with { type: 'text' };
 import particlesDrawSrc from './shaders/particles_draw.wgsl' with { type: 'text' };
 import { placeNone } from './placeField';
@@ -73,7 +73,7 @@ export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fw
 /** Per-kind numbers (shaders/particles_common.wgsl k0 / k1), live from the panel. holdOrFade: SPARK = fraction of life held white-hot before the fall to red;
  *  others = seconds of fade-out at the end of life. shutterOrGrowth: streak kinds = seconds of motion one streak shows; DUST = growth factor of the radius over
  *  its life. brightOrOpacity: SPARK = brightness × (× 25 HDR at white heat, meant to clip); DUST = peak opacity; others unused (1).
- *  DUST reads its physics-free slots as LOOK (rust/game_rules/src/particle_fx DUST_LOOK, Tab ▸ Effects ▸ Dust puffs): restitution = the share of a crossing beam scattered toward the eye (0.5),
+ *  DUST reads its physics-free slots as LOOK (rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK, Tab ▸ Effects ▸ Dust puffs): restitution = the share of a crossing beam scattered toward the eye (0.5),
  *  keep = × the cache's ambient on it (1), sleepV = fade-in seconds (0.06), holdOrFade = × the edge feather / depth softening (1) — the values the kernels had as literals.
  *  SHEET reads the eight slots as render/sheetModel.ts SHEET: gravity · drag = KT (along-slip) · restitution = KN_LIN · keep = KN_Q (through-slip drag × airspeed) ·
  *  sleepV · holdOrFade = fade s · shutterOrGrowth = FLUT (flutter torque gain) · brightOrOpacity = TRANS (light through the back face).
@@ -81,13 +81,13 @@ export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fw
  *  keep = splash crown radius m · sleepV = splash seconds · holdOrFade = streak fade-in s (born under the top of the slab, not popped) · shutterOrGrowth = streak shutter s · brightOrOpacity = radiance ×. */
 export interface KindParams { gravity: number; drag: number; restitution: number; keep: number; sleepV: number; holdOrFade: number; shutterOrGrowth: number; brightOrOpacity: number; }
 export const KIND_DEFAULTS: Record<PKind, KindParams> = {
-  spark:  { gravity: 16,  drag: 1.6, restitution: 0.25, keep: 0.7,  sleepV: 0,    holdOrFade: 0.15, shutterOrGrowth: 0.017, brightOrOpacity: 2.6 },   // = rust/game_rules/src/effects sparks: gravity 16, drag 1.6, floor bounce −0.25 / ×0.7, hold 0.15, shutter 17 ms, brightness 2.6
+  spark:  { gravity: 16,  drag: 1.6, restitution: 0.25, keep: 0.7,  sleepV: 0,    holdOrFade: 0.15, shutterOrGrowth: 0.017, brightOrOpacity: 2.6 },   // = rust/game_rules/src/tick/effects.rs sparks: gravity 16, drag 1.6, floor bounce −0.25 / ×0.7, hold 0.15, shutter 17 ms, brightness 2.6
   debris: { gravity: 9.8, drag: 0.9, restitution: 0.3,  keep: 0.55, sleepV: 0.35, holdOrFade: 3.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
-  dust:   { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0,  sleepV: 0.05, holdOrFade: 1.3,  shutterOrGrowth: 0.6,   brightOrOpacity: 0.3 },   // (drag 6: a puff of dust decelerates in centimetres, it does not sail; growth / opacity = rust/game_rules/src/particle_fx DUST_LOOK's 08-12 defaults)   // (restitution / keep / sleepV / holdOrFade = the puff's LOOK: wrap, ambient ×, fade-in s, softness × — rust/game_rules/src/particle_fx DUST_LOOK)
+  dust:   { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0,  sleepV: 0.05, holdOrFade: 1.3,  shutterOrGrowth: 0.6,   brightOrOpacity: 0.3 },   // (drag 6: a puff of dust decelerates in centimetres, it does not sail; growth / opacity = rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK's 08-12 defaults)   // (restitution / keep / sleepV / holdOrFade = the puff's LOOK: wrap, ambient ×, fade-in s, softness × — rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK)
   casing: { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleepV: 0.4, holdOrFade: 4.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
   sheet:  { gravity: SHEET.gravity, drag: SHEET.KT, restitution: SHEET.KN_LIN, keep: SHEET.KN_Q, sleepV: SHEET.sleepV, holdOrFade: SHEET.fade, shutterOrGrowth: SHEET.FLUT, brightOrOpacity: SHEET.TRANS },
   rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by src/picture/rain.ts; brightOrOpacity likewise from particleRainBright)
-  shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
+  shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/breakage/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
 export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
@@ -102,7 +102,7 @@ export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; l
   /** DUST only: STEAM (src/picture/snow/breath.ts) — a puff filed with this (0‥1, under 1) is warm breath: its peak opacity × this, and it rises instead of settling. It rides
    *  the colour word's top byte, 255 on every other record (shaders: `steamOf`); left out = the puff as it always was */
   steam?: number;
-  /** SPARK only: an EMBER off an open fire (rust/game_rules/src/fire) — a spark filed with this (0‥1, under 1: × its light) rides the hot air up and goes with the wind where a
+  /** SPARK only: an EMBER off an open fire (rust/game_rules/src/air/fire.rs) — a spark filed with this (0‥1, under 1: × its light) rides the hot air up and goes with the wind where a
    *  spark flies and falls, and cools slowly through orange to a red that dies. It rides the colour word's top byte like `steam` (shaders: `emberIs`); left out = a spark as it always was */
   ember?: number; }
 interface EmitRec { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number; /** filed while Particles.ours was up */ ours?: boolean; /** frames this record has waited in the queue past the one it was queued for (the birth cap) */ waited: number; }
@@ -150,7 +150,7 @@ export class Particles {
   params: Record<PKind, KindParams> = { spark: { ...KIND_DEFAULTS.spark }, debris: { ...KIND_DEFAULTS.debris }, dust: { ...KIND_DEFAULTS.dust }, casing: { ...KIND_DEFAULTS.casing }, sheet: { ...KIND_DEFAULTS.sheet }, rain: { ...KIND_DEFAULTS.rain }, shard: { ...KIND_DEFAULTS.shard } };
   /** the three strongest lights at each lit particle get a shadow ray (else every light counts unshadowed — for measuring what the rays cost) */
   shadowRays = true;
-  /** glass at rest shows (rust/game_rules/src/shards SHARDS.restFrost; flags bit 8): a resting shard is drawn as the little drift of grains it stands for — wider, frosted — instead of
+  /** glass at rest shows (rust/game_rules/src/breakage/shards SHARDS.restFrost; flags bit 8): a resting shard is drawn as the little drift of grains it stands for — wider, frosted — instead of
    *  one clear face lying flat, which against any floor was nothing. Off = every resting shard as it flies. */
   shardRestFrost = true;
   /** particles collide with the trace grid's boxes at all (off = ballistic through everything, for measuring) */
@@ -168,7 +168,7 @@ export class Particles {
   /** impulses gate particles further than half a metre by their occlusion ray when the record asks (measurement: off = every record applied unoccluded, to price the rays) */
   impulseOcclusion = true;
   stats: ParticleStats = { alive: 0, asleep: 0, bounces: 0, killedInside: 0, kicked: 0, windWoken: 0, live: [0, 0], born: 0, records: 0, impulses: 0, winds: 0, emitted: 0, perSec: 0, droppedRecs: 0, droppedBirths: 0, impQueued: 0, impMerged: 0, impDropped: 0, impFrames: 0, impIdle: 0, impRefused: 0 };
-  /** WIND (rust/game_rules/src/wind → setWind once a frame): the sources to pack BEHIND this frame's impulses (≤ WIND_GPU_MAX and never more than the impulses leave of MAX_IMPULSES — impulses come
+  /** WIND (rust/game_rules/src/air/wind.rs → setWind once a frame): the sources to pack BEHIND this frame's impulses (≤ WIND_GPU_MAX and never more than the impulses leave of MAX_IMPULSES — impulses come
    *  first, a bang is never starved of a slot by a draught), and the three live knobs every wind record carries (particles.wgsl windKnobs) */
   private winds: readonly WindGpuSource[] = []; private windKnobs: [number, number, number] = [0.35, 2.0, 0.15];
   /** births a frame (renderer v3 Phase 0 cap; ui/quality.ts presets 512 / 384 / 256 / 192 / 128 via settings.particleBirths, handed in by prepare()): records that do not fit wait in
@@ -266,7 +266,7 @@ export class Particles {
   }
 
   // ------------------------------------------------------------------ emit API (game code; deterministic — the seed counts off this object's own serial)
-  /** WHAT IS FILED NOW IS THE TEAM'S OWN DOING (rust/game_rules/src/fogofwar FOG.ours, set round an effect by FogOfWar.begin / done): the record's bit 18 → PB_OURS on each
+  /** WHAT IS FILED NOW IS THE TEAM'S OWN DOING (rust/game_rules/src/stealth/fogofwar FOG.ours, set round an effect by FogOfWar.begin / done): the record's bit 18 → PB_OURS on each
    *  particle born of it, which the draw does not cut over floor the fog of war hides (particles_draw.wgsl). Never read by the simulation */
   ours = false;
   /** Queue `count` particles of `kind` at `pos` about `dir` with the numbers in `o` for the next frame (or a later one, if the frame's birth cap is spent). Returns how many
@@ -321,12 +321,12 @@ export class Particles {
     r.pos[0] = pos[0]; r.pos[1] = pos[1]; r.pos[2] = pos[2]; r.radius = radius; r.strength = strength; r.up = up;
     r.bias[0] = b[0]; r.bias[1] = b[1]; r.bias[2] = b[2]; r.eye[0] = e[0]; r.eye[1] = e[1]; r.eye[2] = e[2]; r.kinds = kinds; r.flags = flags; r.seed = seed;
   }
-  /** LOOK ONLY: the hot air over each fire near the view, as jets that point up (rust/game_rules/src/fire files them each frame; an empty list = none). They ride behind the
+  /** LOOK ONLY: the hot air over each fire near the view, as jets that point up (rust/game_rules/src/air/fire.rs files them each frame; an empty list = none). They ride behind the
    *  wind's records in the same block, marked (iflags bit 6), and only the falling snow reads them: particles.wgsl heatAir. The wind's own sum skips them.
    *  THEY ARE THE FIRST LEFT OUT when the block is full (WIND_GPU_MAX records less a blast frame's impulses): the wind keeps its places. */
   heat: readonly WindGpuSource[] = [];
   setHeat(srcs: readonly WindGpuSource[]) { this.heat = srcs; }
-  /** This frame's WIND (rust/game_rules/src/wind, once a frame): the sources whose air the update kernel measures every live particle's drag against — kept by
+  /** This frame's WIND (rust/game_rules/src/air/wind.rs, once a frame): the sources whose air the update kernel measures every live particle's drag against — kept by
    *  reference until the next call, packed at prepare() behind the impulses; an empty list = still air (nothing packed, nothing uploaded, the kernel's one branch). `knobs` =
    *  (sheet wake m/s, sheet kick ×, debris coupling), riding on every record. Allocates nothing; never wakes or moves anything by itself. */
   setWind(srcs: readonly WindGpuSource[], knobs: readonly [number, number, number]) { this.winds = srcs; this.windKnobs[0] = knobs[0]; this.windKnobs[1] = knobs[1]; this.windKnobs[2] = knobs[2]; }
@@ -455,7 +455,7 @@ export class Particles {
       } else this.stats.impIdle += this.impN;
       this.impN = 0;
     }
-    // WIND records BEHIND them (rust/game_rules/src/wind → setWind): as many of this frame's sources as the impulses leave room for, up to WIND_GPU_MAX, only with something live to
+    // WIND records BEHIND them (rust/game_rules/src/air/wind.rs → setWind): as many of this frame's sources as the impulses leave room for, up to WIND_GPU_MAX, only with something live to
     // move; the count in flags bits 16‥20; the three knobs on every record as two f16 pairs (particles_common.wgsl; the fourth half is spare). One tail upload covers impulses + winds.
     if (live > 0 && (this.winds.length || this.heat.length)) {
       const room = Math.min(WIND_GPU_MAX, MAX_IMPULSES - ni); const kn = this.windKnobs;
@@ -466,8 +466,8 @@ export class Particles {
         if (!(s.speed > 0)) continue;
         const b = (IMP_OFFSET + (ni + nw) * IMP_BYTES) / 4;
         if (s.kind === 'storm') {
-          // (ROOF BY ROOF, rust/game_rules/src/wind WX_OWN.wind: the record's two rectangles are the level's first two roofs and iflags bit 5 sends the kernel to the Frame for the
-          // other two — frame.cardCfg.y / .z, where the rain's own test reads them (rust/game_rules/src/weather writes the wind's roofs and the Frame's from one list); bit 4 = the
+          // (ROOF BY ROOF, rust/game_rules/src/air/wind.rs WX_OWN.wind: the record's two rectangles are the level's first two roofs and iflags bit 5 sends the kernel to the Frame for the
+          // other two — frame.cardCfg.y / .z, where the rain's own test reads them (rust/game_rules/src/air/weather.rs writes the wind's roofs and the Frame's from one list); bit 4 = the
           // rule is on at all: the wisps read the field. Neither bit: the record as it always was)
           const R = s.roofs; const I = R ? R[0] : s.interior ?? [0, 0, 0, 0], A = R ? R[1] ?? [0, 0, 0, 0] : s.annex ?? [0, 0, 0, 0];
           f[b] = I[0]; f[b + 1] = I[1]; f[b + 2] = I[2]; f[b + 3] = I[3];

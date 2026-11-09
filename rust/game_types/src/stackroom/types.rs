@@ -1,6 +1,6 @@
 //! The types of `stackroom`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what stackRoomBookKeep took, to put the room rule's book back once after an ask made only to be looked at (stackroom.ts:92). Forget: there was no book, so drop it. Back: forget the floors and doorway cells read since; floors marks which faces of which doors had been read (a floor is never rewritten once read, so marking is the same as the TypeScript's copied pairs, without cloning every Floor's W*H cells on each trial). sig and doors: if the book no longer has them it was rebuilt during the ask, and the TypeScript's restored old book would be rebuilt empty at the next bookOf, so set books to None
@@ -37,17 +37,10 @@ pub struct StackRoomProbe {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StackroomMod {
     /// (src/game/stackroom.ts:87 books)
     pub books: Option<crate::stackroom::Book>,
-}
-impl StackroomMod {
-    pub fn blank() -> Self {
-        StackroomMod {
-            books: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

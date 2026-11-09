@@ -1,6 +1,6 @@
 //! The types of `kitanim`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -12,20 +12,11 @@ pub struct BeatRow {
     pub keep: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ReloadKind {
     #[default] Dry,
     Empty,
     Tactical,
-}
-impl ReloadKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ReloadKind::Dry => "dry",
-            ReloadKind::Empty => "empty",
-            ReloadKind::Tactical => "tactical",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

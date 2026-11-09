@@ -59,14 +59,14 @@ A ruling that stands on a system's own page is there and not here.
 - "let's remove the icons on mouse position from squad orders entirely": the cursor carries no order icon.
 - "pressing F only releases the people blocked on it": `door_tools_word_men`.
 - "the guys shouldn't split up in situations like this -- buddy teams should try to stay together": a pair goes round one way (`squad_orders_same_ways`).
-- "a, but yeah you have to order it": a teammate looks under a door only on the row `wandLook`, and nothing in `doortools/` or `autopilot/` starts it.
+- "a, but yeah you have to order it": a teammate looks under a door only on the row `wandLook`, and nothing in `doortools/` or `autopilot.rs` starts it.
 - "ordering your squad to throw a grenade is still pretty useless. they should figure out how to throw to a spot": `walk_spot` finds the man and where he walks to.
 - "the point man here saw his buddy go down, knows roughly where the enemy is in the room and looks the wrong way going in": `door_tools_threat_note`.
 - "yeah maybe this should force kicking from the front?": `door_tools_boot_spot` goes square on where a pane has eyes on the side spot (`stack_eyes`).
 
 ## Defenders
 
-- "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are": `picture/`, told by `picture_tell`, never
+- "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are": `picture.rs`, told by `picture_tell`, never
   from the truth.
 - "effectively just a health system ... but with very high lethality": one model for everybody, `condition_of`.
 - "both quiet and maybe even some loud": a response team on a loud level is a `raid` in the level file.

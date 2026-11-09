@@ -125,7 +125,7 @@ export function drawArt(g: CanvasRenderingContext2D, A: PlanArt, V: ArtView) {
   const inside = (x: number, z: number) => x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3];
   /** a box is drawn where any of it stands on the stretch shown (a long wall whose middle is off it still shows its end) */
   const on = (s: Solid) => s.x1 >= R[0] && s.x0 <= R[2] && s.z1 >= R[1] && s.z0 <= R[3];
-  /** a box's footprint corners on the plan (a box's yaw turns world → local by +yaw about Y — rust/game_rules/src/scene_collision — so local → world is a turn by −yaw) */
+  /** a box's footprint corners on the plan (a box's yaw turns world → local by +yaw about Y — rust/game_rules/src/world/scene_collision.rs — so local → world is a turn by −yaw) */
   const foot = (x: number, z: number, hx: number, hz: number, yaw: number, out: number[]) => {
     const c = yaw ? Math.cos(yaw) : 1, s = yaw ? Math.sin(yaw) : 0;
     out[0] = x - hx * c - hz * s; out[1] = z + hx * s - hz * c; out[2] = x + hx * c - hz * s; out[3] = z - hx * s - hz * c;

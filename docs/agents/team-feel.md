@@ -24,22 +24,22 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | module | what it does |
 |---|---|
 | `roomfight/` | the fight: `operative.rs` is a teammate, `fight.rs` the tick and what he hears, `line.rs` who stands in a round's way, `rooms.rs` its rooms |
-| `cleared/` | the level's rooms, flooded from each door, and which the team has stood in |
-| `roomread/` | the space round a point and its ways out, for `roomfit/` |
-| `seenwalk/` | what lit floor in view of an unknown room costs a walk |
-| `coverfire/` | rounds into breakable cover at a man known to be behind it |
-| `nvg/`, `irlight/` | whether the team is dark and each man's goggles; the infrared flood on the goggles |
-| `irlaser/` | Sam's infrared laser |
-| `silent/` | the silent posture, and `round_held`, the one question every fire hold goes through |
-| `holdfire/` | nobody fires first, whatever the posture |
-| `unseen/`, `sneak/` | the team sneaking because Sam is; the partner's careful follow |
-| `spotted/` | what a silent man does when a defender is onto him |
-| `pairup/` | the switch that turns on `pairorders/`, `sneak/` and `spotted/` together |
-| `showwhy/` | waves, fists and lines that say why a teammate is waiting |
+| `cleared.rs` | the level's rooms, flooded from each door, and which the team has stood in |
+| `roomread.rs` | the space round a point and its ways out, for `roomfit.rs` |
+| `seenwalk.rs` | what lit floor in view of an unknown room costs a walk |
+| `coverfire.rs` | rounds into breakable cover at a man known to be behind it |
+| `nvg.rs`, `irlight.rs` | whether the team is dark and each man's goggles; the infrared flood on the goggles |
+| `irlaser.rs` | Sam's infrared laser |
+| `silent.rs` | the silent posture, and `round_held`, the one question every fire hold goes through |
+| `holdfire.rs` | nobody fires first, whatever the posture |
+| `unseen.rs`, `sneak/` | the team sneaking because Sam is; the partner's careful follow |
+| `spotted.rs` | what a silent man does when a defender is onto him |
+| `pairup.rs` | the switch that turns on `pairorders.rs`, `sneak/` and `spotted.rs` together |
+| `showwhy.rs` | waves, fists and lines that say why a teammate is waiting |
 
-Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/guards/p_05.rs`, numbers in `LightsK`.
-Corners and the floor search are in `rust/game_rules/src/doortools/p_07.rs` and `p_08.rs`. Openings dealt to stopped men are `cover/`, the team's pace
-`teampace/` (`squad.md`).
+Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/people/guards/search.rs`, numbers in `LightsK`.
+Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs` and `flow.rs`. Openings dealt to stopped men are `cover/`, the team's pace
+`teampace.rs` (`squad.md`).
 
 The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `src/render/lights.ts` caps them.
 
@@ -75,7 +75,7 @@ a clear shot at chest or head, or a man behind breakable cover (`cover_seen`); `
 
 **When he cannot shoot.** A friend in the line: `room_fight_side_step` once he has stood `line` seconds, and `room_fight_let_go` drops the masked man
 after `let_go` for someone shooting from elsewhere. No shot and a walk to finish: `room_fight_walk_on`, saying "no shot — moving.". Stopped in a
-doorway: `room_fight_doorway`. Dark on a lit man, Sam in the line: `room_fight_hold_short` stops his feet. Dry: `gunslots/` draws the
+doorway: `room_fight_doorway`. Dark on a lit man, Sam in the line: `room_fight_hold_short` stops his feet. Dry: `gunslots.rs` draws the
 sidearm on a close man, else `begin_reload` and "reloading.".
 
 **Holding fire.** `round_held` is `silent_holds_round`, `pair_holds_round` or `spotted_holds_round`. Off the silent posture, `silent_holds_round` asks
@@ -102,7 +102,7 @@ a loud tool is picked (`silent_tool`). A door no pick opens is booted only then 
 **Unseen** (`unseen_live`) needs no order: Sam low, on a wall or slow (`sam_sneaks`) and nobody found (`squad_found`). It gives `unseen_low`,
 `unseen_follow`, `unseen_step`, `unseen_holds` and a place along Sam's wall (`unseen_wall_slot`), to all but men working a door (`entering`).
 
-**The partner** is on only under `k.pairup.on`, which a quiet mission with a squad sets at its start (`pair_up_apply`; `quiet/` keeps the old switches
+**The partner** is on only under `k.pairup.on`, which a quiet mission with a squad sets at its start (`pair_up_apply`; `quiet.rs` keeps the old switches
 in `Held`), with `k.silent.start`. `sneak_follow` walks Sam's own trail (`track`) and reads each step by the defenders' arithmetic (`exposure`,
 `lit_seen`, `eye_gains`, `cross_cost`). `spotted_tick` sets `SpottedMode`: `Wary` holds still or slips out of the line (`hide`), `Caught` shoots on
 sight and finds a shot (`spotted_keen`, `cover`), and at arm's length a roused man is taken by hand (`hands`).
@@ -114,10 +114,10 @@ gun to the unseen cell of least turn, `door_tools_send_on` sends a man to floor 
 when its own men are down.
 
 **Known rooms.** `cleared_rooms_mark` runs off everyone's feet. `cleared_rooms_dear_for` prices the cells of unknown rooms for a route, bar his own
-and his mark's, and `seen_way` in `rust/game_rules/src/orders/p_07.rs` adds `seen_price`.
+and his mark's, and `seen_way` in `rust/game_rules/src/squad_orders/orders/routes.rs` adds `seen_price`.
 
-**Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. It
-is live only with cover that breaks (`chew_live`) or walls that take rounds (`wall_men_live`).
+**Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. A
+piece is chewed only where cover breaks (`chew_live`).
 
 **Why** (`show_why_tick`): masked by Sam, a wave and "you're in my line." (`masked`, one voice: `line_said_by`); a stack waiting, squeezes up the file
 then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "I've got this door.".
@@ -142,7 +142,7 @@ then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "
 - **Rounds through a doorway turn the men who can see it.** "enemy was immediately in front of them and shooting, nothing happened"
 - **Routes keep to known rooms.** "they'll route to the room through a different door … even worse they'll go through uncleared rooms to get there"
 - **Lit is lit to somebody.** "not following me here". A dim step is seen only where that defender's eye would gain on a man there (`lit_seen`).
-- **Fear is for defenders.** `morale/` asks only of defenders and night staff (`ours`). A teammate's nerve is suppression and being hurt:
+- **Fear is for defenders.** `morale.rs` asks only of defenders and night staff (`ours`). A teammate's nerve is suppression and being hurt:
   `condition_sup` widens his rounds, `condition_pace` caps his legs.
 
 ## To change it
@@ -157,7 +157,7 @@ then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "
   show a line for a round held anyway.
 - **When his light burns:** the `want` list in `team_lit`. The goggles follow by themselves.
 - **A word or a wave:** a section of `show_why_tick`, or `room_fight_speak`. Player text follows `writing.md`.
-- **On for a mission:** the quiet mission's start in `rust/game_rules/src/quiet/p_01.rs`. A new part is a field of `Held`.
+- **On for a mission:** the quiet mission's start in `rust/game_rules/src/missions/quiet.rs`. A new part is a field of `Held`.
 
 ## What holds it
 
@@ -178,4 +178,4 @@ Native tests in `rust/game_start/tests/`:
 ## Not seen
 
 How a teammate's look or side step reads in play, and the wave and the fist, have been checked by numbers only. A goggled team's flood has not been
-judged on a GPU. No native test names `holdfire/`, `unseen/` or the corners' measure.
+judged on a GPU. No native test names `holdfire.rs`, `unseen.rs` or the corners' measure.

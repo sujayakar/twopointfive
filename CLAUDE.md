@@ -33,13 +33,13 @@ from its idea to its row: `.claude/skills/level/SKILL.md`.
   `rust/game_types/src/knobs/`. None is written in `src/` (`tools/draw/ban.ts`, the build's first step).
 - **A new rule lands on,** with a native test that fails without it. It gets an off word only if somebody asks for one.
 - **Strong general systems.** No special case for one level, one door or one man where a system can carry it.
-- **The same inputs make the same game.** No clock, no die but the game's own (`rust/game_rules/src/dice.rs`), no order that is not written
+- **The same inputs make the same game.** No clock, no die but the game's own (`rust/game_rules/src/tick/dice.rs`), no order that is not written
   down, all state reachable from `Game` or in its block.
 - **One model for the picture and the AI.** What a man senses is what the picture shows. No number off the GPU reaches a rule.
 - **No GPU here.** Native tests see no picture and hear nothing; a page script runs on the software adapter. Say what was checked and how,
   and "never seen on a GPU" of the rest. "Verified" in full means driven in a real browser with no console or GPU errors.
 - **For the player.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Harder by smarter enemies,
-  never by hit points. Teammates walk at the player's pace and run only for a reason (`teampace/`). Nothing is painted on the world for the player.
+  never by hit points. Teammates walk at the player's pace and run only for a reason (`teampace.rs`). Nothing is painted on the world for the player.
 - **Small commits.** Build it, drive it, type check, commit. A change that moves play says what moved and what was measured; one that moves a
   pin says why (`rust/game_start/pins.txt` is made by `gate pin`, never by hand).
 - **Git.** Work on your own branch off `twopointsix`, whose head is the build to play and moves only by the merge of a finished branch. Never

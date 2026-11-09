@@ -4,6 +4,7 @@
 extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
+pub use game_derive::{Blank, Words};
 pub mod bytes;
 pub mod ids;
 pub mod js;
@@ -200,7 +201,6 @@ pub mod roomclear { pub mod types; pub use types::*; }
 pub mod roomfight { pub mod types; pub use types::*; }
 pub mod roomfit { pub mod types; pub use types::*; }
 pub mod roomread { pub mod types; pub use types::*; }
-pub mod root_settings { pub mod types; pub use types::*; }
 pub mod rowset { pub mod types; pub use types::*; }
 pub mod runner { pub mod types; pub use types::*; }
 pub mod rustknobs { pub mod types; pub use types::*; }

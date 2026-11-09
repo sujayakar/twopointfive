@@ -32,18 +32,30 @@ with no module at all.
 1. **The hand.** `src/draw/hand.ts` samples keys, mouse and camera; `face_hand` takes it. What a player or a panel does that is no input
    (a setting, a kit, an order from a card) goes as a command: `src/draw/commands.ts`, read by `rust/game_run/src/command.rs`.
 2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one list of calls in order,
-   `step_seats_on_first` in `rust/game_rules/src/game/p_06.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
+   `step_seats_on_first` in `rust/game_rules/src/tick/game/tick.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
    on one man, then every man (`update_guard`), doors, furniture, destruction, air, lights, fire, devices, weather, items, glass, the fog,
    the drawn bodies, the light meter. A new system is a line in that list.
 3. **What is drawn.** `rust/game_draw` fills sections: flat rows of numbers, one run a kind (men, lights, boxes, marks, fog, smoke, sky, view).
    Filling takes the game shared, so drawing cannot change it. `tools/draw/gen.ts` makes the page's offsets from the same declaration.
-4. **What is told.** The HUD's record comes from `rust/game_rules/src/view/`, sounds and one-shot effects from
-   `rust/game_rules/src/out_events/`.
+4. **What is told.** The HUD's record comes from `rust/game_rules/src/tick/view/`, sounds and one-shot effects from
+   `rust/game_rules/src/tick/out_events.rs`.
 5. **The picture.** `src/host/drawpage.ts` draws at the display's rate between two ticks (`src/host/between.ts`); the tick's rate is fixed
    (`src/host/fixedstep.ts`). `src/engine.ts` runs the renderer.
 
 A run's tape is the start and every hand, so a replay is the run stepped again (`replays.md`). A networked game is the same thing over a wire:
 records go up, never state.
+
+**A fixture's light and a mark are the game's, whatever the picture shows.** A fixture's light for a question is a fact of the level (`al.base`); the
+panel's emissive slider moves only the surfaces the shader draws. The marking lights are always registered, at the level's `markTexel` or
+`MARKING_TEXEL`, and `?nomarkings` is the picture's alone. Marks are always laid; the panel's switch stops the upload
+(`src/render/decals.ts`). A wet character's look is the last number of a look (`src/draw/look.ts`). Never seen on a GPU.
+
+**No rule reads a picture's setting: the game tells the picture its sky.** `told` (`rust/game_rules/src/air/hours/told.rs`) works out the sky, the haze, the
+exposure and the wet gloss from state whenever it is asked, and keeps nothing: the kit stage's own sky if it stands one, else the show's day, else the
+hour under its weather (`sky_dome`), else the level's night. `rust/game_draw/src/sky.rs` reads it. `src/draw/sky.ts` keeps the rule at the page's end: a
+number the game has not moved writes nothing, a hand's turn stands until the game says another, and a turn of the exposure is carried to that as a
+factor. `rust/game_start/tests/told.rs` holds 23 stands against `told_numbers.json`, the numbers the settings held on the last build that wrote them.
+Never seen on a GPU.
 
 ## Where things are
 
@@ -52,7 +64,7 @@ records go up, never state.
 | crate | what it is |
 |---|---|
 | `rust/game_types/` | the data: every module's types, typed ids, and the numbers people tune (`rust/game_types/src/knobs/`) |
-| `rust/game_rules/` | the rules, a folder a module; its crate name is `game` |
+| `rust/game_rules/` | the rules, a folder a system; its crate name is `game` |
 | `rust/sim/` | the world's hot loops on flat columns: lines and collision, light, fog, sound, smoke, doors, furniture, glass, weather, poses |
 | `rust/game_draw/` | what the picture is told |
 | `rust/game_run/` | what a host does round a step: commands, the panel's knobs, the cards before a game, address words (`rust/game_run/src/words.rs`) |
@@ -60,26 +72,33 @@ records go up, never state.
 | `rust/game_face/` | the module's face: the calls a host makes, with each file's own calls at its head |
 | `rust/game_derive/`, `rust/prim/` | a declaration's bytes and knobs, and the four operations the core library lacks |
 
-Where a system's rules are, by its page:
+The rules are eighteen systems, a folder of `rust/game_rules/src/` each. Code names a module with no system (`crate::doors`), and what no other
+system calls is not `pub`:
 
-| page | modules of `rust/game_rules/src/` |
-|---|---|
-| `squad.md` | `orders/`, `pairorders/`, `pairup/`, `squadthrow/`, `squadsmoke/`, `squad40/`, `shutdoor/`, `cover/`, `rearwatch/`, `teampace/`, `planmode/` |
-| `door-tools.md` | `doortools/`, `doorpath/`, `stackroom/`, `stackline/`, `entrypoints/`, `roomread/`, `roomfit/`, `bigkit/`, `wand/` |
-| `team-feel.md` | `roomfight/`, `cleared/`, `nvg/`, `irlaser/`, `irlight/`, `silent/`, `sneak/`, `unseen/`, `spotted/` |
-| `enemies.md` | `guards/`, `enemysquads/`, `digin/`, `pressure/`, `lanes/`, `laststand/`, `tactics/`, `qrf/`, `netquiet/`, `difficulty/`, `doorforce/`, `darkdoor/`, `needs/`, `civilians/` |
-| `ai-architecture.md` | `control/`, `owner/`, `belief/`, `sense/`, `attention/`, `morale/`, `startle/`, `runner/` |
-| `stealth.md` | `fogofwar/`, `interact/`, `takedown/`, `close/`, `wallsnap/`, `stickycam/`, `devices/`, `lightswitch/`, `lighting/`, `whistle/` |
-| `player.md` | `player/`, `aim/`, `combat/`, `weapons/`, `kit/`, `loadout/`, `hands/`, `handwork/`, `friendlyfire/` |
-| `doors.md` | `doors/`, `doorswing/`, `doorway/`, `handleside/`, `sprintdoor/`, `doorthrow/`, `doorblast/`, `props/` |
-| `destruction.md` | `destruction/`, `wallbreak/`, `wallcharge/`, `glass/`, `glassbreak/`, `furnblast/`, `debris/`, `frag/`, `he40/`, `falling/` |
-| `weather.md` | `weather/`, `weather_kinds/`, `wind/`, `wet/`, `hours/`, `fire/`, `air_dust/`, `snow_bog/` |
-| `missions.md` | `mission/`, `roomclear/`, `rescue/`, `quiet/`, `nightbreach/`, `lesson/`, `rails/`, `par/`, `verdict/` |
-| `dialogue.md` | `words/`, `dialogue/`, `doornames/`, `squadnet/` |
-| `anim.md` | `character/`, `anim_skeleton/`, `ragdoll/`, `stealthpose/`, `kitanim/` |
+| folder | what it is | pages |
+|---|---|---|
+| `people/` | every man: his frame, senses, mind, the two lists, nerve and needs; civilians | `ai-architecture.md`, `enemies.md` |
+| `defenders/` | a defender at his post: the room fight, lanes, the press, digging in, the dark, the last stand | `enemies.md` |
+| `pursuit/` | enemy squads and their net, pursuit, grenades, the response team, difficulty | `enemies.md` |
+| `squad_orders/` | the book of orders, the ring, every order that is not at a door, pairs, jobs | `squad.md` |
+| `entries/` | what the squad does at a door or a wall on order | `door-tools.md` |
+| `teammates/` | what they cover, how they walk, look and keep quiet unasked | `team-feel.md` |
+| `sam/` | his feet, aim, hands, and what his Space key offers | `player.md` |
+| `stealth/` | the fog of war, close work, the wall hold, switches, cameras, the whistle | `stealth.md` |
+| `guns/` | a round, a throw, what a gun holds, friends in the line | `player.md` |
+| `outfit/` | the kit, its cards and picture, what a man wears and holds | `menus.md`, `anim.md` |
+| `body/` | the skeleton, the layers that pose a man, the fall | `anim.md` |
+| `fittings/` | doors and furniture | `doors.md` |
+| `breakage/` | walls, glass, furniture and lamps that break, debris, marks | `destruction.md` |
+| `air/` | lamps and hours, weather, wind, fire, dust, snow | `weather.md`, `stealth.md` |
+| `missions/` | the list, each kind of mission, tutorials, the director, par | `missions.md` |
+| `speech/` | who says what, door names, the strip, the recap | `dialogue.md` |
+| `world/` | the box world and its questions | `rust.md`, `levels.md` |
+| `tick/` | `Game` stood, stepped, saved and shown: the tick's list, seats, commands, the view, the die | this page, `rust.md` |
 
-A module the table lacks says what it is at its head; `grep -rl` over `rust/game_rules/src` for a rule's own words finds the rest. A module's types
-are under the same name in `rust/game_types/src/`, and its numbers in `rust/game_types/src/knobs/`.
+A module says what it is at its head; `grep -rl` over `rust/game_rules/src` for a rule's own words finds the rest. A module's
+types are under the same name in `rust/game_types/src/` (a folder a module, in no system), and its
+numbers in `rust/game_types/src/knobs/`.
 
 ### `src/`
 

@@ -1,47 +1,7 @@
 //! The types of `scene_scenarios`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
-
-/// a lesson step's done-test, a variant for each `is` of LESSON_TESTS (scenarios.ts LessonTest, lesson.ts). Unknown: an `is` no row has, or a record that would throw; it never passes (lesson.ts passes)
-#[derive(Clone, Debug, ToBytes)]
-pub enum LessonTestKind {
-    Unknown { is: String },
-    In { area: crate::scene_scenarios::Rect },
-    Near { at: V3, r: Option<f64> },
-    Flag { flag: String, value: Option<bool> },
-    Slot { slot: String, drawn: Option<bool> },
-    Pace { below: Option<f64>, above: Option<f64> },
-    Meter { which: String, below: Option<f64>, above: Option<f64> },
-    Stage { stage: String },
-    Door { door: String, state: String },
-    Target { name: String, on: bool },
-    Men { down: Option<f64> },
-    Did { what: String, on: Option<String>, n: Option<f64> },
-    Downed { how: String, n: Option<f64> },
-    Body { area: crate::scene_scenarios::Rect },
-    Calm { route: Option<String> },
-    Loaded,
-    Reload,
-    Launcher { on: String, fired: bool },
-    Burst { n: Option<f64> },
-    Threw { kind: Option<String>, quick: bool, area: Option<crate::scene_scenarios::Rect> },
-    OrderTo { who: String },
-    StackOn { door: String, who: Option<String>, set: bool },
-    PairsOn { doors: Option<f64> },
-    Word { doors: Option<f64> },
-    Taken { room: String },
-    Following,
-    Mate { area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64> },
-    Pair { what: String, n: Option<f64> },
-    Cue { name: String },
-    View { turned: Option<f64>, zoomed: Option<f64> },
-    Squad { area: crate::scene_scenarios::Rect, n: Option<f64> },
-    Stacks { doors: Vec<String>, n: Option<f64>, set: bool },
-    Watching { at: V3, r: Option<f64>, n: Option<f64> },
-    All { of: Vec<crate::scene_scenarios::LessonTestKind> },
-    Any { of: Vec<crate::scene_scenarios::LessonTestKind> },
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rect {
@@ -158,18 +118,10 @@ pub enum RouteOpeningKind {
     Doorway,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RouteOpeningSide {
     #[default] Left,
     Right,
-}
-impl RouteOpeningSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteOpeningSide::Left => "left",
-            RouteOpeningSide::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -332,7 +284,7 @@ pub struct LessonStep {
     pub menu_line: Option<String>,
     pub page_line: Option<String>,
     pub flat_line: Option<String>,
-    pub done: crate::scene_scenarios::LessonTestKind,
+    pub done: crate::lesson::LessonTest,
     pub hold: Option<f64>,
     pub settle: Option<f64>,
     pub at: Option<V3>,
@@ -360,7 +312,7 @@ impl Default for LessonStep {
             menu_line: None,
             page_line: None,
             flat_line: None,
-            done: crate::scene_scenarios::LessonTestKind::Unknown { is: String::new() },
+            done: crate::lesson::LessonTest::Any { of: Vec::new() },   // (any of nothing: no deed passes it)
             hold: None,
             settle: None,
             at: None,
@@ -520,7 +472,7 @@ pub struct LevelScenarios {
     pub rescue: Option<crate::scene_scenarios::RescueData>,
     pub places: Option<crate::scene_scenarios::PlacesData>,
     pub quiet: Option<crate::scene_scenarios::QuietData>,
-    pub lesson: Option<crate::scene_scenarios::LessonData>,
+    pub lesson: Option<alloc::sync::Arc<crate::scene_scenarios::LessonData>>,   // (shared: a tick holds the list beside `g` with no copy of it)
     pub par: Option<crate::scene_scenarios::ParData>,
     pub issue: Option<crate::scene_scenarios::IssueData>,
     pub response: Option<crate::scene_scenarios::ResponseData>,
@@ -573,47 +525,25 @@ pub struct ScenarioEntry {
     pub squads: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum ScenarioEntryKind {
     #[default] Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
 }
-impl ScenarioEntryKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryKind::Nightbreach => "nightbreach",
-            ScenarioEntryKind::Roomclear => "roomclear",
-            ScenarioEntryKind::Rescue => "rescue",
-            ScenarioEntryKind::Quiet => "quiet",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum MissionGroup {
     Clock,
     Tutorial,
     Raids,
     Strongholds,
-    QuietAlone,
-    QuietTwo,
-}
-impl MissionGroup {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionGroup::Clock => "clock",
-            MissionGroup::Tutorial => "tutorial",
-            MissionGroup::Raids => "raids",
-            MissionGroup::Strongholds => "strongholds",
-            MissionGroup::QuietAlone => "quiet-alone",
-            MissionGroup::QuietTwo => "quiet-two",
-        }
-    }
+    #[word("quiet-alone")] QuietAlone,
+    #[word("quiet-two")] QuietTwo,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ScenarioEntryWeather {
     Clear,
     Overcast,
@@ -621,18 +551,6 @@ pub enum ScenarioEntryWeather {
     Downpour,
     Fog,
     Dust,
-}
-impl ScenarioEntryWeather {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryWeather::Clear => "clear",
-            ScenarioEntryWeather::Overcast => "overcast",
-            ScenarioEntryWeather::Rain => "rain",
-            ScenarioEntryWeather::Downpour => "downpour",
-            ScenarioEntryWeather::Fog => "fog",
-            ScenarioEntryWeather::Dust => "dust",
-        }
-    }
 }
 
 /// the most men a room clear stages in squads

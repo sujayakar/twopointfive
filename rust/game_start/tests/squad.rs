@@ -1,4 +1,4 @@
-//! THE SQUAD'S WORDS, AS A HUD IS TOLD THEM (`view::tick_view`, `squad`; rust/game_rules/src/orders/hud.rs): the page reads these and words nothing of its own.
+//! THE SQUAD'S WORDS, AS A HUD IS TOLD THEM (`view::tick_view`, `squad`; rust/game_rules/src/squad_orders/orders/hud.rs): the page reads these and words nothing of its own.
 use game::game::DownBy;
 use game::orders::Who;
 use game::view::{MateLine, SquadView};

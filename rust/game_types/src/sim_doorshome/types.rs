@@ -1,6 +1,6 @@
 //! The types of `sim_doorshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -99,20 +99,12 @@ pub struct SimDoorshomeModDOORSSTEPPED {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimDoorshomeMod {
     /// (src/sim/doorshome.ts:71 IO)
     pub io: Option<crate::sim_doorshome::DoorIo>,
     /// (src/sim/doorshome.ts:83 DOORS_STEPPED)
-    pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
-}
-impl SimDoorshomeMod {
-    pub fn blank() -> Self {
-        SimDoorshomeMod {
-            io: None,
-            doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0, noises: 0.0 },
-        }
-    }
+    #[is(crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0, noises: 0.0 })] pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
 }
 
 /// (src/sim/doorshome.ts:16 DOOR_CAP)

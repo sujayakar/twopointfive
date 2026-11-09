@@ -18,6 +18,14 @@ static ONE_GAME: Mutex<()> = Mutex::new(());
 std::thread_local! { static HOLDS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
 static CHARACTER: OnceLock<files::CharacterFiles> = OnceLock::new();
 
+/// the level file of every room clear of the game's mission list, each once, by name: a new row is here with nothing to write
+pub fn room_clear_files() -> Vec<String> {
+    let mut files: Vec<String> = game::scene_scenario_list::scenarios().into_iter().filter(|e| e.kind == game::scene_scenarios::ScenarioEntryKind::Roomclear).map(|e| e.level.unwrap_or_else(|| String::from("office.json"))).collect();
+    files.sort();
+    files.dedup();
+    files
+}
+
 /// the host's frame rate: a tick is a sixtieth of a second
 pub const DT: f64 = 1.0 / 60.0;
 
@@ -41,7 +49,7 @@ impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
 #[derive(Debug, PartialEq)]
-pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize, pub daylight: bool }
+pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize }
 
 /// a mouse button, by its bit in the Input
 #[derive(Clone, Copy, Debug)]
@@ -398,7 +406,7 @@ impl Play {
     /// a place of the floor `off` metres out from the first wall charge's face, on the side it was set from
     pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
     /// the objective row, as a HUD is given it
-    pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
+    pub fn objective(&self) -> String { self.view().mission.text }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
     pub fn view(&self) -> game::view::TickView { self.view_of(0) }
     /// WHAT A HUD IS TOLD OF ITS CURSOR with the cursor on a point of the world, through the host's camera as it stands (None: the point is not in the picture)
@@ -478,7 +486,7 @@ impl Play {
         Floor {
             boxes: g.col.boxes.len(), round: count(&|b| b.round == Some(true)), shaped: count(&|b| b.shaped == Some(true)), trim: count(&|b| b.piece == Some(true)),
             civilians: g.civilians.len(), cameras: g.devices.cameras.len(), lasers: g.devices.lasers.len(), keypads: g.devices.keypads.len(),
-            vents: g.level.vents.as_ref().map_or(0, |v| v.len()), daylight: g.level.daylight.is_some(),
+            vents: g.level.vents.as_ref().map_or(0, |v| v.len()),
         }
     }
 

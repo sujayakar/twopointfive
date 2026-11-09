@@ -248,7 +248,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { name: 'the side yard', bounds: { x0: 26.2, x1: 31.8, z0: 3.2, z1: 18.2 } }, { name: 'the wash yard', bounds: { x0: 7.2, x1: 11.8, z0: 7.8, z1: 18.2 } },
     ] },
   };
-  // ---- what is underfoot (rust/game_rules/src/floor): the yard is 'asphalt' (the nearest the six have to earth), the house's beaten floor stone, the rugs carpet
+  // ---- what is underfoot (rust/game_rules/src/world/floor.rs): the yard is 'asphalt' (the nearest the six have to earth), the house's beaten floor stone, the rugs carpet
   // `building` is the whole world, so the plan is all zones (first match wins), as on the floodlit yard: a zone is read only inside it, and with the house's
   // own rectangle here the gate hut's zone, out in the side yard, was never read (its floor sounded as the yard's).
   const surfaces: SurfacesData = {

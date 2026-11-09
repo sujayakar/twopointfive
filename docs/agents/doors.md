@@ -19,20 +19,20 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `doors/` | a door: its leaf, lock, latch and boxes; who is locked out; the boot; the hand; a man's path threaded through a frame |
-| `doorswing/` | which way each door opens, dealt once as the level is made |
-| `doorway/` | manners: who waits at a frame, who goes round whom, where nobody stands about |
-| `handleside/` | a man opens a door from where its handle is, off the floor the leaf sweeps |
-| `sprintdoor/` | Sam running at a door |
-| `doorthrow/` | what a leaf driven into a man does to him |
-| `doorblast/` | a leaf off its hinges, splintered by gunfire or torn by a blast, and the slab it becomes |
-| `doornames/` | what a door is called out loud |
-| `shutdoor/` | the squad's order to shut one |
-| `doorforce/`, `darkdoor/`, `digin/` | defenders: firing and booting through a shut door, staying out of a dark room, wedging (`enemies.md`) |
-| `props/` | furniture: pushed, shoved by a leaf, thrown by a blast |
+| `doorswing.rs` | which way each door opens, dealt once as the level is made |
+| `doorway.rs` | manners: who waits at a frame, who goes round whom, where nobody stands about |
+| `handleside.rs` | a man opens a door from where its handle is, off the floor the leaf sweeps |
+| `sprintdoor.rs` | Sam running at a door |
+| `doorthrow.rs` | what a leaf driven into a man does to him |
+| `doorblast.rs` | a leaf off its hinges, splintered by gunfire or torn by a blast, and the slab it becomes |
+| `doornames.rs` | what a door is called out loud |
+| `shutdoor.rs` | the squad's order to shut one |
+| `doorforce.rs`, `darkdoor.rs`, `digin/` | defenders: firing and booting through a shut door, staying out of a dark room, wedging (`enemies.md`) |
+| `props.rs` | furniture: pushed, shoved by a leaf, thrown by a blast |
 
 The step itself is `rust/sim/src/doors.rs` (and `rust/sim/src/props.rs`): every leaf for one tick, on flat columns. `game_update_doors` in
-`rust/game_rules/src/game/p_07.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
-`rust/game_rules/src/player/p_07.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
+`rust/game_rules/src/tick/game/doors.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
+`rust/game_rules/src/sam/player/interactables.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
 `tools/levels/lib/doorSize.ts`. A leaf is drawn as any box is; `rust/game_draw/src/doorways.rs` adds the doorways the light's reach asks for.
 
 ## How it works
@@ -54,7 +54,7 @@ Every lock has an id; a man has a ring of them. Picking takes `DOORS_PICK_SECS`;
 **The boot** (`doors_kick_in`) breaks the lock and flings the leaf. From the face a door opens toward, the frame holds it (`doors_boot_holds`): a thud, and
 nothing gives. Steel only rings.
 
-**Through a leaf** men hear less and a round may go on (`wallpen/`). A leaf is in the dynamic boxes, so sight, light, smoke and sound all ask the leaf where it
+**Through a leaf** men hear less and a round may go on (`wallpen.rs`). A leaf is in the dynamic boxes, so sight, light, smoke and sound all ask the leaf where it
 stands.
 
 ## Rules that hold
@@ -88,7 +88,7 @@ stands.
   or `?knob.doorthrow.kick_secs=3` turns it. `?doorcost=0` is the cheap count for shooting one out.
 - **How a leaf moves:** `rust/sim/src/doors.rs`. A column it keeps from tick to tick is added to the list at its head. What it needs of the game is an
   argument of the one call; it keeps nothing else. Its constants stand a second time in `rust/game_types/src/doors/`, for the rules that read them.
-- **A new way to work a door:** a row in `rust/game_rules/src/player/p_07.rs` for Sam; for the squad an order (`door-tools.md`). Move the leaf through
+- **A new way to work a door:** a row in `rust/game_rules/src/sam/player/interactables.rs` for Sam; for the squad an order (`door-tools.md`). Move the leaf through
   `doors_use`, `doors_crack`, `doors_pull`, `doors_pull_to` or `doors_kick_in`, never by its angle, so that the noise, the blame and who it struck follow.
 - **A noise:** `doors_sound`, which is heard by the rules and played by the mixer alike.
 - **A door in a level:** its generator; `closer`, `exterior`, `locked`, `lock`, `keySide`, `swing` and `steel` are the words. Another size is `DOOR_SIZE` and every

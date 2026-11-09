@@ -1,6 +1,6 @@
 //! The types of `scenario_run`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug)]
@@ -14,22 +14,12 @@ pub struct StartFromQuery {
     pub why: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ActiveScenario {
     Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
-}
-impl ActiveScenario {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ActiveScenario::Nightbreach => "nightbreach",
-            ActiveScenario::Roomclear => "roomclear",
-            ActiveScenario::Rescue => "rescue",
-            ActiveScenario::Quiet => "quiet",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

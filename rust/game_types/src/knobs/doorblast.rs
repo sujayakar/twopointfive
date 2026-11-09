@@ -55,8 +55,7 @@ pub struct DoorblastKTearM {
 ///  read as masonry or sheet metal), then slivers, then dust-fine splinters; where the cuts fall goes by where the last round struck, so no two doors break alike. What is left is
 ///  the LOCK RAIL lying by the frame with the handles on it — the leaf's own box, so to every reader this is a door off its hinges (Door.off: an open
 ///  doorway to sight, shots, sound, smoke, the AI and every door order; reset() hangs it; a checkpoint files the rail where it lies and a leaf's count
-///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch, never
-///  under a showcase).
+///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch).
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct DoorshotK {
     /// how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol; 1 = drywall's own six and twelve, what a recording from

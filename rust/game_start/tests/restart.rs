@@ -104,19 +104,17 @@ fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     assert!(!p.g.ai_enabled && !p.g.tune.teams, "the switches went back with the game");
 }
 
-/// THE RULE: the hour is the first step's and the picture's settings go on, so a night's lights are never under a noon's sky.
-/// A FAILURE MEANS: an hour picked in a try stays in the sky over a level whose lights went back to night; or the quality the player set is lost.
+/// THE RULE: the hour is the first step's, so a night's lights are never under a noon's sky.
+/// A FAILURE MEANS: an hour picked in a try stays in the sky over a level whose lights went back to night.
 #[test]
-fn the_hour_goes_back_and_the_settings_do_not() {
+fn the_hour_goes_back() {
     let mut p = pass();
-    let (sky, haze, exposure) = (p.g.engine.settings.sky_zenith, p.g.engine.settings.haze_density, p.g.engine.settings.exposure);
+    let night = game::hours::told::told(&p.g);
     p.run(0.5);
     assert!(game::hours::apply_hour(&mut p.g, game::hours::HourId::Midday), "the hour did not take");
-    assert_ne!(p.g.engine.settings.sky_zenith, sky);
-    p.g.engine.settings.render_scale = 0.61;
+    assert_ne!(game::hours::told::told(&p.g).zenith, night.zenith);
     assert!(control::restart(&mut p.g));
-    assert_eq!((p.g.engine.settings.sky_zenith, p.g.engine.settings.haze_density, p.g.engine.settings.exposure), (sky, haze, exposure));
-    assert_eq!(p.g.engine.settings.render_scale, 0.61, "the player's settings went back with the game");
+    assert_eq!(game::hours::told::told(&p.g), night);
 }
 
 /// THE RULE: a lever of the difficulty goes over whole: the rung it is set to and the table it wrote.

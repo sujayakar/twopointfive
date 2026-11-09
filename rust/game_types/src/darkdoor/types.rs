@@ -1,6 +1,6 @@
 //! The types of `darkdoor`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -55,26 +55,14 @@ pub struct Read {
     pub mean: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum LineKind {
     With,
     Copy,
     Alone,
-    Self_,
+    #[word("self")] Self_,
     Call,
     Nobody,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::With => "with",
-            LineKind::Copy => "copy",
-            LineKind::Alone => "alone",
-            LineKind::Self_ => "self",
-            LineKind::Call => "call",
-            LineKind::Nobody => "nobody",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -109,7 +97,7 @@ pub struct DoorAhead {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DarkdoorMod {
     /// (src/game/darkdoor.ts:76 stateOf)
     pub state_of: JsMap<GuardId, crate::darkdoor::Fear>,
@@ -117,15 +105,6 @@ pub struct DarkdoorMod {
     pub reads_of: Option<JsMap<crate::Num, crate::darkdoor::Read>>,
     /// (src/game/darkdoor.ts:81 cellsOf)
     pub cells_of: Option<JsMap<crate::Num, Vec<f64>>>,
-}
-impl DarkdoorMod {
-    pub fn blank() -> Self {
-        DarkdoorMod {
-            state_of: JsMap::new(),
-            reads_of: None,
-            cells_of: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

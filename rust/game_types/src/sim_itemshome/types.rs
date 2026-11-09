@@ -1,23 +1,13 @@
 //! The types of `sim_itemshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ItemStore {
     pub o: crate::sim_itemshome::ItemStoreO,
     pub cap: f64,
 }
-impl ItemStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        ItemStore {
-            o: crate::sim_itemshome::ItemStoreO::default(),
-            cap: 0.0,
-        }
-    }
-}
-impl Default for ItemStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ItemStoreO {
@@ -102,17 +92,10 @@ pub struct ItemCols {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimItemshomeMod {
     /// (src/sim/itemshome.ts:137 ITEMS_STEPPED)
-    pub items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED,
-}
-impl SimItemshomeMod {
-    pub fn blank() -> Self {
-        SimItemshomeMod {
-            items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, host: 0.0, walks: 0.0, rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0 },
-        }
-    }
+    #[is(crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, host: 0.0, walks: 0.0, rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0 })] pub items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED,
 }
 
 /// (src/sim/itemshome.ts:31 ITEM_CAP)

@@ -1,0 +1,19 @@
+//! THE SQUAD'S ORDERS: the book, the ring, every order that is not at a door, pairs, jobs.
+pub mod cmdring;
+pub mod holdfire;
+pub mod orders;
+pub mod pairorders;
+pub mod pairup;
+pub mod planmode;
+pub mod ringlone;
+pub mod seenwalk;
+pub mod shutdoor;
+pub mod squad;
+pub mod squad40;
+pub mod squadcast;
+pub mod squadsmoke;
+pub mod squadthrow;
+pub mod stayask;
+pub mod wandorder;
+pub mod workstow;
+pub mod workthings;

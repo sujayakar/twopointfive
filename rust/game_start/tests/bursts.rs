@@ -1,4 +1,4 @@
-//! A BURST IS AT ONE MAN (rust/game_rules/src/mind.rs `foe`): the man it was begun at down, it ends, and the next man is aimed at like the first.
+//! A BURST IS AT ONE MAN (rust/game_rules/src/people/mind.rs `foe`): the man it was begun at down, it ends, and the next man is aimed at like the first.
 use game::ids::GuardId;
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};

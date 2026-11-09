@@ -262,28 +262,27 @@ fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
 
 // ---------------------------------------------------------------- the start card's show, and glass in the air
 
-/// THE RULE: a show's fresh encounter has its men on their routes' first marks; once the show has let go, the night's opening stands them where a fresh night does.
-/// A FAILURE MEANS: after the start card's show a man starts on top of the way in.
+/// THE RULE: while nobody plays (the title's reel) the men live their night, and nothing of it is the player's: no game is kept, nothing is counted, nobody speaks to him. The encounter put back is a
+/// fresh night's. CONTROL: the same seconds played are counted.
+/// A FAILURE MEANS: a night begins with what the reel behind the title did, or a man starts on top of the way in.
 #[test]
-fn the_nights_opening_stands_the_men_again_after_a_show() {
+fn a_night_after_the_reel_is_a_fresh_night() {
     let mut p = Play::level("office.json", false, &Opts { seed: 1, ..Default::default() });
     p.run(0.1);
     game::game::game_restart_encounter(&mut p.g);
     let marks: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
-    p.g.quiet_utility = true;
-    p.g.touring = true;
-    p.run(5.0);
-    game::game::game_restart_encounter(&mut p.g);
-    for &gd in &p.g.guards.clone() {
-        let (r, at) = (p.g.gd[gd].route, p.at(gd));
-        let first = p.g.tab.route[r].points[0];
-        assert!(dist(at, [first[0], first[2]]) < 0.05, "under the show a man is on his route's first mark");
-    }
-    p.g.quiet_utility = false;
-    p.g.touring = false;
+    (p.g.aside, p.g.player_invisible) = (true, true);
+    p.run(240.0);
+    assert!(p.view().mission.text.is_empty() && p.view().mission.pos.is_none(), "the player is told where to go");
+    assert!(p.g.guards.iter().zip(&marks).any(|(&g, m)| dist(p.at(g), *m) > 3.0), "nobody walked his beat");
+    assert_eq!((p.g.mission.stats.elapsed, p.g.saves.stats.autosaves, p.view().radio.len()), (0.0, 0.0, 0), "the reel was counted, kept or spoken over: {:?}", p.view().radio);
+    (p.g.aside, p.g.player_invisible) = (false, false);
+    game::game::game_restart(&mut p.g);
     p.frame();
     let now: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
-    assert!(marks.iter().zip(&now).all(|(a, b)| dist(*a, *b) < 0.05), "a frame after the show let go: {now:?} against a fresh night's {marks:?}");
+    assert!(marks.iter().zip(&now).all(|(a, b)| dist(*a, *b) < 0.05), "a frame after the reel: {now:?} against a fresh night's {marks:?}");
+    p.run(2.0);
+    assert!(p.g.mission.stats.elapsed > 1.9);
 }
 
 /// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's, in its block.

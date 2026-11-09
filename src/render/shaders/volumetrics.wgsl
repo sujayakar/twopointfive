@@ -43,7 +43,7 @@ const VOL_RAY_STEPS: u32 = 160u;   // march steps one view ray may spend over AL
 
 // (coneInterval — the ray's stretch inside a spot's cone — lives in vol_common.wgsl with the other shared helpers)
 
-// ---- (c) weather (rust/game_rules/src/weather): rain streaks and splash rings in the OUTDOOR air, and the lit-sky glow of a lightning stroke ----
+// ---- (c) weather (rust/game_rules/src/air/weather.rs): rain streaks and splash rings in the OUTDOOR air, and the lit-sky glow of a lightning stroke ----
 // Rain is not simulated: it is a lattice of falling drop columns evaluated analytically along the view ray. Columns stand at hashed points of a
 // RAIN_CELL xz lattice (two per cell, each with a rank so frame.weatherA.x thins them out), leaning with the wind (weatherA.yz: metres sideways per
 // metre of height), and carry a drop every RAIN_PERIOD metres falling at RAIN_V, each drawn out RAIN_LEN long — the streak a 1/30 s eye makes of it.
@@ -513,7 +513,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
   }
 
-  // ---- (c) weather: rain streaks / splash rings / the sky flash — outdoor air only (rainAlong / splashAt above; rust/game_rules/src/weather feeds frame.weatherA‥D) ----
+  // ---- (c) weather: rain streaks / splash rings / the sky flash — outdoor air only (rainAlong / splashAt above; rust/game_rules/src/air/weather.rs feeds frame.weatherA‥D) ----
   var reactL = 0.0;   // what (c) adds toward the eye, for the TAAU resolve (outReact) — nothing drawn here has a history worth keeping: streaks fall metres a frame. (Beams are deliberately NOT
   if (wxAirOn) { reactL += wxFlash * (0.5 + 0.5 * T); }   // (the air a stroke lit, as the march above composed it: lit and gone with the stroke, not a history's worth)
                       // in it: a torch beam is a smooth gradient the history serves well, and marking it reactive handed the resolve the raw internal-resolution march instead — measured, reverted.)

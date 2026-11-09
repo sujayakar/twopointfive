@@ -85,7 +85,7 @@ pub const LASER_TRIP: u32 = 4;
 
 // the kinds of `input`: on (a: 0 or 1) · broken · mended · toggled (the panel's: flipped and mended) · blinded until a · what a hand left (a: when, NaN: nothing) ·
 // the level as authored (a: 0 or 1) · its base strength a · all four of a file (a on, b broken, c until, d hand) · the mains tripped at a for b seconds · the mains
-// back at a · the mains as a file or a show has them (a: M_ bits, b until, c since, d restored at) · the timer at the panel set to a · the mains as a new level has them ·
+// back at a · the mains as a file has them (a: M_ bits, b until, c since, d restored at) · the timer at the panel set to a · the mains as a new level has them ·
 // the restrike's delay a (a recording's own)
 pub const IN_ON: u32 = 0;
 pub const IN_BREAK: u32 = 1;
@@ -424,8 +424,8 @@ pub fn flip(g: usize, on: bool, time: f64, strike: bool, n: usize) {
 }
 
 /// ONE TICK OF THE LIGHTS (lighting.ts updateTargets): the mains' own clock and the timer at the panel, the beacons, each fixture's factor and each lamp as it
-/// burns. `near`: one of theirs is at the panel (who is the caller's). `es`: the renderer setting an area light's strength is scaled by, an input.
-pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u32 {
+/// burns. `near`: one of theirs is at the panel (who is the caller's).
+pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64) -> u32 {
     let l = &mut state(g).lights;
     let mut ev = 0;
     if active(l) && !permanent(l) && time >= l.until {
@@ -491,7 +491,7 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
             tube(l, r, time);
         } else if role == R_AREA {
             let f = l.factor[l.row_target[r] as usize];
-            let i = l.row_base[r] * f * es;
+            let i = l.row_base[r] * f;
             burn(l, r, f > 0.001, i);
             tube(l, r, time);
         }

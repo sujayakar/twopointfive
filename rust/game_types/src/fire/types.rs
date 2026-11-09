@@ -1,6 +1,6 @@
 //! The types of `fire`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -21,10 +21,8 @@ pub struct FireShown {
     pub time: f64,
     pub stir: Option<Vec<f64>>,
     pub stir_at: Option<Vec<f64>>,
-    pub bed: Vec<f64>,
     pub smoke: Vec<f64>,
     pub smokes: f64,
-    pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
 }
@@ -84,17 +82,10 @@ pub struct WindAt {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FireMod {
     /// (src/game/fire.ts:223 states)
     pub states: Option<crate::fire::FireStats>,
-}
-impl FireMod {
-    pub fn blank() -> Self {
-        FireMod {
-            states: None,
-        }
-    }
 }
 
 /// (src/game/fire.ts:167 FIRE_LOOK_SMOKE: a table nothing writes)

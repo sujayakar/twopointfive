@@ -1,10 +1,10 @@
 //! The types of `doornames`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoornamesMod {
     /// (src/game/doornames.ts:24 SAID)
     pub said: JsMap<DoorId, String>,
@@ -12,15 +12,6 @@ pub struct DoornamesMod {
     pub written: JsMap<DoorId, String>,
     /// (src/game/doornames.ts:28 SAID_UP)
     pub said_up: JsMap<DoorId, String>,
-}
-impl DoornamesMod {
-    pub fn blank() -> Self {
-        DoornamesMod {
-            said: JsMap::new(),
-            written: JsMap::new(),
-            said_up: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/doornames.ts:42 ORDINALS: a table nothing writes)

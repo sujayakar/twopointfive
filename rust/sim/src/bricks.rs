@@ -37,8 +37,9 @@ pub const CELLS: usize = BX * BX * BY;
 pub const MAX_BRICKS: usize = 512;
 /// emitters letting out at once (the solver's own list holds as many)
 pub const MAX_EMIT: usize = 64;
-/// DOUBLES AN EMITTER: where it stands (x y z), what it lets out a second (unit·m³), how long it runs, how long it has, how wide it is (m)
-pub const EMIT: usize = 7;
+/// DOUBLES AN EMITTER: where it stands (x y z), what it lets out a second (unit·m³), how long it runs, how long it has, how wide it is (m), and what is missing from the
+/// color of what it lets out (1 − its tint, r g b: 0 = smoke's own grey)
+pub const EMIT: usize = 10;
 /// the head: emitters live · steps taken · the plan in bricks, x then z (0 = no step has been taken on any level yet) · THE BOOK OF THE SMOKE, two
 /// sums in unit·m³ that thin at the cells' own rate, so that at every step what the cells hold + what was given back = what was let out: all that was let
 /// out · what thin bricks held when they were given back, and what the wind carried over the plan's edge (K.wind) · seconds owed toward the next step · a word of nothing (a block is whole vectors long)
@@ -53,10 +54,13 @@ const H_CLOCK: usize = 6;
 pub const O_EMIT: usize = HEAD;
 /// which brick is where: its place in plan, x then z, EACH PLUS ONE (0 = the slot is free: a row of zeros is an empty grid)
 pub const O_KEYS: usize = O_EMIT + MAX_EMIT * EMIT;
+/// WHAT COLOR A BRICK'S SMOKE IS: what is missing from it, r g b, on average over all the smoke in the brick (dust is tan, soot is dark: whoever draws a game put back has no
+/// other word of it). No eye and no rule reads it.
+pub const O_DYE: usize = O_KEYS + MAX_BRICKS * 2;
 /// THE LIGHT UNDER A ROOF (glow.rs), a number a square metre of the plan in five columns: the best of the six faces at its middle · their mean · the mean
 /// with the lamps', which is what leaves its surfaces · the face that looks up · the level of the place it is in (a logarithm). Zeros where nothing has swept: no light.
 pub const MAX_GLOW: usize = MAX_BRICKS * (SIDE * SIDE) as usize;
-pub const O_GLOW_MAX: usize = O_KEYS + MAX_BRICKS * 2;
+pub const O_GLOW_MAX: usize = O_DYE + MAX_BRICKS * 3;
 pub const O_GLOW_MEAN: usize = O_GLOW_MAX + MAX_GLOW;
 pub const O_GLOW_A: usize = O_GLOW_MEAN + MAX_GLOW;
 /// …and the word of the lamps it is swept under (glow.rs; 0 = never, or not since the light model was last down) · which metre the sweep comes to next ·
@@ -106,6 +110,8 @@ const M_COPY: usize = 2;
 static mut DELTA: [f64; MAX_BRICKS * CELLS] = [0.0; MAX_BRICKS * CELLS];
 static mut THIN: [bool; MAX_BRICKS] = [false; MAX_BRICKS];
 static mut HELD: [f64; MAX_BRICKS] = [0.0; MAX_BRICKS];
+/// what of a step came into a brick from the bricks round it, and what is missing from its color
+static mut CAME: [[f64; 4]; MAX_BRICKS] = [[0.0; 4]; MAX_BRICKS];
 
 const F_X: u8 = 1;
 const F_Y: u8 = 2;
@@ -160,6 +166,8 @@ pub struct Stood {
     pub z: usize,
     pub rho: &'static [f64],
     pub open: [u32; WORDS],
+    /// what is missing from its color
+    pub dye: [f64; 3],
 }
 /// …none before its first step, or where nobody has asked the faces of the state that stands there (a game put back, till its next step or `ways`)
 pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
@@ -181,7 +189,7 @@ impl Stands {
         let faces = unsafe { &(*core::ptr::addr_of!(FACES))[self.g] };
         let face = |c: usize| (faces[b * CELLS + c] & (F_X | F_Y | F_Z | F_ASKED)) as u32;
         let open = core::array::from_fn(|w| (0..4).fold(0, |o, j| o | face(w * 4 + j) << (8 * j)));
-        Some(Stood { x: x as usize - 1, z: z as usize - 1, rho: &st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS], open })
+        Some(Stood { x: x as usize - 1, z: z as usize - 1, rho: &st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS], open, dye: core::array::from_fn(|i| st[O_DYE + b * 3 + i]) })
     }
 }
 /// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
@@ -240,6 +248,7 @@ impl Grid {
                     self.st[O_RHO + b * CELLS + c] = 0.0;
                     self.faces[b * CELLS + c] = 0;
                 }
+                self.dye(b, [0.0; 3]);
                 return Some(b);
             }
         }
@@ -256,6 +265,19 @@ impl Grid {
         for c in 0..CELLS {
             self.st[O_RHO + b * CELLS + c] = 0.0;
         }
+        self.dye(b, [0.0; 3]);
+    }
+    fn dye(&mut self, b: usize, d: [f64; 3]) {
+        self.st[O_DYE + b * 3..O_DYE + b * 3 + 3].copy_from_slice(&d);
+    }
+    fn dyed(&self, b: usize) -> [f64; 3] {
+        [self.st[O_DYE + b * 3], self.st[O_DYE + b * 3 + 1], self.st[O_DYE + b * 3 + 2]]
+    }
+    /// `share` of a brick's smoke is of color `d`, and the rest what it was
+    fn mix(&mut self, b: usize, share: f64, d: [f64; 3]) {
+        let was = self.dyed(b);
+        let s = unit(share);
+        self.dye(b, core::array::from_fn(|i| was[i] + (d[i] - was[i]) * s));
     }
     /// where each brick is, from the state (a brick the state names off its own plan, or where another already is, is given back)
     fn reindex(&mut self) {
@@ -458,7 +480,7 @@ fn shares(share: &[f64; MAX_GLOW], wide: usize, gx: usize, gz: usize, x: usize, 
 }
 /// LET OUT: an emitter joins the list of the game in slot `g` (where, how wide, what it lets out a second, for how long). When the list is full the one
 /// with the least still to let out gives way, and that may be the newcomer.
-pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
+pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64, dye: [f64; 3]) {
     // (an emitter that is no number lets nothing out, and must not sit in the list as one)
     if !(x - x == 0.0 && y - y == 0.0 && z - z == 0.0 && radius >= 0.0 && radius < 1e6 && rate > 0.0 && ttl > 0.0 && rate * ttl < 1e12) {
         return;
@@ -493,6 +515,9 @@ pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) 
     st[o + 4] = ttl;
     st[o + 5] = 0.0;
     st[o + 6] = radius;
+    for i in 0..3 {
+        st[o + 7 + i] = unit(dye[i]);
+    }
 }
 /// SHUT: every emitter of the game in slot `g` has let out its last; what is in the air stays
 pub fn shut(g: usize) {
@@ -506,20 +531,21 @@ pub fn shut(g: usize) {
 fn emitters(st: &[f64; LEN]) -> usize {
     js_min(st[H_EMIT], MAX_EMIT as f64) as usize
 }
-/// an emitter as it lets out: where it stands, what it lets out a second, how long it runs, how long it has, how wide it is
+/// an emitter as it lets out: where it stands, what it lets out a second, how long it runs, how long it has, how wide it is, what is missing from its color
 pub struct Lets {
     pub at: [f64; 3],
     pub rate: f64,
     pub ttl: f64,
     pub age: f64,
     pub radius: f64,
+    pub dye: [f64; 3],
 }
 /// the emitters letting out in the game in slot `g`
 pub fn letting(g: usize) -> impl Iterator<Item = Lets> {
     let st = &state_read(g).smoke.st;
     (0..emitters(st)).map(|i| {
         let e = &st[O_EMIT + i * EMIT..O_EMIT + (i + 1) * EMIT];
-        Lets { at: [e[0], e[1], e[2]], rate: e[3], ttl: e[4], age: e[5], radius: e[6] }
+        Lets { at: [e[0], e[1], e[2]], rate: e[3], ttl: e[4], age: e[5], radius: e[6], dye: [e[7], e[8], e[9]] }
     }).filter(|e| e.age < e.ttl)
 }
 /// how many emitters are letting out in the game in slot `g`
@@ -678,9 +704,13 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     let wide = g.nbx * 2;
     let n = emitters(g.st);
     let mut kept = 0;
+    // (is there any color to carry)
+    let mut dyes = (0..MAX_BRICKS).any(|b| g.st[O_KEYS + b * 2] != 0.0 && g.dyed(b) != [0.0; 3]);
     for i in 0..n {
         let o = O_EMIT + i * EMIT;
         let (x, y0, z, rate, ttl, age, radius) = (g.st[o], g.st[o + 1], g.st[o + 2], g.st[o + 3], g.st[o + 4], g.st[o + 5], g.st[o + 6]);
+        let dye = [g.st[o + 7], g.st[o + 8], g.st[o + 9]];
+        dyes |= dye != [0.0; 3];
         if age < ttl {
             let amount = rate * js_min(SUB, ttl - age);
             let top = (BY - 1) as f64;
@@ -713,6 +743,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                 let (ux, uz) = (cx as usize, cz as usize);
                 g.st[H_OUT] += amount;
                 if let Some(b) = g.brick_or_new((ux / BX) as i32, (uz / BX) as i32) {
+                    if dyes {
+                        let had: f64 = g.st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS].iter().sum();
+                        g.mix(b, amount / VOL / (had + amount / VOL), dye);
+                    }
                     let each = amount / VOL / (head - foot);
                     let mut y = floor(foot);
                     while y < head {
@@ -732,6 +766,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
             g.st[t + 4] = ttl;
             g.st[t + 5] = age;
             g.st[t + 6] = radius;
+            g.st[t + 7..t + 10].copy_from_slice(&dye);
             kept += 1;
         }
     }
@@ -777,6 +812,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     ask(w, set, g);
 
     let delta = unsafe { &mut *core::ptr::addr_of_mut!(DELTA) };
+    let came = unsafe { &mut *core::ptr::addr_of_mut!(CAME) };
+    if dyes {
+        *came = [[0.0; 4]; MAX_BRICKS];
+    }
     // 3b. THE WIND (K.wind): under the open sky the air moves and the smoke goes with it — across the open faces in plan, out of the cell UPWIND (a
     //     donor's own density: nothing is made), at the wind's speed at that height × the share of it the two squares have (none under a roof: a
     //     room's smoke stays a room's, and the wind comes in at a door only as far as the lee lets it). What it carries over the plan's edge has left
@@ -834,6 +873,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                                     let over = if ux > 0.0 { ux * here } else { ux * g.st[O_RHO + n] };
                                     delta[c] -= over;
                                     delta[n] += over;
+                                    if dyes {
+                                        carry(g, came, c, n, over);
+                                    }
                                 } else if cx > 0.0 && bx as usize + 1 == g.nbx {
                                     let out = cx * h * s * here;
                                     delta[c] -= out;
@@ -846,6 +888,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                                     let over = if uz > 0.0 { uz * here } else { uz * g.st[O_RHO + n] };
                                     delta[c] -= over;
                                     delta[n] += over;
+                                    if dyes {
+                                        carry(g, came, c, n, over);
+                                    }
                                 } else if cz > 0.0 && bz as usize + 1 == g.nbz {
                                     let out = cz * h * s * here;
                                     delta[c] -= out;
@@ -909,6 +954,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                             let pass = rx * (here - g.st[O_RHO + n]);
                             delta[c] -= pass;
                             delta[n] += pass;
+                            if dyes {
+                                carry(g, came, c, n, pass);
+                            }
                         }
                     }
                     if f & F_Y != 0 {
@@ -923,6 +971,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                             let pass = rz * (here - g.st[O_RHO + n]);
                             delta[c] -= pass;
                             delta[n] += pass;
+                            if dyes {
+                                carry(g, came, c, n, pass);
+                            }
                         }
                     }
                 }
@@ -951,6 +1002,11 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
         }
         held[b] = mass * VOL;
         thin[b] = held[b] < k.gone;
+        // (what came in is mixed into what is there now; the thinning leaves the color as it is)
+        if dyes && came[b][0] > 0.0 && mass > 0.0 {
+            let [i, d @ ..] = came[b];
+            g.mix(b, i * keep / mass, d.map(|v| v / i));
+        }
     }
     let mut given = 0.0;
     for b in 0..MAX_BRICKS {
@@ -987,6 +1043,20 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
         }
     }
     g.st[H_GIVEN] += given + blown * VOL * keep;
+}
+
+/// `over` of smoke goes from cell `c` to cell `n` (or back, where it is less than nothing): into another brick it takes its brick's color along
+#[inline(always)]
+fn carry(g: &Grid, came: &mut [[f64; 4]; MAX_BRICKS], c: usize, n: usize, over: f64) {
+    let (from, to, v) = if over > 0.0 { (c / CELLS, n / CELLS, over) } else { (n / CELLS, c / CELLS, -over) };
+    if from == to || !(v > 0.0) {
+        return;
+    }
+    let d = g.dyed(from);
+    came[to][0] += v;
+    for i in 0..3 {
+        came[to][1 + i] += v * d[i];
+    }
 }
 
 /// the cell `i` along a brick's edge on `side` (0 = toward −x · 1 = toward +x · 2 = toward −z · 3 = toward +z), as (x, z) in the brick

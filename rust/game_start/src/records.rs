@@ -70,52 +70,69 @@ json_words!(game::floor::FloorMat { Carpet: "carpet", Lino: "lino", Stone: "ston
 json_struct!(game::scene_level_data::SurfacesDataZonesItem { mat: "mat", x0: "x0", z0: "z0", x1: "x1", z1: "z1" } drops { "id": String, "notes": Option<String> });
 json_struct!(game::scene_level_data::SurfacesData { building: "building", grass_edge: "grassEdge", inside: "inside", outside: "outside", verge: "verge", zones: "zones" });
 
+json_words!(game::lesson::LessonFlag { Crouch: "crouch", Sprint: "sprint", Wall: "wall", Peek: "peek", Lean: "lean", Nv: "nv", Light: "light", Holstered: "holstered", Gun: "gun", RingsOut: "ringsOut", ShellsOut: "shellsOut", Auto: "auto", Setup: "setup", SetupShut: "setupShut", Dragging: "dragging", Dark: "dark", ChargeSet: "chargeSet", ChargeClear: "chargeClear", WallBlown: "wallBlown", Holding: "holding", Picking: "picking", Coding: "coding", Menu: "menu", OwnRing: "ownRing", Silent: "silent" });
+json_words!(game::lesson::LessonDoorState { Open: "open", Shut: "shut", Unlocked: "unlocked", Broken: "broken", Charged: "charged" });
+json_words!(game::lesson::LessonMeter { Noise: "noise", Light: "light" });
+json_words!(game::lesson::LessonHow { Takedown: "takedown", Choke: "choke", Whip: "whip", Ring: "ring", Knife: "knife" });
+json_words!(game::lesson::LessonThrown { Smoke: "smoke", Flash: "flash", Frag: "frag", He40: "he40", Cam: "cam" });
+json_words!(game::lesson::LessonPairWhat { Mark: "mark", Now: "now", Set: "set", Go: "go", GoF: "go:F", GoHands: "go:hands", Down: "down" });
+json_words!(game::game::SlotKind { Pistol: "pistol", Rifle: "rifle", Smoke: "smoke", Flash: "flash", Frag: "frag" });
+json_words!(game::orders::Who { All: "all", Red: "red", Blue: "blue" });
+json_words!(game::orders::SquadOrdersMenSel { All: "all", Red: "red", Blue: "blue" });
+json_words!(game::weapons::RifleAttachment { Ring: "ring", He40: "he40", Cam: "cam" });
+// (a stage a test can wait for: `failed` ends the lesson and is no step's)
+json_words!(game::game::MissionStage { Infiltrate: "infiltrate", Drive: "drive", Exfil: "exfil", Done: "done" });
+
 /// what a test says that is true or left out
 fn said(j: &Json, key: &str, at: &At) -> bool { field::<Option<bool>>(j, key, at).unwrap_or(false) }
 
-/// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is.
-impl FromJson for game::scene_scenarios::LessonTestKind {
+/// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is and each word in it is read as its type. A word none holds is a fault of the file: such a step would wait for ever.
+impl FromJson for game::lesson::LessonTest {
     fn from_json(j: &Json, at: &At) -> Self {
-        use game::scene_scenarios::LessonTestKind as K;
+        use game::lesson::LessonTest as T;
         let at = &at.of_record(j);
         let is: String = field(j, "is", at);
-        match is.as_str() {
-            "in" => K::In { area: field(j, "area", at) },
-            "near" => K::Near { at: field(j, "at", at), r: field(j, "r", at) },
-            "flag" => K::Flag { flag: field(j, "flag", at), value: field(j, "value", at) },
-            "slot" => K::Slot { slot: field(j, "slot", at), drawn: field(j, "drawn", at) },
-            "pace" => K::Pace { below: field(j, "below", at), above: field(j, "above", at) },
-            "meter" => K::Meter { which: field(j, "which", at), below: field(j, "below", at), above: field(j, "above", at) },
-            "stage" => K::Stage { stage: field(j, "stage", at) },
-            "door" => K::Door { door: field(j, "door", at), state: field(j, "state", at) },
-            "target" => K::Target { name: field(j, "name", at), on: field(j, "on", at) },
-            "men" => K::Men { down: field(j, "down", at) },
-            "did" => K::Did { what: field(j, "what", at), on: field(j, "on", at), n: field(j, "n", at) },
-            "downed" => K::Downed { how: field(j, "how", at), n: field(j, "n", at) },
-            "body" => K::Body { area: field(j, "area", at) },
-            "calm" => K::Calm { route: field(j, "route", at) },
-            "loaded" => K::Loaded,
-            "reload" => K::Reload,
-            "launcher" => K::Launcher { on: field(j, "on", at), fired: said(j, "fired", at) },
-            "burst" => K::Burst { n: field(j, "n", at) },
-            "threw" => K::Threw { kind: field(j, "kind", at), quick: said(j, "quick", at), area: field(j, "area", at) },
-            "orderTo" => K::OrderTo { who: field(j, "who", at) },
-            "stackOn" => K::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: said(j, "set", at) },
-            "pairsOn" => K::PairsOn { doors: field(j, "doors", at) },
-            "word" => K::Word { doors: field(j, "doors", at) },
-            "taken" => K::Taken { room: field(j, "room", at) },
-            "following" => K::Following,
-            "mate" => K::Mate { area: field(j, "area", at), at: field(j, "at", at), r: field(j, "r", at), by: field(j, "by", at), away: field(j, "away", at) },
-            "pair" => K::Pair { what: field(j, "what", at), n: field(j, "n", at) },
-            "cue" => K::Cue { name: field(j, "name", at) },
-            "view" => K::View { turned: field(j, "turned", at), zoomed: field(j, "zoomed", at) },
-            "squad" => K::Squad { area: field(j, "area", at), n: field(j, "n", at) },
-            "stacks" => K::Stacks { doors: field(j, "doors", at), n: field(j, "n", at), set: said(j, "set", at) },
-            "watching" => K::Watching { at: field(j, "at", at), r: field(j, "r", at), n: field(j, "n", at) },
-            "all" => K::All { of: field(j, "of", at) },
-            "any" => K::Any { of: field(j, "of", at) },
-            w => { j.skip_all(); if j.get("is").str().is_some() { at.fault(&format!("no lesson's test is called '{w}'")); } K::Loaded }
+        let t = match is.as_str() {
+            "in" => T::In { area: field(j, "area", at) },
+            "near" => T::Near { at: field(j, "at", at), r: field(j, "r", at) },
+            "flag" => T::Flag { flag: field(j, "flag", at), value: field(j, "value", at) },
+            "slot" => T::Slot { slot: field(j, "slot", at), drawn: field(j, "drawn", at) },
+            "pace" => T::Pace { below: field(j, "below", at), above: field(j, "above", at) },
+            "meter" => T::Meter { which: field(j, "which", at), below: field(j, "below", at), above: field(j, "above", at) },
+            "stage" => T::Stage { stage: field(j, "stage", at) },
+            "door" => T::Door { door: field(j, "door", at), state: field(j, "state", at) },
+            "target" => T::Target { name: field(j, "name", at), on: field(j, "on", at) },
+            "men" => T::Men { down: field(j, "down", at) },
+            "did" => T::Did { what: field(j, "what", at), on: field(j, "on", at), n: field(j, "n", at) },
+            "downed" => T::Downed { how: field(j, "how", at), n: field(j, "n", at) },
+            "body" => T::Body { area: field(j, "area", at) },
+            "calm" => T::Calm { route: field(j, "route", at) },
+            "loaded" => T::Loaded,
+            "reload" => T::Reload,
+            "launcher" => T::Launcher { on: if j.peek("on").and_then(Json::str) == Some("none") { field::<String>(j, "on", at); None } else { Some(field(j, "on", at)) }, fired: said(j, "fired", at) },
+            "burst" => T::Burst { n: field(j, "n", at) },
+            "threw" => T::Threw { kind: field(j, "kind", at), quick: said(j, "quick", at), area: field(j, "area", at) },
+            "orderTo" => T::OrderTo { who: field(j, "who", at) },
+            "stackOn" => T::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: said(j, "set", at) },
+            "pairsOn" => T::PairsOn { doors: field(j, "doors", at) },
+            "word" => T::Word { doors: field(j, "doors", at) },
+            "taken" => T::Taken { room: field(j, "room", at) },
+            "following" => T::Following,
+            "mate" => T::Mate { area: field(j, "area", at), at: field(j, "at", at), r: field(j, "r", at), by: field(j, "by", at), away: field(j, "away", at) },
+            "pair" => T::Pair { what: field(j, "what", at), n: field(j, "n", at) },
+            "cue" => T::Cue { name: field(j, "name", at) },
+            "view" => T::View { turned: field(j, "turned", at), zoomed: field(j, "zoomed", at) },
+            "squad" => T::Squad { area: field(j, "area", at), n: field(j, "n", at) },
+            "stacks" => T::Stacks { doors: field(j, "doors", at), n: field(j, "n", at), set: said(j, "set", at) },
+            "watching" => T::Watching { at: field(j, "at", at), r: field(j, "r", at), n: field(j, "n", at) },
+            "all" => T::All { of: field(j, "of", at) },
+            "any" => T::Any { of: field(j, "of", at) },
+            w => { j.skip_all(); if j.get("is").str().is_some() { at.fault(&format!("no lesson's test is called '{w}'")); } T::Loaded }
+        };
+        if let T::Did { what, .. } = &t {
+            if !["act:", "event:", "chron:", "order:"].iter().any(|k| what.len() > k.len() && what.starts_with(k)) { at.key("what").fault(&format!("no deed '{what}': act:, event:, chron: or order: and its name")); }
         }
+        t
     }
 }
 
@@ -123,6 +140,8 @@ impl FromJson for game::scene_scenarios::LessonTestKind {
 json_words!(game::scene_level::CivilianDefKind { Cleaner: "cleaner", Worker: "worker" });
 json_words!(game::scene_level::CivilianTask { Bin: "bin", Stand: "stand", Wipe: "wipe", Sit: "sit", Cooler: "cooler", Printer: "printer", Shelf: "shelf" });
 json_struct!(game::scene_level::VentDef { name: "id", pos: "pos", dir: "dir", speed: "speed", spread: "spread", reach: "reach", size: "size", period: "period", duty: "duty", phase: "phase", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
+json_words!(game::scene_level::HumKind { Hum: "hum", Servers: "servers", Buzz: "buzz", Wind: "wind" });
+json_struct!(game::scene_level::HumDef { name: "id", kind: "kind", pos: "pos", level: "level", radius: "radius", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
 json_words!(game::scene_level::RoomClearPlanBreach { Kick: "kick", Open: "open" });
 json_struct!(game::scene_level::BreachPlanBounds { x0: "x0", x1: "x1", z0: "z0", z1: "z1" });
 json_struct!(game::scene_level::BreachPlanLines { stack1: "stack1", stack2: "stack2", go2: "go2", in1: "in1", side2: "side2", side1: "side1", push1: "push1", under2: "under2", nothing2: "nothing2", corner1: "corner1", empty2: "empty2", radio1: "radio1" });

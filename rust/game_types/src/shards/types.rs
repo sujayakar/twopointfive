@@ -1,6 +1,6 @@
 //! The types of `shards`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -74,7 +74,7 @@ pub struct Life {
     pub n: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassShards {
     pub lives: Vec<crate::shards::Life>,
     pub live_est: f64,
@@ -89,26 +89,6 @@ pub struct GlassShards {
     pub log: Vec<String>,
     pub serial: f64,
 }
-impl GlassShards {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        GlassShards {
-            lives: Vec::new(),
-            live_est: 0.0,
-            breaks: Vec::new(),
-            recs_this_frame: 0.0,
-            sounds_this_frame: 0.0,
-            sound_at: JsMap::new(),
-            sound_owed: JsMap::new(),
-            deferred: Vec::new(),
-            deferred_n: 0.0,
-            crunch_n: 0.0,
-            log: Vec::new(),
-            serial: 0.0,
-        }
-    }
-}
-impl Default for GlassShards { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassShardsBreaksItem {

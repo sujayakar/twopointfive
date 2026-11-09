@@ -149,7 +149,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'late', name: 'Late', arrive: { door: 'gate_s', spawn: [[19.4, 0, 24.6], [20.6, 0, 24.6]], men: 2 } },
     ],
   };
-  // ---- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears). `building` is the floor the zones are laid over — here
+  // ---- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears). `building` is the floor the zones are laid over — here
   //      the whole walled yard, asphalt — and each zone a rectangle of another finish, the first that holds a point winning. Without this block a map gets the
   //      OFFICE's map: carpet across x 4‥36, z 4‥24, its yard included.
   const surfaces: SurfacesData = {

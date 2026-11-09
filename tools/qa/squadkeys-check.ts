@@ -1,4 +1,4 @@
-// THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE (src/ui/options.ts squadRows; rust/game_rules/src/cmdring `only`).
+// THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE (src/ui/options.ts squadRows; rust/game_rules/src/squad_orders/cmdring.rs `only`).
 // The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". On the page the squad's keys are the command key and the word's;
 // Shift with the command key sends a part of the squad to one more thing. Reads the module and the screen's source as text: no stand, no page.
 //   bun run tools/qa/squadkeys-check.ts
@@ -28,7 +28,7 @@ export async function squadKeysCheck(): Promise<boolean> {
     "keys: the command key's row says its tap and its hold, the sprint key with it is the next row, and the word's row says what it does", say(k));
   // ---- letters
   line(!has(k, 'H') && !has(k, 'G'), "letters: the wheel's two letters are not listed", say(k));
-  // ---- twice (the key tapped twice is 'fall in', rust/game_rules/src/cmdring `twice`: the command key's row says so, and only then)
+  // ---- twice (the key tapped twice is 'fall in', rust/game_rules/src/squad_orders/cmdring.rs `twice`: the command key's row says so, and only then)
   const tw = squadRows(built, true) as Row[], twSaid = tw[0]?.[2] ?? '';
   line(/tap it twice to call everyone back to you/.test(twSaid) && /tap it to give the usual order/.test(twSaid) && /hold it a moment to open the wheel/.test(twSaid) && !/twice/.test(k[0][2] ?? '') && tw.length === k.length,
     "twice: with the key tapped twice being 'fall in' the command key's row says so between its tap and its hold, and without the rule it does not", `"${twSaid}"`);

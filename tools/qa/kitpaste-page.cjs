@@ -1,5 +1,5 @@
 // COPY AND PASTE FOR LOADOUTS, ON THE REAL PAGE (the Team & kit step: ui/kitCard.ts KIT_CLIP — the two buttons, C and V — ui/loadout.ts — the keys from any
-// row, the roster's mark — rust/game_rules/src/kit kit_paste). The maintainer, 10-15: "we should have copy and paste for loadouts".
+// row, the roster's mark — rust/game_rules/src/outfit/kit kit_paste). The maintainer, 10-15: "we should have copy and paste for loadouts".
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick), with five cards planted in the store by
 // the big slot's own fields: a man's kit is copied by the key and pasted onto another by the key, onto you by the button, the kit of a man with nothing in his big slot
 // onto you by Ctrl+C / Ctrl+V (your big slot is emptied with the rest: a paste hands over the whole card); each time the store holds the kit, written ONCE, the tiles that moved flash, the men who wear the copied kit are marked on the roster,
@@ -42,7 +42,7 @@ async function open(browser, extra, mission = 'depot-four') {
   return { ctx, page, read, pick, key, shot };
 }
 const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, walls: m?.walls });
-// A TOOL EACH PAIR (rust/game_rules/src/kit KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
+// A TOOL EACH PAIR (rust/game_rules/src/outfit/kit KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
 // Red One's kit and after it, its tile does not move, and the store leaves his slot to the deal: a tool a man is only lent is never written, by a paste either.
 const counted = m => J({ ...kitOf(m), big: '' });
 

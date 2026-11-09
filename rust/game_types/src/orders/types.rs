@@ -1,6 +1,6 @@
 //! The types of `orders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
@@ -28,9 +28,9 @@ pub struct StackPost {
     pub group: Option<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadOrders {
-    pub knobs: crate::knobs::OrdersK,
+    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
     /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
     pub made: JsMap<String, OrdersOrderDefId>,
@@ -39,7 +39,7 @@ pub struct SquadOrders {
     pub owners: Vec<crate::orders::SquadOwner>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
-    pub who: crate::orders::Who,
+    #[is(crate::orders::Who::All)] pub who: crate::orders::Who,
     pub menu: Option<crate::orders::Menu>,
     pub cmd_ring: Option<crate::cmdring::RingState>,
     pub cmd_press: Option<crate::orders::SquadOrdersCmdPress>,
@@ -48,17 +48,17 @@ pub struct SquadOrders {
     pub shows: Vec<crate::orders::SquadOrdersShowsItem>,
     pub asg: JsMap<GuardId, OrdersAssignmentId>,
     pub trail: Vec<V3>,
-    pub back: V3,
-    pub view: crate::orders::SquadOrdersView,
+    #[is([0.0, 0.0, -1.0])] pub back: V3,
+    #[is(crate::orders::SquadOrdersView { input: None, cam: None, canvas: None })] pub view: crate::orders::SquadOrdersView,
     pub esc_used: bool,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
     pub group: f64,
     pub roster: Vec<GuardId>,
     pub sam_p: V3,
-    pub sam_t: f64,
+    #[is(-1.0)] pub sam_t: f64,
     pub sam_v: f64,
-    pub sam_dir: V3,
+    #[is([0.0, 0.0, 1.0])] pub sam_dir: V3,
     pub door_marks: Vec<crate::orders::SquadOrdersDoorMarksItem>,
     pub cast: Option<crate::orders::OtherCast>,
     pub aside_mem: JsMap<GuardId, crate::orders::SquadOrdersAsideMemValue>,
@@ -66,7 +66,7 @@ pub struct SquadOrders {
     pub rest_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersRestOfValue>,
     pub held_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersHeldOfValue>,
     pub short_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersShortOfValue>,
-    pub clear_t: f64,
+    #[is(-1.0)] pub clear_t: f64,
     pub clear_by: Vec<f64>,
     pub apart_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersApartOfValue>,
     pub file_hand: f64,
@@ -80,61 +80,6 @@ pub struct SquadOrders {
     pub face_flip: bool,
     pub reached: JsMap<String, crate::orders::SquadOrdersReachedValue>,
 }
-impl SquadOrders {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        SquadOrders {
-            knobs: crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 },
-            defs: Vec::new(),
-            made: JsMap::new(),
-            shown: crate::orders::Shown::default(),
-            owners: Vec::new(),
-            posture: None,
-            people: None,
-            who: crate::orders::Who::All,
-            menu: None,
-            cmd_ring: None,
-            cmd_press: None,
-            tap_was: None,
-            log: Vec::new(),
-            shows: Vec::new(),
-            asg: JsMap::new(),
-            trail: Vec::new(),
-            back: [0.0, 0.0, -1.0],
-            view: crate::orders::SquadOrdersView { input: None, cam: None, canvas: None },
-            esc_used: false,
-            ours: JsSet::new(),
-            acks: 0.0,
-            group: 0.0,
-            roster: Vec::new(),
-            sam_p: [0.0, 0.0, 0.0],
-            sam_t: -1.0,
-            sam_v: 0.0,
-            sam_dir: [0.0, 0.0, 1.0],
-            door_marks: Vec::new(),
-            cast: None,
-            aside_mem: JsMap::new(),
-            back_fix: JsMap::new(),
-            rest_of: JsMap::new(),
-            held_of: JsMap::new(),
-            short_of: JsMap::new(),
-            clear_t: -1.0,
-            clear_by: Vec::new(),
-            apart_of: JsMap::new(),
-            file_hand: 0.0,
-            file_gave: false,
-            sam_out: false,
-            leaf_out_gave: false,
-            glass_at: JsMap::new(),
-            glass_sig: 0.0,
-            fur_in: false,
-            worked: JsMap::new(),
-            face_flip: false,
-            reached: JsMap::new(),
-        }
-    }
-}
-impl Default for SquadOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadOwner {
@@ -386,22 +331,12 @@ pub struct SquadOrdersReachedValueLock {
     pub side: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum TargetKind {
     None,
     Door,
     Floor,
     Foe,
-}
-impl TargetKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TargetKind::None => "none",
-            TargetKind::Door => "door",
-            TargetKind::Floor => "floor",
-            TargetKind::Foe => "foe",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -533,7 +468,7 @@ pub struct AIM {
     pub upper: crate::character::UpperMode,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum SquadOrdersMenSel {
     Num(f64),
     Guard(GuardId),
@@ -721,17 +656,10 @@ pub struct FarOff {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct OrdersMod {
     /// (src/game/orders.ts:529 FOLLOW_WORD)
     pub follow_word: JsMap<OrdersAssignmentId, crate::orders::OrdersModFOLLOWWORDValue>,
-}
-impl OrdersMod {
-    pub fn blank() -> Self {
-        OrdersMod {
-            follow_word: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/orders.ts:114 NOWHERE: a table nothing writes)

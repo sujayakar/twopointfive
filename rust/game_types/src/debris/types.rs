@@ -1,6 +1,6 @@
 //! The types of `debris`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -17,39 +17,20 @@ pub struct FootBookStats {
     pub gave_up: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Debris {
     pub list: Vec<DebrisChunkId>,
-    pub serial: f64,
+    #[is(1.0)] pub serial: f64,
     pub frame: f64,
-    pub stats: crate::debris::DebrisStats,
+    #[is(crate::debris::DebrisStats { spawned: 0.0, refused: 0.0, evicted: 0.0, landed: 0.0, peak_live: 0.0, peak_moving: 0.0, kicked: 0.0, told: 0.0 })] pub stats: crate::debris::DebrisStats,
     pub fling: Option<V3>,
-    pub serial0: f64,
+    #[is(1.0)] pub serial0: f64,
     pub impulses: f64,
-    pub foot_mu: f64,
+    #[is(0.3)] pub foot_mu: f64,
     pub shoves: f64,
-    pub scuff_at: f64,
-    pub feet_stats: crate::debris::DebrisFeetStats,
+    #[is(-1.0)] pub scuff_at: f64,
+    #[is(crate::debris::DebrisFeetStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 })] pub feet_stats: crate::debris::DebrisFeetStats,
 }
-impl Debris {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Debris {
-            list: Vec::new(),
-            serial: 1.0,
-            frame: 0.0,
-            stats: crate::debris::DebrisStats { spawned: 0.0, refused: 0.0, evicted: 0.0, landed: 0.0, peak_live: 0.0, peak_moving: 0.0, kicked: 0.0, told: 0.0 },
-            fling: None,
-            serial0: 1.0,
-            impulses: 0.0,
-            foot_mu: 0.3,
-            shoves: 0.0,
-            scuff_at: -1.0,
-            feet_stats: crate::debris::DebrisFeetStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 },
-        }
-    }
-}
-impl Default for Debris { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DebrisStats {
@@ -71,7 +52,7 @@ pub struct DebrisFeetStats {
     pub gave_up: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum ChunkKind {
     Tile,
     Shard,
@@ -79,18 +60,6 @@ pub enum ChunkKind {
     Clutter,
     Binder,
     Chunk,
-}
-impl ChunkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChunkKind::Tile => "tile",
-            ChunkKind::Shard => "shard",
-            ChunkKind::Housing => "housing",
-            ChunkKind::Clutter => "clutter",
-            ChunkKind::Binder => "binder",
-            ChunkKind::Chunk => "chunk",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]

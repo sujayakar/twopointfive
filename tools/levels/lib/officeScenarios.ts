@@ -1,5 +1,5 @@
 // The OFFICE's scenario data (lib/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
-// tables that lived in rust/game_rules/src/nightbreach, rust/game_rules/src/roomclear, rescue and rescueflow, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
+// tables that lived in rust/game_rules/src/missions/nightbreach.rs, rust/game_rules/src/missions/roomclear.rs, rescue and rescueflow, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
 // else's: officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
 // every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
 // Plain literals and type-only imports: nothing here is built from another module's exports.
@@ -19,7 +19,7 @@ const NIGHT_BREACH: NightBreachData = {
  *  the east side); the manager's office and the server room have two each (their corridor doors, and the side door between them); storage has one. Every structure
  *  door is shut at the staging; the locks are the level's own (server, manager and storage locked against Sam — pick or kick; the side door between the server room
  *  and the manager's office is the keypad's, and with no cleaner on the floor to give its code that is a kick; the break room's doors push open). Five men in all:
- *  Sam, the pair and five defenders are the eight characters the shadow-proxy budget holds (rust/game_rules/src/guards spawn_unit). */
+ *  Sam, the pair and five defenders are the eight characters the shadow-proxy budget holds (rust/game_rules/src/people/guards spawn_unit). */
 const STRUCTURE: StructureData = {
   name: 'east wing',
   rooms: [
@@ -65,7 +65,7 @@ const RESCUE: RescueData = {
   team: { sam: [7.6, 0, 13.4], samYaw: 0.9, ops: [[6.6, 0, 14.25], [8.5, 0, 14.3]] },
   room: { name: "manager's office", where: 'far end of the corridor', door: 'manager', lights: 'manager', doorAim: DOOR_AIM,
     outside: [DOOR_AIM[0], 0, DOOR_AIM[2] + 1], hold: [DOOR_AIM[0], 0, DOOR_AIM[2] + 0.4] },
-  /** the side door from the server room: its jambs on that side have no floor, so the face's marks are authored (rust/game_rules/src/orders door_marks). The hostage room lies
+  /** the side door from the server room: its jambs on that side have no floor, so the face's marks are authored (rust/game_rules/src/squad_orders/orders door_marks). The hostage room lies
    *  mostly SOUTH of this door, so the free floor north of the opening — the latch side, where a stack would go by habit — is in plain view of the room once the
    *  leaf swings (the door man's mark looks straight through at it). The stack is behind the cabinet south of the hinge instead: nobody on the defenders' marks
    *  has a line to either man, and a blind burst through the doorway goes past them. The price: the first man opens the leaf and throws from a long arm's reach
@@ -95,7 +95,7 @@ const RESCUE: RescueData = {
   },
 };
 
-/** THE TEAM & KIT PICTURE of the office (rust/game_rules/src/kitstage; keys: docs/level-format.md `kitView`) — the office's block lives HERE, as every other level's lives
+/** THE TEAM & KIT PICTURE of the office (rust/game_rules/src/outfit/kitstage; keys: docs/level-format.md `kitView`) — the office's block lives HERE, as every other level's lives
  *  in its own file: one way (the night breach, the room clear, the rescue and the plain night all show way 0). INDOORS: the server room's door from the
  *  corridor, the stack up the corridor's wall under its one lit ceiling panel, the racks behind that stretch of wall. That door and no nearer one to a
  *  mission's own: it stands shut as authored (the break room's west door and the manager's stand open as authored, and a leaf that stands open is no door to
@@ -107,7 +107,7 @@ const RESCUE: RescueData = {
  *  room's, past the last man). Everything else is measured (rust/game_start/src/kit_plan.rs). */
 const KIT_VIEW: KitViewData = { ways: [{ door: 'server', ref: [17.6, 11.1], hide: ['box_0120', 'box_0121', 'box_0380', 'box_0390'], slots: [null, null, null, [15.0, 11.56, 90]], roomLights: 1, pane: false }] };
 
-/** THE RESPONSE TEAM (rust/game_rules/src/qrf, RESPONSE.on): the building's own. The marks are rust/game_rules/src/qrf QRF_MARKS number for number — the landing behind the steel stair
+/** THE RESPONSE TEAM (rust/game_rules/src/pursuit/qrf, RESPONSE.on): the building's own. The marks are rust/game_rules/src/pursuit/qrf QRF_MARKS number for number — the landing behind the steel stair
  *  door, the fan just inside it, the four outside posts of the lot and where the gate's own men are stood up — and the words are the lines the office always
  *  had. One way in: the floor has one stair. A run is dealt three or four men, a minute to a minute and a half out. */
 const RESPONSE: ResponseData = {
@@ -126,7 +126,7 @@ const RESPONSE: ResponseData = {
   outside: [[38.6, 0, 26.6], [37.4, 0, 26.9], [38.8, 0, 25.4], [37.2, 0, 25.6]],
 };
 
-/** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (rust/game_rules/src/doornames, WORDS.doors): their ids end in a bearing and the HUD has no
+/** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (rust/game_rules/src/speech/doornames.rs, WORDS.doors): their ids end in a bearing and the HUD has no
  *  compass, so each is named by what it is taken from, as another level's doors are */
 const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door' }, { door: 'breakroom_w', name: 'cubicles-side break room door' }];
 /** WHERE A PERSON STANDS TO USE EACH THING ON THE FLOOR, as named marks (level.ts Level.marks; attached at load beside the scenarios). Nothing in

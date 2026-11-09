@@ -1,6 +1,6 @@
 //! The types of `weather`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -34,53 +34,25 @@ pub struct WeatherSnapStats {
     pub barks: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Weather {
-    pub on: bool,
+    #[is(true)] pub on: bool,
     pub kind_now: Option<crate::weather_kinds::WeatherKind>,
     pub roof_rects: Vec<[f64; 4]>,
     pub fog_spec: Option<crate::weather_kinds::FogSpec>,
     pub fog_word: f64,
-    pub fog_glow: f64,
-    pub wind: [f64; 2],
-    pub wet_gloss: bool,
+    #[is(1.0)] pub fog_glow: f64,
+    #[is([1.1, 0.45])] pub wind: [f64; 2],
+    #[is(true)] pub wet_gloss: bool,
     pub flash: Option<crate::weather::Flash>,
-    pub stats: crate::weather::WeatherStats,
-    pub suspended: bool,
+    #[is(crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0, last_thunder: None })] pub stats: crate::weather::WeatherStats,
     pub touched: Vec<crate::weather::WeatherTouchedItem>,
-    pub gloss_was: Option<bool>,
     pub snow_rate: f64,
     pub own: bool,
     pub fits: Option<bool>,
     pub wet_on: bool,
     pub lot: Option<BoxId>,
 }
-impl Weather {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Weather {
-            on: true,
-            kind_now: None,
-            roof_rects: Vec::new(),
-            fog_spec: None,
-            fog_word: 0.0,
-            fog_glow: 1.0,
-            wind: [1.1, 0.45],
-            wet_gloss: true,
-            flash: None,
-            stats: crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0, last_thunder: None },
-            suspended: false,
-            touched: Vec::new(),
-            gloss_was: None,
-            snow_rate: 0.0,
-            own: false,
-            fits: None,
-            wet_on: false,
-            lot: None,
-        }
-    }
-}
-impl Default for Weather { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Flash {

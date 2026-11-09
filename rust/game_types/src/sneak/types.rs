@@ -1,26 +1,15 @@
 //! The types of `sneak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
     #[default] Door,
     Near,
     Open,
     Lit,
     Long,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Door => "door",
-            Why::Near => "near",
-            Why::Open => "open",
-            Why::Lit => "lit",
-            Why::Long => "long",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -188,7 +177,7 @@ pub struct SneakModKeptLinesValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SneakMod {
     /// (src/game/sneak.ts:188 leafT)
     pub leaf_t: JsMap<DoorId, crate::sneak::SneakModLeafTValue>,
@@ -200,17 +189,6 @@ pub struct SneakMod {
     pub cell_lit: Option<JsMap<crate::Num, [f64; 2]>>,
     /// (src/game/sneak.ts:325 keptLines)
     pub kept_lines: JsMap<GuardId, crate::sneak::SneakModKeptLinesValue>,
-}
-impl SneakMod {
-    pub fn blank() -> Self {
-        SneakMod {
-            leaf_t: JsMap::new(),
-            states: None,
-            live_at: None,
-            cell_lit: None,
-            kept_lines: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -21,14 +21,14 @@ In `rust/game_rules/src/`, with types and tables under the same names in `rust/g
 
 | module | what it does |
 |---|---|
-| `guards/p_09.rs` | `say`: the one way a man speaks; `guards/p_08.rs` has `bubble_secs` |
+| `guards/rollcall.rs` | `say`: the one way a man speaks; `guards/gun.rs` has `bubble_secs` |
 | `dialogue/` | the held man and Sam: `gather`, `pick_line`, `script_for`, `pick_sam_line`; places (`place_name`, `is_office`); `tick_radio`; `update_ambient` |
-| `cues/` | the strip's rows (`cues_file`, `radio_rows`), each line as a HUD is told it (`bubbles_view`), the defenders' cues (`cues_tick`, `cues_note`) |
-| `squadnet/` | the click, "… is down.", a lead's call at the end of an entry (`room_call`, `plain_call`), a quick pick's reason (`why_words`) |
-| `doornames/` | the name a door is said by (`name_doors`, `door_said_name`, `shorthand_id`) |
+| `cues.rs` | the strip's rows (`cues_file`, `radio_rows`), each line as a HUD is told it (`bubbles_view`), the defenders' cues (`cues_tick`, `cues_note`) |
+| `squadnet.rs` | the click, "… is down.", a lead's call at the end of an entry (`room_call`, `plain_call`), a quick pick's reason (`why_words`) |
+| `doornames.rs` | the name a door is said by (`name_doors`, `door_said_name`, `shorthand_id`) |
 | `netquiet/` | its speech is `speak`: a man calling a name that does not answer |
-| `civilians/` | `hostage_say`, `civ_say`, `civilian_answer`; `rescue/p_03.rs` times the hostages |
-| `words/` | `w` and `wg`: each hands back the present line and nothing else |
+| `civilians/` | `hostage_say`, `civ_say`, `civilian_answer`; `rescue/clock.rs` times the hostages |
+| `words.rs` | `w` and `wg`: each hands back the present line and nothing else |
 | `view/` | `tick_view` hands `radio` and `bubbles` to the page |
 
 The page's half: `src/ui/bubbles.ts` puts each line on the screen and `src/ui/netplace.ts` finds its place at the edge. The strip is drawn by `src/ui/overlay.ts`.
@@ -44,11 +44,11 @@ Who says what, and where the words are:
 | staff about their rounds | `needs_lines_table`, and lines in `guards/` | a coffee, a smoke, a call for a missing man |
 | the handler and Sam | `handler_lines` | `handler_beat`, the office night only |
 | civilians, hostages | `civ_lines`, `hostage_lines_table` | `civ_say`, `hostage_say` by `HostageMoment` |
-| a man who finds a hold | `lines_of` in `guards/p_03.rs` | by moment and temperament |
-| a defender | `LINES` in `morale/`, `laststand/`, `darkdoor/`; `lines` in `runner/`, `gunhold/`; `SUP_LINES` in `suppression/`; `wary` and its sisters in `attention/` | each rule's own moment |
+| a man who finds a hold | `lines_of` in `guards/standoff.rs` | by moment and temperament |
+| a defender | `LINES` in `morale.rs`, `laststand.rs`, `darkdoor.rs`; `lines` in `runner.rs`, `gunhold.rs`; `SUP_LINES` in `suppression.rs`; `wary` and the rest in `attention.rs` | its own moment |
 | a defender at a door, or going around | `gate_call`, `flank_call` in `tactics/` | a pursuit plan |
-| a defender's squad | `LINES` in `cues/`, more in `enemysquads/`, `rescueflush/` | `cues_cue`, or the rule itself |
-| a teammate | an order's `ack` in `orders/p_02.rs`, `doortools/`, `sneak/`, `showwhy/`, a contact called by `fog_of_war_call_words` | `say`, or `cues_call` for a call through the fog |
+| a defender's squad | `LINES` in `cues.rs`, more in `enemysquads/`, `rescueflush.rs` | `cues_cue`, or the rule itself |
+| a teammate | an order's `ack` in `orders/menu.rs`, `doortools/`, `sneak/`, `showwhy.rs`, a contact called by `fog_of_war_call_words` | `say`, or `cues_call` for a call through the fog |
 
 ## How it works
 
@@ -62,12 +62,12 @@ the next. A held man says nothing unless forced. A man under the squad's silence
 - The seat's own man has `BubblePlace::Edge` while the fog hides him. Otherwise `BubblePlace::OverOrEdge` lets the page choose by its camera.
 - The tone (`bubble_tone`) comes from his state. A teammate is never wary.
 
-**The strip.** `radio_rows` gives what `cues_file` kept. A row has a class (`cue_class` by its words, or the kind's own in `cues/`), and a lower class is better. Class 0
+**The strip.** `radio_rows` gives what `cues_file` kept. A row has a class (`cue_class` by its words, or the kind's own in `cues.rs`), and a lower class is better. Class 0
 is a line that came in `radio: `: control, the staff's net and the handler. A class waits for its gap, the same words are not filed twice, and a full strip gives up
 its worst row. A squad's word ("Bravo: …", `squad_word`) outranks a man's in its class. Each part of that is a knob in `CuesK`.
 
 **A defender's line reaches the strip three ways:** `say` on the radio calls `cues_heard`, `cues_net` is a line that is telling only, and `cues_cue` is one of the kinds in
-`cues/`. All of them need a room fight to be on (`fight_live`, and `cues_tick` returns without one). `cues_tick` watches each defender and `cues_note` reads the fight's log, in the man's words.
+`cues.rs`. All of them need a room fight to be on (`fight_live`, and `cues_tick` returns without one). `cues_tick` watches each defender and `cues_note` reads the fight's log, in the man's words.
 
 **What the player hears and what is only shown.** Lines are text. The sounds around them are these: `radio` as the defenders' squelch, as the team's higher click and as a teammate's lower "down"
 click; `murmur` when Sam remarks; `heldProtest` from a hostage or a man in Sam's arm. A shout (`is_shout`: the writer put a bang in it) that `cues_overheard` carries by `hear_path` to an ear
@@ -82,7 +82,7 @@ says: `squadnet::team_says`, by the man it is about or the nearest who can speak
 code he has just learnt by `say_over_sam`, but not with a man in his arm, because his bubble would hold back the next question.
 
 **What such a line moves.** `say` does for these what it does for any line. A silent squad's hand goes to the radio (`radio_hand`), and that pose moves his bones. A radio bubble makes
-`sup_bark` hold a line back and `cues_cue` skip a cue, and `rescue/p_03.rs` picks a quiet man for its line. No die is drawn and no noise is filed.
+`sup_bark` hold a line back and `cues_cue` skip a cue, and `rescue/clock.rs` picks a quiet man for its line. No die is drawn and no noise is filed.
 Nobody has seen these rows or lines on a GPU or played them.
 
 **A held man.** `gather` builds `DialogueCtx`: what he knows (`knowledge_of`), how rattled (`agitation_of`, `band_of`), his temperament (`temperament_of`), the facts
@@ -123,11 +123,11 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 - **The handler is the office's.** "the 'subtle was twenty years ago' text with the handler keeps popping up -- should be confined to just the office level and honestly a bit
   stale anyways". `radio_live` is false anywhere else. A beat also waits for `radio_clear`: nobody alert and Sam's hands free. His answer is dropped if he cannot give it.
 - **No compass word in a door's or a route's name,** and no two doors of a level said the same, the office and the lessons aside. A route is said by the level's place it keeps to
-  (`route_name`), else by its own words. The office's response team keeps "west stairwell" (`qrf/p_02.rs`).
-- **On a defender's net "they" is the team.** So the hostages are named: "the hostages are gone — they're moving them! cut them off!" (`rescueflush/`).
+  (`route_name`), else by its own words. The office's response team keeps "west stairwell" (`qrf/move_in.rs`).
+- **On a defender's net "they" is the team.** So the hostages are named: "the hostages are gone — they're moving them! cut them off!" (`rescueflush.rs`).
 - **One can, a word for each place.** A squad's rows and mouths say bang ("bang out!", "no bangs left."). Where kit is picked or held it is "stun canister", and a lesson says
   "stun grenade". A mission's blurb and `combat/` say flashbang. A new line takes the word of the place it stands in.
-- **The verdict is a word or two in capitals, never a sentence** (`verdict/`): CLEAR, RESCUED, OUT; DOWN, WIPED, LOST, FAILED. The why under it is the mission's own line.
+- **The verdict is a word or two in capitals, never a sentence** (`verdict.rs`): CLEAR, RESCUED, OUT; DOWN, WIPED, LOST, FAILED. The why under it is the mission's own line.
 - **The same words on the same floor are one row.** A second man's copy of a line is news to nobody (`dup_secs`).
 - **How many are inside is a mystery.** "we should also remove all defender counts from the menus, etc., it should be a mystery!" A man in Sam's arm may say how many, because he gave it up.
 
@@ -140,7 +140,7 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 - **A new line for a held man:** a `Line` in `lines` with `k`, `t`, `s` and `needs` (a `Need`, then its fact in `gather` and `hold_fact`). A new token: `Token`, `DialogueCtxTokens`, and the
   table in `ctx_tokens_map`.
 - **A new script:** a `Script` in `scripts`, with all four `ScriptBeats`. `script_fits` drops it for any man it cannot fill.
-- **A new defender's line on the strip:** a `CueKind` with its row in `LINES` in `cues/` and a class, or `say` with radio on and words that `CLASSES` already ranks. A line in no row of `CLASSES`
+- **A new defender's line on the strip:** a `CueKind` with its row in `LINES` in `cues.rs` and a class, or `say` with radio on and words that `CLASSES` already ranks. A line in no row of `CLASSES`
   files as class 4.
 - **Say something to the HUD:** `say` for a man, `team_says` for whoever of the team is there, `refuse` for his own press, `cues_radio` for control.
 - **A strip's numbers:** `rust/game_types/src/knobs/cues.rs`; the edge and the click: `squadnet.rs`. Both turn on a panel or by `?knob.cues.rows=4`.

@@ -1,6 +1,6 @@
 //! The types of `anim_gltf`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -112,18 +112,10 @@ pub struct AnimGltfModNvgBitsValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AnimGltfMod {
     /// (src/anim/gltf.ts:33 nvgBits)
     pub nvg_bits: JsMap<AnimGltfCastInfoId, crate::anim_gltf::AnimGltfModNvgBitsValue>,
     /// (src/anim/gltf.ts:44 suitBits)
     pub suit_bits: JsMap<AnimGltfCastInfoId, f64>,
-}
-impl AnimGltfMod {
-    pub fn blank() -> Self {
-        AnimGltfMod {
-            nvg_bits: JsMap::new(),
-            suit_bits: JsMap::new(),
-        }
-    }
 }
