@@ -1,23 +1,13 @@
 //! The types of `moths`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Moths {
     pub lamps: Vec<crate::moths::MothsLampsItem>,
     pub moths: Vec<crate::moths::Moth>,
 }
-impl Moths {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Moths {
-            lamps: Vec::new(),
-            moths: Vec::new(),
-        }
-    }
-}
-impl Default for Moths { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MothsLampsItem {

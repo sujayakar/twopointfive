@@ -1,6 +1,6 @@
 //! The types of `picture`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// exposedAt asked of many spots at one moment: the man's height asked at, and each live idea (a copy) with its weight, heaviest first, and the places its man may have walked to once first asked (picture.ts exposureAsker)
@@ -109,20 +109,12 @@ pub struct PictureStep {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PictureMod {
     /// (src/game/picture.ts:118 STATES)
     pub states: Option<crate::picture::State>,
     /// (src/game/picture.ts:291 VIEWING)
     pub viewing: bool,
-}
-impl PictureMod {
-    pub fn blank() -> Self {
-        PictureMod {
-            states: None,
-            viewing: false,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

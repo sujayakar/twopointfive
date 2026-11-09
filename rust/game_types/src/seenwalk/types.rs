@@ -1,6 +1,6 @@
 //! The types of `seenwalk`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's price of the floor, the penalty of nav.findPath and C.dearAlong: `dear` on lit floor in view of an uncleared room and on floor outside the box, 1 elsewhere. The box and the eyes are this walk's; the knobs, g.cleared, g.col.nav and the block memo (g.m.seenwalk.shared, shared by every walk of the tick) are read live from g (seenwalk.ts seenPrice)
@@ -25,17 +25,10 @@ pub struct SharedEyesItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SeenwalkMod {
     /// (src/game/seenwalk.ts:49 shared)
     pub shared: Option<crate::seenwalk::Shared>,
-}
-impl SeenwalkMod {
-    pub fn blank() -> Self {
-        SeenwalkMod {
-            shared: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

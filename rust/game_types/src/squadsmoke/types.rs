@@ -1,6 +1,6 @@
 //! The types of `squadsmoke`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -39,17 +39,10 @@ pub struct SquadSmokeThrower {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadsmokeMod {
     /// (src/game/squadsmoke.ts:57 states)
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,
-}
-impl SquadsmokeMod {
-    pub fn blank() -> Self {
-        SquadsmokeMod {
-            states: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `guards`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to (guards.ts litPlace's `key`; null is the Option's None)
@@ -73,7 +73,7 @@ pub struct Pair {
     pub vel: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum StandoffMoment {
     Lost,
     Enter,
@@ -83,20 +83,6 @@ pub enum StandoffMoment {
     Dropped,
     Freed,
     HitHim,
-}
-impl StandoffMoment {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StandoffMoment::Lost => "lost",
-            StandoffMoment::Enter => "enter",
-            StandoffMoment::Cornered => "cornered",
-            StandoffMoment::NoShot => "noShot",
-            StandoffMoment::Line => "line",
-            StandoffMoment::Dropped => "dropped",
-            StandoffMoment::Freed => "freed",
-            StandoffMoment::HitHim => "hitHim",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -493,7 +479,7 @@ pub enum InHand {
     Weapon,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RaiseEscalationCause {
     Search,
     Civilian,
@@ -501,18 +487,6 @@ pub enum RaiseEscalationCause {
     Missing,
     Body,
     Hostage,
-}
-impl RaiseEscalationCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RaiseEscalationCause::Search => "search",
-            RaiseEscalationCause::Civilian => "civilian",
-            RaiseEscalationCause::Device => "device",
-            RaiseEscalationCause::Missing => "missing",
-            RaiseEscalationCause::Body => "body",
-            RaiseEscalationCause::Hostage => "hostage",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -533,7 +507,7 @@ pub enum EndEngagementOutcome {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GuardsMod {
     /// (src/game/guards.ts:270 groundTrack)
     pub ground_track: JsMap<PlayerId, crate::guards::GuardsModGroundTrackValue>,
@@ -554,7 +528,7 @@ pub struct GuardsMod {
     /// (src/game/guards.ts:1368 heldLastFrame)
     pub held_last_frame: JsSet<GuardId>,
     /// (src/game/guards.ts:1371 UNSTICK)
-    pub unstick: crate::guards::GuardsModUNSTICK,
+    #[is(crate::guards::GuardsModUNSTICK { legs: 0.0, snaps: 0.0, last_snap_t: -1.0, last_snap_who: None })] pub unstick: crate::guards::GuardsModUNSTICK,
     /// (src/game/guards.ts:1545 litSeen)
     pub lit_seen: JsMap<GuardId, crate::guards::GuardsModLitSeenValue>,
     /// (src/game/guards.ts:1577 litUntil)
@@ -573,31 +547,6 @@ pub struct GuardsMod {
     pub unit_serial: f64,
     /// (src/game/guards.ts:3535 engagements)
     pub engagements: Option<crate::guards::Engagement>,
-}
-impl GuardsMod {
-    pub fn blank() -> Self {
-        GuardsMod {
-            ground_track: JsMap::new(),
-            body_meters: JsMap::new(),
-            holds_called: JsSet::new(),
-            floor_bark_t: None,
-            last_bark: JsMap::new(),
-            held_meters: JsMap::new(),
-            unstick_legs: JsMap::new(),
-            unstick_retry_at: JsMap::new(),
-            held_last_frame: JsSet::new(),
-            unstick: crate::guards::GuardsModUNSTICK { legs: 0.0, snaps: 0.0, last_snap_t: -1.0, last_snap_who: None },
-            lit_seen: JsMap::new(),
-            lit_until: JsMap::new(),
-            wall_seen: JsMap::new(),
-            torch_low_seen: JsMap::new(),
-            lit_man_seen: JsMap::new(),
-            door_cells_of: None,
-            rollcalls: None,
-            unit_serial: 0.0,
-            engagements: None,
-        }
-    }
 }
 
 /// (src/game/guards.ts:58 OCP_MUTTER: a table nothing writes)

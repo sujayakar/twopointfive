@@ -1,6 +1,6 @@
 //! The types of `doorswing`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,7 +12,7 @@ pub struct SwingDeal {
     pub clear: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SwingWhy {
     #[default] Mission,
     Floor,
@@ -23,27 +23,9 @@ pub enum SwingWhy {
     Room,
     Hostages,
     Lock,
-    StandsOpen,
+    #[word("stands open")] StandsOpen,
     Wider,
-    LeafRoom,
-}
-impl SwingWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SwingWhy::Mission => "mission",
-            SwingWhy::Floor => "floor",
-            SwingWhy::Authored => "authored",
-            SwingWhy::Folds => "folds",
-            SwingWhy::Outside => "outside",
-            SwingWhy::Plan => "plan",
-            SwingWhy::Room => "room",
-            SwingWhy::Hostages => "hostages",
-            SwingWhy::Lock => "lock",
-            SwingWhy::StandsOpen => "stands open",
-            SwingWhy::Wider => "wider",
-            SwingWhy::LeafRoom => "leaf room",
-        }
-    }
+    #[word("leaf room")] LeafRoom,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

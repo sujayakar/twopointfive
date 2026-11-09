@@ -1,6 +1,6 @@
 //! The types of `particle_fx`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug)]
@@ -245,26 +245,16 @@ pub struct PendingTinksItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ParticleFxMod {
     /// (src/game/particleFx.ts:35 DUST)
-    pub dust: crate::particle_fx::ParticleFxModDUST,
+    #[is(crate::particle_fx::ParticleFxModDUST { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 })] pub dust: crate::particle_fx::ParticleFxModDUST,
     /// (src/game/particleFx.ts:39 DUST_LOOK)
-    pub dust_look: crate::particle_fx::ParticleFxModDUSTLOOK,
+    #[is(crate::particle_fx::ParticleFxModDUSTLOOK { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 })] pub dust_look: crate::particle_fx::ParticleFxModDUSTLOOK,
     /// (src/game/particleFx.ts:144 PFX)
-    pub pfx: crate::particle_fx::ParticleFxModPFX,
+    #[is(crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 })] pub pfx: crate::particle_fx::ParticleFxModPFX,
     /// (src/game/particleFx.ts:290 STATE)
     pub state: Option<crate::particle_fx::FxState>,
-}
-impl ParticleFxMod {
-    pub fn blank() -> Self {
-        ParticleFxMod {
-            dust: crate::particle_fx::ParticleFxModDUST { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 },
-            dust_look: crate::particle_fx::ParticleFxModDUSTLOOK { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 },
-            pfx: crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 },
-            state: None,
-        }
-    }
 }
 
 /// (src/game/particleFx.ts:69 PROP_SURF: a table nothing writes)

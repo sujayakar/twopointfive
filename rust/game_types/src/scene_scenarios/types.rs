@@ -1,6 +1,6 @@
 //! The types of `scene_scenarios`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -118,18 +118,10 @@ pub enum RouteOpeningKind {
     Doorway,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RouteOpeningSide {
     #[default] Left,
     Right,
-}
-impl RouteOpeningSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteOpeningSide::Left => "left",
-            RouteOpeningSide::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -533,47 +525,25 @@ pub struct ScenarioEntry {
     pub squads: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum ScenarioEntryKind {
     #[default] Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
 }
-impl ScenarioEntryKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryKind::Nightbreach => "nightbreach",
-            ScenarioEntryKind::Roomclear => "roomclear",
-            ScenarioEntryKind::Rescue => "rescue",
-            ScenarioEntryKind::Quiet => "quiet",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum MissionGroup {
     Clock,
     Tutorial,
     Raids,
     Strongholds,
-    QuietAlone,
-    QuietTwo,
-}
-impl MissionGroup {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionGroup::Clock => "clock",
-            MissionGroup::Tutorial => "tutorial",
-            MissionGroup::Raids => "raids",
-            MissionGroup::Strongholds => "strongholds",
-            MissionGroup::QuietAlone => "quiet-alone",
-            MissionGroup::QuietTwo => "quiet-two",
-        }
-    }
+    #[word("quiet-alone")] QuietAlone,
+    #[word("quiet-two")] QuietTwo,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ScenarioEntryWeather {
     Clear,
     Overcast,
@@ -581,18 +551,6 @@ pub enum ScenarioEntryWeather {
     Downpour,
     Fog,
     Dust,
-}
-impl ScenarioEntryWeather {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryWeather::Clear => "clear",
-            ScenarioEntryWeather::Overcast => "overcast",
-            ScenarioEntryWeather::Rain => "rain",
-            ScenarioEntryWeather::Downpour => "downpour",
-            ScenarioEntryWeather::Fog => "fog",
-            ScenarioEntryWeather::Dust => "dust",
-        }
-    }
 }
 
 /// the most men a room clear stages in squads

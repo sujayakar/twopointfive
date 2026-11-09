@@ -1,6 +1,6 @@
 //! The types of `difficulty`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what difficulty.ts same() compares: the levers as they stand, or one of the two defenders' tables (difficulty.ts:163). Two of different arms are not the same.
@@ -22,32 +22,16 @@ pub struct DifficultyAsked {
     pub cone: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum Difficulty {
     #[default] Hard,
     Standard,
 }
-impl Difficulty {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Difficulty::Hard => "hard",
-            Difficulty::Standard => "standard",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum KitRung {
     #[default] None,
     Stuns,
-}
-impl KitRung {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitRung::None => "none",
-            KitRung::Stuns => "stuns",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -58,22 +42,12 @@ pub struct Levers {
     pub told: Option<crate::told::ToldRung>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum LeverKey {
     #[default] Fog,
     Told,
     Ai,
     Kit,
-}
-impl LeverKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LeverKey::Fog => "fog",
-            LeverKey::Told => "told",
-            LeverKey::Ai => "ai",
-            LeverKey::Kit => "kit",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -133,20 +107,11 @@ pub struct TablesOf {
     pub d: crate::knobs::DiginK,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DifficultyNow {
     Hard,
     Standard,
     Custom,
-}
-impl DifficultyNow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DifficultyNow::Hard => "hard",
-            DifficultyNow::Standard => "standard",
-            DifficultyNow::Custom => "custom",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -171,14 +136,14 @@ pub enum DifficultyWordsSquads {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DifficultyMod {
     /// (src/game/difficulty.ts:95 HERE)
-    pub here: String,
+    #[is(String::from(""))] pub here: String,
     /// (src/game/difficulty.ts:144 BASE)
-    pub base: crate::difficulty::Difficulty,
+    #[is(crate::difficulty::Difficulty::Standard)] pub base: crate::difficulty::Difficulty,
     /// (src/game/difficulty.ts:145 SET)
-    pub set: crate::difficulty::DifficultyModSET,
+    #[is(crate::difficulty::DifficultyModSET { fog: None, ai: None, kit: None, told: None })] pub set: crate::difficulty::DifficultyModSET,
     /// (src/game/difficulty.ts:203 coneVisit)
     pub cone_visit: Option<bool>,
     /// (src/game/difficulty.ts:204 ownWas)
@@ -187,19 +152,6 @@ pub struct DifficultyMod {
     pub own_for: Option<crate::quietfog::QuietRung>,
     /// (src/game/difficulty.ts:244 HELD)
     pub held: Option<crate::difficulty::DifficultyModHELD>,
-}
-impl DifficultyMod {
-    pub fn blank() -> Self {
-        DifficultyMod {
-            here: String::from(""),
-            base: crate::difficulty::Difficulty::Standard,
-            set: crate::difficulty::DifficultyModSET { fog: None, ai: None, kit: None, told: None },
-            cone_visit: None,
-            own_was: None,
-            own_for: None,
-            held: None,
-        }
-    }
 }
 
 /// (src/game/difficulty.ts:97 LEVEL_STRUCTURE: a table nothing writes)

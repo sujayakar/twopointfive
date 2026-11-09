@@ -1,9 +1,9 @@
 //! The types of `netquiet`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum LineKind {
     #[default] Body,
     Name,
@@ -11,18 +11,6 @@ pub enum LineKind {
     Why,
     Alone,
     Ask,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Body => "body",
-            LineKind::Name => "name",
-            LineKind::Last => "last",
-            LineKind::Why => "why",
-            LineKind::Alone => "alone",
-            LineKind::Ask => "ask",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -81,17 +69,10 @@ pub struct NetQuietPose {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NetquietMod {
     /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
-}
-impl NetquietMod {
-    pub fn blank() -> Self {
-        NetquietMod {
-            state_of: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

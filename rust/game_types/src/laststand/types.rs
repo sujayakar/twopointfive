@@ -1,6 +1,6 @@
 //! The types of `laststand`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a line makes true for the HUD as it is said (laststand.ts net `then`); st and g are the caller's. NameAtUnlessFree reads d's mode when the line is said; NameAt's w was settled when the line was made
@@ -161,16 +161,9 @@ pub struct NetRedoRet {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LaststandMod {
     /// (src/game/laststand.ts:170 STATES)
     pub states: Option<crate::laststand::State>,
-}
-impl LaststandMod {
-    pub fn blank() -> Self {
-        LaststandMod {
-            states: None,
-        }
-    }
 }
 

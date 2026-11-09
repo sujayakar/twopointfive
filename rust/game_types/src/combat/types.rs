@@ -1,6 +1,6 @@
 //! The types of `combat`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// bodyHit's contact: what decides a round whose origin is already inside the man (combat.ts bodyHit). `true` is the parameter's None. Entering = false: the entering hit only. Muzzle = fireWeapon's test. LegCrown = a later leg through glass, ro[1] <= headTop's height (or pos + 1.8). Flight = a ring or a 40 mm round, ro[1] < headTop's height (or pos + 1.75) + radius
@@ -60,17 +60,10 @@ pub struct DetonateStunRawSam {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CombatMod {
     /// (src/game/combat.ts:100 strayGun)
     pub stray_gun: Option<FirearmId>,
-}
-impl CombatMod {
-    pub fn blank() -> Self {
-        CombatMod {
-            stray_gun: None,
-        }
-    }
 }
 
 /// (src/game/combat.ts:359 solidScratch: a table nothing writes)

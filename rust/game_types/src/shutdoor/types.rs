@@ -1,6 +1,6 @@
 //! The types of `shutdoor`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -67,20 +67,12 @@ pub struct PlanArm1 {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShutdoorMod {
     /// (src/game/shutdoor.ts:58 jobs)
     pub jobs: JsMap<GuardId, crate::shutdoor::Job>,
     /// (src/game/shutdoor.ts:108 spotted)
     pub spotted: Option<crate::shutdoor::ShutdoorModSpottedValue>,
-}
-impl ShutdoorMod {
-    pub fn blank() -> Self {
-        ShutdoorMod {
-            jobs: JsMap::new(),
-            spotted: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

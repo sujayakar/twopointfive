@@ -1,6 +1,6 @@
 //! The types of `entrypoints`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -12,25 +12,13 @@ pub struct Pod {
     pub moved: bool,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct EntryPoints {
     pub been: JsMap<CoverOpeningId, f64>,
-    pub last: f64,
-    pub stats: crate::entrypoints::EntryPointsStats,
+    #[is(-1.0)] pub last: f64,
+    #[is(crate::entrypoints::EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 })] pub stats: crate::entrypoints::EntryPointsStats,
     pub log: Vec<String>,
 }
-impl EntryPoints {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        EntryPoints {
-            been: JsMap::new(),
-            last: -1.0,
-            stats: crate::entrypoints::EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 },
-            log: Vec::new(),
-        }
-    }
-}
-impl Default for EntryPoints { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EntryPointsStats {

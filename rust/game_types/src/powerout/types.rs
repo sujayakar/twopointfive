@@ -1,6 +1,6 @@
 //! The types of `powerout`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -54,7 +54,7 @@ pub struct PowerOutEvent {
     pub why: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PowerOutEventWhat {
     #[default] Stay,
     Lost,
@@ -68,24 +68,6 @@ pub enum PowerOutEventWhat {
     Wrecked,
     Restored,
     Overdue,
-}
-impl PowerOutEventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PowerOutEventWhat::Stay => "stay",
-            PowerOutEventWhat::Lost => "lost",
-            PowerOutEventWhat::Home => "home",
-            PowerOutEventWhat::Go => "go",
-            PowerOutEventWhat::There => "there",
-            PowerOutEventWhat::Said => "said",
-            PowerOutEventWhat::Noticed => "noticed",
-            PowerOutEventWhat::Nobody => "nobody",
-            PowerOutEventWhat::Abort => "abort",
-            PowerOutEventWhat::Wrecked => "wrecked",
-            PowerOutEventWhat::Restored => "restored",
-            PowerOutEventWhat::Overdue => "overdue",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -125,15 +107,8 @@ pub struct CoverSpot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PoweroutMod {
     /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,
-}
-impl PoweroutMod {
-    pub fn blank() -> Self {
-        PoweroutMod {
-            states: None,
-        }
-    }
 }

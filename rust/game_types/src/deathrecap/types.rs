@@ -1,6 +1,6 @@
 //! The types of `deathrecap`: every death explains itself (rust/game_rules/src/deathrecap).
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -157,7 +157,7 @@ pub struct DeathRecap {
 /// THE RECAP'S RECORD: the game's own, written by the tick (`deathrecap::recap_tick`) and by a round landing (`recap_round`), fresh with every mission. Only
 /// `lost_live` is on the wire: the rest is handed out once, to the end card. A kept game has none of it (`recap_left_behind`), so a load starts it over: a load is a run
 /// in which that death has not happened.
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Recap {
     /// the mission this record is of, by its serial
     pub run: Option<u32>,
@@ -169,16 +169,16 @@ pub struct Recap {
     /// the tick has looked at the floor: who is down from now on went down in front of it (not a body a checkpoint brought back)
     pub primed: bool,
     /// when the run ended (infinity while it has not): what the card may show of a run that is played on past its end stops there
-    pub over_at: f64,
-    pub frames: VecDeque<crate::deathrecap::RecapFrame>,
-    pub shots: VecDeque<crate::deathrecap::RecapShot>,
+    #[is(f64::INFINITY)] pub over_at: f64,
+    #[is(VecDeque::new())] pub frames: VecDeque<crate::deathrecap::RecapFrame>,
+    #[is(VecDeque::new())] pub shots: VecDeque<crate::deathrecap::RecapShot>,
     /// the last event read, by its serial (serials rise along the game's list of events)
     pub seen_to: u32,
     pub down: JsSet<crate::Num>,
     /// the last round into each man, by his character's id
     pub rounds: JsMap<crate::Num, crate::deathrecap::Round>,
     pub cast: JsMap<crate::Num, crate::deathrecap::RecapMan>,
-    pub deaths: VecDeque<crate::deathrecap::RecapDeath>,
+    #[is(VecDeque::new())] pub deaths: VecDeque<crate::deathrecap::RecapDeath>,
     /// how many deaths this record has dealt a number to
     pub deaths_dealt: u32,
     pub due: Vec<crate::deathrecap::RecapDue>,
@@ -189,33 +189,6 @@ pub struct Recap {
     pub lost: Vec<crate::deathrecap::Lost>,
     pub lost_next: f64,
 }
-impl Recap {
-    /// a mission's record before the tick has looked at it
-    pub fn blank() -> Self {
-        Recap {
-            run: None,
-            all_down: false,
-            last_t: 0.0,
-            next: 0.0,
-            primed: false,
-            over_at: f64::INFINITY,
-            frames: VecDeque::new(),
-            shots: VecDeque::new(),
-            seen_to: 0,
-            down: JsSet::new(),
-            rounds: JsMap::new(),
-            cast: JsMap::new(),
-            deaths: VecDeque::new(),
-            deaths_dealt: 0,
-            due: Vec::new(),
-            takes: Vec::new(),
-            lost_live: Vec::new(),
-            lost: Vec::new(),
-            lost_next: 0.0,
-        }
-    }
-}
-impl Default for Recap { fn default() -> Self { Self::blank() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
