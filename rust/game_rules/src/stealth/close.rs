@@ -629,17 +629,3 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Everybody up, this seat's close-in memory gone.
-pub fn close_reset(g: &mut crate::game::Game) {
-    let seated = g.m.close.seated.as_ref().map(|seated| seated.keys()).unwrap_or_default();
-    for gd in seated {
-        close_unseat(g, gd, None);
-    }
-    let player = g.player;
-    let Some(s) = g.m.close.state.get_mut(player) else { return };
-    s.best = None;
-    s.t = -1.0;
-    s.mode = None;
-    s.mode_d = f64::INFINITY;
-    s.rmb_t = -1.0;
-}

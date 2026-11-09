@@ -22,7 +22,6 @@ fn find_lane(g: &Game, id: f64) -> Option<LanesLaneId> {
 fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
