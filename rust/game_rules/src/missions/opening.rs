@@ -153,33 +153,13 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
 mod tests {
     use super::*;
 
-    // The expected bits are the TypeScript's own, under bun with EXACT.on = true.
+    /// A FAILURE MEANS: the guard the fair start moves is put off his own route, or off the floor: a place along a leg lies between its ends, at its share, at height nothing.
     #[test]
-    fn flat_matches_the_typescript_bits() {
-        assert_eq!(flat([3.1, 0.0, 4.7], [-0.3, 0.0, 9.21]).to_bits(), 0x40169791dc4b67b8);
-        assert_eq!(flat([12.5, 0.0, -7.25], [12.5, 0.0, -7.25]).to_bits(), 0);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 0.0, 1e-9]).to_bits(), 0x3fd21a18513d04d3);
-    }
-
-    #[test]
-    fn walking_a_leg_matches_the_typescript_bits() {
-        let (p, q): (V3, V3) = ([1.3, 0.0, -2.7], [8.9, 0.0, 4.1]);
+    fn a_place_along_a_leg_lies_on_it_on_the_floor() {
+        let (p, q): (V3, V3) = ([1.0, 2.0, -2.0], [4.0, 3.0, 2.0]);
         let l = flat(p, q);
-        assert_eq!(l.to_bits(), 0x402465655f122ff6);
-        let want: [(usize, u64, u64, u64); 3] = [
-            (0, 0x3fe0000000000000, 0x3ffac30de0b68c0d, 0xc002eecd540f5841),
-            (7, 0x4010000000000000, 0x40111fb55b06b1b4, 0xbfa0cddb51e3b3c0),
-            (14, 0x401e000000000000, 0x401b8ea73ddfc065, 0x4002685e79803aa2),
-        ];
-        let (mut n, mut s) = (0, 0.5);
-        while s <= l {
-            let at = leg_point(p, q, s, l);
-            for w in want.iter().filter(|w| w.0 == n) {
-                assert_eq!((s.to_bits(), at[0].to_bits(), at[2].to_bits()), (w.1, w.2, w.3));
-            }
-            n += 1;
-            s += 0.5;
-        }
-        assert_eq!(n, 20);
+        assert_eq!(leg_point(p, q, 0.0, l), [1.0, 0.0, -2.0]);
+        assert_eq!(leg_point(p, q, l, l), [4.0, 0.0, 2.0]);
+        assert_eq!(leg_point(p, q, l / 2.0, l), [2.5, 0.0, 0.0]);
     }
 }

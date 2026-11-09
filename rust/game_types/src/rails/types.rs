@@ -66,5 +66,4 @@ pub const NOTE_SECS: f64 = 2.6;
 
 pub const MENU_M: f64 = 6.0;
 
-pub const CARD_CHARS: f64 = 260.0;
 

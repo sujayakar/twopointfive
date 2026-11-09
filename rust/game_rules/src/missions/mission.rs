@@ -388,12 +388,13 @@ mod tests {
         g
     }
 
-    /// rackDist's plain arm against mission.ts's arithmetic run under bun with EXACT on.
+    /// A rack on the plain night is reached from anywhere across its width; past its edge the corner counts.
     #[test]
-    fn rack_dist_plain_has_the_typescripts_bits() {
-        let (front, half_w) = ([3.7, 0.0, -2.3], 0.45);
-        assert_eq!(rack_dist_plain(front, half_w, [5.1, 0.0, -1.9]).to_bits(), 0x3ff07e0f66afed04);
-        assert_eq!(rack_dist_plain(front, half_w, [3.8, 0.0, 4.4]).to_bits(), 0x401acccccccccccd);
+    fn a_rack_is_reached_from_anywhere_across_its_width() {
+        let (front, half_w) = ([3.0, 0.0, 0.0], 0.5);
+        assert_eq!(rack_dist_plain(front, half_w, [3.25, 0.0, 2.0]), 2.0);
+        assert_eq!(rack_dist_plain(front, half_w, [2.75, 0.0, -2.0]), 2.0);
+        assert_eq!(rack_dist_plain(front, half_w, [6.5, 0.0, 4.0]), 5.0);
     }
 
     #[test]
@@ -434,7 +435,7 @@ mod tests {
         assert_eq!(g.mission.stats.elapsed, 0.0);
     }
 
-    /// The HUD's percent, against the TypeScript's for the same times; it stops at 99 until the drive is out.
+    /// The HUD's percent stops at 99 until the drive is out.
     #[test]
     fn the_drive_percent_stops_at_99() {
         assert_eq!(drive_percent(0.0), "0");

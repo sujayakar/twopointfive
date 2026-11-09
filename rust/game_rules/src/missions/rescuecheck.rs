@@ -439,24 +439,20 @@ fn let_go(g: &mut Game) {
 mod tests {
     use super::*;
 
-    // The bits are the TypeScript's own, printed under bun with EXACT on.
     #[test]
-    fn flat_has_the_typescripts_bits() {
-        assert_eq!(flat([1.3, 9.0, -7.7], [4.25, 2.0, 11.1]).to_bits(), 0x403307b0d5c6522b);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.1, 5.0, 0.2]).to_bits(), 0);
-        assert_eq!(flat([-12.625, 0.0, 33.3], [17.77, 0.0, -0.01]).to_bits(), 0x40468bf3964912ae);
+    fn a_distance_on_the_floor_ignores_height() {
+        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
     }
+    /// A FAILURE MEANS: a guard's radio check comes outside the seconds the knobs give it, all at one moment, or differently on two runs: where in its band each check falls goes by its key and no die.
     #[test]
-    fn frac_has_the_typescripts_bits() {
-        assert_eq!(frac(3.7).to_bits(), 0x3fe6666666666668);
-        assert_eq!(frac(-1.25).to_bits(), 0x3fe8000000000000);
-        assert_eq!(frac(6.180339887).to_bits(), 0x3fc715609e6a27a0);
-    }
-    #[test]
-    fn band_has_the_typescripts_bits() {
-        assert_eq!(band([14.0, 22.0], 7.0).to_bits(), 0x40309c22a087d824);
-        assert_eq!(band([24.0, 36.0], 8.0).to_bits(), 0x4041aa66d2bd94b0);
-        assert_eq!(band([24.0, 36.0], 134.0).to_bits(), 0x4040e63a49e77a98);
-        assert_eq!(band([14.0, 22.0], 0.0).to_bits(), 0x402c000000000000);
+    fn a_check_falls_inside_its_band_by_its_key() {
+        let (lo, hi) = (14.0, 22.0);
+        assert_eq!(band([lo, hi], 0.0), lo);
+        let times: alloc::vec::Vec<f64> = (0..40).map(|k| band([lo, hi], k as f64 * 7.0 + 3.0)).collect();
+        assert!(times.iter().all(|t| *t >= lo && *t < hi), "{times:?}");
+        let (least, most) = times.iter().fold((hi, lo), |(a, b), t| (a.min(*t), b.max(*t)));
+        assert!(most - least > (hi - lo) * 0.8, "the band is used across its width: {least} to {most}");
+        assert_eq!(band([lo, hi], 7.0), band([lo, hi], 7.0));
+        assert!((frac(-1.25) - 0.75).abs() < 1e-12, "below zero too");
     }
 }

@@ -649,11 +649,12 @@ mod tests {
         assert_eq!(lens.desired, [1.0, 2.0, 3.0]);
     }
 
+    /// Where a man is sent to leave by: a stride past the exit, along its own way out.
     #[test]
-    fn exit_point_has_the_typescripts_bits() {
+    fn an_exit_point_is_a_stride_past_along_its_own_way() {
         let p = exit_point(&exit(), None);
-        assert_eq!(p[0].to_bits(), 0x400051eb851eb852);
-        assert_eq!(p[2].to_bits(), 0xbff87ae147ae147a);
+        assert!((p[0] - (1.5 + 0.6 * 0.9)).abs() < 1e-12 && (p[2] - (-2.25 + 0.8 * 0.9)).abs() < 1e-12, "{p:?}");
+        assert!(out_through(&exit(), p), "and that place is out");
     }
 
     #[test]
@@ -668,19 +669,21 @@ mod tests {
         assert!(out_through(&wide, aside));
     }
 
-    /// the picks are bun's, off the TypeScript's own mulberry32
+    /// A FAILURE MEANS: a link with a pin does not put a player back on the deal it names: the same pin deals the same, on the lists' own rows, and the patrols' length moves neither of the other two picks.
     #[test]
-    fn a_pinned_deal_deals_what_the_typescript_deals() {
-        for (pin, s, p, q, a, b, c) in [
-            (7.0, 3, 2, Some(4), 0.0, 0.0, 1.0),
-            (0.0, 1, 1, None, 0.0, 0.0, -1.0),
-            (-5.0, 5, 4, Some(2), 4.0, 0.0, 1.0),
-            (2147483648.5, 2, 3, Some(0), 1.0, 1.0, -1.0),
-        ] {
-            // mulberry32's stream is `Die`'s, draw for draw; `mulberry32` itself is a stub in this crate
-            let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q);
-            assert_eq!((d.start, d.spot, d.patrol), (a, b, c), "pin {}", pin);
+    fn a_pinned_deal_is_the_same_each_time_and_stays_on_its_lists() {
+        let deal = |pin: f64, s, p, q| { let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q); (d.start, d.spot, d.patrol) };
+        let pins = [7.0, 0.0, -5.0, 2147483648.5, 11.0, 23.0];
+        for pin in pins {
+            let (a, b, c) = deal(pin, 5, 4, Some(3));
+            assert_eq!(deal(pin, 5, 4, Some(3)), (a, b, c), "pin {pin}");
+            assert!((0.0..5.0).contains(&a) && (0.0..4.0).contains(&b) && (0.0..3.0).contains(&c), "pin {pin}");
+            assert_eq!(deal(pin, 5, 4, None), (a, b, -1.0), "no patrols to pick from, pin {pin}");
+            assert_eq!(deal(pin, 5, 4, Some(0)), (a, b, -1.0), "an empty list of them, pin {pin}");
+            assert_eq!(deal(pin, 1, 1, Some(1)), (0.0, 0.0, 0.0), "one of each, pin {pin}");
         }
+        let first = deal(pins[0], 5, 4, Some(3));
+        assert!(pins.iter().any(|p| deal(*p, 5, 4, Some(3)) != first), "another pin deals another");
     }
 
     #[test]

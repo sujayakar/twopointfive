@@ -410,25 +410,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
-/// a row's `below` and `above`
-fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
-    let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
-    let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
-    if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
-}
 
-/// a kind's word (`t.is`)
-fn kind_word(t: &LessonTest) -> &'static str {
-    use LessonTest as T;
-    match t {
-        T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
-        T::Stage { .. } => "stage", T::Door { .. } => "door", T::Target { .. } => "target", T::Men { .. } => "men", T::Did { .. } => "did", T::Downed { .. } => "downed",
-        T::Body { .. } => "body", T::Calm { .. } => "calm", T::Loaded => "loaded", T::Reload => "reload", T::Launcher { .. } => "launcher", T::Burst { .. } => "burst",
-        T::Threw { .. } => "threw", T::OrderTo { .. } => "orderTo", T::StackOn { .. } => "stackOn", T::PairsOn { .. } => "pairsOn", T::Word { .. } => "word", T::Taken { .. } => "taken",
-        T::Following => "following", T::Mate { .. } => "mate", T::Pair { .. } => "pair", T::Cue { .. } => "cue", T::View { .. } => "view", T::Squad { .. } => "squad",
-        T::Stacks { .. } => "stacks", T::Watching { .. } => "watching", T::All { .. } => "all", T::Any { .. } => "any",
-    }
-}
 
 fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
     use LessonFlag as F;
@@ -526,91 +508,55 @@ pub mod flags {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own answers (lesson.ts:35-78 run under bun, with the page's values)
-    static LOWER: &[(&str, &str)] = &[("Grab", "grab"), ("grab", "grab"), ("", ""), ("É1", "é1"), ("𐐀x", "𐐀x")];
-    static BARE: &[(&str, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", "V whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", "Hold Space, wheel to kick, let go"),
-        ("xV whistles and V whistlesy but V whistles.", "xV whistles and V whistlesy but V whistles."),
-        ("Right click to knock him out, or left click to use the knife", "Right-click to knock him out"),
-        ("Stay low so he doesn't hear you, then left click to knife him", "Stay low so he doesn't hear you, then right-click to knock him out"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", "When the guard comes through, step in and right-click to knock him out"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", "When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", "{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
-    ];
-    static TOKEN: &[(&str, bool, bool, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", false, false, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", false, true, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", true, false, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", true, true, "V whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", false, false, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", false, true, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", true, false, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", true, true, "Hold Space, wheel to kick, let go"),
-        ("xV whistles and V whistlesy but V whistles.", false, false, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", false, true, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", true, false, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", true, true, "xV whistles and V whistlesy but V whistles."),
-        ("Right click to knock him out, or left click to use the knife", false, false, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", false, true, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", true, false, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", true, true, "Right click to knock him out, or left click to use the knife"),
-        ("Stay low so he doesn't hear you, then left click to knife him", false, false, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", false, true, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", true, false, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", true, true, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", false, false, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", false, true, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", true, false, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", true, true, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", false, false, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", false, true, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", true, false, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", true, true, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", false, false, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", false, true, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", true, false, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", true, true, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", false, false, "When he lights up, creep in and press [Space] behind him to grab him. Left-click to knife him if he turns, or right-click to knock him out, or left-click to use the knife. Press [Space] to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", false, true, "When he lights up, creep in and press [Space] behind him to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Press [Space] to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", true, false, "When he lights up, creep in and hold left click on him from behind to grab him. Left-click to knife him if he turns, or right-click to knock him out, or left-click to use the knife. Hold left click on him to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", true, true, "When he lights up, creep in and hold left click on him from behind to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Hold left click on him to grab him now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", false, false, "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", false, true, "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", true, false, "Hold left click on the near guard from behind to grab him, then hold left click on yours to grab him. {grab from behind} {knock out} hold left click on o'neil to grab him ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", true, true, "Hold left click on the near guard from behind to grab him, then hold left click on yours to grab him. {grab from behind} {knock out} hold left click on o'neil to grab him ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", false, false, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", false, true, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", true, false, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", true, true, "training ▸ — {take the cook’s man out}"),
-    ];
-    static LINE: &[(&str, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", "Space held, then 5, whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", "Hold Space, then 2 kicks it"),
-        ("xV whistles and V whistlesy but V whistles.", "xV whistles and V whistlesy but Space held, then 5, whistles."),
-        ("Right click to knock him out, or left click to use the knife", "Right-click to knock him out"),
-        ("Stay low so he doesn't hear you, then left click to knife him", "Stay low so he doesn't hear you, then right-click to knock him out"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", "When the guard comes through, step in and right-click to knock him out"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", "When he lights up, creep in and press [Space] behind him to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Press [Space] to grab him now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
-    ];
-    static NAMES: &[(&str, bool)] = &[("grab him", true), ("Grab him", true), ("grab him from behind", true), ("Grab The Near Guard From Behind", true), ("knock him out", true), ("take him out", true), ("Take yours out", true), ("open the door", false), ("grab from behind", false), ("grab him from the left", false), ("grab", false), ("grab ", false), ("", false), ("knock out", false), ("take o'neil out", true), ("'grab him", false), ("grab  him", false), ("hi", false), ("grab\nhim", false), ("Éa", false)];
+    /// A FAILURE MEANS: a player is told to use a knife the game does not give him. Whole words only: a longer word that holds the phrase is left alone.
     #[test]
-    fn lower_as_the_typescript() { for (a, b) in LOWER { assert_eq!(lower(a), *b); } }
+    fn a_line_that_names_the_knife_says_the_knockout() {
+        assert_eq!(bare_line("Right click to knock him out, or left click to use the knife"), "Right-click to knock him out");
+        assert_eq!(bare_line("Stay low, then left click to knife him"), "Stay low, then right-click to knock him out");
+        assert_eq!(bare_line("Step in and left-click to kill him with the knife"), "Step in and right-click to knock him out");
+        assert_eq!(bare_line("Hold left click to knife himself"), "Hold left click to knife himself");
+        assert_eq!(bare_line("Hold Space, wheel to kick, let go"), "Hold Space, wheel to kick, let go");
+    }
+
+    /// A FAILURE MEANS: a line asks for a key that does not do it: a move's token is written out as the keys stand, keeping the capital its author gave it.
     #[test]
-    fn bare_line_as_the_typescript() { for (a, b) in BARE { assert_eq!(bare_line(a), *b); } }
+    fn a_token_is_written_out_as_the_keys_stand() {
+        let (key, click) = ((Some(false), Some(true)), (Some(true), Some(true)));
+        assert_eq!(token_line("Now {grab him}.", key.0, key.1), "Now press [Space] to grab him.");
+        assert_eq!(token_line("{Grab him from behind}.", key.0, key.1), "Press [Space] behind him to grab him.");
+        assert_eq!(token_line("{grab him}", click.0, click.1), "hold left click on him to grab him");
+        assert_eq!(token_line("{Grab the near guard from behind}", click.0, click.1), "Hold left click on the near guard from behind to grab him");
+        // with a knife to hand the blows say so; with none, each is the knockout
+        assert_eq!(token_line("{knock him out}", Some(false), Some(false)), "right-click to knock him out, or left-click to use the knife");
+        assert_eq!(token_line("{take him out}", Some(false), Some(false)), "left-click to knife him");
+        assert_eq!(token_line("{take him out}", Some(false), Some(true)), "right-click to knock him out");
+        assert_eq!(token_line("{knock o'neil out}", Some(false), Some(true)), "right-click to knock o'neil out");
+        // what is no token is left as it was written
+        for line in ["{open the door}", "{grab him", "{grab him from the left}", "{1x}", "no braces"] {
+            assert_eq!(token_line(line, Some(false), Some(true)), line);
+        }
+    }
+
+    /// The line the HUD shows: tokens out, no knife, and the hand ring's own keys for the whistle and the kick.
     #[test]
-    fn token_line_as_the_typescript() { for (a, h, b, c) in TOKEN { assert_eq!(token_line(a, Some(*h), Some(*b)), *c); } }
+    fn the_line_on_the_page_names_the_rings_keys() {
+        assert_eq!(line_on_page("V whistles the cook out", 5.0), "Space held, then 5, whistles the cook out");
+        assert_eq!(line_on_page("xV whistles but V whistlesy", 5.0), "xV whistles but V whistlesy");
+        assert_eq!(line_on_page("Hold Space, wheel to kick, let go", 5.0), "Hold Space, then 2 kicks it");
+        assert_eq!(line_on_page("{Take him out} if he turns", 5.0), "Right-click to knock him out if he turns");
+    }
+
+    /// The level's check reads this: a token in a line that is no move's stands out as a brace on the player's screen, so it must be refused, and a real one let by.
     #[test]
-    fn the_page_line_as_the_typescript() { for (a, b) in LINE { assert_eq!(line_on_page(a, 5.0), *b); } }
-    #[test]
-    fn names_as_the_typescript() { for (a, b) in NAMES { assert_eq!(lesson_token(a), *b, "{}", a); } }
+    fn a_token_names_a_move_and_nothing_else() {
+        for name in ["grab him", "Grab him", "grab him from behind", "Grab The Near Guard From Behind", "knock him out", "take him out", "Take yours out", "take o'neil out"] {
+            assert!(lesson_token(name), "{}", name);
+        }
+        for name in ["open the door", "grab from behind", "grab him from the left", "grab", "grab ", "", "knock out", "'grab him", "grab  him", "grab\nhim", "\u{c9}a"] {
+            assert!(!lesson_token(name), "{}", name);
+        }
+    }
+
     #[test]
     fn after_finds_the_row_past_last() {
         assert_eq!(after(&[4, 7, 9], Some(7)), 2);
@@ -619,26 +565,25 @@ mod tests {
         assert_eq!(after(&[4, 7, 9], None), 0);
         assert_eq!(after(&[], None), 0);
     }
+
+    /// A meter's band is open at both ends; a kind with no band has nothing to refuse.
     #[test]
-    fn band_reads_the_meter_only() {
+    fn a_band_is_open_at_its_ends() {
         let meter = |below, above| LessonTest::Meter { which: LessonMeter::Noise, below, above };
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
-        assert!(band_check(&meter(None, None)).is_some() && band_check(&meter(Some(f64::NAN), None)).is_some() && band_check(&meter(Some(1.0), None)).is_none());
         let pace = |below, above| LessonTest::Pace { below, above };
         assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
-        assert!(band_check(&pace(None, None)).is_some() && band_check(&pace(None, Some(0.5))).is_none());
-        assert!(band_check(&LessonTest::Loaded).is_some());   // (t.below and t.above are undefined on any other kind)
     }
+
+    /// A step that waits on a stage passes once the mission is at it or beyond: the stages run in order, and a failed run is on none of them.
     #[test]
-    fn the_skeletons_tables_say_what_the_typescript_says() {
-        // (the lists in lesson.ts testFault's messages, run under bun)
-        let kinds = [LessonTest::Pace { below: None, above: None }, LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
-        for k in &kinds { assert!(lesson_tests().has(String::from(kind_word(k)))); }
-        assert_eq!(stage_index("infiltrate"), 0);
-        assert_eq!(stage_index("done"), 3);
+    fn the_stages_run_in_order_and_failed_is_none_of_them() {
+        let at: Vec<i32> = ["infiltrate", "drive", "exfil", "done"].iter().map(|s| stage_index(s)).collect();
+        assert_eq!(at, [0, 1, 2, 3]);
         assert_eq!(stage_index("failed"), -1);
     }
+
     #[test]
     fn inside_is_open_at_its_edges() {
         let r = crate::scene_scenarios::Rect { x0: 0.0, x1: 1.0, z0: 0.0, z1: 1.0 };

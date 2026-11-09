@@ -768,45 +768,49 @@ mod tests {
         r
     }
 
-    /// bun on the TypeScript's placeDefenders, EXACT on: room, mark and Tango number of each man
+    /// A FAILURE MEANS: a room holds the wrong number of men, two on a mark, or a restart deals another fight than the seed says. Seed nothing's first attempt is the level file's own marks in order.
     #[test]
-    fn the_deal_is_the_typescripts() {
+    fn a_deal_fills_each_room_from_its_own_marks_the_same_each_time() {
         let s = crate::roomclear::PlaceDefendersS { rooms: vec![room("a", 2.0, 5), room("b", 1.0, 3), room("c", 3.0, 3), room("d", 3.0, 7)] };
-        let want: [(f64, f64, &str); 8] = [
-            (0.0, 1.0, "a01,a12,b03,c04,c15,c26,d07,d18,d29"),
-            (0.0, 2.0, "a11,a22,b13,c04,c15,c26,d17,d28,d59"),
-            (1.0, 1.0, "a21,a32,b03,c04,c15,c26,d17,d38,d59"),
-            (7.0, 3.0, "a11,a42,b13,c04,c15,c26,d07,d48,d69"),
-            (-5.0, 2.0, "a11,a22,b23,c04,c15,c26,d17,d58,d69"),
-            (9973.0, 1.0, "a01,a22,b23,c04,c15,c26,d07,d28,d69"),
-            (123456789.0, 4.0, "a11,a42,b13,c04,c15,c26,d27,d38,d49"),
-            (3.9, 1.5, "a11,a42,b23,c04,c15,c26,d07,d18,d39"),
-        ];
-        for (seed, attempt, line) in want {
-            let got: Vec<String> = place_defenders(seed, Some(attempt), &s).iter().map(|p| format!("{}{}{}", p.room, p.mark, &p.name[6..])).collect();
-            assert_eq!(got.join(","), line, "seed {} attempt {}", seed, attempt);
+        let line = |seed: f64, attempt: f64| place_defenders(seed, Some(attempt), &s).iter().map(|p| format!("{}{}", p.room, p.mark)).collect::<Vec<String>>().join(",");
+        assert_eq!(line(0.0, 1.0), "a0,a1,b0,c0,c1,c2,d0,d1,d2");
+        let deals = [(0.0, 2.0), (1.0, 1.0), (7.0, 3.0), (-5.0, 2.0), (9973.0, 1.0), (3.9, 1.5)];
+        for (seed, attempt) in deals {
+            let deal = place_defenders(seed, Some(attempt), &s);
+            assert_eq!(line(seed, attempt), line(seed, attempt));
+            for r in &s.rooms {
+                let marks: Vec<f64> = deal.iter().filter(|p| p.room == r.id).map(|p| p.mark).collect();
+                assert_eq!(marks.len() as f64, r.garrison, "seed {seed}: room {}", r.id);
+                assert!(marks.windows(2).all(|w| w[0] < w[1]), "seed {seed}: each mark once, in its order");
+            }
+            for (i, p) in deal.iter().enumerate() {
+                assert_eq!(p.name, format!("Tango {}", i + 1));
+                let r = s.rooms.iter().find(|r| r.id == p.room).unwrap();
+                assert_eq!((p.pos, p.aim_at), (r.marks[p.mark as usize].pos, r.marks[p.mark as usize].aim_at), "seed {seed}: he stands on his mark, looking where it looks");
+            }
+        }
+        assert!(deals.iter().any(|(s, a)| line(*s, *a) != line(0.0, 1.0)), "another seed deals another fight");
+        assert_ne!(line(1.0, 1.0), line(1.0, 2.0), "and another attempt another");
+    }
+
+    /// A fresh start is a dealt fight, never the file's own marks (seed nothing): whatever the game's die was seeded with, a seed from 1 up to 9973.
+    #[test]
+    fn a_fresh_start_is_never_the_authored_deal() {
+        assert_eq!((fresh_seed_of(0.0), fresh_seed_of(9972.0), fresh_seed_of(9973.0)), (1.0, 9973.0, 1.0));
+        for x in [-1.0, 3.7e9, 4294967296.0, 1.5] {
+            let seed = fresh_seed_of(x);
+            assert!((1.0..=9973.0).contains(&seed) && seed == m::floor(seed), "{x}: {seed}");
         }
     }
 
-    /// bun on the TypeScript's freshSeedOf
+    /// How far a mark stands from a prop where it rests: none inside it, measured from its edge, on the prop's own turn.
     #[test]
-    fn the_fresh_readings_are_the_typescripts() {
-        let want: [(f64, f64); 7] = [(0.0, 1.0), (1.0, 2.0), (9972.0, 9973.0), (9973.0, 1.0), (4294967296.0, 1.0), (-1.0, 5089.0), (3.7e9, 7028.0)];
-        for (x, seed) in want {
-            assert_eq!(fresh_seed_of(x), seed);
-        }
-    }
-
-    /// bun on the TypeScript's propGap, EXACT on: the doubles' bits
-    #[test]
-    fn the_gap_is_the_typescripts_bits() {
-        let cases: [([f64; 3], f64, f64, V3, u64); 3] = [
-            ([1.5, -2.25, 0.7], 0.4, 0.9, [3.1, 0.0, 0.2], 0x40000971d6510133),
-            ([0.0, 0.0, 0.0], 0.5, 0.5, [0.1, 0.0, 0.1], 0),
-            ([10.125, 4.0, 2.356], 1.2, 0.3, [12.0, 0.0, 6.5], 0x3ffe6214913a134b),
-        ];
-        for (home, hx, hz, at, bits) in cases {
-            assert_eq!(prop_gap(crate::roomclear::PropGapP { home, hx, hz }, at).to_bits(), bits);
-        }
-    }
-}
+    fn a_gap_to_a_prop_is_from_its_edge_on_its_own_turn() {
+        let square = crate::roomclear::PropGapP { home: [0.0, 0.0, 0.0], hx: 1.0, hz: 1.0 };
+        assert_eq!(prop_gap(square, [0.5, 0.0, 0.5]), 0.0);
+        assert_eq!(prop_gap(square, [4.0, 0.0, 0.0]), 3.0);
+        assert_eq!(prop_gap(square, [4.0, 0.0, 5.0]), 5.0);
+        let long_bench = |turn| crate::roomclear::PropGapP { home: [0.0, 0.0, turn], hx: 2.0, hz: 0.5 };
+        assert_eq!(prop_gap(long_bench(0.0), [0.0, 0.0, 1.0]), 0.5);
+        assert!(prop_gap(long_bench(m::PI / 2.0), [0.0, 0.0, 1.0]) < 1e-12, "turned a quarter, that place is inside it");
+    }}

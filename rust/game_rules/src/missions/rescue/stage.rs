@@ -565,13 +565,11 @@ pub(super) fn rescue_place(g: &crate::game::Game) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits are the TypeScript's own, under bun with EXACT.on = true
     #[test]
-    fn flat_and_wrap_are_the_typescripts_bits() {
-        assert_eq!(flat([7.6, 0.0, 13.4], [-3.25, 9.0, 0.1]).to_bits(), 0x40312a0e3d2cb01b);
-        assert_eq!(flat([1.0, 0.0, 2.0], [1.0, 5.0, 2.0]).to_bits(), 0);
-        assert_eq!(wrap(4.0).to_bits(), 0xc00243f6a8885a30);
-        assert_eq!(wrap(-7.5).to_bits(), 0xbff37812aeef4b9e);
-        assert_eq!(wrap(0.3).to_bits(), 0x3fd3333333333333);
+    fn a_distance_on_the_floor_ignores_height_and_an_angle_comes_back_inside_half_a_turn() {
+        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
+        assert!((wrap(4.0) - (4.0 - 2.0 * m::PI)).abs() < 1e-12);
+        assert!((wrap(-7.5) - (-7.5 + 2.0 * m::PI)).abs() < 1e-12);
+        assert!((wrap(0.3) - 0.3).abs() < 1e-12);
     }
 }

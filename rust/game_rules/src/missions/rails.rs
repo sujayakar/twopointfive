@@ -51,10 +51,6 @@ mod tests {
         assert_eq!(lookout_eye(STEP_EYE_ID, LookoutEyeE { at: [0.0; 3], yaw: 0.0, fov: Some(90.0) }).fov, Some(90.0));
     }
 
-    #[test]
-    fn a_card_size_reads_as_the_typescript_wrote_it() {
-        assert_eq!(alloc::format!("{CARD_CHARS}"), "260");
-    }
 
 }
 

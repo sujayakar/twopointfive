@@ -715,7 +715,7 @@ mod tests {
         let bl = crate::nightbreach::blind();
         let mut man = crate::game::Guard::blank();
         man.dazzled_until = 3.0;
-        man.held = Some(crate::game::GuardHeld::default());   // (cover at :114 is another part's: in Sam's arm it is not asked)
+        man.held = Some(crate::game::GuardHeld::default());   // (a man held is not asked to cover)
         let h = g.gd.push(man);
         g.time = 1.0;
         let mut b = BlindBurst { until: -1.0, n: 5.0, next: 0.0 };
