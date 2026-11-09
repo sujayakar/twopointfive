@@ -2,7 +2,7 @@
 // server, a checkout, the one-file page) this adds nothing: the screen as it was.
 //   Share replays and stats   this browser's own choice to send (cloud.ts `share`, kept in this browser)
 //   Your settings link        copies the link that hands this browser's settings to another one
-// The page's hook (`window.__cloud`, main.ts) is all this reads: no game code, and nothing at module level.
+// The page's hook (`window.__cloud`, host/drawpage.ts) is all this reads: no game code, and nothing at module level.
 import type { RowKit } from './findme';
 
 interface Hook { share: boolean; link(): string }

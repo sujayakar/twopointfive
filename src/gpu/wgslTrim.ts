@@ -14,7 +14,7 @@
 // `?shadertrim=0` = every module as it was, whole. tools/qa/shadertrim-check.ts holds the rule to the shipped shaders; the page's own boot (every pipeline
 // made, no GPU error) is what says the compiler agrees.
 export const SHADER_TRIM = { on: true };
-try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER_TRIM.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER_TRIM.on = false; } catch { /* no page */ }
 
 // …AND CUT TO WHAT ITS CONSTANT SWITCHES LEAVE ON. The scene prelude's switches are module-scope constants (`const WX_KINDS: bool = false;`, render/frame.ts), read
 // once at boot, and the kernels branch on them: `if (WX_KINDS) { … }`. The rule above keeps a declaration that anything kept MENTIONS, so the dead side of such a
@@ -33,10 +33,9 @@ try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER
 // gpu/device.ts) reads what it always did.
 // A function is folded when the trim first keeps it, never before: most of the prelude's functions are not kept by any one module.
 // `?shaderfold=0` = no branch is cut (the trim's own rule alone, as it was). Nothing is cut with the trim off. tools/qa/shaderfold-check.ts holds the rule to
-// small texts of every form and to the shaders the engine boots with; that the folded text COMPILES, with no warning, is tools/qa/wgsl-compile.cjs's to say,
-// and that it draws the same frame tools/qa/draw-equal.cjs's (`--with shaderfold=0` against none, on the software adapter).
+// small texts of every form and to the shaders the engine boots with; that the folded text COMPILES, with no warning, is tools/qa/wgsl-compile.cjs's to say.
 export const SHADER_FOLD = { on: true };
-try { if (new URLSearchParams(location.search).get('shaderfold') === '0') SHADER_FOLD.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('shaderfold') === '0') SHADER_FOLD.on = false; } catch { /* no page */ }
 
 interface Decl { text: string; name: string | null; root: boolean; entry: boolean; fn: boolean; ids: readonly string[] }
 /** by declaration text: the prelude's few hundred declarations are read once, whatever number of modules carry them. Its keys are slices of the modules' own

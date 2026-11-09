@@ -10,7 +10,7 @@
 import { main, ROOT } from './here.ts';
 import { readFileSync } from 'node:fs';
 const CM = await import(`${ROOT}/src/render/charMaterials.ts`);
-const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);   // (TPS_LOOK=1: the tables' checks run on the look's second tables, with the two rules that are the plain file's own stood down)
+const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;

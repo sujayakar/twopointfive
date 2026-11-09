@@ -45,7 +45,7 @@ const SUBS: [number, number][] = [[8, 8], [1, 1], [14, 1], [1, 14], [14, 14]];  
 /** All-threes row: the mask of a light that may reach anywhere, at full weight (dynamic lights, the moon). */
 export const REACH_ALL = (() => { const a = new Uint32Array(REACH_ROW_WORDS); a.fill(0xffffffff); return a; })();
 
-/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as doors.ts has it). */
+/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/doors has it). */
 export interface ReachDoor { hinge: [number, number]; closedDir: number; width: number }
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
@@ -53,7 +53,7 @@ export interface ReachDoor { hinge: [number, number]; closedDir: number; width: 
 export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (doors.ts / level.ts convention)
+    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/doors / level.ts convention)
     for (let s = 0.03; s < d.width; s += FINE / 2) for (let across = -0.16; across <= 0.16; across += FINE / 2) {   // ± the wall's thickness across the gap
       const x = Math.floor((d.hinge[0] + ux * s - uz * across - WORLD.min[0]) / FINE), z = Math.floor((d.hinge[1] + uz * s + ux * across - WORLD.min[2]) / FINE);
       if (x >= 0 && z >= 0 && x < FW && z < FH) solid[z * FW + x] = 2;
@@ -212,10 +212,10 @@ export function segNearRect(ax: number, az: number, bx: number, bz: number, r: r
 export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump fields worked out (one a raster, none for a raster whose walls only opened)
 /** How reachKeep.ts tick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
  *  next (60000: over 31 staged blasts on five levels no blast's masks land later than they did a mask at a time; at 40000 five did, by up to ten frames).
- *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
- *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. A REGISTERED SWITCH (host/profile.ts
- *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it). Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
- *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames, and a stand with no picture never reads it. `steps` IS THE STEP OF A FRAME
+ *  `whole` = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
+ *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs.
+ *  Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
+ *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames. `steps` IS THE STEP OF A FRAME
  *  WITH NO PACE (a tool's stand, which keeps no clock; the page with `?planpace=old`; a page's first frames): where the frame has the planners' pace the
  *  keeper's step is an allowance of TIME (reachKeep.ts KEEP_MS), since a count of steps is 2 ms warm and five times that cold in a browser. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };

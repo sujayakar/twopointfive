@@ -23,7 +23,7 @@ const seedOf = (c: Vec3) => (Math.round(c[0] * 100) * 73856093) ^ (Math.round(c[
 const ext = (b: { h: Vec3; yaw: number }): [number, number] => { const ac = Math.abs(Math.cos(b.yaw)), as = Math.abs(Math.sin(b.yaw)); return [ac * b.h[0] + as * b.h[2], as * b.h[0] + ac * b.h[2]]; };
 
 /** THE LOUD LEVELS — the ones a scenario is played on, the ones that get dressing: generator (tools/levels/<gen>.ts) → file under levels/ and the page query that
- *  stages its scenario. The one list: export.ts dresses by it, tools/qa/loudchaos-probes.ts checks by it. */
+ *  stages its scenario. The one list: export.ts dresses by it. */
 export const LOUD_LEVELS: { gen: string; file: string; q: string }[] = [
   { gen: 'records', file: 'records.json', q: 'roomclear=1' }, { gen: 'depot', file: 'depot.json', q: 'roomclear=1&squad4' }, { gen: 'block', file: 'block.json', q: 'roomclear=1&squad4' },
   { gen: 'warehouse', file: 'warehouse.json', q: 'roomclear=1&squad4' }, { gen: 'compound', file: 'compound.json', q: 'roomclear=1&squad4' },

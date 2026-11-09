@@ -1,6 +1,6 @@
 // The falling SHEET's dynamics — the CPU reference of what render/shaders/particles.wgsl `sheetAir` integrates for the P_SHEET particle kind (a leaf of
-// office paper knocked off a desk by a burst: destruction.ts). One model, written twice: the shader flies the thousands you see, this file flies the same
-// equations for the QA probes (settle time, no NaN, the flutter looks like flutter — tools/qa probes 'destruction') and is the place the numbers are argued.
+// office paper knocked off a desk by a burst: rust/game_rules/src/destruction). One model, written twice: the shader flies the thousands you see, this file flies the same
+// equations and is the place the numbers are argued.
 // Keep the two in step: SHEET below = particles.ts KIND_DEFAULTS.sheet's slots (gravity · drag = KT · restitution = KN_LIN · keep = KN_Q · sleepV · fade · FLUT ·
 // TRANS) + the two constants the kind block has no slot for (ANG_DAMP, SPIN_MAX), which particles_common.wgsl repeats.
 //
@@ -46,7 +46,7 @@ export const SHEET = {
 // pushes the floor's litter out along the floor, never into it), the sum NOT renormalised (up and bias add to a unit radial); |v| is clamped per kind after
 // the kick and a resting particle is only woken by a kick of at least wake(kind). This table is the kernel's third row per kind (particles.ts packs it into
 // the uniform block, so the panel edits it live); the sheet's SHAPE response (the fresh tilt and tumble that put it back into the flutter model) is the two
-// constants under it, which particles_common.wgsl repeats. The probes fly the reference below; the kernel flies what you see.
+// constants under it, which particles_common.wgsl repeats.
 /** per-kind response: gain on the record's strength · multiplier on its upward share · |v| cap after the kick (m/s) · the least kick that wakes a resting one (m/s) */
 export interface ImpulseResponse { gain: number; upK: number; vMax: number; wake: number; }
 export const IMP_RESPONSE = {

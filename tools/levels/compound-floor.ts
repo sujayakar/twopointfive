@@ -30,7 +30,7 @@
 //   · PLACED BY HAND (the authored-levels goal: one problem, the same on every try — placement seed 0 / attempt 1 = each room's first `garrison` marks in file
 //     order, so the ORDER of a room's marks below is the placement). THE PROBLEM: two lit outbuildings face each other across the dark yard the team must
 //     cross; the near one (the garage) is bait and the far one (the shed) is the guard room, and whichever door is stacked on has the other at its back.
-//     TALLIED (tools/qa/plan-fights.ts: a scripted commander on the shipped headless stand, hard, placement 0, 24 seeds; taken · teammates up of 96) —
+//     TALLIED (a scripted commander, hard, placement 0, 24 seeds; taken · teammates up of 96) —
 //     THE OBVIOUS PLAN, the garage first (the near door from the west gate): 11 · 19: the garage falls for nothing and the shed's four arrive by the west yard
 //     and the forecourt door. The sala's west door first: 17 · 36 (the garage's man on the forecourt, behind the stack). ANSWER A, the shed first with a
 //     stun canister through its back-strip door: 21 · 62 (with no canisters, 12 seeds: 3 · 4 of 48). ANSWER B, the north gate, the BREAKER in the pantry and
@@ -57,7 +57,7 @@
 //         z 24 +--------+----------------------[ main gate ]+---+-----+
 //                                                 (x 22..25)
 //
-// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout — tools/qa/playthrough.ts; the record and the 144-seed tallies are in
+// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout; the record and the 144-seed tallies are in
 // rebuild/enemy-squads/map-compound.md): the first layout (team at the main gate, an open garage bay, a hall open to the corridor, a door on the corridor's east
 // end, windows on the sala and the office) left 2 men in 10 standing: two thirds of the defenders run at the first bang, and in open ground they arrive from
 // every side at once. What moved it: the team start by the dark gate (the outbuildings fall first, the house is met from one end), doors instead of open mouths
@@ -67,7 +67,7 @@
 // LIMITS IT IS BUILT INSIDE (not lifted here): the world is 40 × 28 m (scene/world.ts — the trace grid, the nav grid and the shaders' bounds), so the wall
 // stands on the office's own shell line (x 4 / 36, z 4 / 24) and the 4 m outside it is the team's approach. weather.ts INTERIOR is that same rectangle: it
 // rains OUTSIDE the wall and not in the yard, nobody gets wet in it, and the storm's wind stops at the wall. weather.ts ANNEX (x 1.1..4, z 9.33..12.87: the
-// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. destruction.ts takes the same rectangle for
+// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. rust/game_rules/src/destruction takes the same rectangle for
 // "indoors": at chaos above 0 a burst in the YARD can drop a ceiling tile out of the sky and raise drywall dust (the room clear's own chaos setting decides
 // whether that is ever seen). The light list holds 64 with every man's torch in it: the level keeps to a handful of fixtures. With eleven defenders, five of
 // the team and Sam the light probe is asked for more queries a frame than it answers (49 against 32: Sam's own meter is the one dropped) and only the first 8
@@ -431,7 +431,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_w', hinge: [4.0, 14.32], closedDir: Z, width: 1.16, exterior: true },
     { name: 'gate_n', hinge: [23.82, 4.0], closedDir: X, width: 1.16, exterior: true },
   ];
-  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (wind.ts gives each one a gust by the
+  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (rust/game_rules/src/wind gives each one a gust by the
   // office's INTERIOR rectangle, which is this wall's own line; a door of the house stands wholly inside that rectangle and would get one blowing an arbitrary
   // way). The house's and the outbuildings' outside doors stand in 0.24 walls like the gates, so their FRAMES are cut the thick way all the same.
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
@@ -521,7 +521,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // it and the west row (the rows sat either side of it; a row east of it where it stands now would lie half off the rug). It stood in the
     // middle (x 16.0 to 17.2, z 16.05 to 16.6), on two lines a man of this room walks when a pair goes round: from the north door across to the east door
     // (to the garage: 23.4 m bare, 25.9 with the table, over its limit) and from his post out by the north door (to the guard hut: 45.2 m of 46, 45.9
-    // with it). 0.6 m east and 0.5 south is the least move that gives both back (tools/qa/wayround-check.ts; twenty-five places were tried)
+    // with it). 0.6 m east and 0.5 south is the least move that gives both back (twenty-five places were tried)
     bx(16.6, 17.8, 16.55, 17.1, 0.31, 0.35, C.woodDark); bx(16.64, 16.7, 16.59, 17.06, 0, 0.31, C.woodDark); bx(17.7, 17.76, 16.59, 17.06, 0, 0.31, C.woodDark);   // the low tea table
     bx(16.82, 17.5, 16.65, 17.01, 0.35, 0.364, P.brass); L.thing(16.96, 0.364, 16.83, 0.06, 0.07, 0.06, C.black);   // tray and pot
     for (let k = 0; k < 6; k++) L.mug(17.14 + (k % 3) * 0.11, 0.364, 16.76 + (k > 2 ? 0.14 : 0), CREAM);           // six glasses: there are guests
@@ -621,7 +621,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     yb(6.37, 5.42, 0.42, 0.3, 0, 0.022, STRAW, 0.5, true); yb(6.05, 5.82, 0.3, 0.22, 0, 0.026, STRAW, -0.4, true); yb(6.5, 5.3, 0.2, 0.15, 0.026, 0.15, STRAW, 0.3, true);   // chaff: a ragged heap thrown down beside the cutter (not a square: the forecourt's grain sheet is the level's yellow rectangle)
     // (THE CUTTER STANDS 0.45 m WEST AND 0.25 m NORTH of where it did, its heap with it. Where it stood, a man sent round to this room's south door had nowhere
     // to stand by it and his next way was 56 m, and the shed's own man lost 0.26 m of the 1.1 he has to spare on his way round to the guard hut
-    // (tools/qa/wayround-check.ts). North alone is enough for the ways, 0.25 m and no less; the step west keeps its flywheel out of the level's own
+    //. North alone is enough for the ways, 0.25 m and no less; the step west keeps its flywheel out of the level's own
     // cardboard box by the north wall)
     bx(6.85, 7.13, 4.83, 5.41, 0.55, 0.72, C.wood); bx(6.87, 7.11, 5.31, 5.37, 0, 0.55, C.woodDark); bx(6.87, 7.11, 4.91, 4.97, 0, 0.55, C.woodDark); bx(6.89, 7.09, 5.03, 5.43, 0.72, 0.8, STRAW, true);   // the chaff cutter: its feed trough on two frames, straw in it
     add({ c: [6.99, 0.66, 4.77], h: [0.17, 0.4, 0.02], albedo: C.black }); add({ c: [6.99, 0.66, 4.77], h: [0.4, 0.17, 0.016], albedo: C.black, flags: NS }); add({ c: [6.99, 0.66, 4.77], h: [0.3, 0.3, 0.012], albedo: C.black, flags: NS });   // … its flywheel at the trough's north end (three nested slabs: a stepped disc; one solid, two drawn)
@@ -765,7 +765,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       G.woodPile(0.55, 8.6, Math.PI / 2, 1.4); G.rubble(0.9, 11.4, 0.7, 6);
       // west, the south end of the strip: stones behind where the four stand, and blocks and the rest of the wood well south of them. TWO THINGS decide this
       // corner. THE DEFENDERS' WAY ROUND to the guard hut comes down this strip hugging the wall and round the corner, 45.2 m of the 46 a way round may be: a
-      // block stack and a wood pile at the wall's foot here made it 46.1 (tools/qa/wayround-check.ts: 21 ways lost and 107 squeezed, where the level had 9 and
+      // block stack and a wood pile at the wall's foot here made it 46.1 (21 ways lost and 107 squeezed, where the level had 9 and
       // 23). And the same two pieces out at the edge but 2 m behind the rear man's start mark changed how the four step off (the scripted runs' endings moved);
       // from 5 m behind him they do not
       G.rubble(0.9, 22.8, 0.7, 5); G.blocks(0.6, 24.4, Math.PI / 2, 2); G.woodPile(0.55, 26.4, Math.PI / 2, 1.6); }
@@ -868,7 +868,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'keep', name: 'Keep', rooms: ['office', 'bunk', 'back'], rally: [29.9, 0, 8.3], barricade: ['o_n', 'a_s', 'b_s'], mayLeave: false },   // the east end: they stay, and wedge only their corridor doors
     ],
   };
-  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (roomclear.ts firstOpen: the first still held): THE HOUSE FIRST, the
+  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (rust/game_rules/src/roomclear: the first still held): THE HOUSE FIRST, the
   // sala leading — the marker stands on what the mission is, and names neither outbuilding (it stood on the shed, the first room of one of the answers).
   // A room's own marks keep their order: the placement is theirs.
   roomClear.rooms = ['sala', 'kitchen', 'office', 'bunk', 'back', 'garage', 'shed', 'hut'].map(id => roomClear.rooms.find(r => r.id === id)!);

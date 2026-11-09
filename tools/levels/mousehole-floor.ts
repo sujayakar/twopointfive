@@ -113,7 +113,7 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
       doors: [{ id: 'post', from: 'corridor' }, { id: 'fire_exit', from: 'east side' }],
       marks: [
         // The hatch (z 15.3‥16.3) gives a man behind the duty desk a line to the three room doors and the floor in front of each. A line is not the eye:
-        // guards.ts cuts every eye off at 16 m, so he notices a man at the exam and store doors and never one at the ward door (17.8 m) or the front door
+        // rust/game_rules/src/guards cuts every eye off at 16 m, so he notices a man at the exam and store doors and never one at the ward door (17.8 m) or the front door
         // (20.7 m). The duty room starts at x 27: no mark in it is inside 16 m of either.
         // PLACED (the first three stand): ONE NEAR, ONE DEEP, ONE UNDER THE LAMP. The hatch gun keeps the corridor. The man across from the fire exit stands under
         // the room's one lit panel, where anybody at that door sees him first. The third stands in the dark south end, 8.8 m from the fire exit — past the 8 m a

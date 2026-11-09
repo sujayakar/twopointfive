@@ -1,13 +1,13 @@
 // RAIN SHOWS IN FRONT OF A WALL'S OUTER FACE AND OVER ITS TOP — the check behind the scene prelude's RAIN_WALLS (src/render/frame.ts rainWallsConfig; on,
 // ?norainwalls at boot = as it was; picture only: no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts rainwalls        (family `weather`)        RAINWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
+//   bun run tools/qa/checks.ts rainwalls        RAINWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
 // the maintainer, 10-19, a depot's yard in the rain: "rain isn't showing up on top of walls properly". The rain is hidden from a pixel whose surface is indoors,
 // and indoors was the roofs' bare rectangles: a level's own roof is its ceiling slab grown by centimetres, over the walls, so every outer wall's face, the door
 // in it and the wall's top showed no rain and the streaks over the yard stopped dead at the wall behind them. The rule now asked: is the point UNDER the roofs,
 // 0.2 m or more inside them on every side (common.wgsl wxUnderRoof).
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. The rule is written again below (`under`) and the shader's own function is held to it BY ITS TEXT, with the
 // two places that ask it and the ring's own gate; the copy is then asked at a wall under a roof written here, grown over it as a level's is. A change to those
-// shader lines is a red line here, not a silent pass. What the picture looks like is the page's to show (tools/qa/weather-look.cjs).
+// shader lines is a red line here, not a silent pass. What the picture looks like is the page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, main } from './here.ts';

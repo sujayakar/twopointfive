@@ -2,7 +2,7 @@
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
 // false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. No kind is downloaded for its own sake any more (the level editor's document was the last, and went with the editor); with downloads put back a file is asked for once under its name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
-// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; every kind on the door's own list is saved through it by some file; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address whose every use in its module is a worker's is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
+// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as host/drawpage.ts maps it. The words a saver says; every kind on the door's own list is saved through it by some file; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address whose every use in its module is a worker's is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -78,7 +78,7 @@ page();
   SAVED.sink = (_f, done) => { end = done; return 'sent'; }; tellSaved('bench', 'h4.json', new Blob(['x']), undefined, () => { throw new Error('the card is gone'); }); let threw = false; try { end?.(true); } catch { threw = true; }
   check(heard.length === 0 && !threw, 'a file that was not taken has no end to hear of, and a saver that throws on hearing troubles nobody');
 }
-{ // the door over the backend's own file intake, mapped as main.ts maps it (the line is read below)
+{ // the door over the backend's own file intake, mapped as host/drawpage.ts maps it (the line is read below)
   let on = true, may = false; const dead = wire('http://127.0.0.1:9', { fetch: (() => Promise.reject(new Error('no backend in this check'))) as any });
   const F = new FileSync(dead, { pid: 'p', sid: 'savefile-check', on: () => on, may: () => may });
   const save = (n: string, b: Blob, k: string, m?: Record<string, string>, d?: SavedDone): 'sent' | 'held' | 'off' | 'no' => { if (!on) return 'off'; const t = F.add(n, b, k, m, d); return t === 'now' ? 'sent' : t ?? 'no'; };   // (cloud.ts `save`)

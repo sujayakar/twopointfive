@@ -1,6 +1,6 @@
 // THE SANDBOX ROW AS THIS MACHINE KEEPS IT: god mode · nobody thinks · unlimited ammunition. One store, written one key at a time by whichever screen flipped it (Options ▸ Game, the debugger),
 // put on a game once it stands (not on a benchmark's scene address, whose fight is the set's) and over a loaded file's own flags: a load from an earlier run must not switch the
-// guards back on under a machine that keeps them off. With no store (a harness) nothing here does anything.
+// guards back on under a machine that keeps them off. With no store nothing here does anything.
 export type SandboxKey = 'god' | 'noAi' | 'ammo';
 export const SANDBOX_LS = 'twopointsix.sandbox';
 /** what this machine last chose, a key it never chose not there */

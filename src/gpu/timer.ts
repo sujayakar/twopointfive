@@ -1,7 +1,7 @@
 // GPU pass timing via timestamp queries (falls back to no-op when unsupported).
 /** THE RENDER PASSES, by the names the page stamps them under. The GPU's busy span (GpuTimer.unionMs) is taken over the OTHERS wherever the page states a
- *  GPU time, because a render pass that draws to the display has stamps that span the wait for it. The ladder's and the backend's GPU ms (main.ts
- *  GPU_RENDER_PASSES), the pricing run (ui/pricerun.ts) and the level table read this list. The read-out's own union (main.ts) and a recording's (ui/perfrec.ts)
+ *  GPU time, because a render pass that draws to the display has stamps that span the wait for it. The ladder's and the backend's GPU ms (host/drawpage.ts,
+ *  host/drawcloud.ts), and the pricing run (ui/pricerun.ts) read this list. The read-out's own union (host/drawpage.ts) and a recording's (ui/perfrec.ts)
  *  still spell theirs, without `present`: not changed here */
 export const RENDER_PASSES: readonly string[] = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];
 /** … the one of them that draws into the page's own textures, so its stamp follows its own work (read on an M4 Max under Metal against 50,000 recorded frames,
@@ -20,8 +20,7 @@ export class GpuTimer {
   private pending: { buf: GPUBuffer; names: string[]; idles: string[] } [] = [];
   /** Smoothed ms per pass name. */
   results = new Map<string, number>();
-  /** Unsmoothed ms per pass name of the last readback that resolved, and how many readbacks have resolved so far — for scripted measurement
-   *  (tools/qa/perf-harness.js averages these over serialized frames instead of waiting for the EMA in `results` to settle). */
+  /** Unsmoothed ms per pass name of the last readback that resolved, and how many readbacks have resolved so far — for scripted measurement. */
   lastFrame = new Map<string, number>(); resolved = 0;
   /** The raw begin/end of every stamped pass of that same readback, in ms from the frame's earliest stamp, in encode order. Passes are NOT serialized on
    *  the GPU: Metal runs independent compute passes concurrently when the queue is saturated (the `direct` pass beside the whole cascade chain is the

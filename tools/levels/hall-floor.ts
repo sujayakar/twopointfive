@@ -124,7 +124,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [9.0, 13.42], closedDir: Math.PI / 2, width: 1.16, exterior: true },
     { name: 'bunks', hinge: [14.02, 12.8], closedDir: 0, width: 1.16 },
-    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (doors.ts wedgeHolds), so from the
+    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (rust/game_rules/src/doors), so from the
     // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — rust/game_start levels second-way)
     { name: 'kit_room', hinge: [25.02, 12.8], closedDir: 0, width: 1.16, swing: 1 },
     { name: 'store', hinge: [18.02, 15.2], closedDir: 0, width: 1.16 },
@@ -215,7 +215,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const STORE: Rect = { x0: 9.12, x1: 21.94, z0: 15.26, z1: 19.88 }, READY: Rect = { x0: 22.06, x1: 31.94, z0: 15.26, z1: 19.88 };
   const GUARD: Rect = { x0: 32.06, x1: 36.88, z0: 8.12, z1: 19.88 }, HALL: Rect = { x0: 9.12, x1: 31.94, z0: 12.86, z1: 15.14 };
 
-  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — doortools.ts pods2 reads a plan's two for the
+  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — rust/game_rules/src/doortools pods2 reads a plan's two for the
   //  first two men in. The first two then stand in file and only the front man's gun answers the far guns, while the third and fourth still fan out and one
   //  goes on up the hall alone (Blue Two lost 7 m in, in 15 of 24 runs): 24 seeds as shipped, 40 of 96 teammates up against 60 without the plan, the far guns' kills 38 against 12.)
 

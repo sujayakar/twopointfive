@@ -3,8 +3,6 @@
 // No story: a place, a thing to take, a way out. Six beats are authored; a run mans five of them (the plain file mans all six).
 //   bun run tools/levels/export.ts police-post      → levels/police-post.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
 //   levels stands police-post  the quiet block against the built floor, every deal started
-//   bun run tools/qa/quiet-light.ts police-post       the light a sneaking man stands in, on paper
-//   bun run tools/qa/quiet-plan.ts police-post --png  the plan picture: beats, starts, places, ways out, the cameras' cones
 //   QUIET_VARIANT=1,0,0 bun run tools/levels/export.ts police-post     → levels/police-post-v100.json: ONE deal (spot, patrol set, start), a scratch file
 //   page: ?levelFile=police-post.json&quiet   (&quiet=N pins the deal)
 //
@@ -69,7 +67,7 @@
 // behind the tarped pallets in the yard's north-east corner; the store on set 0.
 // REPLAY: three starts (west gate · north wall · east wall), three spots, three exits (east · north · west), three patrol sets.
 //
-// HOW IT WAS TUNED (tools/qa/solo-night.ts, the scripted player; the level moved, never the tool) — kept from the first build, do not undo blindly:
+// HOW IT WAS TUNED (the scripted player; the level moved, never the tool) — kept from the first build, do not undo blindly:
 //   - the lamps (the compound's 260 cd / 65° lit the whole yard: now 120 cd / 34–48°); lamp_yard turned north off the gate → porch line;
 //   - the shed's door from its north wall to its east, then the yard wall: the generator man saw the west gate from the forecourt on 9 seeds of 12;
 //   - the yard man from a loop through yard_sw to a horseshoe that comes down the west yard in plain view;
@@ -81,9 +79,9 @@
 // The polish pass (10-10): the lock graph and the ring; the corridor man on every set; the impound; the breaker moved; the generator man's and the man off
 // watch's waits; the tripwire retired; the whole post rebuilt in the GWOT look kit on the same wall lines, blockers and lights.
 //
-// LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. needs.ts NEED_SPOTS and
-// qrf.ts QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
-// NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, levels stands, quiet-light, the scripted solo night); nobody has looked at it on a GPU.
+// LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. rust/game_rules/src/needs NEED_SPOTS and
+// rust/game_rules/src/qrf QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
+// NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night); nobody has looked at it on a GPU.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -147,7 +145,7 @@ export const POST_ROUTES: PatrolRoute[] = [
   { name: 'generator', keys: [], points: [[21.3, 0, 16.8], [14.0, 0, 20.6], [7.6, 0, 21.4]], wait: [25, 0, 20] },   // (by his own cot: no two men begin on one spot)
   // THE DESK MAN — THE KEYS: behind the counter, at the cabinet, across the room to try the corridor door's handle (he never opens it: tried as desk ↔
   // cells, he came out of that door three metres from the armoury's and looked down the lit end of the corridor at the porch), then out of the front door
-  // for a look at the gate. His is the only ring: the stop by the 'duty' door is what puts a keyed door on his beat (dialogue.ts keyedDoorOn, 2.5 m)
+  // for a look at the gate. His is the only ring: the stop by the 'duty' door is what puts a keyed door on his beat (rust/game_rules/src/dialogue keyed_door_on, 2.5 m)
   // HIS JOB: 25 s facing east over the counter with the front door, the duty door and the bunk-room door in his cone; 14 s at the filing cabinet in the
   // north-west corner with his back to the room (THE GRAB); the handle; the porch
   { name: 'desk', keys: ['post'], points: [[13.7, 0, 16.4], [14.5, 0, 16.4], [14.0, 0, 15.5], [18.3, 0, 15.5], [16.9, 0, 19.8]], wait: [0, 25, 14, 5, 6] },
@@ -432,7 +430,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   ceilingPanel(24.5, 22.6, true, 'hut', false, 0.4, 0.4, [4, 3.4, 2.4]);
   switchables[switchables.length - 1].mains = false;                                    // the lantern: the hut is lit through a blackout
 
-  // ---------------- what goes dark when the thing is taken (game.ts rackTargets: the switchables named rack<rackIndex>_leds) — a tell-tale on each holder ----------------
+  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/game rack_targets: the switchables named rack<rackIndex>_leds) — a tell-tale on each holder ----------------
   grp('objective');
   for (const s of QUIET.spots) { const f = s.front, led = add({ c: [f[0] + 0.2, 1.45, f[2] + 0.006], h: [0.03, 0.012, 0.004], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
     switchables.push({ name: `rack${s.rackIndex}_leds`, boxes: [led], group: 'objective', on: true, baseEmissive: [0.3, 4, 0.6], mains: false }); }
@@ -465,7 +463,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   beacon(22.0, 13.25); beacon(6.8, 22.4);
 
   // ---------------- doors. THE LOCK GRAPH: the four corridor doors of the rooms worth having (the armoury has none) and side_e are on the one key 'post', keyed on the OUTER face ----------------
-  // (keySide is the sign of doors.ts Doors.side on the face that wants the key: for a leaf in a wall along x hung with closedDir 0 the south face is +1; the
+  // (keySide is the sign of rust/game_rules/src/doors Doors.side on the face that wants the key: for a leaf in a wall along x hung with closedDir 0 the south face is +1; the
   //  office's leaf is hung the other way round (closedDir π), so its south face is −1; the duty room is SOUTH of the corridor, so its corridor face is −1)
   const X = 0, Z = HALF;   // closedDir: a leaf in a wall that runs along x / along z
   const POST = { locked: true, lock: 'post' } as const;

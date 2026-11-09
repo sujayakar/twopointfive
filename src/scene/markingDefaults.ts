@@ -146,7 +146,7 @@ export function whiteboardMarks(h: Vec3, face: MarkFace, t = T): MarkingDef[] {
 }
 /** THE RULE for EMISSIVE markings (the maintainer's, 08-10, refined 08-12 at the workbench when the blue machine's albedo-only red wedge read black): a backlit
  *  front is ONE LAMP behind a printed film — every cell transmits it, so every entry MAY emit and cells may differ in chroma (a red wedge on a blue field), but the
- *  DOMINANT hue should carry most of the flux and redistribute LUMINANCE (the dominant hue, its light tint / white, a dark, at most a small accent), because game.ts
+ *  DOMINANT hue should carry most of the flux and redistribute LUMINANCE (the dominant hue, its light tint / white, a dark, at most a small accent), because rust/game_rules/src/game
  *  registers ONE rectangular light per marking whose colour is the pattern's FLUX-WEIGHTED MEAN chroma (markStats): exact in the far field, a small lie only within a
  *  texel-pitch of a strongly two-toned front. A front that is genuinely half one hue and half another wants two markings (two lights). And FLUX: the light is DERIVED
  *  from the pattern (radiance × area over the rect), so what every visual path draws (the g-buffer + composite at the primary hit, traced reflection hits, the
@@ -210,7 +210,7 @@ export function dispenserMarks(h: Vec3, t = T): MarkingDef[] {
  *  a real recess with its own shadow). ONE emissive marking: the backlit red FIELD over the whole front on the COARSE lattice (18 × 29 with the control column's
  *  4 × 16 cut out and a black cap / frame ≈ 0.96 m² lit — the old glowing slab's area, so at the old slab's luminous intensity about its radiance too) with the
  *  white ribbon + block stack; palette = red (emissive) · white (emissive, 2.2 × the luminance, the same warm cast — ONE chroma, luminance redistributed) · black
- *  accents (not emissive); radiances × k which officeGen calibrates; game.ts registers it as the machine's one light, coloured its mean. Inset right the CONTROL
+ *  accents (not emissive); radiances × k which officeGen calibrates; rust/game_rules/src/game registers it as the machine's one light, coloured its mean. Inset right the CONTROL
  *  COLUMN (plain albedo: it does not glow). Two markings; the sides are the red body. */
 export function vendingRedMarks(h: Vec3, k: number, t = T): MarkingDef[] {
   const pal: MarkPal[] = [
@@ -233,7 +233,7 @@ export function vendingBlueMarks(h: Vec3, k: number, t = T): MarkingDef[] {
   const pal: MarkPal[] = [
     { albedo: [0.03, 0.06, 0.3], emit: [0.1 * k, 0.26 * k, 1.0 * k], rough: 0.1 },      // the deep blue field
     { albedo: [0.4, 0.44, 0.5], emit: [0.62 * k, 0.72 * k, 0.95 * k], rough: 0.1 },     // its white (a cool cast: ~2.3 × the field's luminance)
-    { albedo: [0.42, 0.04, 0.035], emit: [0.9 * k, 0.075 * k, 0.06 * k], rough: 0.1 },   // the roundel's red wedge: the SAME backlight through a red filter (≈ the field's luminance) — every cell of a backlit front transmits the one lamp; the registered light's colour is the flux-weighted mean of what comes through (game.ts markStats), which a small red wedge on a blue field barely moves
+    { albedo: [0.42, 0.04, 0.035], emit: [0.9 * k, 0.075 * k, 0.06 * k], rough: 0.1 },   // the roundel's red wedge: the SAME backlight through a red filter (≈ the field's luminance) — every cell of a backlit front transmits the one lamp; the registered light's colour is the flux-weighted mean of what comes through (rust/game_rules/src/game mark_stats), which a small red wedge on a blue field barely moves
   ];
   return some([
     markFromRect('+z', 'coarse', [-0.4, -0.7, 0.4, 0.75], pal, c => globeField(c, 12, [12, 7, 16, 23], 1, 2, 3), t),   // 16 × 29; the column's cells (u 0.2‥0.4, v −0.35‥0.45) transparent
@@ -277,7 +277,7 @@ export function rackMarks(h: Vec3, slots: { v: number; amber: boolean }[], t = T
   }
   return some(out);
 }
-/** DOOR LEAF (doors.ts: h = [w/2 − 0.01, height/2, thick/2], big faces ±z): a stainless kick plate along the bottom of both faces and a push plate at hand height by
+/** DOOR LEAF (rust/game_rules/src/doors: h = [w/2 − 0.01, height/2, thick/2], big faces ±z): a stainless kick plate along the bottom of both faces and a push plate at hand height by
  *  the latch edge on the +z face. Steel fire doors get neither (they are the plate). */
 export function doorLeafMarks(h: Vec3, t = T): MarkingDef[] {
   const yb = -(h[1] - 0.02);

@@ -1,7 +1,7 @@
 // THE DEPOT — a motor pool at night: three huts round a floodlit yard, and a dark signals hut and a store's hatch that look across it.
 // A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
 //   bun run tools/levels/export.ts depot [--check]     → levels/depot.json, with its `scenarios.roomClear` block
-//   page: ?levelFile=depot.json&roomclear&squad4       · headless: bun run tools/qa/probes.ts depot
+//   page: ?levelFile=depot.json&roomclear&squad4
 //
 // ONE PROBLEM, in a sentence: THE SIGNALS HUT AND THE STORE'S HATCH HOLD THE LIT YARD IN A CROSSFIRE FROM THE DARK, AND THE HUT'S OWN DOOR — AND THE
 // MAINS — ARE AT ITS BACK.
@@ -244,7 +244,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     if (slots.length) switchables.push({ name: `rack${i}_leds`, boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: i === 0, mains: false });
   }
   desk(27.0, 12.7, 1.6, 0.8, 0, C.metal); monitor(26.6, 12.6, 0, false); chair(26.7, 13.45, 0);
-  papers(27.55, 0.76, 12.5, 0.4); papers(27.3, 0.76, 12.95, -0.25);   // the signals log and a message pad (and paper for a firefight to throw about: loudchaos-probes.ts loudLevels wants six sheets a loud level)
+  papers(27.55, 0.76, 12.5, 0.4); papers(27.3, 0.76, 12.95, -0.25);   // the signals log and a message pad (and paper for a firefight to throw about: six sheets a loud level)
   cabinet(28.95, 14.45, -Math.PI / 2);
 
   // ---------------- the tyre store (x 4..9, z 18.5..24): NOT held, dark — a room off the bay, no door on the yard ----------------

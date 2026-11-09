@@ -16,7 +16,7 @@
 // (so a lintel, a sill, a mullion and sandbags against the outside each take what they cover; a cupboard in the room is in front of the light, and shadows it). TWO STAGES: `planOpenings` finds every opening the WALLS leave, where its light hangs and how big it is with nothing
 // in it (made again only when a wall changes); `openAreas` then takes out what each door's leaf covers where it hangs now (a shut door: all of it), so a
 // doorway's light stays where it is while its door swings, and only its strength moves.
-// Nothing here knows a level, a door or a window by name, and it imports nothing from src/game. The check: tools/qa/openings-check.ts.
+// Nothing here knows a level, a door or a window by name, and it imports no game code.
 import type { Vec3 } from '../math/vec';
 import { whole } from '../render/steps';
 import { BoxFlag, type Box, type PlanBox } from './boxes';

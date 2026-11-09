@@ -10,8 +10,8 @@
 // tape sync. So the door has no kind to save one under.
 // THE DOOR ANSWERS WHAT BECAME OF THE FILE (`Saved`, and later `done`: it arrived, or it was let go), and whoever saved it says so to the player in plain
 // words (`savedWords`): there is no file in a downloads folder to notice any more, so a save that went nowhere must not look like one that went.
-// WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (main.ts, to the backend's file intake where a build has one), and whether a file may go
-// is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build and every headless tool set no sink.
+// WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (host/drawpage.ts, to the backend's file intake where a build has one), and whether a file may go
+// is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build sets no sink.
 // A PAGE IS ONE BUNDLE: the replay pages carry no door at all.
 // THIS MODULE IMPORTS NOTHING: ui/ saves through it.
 /** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
@@ -32,10 +32,10 @@ export const SAVED: { sink: ((f: SavedFile, done?: SavedDone) => Saved | boolean
 /** `on`: a saved file goes to the listener alone, and the browser is handed none (`?downloads=1` puts it off: every file is downloaded and the listener told,
  *  as it was). No kind is downloaded for its own sake any more: the one that was, the level editor's document, went with the editor (2026-11-07) */
 export const SAVE_UP: { on: boolean } = { on: true };
-try { if (new URLSearchParams(location.search).get('downloads') === '1') SAVE_UP.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('downloads') === '1') SAVE_UP.on = false; } catch { /* no page */ }
 /** a file is handed to the browser as a download, whatever the listener does with it */
 export const downloads = (): boolean => !SAVE_UP.on;
-/** the page is served from this machine (or there is no page: a native host, the harness), where a shot server may be up (tools/shot-server.ts) */
+/** the page is served from this machine (or there is no page: a native host, a tool), where a shot server may be up (tools/shot-server.ts) */
 export const onThisMachine = (): boolean => typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 /** a file is worth making at all: somebody listens, or the browser is handed it (a large take is not put together for nobody) */
 export const wanted = (): boolean => !!SAVED.sink || downloads();

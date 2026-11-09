@@ -3,9 +3,9 @@
 // asks again after a tick (or after anything else that moved the Rust game) and hands over the new record.
 //
 // Its types are the Rust structs' (rust/game_types/src/view), and read.ts, written from them, reads their bytes: no table and no book at run time. A game no
-// host steps (a workbench's floor, the moment before the first start) has the blank one.
+// host steps (the moment before the first start) has the blank one.
 //
-// NOTHING UNDER src/view IMPORTS THE GAME (src/game, src/sim, src/scene, src/anim, the bridge): a page that holds no game reads the same record
+// NOTHING UNDER src/view IMPORTS THE GAME: a page that holds no game reads the same record
 // (tools/qa/view-check.ts). So a man is named by his character's id, a door by its name, and never by an object of the page's.
 import type { TickView } from './read';
 export type { BubbleView, EmptyView, HandRingView, KitGun, KitSetup, KitSlot, KitThing, KitView, LessonView, ManMark, MateLine, MissionOf, MissionView, Note, Pair, PlanView, RadioRow, RailCard, RailPrompt, RailsView, RingView, SquadView, ThrowLine, TickView } from './read';

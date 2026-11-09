@@ -36,8 +36,8 @@
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
 // QUIET_VARIANT=spot,set,start exports ONE deal to levels/bazaar.v<spot><set><start>.json for the checks (never committed).
 //
-// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless (tools/qa/quiet-light.ts,
-// tools/qa/solo-night.ts on every deal); seen drawn once, on the software renderer.
+// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless
+// on every deal; seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '../../src/scene/level';
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
@@ -335,8 +335,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // its door, west down the alley, TRIES THE PHARMACY'S BACK DOOR — some thirteen seconds in, his back to the north gate — down the passage, up to the
     // pharmacy's window for a look in, east along the street under the camera, in at the garage's wicket, a look at the office's keypad door, and through the
     // garage's back door to the generator again
-    // (hand-set: the last stand is 1 s, was 4. His lap with a talk at the lorry in it is then the west torch's 85.7 s (84.7 / 87.8 / 85.6 measured on the
-    // shipped stand); without a talk it is 71.9 s. The talks run out after three laps; the needs breaks have begun by then.)
+    // (hand-set: the last stand is 1 s, was 4. His lap with a talk at the lorry in it is then the west torch's 85.7 s (84.7 / 87.8 / 85.6 measured);
+    // without a talk it is 71.9 s. The talks run out after three laps; the needs breaks have begun by then.)
     { name: 'roundE', points: [W(34.2, 6.6), W(31.0, 6.0), W(27.0, 4.9), W(25.4, 6.0), W(22.6, 6.3), W(20.9, 6.3), W(20.9, 7.2), W(17.0, 6.4), W(17.0, 14.0), W(17.6, 18.5), W(19.2, 18.4), W(19.2, 17.2), W(20.9, 17.4), W(23.0, 19.1), W(26.0, 18.4), W(30.6, 18.9), W(31.9, 17.2), W(31.6, 9.9), W(30.9, 9.9), W(33.4, 9.2)],
       wait: [2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 1, 0] },
     // the lorry's driver, awake: up and down the flank of his lorry — a while by the bed looking west down the street, a long while leaning on the cab with
@@ -344,7 +344,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // (ON THE FIRST LAP he has not arrived from anywhere: for those first ten seconds he faces EAST along the lorry, down his first leg, not west. Every
     // number of this level was measured that way; a lead-in waypoint would turn him west from the first frame and wants the deals measured again.)
     // (hand-set waits, the original points: 17 s by the bed, 10.75 s at the cab, so his lap is HALF the east torch's own (35.95 of 71.9 s). The east
-    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (dialogue.ts
+    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/dialogue
     // AMBIENT: each of the level's three talks is heard once a run, and a talk holds both men, so they stay in step through it). He is then by the bed,
     // his back to the pharmacy, for about 14 s after the torch leaves the shutter: that is the shops route's way across the shop. He must be walking east
     // by t = 20 s: stood by the bed then he is within talking reach of the west torch and the first talk holds the west round up instead.)

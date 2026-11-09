@@ -20,8 +20,8 @@
 // What this is not: a time. DXC's time grows faster than the text and a loop round ONE call site is one copy here as it is there; the order of the list and
 // what a rewrite takes out are what it is for. What it cannot see: a pipeline the page makes on first use, later than its boot (the entry points nobody asked
 // a pipeline for are listed, not sized into the totals), and the switches a URL flag or a trial turns. The fold of constant switches is on, as on the page: a
-// branch a constant decides is not in the text, so a kernel's size follows the switches. The listing is the shipped stand's page on a snow level in its
-// weather (cut boxes, the glass fracture and the dust's look on, as main.ts puts them: tools/qa/pageboot.ts), and the budget is held to that page AND to the
+// branch a constant decides is not in the text, so a kernel's size follows the switches. The listing is the page on a snow level in its
+// weather (cut boxes, the glass fracture and the dust's look on, as host/drawpage.ts puts them: tools/qa/pageboot.ts), and the budget is held to that page AND to the
 // title's, which a second run of this file sizes. What a word on the address would add (a trial) is in neither:
 //   bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json out.json]      exit 0 = within the budget, 1 = not, or the boot did not finish
 //   bun run tools/qa/shaderinline-check.ts --setting title|snow|nowalls                                    one page alone, listed and held to the table (pageboot.ts SETTINGS)
@@ -32,7 +32,7 @@
 // tools/qa/shader-count-page.cjs prints it (the real page's modules can be held against these).
 import { readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-process.env.TPS_PROFILE = 'shipped';   // (the page's shaders: the frozen stand holds switches off that are consts in the scene prelude — other texts, other sizes)
+process.env.TPS_PROFILE = 'shipped';
 import { ROOT } from './here.ts';
 const { pageBoot, settingArg, SETTINGS } = await import('./pageboot.ts');
 type Stage = import('./pageboot.ts').Stage; type Mod = import('./pageboot.ts').Mod;

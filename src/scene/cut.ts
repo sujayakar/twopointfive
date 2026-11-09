@@ -3,13 +3,13 @@
 // = its centre, axes = its own: before the yaw / Box.rot, metres). The planes ride with the box for free: move, yaw or tumble the box and the cut goes with it.
 //
 // ONE MODEL: the rasteriser draws that solid (gbuffer.wgsl, the cut pass), every GPU ray meets it (common.wgsl isectBox → shadows, bounce, reflections, the light
-// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, collision.ts lineBox → rounds, aim, sight, sound, throw arcs).
-// What stays the UNCUT box, by decision: everything that pushes against it (collision.ts collideCircle / gather, the nav grid, debris / prop contact), its
+// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, rust/game_rules/src/scene_collision line_box → rounds, aim, sight, sound, throw arcs).
+// What stays the UNCUT box, by decision: everything that pushes against it (rust/game_rules/src/scene_collision collide_circle / gather, the nav grid, debris / prop contact), its
 // registration in the trace grid and the ray grid (a superset: only costs a test), and the smoke solver's obstacle bake.
 //
-// THE SWITCH: cutConfig.on (raised once at boot; the scene prelude's `const CUT_BOXES` is compiled from it, so flipping it wants a reload). OFF in this module, so
-// everything headless stands as it was (CUTBOXES=1 | 0 in front of a headless tool forces it; the cut probes raise it themselves); the PAGE turns it ON at boot
-// (main.ts → initCutSwitch) unless the address says ?nocutboxes / ?cutboxes=0 or this machine kept localStorage twopointsix.cutboxes = '0'. OFF = Box.cut is ignored by
+// THE SWITCH: cutConfig.on (raised once at boot; the scene prelude's `const CUT_BOXES` is compiled from it, so flipping it wants a reload). OFF in this module;
+// the PAGE turns it ON at boot
+// (host/drawpage.ts → initCutSwitch) unless the address says ?nocutboxes / ?cutboxes=0 or this machine kept localStorage twopointsix.cutboxes = '0'. OFF = Box.cut is ignored by
 // everything: the plain box, the base build's frame hash for hash. Whoever EMITS cut pieces asks cutBoxesOn() and emits its plain boxes otherwise.
 //
 // The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
@@ -27,7 +27,7 @@ export const CUT_STRIDE = CUT_ROWS + 1;
 export const CUT_PAD: readonly [number, number, number, number] = [0, 0, 0, 1];
 /** the GPU flag bit of a box that has a record (common.wgsl GEO_CUT; bit 16 of the geo flags word — free up there: the CPU's bit 16, SoundSeal, is never uploaded) */
 export const BOX_CUT_BIT = 1 << 16;
-/** the switch (see the head of this file). Mutate only at boot (main.ts initCutSwitch) or in a headless probe. */
+/** the switch (see the head of this file). Mutate only at boot (host/drawpage.ts initCutSwitch). */
 export const cutConfig = {
   on: false,
 };
@@ -172,7 +172,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
- *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
+ *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop. */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
 export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
   let k = -1;

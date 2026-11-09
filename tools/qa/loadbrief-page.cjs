@@ -1,4 +1,4 @@
-// THE LOAD BRIEF ON THE REAL PAGE (src/ui/loadbrief.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), a mission's own
+// THE LOAD BRIEF ON THE REAL PAGE (src/ui/loadbrief.ts): headless Chromium on the software WebGPU adapter, a mission's own
 // address loaded as a visitor loads it — no ?paused, no ?mute — once for each kind of mission, each started another way.
 //   PORT=5199 node tools/qa/loadbrief-page.cjs [outDir]      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs; with no word night breach and tutorial, a boot each; JOBS=all every kind)
 //   night breach · room clear · rescue · quiet · tutorial · solo night
@@ -11,7 +11,7 @@
 //   paused   the automation boot (?paused&mute): no brief at any point, and a script's frames run
 // exit 0 = every job, with no page error · 1 = otherwise. LOADBRIEF_BREAK=1 loads the brief jobs with the switch off: they must FAIL.
 // THE FRAMES ARE NOT DRAWN unless REAL=1: the software adapter takes minutes over one frame of the level, and nothing here reads one — the page's own loop
-// runs every frame of the game with the renderer's draw put aside from the moment the boot is done (carlamps-page.cjs's STEP, for the whole run). REAL=1
+// runs every frame of the game with the renderer's draw put aside from the moment the boot is done. REAL=1
 // leaves the renderer alone: the same verdicts over drawn frames, for one job at a time and a long wait.
 // Game logic and DOM only: nothing here judges a picture of the level. With an outDir it keeps a still of each brief as Chromium lays it out (the brief is
 // plain DOM, so that still is the brief; the level behind it has never been seen on a GPU by this tool).

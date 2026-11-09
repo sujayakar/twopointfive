@@ -1,5 +1,5 @@
 // THE RING AT HIS FEET (host/findme.ts FINDME.ring, a setting of the player's): the gold ring an open order menu puts at his feet (ui/planfloor.ts `py`), drawn whenever that one is not up.
-// Where it goes is where his man is drawn. The outline, the setting's other half, is the renderer's (ui/findmeviz.ts).
+// Where it goes is where his man is drawn. The outline, the setting's other half, is the renderer's (draw/rims.ts).
 import type { Vec3 } from '../math/vec';
 import { FINDME } from '../host/findme';
 import type { HudCam, HudSource } from '../view/hud';

@@ -10,7 +10,7 @@ import { SmokeEmitter, SmokePush, SmokeSystemLike, WIND_GPU_MAX } from './types'
 import type { WindGpuSource } from './types';
 import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
-import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
+import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
 import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
@@ -69,7 +69,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  once it is all zero; 0.002 is where the view march stops counting a sample — at half-float's 6e-5 a plume's invisible skirt would hold bricks for another 25 s); thinDecay / thinBelow =
    *  density under thinBelow goes up to thinDecay/s faster, always (a look knob: how far the faint skirt spreads); soft* = the pool's soft ceiling (smoke.wgsl SP); viewBias / viewR = that ceiling by where the
    *  camera looks: past viewR metres from engine.viewFocus (full at twice that) it starts sooner, bites harder, and the last quarter of the pool is refused (0 = one ceiling everywhere); indirect = dispatch exactly the live
-   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and main.ts); directAt = with `indirect` on, the share of the pool stepping
+   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and host/drawpage.ts); directAt = with `indirect` on, the share of the pool stepping
    *  (as last read back) from which the whole pool is dispatched anyway: each indirect call costs a validation dispatch, −0.14 ms a step on the maintainer's Mac at ¾ full (> 1 = never); split = time the step's five
    *  parts apart. WHO STEPS (smoke.wgsl buildList): calmMax = the longest a brick may wait between steps, in frames (1 = every brick every frame, the solver as first benched; 2; 4); how calm it must be is
    *  params.calmCells (cells its fastest air may cross in the wait, 0 = never waits in sight); farCells = the same allowance out of sight (needs viewBias; 0 = no laxer than in sight; 1 keeps a far plume within a fifth of its stepped-every-frame mass at 7 s for two thirds fewer steps, 2 leaves nearly twice the smoke hanging: notebook §9.1).

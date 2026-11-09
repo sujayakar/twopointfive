@@ -1,6 +1,6 @@
 // The look prototype's "Blowing snow" row, the frame's side (src/render/lookveil.ts lookVeilFrame): the frame says WHERE the powder's field lies over the world
-// and where the sun is, and nothing of any wind (the powder has none of its own: it rides the game's air, render/powderField.ts, whose own check is
-// tools/qa/powder-field-page.cjs). And the shader that draws it (shaders/composite.wgsl) reads the powder from that field.
+// and where the sun is, and nothing of any wind (the powder has none of its own: it rides the game's air, render/powderField.ts).
+// And the shader that draws it (shaders/composite.wgsl) reads the powder from that field.
 // No GPU: the powder itself is never SEEN here.
 //   bun run tools/qa/lookveil-check.ts   (exit 0 = all pass; LOOKVEIL_BREAK=1 hands the frame a plan twice as wide as the field's and must fail)
 import { lookVeilFrame } from '../../src/render/lookveil';

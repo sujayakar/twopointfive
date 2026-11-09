@@ -1,5 +1,5 @@
 // THE FIXED STEP: the game is stepped in whole ticks of 1 / hz whatever the display's rate; this says how many a frame runs and what is owed after them (the
-// frame order round them is the host's: loop.ts, drawpage.ts).
+// frame order round them is the host's: drawpage.ts).
 /** the fixed step's knobs. `on`: the switch (off = the variable step, the loop as it was). `hz`: ticks a second. `snap` (s): a frame time within this of a whole number of
  *  refreshes of a common display is taken as exactly that (a 60 Hz display's 16.6‥16.8 ms frames are each ONE tick, never the 0-then-2 a raw accumulator beats out).
  *  `maxTicks`: the most ticks one frame may run (a hitch longer than that is dropped, not caught up). */

@@ -1,8 +1,7 @@
 // The two conversions between the level FILE (levelData.ts LevelData: ids, flag names, material keys) and the level the game RUNS (level.ts Level: Box[]
 // with bit flags, array indices, LightDef[] …):
-//   loadLevel(data)          → Level   what buildLevel() does with levels/office.json at every boot (browser, headless harness, tools alike)
-//   levelToData(level, opts) → LevelData   the exporter's direction (tools/level-export.ts turns the legacy procedural generator's output into the file),
-//                                           and the round-trip probe's (tools/qa/level-probes.ts)
+//   loadLevel(data)          → Level   what buildLevel() does with levels/office.json at every boot (browser, tools alike)
+//   levelToData(level, opts) → LevelData   the exporter's direction (tools/level-export.ts turns the legacy procedural generator's output into the file)
 // Both preserve ARRAY ORDER exactly — data.boxes[i] ⇄ level.boxes[i] ⇄ world.statics[i] — and resolve every cross reference (a light's fixture, a
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
@@ -151,7 +150,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   };
   // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
   // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
-  // (a file with none: floor.ts's own office map, which level-probes.ts holds equal to the office file's block).
+  // (a file with none: rust/game_rules/src/floor's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   levelNames.set(level, data.name);
   return level;
@@ -234,7 +233,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (used.has(id)) { let k = 2; while (used.has(`${id}_${k}`)) k++; id = `${id}_${k}`; }
     used.add(id); ids[i] = id;
   }
-  // bits the runtime derives and may have OR'd into a Level it was handed (game.ts sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
+  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
   const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {

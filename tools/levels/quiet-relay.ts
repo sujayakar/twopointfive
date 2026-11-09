@@ -5,8 +5,6 @@
 // the dark; the other is already at the door when he drops. (The border crossing is two men down on one beat; this is one man down and one man through.)
 //   bun run tools/levels/export.ts quiet-relay [--check]     → levels/quiet-relay.json
 //   levels stands quiet-relay         the scenarios.quiet block against the built floor, every deal
-//   bun run tools/qa/quiet-light.ts quiet-relay              the light a sneaking man stands in, on paper
-//   bun run tools/qa/quiet-pair.ts --level quiet-relay.json --seeds 1-48      the scripted pair beside the same run alone
 //   page: ?levelFile=quiet-relay.json&quiet&squad=1          (&quiet=N pins the deal; without &squad=1 it is played alone)
 //
 //          x 4        10    14        20        27  29        36
@@ -76,7 +74,7 @@
 // your way and the wicket is the short way in), three spots (the rack in the comms hut · the safe in the ops room · the locker in the bunk hut), three sets,
 // four ways out (east · west · north · the wicket), all open every run.
 //
-// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, levels stands, quiet-light, the scripted solo night and pair), one still
+// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night and pair), one still
 // on the software renderer. Nobody has played it. In the GWOT kit (src/scene/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
@@ -104,7 +102,7 @@ export const RELAY_ROOMS: Record<'comms' | 'ops' | 'bunk' | 'shed', Rect> = {
 };
 const R = RELAY_ROOMS;
 
-/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off game.ts CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
+/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off rust/game_rules/src/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
  *  ON THE FIRST LAP a man stands on waypoint 0 from the first frame and has not 'arrived' from anywhere (he faces down his first leg, or wherever a settling step leaves him): so every long stand
  *  here is waypoint 1 or later, behind a lead-in waypoint with no wait a stride short of it, and is come at on the first lap as on every other. (The walker's and the fuel man's short first stands are not.)
  *  The route called 'mast' is the generator man's (it keeps its first name: sets and traces say 'mast'). */
@@ -118,9 +116,9 @@ export const RELAY_ROUTES: PatrolRoute[] = [
   // His back is the east mouth of the alley behind the blast wall: the far side of the light from the doors
   // (THE LAP STARTS ON THE LEAD-IN, a stride and a half due SOUTH of the stand: he is on his stand looking north from the second second of a run and has looked nowhere
   //  else first. It used to start at the east end of the few paces: ten seconds looking south-west and west before the first stand, and a partner ordered to his
-  //  back in that time — pairorders.ts goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
+  //  back in that time — rust/game_rules/src/pairorders goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
   //  into the near field of his eye when he looked north. THE LEAD-IN IS DUE SOUTH ON PURPOSE: a standing man keeps the yaw of the leg he walked in by
-  //  (guards.ts never turns him on a stand), and pairorders.ts calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
+  //  (rust/game_rules/src/guards never turns him on a stand), and pairorders calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
   //  side of dead astern. From the south-east (27.6, 22.4) he faced 36 to 51 degrees west of north and the strip behind the blast wall came out 45 degrees off
   //  his stern: an early order onto him never set. From due south the strip is inside the free wedge and the first order sets. The price: the lit door is
   //  53 degrees off his axis, so on his own (door camera out) he is about a second slower onto a man there.)
@@ -335,7 +333,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.pickup(32.0, 25.3, Math.PI, 'truckWhite');                                            // left on the road for the night, against the wall: the road start is behind it and the way west passes south of it
   G.bush(2.4, 22.6, 1.1); G.bush(37.6, 9.0); G.bush(14.0, 2.0, 0.9); G.bush(31.0, 2.2, 1.2); G.bush(2.2, 7.4); G.rubble(37.4, 15.0, 0.9, 8);
 
-  // ---------------- what goes dark when the thing is taken (game.ts rackTargets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
+  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/game rack_targets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
   grp('objective');
   for (const s of QUIET.spots) { const f = s.front, onX = s.rackIndex === 2;
     const led = add({ c: onX ? [f[0] + 0.006, 1.45, f[2] + 0.2] : [f[0] + 0.2, 1.45, f[2] + 0.006], h: onX ? [0.004, 0.012, 0.03] : [0.03, 0.012, 0.004], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
@@ -375,7 +373,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_n', hinge: [22.32, 4.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'gate_s', hinge: [19.42, 24.0], closedDir: 0, width: 1.16, exterior: true },
   ];
-  // (`exterior` is for the leaves in the COMPOUND wall: wind.ts gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
+  // (`exterior` is for the leaves in the COMPOUND wall: rust/game_rules/src/wind gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
   const THICK = new Set(['comms', 'ops', 'bunk', 'shed']);
   for (const d of doors) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 

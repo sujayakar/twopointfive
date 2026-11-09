@@ -212,7 +212,7 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
  *  THE MEASURE, in plan, from the file alone. A WALL is cut as tools/qa/bouncewalls-check.ts cuts one (casts a shadow, from the floor to the ceiling,
  *  long and thin: a mast or a pillar is not; its numbers are typed again here, and a turned wall is kept here), and the line of a door the file does
  *  not hold open. Between a face and a probe a wall counts a hand's width short of each end, so that a line grazing its end goes round it. A LAMP is a
- *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that game.ts stands an area light in for (a
+ *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that rust/game_rules/src/game stands an area light in for (a
  *  ceiling panel, a screen: its brightest channel times its face). A probe is LIT by a lamp in range with no wall between them (a spot too: its
  *  bounce fills the room its cone is in), or by the sky where no roof is over it and the file has a sun or moon; a probe inside a wall is dark. For
  *  every box a ray can land on that is not the building's own (no decal, not glass, no group of STRUCTURE), and every loose prop, a point every `step`
@@ -262,7 +262,7 @@ export function leakReads(L: LevelFile): LeakRead[] {
   type Lamp = { id: string; pos: number[]; range: number; power: number; dir?: number[]; cos: number };
   const lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2], byId = new Map(L.boxes.map(b => [b.id, b]));
   const lamps: Lamp[] = L.lights.filter(l => l.kind !== 'dir' && l.enabled !== false).map(l => ({ id: l.id, pos: l.pos, range: l.range ?? 8, power: l.intensity ?? 1, dir: l.kind === 'spot' ? l.dir : undefined, cos: Math.cos((l.outerDeg ?? 90) * Math.PI / 180) }));
-  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (game.ts, the flat fixtures it lights the scene by)
+  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (rust/game_rules/src/game, the flat fixtures it lights the scene by)
     for (const id of s.boxes ?? []) { const b = byId.get(id); if (!b) continue; const h = [...b.h].sort((p, q) => q - p), power = Math.max(...s.baseEmissive, 1e-3) * 4 * h[0] * h[1];
       if (h[2] <= 0.06 && 4 * h[0] * h[1] >= 0.01) lamps.push({ id: s.id, pos: b.c, range: Math.min(26, Math.max(3, Math.sqrt(power / 0.0015))), power, cos: -1 }); } }
   /** what this lamp gives a point a metre up, walls aside: nothing out of its range, or (`cone`) out of a spot's cone */
@@ -338,7 +338,7 @@ export const NOBODY_COMES: Record<string, string> = {
   barracks: 'at eleven, nobody is left to come', registry: 'the hostage clock is the pressure', consulate: 'the hostage clock is the pressure',
   killhouse: 'it has its own clock', floodlit: 'one idea, and it is not this', mousehole: 'one idea, and it is not this',
   glasshouse: 'one idea, and it is not this', pass: 'a snowed-in road' };
-/** a `why` shorter than this is not a sentence (the same 40 as response-check.ts's file line) */
+/** a `why` shorter than this is not a sentence */
 const WHY_MIN = 40;
 /** the rooms a level names (the room clear's, the rescue's, the quiet spots', its places) */
 function roomsOf(L: LevelFile): { name: string; bounds: Bounds }[] {

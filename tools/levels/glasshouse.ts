@@ -46,13 +46,13 @@ export const GLASSHOUSE_FRONT: Vec3 = [33.0, 0, 15.5], GLASSHOUSE_BACK: Vec3 = [
 // chest-high points the marks' guns rest on: the forecourt through the front panes (one bank, the other), and the doors' inner faces, each on the middle of
 // its doorway AS HUNG (the kit fits a 0.9 m doorway inside the 1.2 m slot drawn below: the exported file's hinge + half its width). THE STORE'S DOOR TO THE
 // LAB IS AT THE BACK-WALL END OF ITS WALL, never the glasshouse end: the camera looks down from the front of the building, and a door within about 1.9 m
-// behind a full-height wall that runs across its view is never drawn — no cursor finds it (tools/qa/doormenu-probes.ts 'the cursor on a door as drawn')
+// behind a full-height wall that runs across its view is never drawn — no cursor finds it
 const LOT_W: Vec3 = [15.2, 1.1, 22.0], LOT_E: Vec3 = [24.8, 1.1, 22.0], LOT_LAB: Vec3 = [14.0, 1.1, 22.0], FRONT_IN: Vec3 = [20.25, 1.1, 17.8];
 const LAB_S: Vec3 = [22.75, 1.1, 13.1], LAB_N: Vec3 = [22.75, 1.1, 12.9], STORE_E: Vec3 = [18.1, 1.1, 8.75];
 const OFFICE_E: Vec3 = [24.1, 1.1, 11.25], BACK_IN: Vec3 = [14.25, 1.1, 8.2], RACK_END: Vec3 = [15.85, 1.1, 12.2];
 
 /** THE ROOM CLEAR (scene/scenarios.ts StructureData). Seven men: glasshouse 3, lab 2, office 1, store 1.
- *  THE HAND PLACEMENT (roomclear.ts placeDefenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+ *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: men in the dark watch a floodlit forecourt through glass that stops no round.
  *  (The answers: come in through a wall that is not glass — the back door, or a hole of your own in the blank end wall — or put the light out.)
  *  · THE FORECOURT (the obvious plan: the short walk along the lit panes to the front door) is under four guns in three rooms from the first pane on:

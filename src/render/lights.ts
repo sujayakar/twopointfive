@@ -40,7 +40,7 @@ export interface RtLight {
   row?: number;
   /** transient lights (muzzle flashes) expire when ttl hits 0 */
   ttl: number; age: number; peakIntensity: number;
-  /** set by whoever FLICKERS a fixture's `intensity` frame by frame (rust/game_rules/src/fire): the strength a reader of the place's steady light takes it for (guards.ts
+  /** set by whoever FLICKERS a fixture's `intensity` frame by frame (rust/game_rules/src/fire): the strength a reader of the place's steady light takes it for (rust/game_rules/src/guards
    *  lightEstimateAt, `steadyOnly`), where it hangs when its `pos` is made to wander and how big it is. Absent = `intensity` and `pos` are that. Nothing in the renderer reads it. */
   steady?: { intensity: number; pos: Vec3; /** … and its authored size: whoever flickers it may make the emitter as big as what burns (fire.ts FIRE.size) */ radius: number; /** … and its authored colour, when whoever flickers it also tints it (fire.ts FIRE.warm) */ color?: Vec3; /** … and its authored reach, when it also carries further (FIRE.reach) */ range?: number; /** … and that it has been out for a frame (fire.ts held) */ out?: boolean };
   /** a light its owner drives frame by frame (the weather's lightning stroke: rust/game_rules/src/weather) that must still be treated as TRANSIENT by the renderer — the
@@ -49,7 +49,7 @@ export interface RtLight {
   transient?: boolean;
   /** wide, soft emitter (ceiling panels, screens, street lamps): its own denoise class in the direct pass. Explicit, not radius-derived. */
   broad?: boolean;
-  /** an AREA light registered for an emissive MARKING (game.ts: the vending windows): the marked box's index << 2 | the marking's ordinal in its list. Rides in the
+  /** an AREA light registered for an emissive MARKING (rust/game_rules/src/game: the vending windows): the marked box's index << 2 | the marking's ordinal in its list. Rides in the
    *  kind word's bits 11‥24 with bit 10 set (common.wgsl lightMarkRef) so the reflection pass can texture this light's ANALYTIC highlight with the marking's own
    *  pattern at the mirror point (markings.wgsl markPatternAtMirror) — a uniform rectangle otherwise. undefined = not a marking's light. */
   markRef?: number;
@@ -133,7 +133,7 @@ export class LightSet {
   private reachData = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS);
   /** the reach buffer's rows as last written, word for word (upload writes the live rows only when they differ from this) */
   private reachSent = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS).fill(0xffffffff);
-  /** the reach rows are written whole next frame (a rollback snapshot put back: this book went back with the lights, the buffer did not — scene/boxes.ts forgetSent) */
+  /** the reach rows are written whole next frame */
   forgetSent() { this.reachSent.fill(0xffffffff); }
   private reachDataI = new Int32Array(this.reachData.buffer); private reachSentI = new Int32Array(this.reachSent.buffer);   // the same words read signed, for the compare alone (sameWords)
   private data = new ArrayBuffer(MAX_LIGHTS * 64);
@@ -220,8 +220,8 @@ export class LightSet {
    *  is the game's and goes into every checkpoint; a light that is only in the picture must be in neither, and no reader of `lights` (the CPU's light
    *  estimates, the fog's lamp list, the count a new man's torch is held to) can then count one. Uploaded last, steady, each with
    *  its own reach row; when the 64 slots are full they are the ones left out.
-   *  `masks` = WHO KEEPS THE LIGHTS' REACH MASKS (render/reachKeep.ts, the engine's: handed in, never kept here, so no snapshot of this set holds it or a
-   *  mask): `row(l)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
+   *  `masks` = WHO KEEPS THE LIGHTS' REACH MASKS (render/reachKeep.ts, the engine's: handed in, never kept here):
+   *  `row(l)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
   upload(time: number, own: readonly RtLight[] = NO_LIGHTS, masks: { row(l: RtLight): Uint32Array | undefined } | null = null) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
     { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)

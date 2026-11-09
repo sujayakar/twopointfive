@@ -1,6 +1,6 @@
 // THE SUN'S GLINT: the check behind the scene prelude's SUN_GLINT (src/render/frame.ts sunGlintConfig; on on the look's page, ?nosunglint at boot = as it
 // was; no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts sunglint        (family `render`)        SUNGLINT_BREAK=1 = the rule off and the same lines asked: must FAIL
+//   bun run tools/qa/checks.ts sunglint        SUNGLINT_BREAK=1 = the rule off and the same lines asked: must FAIL
 //   Also here, since it is the same function's text: NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN (the prelude's GLINT_PICK, lines 4 and 5 below; GLINTPICK_BREAK=1
 //   asks the pick's lines of the half credit it replaces: must FAIL)
 // The maintainer, 11-04, of a car's gloss paint beside two pictures of the real thing: "mm doesn't look good. we don't need to go full hyperrealistic but we
@@ -22,7 +22,7 @@ export async function sunGlintCheck(): Promise<boolean> {
   const texts = [read('reflect.wgsl')];
   const { scenePrelude, sunGlintConfig } = await import(`${ROOT}/src/render/frame.ts`);
   // 1. the prelude's word: true with the switch up, false with the switch down; the switch itself ships up, and
-  //    its off word is wired: main.ts lowers it for ?nosunglint, a replay's visit keeps the word, and the look's page knows it for one of its own
+  //    its off word is wired: host/drawpage.ts lowers it for ?nosunglint, a replay's visit keeps the word, and the look's page knows it for one of its own
   { const was = sunGlintConfig.on; let a: string | undefined, b: string | undefined;
     const word = (sw: boolean) => { sunGlintConfig.on = sw; return /const SUN_GLINT: bool = (true|false);/.exec(scenePrelude())?.[1]; };
     try { a = word(was && !BRK); b = word(false); } finally { sunGlintConfig.on = was; }

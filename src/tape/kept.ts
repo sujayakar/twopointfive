@@ -3,7 +3,7 @@
 // (the maintainer, 10-11: "maybe a good model would be that we save all replays as we go (in browser storage?) and then i can just periodically dump all of them to
 // you (and you dedup?) … without me needing to do a bunch of explicit curation")
 // A page visit's tape is kept as PIECES: every few seconds the page hands over what the replay ring and the run tape have gained since the last piece
-// (game/replaybuf.ts since()) and the piece is written to this browser's own storage (keepstore.ts). Pieces laid end to end are the whole visit — every run made on
+// and the piece is written to this browser's own storage (keepstore.ts). Pieces laid end to end are the whole visit — every run made on
 // that page load, however long — where an F7 file is the ring's last five minutes. A DUMP is those pieces as lines of JSON, one line a record (`KeptLine`), gzipped
 // in members that simply follow one another (so the page never has to hold or re-pack the whole thing):
 //   {k:'dump'}   once, first: what the file holds
@@ -13,13 +13,13 @@
 //   {k:'notes'}  notes put on a kept visit in the viewer
 //   {k:'f7'}     a file an older page's key saved: its notes and which visit it is a window of (the trace itself is in the visit's pieces)
 //   {k:'file'}   a whole replay file an older page saved whose visit is NOT kept (saved before the page kept tapes, or its visit has been let go)
-// `assemble` turns one visit's head and pieces back into a ReplayFile — the very thing F7 writes, so the viewer, tools/qa/replay-at.ts and the re-run read it as
-// they read any other. No game code is imported: the viewer page and the reading tool (tools/qa/replay-dump.ts) load this file alone.
+// `assemble` turns one visit's head and pieces back into a ReplayFile — the very thing F7 writes, so whoever reads one reads it as
+// any other. No game code is imported: the viewer page and the reading tool (tools/qa/replay-dump.ts) load this file alone.
 import type { CastRow, Sample, ReplayEvent, ReplayLine, ReplayNote, ReplayFile, RunTape, TapeVal } from './format';
 
 export const KEPT_VERSION = 1;
 
-/** the run tape's rows since the piece before (game/runtape.ts since()); `ticks` = steps taped so far, the first piece of a visit carries the recipe and
+/** the run tape's rows since the piece before; `ticks` = steps taped so far, the first piece of a visit carries the recipe and
  *  the tape's version (format.ts TAPE_VERSION; absent = a visit from before it was said, 1) */
 export interface TapePiece {
   ticks: number; recipe?: Omit<RunTape['recipe'], 'search' | 'levelFile'>; v?: number;

@@ -24,7 +24,7 @@ export const COOP = {
    *  for a start is two minutes: cloud/convex/games.ts policy) */
   pollMs: 500, startMs: 150_000,
 };
-try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page (the harness) */ }
+try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page */ }
 
 /** a code's letters and length, as the control plane deals them (cloud/convex/games.ts MP: no vowels, no digits) */
 export const CODE = { letters: 'BCDFGHJKLMNPQRSTVWXZ', len: 5 };

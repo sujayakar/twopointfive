@@ -1,5 +1,5 @@
 // The look prototype's ONE EXPOSURE row (src/render/lookexpo.ts lookExpoFrame; composite.wgsl lookExpoGain, mirrored below; the place field it reads is
-// render/placeField.ts, whose own check is tools/qa/place-field-page.cjs). The maintainer, 10-31, of the day rows mended a case at a time: "i worry that we're
+// render/placeField.ts). The maintainer, 10-31, of the day rows mended a case at a time: "i worry that we're
 // finding these cases one by one and not fixing them systematically", and of a store with one bulb in overcast: "compare to night and dusk". One gain a place,
 // no cap on it, and nothing by the pixel but the Light in order row (11-04: a pixel holding more light than its place is shown as that light's place would be). No GPU: the lines are mirrored here as numbers and the picture is never SEEN here.
 //   bun run tools/qa/lookexpo-check.ts   (exit 0 = all pass; LOOKEXPO_BREAK=1 caps a place's gain at six times, as the rows before had it, and must fail;

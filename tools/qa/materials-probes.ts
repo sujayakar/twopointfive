@@ -13,7 +13,7 @@
 //                        stretches the lobe along the axis it is told to
 //   materials-arealight  the analytic stand-in for a panel on a rough finish (centre direction, lobe widened by r / 2d, no renormalisation) against a quadrature
 //                        of the true GGX integral over a 1.2 × 0.6 panel: peak within −35 % / +60 % for rough 0.3‥0.45 — the choice reflect.wgsl rtGlints documents
-//   bun run tools/qa/probes.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict; probes.ts sets the exit code)
+//   bun run tools/qa/checks.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict)
 import { ROOT, fake, main } from './here.ts';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

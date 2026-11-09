@@ -24,7 +24,7 @@ export const FOG_BINS = 2048;
 export const FOG_LIGHTS = 48;
 /** which program draws the fog: 'hint' = the table first, a grid walk only where the table has no answer · 'old' = a grid walk per eye per pixel, as it always was. Same picture. */
 export type FogPassMode = 'hint' | 'old';
-/** `?fogpass=old` (or =hint) for a visit; no page — the harness — 'hint' */
+/** `?fogpass=old` (or =hint) for a visit; no page: 'hint' */
 function fogPassFlag(): FogPassMode { try { const v = new URLSearchParams(location.search).get('fogpass'); if (v === 'old') return 'old'; } catch { /* no page */ } return 'hint'; }
 /** What the game hands the pass each frame (one object, written in place by rust/game_rules/src/fogofwar update): `on` false = no pass. */
 export interface FogFrame {
@@ -66,7 +66,7 @@ export interface FogFrame {
    *  on floor the team sees is marked (shaders/particles.wgsl) and is then drawn over that floor when nobody looks too, until something wakes it. false = a
    *  case, a chip or a leaf of paper at rest is cut the moment the team looks away, as it was */
   kept: boolean;
-  /** which statics are thin and free, a bit a box index (rust/game_rules/src/fogofwar thinBlock, off scene/thin.ts's marks), and the box list they were read off: its
+  /** which statics are thin and free, a bit a box index (rust/game_rules/src/fogofwar thinBlock), and the box list they were read off: its
    *  geometry serial and its count of statics. A frame drawn after the list changed and before the next fill (a wall rebuilt, a restart: an index is another
    *  box's by then — a leaf's, should the statics have shrunk) is drawn with the row off (FogSight.encode) */
   thinBits: Uint32Array; thinSerial: number; thinCount: number;
@@ -215,7 +215,7 @@ export class FogPass {
     return this.device.createBindGroup({ layout: this.layout!, entries: [{ binding: 0, resource: src }, { binding: 1, resource: out }, { binding: 2, resource: depthView }, { binding: 3, resource: normalView }, { binding: 5, resource: albedoView }, { binding: 4, resource: { buffer: this.ubuf! } }, { binding: 6, resource: hintView }, { binding: 8, resource: { buffer: this.lbuf! } }] });
   }
 
-  // ---- QA (tools/qa/fog-pass-check.cjs): the LAST dispatched frame's inputs — its copy of hdr, its g-buffer, its uniform block, the scene as uploaded — through one
+  // ---- QA: the LAST dispatched frame's inputs — its copy of hdr, its g-buffer, its uniform block, the scene as uploaded — through one
   //      program again into a scratch texture, read back. Nothing of the frame is touched. `count` false = the picture that program stores (rgba16float halves: two
   //      programs compared on the very same inputs); true = its counting twin (per pixel: walks, hint box tests, the walks' box tests, the walks' cells — and for the
   //      hinted one `pre`: per (bin, eye) the table ray's box tests | cells << 16). Compiled on first use, never part of a frame.

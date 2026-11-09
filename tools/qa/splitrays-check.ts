@@ -1,9 +1,9 @@
 // THE GATHER IS TWO PROGRAMS (src/render/gatherSplit.ts, shaders/gather_split.wgsl; until 2026-11-07 the Shaders row 'Separate shadow rays'). `trace` writes the points
 // it needs lit, `light` lights them round ONE directAtPoint — where the one-kernel gather that went was a program DXC pasted to 780 KB. What is checked here is what a
-// harness can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the shader and in
+// tool can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the shader and in
 // the engine, that a refused buffer is heard outside the machine, and what a load compiles (the gather's two pipelines, once each, each with a budget row of its own,
 // the size tool green, and no one-kernel gather).
-// NOT here (no GPU, and a harness compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
+// NOT here (no GPU, and a tool compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
 //   bun run tools/qa/splitrays-check.ts                        exit 0 = every line passed, 1 = one failed
 //   SPLITRAYS_BREAK=1 bun run tools/qa/splitrays-check.ts      `light` is read with a second call site of the light loop written into it: must FAIL
 import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';

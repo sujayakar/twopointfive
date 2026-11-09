@@ -3,7 +3,7 @@
 // eaves, and the rooms' open windows look straight down it at the gate. The floodlights and every bulb in the building hang on the MAINS; the mains breaker
 // is in the generator shed on the OUTSIDE of the west wall, a short walk from the start to a door with a lamp over it. Throw it (Sam's own row, or the squad's 'work' order
 // on the panel) and the yard is black: the defenders carry no lights and no goggles, the team has goggles. NOBODY COMES TO PUT THE LIGHTS BACK ON: a room
-// clear pins its defenders to their marks (lighting.ts hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
+// clear pins its defenders to their marks (rust/game_rules/src/lighting hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
 // the lights ON and 22 of 24 with them out — the dark stopped mattering. The trial is rebuild/missions/new/floodlit-shed-held.patch in the project files.
 // What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
@@ -17,8 +17,8 @@
 // CHECKED WITH THE FOUR ONLY: levels stands floodlit --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
 // for a pair (a pair crossing the lit yard is wiped on most of that probe's seeds; that is the level's point, not a fault to tune away). WHEN THIS WAS
 // WRITTEN the probe's default seeds were 1,2,3 and seed 2 was red with the four: the last defender left by the store's back door and stood in the dark
-// strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). playthrough.ts's commander hunts him:
-// 48 of 48 shipped runs ended. ON THE BUILD OF 3752969b (10-14, frozen stand) the default is seeds 0,1,2,3 (0 = the level's own marks) and the four
+// strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). A commander that hunts him
+// ended 48 of 48 runs. ON THE BUILD OF 3752969b (10-14) the default is seeds 0,1,2,3 (0 = the level's own marks) and the four
 // takes the floor on all four (seed 2 at 51.8 s, one teammate up); the pair is wiped on 0, 1 and 2 and takes it on 3, which the probe does not ask of it.
 // Built from the kit (scene/levelKit.ts). Plan, +x east, +z south, metres:
 //
@@ -153,7 +153,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallX(k, 15, 0.48, 3.88, EXT, sw, [], {}, WALL_H);
   K.wallX(k, 19.5, 0.48, 3.88, EXT, sw, [K.doorAt(k, 'shed', 'x', 19.5, 2.4, { exterior: true })], {}, WALL_H);
   K.wallZ(k, 0.6, 15.12, 19.38, EXT, sw, [], {}, WALL_H);
-  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (lighting.ts stands its man north of the panel)
+  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/lighting stands its man north of the panel)
   K.add(k, { c: [1.6, 0.45, 15.75], h: [0.75, 0.45, 0.4], albedo: [0.5, 0.42, 0.1] });   // the generator set on its skid, against the north wall
   K.add(k, { c: [1.6, 0.94, 15.75], h: [0.5, 0.04, 0.3], albedo: C.black });
   K.add(k, { c: [2.37, 0.6, 15.75], h: [0.015, 0.02, 0.02], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });   // its running lamp
@@ -237,9 +237,9 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // out there the ground outside the wall had the sky's even fill and nothing else — no pool, no shadow, the men one grey with the wall (the depot and the
     // pass have thin moons too, and lamps outside). The moon stays (it is what keeps the yard black with the mains out); these go out with the floodlights,
     // so the dark is as dark as it was. A bulkhead lamp on the outer face of each gate post, thrown out and along the wall away from the gate, and one over
-    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (nvg.ts NVG.darkAt is 0.5 — at 50
+    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/nvg NVG.darkAt is 0.5 — at 50
     // the five marks read 0.29‥0.62 and the team stood up half goggled, half bare-eyed), Sam's about 0.3. Nobody in the building has a line to a start mark
-    // or to the shed's door (tools/qa/floodlit-check.ts asks both). TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
+    // or to the shed's door. TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
     // sits 2.6 m from the nearest mark and 5 from Sam's, so any strength that lifts Sam's reading (0.25 → 0.39 at 8) takes the near man over the line (0.53).
     const lamp = (name: string, x: number, y: number, face: number, dir: Vec3, intensity: number, range: number, outerDeg: number, color: Vec3) => {
       const head = K.add(k, { c: [x, y, face + 0.04], h: [0.1, 0.06, 0.04], albedo: C.metal, emissive: [30, 22, 12], flags: BoxFlag.NoShadow });   // on a wall's south face

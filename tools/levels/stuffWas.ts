@@ -2,10 +2,9 @@
 // Until then the look decided what a box is made of in three steps (render/gbuffer.ts lookWordOf, lookNamed, lookStuff, as they were): the box's own word;
 // else the NAME of the first row of the level file that has the box's colour, by the table of names, unless that name was one of six that are more than one
 // thing; else its COLOUR, matched against the 2010s palette exactly and then darkened in one piece. Nothing in src/ does that any more (scene/stuff.ts: what a
-// thing is made of is said). This file keeps the old rule, with the tables it read copied in as they stood, for two jobs and no other:
+// thing is made of is said). This file keeps the old rule, with the tables it read copied in as they stood, for one job and no other:
 //   · tools/levels/stuff-bake.ts brings a level file written before forward: every box says what it WAS drawn as, so the picture does not move;
-//   · tools/qa/stuff-audit.ts prints what every box of every level was and is, so that "nothing moved" is a count and not a claim.
-// NEVER EDIT THE TABLES BELOW to follow the game: they are a record. When no level file from before is left to bring forward, both tools and this go.
+// NEVER EDIT THE TABLES BELOW to follow the game: they are a record. When no level file from before is left to bring forward, the tool and this go.
 
 type Vec = readonly number[];
 /** how near a paint was its palette row, and how far a classed paint could be darkened in one piece and still be that stuff */
