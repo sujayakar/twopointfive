@@ -854,39 +854,77 @@ mod tests {
         m
     }
 
-    /// the TypeScript's own bits (bun, EXACT.on), hipsTurn on each branch: walking, backing up, into a leaf, by hand, standing
+    const LONG: f64 = 1.0;   // a frame long enough that his hips get where they are going
+
+    /// Walking on his own, hips go the way he walks and lean toward the aim, further with the gun up.
     #[test]
-    fn hips_turn_matches_the_typescripts_bits() {
-        let d60 = 1.0 / 60.0;
-        let rows: [(crate::player::Legs, f64, bool, bool, Option<f64>, bool, f64, u64, bool); 7] = [
-            (legs(0.3, 1.9, 1.2, -0.7, false), 1.4, false, false, None, false, d60, 0x3fdccccccccccccc, false),
-            (legs(-2.1, 1.0, -0.4, 2.2, true), 2.2, true, false, None, false, d60, 0xbfff333333333334, false),
-            (legs(0.5, 2.9, 1.0, 0.1, false), 1.0, false, true, Some(0.8), false, d60, 0x3fe6666666666666, false),
-            (legs(0.5, 2.9, 1.0, 0.1, false), 1.0, false, false, Some(-1.3), true, d60, 0x3fd3333333333333, true),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.0, false, false, None, false, d60, 0x3fcbbbbbbbbbbbbc, false),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.0, true, false, None, false, 1.0 / 30.0, 0x3fd5555555555556, false),
-            (legs(0.1, 1.7, 0.0, 0.0, false), 0.1, false, false, Some(2.0), true, d60, 0x3fd3333333333334, false),
-        ];
-        for (i, (m0, speed, aiming, orbit, into, by_hand, dt, bits, back)) in rows.into_iter().enumerate() {
-            let mut m = m0;
-            hips_turn(&mut m, speed, aiming, orbit, into, by_hand, dt);
-            assert_eq!(m.char.body_yaw.to_bits(), bits, "row {}", i);
-            assert_eq!(m.backpedal, back, "row {}", i);
-        }
+    fn walking_his_hips_follow_his_way_and_lean_to_his_aim() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let at = |aim: f64, aiming: bool| { let mut m = legs(0.0, aim, 0.0, 1.5, false); hips_turn(&mut m, 1.5, aiming, false, None, false, LONG); m.char.body_yaw };
+        near(at(0.5, false), 0.3);
+        near(at(0.5, true), 0.5);
+        near(at(1.5, true), 0.8);     // no further round than the waist goes
+        let mut m = legs(0.0, 0.5, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, true, false, None, false, 0.01);
+        near(m.char.body_yaw, 0.09);  // and at a rate, not at once
+    }
+
+    /// A failure means he flickers between walking forward and backing up as the cursor crosses his flank: it takes a clear look behind to start backing up, and a clear look ahead to stop.
+    #[test]
+    fn he_backs_up_with_his_aim_behind_him_and_does_not_flicker() {
+        let after = |aim: f64, back: bool| { let mut m = legs(0.0, aim, 0.0, 1.5, back); hips_turn(&mut m, 1.5, true, false, None, false, LONG); (m.backpedal, m.char.body_yaw) };
+        let (back, body) = after(m::PI, false);
+        assert!(back && (body.abs() - m::PI).abs() < 1e-9, "aim straight behind: back up facing it ({body})");
+        assert!(!after(1.7, false).0, "a little behind the shoulder: still walking forward");
+        assert!(after(1.7, true).0, "...and still backing up");
+        assert!(!after(1.0, true).0, "a clear look ahead ends it");
+    }
+
+    /// A failure means he turns away from the leaf he works: walked open it pulls his hips a little and he never backs up; by hand he faces it, and backs up if he walks away from it.
+    #[test]
+    fn a_leaf_turns_his_hips_more_than_his_aim_does() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, true);
+        hips_turn(&mut m, 1.5, false, true, Some(1.0), false, LONG);
+        assert!(!m.backpedal);
+        near(m.char.body_yaw, 0.35);
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, false, false, Some(1.3), true, LONG);
+        assert!(!m.backpedal);
+        near(m.char.body_yaw, 1.3);
+        let mut m = legs(0.0, 2.9, 0.0, 1.5, false);
+        hips_turn(&mut m, 1.5, false, false, Some(3.0), true, LONG);
+        assert!(m.backpedal);
+    }
+
+    /// Standing, his hips stay until the aim has gone past what the waist takes, less with the gun up; then they come round short of it.
+    #[test]
+    fn standing_his_hips_stay_until_the_aim_passes_the_waist() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let at = |aim: f64, aiming: bool, into: Option<f64>, hand: bool| { let mut m = legs(0.0, aim, 0.0, 0.0, true); hips_turn(&mut m, 0.0, aiming, false, into, hand, LONG); assert!(!m.backpedal); m.char.body_yaw };
+        assert_eq!(at(1.0, false, None, false), 0.0);
+        near(at(1.0, true, None, false), 1.0 - 0.6 * 0.7);
+        near(at(2.0, false, None, false), 2.0 - 1.2 * 0.7);
+        assert_eq!(at(0.0, false, Some(0.2), false), 0.0);
+        near(at(0.0, false, Some(0.4), false), 0.4 - 0.25 * 0.7);
+        near(at(0.0, false, Some(0.4), true), 0.4 - 0.1 * 0.7);
     }
 
     #[test]
-    fn keys_way_matches_the_typescripts_bits() {
-        let way = keys_way([0.6, 0.0, 0.8], [0.8, 0.0, -0.6], true, false, true, false);
-        assert_eq!(way[0].to_bits(), 0x3ff6666666666666);
-        assert_eq!(way[1].to_bits(), 0x3fc999999999999c);
+    fn his_keys_add_up_and_opposite_keys_cancel() {
+        let (fwd, right) = ([0.5, 0.0, 0.75], [0.75, 0.0, -0.5]);
+        assert_eq!(keys_way(fwd, right, true, false, true, false), [1.25, 0.25]);
+        assert_eq!(keys_way(fwd, right, false, true, false, true), [-1.25, -0.25]);
+        assert_eq!(keys_way(fwd, right, true, true, true, true), [0.0, 0.0]);
+        assert_eq!(keys_way(fwd, right, false, false, false, false), [0.0, 0.0]);
     }
 
     #[test]
-    fn leaf_facing_turns_only_for_a_leaf_that_pushes() {
-        let dp = crate::player::LeafFacingDp { w: 1.0, n: vec![0.3, 0.0, -0.95] };
-        assert_eq!(leaf_facing(Some(&dp), false).unwrap().to_bits(), 0xbfd39384f94e28a0);
-        assert_eq!(leaf_facing(Some(&dp), true), None);
+    fn a_leaf_turns_him_square_into_it_only_when_it_pushes() {
+        let dp = |w| crate::player::LeafFacingDp { w, n: vec![1.0, 0.0, 0.0] };
+        assert!((leaf_facing(Some(&dp(1.0)), false).unwrap() + m::PI / 2.0).abs() < 1e-12, "a yaw of minus a quarter faces -x, into a face whose normal is +x");
+        assert_eq!(leaf_facing(Some(&dp(0.5)), false), None);    // it merely rests on him
+        assert_eq!(leaf_facing(Some(&dp(1.0)), true), None);     // the gun is up
         assert_eq!(leaf_facing(None, false), None);
     }
 }

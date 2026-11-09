@@ -75,19 +75,23 @@ pub fn feet_hold(g: &mut crate::game::Game, prev: f64, speed: f64, dt: f64) -> f
 mod tests {
     use super::*;
     use crate::aimcost::RoundLeg;
+    use crate::v3::V3;
 
-    /// Expected bits and booleans are the TypeScript's own, run under bun with EXACT on.
+    /// A round flew along +x for 5 m, then along +z for 4 m and stopped.
     fn legs() -> [RoundLeg; 2] {
-        [RoundLeg { o: [1.25, 1.7, -3.1], d: [0.6, 0.0, 0.8], end: 7.3 }, RoundLeg { o: [5.625, 1.7, 2.5], d: [-0.8, 0.6, 0.0], end: 2.2 }]
+        [RoundLeg { o: [0.0; 3], d: [1.0, 0.0, 0.0], end: 5.0 }, RoundLeg { o: [5.0, 0.0, 0.0], d: [0.0, 0.0, 1.0], end: 4.0 }]
     }
 
+    /// A failure means a lamp is struck by a round that never came near it, or missed by one that passed it: the legs count only as far as the round flew.
     #[test]
-    fn legs_near_bits() {
+    fn a_rounds_legs_are_measured_only_as_far_as_it_flew() {
         let l = legs();
-        assert_eq!(legs_near([3.1, 2.2, 1.9], &l).to_bits(), 0x3ff45988b14c549a);
-        assert_eq!(legs_near([-4.0, 0.3, 0.1], &l).to_bits(), 0x40193916e14beafc);
-        assert_eq!(legs_near([20.0, 1.0, 20.0], &l).to_bits(), 0x40367848963bd91a);
-        assert_eq!(legs_near([1.0, 2.0, 3.0], &[]).to_bits(), 0x7ff0000000000000);
+        let near = |p: V3, want: f64| { let d = legs_near(p, &l); assert!((d - want).abs() < 1e-12, "{p:?}: {d}"); };
+        near([2.0, 3.0, 0.0], 3.0);        // beside the first leg
+        near([-4.0, 0.0, -3.0], 5.0);      // behind where it started
+        near([5.0, 0.0, 7.0], 3.0);        // past where it stopped
+        near([4.0, 0.0, 2.0], 1.0);        // the nearer of the two legs
+        assert_eq!(legs_near([1.0, 2.0, 3.0], &[]), f64::INFINITY);
     }
 
 }

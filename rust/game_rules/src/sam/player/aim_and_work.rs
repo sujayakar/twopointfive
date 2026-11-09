@@ -747,18 +747,24 @@ fn chest_or(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// bits printed by the TypeScript under EXACT
+    /// A failure means the gun swings the long way round to a cursor just past behind him, or at another rate at another frame rate.
     #[test]
-    fn aim_ease_is_the_typescripts_bits() {
-        assert_eq!(aim_ease(0.3, [1.0, 0.0, 2.0], 1.0 / 60.0).to_bits(), 0x3fd5a6cb23466713);
-        assert_eq!(aim_ease(-3.1, [-0.7, 0.2, -0.4], 1.0 / 30.0).to_bits(), 0xc00575bcbc220316);
-        assert_eq!(aim_ease(3.0, [-0.1, 0.0, -1.0], 0.25).to_bits(), 0x4009e50da7aef3a5);
+    fn the_gun_eases_the_short_way_round_at_any_frame_rate() {
+        let behind_him: V3 = [-0.04, 0.0, -1.0];                     // a bearing just over the seam at half a turn
+        let eased = aim_ease(3.0, behind_him, 1.0 / 60.0);
+        assert!(eased > 3.0 && eased < 3.0 + 0.4, "{eased}");
+        assert_eq!(aim_ease(0.3, [1.0, 0.0, 2.0], 0.0), 0.3);
+        let bearing = v3::yaw_of([1.0, 0.0, 2.0]);
+        assert!((aim_ease(0.3, [1.0, 0.0, 2.0], 5.0) - bearing).abs() < 1e-9, "he gets there and no further");
+        let once = aim_ease(0.3, [1.0, 0.0, 2.0], 1.0 / 30.0);
+        let twice = aim_ease(aim_ease(0.3, [1.0, 0.0, 2.0], 1.0 / 60.0), [1.0, 0.0, 2.0], 1.0 / 60.0);
+        assert!((once - twice).abs() < 1e-12, "{once} {twice}");
     }
+    /// A cursor whose ray met nothing still aims somewhere: a metre ahead of the way his body faces, at chest height off his feet.
     #[test]
-    fn aim_level_is_the_typescripts_bits() {
-        let a = aim_level(crate::player::AimLevelC { pos: [1.5, 0.0, -2.25], body_yaw: 0.7 });
-        assert_eq!(a.map(f64::to_bits), [0x4001275b9a51866e, 0x3ff2666666666666, 0xbff7c334d6b03137]);
-        let b = aim_level(crate::player::AimLevelC { pos: [-12.125, 1.05, 33.3], body_yaw: -2.4 });
-        assert_eq!(b.map(f64::to_bits), [0xc02999d64f5c3d1a, 0x400199999999999a, 0x404048037b942320]);
+    fn a_cursor_on_nothing_aims_level_a_metre_ahead_of_his_body() {
+        let near = |a: V3, b: V3| for k in 0..3 { assert!((a[k] - b[k]).abs() < 1e-12, "{a:?} {b:?}"); };
+        near(aim_level(crate::player::AimLevelC { pos: [1.5, 0.0, -2.25], body_yaw: 0.0 }), [1.5, 1.15, -1.25]);
+        near(aim_level(crate::player::AimLevelC { pos: [1.5, 1.0, -2.25], body_yaw: m::PI / 2.0 }), [2.5, 2.15, -2.25]);
     }
 }
