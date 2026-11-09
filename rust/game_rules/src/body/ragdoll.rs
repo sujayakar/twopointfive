@@ -26,10 +26,10 @@ const APART: [(usize, usize, f64); 20] = [(12, 13, 0.9), (14, 15, 0.9), (12, 15,
 /// knee direction rule over (hip, knee, ankle)
 const KNEES: [(usize, usize, usize); 2] = [(10, 12, 14), (11, 13, 15)];
 
-/// cos 55°, the game's own (ragdoll.ts:52): the skeleton's const of this name is one unit in the last place off it (see notes, ## Skeleton), and this one shadows it.
+/// cos 55°, the game's own: the skeleton's const of this name is one unit in the last place off it (see notes, ## Skeleton), and this one shadows it.
 const NECK_CONE_COS: f64 = 0.5735764363510462;
 
-/// wd.gather(…, this.near): the collision grid's indices of the statics round the body (ragdoll.ts:343). In a test, a stand-in for the grid's stub.
+/// wd.gather(…, this.near): the collision grid's indices of the statics round the body. In a test, a stand-in for the grid's stub.
 fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     #[cfg(test)]
     return tests::every_static(g, out);
@@ -37,8 +37,8 @@ fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
-/// `b.c`, `b.h`, `b.yaw` of a box (ragdoll.ts:345, :354). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`.
-/// Once the rows have a table this is the row's three fields. In a test, a stand-in for the table.
+/// `b.c`, `b.h`, `b.yaw` of a box. Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`. Once the rows have a table
+/// this is the row's three fields. In a test, a stand-in for the table.
 fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     #[cfg(test)]
     return tests::box_row(b);
@@ -46,7 +46,7 @@ fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 }
 
-/// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.   (ragdoll.ts Ragdoll.constructor)
+/// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.
 pub(super) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, world: Option<&crate::ragdoll::RagdollWorld>) -> RagdollId {
     let id = g.tab.ragdoll.push(crate::ragdoll::Ragdoll::blank());
     let this = &mut g.tab.ragdoll[id];
@@ -132,14 +132,14 @@ pub fn ragdoll_clear_pins(g: &mut crate::game::Game, id: RagdollId) { rd_clear_p
 pub fn ragdoll_ride(g: &mut crate::game::Game, id: RagdollId, about: V3, dx: f64, dz: f64, dyaw: f64) { rd_ride(&mut g.tab.ragdoll[id], about, dx, dz, dyaw) }
 /// (Ragdoll.takeImpact)
 pub fn ragdoll_take_impact(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
-/// Distance between two particles.   (ragdoll.ts Ragdoll.dist)
+/// Distance between two particles.
 fn rd_dist(this: &crate::ragdoll::Ragdoll, i: f64, j: f64) -> f64 {
     let (i, j) = (i as usize, j as usize);
     let x = &this.x;
     m::hyp3(x[j * 3] - x[i * 3], x[j * 3 + 1] - x[i * 3 + 1], x[j * 3 + 2] - x[i * 3 + 2])
 }
 
-/// World position of particle i (into `out` if given, and returned).   (ragdoll.ts Ragdoll.point)
+/// World position of particle i (into `out` if given, and returned).
 fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 {
     let i = i as usize;
     let p = [this.x[i * 3], this.x[i * 3 + 1], this.x[i * 3 + 2]];
@@ -147,12 +147,12 @@ fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 
     p
 }
 
-/// Collision radius of particle i.   (ragdoll.ts Ragdoll.radius)
+/// Collision radius of particle i.
 fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
     RADIUS[i as usize]
 }
 
-/// Add velocity (m/s) to one particle. Wakes the body.   (ragdoll.ts Ragdoll.addVelocity)
+/// Add velocity (m/s) to one particle. Wakes the body.
 fn rd_add_velocity(this: &mut crate::ragdoll::Ragdoll, i: f64, v: V3, scale: Option<f64>) {
     let i = i as usize;
     let scale = scale.unwrap_or(1.0);
@@ -161,7 +161,7 @@ fn rd_add_velocity(this: &mut crate::ragdoll::Ragdoll, i: f64, v: V3, scale: Opt
     this.awake = 0.0;
 }
 
-/// Add a rigid velocity field to the whole body: v + ω × (p − trunk centre).   (ragdoll.ts Ragdoll.addRigidVelocity)
+/// Add a rigid velocity field to the whole body: v + ω × (p − trunk centre).
 fn rd_add_rigid_velocity(this: &mut crate::ragdoll::Ragdoll, v: V3, omega: V3) {
     let c = this.centre;
     for i in 0..N {
@@ -175,7 +175,7 @@ fn rd_add_rigid_velocity(this: &mut crate::ragdoll::Ragdoll, v: V3, omega: V3) {
     this.awake = 0.0;
 }
 
-/// Displace one particle in the ground plane; wakes it if it actually moved.   (ragdoll.ts Ragdoll.nudge)
+/// Displace one particle in the ground plane; wakes it if it actually moved.
 fn rd_nudge(this: &mut crate::ragdoll::Ragdoll, i: f64, dx: f64, dz: f64) {
     if m::abs(dx) + m::abs(dz) < 1e-4 { return; }
     let i = i as usize;
@@ -183,7 +183,7 @@ fn rd_nudge(this: &mut crate::ragdoll::Ragdoll, i: f64, dx: f64, dz: f64) {
     rd_wake(this);
 }
 
-/// Simulate again from now; does not reset the MAX_AWAKE budget.   (ragdoll.ts Ragdoll.wake)
+/// Simulate again from now; does not reset the MAX_AWAKE budget.
 fn rd_wake(this: &mut crate::ragdoll::Ragdoll) {
     if !this.sleeping { return; }
     this.sleeping = false;
@@ -191,7 +191,7 @@ fn rd_wake(this: &mut crate::ragdoll::Ragdoll) {
     this.snap.copy_from_slice(&this.x);
 }
 
-/// Hold particle i at `target` (moved there kinematically, ≤ PIN_STEP per substep).   (ragdoll.ts Ragdoll.setPin)
+/// Hold particle i at `target` (moved there kinematically, ≤ PIN_STEP per substep).
 fn rd_set_pin(this: &mut crate::ragdoll::Ragdoll, i: f64, target: V3) {
     let i = i as usize;
     this.pin_t[i * 3] = target[0]; this.pin_t[i * 3 + 1] = m::max(target[1], RADIUS[i]); this.pin_t[i * 3 + 2] = target[2];
@@ -199,7 +199,7 @@ fn rd_set_pin(this: &mut crate::ragdoll::Ragdoll, i: f64, target: V3) {
     rd_wake(this);
 }
 
-/// Let ONE pinned particle go.   (ragdoll.ts Ragdoll.unpin)
+/// Let ONE pinned particle go.
 fn rd_unpin(this: &mut crate::ragdoll::Ragdoll, i: f64) {
     let i = i as usize;
     if this.pinned[i] == 0 { return; }
@@ -211,12 +211,12 @@ fn rd_unpin(this: &mut crate::ragdoll::Ragdoll, i: f64) {
     rd_wake(this);
 }
 
-/// Is this particle pinned.   (ragdoll.ts Ragdoll.isPinned)
+/// Is this particle pinned.
 fn rd_is_pinned(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
     this.pinned[i as usize] != 0
 }
 
-/// Let every pin go.   (ragdoll.ts Ragdoll.clearPins)
+/// Let every pin go.
 fn rd_clear_pins(this: &mut crate::ragdoll::Ragdoll) {
     if !this.any_pin { return; }
     for i in 0..N { this.pinned[i] = 0; this.w[i] = 1.0 / MASS[i]; }
@@ -225,7 +225,7 @@ fn rd_clear_pins(this: &mut crate::ragdoll::Ragdoll) {
     this.ride_owed = false;
 }
 
-/// A CARRIED body rides its carrier: over the next step the free particles take his step and turn.   (ragdoll.ts Ragdoll.ride)
+/// A CARRIED body rides its carrier: over the next step the free particles take his step and turn.
 fn rd_ride(this: &mut crate::ragdoll::Ragdoll, about: V3, dx: f64, dz: f64, dyaw: f64) {
     if this.ride_owed {
         let k = m::min(1.0, MAX_STEP / m::max(1e-9, m::hyp2(this.ride_v[2], this.ride_v[3]) + m::abs(this.ride_v[4])));
@@ -237,7 +237,7 @@ fn rd_ride(this: &mut crate::ragdoll::Ragdoll, about: V3, dx: f64, dz: f64, dyaw
     this.ride_owed = true;
 }
 
-/// Take the free particles through share `k` of what is owed.   (ragdoll.ts Ragdoll.rideBy)
+/// Take the free particles through share `k` of what is owed.
 fn rd_ride_by(this: &mut crate::ragdoll::Ragdoll, k: f64) {
     let (ax, az, sx, sz, co, si) = (this.ride_v[0], this.ride_v[1], this.ride_v[2] * k, this.ride_v[3] * k, m::cos(this.ride_v[4] * k), m::sin(this.ride_v[4] * k));
     let (x, px) = (&mut this.x, &mut this.px);
@@ -253,7 +253,7 @@ fn rd_ride_by(this: &mut crate::ragdoll::Ragdoll, k: f64) {
     this.ride_v[1] += sz;
 }
 
-/// Hardest trunk / head landing worth hearing since the last one reported; 0 otherwise.   (ragdoll.ts Ragdoll.takeImpact)
+/// Hardest trunk / head landing worth hearing since the last one reported; 0 otherwise.
 fn rd_take_impact(this: &mut crate::ragdoll::Ragdoll, min: Option<f64>, gap: Option<f64>) -> f64 {
     let (min, gap) = (min.unwrap_or(1.4), gap.unwrap_or(0.25));
     let v = this.impact_v;
@@ -263,7 +263,7 @@ fn rd_take_impact(this: &mut crate::ragdoll::Ragdoll, min: Option<f64>, gap: Opt
     v
 }
 
-/// Advance by dt (s): fixed 180 Hz substeps from an accumulator, at most MAX_SUBSTEPS a call.   (ragdoll.ts Ragdoll.step)
+/// Advance by dt (s): fixed 180 Hz substeps from an accumulator, at most MAX_SUBSTEPS a call.
 pub(super) fn ragdoll_step(g: &mut crate::game::Game, id: RagdollId, dt: f64) {
     let this = &mut g.tab.ragdoll[id];
     this.since_impact += dt;
@@ -283,7 +283,7 @@ pub(super) fn ragdoll_step(g: &mut crate::game::Game, id: RagdollId, dt: f64) {
     if js::truthy(share) { g.tab.ragdoll[id].ride_owed = false; }
 }
 
-/// One 180 Hz substep: integrate, gather, project, contacts, sleep.   (ragdoll.ts Ragdoll.substep)
+/// One 180 Hz substep: integrate, gather, project, contacts, sleep.
 fn ragdoll_substep(g: &mut crate::game::Game, id: RagdollId) {
     rd_integrate(&mut g.tab.ragdoll[id]);
     // 2. what is around the body this substep
@@ -400,7 +400,7 @@ fn rd_solve(this: &mut crate::ragdoll::Ragdoll) {
     }
 }
 
-/// Clamp |xj − xi| into [lo, hi], corrections split by inverse mass.   (ragdoll.ts Ragdoll.distance)
+/// Clamp |xj − xi| into [lo, hi], corrections split by inverse mass.
 fn rd_distance(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, lo: f64, hi: f64) {
     let (i, j) = (i as usize, j as usize);
     let (a, b) = (i * 3, j * 3);
@@ -418,7 +418,7 @@ fn rd_distance(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, lo: f64, hi: 
     x[b] -= dx * k * wj; x[b + 1] -= dy * k * wj; x[b + 2] -= dz * k * wj;
 }
 
-/// Sphere-sphere keep-apart of limb particle i off particle j, logged as a contact on the limb.   (ragdoll.ts Ragdoll.apart)
+/// Sphere-sphere keep-apart of limb particle i off particle j, logged as a contact on the limb.
 fn rd_apart(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, lo: f64) {
     let (iu, ju) = (i as usize, j as usize);
     let (a, b) = (iu * 3, ju * 3);
@@ -435,7 +435,7 @@ fn rd_apart(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, lo: f64) {
     rd_contact(this, i, dx / l, dy / l, dz / l, (lo - l) * wi / ws);
 }
 
-/// Keep the direction i→j within acos(cosMax) of a trunk-relative axis.   (ragdoll.ts Ragdoll.cone)
+/// Keep the direction i→j within acos(cosMax) of a trunk-relative axis.
 fn rd_cone(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, axis0: V3, cos_max: f64) {
     let (i, j) = (i as usize, j as usize);
     let (a, b) = (i * 3, j * 3);
@@ -465,7 +465,7 @@ fn rd_cone(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64, axis0: V3, cos_ma
     x[a] -= ex * wi / ws; x[a + 1] -= ey * wi / ws; x[a + 2] -= ez * wi / ws;
 }
 
-/// Knee k must lie on the trunk's forward side of the hip-ankle line, projected with inverse-mass weights.   (ragdoll.ts Ragdoll.knee)
+/// Knee k must lie on the trunk's forward side of the hip-ankle line, projected with inverse-mass weights.
 fn rd_knee(this: &mut crate::ragdoll::Ragdoll, hi: f64, ki: f64, ai: f64) {
     let (hi, ki, ai) = (hi as usize, ki as usize, ai as usize);
     let (a, b, c) = (hi * 3, ki * 3, ai * 3);
@@ -492,7 +492,7 @@ fn rd_knee(this: &mut crate::ragdoll::Ragdoll, hi: f64, ki: f64, ai: f64) {
     x[c] += fx * da; x[c + 1] += fy * da; x[c + 2] += fz * da;
 }
 
-/// Rigid trunk: best-fit rotation of the cluster against its bind shape, then every member snapped to centroid + R·rest offset.   (ragdoll.ts Ragdoll.shapeMatch)
+/// Rigid trunk: best-fit rotation of the cluster against its bind shape, then every member snapped to centroid + R·rest offset.
 fn rd_shape_match(this: &mut crate::ragdoll::Ragdoll) {
     let mass = this.trunk_mass;
     let (mut cx, mut cy, mut cz) = (0.0, 0.0, 0.0);
@@ -523,7 +523,7 @@ fn rd_shape_match(this: &mut crate::ragdoll::Ragdoll) {
     }
 }
 
-/// Statics whose footprint overlaps the body's box (± a margin) and door leaves within reach, with their yaw cos/sin.   (ragdoll.ts Ragdoll.gatherNear)
+/// Statics whose footprint overlaps the body's box (± a margin) and door leaves within reach, with their yaw cos/sin.
 fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     let this = &mut g.tab.ragdoll[id];
     this.n_near = 0.0;
@@ -580,7 +580,7 @@ fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     }
 }
 
-/// True if particle i's centre is inside one of the gathered statics (bind-time check only).   (ragdoll.ts Ragdoll.buried)
+/// True if particle i's centre is inside one of the gathered statics (bind-time check only).
 fn rd_buried(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
     if !this.world { return false; }
     let o = i as usize * 3;
@@ -596,7 +596,7 @@ fn rd_buried(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
     false
 }
 
-/// Push particle i out of the floor, the nearby statics and door leaves; records contact depth / normal.   (ragdoll.ts Ragdoll.collide)
+/// Push particle i out of the floor, the nearby statics and door leaves; records contact depth / normal.
 fn rd_collide(this: &mut crate::ragdoll::Ragdoll, i: f64) {
     let o = i as usize * 3;
     let r = RADIUS[i as usize];
@@ -621,7 +621,7 @@ fn rd_collide(this: &mut crate::ragdoll::Ragdoll, i: f64) {
     this.dyn_b = dyn_b;
 }
 
-/// Note a contact on particle i: deepest depth, summed normal.   (ragdoll.ts Ragdoll.contact)
+/// Note a contact on particle i: deepest depth, summed normal.
 fn rd_contact(this: &mut crate::ragdoll::Ragdoll, i: f64, nx: f64, ny: f64, nz: f64, pen: f64) {
     let i = i as usize;
     if pen > this.pen[i] { this.pen[i] = pen; }
@@ -629,7 +629,7 @@ fn rd_contact(this: &mut crate::ragdoll::Ragdoll, i: f64, nx: f64, ny: f64, nz: 
     this.cn[o] += nx * pen; this.cn[o + 1] += ny * pen; this.cn[o + 2] += nz * pen;
 }
 
-/// Sphere (particle i, radius r) against a yawed box; b[q‥q+5] = the box's centre and half-sizes.   (ragdoll.ts Ragdoll.sphereBox)
+/// Sphere (particle i, radius r) against a yawed box; b[q‥q+5] = the box's centre and half-sizes.
 fn rd_sphere_box(this: &mut crate::ragdoll::Ragdoll, i: f64, r: f64, b: &[f64], q: f64, c_2: f64, s: f64) {
     let (c, q) = (c_2, q as usize);
     let o = i as usize * 3;
@@ -674,7 +674,7 @@ fn rd_sphere_box(this: &mut crate::ragdoll::Ragdoll, i: f64, r: f64, b: &[f64], 
     rd_contact(this, i, nx, ny, nz, pen);
 }
 
-/// Rotational part of the 3×3 matrix A (row-major), refined from the warm start q in place (Müller et al. 2016).   (ragdoll.ts extractRotation)
+/// Rotational part of the 3×3 matrix A (row-major), refined from the warm start q in place (Müller et al. 2016).
 fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
     let mut rr = [0.0; 9];   // (erR: module scratch in the TypeScript)
     let mut it = 0.0;
@@ -704,7 +704,7 @@ fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
     }
 }
 
-/// Row-major 3×3 rotation matrix of unit quaternion q into out.   (ragdoll.ts quatToMat)
+/// Row-major 3×3 rotation matrix of unit quaternion q into out.
 fn quat_to_mat(q: Quat, out: &mut Vec<f64>) {
     quat_mat(q, out.as_mut_slice());
 }
@@ -731,7 +731,6 @@ mod tests {
     }
 
     std::thread_local! {
-        /// The box rows' stand-in (the skeleton has no table of them yet): centre, half sizes, yaw.
         static BOX_ROWS: std::cell::RefCell<Vec<(V3, V3, f64)>> = std::cell::RefCell::new(Vec::new());
     }
     pub(super) fn box_row(b: BoxId) -> (V3, V3, f64) { BOX_ROWS.with(|t| t.borrow()[b.ix()]) }

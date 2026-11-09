@@ -1,4 +1,4 @@
-//! A calm guard burns his torch only where he needs it. (src/game/calmtorch.ts)
+//! A calm guard burns his torch only where he needs it.
 
 pub use ::game_types::calmtorch::types;
 pub use types::*;
@@ -8,14 +8,14 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// The place's steady light at a point of floor, on the meter's scale. (calmtorch.ts placeLight)
+/// The place's steady light at a point of floor, on the meter's scale.
 pub fn place_light(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let mut skip = |_: &mut Game, _: f64| true;
     let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 
-/// Is this point lit enough to work in: `bar` there, on floor in plain view inside `spillM`, or by day on lit floor out to `dayM`. (calmtorch.ts workLit)
+/// Is this point lit enough to work in: `bar` there, on floor in plain view inside `spillM`, or by day on lit floor out to `dayM`.
 pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> bool {
     let bar = bar.unwrap_or(g.k.torch.lit_at);
     if place_light(g, x, z) >= bar {
@@ -59,7 +59,7 @@ pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> 
     false
 }
 
-/// His place read for the switch: 1 lit all down his look, -1 dark here or just ahead, 0 between. (calmtorch.ts placeRead)
+/// His place read for the switch: 1 lit all down his look, -1 dark here or just ahead, 0 between.
 fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let x = g.ch[c].pos[0];
@@ -91,7 +91,7 @@ fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if lit { 1.0 } else { 0.0 }
 }
 
-/// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind. (calmtorch.ts calmTorchRuled)
+/// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind.
 fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_none()
         && g.gd[gd].team == crate::teams::Team::Guard
@@ -102,7 +102,7 @@ fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
         && g.gd[gd].body_duty.is_none()
 }
 
-/// True = his torch is dark this frame; counts `dt` on his dwell. (calmtorch.ts calmTorchDark)
+/// True = his torch is dark this frame; counts `dt` on his dwell.
 pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     let dt = if g.m.calmtorch.posing { 0.0 } else { dt };
     if !calm_torch_ruled(g, gd) {
@@ -160,7 +160,7 @@ pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool 
     s.dark
 }
 
-/// The switch under his thumb, for the player's ears only: no event is filed, nobody hears it. (calmtorch.ts click)
+/// The switch under his thumb, for the player's ears only: no event is filed, nobody hears it.
 fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on {
         g.stats.calmtorch.clicks_on += 1;

@@ -37,10 +37,10 @@ fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<Follo
     c.pin
 }
 
-/// Hold the view (none: let it go). (camera.ts FollowCamera.setPin)
+/// Hold the view (none: let it go).
 pub fn follow_camera_set_pin(g: &mut Game, id: CameraId, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> { set_pin(&mut g.tab.camera[id], p) }
 
-/// A drawn frame and a tick's follow, together. (camera.ts FollowCamera.update)
+/// A drawn frame and a tick's follow, together.
 pub fn follow_camera_update(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
     update(&mut g.tab.camera[id], dt, follow, aim_point)
 }
@@ -49,7 +49,7 @@ fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     step(c, dt, follow, aim_point);
 }
 
-/// Once a game tick: the follow itself, or the pin verbatim. (camera.ts FollowCamera.step)
+/// Once a game tick: the follow itself, or the pin verbatim.
 fn follow_camera_step(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
     step(&mut g.tab.camera[id], dt, follow, aim_point)
 }
@@ -79,7 +79,7 @@ fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     rebuild(c);
 }
 
-/// Once a drawn frame: 'previous' becomes the matrix the last frame was drawn with. (camera.ts FollowCamera.frame)
+/// Once a drawn frame: 'previous' becomes the matrix the last frame was drawn with.
 fn follow_camera_frame(g: &mut Game, id: CameraId) {
     frame(&mut g.tab.camera[id])
 }
@@ -149,7 +149,7 @@ fn draw_out(c: &mut FollowCamera) {
     rebuild(c);
 }
 
-/// The matrices from look-at, angles and distance; the tick calls it too (game.ts:1665, journal.ts:879). (camera.ts FollowCamera.rebuild)
+/// The matrices from look-at, angles and distance; the tick calls it too.
 pub fn follow_camera_rebuild(g: &mut Game, id: CameraId) {
     rebuild(&mut g.tab.camera[id])
 }
@@ -166,7 +166,7 @@ fn rebuild(c: &mut FollowCamera) {
     }
 }
 
-/// Spectating: every half second, pick the yaw the followed man can be seen from. (camera.ts FollowCamera.autoYaw)
+/// Spectating: every half second, pick the yaw the followed man can be seen from.
 fn follow_camera_auto_yaw(g: &mut Game, id: CameraId, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
     // (`blocked` needs g, so the camera is let go across the search; the level's segment test writes no yaw)
     let yaw = match auto_yaw_due(&mut g.tab.camera[id], dt) {
@@ -225,7 +225,6 @@ fn ease_yaw(c: &mut FollowCamera, dt: f64, on: bool) {
     c.yaw += d * m::min(1.0, dt * 3.0);
 }
 
-/// (camera.ts FollowCamera.zoom)
 pub fn follow_camera_zoom(g: &mut Game, id: CameraId, delta: f64) {
     zoom(&mut g.tab.camera[id], delta)
 }
@@ -233,12 +232,11 @@ fn zoom(c: &mut FollowCamera, delta: f64) {
     c.desired_distance = v3::clamp(c.desired_distance * m::exp(delta * 0.0012), 6.0, 40.0);
 }
 
-/// (camera.ts FollowCamera.rotate)
 pub fn follow_camera_rotate(g: &mut Game, id: CameraId, d_yaw: f64) {
     g.tab.camera[id].yaw += d_yaw;
 }
 
-/// World point to CSS pixels of a w×h view, and whether it is showable. (camera.ts FollowCamera.project)
+/// World point to CSS pixels of a w×h view, and whether it is showable.
 pub fn follow_camera_project(g: &Game, id: CameraId, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
     project(&g.tab.camera[id].view_proj, p, w, h, margin, min_w)
 }
@@ -258,7 +256,7 @@ pub fn project(vp: &crate::v3::m4::Mat4, p: V3, w: f64, h: f64, margin: Option<f
     )
 }
 
-/// World-space ray through a pixel in [0,1]² UV, origin top-left. (camera.ts FollowCamera.ray)
+/// World-space ray through a pixel in [0,1]² UV, origin top-left.
 pub fn follow_camera_ray(g: &Game, id: CameraId, u: f64, v: f64) -> FollowCameraRay {
     ray(&g.tab.camera[id].inv_view_proj, u, v)
 }
@@ -270,7 +268,7 @@ pub fn ray(inv_view_proj: &crate::v3::m4::Mat4, u: f64, v: f64) -> FollowCameraR
     FollowCameraRay { ro: p0, rd: v3::normalize(v3::sub(p1, p0)) }
 }
 
-/// A UV ray against the plane y = h. (camera.ts FollowCamera.groundPoint)
+/// A UV ray against the plane y = h.
 pub fn follow_camera_ground_point(g: &Game, id: CameraId, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
     ground_point(&g.tab.camera[id].inv_view_proj, u, v, h)
 }
@@ -288,7 +286,7 @@ pub fn ground_point(inv_view_proj: &crate::v3::m4::Mat4, u: f64, v: f64, h: Opti
     Some(v3::mad(ro, rd, t))
 }
 
-/// Camera-relative planar basis for WASD. (camera.ts FollowCamera.planarBasis)
+/// Camera-relative planar basis for WASD.
 pub fn follow_camera_planar_basis(g: &Game, id: CameraId) -> FollowCameraPlanarBasis {
     planar_basis(&g.tab.camera[id])
 }

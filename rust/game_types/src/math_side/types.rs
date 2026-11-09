@@ -11,7 +11,6 @@ pub struct MathSideModPUTBACKS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct MathSideMod {
-    /// (src/math/side.ts:134 PUT_BACKS)
     #[is(crate::math_side::MathSideModPUTBACKS { n: 0.0 })] pub put_backs: crate::math_side::MathSideModPUTBACKS,
 }
 

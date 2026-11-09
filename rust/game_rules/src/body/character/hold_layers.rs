@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 3981 to 4293
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,24 +16,24 @@ fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 
 // ---- handwork
 
-/// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands? (character.ts workInfo)
+/// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands?
 pub fn anim_work_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimWorkInfo {
     let k = &g.ch[c].anim.wk;
     crate::character::AnimWorkInfo { pose: k.last.clone(), w: k.shown, hand: k.main, two: k.two }
 }
 
-/// The verb is done: the pose carries on by itself for `secs` past its end. (character.ts workAfter)
+/// The verb is done: the pose carries on by itself for `secs` past its end.
 pub fn anim_work_after(g: &mut crate::game::Game, c: CharId, secs: f64) {
     if g.ch[c].anim.wk.last.is_some() { g.ch[c].anim.wk.after = secs; }
 }
 
-/// A line over the radio: the left hand goes up for about `secs`. (character.ts radio)
+/// A line over the radio: the left hand goes up for about `secs`.
 pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
     let r = &mut g.ch[c].anim.rx;
     r.left = m::max(r.left, v3::clamp(secs, 0.8, 3.0));
 }
 
-/// What the gun hand visibly holds: the rule's, unless a swap is running. (character.ts swapHeld)
+/// What the gun hand visibly holds: the rule's, unless a swap is running.
 pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
@@ -48,12 +47,12 @@ pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::char
     if a < k.away { s.from } else if a < k.take { None } else { s.to }
 }
 
-/// How far the swap's hand is at the torch on his belt this frame. (character.ts swapBelt)
+/// How far the swap's hand is at the torch on his belt this frame.
 pub(super) fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.sw.belt
 }
 
-/// The swap's progress (-1: none), what it goes to, and whether one waits. (character.ts swapInfo)
+/// The swap's progress (-1: none), what it goes to, and whether one waits.
 pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
     let s = &g.ch[c].anim.sw;
     crate::character::AnimSwapInfo {
@@ -62,7 +61,7 @@ pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::Ani
     }
 }
 
-/// The torch and sidearm swap's clock, and its arm when it shows. (character.ts swapLayer)
+/// The torch and sidearm swap's clock, and its arm when it shows.
 pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) {
     if taken { g.ch[c].anim.sw.t = -1.0; return; }
     let weapon = g.ch[c].anim.sw.to == Some(AnimCarry::Weapon);
@@ -94,7 +93,7 @@ fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: 
     anim_layer(g, c, |s, an, n| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p, n));
 }
 
-/// Hands at work on a thing: the gate, and the layer when it runs. (character.ts workLayer)
+/// Hands at work on a thing: the gate, and the layer when it runs.
 pub(super) fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool, armed: bool, tw_y: f64, tw_p: f64) {
     let k = &mut g.ch[c].anim.wk;
     if k.last.is_none() { k.shown = 0.0; return; }
@@ -115,7 +114,7 @@ pub(super) fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fre
 /// The torch up in the hand that holds it, weight e.
 pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::torch_up(s, an, e, k)); }
 
-/// A hand to the radio: its clock and spring, and the pose when it shows. (character.ts radioLayer)
+/// A hand to the radio: its clock and spring, and the pose when it shows.
 pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
     let r = &mut g.ch[c].anim.rx;
     r.left = m::max(0.0, r.left - dt);
@@ -152,7 +151,7 @@ pub(super) fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
     anim_layer(g, c, |s, an, k| ::sim::layers::held_layer(s, an, w, dt, &h, kill, beats, k));
 }
 
-/// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold. (character.ts holdBusy)
+/// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold.
 pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let an = &mut g.ch[c].anim;
     // (undefined, null or a word: all three are told apart)
@@ -173,7 +172,7 @@ pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
 
 // ---- the big tool
 
-/// The big slot's tool in his hands: the way out that poses nothing, then the layer. (character.ts bigLayer)
+/// The big slot's tool in his hands: the way out that poses nothing, then the layer.
 pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character::AnimBigTool, tw_y: f64, tw_p: f64) {
     let stowing = b.end >= 0.0 && b.t >= b.end;
     let us = if stowing { v3::clamp((b.t - b.end) / m::max(1e-3, b.stow), 0.0, 1.0) } else { 0.0 };
@@ -201,7 +200,7 @@ pub(super) fn anim_throw_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
 
 // ---- the capsules' records
 
-/// One capsule record [a, r, b] of Character.capsules: the segment a to c, its far end carried `extend_b` further along it. (character.ts capRec)
+/// One capsule record [a, r, b] of Character.capsules: the segment a to c, its far end carried `extend_b` further along it.
 pub(super) fn cap_rec(a: V3, c_2: V3, r: f64, extend_b: Option<f64>) -> Vec<f64> {
     let extend_b = extend_b.unwrap_or(0.0);
     let (mut bx, mut by, mut bz) = (c_2[0], c_2[1], c_2[2]);
@@ -213,7 +212,7 @@ pub(super) fn cap_rec(a: V3, c_2: V3, r: f64, extend_b: Option<f64>) -> Vec<f64>
     vec![a[0], a[1], a[2], r, bx, by, bz]
 }
 
-/// The shoe's capsule: heel to past the toe along the sole. (character.ts capSole)
+/// The shoe's capsule: heel to past the toe along the sole.
 pub(super) fn cap_sole(foot: V3, toe: V3) -> Vec<f64> {
     let up = TOE_FLOOR_Y;
     let heel: V3 = [foot[0] - (toe[0] - foot[0]) * 0.35, m::min(foot[1], toe[1] - up + 0.033 + (foot[1] - toe[1]) * 0.15), foot[2] - (toe[2] - foot[2]) * 0.35];

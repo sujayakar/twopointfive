@@ -18,9 +18,7 @@ pub enum SuitAs {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SceneLookMod {
-    /// (src/scene/look.ts:24 suitAsked)
     pub suit_asked: Option<crate::scene_look::SceneLookModSuitAsked>,
-    /// (src/scene/look.ts:35 lookPlace)
     #[is(true)] pub look_place: bool,
 }
 

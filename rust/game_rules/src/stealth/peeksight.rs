@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.   (peeksight.ts peekEye)
+/// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.
 pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wall?;
@@ -29,12 +29,11 @@ pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) 
     Some(eye_at(own, p, turned_look(own.look, s, t, n, e, turn_deg)))
 }
 
-/// (peeksight.ts:40 `e`)
 fn ease(peek: f64) -> f64 {
     peek * peek * (3.0 - 2.0 * peek)
 }
 
-/// How far along the wall and how far toward its plane the head goes at full peek.   (peeksight.ts:42-43)
+/// How far along the wall and how far toward its plane the head goes at full peek.
 fn lean(own_at: V3, s: f64, t: V3, n: V3, d: f64, lo: f64, hi: f64, out: f64, off: f64) -> (f64, f64) {
     let u = own_at[0] * t[0] + own_at[2] * t[2];
     let dist = own_at[0] * n[0] + own_at[2] * n[2] - d;
@@ -43,12 +42,12 @@ fn lean(own_at: V3, s: f64, t: V3, n: V3, d: f64, lo: f64, hi: f64, out: f64, of
     (along, inward)
 }
 
-/// The head's place a share `k` of the way out.   (peeksight.ts:44 the closure `at`)
+/// The head's place a share `k` of the way out.
 fn lean_at(own_at: V3, t: V3, n: V3, along: f64, inward: f64, k: f64) -> V3 {
     [own_at[0] + (t[0] * along - n[0] * inward) * k, own_at[1], own_at[2] + (t[2] * along - n[2] * inward) * k]
 }
 
-/// The look turned with the peek, by angle, from his own to `turn_deg`: by way of 'along the wall', never the room behind him.   (peeksight.ts:54-56)
+/// The look turned with the peek, by angle, from his own to `turn_deg`: by way of 'along the wall', never the room behind him.
 fn turned_look(own_look: V3, s: f64, t: V3, n: V3, e: f64, turn_deg: f64) -> V3 {
     let ox = (own_look[0] * t[0] + own_look[2] * t[2]) * s;
     let oy = -(own_look[0] * n[0] + own_look[2] * n[2]);
@@ -59,7 +58,7 @@ fn turned_look(own_look: V3, s: f64, t: V3, n: V3, e: f64, turn_deg: f64) -> V3 
     [t[0] * cs - n[0] * sn, 0.0, t[2] * cs - n[2] * sn]
 }
 
-/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent, as the TypeScript's literal leaves them.   (peeksight.ts:51,56)
+/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent, as the TypeScript's literal leaves them.
 fn eye_at(own: crate::fogofwar::FogEye, p: V3, look: V3) -> crate::fogofwar::FogEye {
     crate::fogofwar::FogEye { id: own.id, pos: p, look, at: p, fov: None, near: None, wand: None }
 }

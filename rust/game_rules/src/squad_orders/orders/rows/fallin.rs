@@ -10,7 +10,7 @@ pub const ORDER: Row = Row { is: &[Is::Follows, Is::LooksAbout, Is::Resumed], ..
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 
-/// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first (orders.ts:611)
+/// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
     for (gd, a) in g.orders.asg.iter() {

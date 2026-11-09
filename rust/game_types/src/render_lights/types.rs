@@ -67,6 +67,5 @@ pub struct RtLightPortal {
     pub share: f64,
 }
 
-/// (src/render/lights.ts:76 MAX_LIGHTS)
 pub const MAX_LIGHTS: f64 = 64.0;
 

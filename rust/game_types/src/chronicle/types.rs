@@ -282,52 +282,36 @@ pub enum SummaryLineState {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ChronicleMod {
-    /// (src/game/chronicle.ts:90 CHATTER)
     #[is({ let mut s = JsSet::new(); for k in [crate::chronicle::ChronKind::Heard, crate::chronicle::ChronKind::Shot, crate::chronicle::ChronKind::Radio, crate::chronicle::ChronKind::Lost, crate::chronicle::ChronKind::Calm, crate::chronicle::ChronKind::Contact, crate::chronicle::ChronKind::NeedBreak] { s.add(k); } s })] pub chatter: JsSet<crate::chronicle::ChronKind>,
 }
 
-/// (src/game/chronicle.ts:27 ROOMS: a table nothing writes)
 pub fn rooms() -> Vec<crate::chronicle::ROOMSItem> { alloc::vec![crate::chronicle::ROOMSItem { name: String::from("corridor"), x0: 4.0, x1: 36.0, z0: 10.0, z1: 12.2 }, crate::chronicle::ROOMSItem { name: String::from("conference room"), x0: 4.0, x1: 14.0, z0: 4.0, z1: 10.0 }, crate::chronicle::ROOMSItem { name: String::from("server room"), x0: 14.0, x1: 22.0, z0: 4.0, z1: 10.0 }, crate::chronicle::ROOMSItem { name: String::from("manager's office"), x0: 22.0, x1: 30.0, z0: 4.0, z1: 10.0 }, crate::chronicle::ROOMSItem { name: String::from("storage"), x0: 30.0, x1: 36.0, z0: 4.0, z1: 10.0 }, crate::chronicle::ROOMSItem { name: String::from("lobby"), x0: 4.0, x1: 12.0, z0: 12.2, z1: 24.0 }, crate::chronicle::ROOMSItem { name: String::from("cubicles"), x0: 12.0, x1: 28.0, z0: 12.2, z1: 24.0 }, crate::chronicle::ROOMSItem { name: String::from("break room"), x0: 28.0, x1: 36.0, z0: 12.2, z1: 24.0 }] }
 
-/// (src/game/chronicle.ts:89 MAX_EVENTS)
 pub const MAX_EVENTS: f64 = 700.0;
 
-/// (src/game/chronicle.ts:89 SOFT_EVENTS)
 pub const SOFT_EVENTS: f64 = 520.0;
 
-/// (src/game/chronicle.ts:97 PATH_CAP)
 pub const PATH_CAP: f64 = 4000.0;
 
-/// (src/game/chronicle.ts:100 HEARD_MERGE_SECS)
 pub const HEARD_MERGE_SECS: f64 = 8.0;
 
-/// (src/game/chronicle.ts:100 SHOT_MERGE_SECS)
 pub const SHOT_MERGE_SECS: f64 = 2.5;
 
-/// (src/game/chronicle.ts:102 SHOT_NEAR_M)
 pub const SHOT_NEAR_M: f64 = 3.0;
 
-/// (src/game/chronicle.ts:220 RANK: a table nothing writes)
 pub fn rank() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("pricks up"), 0.0); t.set(String::from("investigates"), 1.0); t.set(String::from("alerted"), 2.0); t } }
 
-/// (src/game/chronicle.ts:392 BANDS: a table nothing writes)
 pub fn bands() -> Vec<crate::chronicle::BANDSItem> { alloc::vec![crate::chronicle::BANDSItem { min: 90.0, word: String::from("GHOST"), blurb: String::from("in and out, and the night none the wiser") }, crate::chronicle::BANDSItem { min: 70.0, word: String::from("SHADOW"), blurb: String::from("they know something happened — not much more") }, crate::chronicle::BANDSItem { min: 40.0, word: String::from("OPERATIVE"), blurb: String::from("the job got done; the floor will be talking about it") }, crate::chronicle::BANDSItem { min: 0.0, word: String::from("ASSAULT"), blurb: String::from("loud, seen, and paid for") }] }
 
-/// (src/game/chronicle.ts:447 STAGE_NAME: a table nothing writes)
 pub fn stage_name() -> Vec<String> { alloc::vec![String::from("calm"), String::from("heightened"), String::from("lockdown")] }
 
-/// (src/game/chronicle.ts:448 CAUSE: a table nothing writes)
 pub fn cause() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("sight"), String::from("eyes on you")); t.set(String::from("sound"), String::from("heard it")); t.set(String::from("radio"), String::from("over the net")); t.set(String::from("body"), String::from("a body")); t.set(String::from("held"), String::from("a man held")); t.set(String::from("search"), String::from("the search found nobody")); t.set(String::from("missing"), String::from("a man missing")); t.set(String::from("hostage"), String::from("a man held")); t.set(String::from("device"), String::from("security had you on camera")); t.set(String::from("civilian"), String::from("a civilian told them")); t.set(String::from("time"), String::from("the clock ran out")); t } }
 
-/// (src/game/chronicle.ts:450 CIV_CAUSE: a table nothing writes)
 pub fn civ_cause() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("sam"), String::from("saw you")); t.set(String::from("gun"), String::from("saw you, gun in hand")); t.set(String::from("body"), String::from("found a body")); t.set(String::from("gunfire"), String::from("heard the shooting")); t.set(String::from("shot"), String::from("heard a muffled shot")); t.set(String::from("bang"), String::from("heard a stun charge")); t.set(String::from("scream"), String::from("heard the screaming")); t.set(String::from("noise"), String::from("a crash beside her")); t.set(String::from("grabbed"), String::from("you had her by the throat")); t.set(String::from("panel"), String::from("panicked")); t } }
 
-/// (src/game/chronicle.ts:452 NEED_WORDS: a table nothing writes)
 pub fn need_words() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("coffee"), String::from("a coffee at the break-room counter")); t.set(String::from("smoke"), String::from("a smoke outside the fire exit")); t.set(String::from("water"), String::from("water at the cooler")); t.set(String::from("stretch"), String::from("a stretch round the lobby")); t } }
 
-/// (src/game/chronicle.ts:454 NEED_SHORT: a table nothing writes)
 pub fn need_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("coffee"), String::from("a coffee")); t.set(String::from("smoke"), String::from("a smoke")); t.set(String::from("water"), String::from("water")); t.set(String::from("stretch"), String::from("a stretch")); t } }
 
-/// (src/game/chronicle.ts:504 INTEL: a table nothing writes)
 pub fn intel() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("door"), String::from("the keyed door (and his key)")); t.set(String::from("code"), String::from("a door code")); t.set(String::from("routes"), String::from("a colleague's route")); t.set(String::from("rollcall"), String::from("when the radio check is due")); t.set(String::from("rollcallLive"), String::from("that a radio check is on now")); t.set(String::from("checkOn"), String::from("that a man is out looking for a colleague")); t.set(String::from("clearing"), String::from("which room the pair is clearing")); t.set(String::from("blackout"), String::from("who is on the breaker")); t.set(String::from("lockdownPosts"), String::from("where the lockdown posts are")); t.set(String::from("missing"), String::from("that a man is missed")); t.set(String::from("drive"), String::from("that the rack is being looked at")); t } }
 

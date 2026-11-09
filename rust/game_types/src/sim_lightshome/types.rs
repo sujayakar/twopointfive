@@ -140,23 +140,16 @@ pub struct LightHomeStandConesItem {
     pub slot: f64,
 }
 
-/// (src/sim/lightshome.ts:16 LIGHT_COLS: a table nothing writes)
 pub fn light_cols() -> [String; 67] { [String::from("n"), String::from("rows"), String::from("beacons"), String::from("cameras"), String::from("lasers"), String::from("mains"), String::from("since"), String::from("until"), String::from("restored_at"), String::from("fix_t"), String::from("blind_until"), String::from("factor"), String::from("stagger"), String::from("base"), String::from("hand"), String::from("bits"), String::from("x"), String::from("y"), String::from("z"), String::from("range"), String::from("radius"), String::from("kind"), String::from("dx"), String::from("dy"), String::from("dz"), String::from("outer"), String::from("inner"), String::from("r"), String::from("g"), String::from("b"), String::from("intensity"), String::from("sx"), String::from("sy"), String::from("sz"), String::from("s_radius"), String::from("s_intensity"), String::from("row_base"), String::from("row_bits"), String::from("row_target"), String::from("beacon_phase"), String::from("beacon_row"), String::from("beacon_target"), String::from("cam_yaw"), String::from("cam_phase"), String::from("cam_seen"), String::from("cam_reported"), String::from("cam_lx"), String::from("cam_ly"), String::from("cam_lz"), String::from("cam_rest"), String::from("cam_a"), String::from("cam_b"), String::from("cam_period"), String::from("cam_pitch"), String::from("cam_px"), String::from("cam_py"), String::from("cam_pz"), String::from("cam_state"), String::from("cam_bits"), String::from("cam_target"), String::from("cam_row"), String::from("las_last"), String::from("las_cut"), String::from("las_sense"), String::from("las_trips"), String::from("las_bits"), String::from("las_target")] }
 
-/// (src/sim/lightshome.ts:26 LIGHT_CAPS: a table nothing writes)
 pub fn light_caps() -> crate::sim_lightshome::LIGHTCAPS { crate::sim_lightshome::LIGHTCAPS { targets: 256.0, rows: 256.0, beacons: 32.0, cameras: 32.0, lasers: 32.0 } }
 
-/// (src/sim/lightshome.ts:37 ROW_BIT: a table nothing writes)
 pub fn row_bit() -> crate::sim_lightshome::ROWBIT { crate::sim_lightshome::ROWBIT { passing: 2.0, screen: 4.0 } }
 
-/// (src/sim/lightshome.ts:42 LIGHT_IN: a table nothing writes)
 pub fn light_in() -> crate::sim_lightshome::LIGHTIN { crate::sim_lightshome::LIGHTIN { on: 0.0, break_: 1.0, mend: 2.0, hand: 5.0, authored: 6.0, base: 7.0, fix: 12.0, fresh: 13.0 } }
 
-/// (src/sim/lightshome.ts:46 CAM: a table nothing writes)
 pub fn cam() -> crate::sim_lightshome::CAM { crate::sim_lightshome::CAM { ok: 1.0, down: 2.0, suspect: 4.0, alarm: 8.0 } }
 
-/// (src/sim/lightshome.ts:47 LASER: a table nothing writes)
 pub fn laser() -> crate::sim_lightshome::LASER { crate::sim_lightshome::LASER { ok: 1.0, down: 2.0, trip: 4.0 } }
 
-/// (src/sim/lightshome.ts:274 LIGHTS_BIT)
 pub const LIGHTS_BIT: f64 = 512.0;

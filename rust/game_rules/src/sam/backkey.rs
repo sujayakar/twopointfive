@@ -2,12 +2,12 @@ use crate::game::Game;
 use crate::ids::*;
 use alloc::string::String;
 
-/// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`). (backkey.ts backHit)
+/// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`).
 pub(super) fn back_hit(g: &crate::game::Game, input: InputId) -> bool {
     crate::input::input_hit(g, input, "Escape") || crate::input::input_hit(g, input, "Tab")
 }
 
-/// The back key, taken out of the frame: whoever answers to it, nobody after does. Both codes go, whichever was there. (backkey.ts backTake)
+/// The back key, taken out of the frame: whoever answers to it, nobody after does. Both codes go, whichever was there.
 pub fn back_take(g: &mut crate::game::Game, input: InputId) -> bool {
     let esc = g.tab.input[input].pressed.delete(String::from("Escape"));
     let tab = g.tab.input[input].pressed.delete(String::from("Tab"));

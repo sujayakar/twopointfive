@@ -1,4 +1,3 @@
-//! src/game/orders.ts lines 2475 to 2696
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,7 +14,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
 // ------------------------------------------------------------ a walk, asked for a menu
 
-/// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.   (orders.ts SquadOrders.asked)
+/// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.
 pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> crate::orders::SquadOrdersAsked {
     let at = man_pos(g, gd);
     let cell = g.col.nav.cell;
@@ -47,7 +46,7 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
-/// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.   (orders.ts SquadOrders.hasLine)
+/// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.
 pub(super) fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
     let p = man_pos(g, gd);
     let (at, door) = match t {
@@ -82,7 +81,7 @@ fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
     l + flat(q, to)
 }
 
-/// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.   (orders.ts SquadOrders.fileCross)
+/// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
 fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
     let n = spots.len();
     let gap = g.k.orders.file_queue_gap;
@@ -211,7 +210,7 @@ fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
     }
 }
 
-/// Men to spots, the pairing that walks the least in all (`groups`: which spots belong together; `front`: the frame a stack's marks stand on).   (orders.ts SquadOrders.pair)
+/// Men to spots, the pairing that walks the least in all (`groups`: which spots belong together; `front`: the frame a stack's marks stand on).
 pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3], groups: Option<&[f64]>, front: Option<V3>) -> Vec<(GuardId, V3)> {
     let mut cross = if front.is_some() { squad_orders_file_cross(g, men, spots) } else { None };
     if men.len() > 2 && men.len() <= 4 && spots.len() >= men.len() {
@@ -271,7 +270,7 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 // ------------------------------------------------------------ the HUD's words
 
-/// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
+/// What one man is doing, in a few words.
 pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {
         return String::from("down");
@@ -301,7 +300,7 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
     String::from("no orders")
 }
 
-/// Who the next order goes to, as the panel names it.   (orders.ts SquadOrders.whoTag)
+/// Who the next order goes to, as the panel names it.
 pub fn squad_orders_who_tag(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::orders::SquadOrdersWhoTag {
     if seat.orders.menu.as_ref().map_or(false, |x| x.part.is_some()) {
         let men = seat.orders.menu.as_ref().unwrap().men.clone();
@@ -327,7 +326,7 @@ pub fn squad_orders_who_tag(g: &crate::game::Game, seat: &crate::seats::SeatRef)
     SquadOrdersWhoTag { tag }
 }
 
-/// A target in the panel's words: what an order from the menu would be about.   (orders.ts SquadOrders.hoverWords)
+/// A target in the panel's words: what an order from the menu would be about.
 pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String {
     match t {
         None => String::new(),
@@ -376,7 +375,7 @@ fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     out
 }
 
-/// Of the way over the statics alone and the way laid with movable things dear, the one he walks.   (orders.ts propWay)
+/// Of the way over the statics alone and the way laid with movable things dear, the one he walks.
 pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
     let round = match round { Some(r) if !r.is_empty() => r, _ => return plain.to_vec() };
     if way_len(from, round) > way_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
@@ -385,7 +384,7 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
     if a.len() == b.len() && a.iter().all(|d| b.contains(d)) { round.to_vec() } else { plain.to_vec() }
 }
 
-/// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched (guards.ts:1491 `round !== pen`), and the one search is the search it was.   (orders.ts propPenalty)
+/// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched, and the one search is the search it was.
 pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
@@ -431,14 +430,14 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
     Some(PropPenalty::Dear { dear, cost, pen: pen.cloned() })
 }
 
-/// What a PropPenalty answers for a cell: dear or not, times what `pen` asks.   (orders.ts:2660, the closure propPenalty returns)
+/// What a PropPenalty answers for a cell: dear or not, times what `pen` asks.
 pub fn prop_penalty_at(g: &crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 {
     let PropPenalty::Dear { dear, cost, pen } = p;
     let here = if dear.has(crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz))) { *cost } else { 1.0 };
     here * match pen.as_ref() { Some(q) => crate::lanes::lane_penalty_at(q, ix, iz), None => 1.0 }
 }
 
-/// ORDERS.sameWay: how far way `a` gets from way `b`, asked every half metre of `a`, and where on `a` that is.   (orders.ts farOff)
+/// ORDERS.sameWay: how far way `a` gets from way `b`, asked every half metre of `a`, and where on `a` that is.
 pub(super) fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
     let off = |x: f64, z: f64| -> f64 {
         let mut mn = m::INF;
@@ -471,19 +470,19 @@ pub(super) fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
 
 // ------------------------------------------------------------ a door's frame and its name
 
-/// How far off a door's frame line a point is (signed: sideOf's sign).   (orders.ts offLine)
+/// How far off a door's frame line a point is (signed: sideOf's sign).
 pub(super) fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0])
 }
 
-/// Which face of the door's frame a point is on (+1 = the CCW side of the closed leaf).   (orders.ts sideOf)
+/// Which face of the door's frame a point is on (+1 = the CCW side of the closed leaf).
 pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     if m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0]) >= 0.0 { 1.0 } else { -1.0 }
 }
 
-/// A door's name as the squad says it.   (orders.ts doorWords)
+/// A door's name as the squad says it.
 pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
     if let Some(said) = crate::doornames::door_said_name(g, d) { return said; }
     let name = g.dr[d].def.name.clone();
@@ -498,7 +497,7 @@ fn id_words(id: &str) -> String {
     t.join(" ")
 }
 
-/// A door's id said as words: compass letters as words, no token dropped.   (orders.ts doorIdWords)
+/// A door's id said as words: compass letters as words, no token dropped.
 pub fn door_id_words(g: &crate::game::Game, id_2: &str) -> String { id_words(id_2) }
 
 #[cfg(test)]

@@ -151,9 +151,7 @@ pub enum WallReactOpMove {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallreactMod {
-    /// (src/game/wallreact.ts:102 WALLREACT_LOG)
     pub wallreact_log: Vec<String>,
-    /// (src/game/wallreact.ts:152)
     pub wall_react: crate::wallreact::WallReact,
 }
 
@@ -175,8 +173,6 @@ pub struct WallreactStats {
     pub openings: i32,
 }
 
-/// (src/game/wallreact.ts:137 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/wallreact.ts:137 CHEST)
 pub const CHEST: f64 = 1.1;

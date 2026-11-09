@@ -227,26 +227,18 @@ pub struct RayBoxRound {
     pub n: V3,
 }
 
-/// (src/scene/boxes.ts:422 BOX_WORLD_RAY_PAD)
 pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
 
-/// (src/scene/boxes.ts:426 BOX_WORLD_RS)
 pub const BOX_WORLD_RS: f64 = 12.0;
 
-/// (src/scene/boxes.ts:13 BoxFlag: a table nothing writes)
 pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
 
-/// (src/scene/boxes.ts:41 SHEET_MASK)
 pub const SHEET_MASK: f64 = 131083.0;
 
-/// (src/scene/boxes.ts:176 MKEY: a table nothing writes)
 pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
 
-/// (src/scene/boxes.ts:236 GEO_STRIDE)
 pub const GEO_STRIDE: f64 = 8.0;
 
-/// (src/scene/boxes.ts:242 GB_ROWS)
 pub const GB_ROWS: f64 = 1152.0;
 
-/// (src/scene/boxes.ts:243 MAT_STRIDE)
 pub const MAT_STRIDE: f64 = 16.0;

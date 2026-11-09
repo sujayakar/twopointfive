@@ -34,7 +34,7 @@ pub struct FollowCamera {
     #[is(crate::M4_IDENTITY)] pub draw_vp: crate::v3::m4::Mat4,
     pub auto_yaw_t: f64,
     pub yaw_goal: Option<f64>,
-    /// INVENTED: bumped by every whole write of desired (game.ts:1614, :1626), for Seat.takeCut (cmd.ts:191)
+    /// INVENTED: bumped by every whole write of desired, for Seat.takeCut
     pub desired_serial: u32,
 }
 
@@ -90,5 +90,4 @@ pub struct FollowCameraPlanarBasis {
     pub right: V3,
 }
 
-/// (src/game/camera.ts:5 PIN_PITCH_MAX)
 pub const PIN_PITCH_MAX: f64 = 1.5533430342749532;

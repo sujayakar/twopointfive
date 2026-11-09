@@ -1,4 +1,4 @@
-//! THE MARKING TABLE: every list of painted marks some box carries, packed once by what it says (src/scene/markings.ts is the layout). A box's list is found by
+//! THE MARKING TABLE: every list of painted marks some box carries, packed once by what it says. A box's list is found by
 //! its content, its box's colour and size: every crate of a kind shares one.
 use super::Row4;
 use alloc::collections::BTreeMap;

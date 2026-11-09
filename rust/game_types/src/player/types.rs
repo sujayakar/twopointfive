@@ -140,7 +140,7 @@ pub struct WallHold {
     pub cam_along: Option<f64>,
     pub cam: bool,
     pub ran: Option<f64>,
-    /// INVENTED: g.serial() where wallSnap makes the hold (player.ts:1081): unseen.ts:184 and :195 ask by identity whether this is the same take of the wall (State.hold, placed). A copy of the hold keeps it
+    /// INVENTED: g.serial() where wallSnap makes the hold: unseen.ts:184 and :195 ask by identity whether this is the same take of the wall (State.hold, placed). A copy of the hold keeps it
     pub serial: u32,
 }
 
@@ -305,156 +305,104 @@ pub struct CursorPointHit {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PlayerMod {
-    /// (src/game/player.ts:1135 wsPend)
     pub ws_pend: JsMap<PlayerId, crate::player::PlayerModWsPendValue>,
-    /// (src/game/player.ts:1165 wsPress)
     pub ws_press: JsMap<PlayerId, crate::player::PlayerModWsPressValue>,
-    /// (src/game/player.ts:1210 PRESS_THINGS)
     #[is({ let mut s = JsSet::new(); for k in ["door", "switch", "breaker", "objective", "cam", "body"] { s.add(String::from(k)); } s })] pub press_things: JsSet<String>,
-    /// (src/game/player.ts:2301 lightAt)
     pub light_at: JsMap<PlayerId, [f64; 2]>,
 }
 
-/// (src/game/player.ts:92 BODY_R)
 pub const BODY_R: f64 = 0.42;
 
-/// (src/game/player.ts:94 KEEP_OFF)
 pub const KEEP_OFF: f64 = 0.55;
 
-/// (src/game/player.ts:101 HOLD_PACE)
 pub const HOLD_PACE: f64 = 0.85;
 
-/// (src/game/player.ts:101 HOLD_PACE_BACK)
 pub const HOLD_PACE_BACK: f64 = 0.65;
 
-/// (src/game/player.ts:101 HOLD_TURN)
 pub const HOLD_TURN: f64 = 2.6;
 
-/// (src/game/player.ts:106 INTERROGATE_GAP)
 pub const INTERROGATE_GAP: f64 = 1.2;
 
-/// (src/game/player.ts:106 ANSWER_TAIL)
 pub const ANSWER_TAIL: f64 = 0.5;
 
-/// (src/game/player.ts:111 GRAB_NOISE)
 pub const GRAB_NOISE: f64 = 0.12;
 
-/// (src/game/player.ts:111 CHOKE_NOISE)
 pub const CHOKE_NOISE: f64 = 0.15;
 
-/// (src/game/player.ts:111 FOLD_NOISE)
 pub const FOLD_NOISE: f64 = 0.3;
 
-/// (src/game/player.ts:111 WHIP_NOISE)
 pub const WHIP_NOISE: f64 = 0.35;
 
-/// (src/game/player.ts:114 CHOKE_GRAIN)
 pub const CHOKE_GRAIN: f64 = 0.4;
 
-/// (src/game/player.ts:117 HOLD_FIRE_CD)
 pub const HOLD_FIRE_CD: f64 = 0.7;
 
-/// (src/game/player.ts:117 HOLD_SPREAD)
 pub const HOLD_SPREAD: f64 = 0.09;
 
-/// (src/game/player.ts:149 DOOR_R)
 pub const DOOR_R: f64 = 0.3;
 
-/// (src/game/player.ts:149 DOOR_FIT: a table nothing writes)
 pub fn door_fit() -> crate::player::DOORFIT { crate::player::DOORFIT { lat: [0.12, 0.5], out: [0.55, 1.0] } }
 
-/// (src/game/player.ts:167 SWEEP_STEP)
 pub const SWEEP_STEP: f64 = 0.2;
 
-/// (src/game/player.ts:261 RIFLE_EQUIP_SECS)
 pub const RIFLE_EQUIP_SECS: f64 = 0.45;
 
-/// (src/game/player.ts:291 LOW_AT)
 pub const LOW_AT: f64 = 1.25;
 
-/// (src/game/player.ts:291 LOW_UNDER)
 pub const LOW_UNDER: f64 = 0.25;
 
-/// (src/game/player.ts:291 LOW_TOP)
 pub const LOW_TOP: f64 = 0.15;
 
-/// (src/game/player.ts:306 LEVEL_REACH)
 pub const LEVEL_REACH: f64 = 20.0;
 
-/// (src/game/player.ts:896 WALL_REACH)
 pub const WALL_REACH: f64 = 0.7;
 
-/// (src/game/player.ts:898 WALL_GAP)
 pub const WALL_GAP: f64 = 0.03;
 
-/// (src/game/player.ts:901 KNEE_Y)
 pub const KNEE_Y: f64 = 0.45;
 
-/// (src/game/player.ts:901 CHEST_Y)
 pub const CHEST_Y: f64 = 1.35;
 
-/// (src/game/player.ts:901 HIGH_Y)
 pub const HIGH_Y: f64 = 2.7;
 
-/// (src/game/player.ts:903 COPLANAR)
 pub const COPLANAR: f64 = 0.01;
 
-/// (src/game/player.ts:905 UPPER_TOL)
 pub const UPPER_TOL: f64 = 0.08;
 
-/// (src/game/player.ts:907 WALL_BRIDGE)
 pub const WALL_BRIDGE: f64 = 0.15;
 
-/// (src/game/player.ts:909 WALL_MIN_FACE)
 pub const WALL_MIN_FACE: f64 = 0.8999999999999999;
 
-/// (src/game/player.ts:911 WALL_PACE)
 pub const WALL_PACE: f64 = 1.4;
 
-/// (src/game/player.ts:913 WALL_TURN)
 pub const WALL_TURN: f64 = 0.9599310885968813;
 
-/// (src/game/player.ts:915 WALL_LOOK)
 pub const WALL_LOOK: f64 = 0.4363323129985824;
 
-/// (src/game/player.ts:915 WALL_PEEK_LOOK)
 pub const WALL_PEEK_LOOK: f64 = 0.5235987755982988;
 
-/// (src/game/player.ts:918 WALL_SHOVE_OFF)
 pub const WALL_SHOVE_OFF: f64 = 0.25;
 
-/// (src/game/player.ts:918 WALL_AWAY_SECS)
 pub const WALL_AWAY_SECS: f64 = 0.25;
 
-/// (src/game/player.ts:920 WALL_SETTLE)
 pub const WALL_SETTLE: f64 = 0.22;
 
-/// (src/game/player.ts:920 WALL_PEEK_SECS)
 pub const WALL_PEEK_SECS: f64 = 0.3;
 
-/// (src/game/player.ts:992 PROP_BODY_R)
 pub const PROP_BODY_R: f64 = 0.3;
 
-/// (src/game/player.ts:1382 LEAN_CHEST)
 pub const LEAN_CHEST: f64 = 1.2;
 
-/// (src/game/player.ts:1384 STACK_PRESS)
 pub const STACK_PRESS: f64 = 0.12;
 
-/// (src/game/player.ts:2554 INTERACT_PRIORITY: a table nothing writes)
 pub fn interact_priority() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("guard"), 0.0); t.set(String::from("held"), 0.0); t.set(String::from("body"), 1.0); t.set(String::from("objective"), 2.0); t.set(String::from("door"), 3.0); t.set(String::from("light"), 9.0); t.set(String::from("breaker"), 2.5); t.set(String::from("switch"), 3.2); t.set(String::from("charge"), 9.4); t.set(String::from("wall"), 9.5); t.set(String::from("cam"), 9.6); t.set(String::from("cancel"), 10.0); t } }
 
-/// (src/game/player.ts:2562 NEARBY_M)
 pub const NEARBY_M: f64 = 3.0;
 
-/// (src/game/player.ts:2564 MAX_NEAR)
 pub const MAX_NEAR: f64 = 3.0;
 
-/// (src/game/player.ts:2568 EASE_RATE)
 pub const EASE_RATE: f64 = 0.55;
 
-/// (src/game/player.ts:2568 EASE_MAX)
 pub const EASE_MAX: f64 = 1.45;
 
-/// (src/game/player.ts:2568 EASE_OFFER)
 pub const EASE_OFFER: f64 = 0.62;

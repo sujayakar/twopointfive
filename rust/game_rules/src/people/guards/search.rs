@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 1502 to 1917
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `was.tgt === key`: the man by his ID, 'pt' by its word, null by None (guards.ts 1562)
+/// `was.tgt === key`: the man by his ID, 'pt' by its word, null by None
 fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
     match (a, b) {
         (None, None) | (Some(LitSeenTgt::Pt), Some(LitSeenTgt::Pt)) => true,
@@ -16,7 +15,7 @@ fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
     }
 }
 
-/// is this floor point under what the meter calls lit, by the place's own lights only (guards.ts litPlace `dark`)
+/// is this floor point under what the meter calls lit, by the place's own lights only
 fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
     let mut carried = |_: &mut Game, _: f64| true;
     let e = light_estimate_at(g, [x, 1.2, z], Some(&mut carried), None, None);
@@ -81,7 +80,7 @@ fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentI
     lit
 }
 
-/// seven directions across a beam about `d`: its axis, four turned about the vertical, one tipped up and one down (guards.ts beamFan)
+/// seven directions across a beam about `d`: its axis, four turned about the vertical, one tipped up and one down
 fn beam_fan(d: V3) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     for a in [0.0, -0.17, 0.17, -0.33, 0.33] {
@@ -95,7 +94,7 @@ fn beam_fan(d: V3) -> Vec<V3> {
     out
 }
 
-/// what one ray of a beam ends on inside `m` of the lens: 3 something that stands, 2 its foot, 1 the ground, 0 nothing (guards.ts rayEnd)
+/// what one ray of a beam ends on inside `m` of the lens: 3 something that stands, 2 its foot, 1 the ground, 0 nothing
 fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
     let dip = if r[1] < 0.0 { m::max(0.0, (o[1] - FLOOR_TOP) / -r[1]) } else { f64::INFINITY };
     let a = m::min(m, dip);
@@ -113,7 +112,7 @@ fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
     1.0
 }
 
-/// is a beam into a wall: its middle ends on something that stands inside `m`, and no ray runs clear (guards.ts beamWalled)
+/// is a beam into a wall: its middle ends on something that stands inside `m`, and no ray runs clear
 fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool) -> bool {
     for i in 0..fan.len() {
         let e = ray_end(g, o, fan[i], m);
@@ -124,7 +123,7 @@ fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool)
     true
 }
 
-/// where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (guards.ts burnsFrom)
+/// where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held`
 fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     if crate::scene_collision::segment_blocked(g, held, p, None, None, None) {
         let radius = FLASHLIGHT_RADIUS;
@@ -134,7 +133,7 @@ fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     }
 }
 
-/// somebody not of his side in the beam, this side of what it ends on (guards.ts wallDark `manIn`)
+/// somebody not of his side in the beam, this side of what it ends on
 fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
     g.guards.iter().any(|&x| {
         if x == gd || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].team == crate::teams::Team::Operative {
@@ -148,7 +147,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
     })
 }
 
-/// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens (guards.ts wallDark)
+/// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens
 pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
     if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || g.gd[gd].state == crate::game::GuardState::Dead {
         return false;
@@ -174,7 +173,7 @@ pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>
     dark
 }
 
-/// TORCH.wallLow: a man with a hand torch whose carried beam would end whole on something that stands lets it hang (guards.ts torchLow)
+/// TORCH.wallLow: a man with a hand torch whose carried beam would end whole on something that stands lets it hang
 pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let t = g.time;
@@ -191,7 +190,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     low
 }
 
-/// is this man's weapon light this rule's to decide (guards.ts lightRuled)
+/// is this man's weapon light this rule's to decide
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
@@ -199,14 +198,14 @@ pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && crate::seats::order_of(g, gd).is_some()
 }
 
-/// stands this floor point lit by the place's steady lights (guards.ts darkOnLitMan `lit`)
+/// stands this floor point lit by the place's steady lights
 fn place_lit_steady(g: &mut Game, p: V3) -> bool {
     let mut carried = |_: &mut Game, _: f64| true;
     let e = light_estimate_at(g, [p[0], 1.2, p[2]], Some(&mut carried), Some(true), None);
     crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at
 }
 
-/// LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark (guards.ts darkOnLitMan)
+/// LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark
 fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> bool {
     if let Some(was) = g.m.guards.lit_man_seen.get(gd) {
         if was.tgt == tgt && g.time - was.t >= 0.0 && g.time - was.t < 0.25 {
@@ -223,7 +222,7 @@ fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> bool
     v
 }
 
-/// LIGHTS.litMan, asked of a teammate the light rule has: is he in the dark on a man who stands lit (guards.ts gunOnLitMan)
+/// LIGHTS.litMan, asked of a teammate the light rule has: is he in the dark on a man who stands lit
 pub fn gun_on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !light_ruled(g, gd) {
         return false;
@@ -252,7 +251,7 @@ pub fn gun_on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// does his weapon light burn this frame, asked only of a man the rule has (guards.ts teamLit)
+/// does his weapon light burn this frame, asked only of a man the rule has
 pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if gun_on_lit_man(g, gd) {
         return false;
@@ -289,19 +288,19 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// is this man one of the team whose pace PACE governs right now (guards.ts teamPaced)
+/// is this man one of the team whose pace PACE governs right now
 pub fn team_paced(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g)
 }
 
-/// the speed his legs may be asked for (guards.ts teamPace)
+/// the speed his legs may be asked for
 pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     let capped = if team_paced(g, gd) { m::min(speed, crate::teampace::team_cap(g, gd)) } else { speed };
     let silent = crate::silent::silent_pace(g, gd, capped);
     crate::condition::condition_pace(g, gd, silent)
 }
 
-/// the speed his legs get for a leg asked at `speed`: one call a leg (guards.ts teamLegs)
+/// the speed his legs get for a leg asked at `speed`: one call a leg
 pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
     match crate::teampace::team_run_legs(g, seat, gd, speed) {
         Some(legs) => legs,
@@ -309,7 +308,7 @@ pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     }
 }
 
-/// where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, round his front (guards.ts teamTurn)
+/// where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, round his front
 pub fn team_turn(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: f64, dt: f64) -> f64 {
     if !(g.k.pace.turn > 0.0) || !team_paced(g, gd) {
         return to;
@@ -323,7 +322,7 @@ pub fn team_turn(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     body_yaw + (if m::abs(want - rel) <= step { want } else { rel + m::sign(want - rel) * step })
 }
 
-/// his speed this frame, having been `was` last frame: the team picks pace up at PACE.accel at most (guards.ts teamLean)
+/// his speed this frame, having been `was` last frame: the team picks pace up at PACE.accel at most
 pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
     if g.gd[gd].speed > was && team_paced(g, gd) {
         let now = g.gd[gd].speed;
@@ -333,7 +332,7 @@ pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
     }
 }
 
-/// walks him along his path this frame; true when he has arrived (guards.ts followPath)
+/// walks him along his path this frame; true when he has arrived
 pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
     let paced = team_pace(g, gd, speed);
@@ -424,7 +423,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     true
 }
 
-/// the doorway cells of every door: nav cell index → the door whose closed frame line runs through it, worked out once (guards.ts doorCells)
+/// the doorway cells of every door: nav cell index → the door whose closed frame line runs through it, worked out once
 pub fn door_cells(g: &mut crate::game::Game) -> JsMap<crate::Num, DoorId> {
     if let Some(cells) = &g.m.guards.door_cells_of {
         return cells.clone();
@@ -462,7 +461,7 @@ fn nav_cell(g: &Game, x: f64, z: f64) -> usize {
     crate::scene_collision::nav_grid_idx(g, x, z) as usize
 }
 
-/// Dijkstra over the nav grid outward from `from`, in seconds of Sam's sprint; doors cost or stop him unless `keyed` (guards.ts floodFrom)
+/// Dijkstra over the nav grid outward from `from`, in seconds of Sam's sprint; doors cost or stop him unless `keyed`
 pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed: Option<bool>) -> crate::guards::FloodFrom {
     let keyed = keyed.unwrap_or(false);
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
@@ -557,15 +556,15 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
     FloodFrom { secs, metres }
 }
 
-/// A cell of the deal.   (guards.ts dealSpots, local type Cand)
+/// A cell of the deal.
 #[derive(Clone, Copy, Debug)]
 struct Cand { cell: usize, pos: V3, kind: crate::guards::SearchSpotKind, cheap: f64, m: f64, hidden: bool, cover: f64 }
 
-/// Every one of `list` at least `r` from `p`.   (guards.ts dealSpots, farFrom)
+/// Every one of `list` at least `r` from `p`.
 fn far_from(p: V3, list: &[Cand], r: f64) -> bool { list.iter().all(|k| v3::dist_xz(k.pos, p) >= r) }
 
 /// Deal the spots of the man's plan (his row) round its fix: flood, count what stands about every reached cell, keep the best covered a spacing apart, ask the
-/// line from the fix, take the top spots by cover and a few well-spread cells of open floor.   (guards.ts dealSpots)
+/// line from the fix, take the top spots by cover and a few well-spread cells of open floor.
 fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * hn) as usize;
@@ -675,7 +674,7 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The plan for this man's search, on his row: built on its first frame round his fix (his feet if he has none), rebuilt if the fix has moved a couple of
-/// metres, plausibility re-flooded every SEARCH_REFLOOD_SECS.   (guards.ts searchPlanFor)
+/// metres, plausibility re-flooded every SEARCH_REFLOOD_SECS.
 pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let at = g.ch[c].pos;

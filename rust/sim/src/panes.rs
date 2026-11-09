@@ -14,7 +14,7 @@
 //! the pane's call is back, a pane at a time. Nothing a fragment's handling does is read by the rest of that pane's rule. Its one question of the world, where it
 //! comes down, is asked here at the moment it lets go, and its landing is scheduled here (falls.rs) under SHARDS.byFall.
 //!
-//! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads (src/game/levelfit.ts), by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
+//! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads, by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
 //! THE QUEUE: MAX_Q pieces waiting in a game; a piece past that stays in its frame for the next support pass. No run has come within a tenth of it.
 use game_types::knobs::Knobs;
 use crate::falls;
@@ -78,7 +78,7 @@ const S_RHO: usize = 3;
 const S_RZ: usize = 7;
 const S_MERGE: usize = 8;
 
-/// A PANE THAT HAS BEEN TOUCHED (glassbreak.ts PaneState)
+/// A PANE THAT HAS BEEN TOUCHED
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Row {
@@ -160,7 +160,7 @@ pub struct Panes {
     /// pieces let go this frame (a frame's budget, across the panes)
     pub released: u32,
     pub flags: u32,
-    /// the floor's last 'glass' event per pane per shooter (glass.ts liveGap): how many, and (pane × 1024 + who, when)
+    /// the floor's last 'glass' event per pane per shooter: how many, and (pane × 1024 + who, when)
     pub nev: u32,
     pub nbl: u32,
     /// the number of the last charge seen
@@ -409,7 +409,7 @@ pub fn row_ref(g: usize, r: usize) -> &'static mut Row {
     pn(g).row(r)
 }
 
-// ---- the game's hashes (glass.ts boxSeed and pointSeed, debris.ts hash01)
+// ---- the game's hashes
 /// the language's `x | 0` of a double
 #[inline]
 pub fn int32(x: f64) -> i32 {
@@ -425,7 +425,7 @@ fn seed_mix(h: u32, x: f64) -> u32 {
     let h2 = (h ^ (int32(round_half_up(x * 1000.0)) as u32)).wrapping_mul(0x85EB_CA77);
     h2 ^ (h2 >> 13)
 }
-/// glass.ts boxSeed: what a box is as one word, its centre and half sizes to the millimetre
+/// What a box is as one word, its centre and half sizes to the millimetre
 pub fn box_seed(b: &[f64]) -> u32 {
     let mut h = 0x9E37_79B1u32;
     for k in 0..3 {
@@ -436,7 +436,6 @@ pub fn box_seed(b: &[f64]) -> u32 {
     }
     h.wrapping_mul(0xC2B2_AE3D)
 }
-/// glass.ts pointSeed
 pub fn point_seed(word: u32, x: f64, y: f64, z: f64) -> u32 {
     let mut h = word;
     h = seed_mix(h, x);
@@ -444,7 +443,7 @@ pub fn point_seed(word: u32, x: f64, y: f64, z: f64) -> u32 {
     h = seed_mix(h, z);
     h.wrapping_mul(0xC2B2_AE3D)
 }
-/// glass.ts blastSeed: a blast's seed, its height left out
+/// A blast's seed, its height left out
 #[inline]
 fn blast_seed(word: u32, at: &[f64; 3]) -> u32 {
     point_seed(word, at[0], 0.0, at[2])
@@ -513,7 +512,7 @@ pub fn norm3(a: [f64; 3]) -> [f64; 3] {
 fn lerp(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
 }
-/// glassbreak.ts nearestOn: the nearest point of a box (yawed, no more) to p
+/// The nearest point of a box (yawed, no more) to p
 #[inline]
 fn nearest_on(b: &[f64], p: [f64; 3]) -> [f64; 3] {
     let (cs, sn) = (b[R_COS], b[R_SIN]);
@@ -527,7 +526,7 @@ fn nearest_on(b: &[f64], p: [f64; 3]) -> [f64; 3] {
 fn rec(o: &World, bi: usize) -> &[f64] {
     &o.rec[bi * REC..bi * REC + REC]
 }
-/// a sheet of glass: thin across its thin axis (the game's own test: glass.ts isSheet)
+/// a sheet of glass: thin across its thin axis
 #[inline]
 fn thin(b: &[f64]) -> bool {
     js_min(b[R_H], b[R_H + 2]) <= THICK_GLASS_HALF
@@ -556,7 +555,6 @@ fn dicing(r: &Row) -> bool {
 fn dice_of(r: &Row) -> Dice {
     Dice { u: r.d[D_U], v: r.d[D_V], cols: r.w[GW_COLS], rows: r.w[GW_ROWS], seed: r.w[GW_DSEED], hu: r.d[D_HU], hv: r.d[D_HV] }
 }
-/// glassbreak.ts openUV
 #[inline]
 fn open_uv(r: &Row, u: f64, v: f64) -> bool {
     if gone(r) {
@@ -603,14 +601,14 @@ pub struct Ctx {
     /// (shardModel.ts SHARD.gravity: a table of authored numbers, handed in)
     pub gravity: f64,
 }
-/// one line as the rule asks it of the statics and the leaves: is something solid across it (collision.ts solidBlocked)
+/// one line as the rule asks it of the statics and the leaves: is something solid across it
 #[inline]
 fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
     lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune).unwrap_or(true)
 }
 
 // ---- which glass a pane is
-/// glassbreak.ts skySide: which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
+/// Which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
 /// geometry once, and kept: statics do not move.
 pub fn sky_side(c: &Ctx, s: usize, tune: &Knobs) -> i32 {
     let (bi, known) = {
@@ -677,7 +675,7 @@ fn over_of(p: &Panes, bi: u32) -> u32 {
     }
     NO_OVER
 }
-/// glassbreak.ts typeOf: the type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
+/// The type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
 /// sidelight is laminated and a partition float; under GLASSREAL.place the pane's own place decides between toughened and float.
 fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64, tune: &Knobs) -> u32 {
     place_rule(sky_side(c, s, tune) != 0, h0, h1, h2, cy, world(c.w).sheets[s].gap, tune)
@@ -697,7 +695,7 @@ pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64, t
         ANNEALED
     }
 }
-/// glassbreak.ts typeOfPane: the type of static `bi` as it will break, or NONE: it is no sheet of glass
+/// The type of static `bi` as it will break, or NONE: it is no sheet of glass
 pub const NO_TYPE: u32 = 9;
 pub fn type_of_pane(c: &Ctx, bi: u32, tune: &Knobs) -> u32 {
     let s = match sheet_of(world(c.w), bi) {
@@ -718,7 +716,7 @@ pub fn type_of_pane(c: &Ctx, bi: u32, tune: &Knobs) -> u32 {
     }
     type_by_place(c, s, h0, h1, h2, cy, tune)
 }
-/// glassbreak.ts setType: pane `bi` breaks as this from here on, made whole first (NO_OVER: back to its place's word)
+/// Pane `bi` breaks as this from here on, made whole first (NO_OVER: back to its place's word)
 pub fn set_type(g: usize, bi: u32, ty: u32) {
     let p = pn(g);
     p.stand();
@@ -742,7 +740,7 @@ pub fn set_type(g: usize, bi: u32, ty: u32) {
     p.nbl = 0;
     p.settle();
 }
-/// glassbreak.ts reset: every pane whole (a word a level's table gave a pane stands, and which face has the sky)
+/// Every pane whole (a word a level's table gave a pane stands, and which face has the sky)
 pub fn reset(g: usize) {
     let p = pn(g);
     if p.used == 0 {
@@ -761,7 +759,7 @@ pub fn reset(g: usize) {
 }
 
 // ---- a pane's first touch
-/// glassbreak.ts stateOf: the pane's row, made if this is its first touch; None: it is no sheet of glass
+/// The pane's row, made if this is its first touch; None: it is no sheet of glass
 fn state_of(c: &Ctx, bi: u32, tune: &Knobs) -> Option<usize> {
     if let Some(r) = pn(c.g).row_of(bi) {
         return Some(r);
@@ -800,7 +798,7 @@ fn state_of(c: &Ctx, bi: u32, tune: &Knobs) -> Option<usize> {
 }
 
 // ---- sites
-/// glassbreak.ts addSite: a new site at (u, v) for a blow of energy e, its ring zone fitted to the room the others leave; −1 = no room
+/// A new site at (u, v) for a blow of energy e, its ring zone fitted to the room the others leave; −1 = no room
 fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32, tune: &Knobs) -> i32 {
     let ns = site_n(r);
     if ns as f64 >= js_min(MAX_SITES as f64, tune.glassbreak.max_sites) || run(r) {
@@ -937,7 +935,7 @@ struct Fr {
     seed: u32,
     key: f64,
 }
-/// falling.ts fallOf: where and when something let go at c with velocity v reaches what is under it (statics and leaves as the ray has them, the world's floor if nothing is)
+/// Where and when something let go at c with velocity v reaches what is under it (statics and leaves as the ray has them, the world's floor if nothing is)
 pub fn fall_of(cx: &Ctx, c: [f64; 3], v: [f64; 3], gravity: f64, reach_k: f64, tune: &Knobs) -> (f64, [f64; 3]) {
     let vy = -v[1];
     let t_of = |h: f64| (-vy + sqrt(vy * vy + 2.0 * gravity * h)) / gravity;
@@ -1055,7 +1053,7 @@ fn landing(c: &Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3], tune: &Knobs
     }
 }
 
-/// glassbreak.ts afterRelease: the pane has a piece less
+/// The pane has a piece less
 fn after_release(c: &Ctx, ri: usize, tune: &Knobs) {
     let (w, was, ext) = {
         let r = pn(c.g).row(ri);
@@ -1084,7 +1082,6 @@ pub fn take_wrote() -> bool {
         w
     }
 }
-/// glassbreak.ts walkableNow
 fn walkable_now(r: &mut Row, tune: &Knobs) -> bool {
     if gone(r) {
         return true;
@@ -1105,7 +1102,7 @@ fn set_open(r: &mut Row, fid: u32) {
     r.w[GW_OPEN + (fid >> 5) as usize] |= 1 << (fid & 31);
     r.n_open += 1;
 }
-/// glassbreak.ts releaseCrater: a site's crater wedges go together, as one fragment. → fragments let go
+/// A site's crater wedges go together, as one fragment. → fragments let go
 fn release_crater(c: &Ctx, ri: usize, i: usize, cause: u32, tune: &Knobs) -> u32 {
     let (hull_n, hp, frag) = {
         let r = pn(c.g).row(ri);
@@ -1150,12 +1147,11 @@ fn release_crater(c: &Ctx, ri: usize, i: usize, cause: u32, tune: &Knobs) -> u32
     after_release(c, ri, tune);
     1
 }
-/// glassbreak.ts outline: (u, v, w) is right-handed for a pane along x and left-handed for one along z: is the (u, v) polygon to be walked backwards to run anticlockwise from the side it leaves by
+/// (u, v, w) is right-handed for a pane along x and left-handed for one along z: is the (u, v) polygon to be walked backwards to run anticlockwise from the side it leaves by
 #[inline]
 fn outline_rev(r: &Row, out_sign: f64) -> bool {
     (out_sign > 0.0) != (r.u_axis == 0)
 }
-/// glassbreak.ts releaseFrag
 fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>, kk: f64, tune: &Knobs) {
     let (f, fr, rev) = {
         let r = pn(c.g).row(ri);
@@ -1204,7 +1200,7 @@ fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>
     emit(c, ri, fr, &f.p[..f.n as usize], rev, tune);
     after_release(c, ri, tune);
 }
-/// glassbreak.ts knockOut: a hard blow on a piece: it goes now (a crater's wedge takes the whole crater with it). → fragments let go
+/// A hard blow on a piece: it goes now (a crater's wedge takes the whole crater with it). → fragments let go
 fn knock_out(c: &Ctx, ri: usize, fid: u32, tune: &Knobs) -> u32 {
     let r = pn(c.g).row(ri);
     if bit(&r.w, GW_OPEN, fid) {
@@ -1220,7 +1216,7 @@ fn knock_out(c: &Ctx, ri: usize, fid: u32, tune: &Knobs) -> u32 {
     release_frag(c, ri, fid, C_HIT, None, 1.0, tune);
     1
 }
-/// glassbreak.ts setRun: the radials reach the frame
+/// The radials reach the frame
 fn set_run(c: &Ctx, ri: usize, tune: &Knobs) {
     let r = pn(c.g).row(ri);
     if run(r) || r.ty != ANNEALED || site_n(r) == 0 {
@@ -1232,7 +1228,6 @@ fn set_run(c: &Ctx, ri: usize, tune: &Knobs) {
 }
 
 // ---- toughened glass
-/// glassbreak.ts startDice
 fn start_dice(c: &Ctx, ri: usize, u: f64, v: f64, seed: u32, tune: &Knobs) {
     let d = {
         let r = pn(c.g).row(ri);
@@ -1284,7 +1279,6 @@ fn dice_done(c: &Ctx, ri: usize) {
         pn(c.g).flags |= FL_GUST;
     }
 }
-/// glassbreak.ts stepDice
 fn step_dice(c: &Ctx, ri: usize, tune: &Knobs) {
     let (d, t0) = {
         let r = pn(c.g).row(ri);
@@ -1323,7 +1317,6 @@ fn step_dice(c: &Ctx, ri: usize, tune: &Knobs) {
         }
     }
 }
-/// glassbreak.ts releaseClump
 fn release_clump(c: &Ctx, ri: usize, d: &Dice, cl: pattern::Clump, tune: &Knobs) {
     {
         let r = pn(c.g).row(ri);
@@ -1427,7 +1420,7 @@ fn drop_all(c: &Ctx, ri: usize, d: &Dice, tune: &Knobs) {
     }
     dice_done(c, ri);
 }
-/// glassbreak.ts releaseSheet: the laminated sheet leaves its frame whole
+/// The laminated sheet leaves its frame whole
 fn release_sheet(c: &Ctx, ri: usize, away: [f64; 3], kk: f64, tune: &Knobs) {
     let (fr, pts, rev) = {
         let p = pn(c.g);
@@ -1493,7 +1486,7 @@ pub struct Blow {
     pub released: u32,
     pub cracked: bool,
 }
-/// glassbreak.ts impact: a blow of `energy` (1 = one pistol round square on) met pane `bi` at (x, y, z) travelling `dir`. `through`: the caller's word on the round
+/// A blow of `energy` (1 = one pistol round square on) met pane `bi` at (x, y, z) travelling `dir`. `through`: the caller's word on the round
 /// (1 went on · 0 stopped · −1 none: the glass decides by energy). The glass does what it does; what the round does next is the caller's.
 pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64, who: f64, through: i32, tune: &Knobs) -> Blow {
     let mut res = Blow { ty: LAMINATED, ..Blow::default() };
@@ -1634,7 +1627,7 @@ fn ring_out(c: &Ctx, ri: usize, j: usize, tune: &Knobs) {
         }
     }
 }
-/// glassbreak.ts widen: a pellet through glass its own shell has just broken: the piece it passed through, if one still stands, goes with it. → fragments let go
+/// A pellet through glass its own shell has just broken: the piece it passed through, if one still stands, goes with it. → fragments let go
 pub fn widen(c: &Ctx, bi: u32, x: [f64; 3], tune: &Knobs) -> u32 {
     let ri = match pn(c.g).row_of(bi) {
         Some(r) => r,
@@ -1729,7 +1722,7 @@ fn set_k(r: &mut Row, seq: f64, kk: f64) {
     r.bk[2 * at + 1] = kk;
     r.bk_at = r.bk_at.wrapping_add(1);
 }
-/// the arrival in hand (glassbreak.ts blastIn): its charge seen, ready for the sheets one at a time
+/// the arrival in hand: its charge seen, ready for the sheets one at a time
 pub fn blast_begin(c: &Ctx, at: [f64; 3]) {
     let (i, seq) = charge_of(pn(c.g), c.now, at);
     let p = pn(c.g);
@@ -1863,7 +1856,7 @@ fn blast_reach(kk: f64) -> f64 {
 
 // ---- support
 static mut HELD_BITS: [u32; 21] = [0; 21];
-/// glassbreak.ts heldSet: which intact pieces of a float pane are HELD, grown outward from the frame and the uncut sheet, so every held piece is joined to them through held pieces
+/// Which intact pieces of a float pane are HELD, grown outward from the frame and the uncut sheet, so every held piece is joined to them through held pieces
 fn held_set(r: &Row, without: i32, tune: &Knobs) -> &'static [u32; 21] {
     let held = unsafe { &mut *core::ptr::addr_of_mut!(HELD_BITS) };
     *held = [0; 21];
@@ -1922,7 +1915,7 @@ fn held_set(r: &Row, without: i32, tune: &Knobs) -> &'static [u32; 21] {
     }
     unsafe { &*core::ptr::addr_of!(HELD_BITS) }
 }
-/// glassbreak.ts supportPass: what a change left unheld falls, a beat later and staggered
+/// What a change left unheld falls, a beat later and staggered
 fn support_pass(c: &Ctx, ri: usize, tune: &Knobs) {
     let (frags, key, lu, lv) = {
         let r = pn(c.g).row(ri);
@@ -2028,7 +2021,7 @@ pub fn step_row(c: &Ctx, ri: usize, tune: &Knobs) {
         }
     }
 }
-/// glassbreak.ts rakeBy: a man on his feet walks into what is left of a run pane that is mostly hole: the pieces in his way go, away from him, nearest first
+/// A man on his feet walks into what is left of a run pane that is mostly hole: the pieces in his way go, away from him, nearest first
 fn rake_by(c: &Ctx, ri: usize, m: &[f64], tune: &Knobs) {
     let pos = [m[0], m[1], m[2]];
     let vel = [m[3], m[4], m[5]];
@@ -2111,7 +2104,6 @@ pub fn open_fraction(g: usize, bi: u32) -> f64 {
         None => 0.0,
     }
 }
-/// glassbreak.ts walkable
 #[inline]
 pub fn walkable(g: usize, bi: u32) -> bool {
     let p = pn(g);
@@ -2120,7 +2112,7 @@ pub fn walkable(g: usize, bi: u32) -> bool {
         None => false,
     }
 }
-/// glassbreak.ts openSig: a number that changes whenever what is open in any pane changes
+/// A number that changes whenever what is open in any pane changes
 pub fn open_sig(g: usize) -> i32 {
     let p = pn(g);
     let mut s = p.n as i32;
@@ -2131,7 +2123,7 @@ pub fn open_sig(g: usize) -> i32 {
     }
     s
 }
-/// glassbreak.ts openAt: is the point where a piece of static `bi` has fallen out
+/// Is the point where a piece of static `bi` has fallen out
 pub fn open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> bool {
     let p = &state_read(g).panes;
     if p.used == 0 {
@@ -2214,7 +2206,7 @@ pub fn take_gust(g: usize) -> bool {
     p.flags &= !FL_GUST;
     f
 }
-/// the floor's last 'glass' event per pane per shooter (glass.ts liveGap): a hit on this pane by this shooter may be told now. Entries past the gap say nothing and go.
+/// the floor's last 'glass' event per pane per shooter: a hit on this pane by this shooter may be told now. Entries past the gap say nothing and go.
 pub fn heard_gap(g: usize, pane: u32, who: f64, now: f64, gap: f64) -> bool {
     let p = pn(g);
     p.stand();

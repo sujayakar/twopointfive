@@ -143,48 +143,33 @@ pub struct SegSegClosest {
     pub on_b: V3,
 }
 
-/// (src/game/devices.ts:46 LED_IDLE: a table nothing writes)
 pub fn led_idle() -> V3 { [1.6, 0.08, 0.05] }
 
-/// (src/game/devices.ts:46 LED_HOT: a table nothing writes)
 pub fn led_hot() -> V3 { [14.0, 0.7, 0.3] }
 
-/// (src/game/devices.ts:48 CONE: a table nothing writes)
 pub fn cone() -> crate::devices::CONE { crate::devices::CONE { intensity: 1.1, color: [1.0, 0.12, 0.07], range_k: 0.7, volumetric: 1.0, outer_max_deg: 24.0, radius: 0.12 } }
 
-/// (src/game/devices.ts:50 BEAM_MARGIN)
 pub const BEAM_MARGIN: f64 = 0.02;
 
-/// (src/game/devices.ts:52 CODE_SECS)
 pub const CODE_SECS: f64 = 1.2;
 
-/// (src/game/devices.ts:53 PAD_REACH)
 pub const PAD_REACH: f64 = 1.35;
 
-/// (src/game/devices.ts:53 DENY_LEVEL)
 pub const DENY_LEVEL: f64 = 0.05;
 
-/// (src/game/devices.ts:58 ERRAND: a table nothing writes)
 pub fn errand() -> crate::devices::ERRAND { crate::devices::ERRAND { awareness: 0.42, react_t: 1.0 } }
 
-/// (src/game/devices.ts:365 CAM_COL: a table nothing writes)
 pub fn cam_col() -> V3 { [0.16, 0.17, 0.19] }
 
-/// (src/game/devices.ts:365 CAM_DARK: a table nothing writes)
 pub fn cam_dark() -> V3 { [0.05, 0.05, 0.06] }
 
-/// (src/game/devices.ts:365 PAD_COL: a table nothing writes)
 pub fn pad_col() -> V3 { [0.22, 0.23, 0.25] }
 
-/// (src/game/devices.ts:365 EMIT_COL: a table nothing writes)
 pub fn emit_col() -> V3 { [0.14, 0.14, 0.16] }
 
-/// (src/game/devices.ts:366 GREEN: a table nothing writes)
 pub fn green() -> V3 { [0.3, 5.0, 0.6] }
 
-/// (src/game/devices.ts:366 RED: a table nothing writes)
 pub fn red() -> V3 { [5.0, 0.3, 0.15] }
 
-/// (src/game/devices.ts:366 AMBER: a table nothing writes)
 pub fn amber() -> V3 { [5.0, 2.4, 0.2] }
 

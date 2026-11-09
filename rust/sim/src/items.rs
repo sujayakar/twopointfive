@@ -1,8 +1,7 @@
-//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR (src/game/throwables.ts Throwables.update) — a can, a grenade, a magazine, a gun out of a dying
+//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR — a can, a grenade, a magazine, a gun out of a dying
 //! hand, for one tick: it ages, falls, meets the walls, the leaves and the furniture by a ray from its middle, bounces, hands the furniture a share of
 //! what it lost, and comes to rest on a floor or on a chair's seat; lying on a thing that has moved, it looks under itself and drops.
 //!
-//! STATEMENT FOR STATEMENT, as doors.rs, props.rs and slabs.rs are. tools/qa/item-ident.ts and the missions of tools/qa/rust-check.ts hold the two together.
 //!
 //! WHAT IS STATE. A thing's own numbers are the `items` part of the game's block (state.rs), laid out as the furniture's are (props.rs says why): a
 //! column a number, as narrow as its values, the truths bits of one word, hot before cold, every column whole vectors on a 16-byte boundary. THE ROWS
@@ -82,7 +81,7 @@ pub struct Items {
 }
 const _: () = assert!(size_of::<Items>() == 16 + 20 * CAP * 8 + 6 * CAP * 4);
 const _: () = assert!(offset_of!(Items, px) % 16 == 0 && offset_of!(Items, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/itemshome.ts ITEM_F64 and ITEM_U32 name them the same)
+/// the columns in their order
 pub const COLS: [usize; 26] = [
     offset_of!(Items, px),
     offset_of!(Items, py),
@@ -114,7 +113,7 @@ pub const COLS: [usize; 26] = [
 
 // ---- WHAT THE HOST HANDS IN AND TAKES BACK FOR ONE WALK (scratch)
 // in: the frame's dt · the row to start at (the walk goes down from it) · whether the host has a rule for panes · whether the ground may be lying snow
-// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture (throwables.ts RIFLE_ITEM.propShare)
+// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture
 pub const P_DT: usize = 0;
 pub const P_FROM: usize = 1;
 pub const P_ASK: usize = 2;
@@ -222,7 +221,7 @@ fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
     let (px, pz) = (x - rec[q + R_C], z - rec[q + R_C + 2]);
     js_abs(cs * px - sn * pz) <= rec[q + R_H] && js_abs(sn * px + cs * pz) <= rec[q + R_H + 2]
 }
-/// snowBog.ts snowBogAt: HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or
+/// HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or
 /// caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare. The statics that
 /// are snow are named by the world's table `snow`; where each is and how it is turned are its own row's.
 fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
@@ -290,7 +289,7 @@ fn things(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     }
     Some((out[0], out[1], out[2], out[3], world(d.w).thing_live[r as usize * TL] as usize))
 }
-/// Throwables.ray: the closest hit among the statics and the leaves (collision.ts raycast) and the furniture: how far, the face's normal, and the id
+/// Throwables.ray: the closest hit among the statics and the leaves and the furniture: how far, the face's normal, and the id
 /// of the thing of furniture PLUS ONE (0: a wall, a floor, a leaf)
 #[allow(clippy::too_many_arguments)]
 fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64, tune: &Knobs) -> Option<(f64, f64, f64, f64, usize)> {

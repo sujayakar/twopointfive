@@ -212,7 +212,7 @@ pub fn panes_view(w: usize, kind: u32, x: f64, y: f64, z: f64, radius: f64, powe
     o.view_n = 0;
     o.view_at = [x, y, z, radius, power, sure];
 }
-/// glassbreak.ts impact: live 1 · was open 2 · punched 4 · diced 8 · cracked 16 · the glass × 32 · fragments let go × 256
+/// Live 1 · was open 2 · punched 4 · diced 8 · cracked 16 · the glass × 32 · fragments let go × 256
 pub fn panes_impact(bi: u32, x: f64, y: f64, z: f64, has_dir: u32, dx: f64, dy: f64, dz: f64, energy: f64, who: f64, through: i32, tune: &Knobs) -> u32 {
     let r = panes::impact(&cx(), bi, [x, y, z], if has_dir != 0 { Some([dx, dy, dz]) } else { None }, energy, who, through, tune);
     r.live as u32 | (r.was_open as u32) << 1 | (r.punched as u32) << 2 | (r.diced as u32) << 3 | (r.cracked as u32) << 4 | r.ty << 5 | r.released << 8
@@ -249,7 +249,7 @@ pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> 
     b[world::R_H + 2] = hz;
     panes::box_seed(&b)
 }
-/// shards.ts crossed: a round's exit jet, its glass comes down where the jet does. `amount`: m² of it.
+/// A round's exit jet, its glass comes down where the jet does. `amount`: m² of it.
 pub fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, speed: f64, amount: f64, who: f64, tune: &Knobs) {
     panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who, tune);
 }
@@ -260,17 +260,17 @@ pub fn panes_cap(i: u32) -> u32 {
 }
 
 // ---- a window's bar
-/// winbars.ts breakBar: 1 this bar goes, its flags as it stood filed
+/// 1 this bar goes, its flags as it stood filed
 pub fn bars_take(bi: u32, flags: u32) -> u32 {
     panes::bar_take(&cx(), bi, flags) as u32
 }
-/// winbars.ts barsBlast: how many bars a charge takes, and in scratch a static and the point each
+/// How many bars a charge takes, and in scratch a static and the point each
 pub fn bars_blast(x: f64, y: f64, z: f64, reach: f64, statics: usize, tune: &Knobs) -> usize {
     panes::bars_blast(&cx(), [x, y, z], reach, statics, scratch(), tune)
 }
 
 // ---- a round and a pane (pen.rs)
-/// glasspen.ts paneCrossing: 1 and the crossing → scratch 0 … 24, what it is born in → scratch 25 · 0 spent in it
+/// 1 and the crossing → scratch 0 … 24, what it is born in → scratch 25 · 0 spent in it
 pub fn pen_cross(bi: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t: f64, e: f64, nth: usize, tune: &Knobs) -> u32 {
     match pen::pane_crossing(&cx(), bi, [ox, oy, oz], [dx, dy, dz], t, e, nth, tune) {
         Some(x) => {

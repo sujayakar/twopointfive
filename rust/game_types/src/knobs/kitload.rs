@@ -17,7 +17,7 @@ pub struct KitloadK {
     /// one of each small thing, by the card's field (about its real weight: a smoke can and a door charge are the heavy ones). A man's four pouches full
     ///  cost his legs about three times what his long gun does: emptying them is a trade worth making without changing the gun
     #[k({ let mut t = JsMap::new(); t.set(String::from("smoke"), [0.1, 0.02]); t.set(String::from("bangs"), [0.07, 0.02]); t.set(String::from("frags"), [0.08, 0.02]); t.set(String::from("shells"), [0.07, 0.01]); t.set(String::from("charges"), [0.1, 0.02]); t.set(String::from("wand"), [0.07, 0.02]); t.set(String::from("cams"), [0.04, 0.01]); t })] pub small: JsMap<String, [f64; 2]>,
-    /// the big thing on his back, by what the big slot's row calls it (kit.ts bigOf)
+    /// the big thing on his back, by what the big slot's row calls it
     #[k({ let mut t = JsMap::new(); t.set(String::from("shotgun"), [0.18, 0.1]); t.set(String::from("hammer"), [0.3, 0.1]); t.set(String::from("wall"), [0.24, 0.06]); t })] pub big: JsMap<String, [f64; 2]>,
     /// how much of a point of mobility is pace: his legs are × 1 + (mobility − his issue's) × pace
     #[k(0.4)] pub pace: f64,
@@ -26,7 +26,6 @@ pub struct KitloadK {
     #[k(0.7)] pub heard: f64,
     /// how much of his pace factor YOUR SPRINT keeps (a flat-out run is legs more than load: 0.5 = half the walk's gain or loss)
     #[k(0.5)] pub sprint: f64,
-    /// the most a TEAMMATE's legs are ever asked for with a light card (m/s): a purposeful walk still (guards.ts PACE.max is 2.2), well under the sprint clip
-    ///  (character.ts BLEND: past 2.7)
+    /// the most a TEAMMATE's legs are ever asked for with a light card (m/s): a purposeful walk still, well under the sprint clip
     #[k(2.4)] pub pace_top: f64,
 }

@@ -7,7 +7,7 @@
 use crate::maths::{exp, hypot2, hypot3};
 use crate::world::{js_max, js_min, or_one, smoothstep};
 
-/// the field's shape (wind.ts WIND_FIELD): how a jet blown at a floor turns along it, its support across, the storm's ceiling, its lee off a roof, its share of
+/// the field's shape: how a jet blown at a floor turns along it, its support across, the storm's ceiling, its lee off a roof, its share of
 /// itself at the ground and what it gains by `STORM_FULL_AT` metres up, how a vent's record becomes a jet
 pub const DEFLECT_H: f64 = 0.55;
 pub const DEFLECT_LOSS: f64 = 0.35;
@@ -22,7 +22,7 @@ pub const CORE_K: f64 = 0.4;
 /// `WIND_FIELD` by place: the order wind.ts names them in
 pub const SHAPE: [f64; 10] = [DEFLECT_H, DEFLECT_LOSS, SUPPORT_SIGMA, STORM_TOP, STORM_LEE, STORM_LOW, STORM_GAIN, STORM_FULL_AT, CUT_K, CORE_K];
 
-/// wind.ts jetVel: the jet's air at `p`
+/// The jet's air at `p`
 #[allow(clippy::too_many_arguments)]
 pub fn jet_vel(pos: [f64; 3], dir: [f64; 3], speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: [f64; 3]) -> [f64; 3] {
     let none = [0.0, 0.0, 0.0];
@@ -86,7 +86,7 @@ pub fn jet_vel(pos: [f64; 3], dir: [f64; 3], speed: f64, reach: f64, tan_spread:
 fn in_rect(x: f64, z: f64, r: &[f64]) -> bool {
     x > r[0] && z > r[1] && x < r[2] && z < r[3]
 }
-/// wind.ts stormVel: `wind` outdoors, nothing inside the two footprints or over the storm's ceiling
+/// `wind` outdoors, nothing inside the two footprints or over the storm's ceiling
 pub fn storm_vel(wind: [f64; 3], interior: &[f64], annex: &[f64], p: [f64; 3]) -> [f64; 3] {
     if p[1] > STORM_TOP || p[1] < 0.0 || in_rect(p[0], p[2], interior) || in_rect(p[0], p[2], annex) {
         return [0.0, 0.0, 0.0];
@@ -95,7 +95,7 @@ pub fn storm_vel(wind: [f64; 3], interior: &[f64], annex: &[f64], p: [f64; 3]) -
     let k = smoothstep(0.0, STORM_LEE, d_out) * (STORM_LOW + STORM_GAIN * js_max(0.0, js_min(1.0, p[1] / STORM_FULL_AT)));
     [wind[0] * k, wind[1] * k, wind[2] * k]
 }
-/// wind.ts roofOut: how far (x, z) stands outside a roof along its nearer axis; a footprint with no width is no roof
+/// How far (x, z) stands outside a roof along its nearer axis; a footprint with no width is no roof
 #[inline]
 fn roof_out(x: f64, z: f64, r: &[f64]) -> f64 {
     if !(r[2] > r[0]) || !(r[3] > r[1]) {
@@ -104,7 +104,7 @@ fn roof_out(x: f64, z: f64, r: &[f64]) -> f64 {
         js_max(js_max(r[0] - x, x - r[2]), js_max(r[1] - z, z - r[3]))
     }
 }
-/// wind.ts stormVelRoofs: `wind` wherever none of the `n` roofs (four doubles each, at most four) is overhead, easing in off the nearest
+/// `wind` wherever none of the `n` roofs (four doubles each, at most four) is overhead, easing in off the nearest
 pub fn storm_vel_roofs(wind: [f64; 3], roofs: &[f64], n: usize, p: [f64; 3]) -> [f64; 3] {
     if p[1] > STORM_TOP || p[1] < 0.0 {
         return [0.0, 0.0, 0.0];
@@ -122,7 +122,6 @@ pub fn storm_vel_roofs(wind: [f64; 3], roofs: &[f64], n: usize, p: [f64; 3]) -> 
     [wind[0] * k, wind[1] * k, wind[2] * k]
 }
 
-/// wind.ts hashU
 #[inline]
 fn hash_u(x: u32) -> u32 {
     let mut x = (x ^ 0x9E3779B9).wrapping_mul(0x85EBCA6B);
@@ -135,7 +134,7 @@ fn hash_u(x: u32) -> u32 {
 fn hash01(x: u32) -> f64 {
     (hash_u(x) >> 8) as f64 / 16777216.0
 }
-/// wind.ts vnoise: smooth value noise in [−1, 1] at x, one lattice value per integer, per seed
+/// Smooth value noise in [−1, 1] at x, one lattice value per integer, per seed
 pub fn vnoise(seed: u32, x: f64) -> f64 {
     let i = prim::floor(x);
     let f = x - i;

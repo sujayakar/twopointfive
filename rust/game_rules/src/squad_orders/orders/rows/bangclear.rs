@@ -14,7 +14,6 @@ pub const ORDER: Row = Row {
     ..Row::new("bangClear", label, issue)
 };
 
-/// doortools.ts:812
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return format!("bang, then go in · {} left", g.door_tools.bangs); }
@@ -22,7 +21,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     format!("{} and clear · {} left", first, g.door_tools.bangs)
 }
 
-/// doortools.ts:814-817
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return crate::doortools::row_can_then(g, What::Bang, t, men); }
     if g.door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }

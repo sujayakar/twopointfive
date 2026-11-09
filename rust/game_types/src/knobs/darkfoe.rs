@@ -2,9 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// the switch and its numbers: on (?nodarkfoe = defenders leave their lights alone and stand
-///  where they were put, as they did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_DARKFOE=1 turns it on). `litAt` is on the meter's
-///  0‥1 scale. UNTUNED by eye: nobody has seen it on a GPU, and the estimate has no bounce (it errs dark, so toward the lamp on).
+/// `litAt` is on the meter's 0‥1 scale. UNTUNED by eye: nobody has seen it on a GPU, and the estimate has no bounce (it errs dark, so toward the lamp on).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DarkfoeK {
     /// the share of them that carry a light (by id); 1 = every man, 0 = nobody

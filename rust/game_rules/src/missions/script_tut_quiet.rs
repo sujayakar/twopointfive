@@ -13,11 +13,11 @@ use alloc::{format, string::String, vec, vec::Vec};
 /// the script's locals, as this run's define pass left them
 fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of levels/tut-quiet.script.ts") } }
 
-/// where he looks from, where he smokes, and the lane's side of the level (tut-quiet.script.ts:20)
+/// where he looks from, where he smokes, and the lane's side of the level
 const LOOK: V3 = [26.4, 0.0, 17.75];
 const SMOKE: V3 = [30.6, 0.0, 17.7];
 const CROSS_WALL_X: f64 = 25.5;
-/// how long he looks, how long the smoke lasts, and how far off boots are heard with his back turned (tut-quiet.script.ts:23)
+/// how long he looks, how long the smoke lasts, and how far off boots are heard with his back turned
 const LOOK_SECS: f64 = 3.6;
 const SMOKE_SECS: f64 = 50.0;
 const RUN_LEVEL: f64 = 0.34;
@@ -38,7 +38,7 @@ const NIGHT_LOOP: u16 = 7;
 const NIGHT_ROUND: u16 = 8;
 const NIGHT_SMOKED: u16 = 9;
 
-/// (tut-quiet.script.ts:25 script) the define pass.
+///  the define pass.
 pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_quiet::TutQuietVars, String> {
     let walk = crate::director::manifest_volume(m, "tq_walk");
     let beam = crate::director::manifest_volume(m, "tq_beam");
@@ -55,7 +55,7 @@ pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crat
     Ok(TutQuietVars { walk: Some(walk), beam: Some(beam), past: Some(past) })
 }
 
-/// the man by name, if he is still at his work (tut-quiet.script.ts:29 calm)
+/// the man by name, if he is still at his work
 fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let u = crate::director::director_beat_unit(g, r, callsign)?;
     if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
@@ -88,32 +88,29 @@ pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, b
     }
 }
 
-/// he is the player's, grabbed or down (tut-quiet.script.ts:49 taken)
+/// he is the player's, grabbed or down
 fn taken(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     !crate::director::director_query_alive(g, r, u) || crate::director::director_query_signalled(g, r, "lesson:held")
 }
 
-/// (tut-quiet.script.ts:50 gone)
 fn gone() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_TAKEN }, Some("he is taken"))
 }
 
-/// he has come round the long wall's end (tut-quiet.script.ts:52 inStrip)
+/// he has come round the long wall's end
 fn in_strip(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     Ok(crate::director::director_query_pos_unit(g, r, u)?[2] < 18.5)
 }
 
-/// (tut-quiet.script.ts:54 met)
 fn met() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_MET }, Some("the player is in front of him"))
 }
 
-/// (tut-quiet.script.ts:55 lit)
 fn lit() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_LIT }, Some("the player is in his light"))
 }
 
-/// q.inside(v, 'sam') of a volume the define pass named (director.ts:852)
+/// q.inside(v, 'sam') of a volume the define pass named
 fn sam_inside(g: &Game, seat: &crate::seats::SeatRef, r: DirectorRunId, v: &Option<crate::director::VolumeRef>) -> bool {
     let id = &v.as_ref().expect("tut-quiet: the define pass names its volumes").id;
     crate::director::director_inside_volume(g, seat, r, id, &crate::director::DirectorInsideVolumeWho::Sam)
@@ -274,7 +271,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
     }
 }
 
-/// (tut-quiet.script.ts:46-93) night's c.until closures, by the TEST_ ids.
+///  night's c.until closures, by the TEST_ ids.
 pub(super) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
     let u = f.u.clone().expect("tut-quiet night: u is set at its start");
     let vars = tut_quiet_vars(g, r).clone();

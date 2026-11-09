@@ -28,7 +28,7 @@ pub struct CkptK {
 ///      out the other, and the slots an older build wrote are read, listed and loaded as they are (same keys, same index; the one old manual slot is the ring's first);
 ///    - every save keeps a small PICTURE of its moment, taken by the host (`Checkpoints.picture`: the simulation never sees a canvas) and stored beside the slot
 ///      (`…pic.<slot>`); a picture that does not fit is dropped, and a save that does not fit has every picture thrown out for it before it is given up;
-///    - WITH A TEAM ON THE FLOOR, where no file can be written (a unit has no slice), the save is the whole game kept in memory (rollback.ts takeSnapshot) and
+///    - WITH A TEAM ON THE FLOOR, where no file can be written (a unit has no slice), the save is the whole game kept in memory and
 ///      put back in place: this run's only, gone with the page or the run — the cards list both kinds on one strip (`timeline`), in the mission clock's order.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct SavetimelineK {

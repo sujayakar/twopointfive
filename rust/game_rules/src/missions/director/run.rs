@@ -1,4 +1,3 @@
-//! src/game/director.ts lines 424 to 857
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -69,7 +68,7 @@ fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
     js::to_u32(s) as f64
 }
 
-/// A level's director: its script defined and linted, armed if the lint found no error. (director.ts Director.constructor)
+/// A level's director: its script defined and linted, armed if the lint found no error.
 pub fn director_new(g: &crate::game::Game, script: Option<crate::scene_level::LevelScriptFn>) -> crate::director::Director {
     let mut d = Director::blank();
     let Some(script) = script else {
@@ -100,7 +99,7 @@ pub fn director_new(g: &crate::game::Game, script: Option<crate::scene_level::Le
     d
 }
 
-/// The script's programs by name. (director.ts Director.programs)
+/// The script's programs by name.
 pub(in crate::missions) fn director_programs(g: &crate::game::Game) -> Vec<String> {
     match &g.director.manifest {
         Some(m) => m.programs.keys(),
@@ -108,7 +107,7 @@ pub(in crate::missions) fn director_programs(g: &crate::game::Game) -> Vec<Strin
     }
 }
 
-/// Why `name` cannot start now; None = it can. (director.ts Director.canStart)
+/// Why `name` cannot start now; None = it can.
 fn director_can_start(g: &crate::game::Game, name: &str) -> Option<String> {
     let Some(manifest) = &g.director.manifest else { return Some(String::from("this level has no script")) };
     if manifest.programs.get(String::from(name)).is_none() {
@@ -124,12 +123,12 @@ fn director_can_start(g: &crate::game::Game, name: &str) -> Option<String> {
     None
 }
 
-/// A tutorial mission's own program is running. (director.ts Director.lessonRuns)
+/// A tutorial mission's own program is running.
 pub fn director_lesson_runs(g: &crate::game::Game) -> bool {
     running(g).is_some() && crate::rails::rails_live(g)
 }
 
-/// The level's script put the defenders' own grenades off. (director.ts Director.theirFragsOff)
+/// The level's script put the defenders' own grenades off.
 pub fn director_their_frags_off(g: &crate::game::Game) -> bool {
     match &g.director.manifest {
         Some(m) if g.director.armed => m.systems.get("theirFrags") == Some(&false),
@@ -137,13 +136,12 @@ pub fn director_their_frags_off(g: &crate::game::Game) -> bool {
     }
 }
 
-/// (director.ts Director.objective)
 pub(in crate::missions) fn director_objective(g: &crate::game::Game) -> Option<crate::director::DirectorObjective> {
     let r = running(g)?;
     g.tab.director_run[r].objective.as_ref().map(|o| DirectorObjective { text: o.text.clone(), pos: o.pos })
 }
 
-/// A signal from outside a beat, met by the running program on its next tick. (director.ts Director.signal)
+/// A signal from outside a beat, met by the running program on its next tick.
 pub(in crate::missions) fn director_signal(g: &mut crate::game::Game, name: &str, data: Option<&crate::director::DirectorSignalData>) {
     let Some(r) = running(g) else { return };
     let data = data.map(|d| match d {
@@ -158,7 +156,7 @@ pub(in crate::missions) fn director_signal(g: &mut crate::game::Game, name: &str
     note(g, "", DirectorPushRowKind::Note, &format!("signal:{}", name), data);
 }
 
-/// Has the running program raised, or been sent, this signal. (director.ts Director.signalled)
+/// Has the running program raised, or been sent, this signal.
 pub(in crate::missions) fn director_signalled(g: &crate::game::Game, name: &str) -> bool {
     match running(g) {
         Some(r) => g.tab.director_run[r].signals.iter().any(|s| s.name == name),
@@ -166,7 +164,7 @@ pub(in crate::missions) fn director_signalled(g: &crate::game::Game, name: &str)
     }
 }
 
-/// A row of the beat log, a ring of LOG_CAP. (director.ts Director.push)
+/// A row of the beat log, a ring of LOG_CAP.
 pub(super) fn director_push(g: &mut crate::game::Game, row: &crate::director::DirectorPushRow) {
     let (t, run, program) = match g.director.run {
         Some(r) => {
@@ -184,7 +182,7 @@ pub(super) fn director_push(g: &mut crate::game::Game, row: &crate::director::Di
 }
 
 // ---------------------------------------------------------------- start / stop
-/// Start program `name` now; the reason when refused. (director.ts Director.start)
+/// Start program `name` now; the reason when refused.
 pub(in crate::missions) fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate::director::DirectorStartOpts>) -> Option<String> {
     if let Some(why) = director_can_start(g, name) {
         return Some(why);
@@ -234,7 +232,7 @@ pub(in crate::missions) fn director_start(g: &mut crate::game::Game, name: &str,
     None
 }
 
-/// Stop the running program: everything it holds let go of, the log noted, onProgramEnd told. Idempotent. (director.ts Director.stop)
+/// Stop the running program: everything it holds let go of, the log noted, onProgramEnd told. Idempotent.
 pub(in crate::missions) fn director_stop(g: &mut crate::game::Game, finished: Option<bool>) {
     let finished = finished.unwrap_or(false);
     let Some(r) = running(g) else { return };
@@ -290,7 +288,7 @@ fn cancel_beat(g: &mut Game, b: DirectorLiveBeatId, why: Option<&str>) {
     note(g, &name, DirectorPushRowKind::Beat, "cancelled", Some(obj(data)));
 }
 
-/// The encounter restarted under a play program: its men are gone, the program ends where it stood. (director.ts Director.onEncounterRestart)
+/// The encounter restarted under a play program: its men are gone, the program ends where it stood.
 pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
     let Some(r) = running(g) else { return };
     if !g.director.exiting {
@@ -301,7 +299,7 @@ pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
 }
 
 // ---------------------------------------------------------------- the tick
-/// Once a frame from Game.update, before tacticsTick. (director.ts Director.tick)
+/// Once a frame from Game.update, before tacticsTick.
 /// (`_input`, `_cam`: the call surface's row still carries them, and nothing reads them: the host's camera and keys are the game's `host_cam` /
 /// `host_input`, handed at the stand)
 pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>, _cam: Option<CameraId>) {
@@ -341,7 +339,6 @@ fn trigger_event(t: &TriggerDef, fresh: &[EventView]) -> Option<EventView> {
     fresh.iter().find(|e| Some(e.kind.as_str()) == kind).cloned()
 }
 
-/// (director.ts Director.fireTriggers)
 fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[crate::director::EventView]) {
     let n = g.tab.director_run[r].def.triggers.len();
     for i in 0..n {
@@ -389,7 +386,7 @@ fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[
     }
 }
 
-/// A second trigger for a running beat is a no-op; one re-started after it ended replaces its record. (director.ts Director.startBeat)
+/// A second trigger for a running beat is a no-op; one re-started after it ended replaces its record.
 pub(super) fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> {
     let Some(script) = g.tab.director_run[r].def.beats.get(String::from(name)).map(|b| b.fn_) else {
         note(g, name, DirectorPushRowKind::Error, &format!("no beat '{}'", name), None);
@@ -424,7 +421,7 @@ pub(super) fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, n
     Some(lb)
 }
 
-/// Resume every running beat whose condition holds, in start order, passing again while any moved. A snapshot: a beat started this pass waits for the next. (director.ts Director.resumeAll)
+/// Resume every running beat whose condition holds, in start order, passing again while any moved. A snapshot: a beat started this pass waits for the next.
 fn director_resume_all(g: &mut crate::game::Game, r: DirectorRunId, fresh: Option<&[crate::director::EventView]>) {
     let fresh = fresh.unwrap_or(&[]);
     for _pass in 0..MAX_PASSES as usize {
@@ -444,7 +441,7 @@ fn director_resume_all(g: &mut crate::game::Game, r: DirectorRunId, fresh: Optio
     }
 }
 
-/// → did the beat advance at all. (director.ts Director.resume)
+/// → did the beat advance at all.
 fn director_resume(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, fresh: &[crate::director::EventView]) -> bool {
     let mut n: f64 = 0.0;
     while g.tab.director_live_beat[b].state == BeatState::Running {
@@ -518,7 +515,7 @@ fn filter_holds(g: &Game, r: DirectorRunId, f: &EventFilter, e: &EventView) -> b
     }
 }
 
-/// Does condition `c` hold this tick: what goes back into the generator, None = keep waiting. (director.ts Director.holds)
+/// Does condition `c` hold this tick: what goes back into the generator, None = keep waiting.
 fn director_holds(g: &mut crate::game::Game, r: DirectorRunId, c_2: &mut crate::director::Cond, fresh: &[crate::director::EventView], b: DirectorLiveBeatId) -> Option<crate::director::CondResult> {
     let yes = |event: Option<EventView>| Some(CondResult { index: 0.0, event });
     match c_2 {
@@ -580,7 +577,6 @@ fn director_holds(g: &mut crate::game::Game, r: DirectorRunId, c_2: &mut crate::
     }
 }
 
-/// (director.ts Director.failBeat)
 fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, e: &str) {
     let msg = e;
     g.tab.director_live_beat[b].state = BeatState::Failed;
@@ -601,7 +597,6 @@ fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLi
         }
     }
 }
-/// (director.ts Director.beginFinish)
 fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) {
     let rr = &mut g.tab.director_run[r];
     if rr.finishing || rr.ended {
@@ -612,7 +607,7 @@ fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) {
     director_stop(g, Some(true));
 }
 
-/// Only what the script set is kept, so only that is put back: a setting the player changed under the program stays his. (director.ts Director.applySystems)
+/// Only what the script set is kept, so only that is put back: a setting the player changed under the program stays his.
 fn director_apply_systems(g: &mut crate::game::Game, r: DirectorRunId) {
     let m = &g.director.manifest.as_ref().unwrap().systems;
     let (qrf, needs, civilians, autosave) = (m.get("qrf").copied(), m.get("needs").copied(), m.get("civilians").copied(), m.get("autosave").copied());
@@ -631,7 +626,6 @@ fn director_apply_systems(g: &mut crate::game::Game, r: DirectorRunId) {
     if let Some(x) = autosave { g.saves.enabled = x; }
 }
 
-/// (director.ts Director.restoreSystems)
 fn director_restore_systems(g: &mut crate::game::Game, r: DirectorRunId) {
     let Some(s) = g.tab.director_run[r].systems_saved.take() else { return };
     if let Some(&x) = s.get("qrf") { g.tune.qrf = x; }
@@ -649,7 +643,7 @@ fn unit_guard(g: &Game, r: DirectorRunId, id: f64) -> Option<GuardId> {
     }
 }
 
-/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts. (director.ts Director.tickBursts)
+/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts.
 fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     let mut i = 0;
     while i < g.tab.director_run[r].bursts.len() {
@@ -702,7 +696,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands. (director.ts Director.tickKicks)
+/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands.
 fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
         return;
@@ -732,7 +726,6 @@ fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
 }
 
 // ---------------------------------------------------------------- resolving handles
-/// (director.ts Director.placeOf)
 pub(super) fn director_place_of(g: &crate::game::Game, p: &crate::director::Place) -> Result<V3, String> {
     let mk = match p {
         Place::List(v) => return Ok(*v),
@@ -747,12 +740,10 @@ pub(super) fn director_place_of(g: &crate::game::Game, p: &crate::director::Plac
     Err(format!("mark '{}' does not resolve", mk.id))
 }
 
-/// (director.ts Director.doorOf)
 pub(super) fn director_door_of(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<DoorId, String> {
     crate::doors::doors_by_name(g, &d.id).ok_or_else(|| format!("door '{}' does not resolve", d.id))
 }
 
-/// (director.ts Director.guardOf)
 pub(super) fn director_guard_of(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<GuardId, String> {
     let rr = &g.tab.director_run[r];
     if let Some(rec) = rr.units.get(crate::Num(u.id)) {
@@ -771,7 +762,6 @@ fn in_volume(v: &crate::scene_level::VolumeDef, p: V3) -> bool {
     let (lx, lz) = (cs * px - sn * pz, sn * px + cs * pz);
     m::abs(lx) <= v.h[0] && m::abs(lz) <= v.h[2] && p[1] >= v.c[1] - v.h[1] - 0.1 && p[1] <= v.c[1] + v.h[1] + 2.0
 }
-/// (director.ts Director.insideVolume)
 pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &crate::seats::SeatRef, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
@@ -788,20 +778,16 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
 }
 
 // The Query's methods: closures in the TypeScript (TS 845-856), with the skeleton's names: a beat calls them.
-/// (director.ts Query.alive)
 pub(in crate::missions) fn director_query_alive(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     unit_guard(g, r, u.id).map_or(false, |gd| g.gd[gd].state != crate::game::GuardState::Dead)
 }
-/// (director.ts Query.arrived)
 pub(in crate::missions) fn director_query_arrived(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let gd = director_guard_of(g, r, u)?;
     Ok(g.gd[gd].script.as_ref().map_or(false, |s| s.arrived.unwrap_or(false)))
 }
-/// (director.ts Query.state)
 pub(in crate::missions) fn director_query_state(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Option<crate::game::GuardState> {
     director_guard_of(g, r, u).ok().map(|gd| g.gd[gd].state)
 }
-/// (director.ts Query.pos, of a man)
 pub(in crate::missions) fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<V3, String> {
     let gd = director_guard_of(g, r, u)?;
     Ok(v3::copy(g.ch[g.gd[gd].ch].pos))
@@ -818,11 +804,9 @@ pub(in crate::missions) fn director_query_door(g: &crate::game::Game, d: &crate:
         swing: crate::doors::door_swing(g, id),
     })
 }
-/// (director.ts Query.signalled)
 pub(in crate::missions) fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str) -> bool {
     g.tab.director_run[r].signals.iter().any(|s| s.name == n)
 }
-/// (director.ts Query.routed)
 pub(in crate::missions) fn director_query_routed(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
         Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),

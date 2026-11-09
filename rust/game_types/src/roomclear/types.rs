@@ -78,6 +78,5 @@ pub struct RoomClearScenarioObjective {
     pub pos: Option<V3>,
 }
 
-/// (src/game/roomclear.ts:106 MARK_CLEAR_M)
 pub const MARK_CLEAR_M: f64 = 0.45;
 

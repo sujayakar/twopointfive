@@ -42,5 +42,4 @@ pub struct CarlampsStats {
     pub painted: i32,
 }
 
-/// (src/game/carlamps.ts:39 VEHICLE_GROUP)
 pub const VEHICLE_GROUP: &str = "vehicle";

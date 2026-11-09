@@ -53,7 +53,7 @@ pub struct Weather {
 // (a whole number of sixteens: the pools after it start on a 16-byte boundary, state.rs)
 const _: () = assert!(size_of::<Weather>() == 8 * 13 + 8 * ROOFS * 4 + 8 + 8 * THUNDERS * TH + 8 + 8 + size_of::<Air>() && size_of::<Weather>() % 16 == 0);
 
-/// the storm's numbers (weather.ts): seconds between strokes, the lot's soak, the speed of sound, a stroke's own peak
+/// the storm's numbers: seconds between strokes, the lot's soak, the speed of sound, a stroke's own peak
 const SPEED_OF_SOUND: f64 = 343.0;
 const FLASH_PEAK: f64 = 18.0;
 const FLASH_MEAN_GAP: f64 = 11.0;
@@ -172,7 +172,7 @@ pub fn hear_mask(w: &Weather, time: f64, x: f64, z: f64, tune: &Knobs) -> f64 {
 }
 
 // ---- what the weather answers to sight
-/// weatherKinds.ts fogTau: the fog's optical depth along a → b, before any roof
+/// The fog's optical depth along a → b, before any roof
 pub fn fog_tau(sigma: f64, h: f64, a: [f64; 3], b: [f64; 3]) -> f64 {
     let l = hypot3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     if !(l > 0.0) {
@@ -298,7 +298,7 @@ pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64], tune: 
     out[7] = at;
     true
 }
-/// weather.ts strokeMean: the mean of the stroke's envelope over [a, b], its `n` pulses (t0, amp, tau) in `pulses`
+/// The mean of the stroke's envelope over [a, b], its `n` pulses (t0, amp, tau) in `pulses`
 pub fn stroke_mean(pulses: &[f64], n: usize, a: f64, b: f64) -> f64 {
     if b <= a {
         let mut e = 0.0;
@@ -334,7 +334,7 @@ const SKY_RING: f64 = 0.35;
 const WET_SKY_SECS: f64 = 0.25;
 const SKY_OFFSETS: [[f64; 2]; 5] = [[0.0, 0.0], [SKY_RING, 0.0], [-SKY_RING, 0.0], [0.0, SKY_RING], [0.0, -SKY_RING]];
 
-/// wet.ts openSky: is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of
+/// Is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of
 /// a second a man (`sky_t`, `open`: his, handed in and back). `head`: how high his head is, as the host reads it. → (open, this call asked the rays)
 #[allow(clippy::too_many_arguments)]
 pub fn open_sky(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, x: f64, z: f64, head: f64, sky_t: &mut f64, open: &mut f64, tune: &Knobs) -> (bool, bool) {

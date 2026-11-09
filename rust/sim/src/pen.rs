@@ -1,4 +1,4 @@
-//! WHAT A PANE IS TO A ROUND (src/game/glasspen.ts, whose TypeScript is the caller): what a sheet takes from a round crossing it, how the round turns, where it
+//! WHAT A PANE IS TO A ROUND: what a sheet takes from a round crossing it, how the round turns, where it
 //! leaves, the flight over panes, and the through-holes rounds have left. One rule for a round and for a line-of-fire question: a man fires through a pane exactly
 //! when his round would get through it. Statement for statement with the rule it replaced. What a round does next and what it files is the caller's.
 //!
@@ -56,7 +56,6 @@ fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
         None
     }
 }
-/// glasspen.ts nearHole
 fn near_hole(g: usize, bi: u32, p: [f64; 3], tune: &Knobs) -> bool {
     let ps = crate::panes::pn(g);
     let r = tune.glasspen.hole_r;
@@ -75,7 +74,7 @@ fn near_hole(g: usize, bi: u32, p: [f64; 3], tune: &Knobs) -> bool {
     }
     false
 }
-/// glasspen.ts paneToll: what sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight; None: the round is spent in it
+/// What sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight; None: the round is spent in it
 pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize, tune: &Knobs) -> Option<Toll> {
     let b = sheet_box(c, bi as usize)?;
     if nth as f64 >= js_min(MAX_CROSS as f64, tune.glasspen.max_panes) {
@@ -108,7 +107,7 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
     }
     Some(Toll { ty, n, cos: co, take, e_out, hole })
 }
-/// glasspen.ts bornIn: what a round leaving the glass at `p` along `d` is born inside: −1 open air · −2 a static a round stops in · else the index of another sheet of glass
+/// What a round leaving the glass at `p` along `d` is born inside: −1 open air · −2 a static a round stops in · else the index of another sheet of glass
 fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
     let n = collide::gather(c.w, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, 64);
     let mut sheet = -1;
@@ -140,7 +139,7 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
     }
     sheet
 }
-/// glasspen.ts deflect: the turn, toward the normal by the slant's share, plus the hashed scatter
+/// The turn, toward the normal by the slant's share, plus the hashed scatter
 fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64, tune: &Knobs) -> [f64; 3] {
     let a = tune.glasspen.deflect_deg * PI / 180.0 * clamp(t.take / js_max(e_in, 1e-6), 0.0, 1.0);
     if a < 1e-6 {
@@ -172,7 +171,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 fn mad(a: [f64; 3], b: [f64; 3], s: f64) -> [f64; 3] {
     [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
 }
-/// glasspen.ts paneCrossing: one pane on a round's flight: what it takes and where the round leaves it; None: spent in it
+/// One pane on a round's flight: what it takes and where the round leaves it; None: spent in it
 pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64, nth: usize, tune: &Knobs) -> Option<Crossing> {
     let at = mad(o, d, t);
     let to = pane_toll(c, bi, at, d, e, nth, tune)?;
@@ -218,7 +217,7 @@ pub fn write_cross(x: &Crossing, o: &mut [f64]) {
 fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
     lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, c.set, -1, true, out, tune)
 }
-/// glasspen.ts armInHole: the arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
+/// The arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
 fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) -> bool {
     let mut any = false;
     for s in 0..panes::sheet_count(c) as usize {
@@ -294,7 +293,7 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
     *left = e;
     n as i32
 }
-/// glasspen.ts shotPasses: does a round of `energy` get through every one of the panes a line of fire meets (static, metres along it to where it enters each, nearest first)
+/// Does a round of `energy` get through every one of the panes a line of fire meets (static, metres along it to where it enters each, nearest first)
 pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes_list: &[f64], energy: f64, tune: &Knobs) -> bool {
     let mut e = energy;
     for i in 0..panes_list.len() / 2 {
@@ -305,7 +304,7 @@ pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes_list: &[f64], energ
     }
     true
 }
-/// glasspen.ts addHole: a crossing remembered on the pane, the oldest forgotten past GLASSPEN.holes
+/// A crossing remembered on the pane, the oldest forgotten past GLASSPEN.holes
 pub fn add_hole(g: usize, bi: u32, p: [f64; 3], tune: &Knobs) {
     let ps = crate::panes::pn(g);
     ps.stand();

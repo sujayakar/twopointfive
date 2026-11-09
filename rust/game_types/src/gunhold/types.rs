@@ -125,36 +125,24 @@ pub struct GunHoldFeet {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GunholdMod {
-    /// (src/game/gunhold.ts:88 knowns)
     pub knowns: JsMap<u32, crate::gunhold::Known>,
-    /// (src/game/gunhold.ts:88 states)
     pub states: JsMap<GuardsStandoffId, crate::gunhold::St>,
-    /// (src/game/gunhold.ts:88 statsOf)
     #[is(Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
-    /// (src/game/gunhold.ts:88 planned)
     pub planned: Option<f64>,
 }
 
-/// (src/game/gunhold.ts:111 HEAR_M)
 pub const HEAR_M: f64 = 7.0;
 
-/// (src/game/gunhold.ts:111 FRESH_S)
 pub const FRESH_S: f64 = 1.0;
 
-/// (src/game/gunhold.ts:143 GUN_Y)
 pub const GUN_Y: f64 = 1.35;
 
-/// (src/game/gunhold.ts:143 PISTOL_ENERGY)
 pub const PISTOL_ENERGY: f64 = 0.6;
 
-/// (src/game/gunhold.ts:228 AIM_Y)
 pub const AIM_Y: f64 = 1.42;
 
-/// (src/game/gunhold.ts:262 LINES: a table nothing writes)
 pub fn lines() -> crate::gunhold::LINES { crate::gunhold::LINES { gun: alloc::vec![String::from("gun — he's got a gun! get behind something!"), String::from("he's armed — cover, get to cover!")], shot: alloc::vec![String::from("he's shooting — out of his line, move!"), String::from("shots! get off his line — go round him!")], round: alloc::vec![String::from("going round him — keep him talking"), String::from("I'll get behind him. keep his eyes on you")], gone: alloc::vec![String::from("he's moved — they're not there!")] } }
 
-/// (src/game/gunhold.ts:273 GUNHOLD_DEFENDER_LINES: a table nothing writes)
 pub fn gunhold_defender_lines() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("gun"), alloc::vec![String::from("pistol's out behind his shield — get to cover!"), String::from("he's drawn from the hold — get behind something!")]); t.set(String::from("shot"), alloc::vec![String::from("he's firing past his shield — off that line, move!"), String::from("rounds from the hold — get off it, go round him!")]); t.set(String::from("round"), alloc::vec![String::from("going round behind him — keep his eyes on you"), String::from("coming at his back. hold him where he is")]); t.set(String::from("gone"), alloc::vec![String::from("he's moved — nobody where we left them!")]); t } }
 
-/// (src/game/gunhold.ts:280 GUNHOLD_NOW: a table nothing writes)
 pub fn gunhold_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("shots! get off his line — go round him!"), String::from("shots! get out of his line of fire — go around him!")); t.set(String::from("going round him — keep him talking"), String::from("going around him — keep him talking")); t.set(String::from("he's drawn from the hold — get behind something!"), String::from("he's pulled a pistol — get behind something!")); t.set(String::from("rounds from the hold — get off it, go round him!"), String::from("he's shooting — get out of his line of fire, go around him!")); t.set(String::from("going round behind him — keep his eyes on you"), String::from("going around behind him — keep his eyes on you")); t.set(String::from("coming at his back. hold him where he is"), String::from("coming up behind him. keep him where he is")); t.set(String::from("he's moved — nobody where we left them!"), String::from("he's moved — they're not where we left them!")); t } }

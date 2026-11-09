@@ -23,5 +23,4 @@ pub struct Ballistics {
     pub solve_iters: f64,
 }
 
-/// (src/game/launcher.ts:49 STAGGER_LINES: a table nothing writes)
 pub fn stagger_lines_table() -> Vec<String> { alloc::vec![String::from("agh — what the—"), String::from("AH! son of a—"), String::from("ow! what— who's there?!"), String::from("nngh— something hit me!"), String::from("jesus— my ribs—")] }

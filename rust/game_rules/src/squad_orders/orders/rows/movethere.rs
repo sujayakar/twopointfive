@@ -16,20 +16,20 @@ pub const ORDER: Row = Row {
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("move there") }
 
-/// 'move'.can (orders.ts:581)
+/// 'move'.can
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
     let at = rows::at(t);
     if squad_orders_walk_try(g, gd, at).is_some() { return None; }
     squad_orders_reach(g, gd, at)
 }
-/// 'move'.valid: a door nobody has tried is walked up to, where it has room for them (orders.ts:582)
+/// 'move'.valid: a door nobody has tried is walked up to, where it has room for them
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match squad_orders_walk_stacks(g, men, rows::at(t)) {
         Some(SquadOrdersWalkStacks::Text(w)) => Err(Some(w)),
         _ => Ok(()),
     }
 }
-/// 'move'.issue: a place and a watch each that fit the room, or the line abreast (orders.ts:583)
+/// 'move'.issue: a place and a watch each that fit the room, or the line abreast
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let t_at = rows::at(t);
     let pc = g.pl[g.player].ch;

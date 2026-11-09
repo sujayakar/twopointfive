@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 1 to 418
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -24,7 +23,7 @@ pub(crate) fn shot_e(e: &crate::game::GameEvent) -> crate::guards::ShotRelationE
     crate::guards::ShotRelationE { kind: e.kind, who: e.who }
 }
 
-/// How a 'glass' event reaches an ear: from its own point, and from each face of the pane it carries, whichever arrives best. (guards.ts glassHeard)
+/// How a 'glass' event reaches an ear: from its own point, and from each face of the pane it carries, whichever arrives best.
 pub(in crate::people) fn glass_heard(g: &mut crate::game::Game, e: crate::game::GameEvent, ear: V3) -> crate::scene_collision::Propagation {
     let mut best = crate::weather::hear_path(g, [e.pos[0], e.pos[1] + 1.0, e.pos[2]], ear, None);
     let ears = match e.ears {
@@ -47,7 +46,7 @@ pub(in crate::people) fn glass_heard(g: &mut crate::game::Game, e: crate::game::
     best
 }
 
-/// His eyes have a man at `at` this moment, by another rule's look than updateGuard's own: the record of a sighting, in one place. (guards.ts eyesOn)
+/// His eyes have a man at `at` this moment, by another rule's look than updateGuard's own: the record of a sighting, in one place.
 pub fn eyes_on(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     crate::mind::fix(g, gd, Some(at), "guards");
     let now = g.time;
@@ -57,7 +56,7 @@ pub fn eyes_on(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     man.last_seen_t = now;
 }
 
-/// Gunfire filed and not through this man's ears yet that hearingCheck will count when it next runs for him; `bangs` counts a stun charge or a door blown too. (guards.ts gunfireDue)
+/// Gunfire filed and not through this man's ears yet that hearingCheck will count when it next runs for him; `bangs` counts a stun charge or a door blown too.
 pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> bool {
     use crate::director::EventKind as K;
     let bangs = bangs.unwrap_or(false);
@@ -91,7 +90,7 @@ pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> b
     false
 }
 
-/// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither. (guards.ts shotRelation)
+/// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither.
 pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
     let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
     let team = g.gd[gd].team;
@@ -101,7 +100,7 @@ pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards
     if crate::teams::is_hostile(g, team, shooter) { crate::guards::ShotRelation::Threat } else { crate::guards::ShotRelation::None }
 }
 
-/// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has. (guards.ts colleagueFirePos)
+/// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has.
 pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::ColleagueFirePosE) -> Option<V3> {
     use crate::picture::Who;
     if e.blind == Some(true) {
@@ -175,7 +174,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     })
 }
 
-/// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id. (guards.ts stepIsThreat)
+/// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id.
 pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
     let team = g.gd[gd].team;
@@ -187,13 +186,13 @@ pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guard
     }
 }
 
-/// A restart: the fresh man's start is not a step from where the last one fell. (guards.ts groundFresh)
+/// A restart: the fresh man's start is not a step from where the last one fell.
 pub fn ground_fresh(g: &mut crate::game::Game) {
     let view = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.guards.ground_track.delete(view);
 }
 
-/// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped. (guards.ts playerGroundVel)
+/// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
     let view = crate::seats::view_key(g, &crate::seats::here(g));
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -225,7 +224,7 @@ fn ground_step(row: &mut crate::guards::GuardsModGroundTrackValue, p: V3, now: f
     }
 }
 
-/// × the sight gain for how Sam is moving as this man sees it. (guards.ts motionFactor)
+/// × the sight gain for how Sam is moving as this man sees it.
 pub(super) fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let pp = g.ch[g.pl[g.player].ch].pos;
     let v = crate::guards::player_ground_vel(g);
@@ -233,7 +232,7 @@ pub(super) fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -
     crate::guards::motion_core(g, gd, pp, v, lit, dist)
 }
 
-/// motionFactor's arithmetic for any watched man at `pp` moving at `v`, lit `lit`, `dist` off. (guards.ts motionCore)
+/// motionFactor's arithmetic for any watched man at `pp` moving at `v`, lit `lit`, `dist` off.
 pub(super) fn motion_core(g: &crate::game::Game, gd: GuardId, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
     let gp = g.ch[g.gd[gd].ch].pos;
     let hunts = hunting(g, gd);
@@ -264,7 +263,7 @@ fn motion_sum(gp: V3, hunts: bool, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
     k
 }
 
-/// Awareness per second a visible player builds in this man at `dist`. (guards.ts sightGain)
+/// Awareness per second a visible player builds in this man at `dist`.
 pub fn sight_gain(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let detect = g.tune.detect_rate;
     let light = g.pl[g.player].visibility;
@@ -286,7 +285,7 @@ pub fn sight_gain(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     rate
 }
 
-/// sightGain for an AI target `o`: the same formula off his light meter, his crouch, his motion. (guards.ts sightGainOn)
+/// sightGain for an AI target `o`: the same formula off his light meter, his crouch, his motion.
 pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f64) -> f64 {
     let detect = g.tune.detect_rate;
     let c = g.gd[gd].ch;
@@ -321,7 +320,7 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
     rate
 }
 
-/// A dead colleague lying in this man's view, not yet called in. (guards.ts bodyInView)
+/// A dead colleague lying in this man's view, not yet called in.
 pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mut i = 0;
     while i < g.guards.len() {
@@ -337,7 +336,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     None
 }
 
-/// bodyInView's test of one body: in range, in the cone (none with `around`), a clear line, light enough. `around`: None is the TypeScript's false, a number how far round his feet a body is plain. (guards.ts bodySeen)
+/// bodyInView's test of one body: in range, in the cone (none with `around`), a clear line, light enough. `around`: None is the TypeScript's false, a number how far round his feet a body is plain.
 pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Option<f64>) -> bool {
     if crate::pairorders::pair_grip_body(g, gd) || crate::doze::doze_asleep(g, gd) {
         return false;
@@ -377,7 +376,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     true
 }
 
-/// How lit this body reads now (0‥1): the light at its trunk, eased at the meter's rate. (guards.ts bodyVisibility)
+/// How lit this body reads now (0‥1): the light at its trunk, eased at the meter's rate.
 pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
     let was = g.m.guards.body_meters.get(o).copied();
     let now = g.time;
@@ -403,7 +402,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
     vis
 }
 
-/// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke? (guards.ts bodyLit)
+/// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
 pub(super) fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);

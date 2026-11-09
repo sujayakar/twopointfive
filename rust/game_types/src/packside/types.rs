@@ -62,24 +62,17 @@ pub struct SideBindDims {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct PacksideMod {
-    /// (src/game/packside.ts:49 memo)
     pub memo: JsMap<RigId, crate::packside::Memo>,
 }
 
-/// (src/game/packside.ts:51 STRIP)
 pub const STRIP: f64 = 0.075;
 
-/// (src/game/packside.ts:52 Y0)
 pub const Y0: f64 = 0.9;
 
-/// (src/game/packside.ts:52 Y1)
 pub const Y1: f64 = 1.62;
 
-/// (src/game/packside.ts:52 ZB)
 pub const ZB: f64 = -0.15;
 
-/// (src/game/packside.ts:106 BAND)
 pub const BAND: f64 = 0.04;
 
-/// (src/game/packside.ts:106 REACH)
 pub const REACH: f64 = 0.14;

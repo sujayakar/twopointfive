@@ -14,7 +14,7 @@ pub const ORDER: Row = Row {
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("stack up") }
 
-/// 'stack'.valid (orders.ts:592)
+/// 'stack'.valid
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Err(None) };
     let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
@@ -29,7 +29,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     }
     Ok(())
 }
-/// 'stack'.issue (orders.ts:597)
+/// 'stack'.issue
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Some(String::from("no door")) };
     let posts = match squad_orders_stack_posts_wait(g, door, side, men) {

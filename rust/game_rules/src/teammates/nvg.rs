@@ -9,7 +9,7 @@ use alloc::{format, vec::Vec};
 
 // ---- the team's state
 
-/// A team nothing has happened to.   (nvg.ts fresh)
+/// A team nothing has happened to.
 fn fresh() -> crate::nvg::Team {
     Team {
         t: -100.0,
@@ -24,7 +24,7 @@ fn fresh() -> crate::nvg::Team {
     }
 }
 
-/// One row of the QA log, the last 200.   (nvg.ts note)
+/// One row of the QA log, the last 200.
 fn note(g: &crate::game::Game, gd: Option<GuardId>, what: &str) {
 }
 
@@ -46,21 +46,21 @@ fn live_man(g: &Game, gd: GuardId) -> Option<Man> {
 
 // ---- the tube
 
-/// post.wgsl's intensifier curve at an exposure and a gain: the signal's `k` and the signal of irradiance `e`.   (nvg.ts:103, 104, 109, 110)
+/// post.wgsl's intensifier curve at an exposure and a gain: the signal's `k` and the signal of irradiance `e`.
 fn tube_curve_of(exposure: f64, gain: f64, albedo: f64, e: f64) -> (f64, f64) {
     let k = albedo / m::PI * exposure;
     let sig = v3::clamp(m::log(1.0 + m::max(e, 0.0) * k * gain) / m::log(1.0 + gain), 0.0, 1.0);
     (k, sig)
 }
 
-/// The curve at the game's own exposure (hours.ts exposureOf) and tube gain (env.ts tubeGain).
+/// The curve at the game's own exposure and tube gain.
 fn tube_curve(g: &Game, e: f64) -> (f64, f64) {
     let exposure = crate::hours::exposure_of(g);
     let gain = crate::env::tube_gain(g);
     tube_curve_of(exposure, gain, g.k.nvg.albedo, e)
 }
 
-/// The meter's 0..1 for a man under irradiance `e` seen through the goggles.   (nvg.ts tubeVis)
+/// The meter's 0..1 for a man under irradiance `e` seen through the goggles.
 pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
     let (k, sig) = tube_curve(g, e);
     if sig > 0.0 {
@@ -71,12 +71,12 @@ pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
     }
 }
 
-/// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.   (nvg.ts tubeSig)
+/// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.
 pub(super) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
     tube_curve(g, e).1
 }
 
-/// A living operative with a unit whose card left him his goggles.   (nvg.ts isMate)
+/// A living operative with a unit whose card left him his goggles.
 fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
@@ -84,7 +84,7 @@ fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
         && crate::kit::kit_goggles(g, gd)
 }
 
-/// When the other side last gave the team reason to think it knows.   (nvg.ts loudT)
+/// When the other side last gave the team reason to think it knows.
 fn loud_t(g: &crate::game::Game) -> f64 {
     let t = g.m.nvg.teams.as_ref().unwrap();   // (only the tick and nvgState ask, each with the team in hand)
     let mut last = m::max_n(&[t.hunt_t, t.alarm_t, g.fight.hot_t]);
@@ -97,12 +97,12 @@ fn loud_t(g: &crate::game::Game) -> f64 {
     if last > -100.0 { last } else { -m::INF }   // (roomfight's 'never' is -100)
 }
 
-/// The light of the place at a point, nothing carried, as it stands: the tube is the eye, and no eye's habit is in it.   (nvg.ts nvgPlaceLight)
+/// The light of the place at a point, nothing carried, as it stands: the tube is the eye, and no eye's habit is in it.
 pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
     crate::guards::light_at(g, p, Some(&mut |_: &mut Game, _: f64| true), None, None).0
 }
 
-/// One point of his place: is it dark to the bare eye, and (if `tube`) too dark for the tube.   (nvg.ts readPlace's `at`)
+/// One point of his place: is it dark to the bare eye, and (if `tube`) too dark for the tube.
 fn read_at(g: &mut Game, x: f64, z: f64, tube: bool, lamp: bool, dim: &mut bool, black: &mut bool) {
     let e = nvg_place_light(g, [x, 1.2, z]);
     let bare = e * crate::guards::eyes_in(g, [x, 1.2, z]);
@@ -114,7 +114,7 @@ fn read_at(g: &mut Game, x: f64, z: f64, tube: bool, lamp: bool, dim: &mut bool,
     }
 }
 
-/// His place, read twice a second: dark to the bare eye, too dark for the tube.   (nvg.ts readPlace)
+/// His place, read twice a second: dark to the bare eye, too dark for the tube.
 fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     if g.time - m.place_t >= 0.0 && g.time - m.place_t < 0.5 {
         return;
@@ -166,13 +166,13 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     }
 }
 
-/// Is the light switched on on the gun in this player's hands.   (nvg.ts:166)
+/// Is the light switched on on the gun in this player's hands.
 fn lead_lit(g: &Game, pl: PlayerId) -> bool {
     let (pistol, rifle) = (g.pl[pl].pistol, g.pl[pl].rifle);
     (crate::game::player_pistol_up(g, pl) && g.fa[pistol].light_on) || (crate::game::player_rifle_up(g, pl) && g.fa[rifle].light_on)
 }
 
-/// Once a frame from Game.update: is the team dark, and each man's goggles.   (nvg.ts nvgTick)
+/// Once a frame from Game.update: is the team dark, and each man's goggles.
 pub fn nvg_tick(g: &mut crate::game::Game) {
     if !crate::roomfight::fight_live(g) {
         if let Some(t) = g.m.nvg.teams.as_mut() {
@@ -307,12 +307,12 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// His weapon light is held off this frame.   (nvg.ts nvgDark)
+/// His weapon light is held off this frame.
 pub fn nvg_dark(g: &crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.dark)
 }
 
-/// He wears the goggles at all.   (nvg.ts nvgWorn)
+/// He wears the goggles at all.
 pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
@@ -320,17 +320,17 @@ pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
         && crate::roomfight::fight_live(g)
 }
 
-/// His goggles are over his eyes.   (nvg.ts nvgDown)
+/// His goggles are over his eyes.
 pub fn nvg_down(g: &crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.down)
 }
 
-/// What he is looking at shows nothing even through the tube.   (nvg.ts nvgBlack)
+/// What he is looking at shows nothing even through the tube.
 pub fn nvg_black(g: &crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.black)
 }
 
-/// The light to read for `o` through `viewer`'s goggles; 0 with them up.   (nvg.ts nvgSight)
+/// The light to read for `o` through `viewer`'s goggles; 0 with them up.
 pub fn nvg_sight(g: &mut crate::game::Game, viewer: GuardId, o: GuardId) -> f64 {
     if !nvg_down(g, viewer) {
         return 0.0;

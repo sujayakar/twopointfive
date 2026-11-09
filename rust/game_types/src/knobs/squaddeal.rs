@@ -4,8 +4,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-/// the switch and its numbers: on (?nosquaddeal = a level with no squads block is one pool,
-///  as it was) and by the shipped stand; the harness's frozen stand leaves it off (TPS_SQUADDEAL=1 turns it on). UNTUNED by play.
+/// UNTUNED by play.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct SquaddealK {
     /// the most men that are ONE squad · the most that are two (more: three)

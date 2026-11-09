@@ -5,62 +5,62 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::string::String;
 
-/// A new Input with every field initialised and no listeners: the harness's, the replayer's, a seat's, a native host's.   (input.ts Input.detached)
+/// A new Input with every field initialised and no listeners: the harness's, the replayer's, a seat's, a native host's.
 pub fn input_detached(g: &mut Game) -> InputId {
     input_new(g, None)
 }
 
-/// The field initialisers. A real `el`'s sink and listeners are the host's: the row holds neither.   (input.ts Input.constructor)
+/// The field initialisers. A real `el`'s sink and listeners are the host's: the row holds neither.
 fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
-/// Is this key held?   (input.ts Input.down)
+/// Is this key held?
 pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
     g.tab.input[id].keys.has(String::from(code))
 }
 
-/// Did this key go down this frame?   (input.ts Input.hit)
+/// Did this key go down this frame?
 pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
     g.tab.input[id].pressed.has(String::from(code))
 }
 
-/// Left button held.   (input.ts Input.lmb)
+/// Left button held.
 pub fn input_lmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 1)
 }
 
-/// Right button held.   (input.ts Input.rmb)
+/// Right button held.
 pub fn input_rmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 4)
 }
 
-/// Left button went down this frame.   (input.ts Input.lmbHit)
+/// Left button went down this frame.
 pub fn input_lmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 1)
 }
 
-/// Right button went down this frame.   (input.ts Input.rmbHit)
+/// Right button went down this frame.
 pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 4)
 }
 
-/// Middle button held.   (input.ts Input.mmb)
+/// Middle button held.
 fn input_mmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 2)
 }
 
-/// Middle button went down this frame.   (input.ts Input.mmbHit)
+/// Middle button went down this frame.
 fn input_mmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 2)
 }
 
-/// The drawn frame is over: every one-frame edge and travel goes.   (input.ts Input.endFrame)
+/// The drawn frame is over: every one-frame edge and travel goes.
 pub fn input_end_frame(g: &mut Game, id: InputId) {
     end_frame(&mut g.tab.input[id])
 }
 
-/// Between two game ticks of one drawn frame: the first tick's edges go; what is held stays held, and the camera's travel stays.   (input.ts Input.endTick)
+/// Between two game ticks of one drawn frame: the first tick's edges go; what is held stays held, and the camera's travel stays.
 fn input_end_tick(g: &mut Game, id: InputId) {
     end_tick(&mut g.tab.input[id])
 }

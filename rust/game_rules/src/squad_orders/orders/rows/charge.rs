@@ -23,7 +23,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     format!("breach with a charge · {} left", g.door_tools.charges)
 }
 
-/// doortools.ts:821-830
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let OrderTarget::Door(x) = t else { return Err(None) };
     let fits = |r: crate::doortools::DoorToolsStandoffFits| match r { crate::doortools::DoorToolsStandoffFits::Text(w) => Err(Some(w)), crate::doortools::DoorToolsStandoffFits::Bool(true) => Ok(()), crate::doortools::DoorToolsStandoffFits::Bool(false) => Err(None) };
@@ -38,7 +37,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     fits(crate::doortools::door_tools_standoff_fits(g, men, t, None))
 }
 
-/// doortools.ts:831
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let OrderTarget::Door(x) = t else { return Some(String::from("no door")) };
     let started = |r: crate::doortools::DoorToolsStartCharge| match r { crate::doortools::DoorToolsStartCharge::Text(w) => Some(w), crate::doortools::DoorToolsStartCharge::Arm1(()) => None };

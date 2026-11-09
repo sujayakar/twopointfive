@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 974 to 1271
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,19 +6,19 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order. (game.ts Game.constructor)
+/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
 pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) {
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
-    g.light_home = crate::sim_lightshome::light_home_new(g, crate::Opaque);   // (field initialisers: game.ts:855)
-    g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);         // (game.ts:859)
+    g.light_home = crate::sim_lightshome::light_home_new(g, crate::Opaque);
+    g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);
     // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
     if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }
     let n_seats = opts.and_then(|o| o.seats).unwrap_or(1.0);
     g.seats = crate::seats::seats_stand(g, n_seats);
     g.local_seat = Some(g.seats[0]);
-    // what this machine kept. A load is called where the skeleton has it, and its storage is its own module's or the host's
+    // what this machine kept.
     crate::difficulty::levers_fog(g);
     crate::fogofwar::fog_flags(g);
     crate::irlight::ir_flags(g);
@@ -258,7 +257,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
     g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
-    g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)   (game.ts:1229)
+    g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)
     crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
@@ -290,7 +289,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     if let Some(over) = crate::levelfit::stood_over(g, &stood, &tables) { panic!("{}", over); }
 }
 
-/// `level.boxes[i]` and `col.boxes[i]` as a row, to read and to write through. (src/scene/boxes.ts:66 on, Box.*)
+/// `level.boxes[i]` and `col.boxes[i]` as a row, to read and to write through.
 fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `engine.lights.add` of the constructor's literals: owner 0, fixtureBox -1, flicker 0, ttl -1, age 0.
@@ -321,14 +320,13 @@ fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3,
     crate::render_lights::light_set_add(g, l)
 }
 
-/// `b.flags |= BoxFlag.AreaLit`: dome and panel glow is the screen's, the light is the analytic one. (game.ts constructor)
+/// `b.flags |= BoxFlag.AreaLit`: dome and panel glow is the screen's, the light is the analytic one.
 fn mark_area_lit(g: &mut Game, id: BoxId) {
     let bit = js::to_i32(crate::scene_boxes::box_flag().area_lit);
     let b = seam_box_row(g, id);
     b.flags = (js::to_i32(b.flags) | bit) as f64;
 }
 
-/// (game.ts:1202 levelOver(level)) What levelfit reads of a level, as the skeleton has it: lengths, a switchable's boxes, a device's kind.
 fn level_counts_of(level: &crate::scene_level::Level, ids: &[BoxId]) -> crate::levelfit::LevelCountsLevel {
     crate::levelfit::LevelCountsLevel {
         doors: vec![crate::Opaque; level.doors.len()],
@@ -356,7 +354,7 @@ fn stood_level_devices(level: &crate::scene_level::Level) -> Option<Vec<crate::l
     }).collect())
 }
 
-/// (game.ts stoodOver(this, ...)) What levelfit reads of the game as it stands.
+///  What levelfit reads of the game as it stands.
 fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::Level) -> crate::levelfit::Stood {
     crate::levelfit::Stood {
         level: crate::levelfit::StoodLevel {
@@ -380,12 +378,12 @@ fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::
     }
 }
 
-/// `for (const s of this.seats) s.view.x = ...`: each seat's set on Game for the call. (game.ts constructor)
+/// `for (const s of this.seats) s.view.x = ...`: each seat's set on Game for the call.
 fn stand_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
     for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut *f); }
 }
 
-/// (game.ts constructor, lightDefs) A light's def by name, the last of a name winning as a Map's does: is it on the mains.
+///  A light's def by name, the last of a name winning as a Map's does: is it on the mains.
 fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
     match level.lights.iter().rev().find(|d| d.name == name) {
         Some(d) => d.mains != Some(false),
@@ -393,7 +391,7 @@ fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
     }
 }
 
-/// (game.ts constructor, staggerOf) A contactor group's restrike stagger: the die is drawn at the group's first appearance.
+///  A contactor group's restrike stagger: the die is drawn at the group's first appearance.
 fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 {
     if !stagger.has(String::from(grp)) {
         let v = stagger.len() as f64 * 0.45 + crate::dice::draw_world(g, "game::stagger_of#1") * 0.5;
@@ -402,7 +400,7 @@ fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 
     *stagger.get(String::from(grp)).unwrap()
 }
 
-/// A man says something. (game.ts Game.say)
+/// A man says something.
 pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>) {
     crate::guards::say(g, g_2, text, radio, force);
 }
