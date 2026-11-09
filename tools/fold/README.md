@@ -1,21 +1,13 @@
-# tools/fold — settled switch rows made constants of the Rust game
+# tools/fold — what the Rust game never runs, and what only reads
 
-Every rule of the game arrived as a yes-or-no row in a knob table. `tools/qa/switches.json` lists every row with its value on the
-page and its kind. A row of kind `settled` is a constant of the game: this program writes its value into the bodies of the Rust game
-and deletes the side that can never run.
+The programs that delete dead code from the Rust game and make a function's signature say whether it writes. Each works on the tree as it stands, and a run of it is proved as the last section says.
 
 ```sh
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --report fold-report.md            # dry: says what it would do
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --write --report fold-report.md    # and does it
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv                   # every row that stays a switch, tried alone
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md --drop drop.txt   # every leaf of the tables no body reads; the settled rows among them, one a line
+tools/fold/never.sh --tests-too           # what the game never runs, deleted, and said in lists
+tools/fold/readers.sh --soften            # a function that cannot write the game takes it by a shared borrow
+tools/fold/target/release/fold fields-drop --file fields.txt --write     # these fields leave their structs and every literal (`mod::Type.field` a line)
+tools/fold/target/release/fold types-drop --file types.txt --write       # these types leave (`mod::Type` a line)
 ```
-
-Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, the game's `knobs/` (the tables at page
-values: a row's value is taken from there and must agree with the list, or the run stops) and every body file
-`<module>/{p_NN,b_NN}.rs` of the game's crates. It writes only body files, and a module's `mod.rs` where that hands a deleted function
-on by name. It finds files by module folder, not by a list, so it can be run again after files move. A second run on its own output
-changes nothing.
 
 ## Where the game is
 
@@ -28,80 +20,18 @@ No pass and no script here names a crate. `fold layout` lists `rust/` and says w
 - a body crate is one of the game's crates with body files: a file of a module folder under `src/` that is not `mod.rs`, `types.rs`
   or `missing.rs`. A module has body files in one crate only, or the run stops and says which two.
 
-One crate today. When the game is split into crates the passes read the same listing: `fold layout bodies` (the body crates, a crate
+The passes read the same listing: `fold layout bodies` (the body crates, a crate
 after the ones it depends on), `users` (the crates that use one), `body-src`, `knobs`, `page` (a crate that builds only a module for
 the page, checked for wasm). A check's output names a file from the folder of the crate the check ran in; `fold diag-from-root --diag
 FILE --in rust/<crate>` rewrites it so every file is named from the root, and the passes read only that.
 
-To settle a row, make it `settled` in `tools/qa/switches.json` (the page's hold of settled rows reads the same list) and run this
-again. `--settle FILE` (one `TABLE.row` a line) tries more rows without touching the list.
-
-## What it takes for a read
-
-`g.k.<table>.<row>` where `g` is typed `Game` (a parameter, a closure's typed parameter, `let v = &mut *g;`); the same through a
-copy or a borrow of a table that is not `mut` (`let k = g.k.cover;` … `k.on`), with scopes and shadowing followed. A read inside a
-macro it can read as expressions (`format!`, `vec!`, `assert!`, `matches!` with its guard…) is taken.
-
-NOT taken, and listed: a read through a parameter typed with a table's struct (`k: &CoverK`: the caller may hand in a copy it has
-changed); a read off a root it cannot type.
-
-## What it folds, and why each step keeps the game the same
-
-It never rewrites a tree: it answers with text edits, applies the innermost, reads the file again, until nothing is left. Every
-literal it writes carries a mark, and every rule but the first asks for the mark, so an `if true` or a `let debug = false` a hand
-wrote is left alone. The marks are taken out at the end.
-
-| step | what | why it is the same game |
-|---|---|---|
-| read | the read becomes the row's page value | the row is never written (below) and holds that value on every run |
-| `!v` | the other literal | |
-| `v && x`, `x && v`, `v \|\| x`, `x \|\| v` | the literal, or `x` | `x && false` and `x \|\| true` drop `x` only where `x` plainly has no effects (below); else the test stays and is listed |
-| `if v {A} else {B}` | the side kept stands in its place, the other is deleted | as a statement its lines are spliced one level out, unless a name it declares is used after it (then it keeps its braces); as a value it is the side's expression or block |
-| what follows a spliced `return`, `break`, `continue` | deleted | it can no longer run |
-| `else if v {…}` in a chain | the chain is cut or closed there | |
-| `let x = v;` (not `mut`) | each use of `x` becomes the literal, then the `let` goes | |
-| `let k = g.k.cover;` nothing uses any more | deleted | |
-| a block the fold emptied | an `if` round it goes where its test plainly has no effects (else listed); an emptied `else` goes; `if c {} else {B}` becomes `if !c {B}`; a `for` over it goes where what it walks plainly has no effects | |
-| a function whose whole body is now one yes or no, or nothing | each call of it becomes that, where its arguments plainly have no effects | only where the path leaves no doubt which function it is: a bare name or `super::name` for this module's own, `crate::<module>::name` for another's, no local or nested function of that name in scope, and the module defines the name exactly ONCE (a private twin in another part, or a `cfg` pair, is a doubt; so is a function under a `cfg`) |
-| a function nothing names any more | deleted, with its line in `mod.rs`; repeated until none is left | by NAME over every `.rs` under `rust/`: a name that still stands anywhere but at a definition or a `mod.rs` hand-on keeps every function of that name. A function that was unnamed BEFORE the fold is left (listed), and so is one only the tools' call surface names |
-
-"Plainly has no effects" is judged by shape alone: literals, names, fields, indexing, arithmetic and comparisons, `&x` (never
-`&mut x`), a short list of std methods (`is_some`, `len`, `abs`, `min` and `max` of two…), the `v3::` and `m::` helpers, and a call
-of a function found to be a PLAIN READING (its body is `let`s of such expressions and one such expression; found to a fixed point,
-under the same no-doubt rule for which function a call names). No other call counts as free of effects (most of the game's
-functions take the whole game, and the die is one call away). A `for` whose body the fold emptied is left standing: walking a thing
-can be an effect. Deleting a test can remove a panic (an index out of range in a test that no longer runs); it cannot add one.
-
-It also stops, and lists the place, where folding could change a meaning quietly: an `if` or a statement under an attribute
-(`#[cfg(test)] if …`); a side kept that ends in a bare number (`0.1`: its type may have come from the side deleted); a block that
-holds a string running over lines (it keeps its braces, so its lines are not moved). A name a format string takes by itself
-(`"{n}"`) counts as a use of that name everywhere a use matters.
-
-What it does not weigh: a spliced block's locals now live to the end of the block it was spliced into. That is the same game unless
-a local's drop does something; the game's bodies have no such type.
-
-## What it will not fold
-
-- **A row a body writes.** An assignment to the row (plain or `+=`), a `&mut` of it, a `&mut` or whole assignment of its table, a
-  method called on its table, a `ref mut` taken of it, its name inside a macro the program cannot read or inside a `macro_rules!`
-  body; through the game or through any name the program cannot type (then it is taken for a write of the game's own). The row is
-  kept out with every place that writes it, under FINDINGS. Only body files are read for this: the generated wire writes every row
-  as the page hands the tables over, by design. Either the row is not settled after all, or the write is dead and goes by hand;
-  then name it in `keep.txt` (`written-ok TABLE.row  why`) and run again. `keep.txt` also keeps a row out by hand (`TABLE.row  why`).
-  A bare `TABLE` in place of `TABLE.row` says it of every row of the table (a table laid whole from the page's own).
-- **A number or a name.** A settled row that is a number stays a number in its table: written in, it would be a bare literal in a
-  formula and nothing would fold.
-- **A setter outside Rust.** The page's panel, its Options and a kept option write the TypeScript tables, which cross to the Rust game
-  every tick. This program cannot see them: do not make a row `settled` in the list while the page still offers it.
-
 ## What the game never runs
 
-Three steps, each its own run, each rerunnable on a later tree:
+Two steps, each its own run, each rerunnable on a later tree:
 
-1. **What the fold left unnamed** goes with the fold (above).
-2. **`--unnamed`: the functions nothing named before the fold either.** The same sweep by name, with no function spared. They are
+1. **`fold unnamed`: the functions nothing names.** A sweep by name, to a fixed point. They are
    translations the Rust game never calls: a panel's summary string, a tuning panel's saver, a setter for an address word.
-3. **`tools/fold/sharp.sh`: the compiler's own reading, to a fixed point.** By name, a dead function that shares its name with a
+2. **`tools/fold/sharp.sh`: the compiler's own reading, to a fixed point.** By name, a dead function that shares its name with a
    live function, a field or a local is missed. `sharp.sh` writes a copy of `rust/` in which every item of a body file is private
    to the crate, lifts the crate's `allow(dead_code)`, runs `cargo check --tests` on the copy and deletes from the real body files
    what the check names (functions, methods, constants, statics; a whole `impl` when all of it went), then runs again until a round
@@ -115,12 +45,12 @@ Three steps, each its own run, each rerunnable on a later tree:
    line in `mod.rs` is dropped only from the list of its own part.
 
    ON A TREE WHERE `mod.rs` ALSO HANDS ON `sig::*` (stubs that are `todo!()`), a function deleted by mistake still compiles and
-   panics when called. Run steps 2 and 3 for good on a tree without those stubs, where a missing function is a compile error. Fields, variants and items
+   panics when called. Run both for good on a tree without those stubs, where a missing function is a compile error. Fields, variants and items
    of generated files the check names are listed, not deleted.
 
-`tools/fold/never.sh` runs steps 2 and 3 and one more reading without the tests, and writes one report: lines by module before and
-after, and the lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later looks of step 2
-and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it).
+`tools/fold/never.sh` runs both and one more reading without the tests, and writes one report: lines by module before and
+after, and the lists. DELETED, NOTHING NAMED IT (the first look of step 1); DELETED, ONLY DEAD CODE NAMED IT (the later looks of step 1
+and all of step 2); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it).
 
 `never.sh --tests-too` goes on: a unit test that is there for code the game never runs goes, and then what it alone held up
 (`fold tests-cut`, then the compiler's pass again). A test goes when it uses something only the tests use and calls no live function of
@@ -151,7 +81,7 @@ A softened read that compiles reads the same thing: the shared twin of each of t
 
 **Reading twins.** A block of the sim was handed out as `&'static mut` from a slot number whether it was read or written. Beside such a
 function a twin named `…_read` hands the same thing out as `&'static` with no `mut` (`sim::state::state_read`, a body's `wx_read`:
-written by hand, `HAND.md` lists them). The pass finds the pairs by that shape and moves every call that compiles onto the twin.
+written by hand). The pass finds the pairs by that shape and moves every call that compiles onto the twin.
 
 **The taint: what the compiler cannot see.** A function can write with only `&Game` in hand through anything that is `unsafe`, a
 static or a cell, or through a `&mut` some function hands back, which is how every block of the sim is written. So after the
@@ -176,34 +106,6 @@ wanted is found by the compiler's note on its signature; an error that fits noth
 it `mut` for every user), or follow a read through the sim crate's own private accessors (a function of the sim that reads a
 `static mut` is tainted like one that writes it).
 
-## A field the TypeScript no longer declares
-
-A struct of the wire's table mirrors a TypeScript interface. When the interface loses a member, the mirror keeps the field: carried
-over the wire and read by nothing.
-
-```sh
-fold fields-gone --type root_settings::RenderSettings --ts src/settings.ts > gone.txt   # the list, by program: `mod::Type.field` a line
-bun run tools/wire/wire.ts drop --file gone.txt                                         # off the wire (table, io.rs, the page's half)
-fold fields-drop --file gone.txt --write                                                # out of the Rust source
-bun run tools/wire/wire.ts drop-type root_settings::RenderSettingsDenoiser              # a type whose last field went: off the wire,
-fold types-drop --file types.txt --write                                                # and out of the Rust source (`mod::Type` a line)
-```
-
-`fields-drop` (first named `knobs-drop`, for a table's rows) takes each field out of its struct, out of every literal and pattern of
-that struct, and deletes a statement that only sets it (`s.field = …;`) where the text itself says `s` is of the struct: a parameter
-of that type, a `let s: Type`, a `let s = Type { … }` or `Type::f(…)` with `f` a function of the type that hands back `Self`. It
-looks in the game's crates and the crates that use them. A read that is left is a compile error, which is the check: run `cargo check
---all-targets` in every crate after it. A type only a dropped field used (an enum of a setting's words) goes with `wire.ts drop-type`
-and then `fold types-drop`: its declaration and its impls. `types-drop` writes nothing and says the places while anything still names
-the type.
-
-## The report
-
-Counts first; then edits by rule; functions settled whole and deleted; FINDINGS; what was left for a hand, each with its place and
-the reason; every place a settled value now stands as a plain value (passed on, stored, returned); the settled rows no body reads or
-writes at all (they live only in the tables and the wire); the functions nothing named before the fold.
-
 ## How a run of it is proved
 
-The fold is meant to change no behaviour: the rows hold their page value on every run. So the proof is `hold` (`rust/game_start`, `hold keep` on the tree before, `hold check` on the tree after): every part the same after every
-frame, and the gate, whose pins must not move. `cargo check` for the native runner and the wasm face, with no new kind of warning.
+A run is meant to change no behaviour. The proof is `hold` (`rust/game_start`, `hold keep` on the tree before, `hold check` on the tree after: every part of the game, every frame) and the gate, whose pins must not move; `cargo check --all-targets` in every crate, the module for wasm, with no new kind of warning.
