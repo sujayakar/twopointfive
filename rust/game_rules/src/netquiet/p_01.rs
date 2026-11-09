@@ -156,11 +156,7 @@ pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::Line
     n.bark = 0.0;
     n.last_kind = kind_index(kind);
     g.stats.netquiet.lines += 1;
-    let (id, t) = (id_of(g, gd), g.time);
-    g.m.netquiet.netquiet_log.push(NetquietModNETQUIETLOGItem { id, t, kind, text, radio });
-    if g.m.netquiet.netquiet_log.len() > 64 {
-        g.m.netquiet.netquiet_log.remove(0);
-    }
+    let id = id_of(g, gd);
 }
 
 /// is anybody of his side up on the whole net, the men in `but` aside (netquiet.ts netUp)

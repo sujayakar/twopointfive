@@ -199,7 +199,7 @@ pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: cra
     let lift = g.k.frag.lift;
     let report = crate::frag::blast(g, [pt[0], pt[1] - lift, pt[2]], &spec);
     g.stats.he40.bursts += 1;
-    log_end(g, &crate::he40::ShellEnd { at: v3::copy(pt), flown: sh.flown, armed: true, met, report: Some(report) });
+    log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: true, met });
 }
 
 /// A dud's velocity coming back off a surface with normal `n`. (he40.ts bounceOff)
@@ -255,7 +255,7 @@ pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, m
         crate::game::game_msg(g, &text);
     }
     g.stats.he40.duds += 1;
-    log_end(g, &crate::he40::ShellEnd { at: v3::copy(at), flown: sh.flown, armed: false, met, report: None });
+    log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
 }
 
 /// One candidate body along a substep's segment, nearest kept. (he40.ts updateShells tryChar)
@@ -419,11 +419,9 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
             g.stats.he40.gone += 1;
             let sh = g.shells[i];
             log_end(g, &crate::he40::ShellEnd {
-                at: v3::copy(sh.pos),
                 flown: sh.flown,
                 armed: sh.flown >= r_k.arm_m,
                 met: crate::he40::ShellEndMet::Air,
-                report: None,
             });
             done = true;
         }

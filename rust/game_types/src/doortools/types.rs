@@ -27,11 +27,9 @@ pub struct DoorTools {
     pub set: Vec<ChargeId>,
     pub linked: Vec<DoorId>,
     pub lights: Option<bool>,
-    pub log: Vec<crate::doortools::DoorToolsLogItem>,
     pub stats: crate::doortools::DoorToolsStats,
     pub roster: Vec<GuardId>,
     pub seen: Option<crate::floorseen::FloorSeen>,
-    pub seen_watch: bool,
     pub led: crate::doortools::DoorToolsLed,
     pub go_key: Option<Option<String>>,
     pub words: Vec<WordId>,
@@ -63,11 +61,9 @@ impl DoorTools {
             set: Vec::new(),
             linked: Vec::new(),
             lights: None,
-            log: Vec::new(),
-            stats: crate::doortools::DoorToolsStats { orders: 0.0, opened: 0.0, kicks: 0.0, shot: 0.0, picks: 0.0, no_boot: 0.0, hand_kept: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, own_flashed: 0.0, frags: 0.0, blown: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, words: 0.0, stepped_back: 0.0, pods_moved: 0.0, sectors: 0.0, sent_on: 0.0, sent_alone: 0.0, door_alone: 0.0, sent_pair: 0.0, not_sent: 0.0, flowed: 0.0, closed_up: 0.0, flow_late: 0.0 },
+            stats: crate::doortools::DoorToolsStats { orders: 0.0, opened: 0.0, kicks: 0.0, shot: 0.0, picks: 0.0, no_boot: 0.0, hand_kept: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, own_flashed: 0.0, frags: 0.0, blown: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, words: 0.0, stepped_back: 0.0, pods_moved: 0.0, sectors: 0.0, sent_on: 0.0, sent_pair: 0.0, not_sent: 0.0, flowed: 0.0, closed_up: 0.0, flow_late: 0.0 },
             roster: Vec::new(),
             seen: None,
-            seen_watch: false,
             led: crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 },
             go_key: None,
             words: Vec::new(),
@@ -123,49 +119,11 @@ pub struct DoorToolsDoneItemLaneBack {
     pub going: String,
     pub face: Option<f64>,
     pub there: String,
-    pub order: Option<String>,
-    pub t0: Option<f64>,
-    pub follow: Option<f64>,
     pub watch: Option<V3>,
-    pub door: Option<DoorId>,
-    pub strafe: Option<bool>,
     pub stance: Option<crate::character::Stance>,
     pub upper: Option<crate::character::UpperMode>,
     pub stack_side: Option<f64>,
     pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub set_line: Option<String>,
-    pub group: Option<f64>,
-    pub set_said: Option<bool>,
-    pub goal: Option<V3>,
-    pub arrived: Option<bool>,
-    pub held_set: Option<bool>,
-    pub held_fire: Option<bool>,
-    pub arr_t: Option<f64>,
-    pub moved_t: Option<f64>,
-    pub light: Option<bool>,
-    pub low: Option<bool>,
-    pub yield_t: Option<f64>,
-    pub face_now: Option<f64>,
-    pub search: Option<bool>,
-    pub search_t: Option<f64>,
-    pub via: Option<Vec<V3>>,
-    pub anchor: Option<V3>,
-    pub mark: Option<V3>,
-    pub mark_t: Option<f64>,
-    pub had: Option<V3>,
-    pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
-    pub thru: Option<DoorId>,
-    pub via_for: Option<V3>,
-    pub via_t: Option<f64>,
-    pub pace: Option<f64>,
-    pub spare: Option<bool>,
-    pub from: Option<V3>,
-    pub foe: Option<GuardId>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub fit: Option<crate::roomfit::Fit>,
-    pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -283,7 +241,6 @@ pub struct DoorToolsDoneItemKickGun {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemQueueItem {
     pub gd: GuardId,
-    pub at: f64,
     pub pod: crate::entrypoints::Pod,
 }
 
@@ -394,8 +351,6 @@ pub enum ThresholdFirst {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemThrPre {
-    pub far: GuardId,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -426,12 +381,6 @@ pub struct ThreatWatch {
     pub still: Option<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DoorToolsLogItem {
-    pub t: f64,
-    pub what: String,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsStats {
     pub orders: f64,
@@ -456,8 +405,6 @@ pub struct DoorToolsStats {
     pub pods_moved: f64,
     pub sectors: f64,
     pub sent_on: f64,
-    pub sent_alone: f64,
-    pub door_alone: f64,
     pub sent_pair: f64,
     pub not_sent: f64,
     pub flowed: f64,
@@ -614,7 +561,6 @@ pub struct DoorGate {
 pub struct SetCharge {
     pub door: DoorId,
     pub side: f64,
-    pub t: f64,
     pub by: String,
 }
 
@@ -969,16 +915,10 @@ pub enum DoorToolsAway {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DoorToolsBlow {
-    pub knocked: f64,
-    pub stunned: f64,
-    pub backblast: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DoorToolsBlowRaw {
-    pub knocked: f64,
-    pub stunned: f64,
-    pub backblast: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -991,7 +931,6 @@ pub struct DoorToolsPieNextS {
 #[derive(Clone, Debug, Default)]
 pub struct DoorToolsPieNextSPie {
     pub eyes: Vec<V3>,
-    pub knee: Vec<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

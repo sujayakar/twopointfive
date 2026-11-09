@@ -121,9 +121,8 @@ fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
 pub fn new_stats() -> crate::laststand::StateStats {
     StateStats {
         t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
-        stands: 0.0, gathered: 0.0, sent: 0.0, arrived: 0.0, short: 0.0, met: 0.0, died_on_way: 0.0, dropped: 0.0, quiet: 0.0, no_way: 0.0,
         moved: 0.0,
-        dig_orders: 0.0, stand_t: f64::NAN, set_t: f64::NAN, set_men: 0.0, thumps: 0.0, lines: 0.0,
+        stand_t: f64::NAN, set_t: f64::NAN, lines: 0.0,
     }
 }
 
@@ -211,10 +210,8 @@ pub fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::Lin
     let callsign = g.gd[gd].callsign.clone();
     crate::game::game_msg(g, &alloc::format!("{} (radio): {}", callsign, text));
     crate::cues::cues_net(g, gd, text, cls);
-    let p = g.ch[g.gd[gd].ch].pos;
-    let t = to_fixed2(g.time);
     let st = st_of(g);
-    st.said.push(LastStandSaid { t, who: callsign, kind: String::from(kind.as_str()), text: String::from(text), at: [to_fixed2(p[0]), to_fixed2(p[2])] });
+    st.said.push(LastStandSaid { who: callsign, text: String::from(text) });
     if st.said.len() > 200 { st.said.drain(0..50); }
     st.stats.lines += 1.0;
     note(g, Some(gd), &alloc::format!("net: {}", text));
@@ -357,8 +354,7 @@ pub fn start_check(g: &mut crate::game::Game) {
         at += pick(g, between);
     }
     let close_at = (match due.last() { Some(x) => x.at, None => g.time + 1.2 }) + pick(g, listen);
-    let t = g.time;
-    st_of(g).check = Some(Check { caller, t, close_at, due, got: Vec::new() });
+    st_of(g).check = Some(Check { caller, close_at, due, got: Vec::new() });
     note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 

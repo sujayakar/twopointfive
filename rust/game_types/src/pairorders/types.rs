@@ -16,7 +16,6 @@ pub struct PairOrders {
     pub seated: bool,
     pub go_seated: bool,
     pub hands_was: bool,
-    pub lit_cells: JsMap<crate::Num, [f64; 2]>,
 }
 impl PairOrders {
     /// what a new one holds
@@ -33,7 +32,6 @@ impl PairOrders {
             seated: false,
             go_seated: false,
             hands_was: false,
-            lit_cells: JsMap::new(),
         }
     }
 }
@@ -109,7 +107,6 @@ pub struct PairOrdersWaysValue {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairordersModPAIRLOGItem {
-    pub t: f64,
     pub what: String,
     /// INVENTED: g.serial() at the push: lesson.ts:113 holds a row as a cursor by identity
     pub serial: u32,

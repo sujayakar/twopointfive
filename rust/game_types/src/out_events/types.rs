@@ -69,7 +69,6 @@ pub struct OutGameAudioLikeRain {
 
 #[derive(Clone, Debug)]
 pub struct OutHostApiRestartPicture {
-    pub why: String,
 }
 
 #[derive(Clone, Debug)]
@@ -142,7 +141,6 @@ pub struct OutMessEvicted {
     pub yaw: f64,
     pub rot: Option<Quat>,
     pub mat: Option<crate::break_table::Mat>,
-    pub kind: crate::debris::ChunkKind,
 }
 
 #[derive(Clone, Debug)]

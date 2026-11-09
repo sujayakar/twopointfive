@@ -37,12 +37,6 @@ pub struct TutTeamPinnedFrame {
     pub at: u16,
     /// k: a yield separates its declaration from a use
     pub k: f64,
-    /// who: a yield separates its declaration from a use
-    pub who: String,
-    /// line: a yield separates its declaration from a use
-    pub line: String,
-    /// u: a yield separates its declaration from a use
-    pub u: Option<crate::director::UnitRef>,
 }
 
 /// (levels/tut-team.script.ts:154-168) the beat 'smoke': where it stands, and what lives across a yield
@@ -97,10 +91,6 @@ pub struct TutTeamPushFrame {
     pub left: Vec<crate::director::UnitRef>,
     /// i: a yield separates its declaration from a use
     pub i: f64,
-    /// u: a yield separates its declaration from a use
-    pub u: Option<crate::director::UnitRef>,
-    /// u: a yield separates its declaration from a use
-    pub u_2: Option<crate::director::UnitRef>,
 }
 
 /// (levels/tut-team.script.ts:208-213) the beat 'indoors': where it stands, and what lives across a yield
@@ -137,16 +127,8 @@ pub struct TutTeamRakeHelperFrame {
     pub o: Option<crate::script_tut_team::TutTeamRakeHelperO>,
     /// total: a yield separates its declaration from a use
     pub total: f64,
-    /// men: a yield separates its declaration from a use
-    pub men: Vec<crate::director::UnitRef>,
-    /// r: a yield separates its declaration from a use
-    pub r: f64,
     /// Z: a yield separates its declaration from a use
     pub z: Option<crate::script_tut_team::TutTeamZone>,
-    /// z: a yield separates its declaration from a use
-    pub z_2: Option<crate::script_tut_team::TutTeamZone>,
-    /// can: a yield separates its declaration from a use
-    pub can: Vec<crate::director::UnitRef>,
     /// u: a yield separates its declaration from a use
     pub u: Option<crate::director::UnitRef>,
     /// heavy: a yield separates its declaration from a use
@@ -170,12 +152,8 @@ pub struct TutTeamHarassHelperFrame {
     pub stop: u16,
     /// o: a parameter
     pub o: Option<crate::script_tut_team::TutTeamHarassHelperO>,
-    /// men: a yield separates its declaration from a use
-    pub men: Vec<crate::director::UnitRef>,
     /// at: a yield separates its declaration from a use
     pub at_2: [f64; 3],
-    /// north: a yield separates its declaration from a use
-    pub north: Option<crate::director::UnitRef>,
     /// u: a yield separates its declaration from a use
     pub u: Option<crate::director::UnitRef>,
     /// heavy: a yield separates its declaration from a use

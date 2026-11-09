@@ -24,14 +24,6 @@ pub struct Out {
     pub calm: crate::powerout::Calm,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct RescueCheckEvent {
-    pub t: f64,
-    pub what: crate::rescuecheck::RescueCheckEventWhat,
-    pub who: String,
-    pub why: String,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueCheckEventWhat {
     #[default] Lost,
@@ -90,7 +82,6 @@ pub struct State {
     pub worded: JsMap<GuardId, crate::rescuecheck::StateWordedValue>,
     pub kept: JsSet<GuardId>,
     pub out: Option<crate::rescuecheck::Out>,
-    pub events: Vec<crate::rescuecheck::RescueCheckEvent>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

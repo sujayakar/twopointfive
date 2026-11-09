@@ -28,7 +28,7 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
 }
 /// The record's copy of the rounds: a side that fired none stays absent.   (guards.ts endEngagement)
 fn rounds_copy(r: &crate::guards::EngagementRounds) -> crate::guards::EngageResultRounds {
-    crate::guards::EngageResultRounds { guard: r.guard, operative: r.operative, hostile: r.hostile, player: r.player, civilian: r.civilian }
+    crate::guards::EngageResultRounds {  }
 }
 
 /// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.   (guards.ts assignLockdown)
@@ -351,8 +351,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     let (men, rig) = (g.men, g.rig);
     let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().get(String::from(o.team.as_str())).unwrap() };
     let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
-    let now = g.time;
-    g.gd[gd].unit = Some(crate::game::UnitInfo { name, spawned_at: now, light: o.light != Some(false), pair: o.pair, seat: None });
+    g.gd[gd].unit = Some(crate::game::UnitInfo { light: o.light != Some(false), pair: o.pair, seat: None });
     crate::control::set_hold(g, gd, true, "guards");
     g.gd[gd].heard_up_to = g.event_seq;
     let c = g.gd[gd].ch;
@@ -433,18 +432,10 @@ pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEnga
             (e.operatives.clone(), e.hostiles.clone(), e.t0, e.kills.clone(), rounds_copy(&e.rounds))
         }
     };
-    let result_outcome = match outcome {
-        crate::guards::EndEngagementOutcome::Wiped => crate::guards::EngageResultOutcome::Wiped,
-        crate::guards::EndEngagementOutcome::Reset => crate::guards::EngageResultOutcome::Reset,
-        crate::guards::EndEngagementOutcome::Cleared => crate::guards::EngageResultOutcome::Cleared,
-        crate::guards::EndEngagementOutcome::Timeout => crate::guards::EngageResultOutcome::Timeout,
-        crate::guards::EndEngagementOutcome::Superseded => crate::guards::EngageResultOutcome::Superseded,
-    };
-    let secs = g.time - t0;
     let operatives_left = living_count(g, &ops);
     let hostiles_left = living_count(g, &hos);
     if let Some(e) = g.m.guards.engagements.as_mut() {
-        e.result = Some(crate::guards::EngageResult { outcome: result_outcome, secs, kills, rounds, operatives_left, hostiles_left });
+        e.result = Some(crate::guards::EngageResult {  });
     }
 }
 
@@ -487,9 +478,8 @@ pub fn tick_engagement(g: &mut crate::game::Game) {
             } else {
                 match down_by { Some(d) => String::from(d.as_str()), None => String::from("—") }
             };
-            let t = g.time - t0;
             if let Some(e) = g.m.guards.engagements.as_mut() {
-                e.kills.push(crate::guards::EngageResultKillsItem { victim, team, by, t });
+                e.kills.push(crate::guards::EngageResultKillsItem {  });
             }
         }
     }

@@ -14,15 +14,6 @@ fn fresh_state() -> crate::close::State {
 
 /// The log of what was taken, the debugger's. (close.ts note)
 pub fn note(g: &mut crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
-    let what = match what {
-        crate::close::NoteWhat::Take => crate::close::CloseModCLOSELOGItemWhat::Take,
-        crate::close::NoteWhat::Grab => crate::close::CloseModCLOSELOGItemWhat::Grab,
-        crate::close::NoteWhat::Seat => crate::close::CloseModCLOSELOGItemWhat::Seat,
-        crate::close::NoteWhat::Unseat => crate::close::CloseModCLOSELOGItemWhat::Unseat,
-    };
-    let item = crate::close::CloseModCLOSELOGItem { t: g.time, who: g.gd[gd].callsign.clone(), what, kind, bearing: bearing.unwrap_or(0.0), dist: dist.unwrap_or(0.0) };
-    g.m.close.close_log.push(item);
-    if g.m.close.close_log.len() > 200 { g.m.close.close_log.remove(0); }
 }
 
 /// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
@@ -122,7 +113,7 @@ pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::clo
     let bearing = v3::wrap_angle(m::atan2(dx, dz) - g.ch[c].body_yaw);
     let wins = close_windows(g, gd);
     let win = window_at(&wins, bearing);
-    let mut o = crate::close::CloseOffer { guard: gd, win, dist, bearing, in_reach: false, clear: false, grab: false, strike: false, can: false, why: String::new() };
+    let mut o = crate::close::CloseOffer { guard: gd, win, dist, in_reach: false, clear: false, grab: false, strike: false, can: false, why: String::new() };
     let cv = g.gd[gd].civ;
     let him: String = match cv { Some(cv) => g.cv[cv].her.clone(), None => String::from("him") };
     let win = match win {
@@ -477,7 +468,7 @@ pub fn close_station(g: &crate::game::Game, gd: GuardId, kind: crate::close::Clo
     let a = g.ch[c].body_yaw + bearing;
     let r = if kind == crate::close::CloseKind::Seat { g.k.close.seat_dist } else { g.k.close.strike_dist };
     let pos: V3 = [gp[0] + m::sin(a) * r, 0.0, gp[2] + m::cos(a) * r];
-    crate::close::CloseStation { pos, yaw: m::atan2(gp[0] - pos[0], gp[2] - pos[2]) }
+    crate::close::CloseStation { pos }
 }
 
 /// The fall's hearing level for a way in, and his shout if he was onto Sam. (close.ts closeNoise)

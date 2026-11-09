@@ -20,7 +20,7 @@ fn why_not_linked() -> String {
 pub fn start() -> crate::sim_sim::SimExports {
     let no = why_not_linked();
     if !no.is_empty() { panic!("{}", no); }
-    SimExports { memory: crate::Opaque }
+    SimExports {  }
 }
 
 /// Why this build cannot run the module ('' = it can). (sim.ts simWhyNot)
@@ -32,7 +32,7 @@ pub fn sim_why_not() -> String {
 pub fn sim() -> crate::sim_sim::SimExports {
     let no = sim_why_not();
     if !no.is_empty() { panic!("{}", no); }
-    SimExports { memory: crate::Opaque }
+    SimExports {  }
 }
 
 

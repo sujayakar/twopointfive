@@ -218,7 +218,7 @@ fn of_model(s: crate::gunlook::Seg) -> Seg {
 /// A node of the viewer's tree in the meta sink, if there is one.
 fn node(meta: &mut Option<&mut Vec<RigNodeMeta>>, path: &str, label: &str, depth: f64, parent: Frame, frame: Frame, box_start: usize, box_count: f64) {
     if let Some(m) = meta.as_deref_mut() {
-        m.push(RigNodeMeta { path: String::from(path), label: String::from(label), depth, parent, frame, box_start: box_start as f64, box_count });
+        m.push(RigNodeMeta {  });
     }
 }
 

@@ -98,7 +98,7 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let j = judge_at(g, b, id, d, Shows::Lying(&pts));
     if j.r != Some(BlastResult::Killed) && !(j.r == Some(BlastResult::Wounded) && j.d <= b.lethal) { return; }
     let (callsign, team) = (g.gd[gd].callsign.clone(), g.gd[gd].team);
-    rep.hits.push(BlastHit { id, name: callsign.clone(), team, d: j.d, exposed: j.e, result: BlastResult::Killed, down: Some(true), behind: None });
+    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed, behind: None });
     rep.killed += 1.0;
     rep.finished += 1.0;
     if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
@@ -142,7 +142,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let Some(r) = j.r else { return };
     rep.player = Some(r);
     let behind = if r == BlastResult::Stunned { j.behind } else { None };
-    rep.hits.push(BlastHit { id, name: String::from("you"), team: crate::teams::Team::Player, d: j.d, exposed: j.e, result: r, down: None, behind });
+    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r, behind });
     let came = if j.behind == Some(BlastHitBehind::Cover) { "the blast broke through your cover" } else { "the blast came through the door" };
     if r == BlastResult::Killed {
         if g.god_mode {
@@ -187,7 +187,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let serial = match spec.serial { Some(s) => s, None => m::floor(g.time * 1000.0) };
     let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
     let name: String = match &spec.name { Some(n) => n.clone(), None => String::from("frag grenade") };
-    let mut rep = BlastReport { at: v3::copy(at), who: spec.who, hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
+    let mut rep = BlastReport { at: v3::copy(at), hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
@@ -275,7 +275,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         let j = judge(g, &b, pos, head, id);
         let Some(r) = j.r else { continue };
         let team = g.gd[gd].team;
-        rep.hits.push(BlastHit { id, name: g.gd[gd].callsign.clone(), team, d: j.d, exposed: j.e, result: r, down: None, behind: if r == BlastResult::Stunned { j.behind } else { None } });
+        rep.hits.push(BlastHit { id, team, exposed: j.e, result: r, behind: if r == BlastResult::Stunned { j.behind } else { None } });
         if r == BlastResult::Shielded { rep.shielded += 1.0; continue; }
         if same_side(side, team) && js::truthy(spec.who) { g.stats.frag.own += 1; }
         if r == BlastResult::Stunned { rep.stunned += 1.0; }

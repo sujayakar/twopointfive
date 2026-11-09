@@ -48,14 +48,6 @@ pub struct AimStateFouled {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimStateLastShot {
     pub t: f64,
-    pub track: f64,
-    pub spread: f64,
-    pub speed: f64,
-    pub gated: bool,
-    pub hands: f64,
-    pub settle: f64,
-    pub tgt: f64,
-    pub own: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -67,11 +59,6 @@ pub struct SettleTimeP {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GuardTerms {
-    pub hands: f64,
-    pub settle: f64,
-    pub tgt: f64,
-    pub own: f64,
-    pub speed: f64,
     pub spread: f64,
 }
 

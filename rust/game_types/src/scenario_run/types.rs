@@ -11,7 +11,6 @@ pub enum StartFromQuerySearch {
 
 #[derive(Clone, Debug, Default)]
 pub struct StartFromQuery {
-    pub spec: Option<crate::scene_scenario_list::ScenarioSpec>,
     pub why: Option<String>,
 }
 
@@ -36,11 +35,7 @@ impl ActiveScenario {
 #[derive(Clone, Debug, Default)]
 pub struct RunningScenario {
     pub kind: crate::scenario_run::RunningScenarioKind,
-    pub squad: f64,
     pub entry: Option<crate::scene_scenarios::ScenarioEntry>,
-    pub title: String,
-    pub team: String,
-    pub saves: Option<bool>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]

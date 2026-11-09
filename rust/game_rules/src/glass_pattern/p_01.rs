@@ -498,7 +498,7 @@ mod tests {
         }
     }
     fn site(u: f64, v: f64, rot: f64, n: f64, seed: f64, rho: [f64; 4], rz: f64, e: f64, merge: f64, hits: f64) -> GpSite {
-        GpSite { u, v, rot, n, seed, rho, rz, e, merge, hits }
+        GpSite { u, v, rot, n, seed, rho, rz, e, merge }
     }
     fn abc() -> [GpSite; 3] {
         [

@@ -330,8 +330,6 @@ pub struct KitModLessonRowPacks {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModKept0 {
-    pub charges: Option<f64>,
-    pub walls: Option<f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -388,15 +386,11 @@ pub struct KitCost {
     pub used: f64,
     pub total: f64,
     pub free: f64,
-    pub lines: Vec<crate::kit::KitCostLinesItem>,
     pub big: Option<crate::kit::KitCostBig>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct KitCostLinesItem {
-    pub item: String,
-    pub n: f64,
-    pub pouches: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -434,14 +428,12 @@ pub struct KitRowCost {
 pub struct KitPeek {
     pub value: crate::kit::KitValue,
     pub why: String,
-    pub passed: String,
 }
 impl Default for KitPeek {
     fn default() -> Self {
         KitPeek {
             value: crate::kit::KitValue::Text(String::new()),
             why: String::new(),
-            passed: String::new(),
         }
     }
 }
@@ -465,7 +457,6 @@ impl Default for Peek {
 #[derive(Clone, Debug)]
 pub struct KitTry {
     pub ok: bool,
-    pub value: crate::kit::KitValue,
     pub why: String,
     pub passed: String,
 }
@@ -473,7 +464,6 @@ impl Default for KitTry {
     fn default() -> Self {
         KitTry {
             ok: false,
-            value: crate::kit::KitValue::Text(String::new()),
             why: String::new(),
             passed: String::new(),
         }
@@ -488,7 +478,6 @@ pub struct KitPreset2 {
 
 #[derive(Clone, Debug, Default)]
 pub struct KitPastePeek {
-    pub card: crate::kit::MemberKit,
     pub changed: Vec<crate::kit::KitField>,
     pub why: String,
 }

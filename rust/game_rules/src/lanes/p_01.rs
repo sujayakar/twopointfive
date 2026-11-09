@@ -449,7 +449,6 @@ pub fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: boo
                 at: [at[0], 0.0, at[2]],
                 dx,
                 dz,
-                t0: now,
                 last_t: now,
                 known_at: -1.0,
                 push_until: -1.0,

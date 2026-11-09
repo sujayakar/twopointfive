@@ -110,7 +110,6 @@ pub struct RecapDoor {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LostMan {
     pub id: f64,
-    pub name: String,
     pub t: f64,
     pub at: [f64; 2],
     pub from: Option<[f64; 2]>,

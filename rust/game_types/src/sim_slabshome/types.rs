@@ -51,12 +51,6 @@ pub struct SlabCols {
 pub struct SlabStore {
     pub doors: f64,
     pub o: crate::sim_slabshome::SlabStoreO,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub home: crate::Opaque,
-    pub b8: f64,
-    pub b4: f64,
-    pub cap: f64,
 }
 impl SlabStore {
     /// what a new one holds
@@ -64,10 +58,6 @@ impl SlabStore {
         SlabStore {
             doors: 0.0,
             o: crate::sim_slabshome::SlabStoreO::default(),
-            home: crate::Opaque,
-            b8: 0.0,
-            b4: 0.0,
-            cap: 0.0,
         }
     }
 }
@@ -100,12 +90,6 @@ pub struct SlabStoreO {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SlabIo {
-    pub x: crate::sim_sim::SimExports,
-    pub par: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SLF {
     pub rest: f64,
     pub landed: f64,
@@ -118,9 +102,6 @@ pub struct SimSlabshomeModSLABSSTEPPED {
     pub there: f64,
     pub here: f64,
     pub host: f64,
-    pub asked: f64,
-    pub differ: f64,
-    pub first: String,
     pub rays: f64,
     pub gathers: f64,
     pub substeps: f64,
@@ -131,16 +112,13 @@ pub struct SimSlabshomeModSLABSSTEPPED {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SimSlabshomeMod {
-    /// (src/sim/slabshome.ts:120 IO)
-    pub io: Option<crate::sim_slabshome::SlabIo>,
     /// (src/sim/slabshome.ts:135 SLABS_STEPPED)
     pub slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED,
 }
 impl SimSlabshomeMod {
     pub fn blank() -> Self {
         SimSlabshomeMod {
-            io: None,
-            slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED { there: 0.0, here: 0.0, host: 0.0, asked: 0.0, differ: 0.0, first: String::from(""), rays: 0.0, gathers: 0.0, substeps: 0.0, landed: 0.0, rested: 0.0 },
+            slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED { there: 0.0, here: 0.0, host: 0.0, rays: 0.0, gathers: 0.0, substeps: 0.0, landed: 0.0, rested: 0.0 },
         }
     }
 }

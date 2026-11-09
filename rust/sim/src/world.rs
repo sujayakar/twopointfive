@@ -268,7 +268,7 @@ impl Over<'_> {
     }
 }
 
-/// how much a table holds, by the same numbers (rows, not bytes)
+/// how much a table holds, by its number (rows, not bytes)
 pub fn cap(table: u32) -> usize {
     match table {
         0 => MAX_BOXES,

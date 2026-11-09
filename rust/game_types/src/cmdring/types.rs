@@ -35,7 +35,6 @@ pub struct SeatRow {
 #[derive(Clone, Debug, Default)]
 pub struct FlatRow {
     pub id: String,
-    pub key: Option<f64>,
     pub hot_key: Option<String>,
     pub opens: Option<String>,
     pub free: Option<bool>,

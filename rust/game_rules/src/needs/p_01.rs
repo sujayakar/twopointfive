@@ -70,7 +70,7 @@ pub fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<
 
 /// A level's own place as a NeedSpot. (needs.ts ownSpot; `owned`'s cache is dropped, the value is a function of `s`)
 pub fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
-    NeedSpot { kind, name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
+    NeedSpot { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
 
 /// A new man's row: never back from a break, so his rest is long had. (needs.ts:111)
@@ -90,12 +90,6 @@ pub fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsMod
 
 /// The last few things that happened. (needs.ts log; NEEDS_DEBUG's sink is host work)
 pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-    let t = g.time;
-    let who = g.gd[gd].callsign.clone();
-    g.m.needs.needs_log.push(NeedsModNEEDSLOGItem { t, who, what: String::from(what) });
-    if g.m.needs.needs_log.len() > 200 {
-        g.m.needs.needs_log.drain(0..50);
-    }
 }
 
 /// (needs.ts frac)
@@ -390,7 +384,6 @@ pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs:
         kind,
         spot,
         phase: TripPhase::Telegraph,
-        forced,
         t0: now,
         depart_at: now + lead,
         left_at: -1.0,

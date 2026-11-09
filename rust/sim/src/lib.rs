@@ -40,7 +40,6 @@ pub mod pattern;
 pub mod pen;
 pub mod poses;
 pub mod props;
-mod pow10;
 pub mod sight;
 pub mod single;
 pub mod skeleton;

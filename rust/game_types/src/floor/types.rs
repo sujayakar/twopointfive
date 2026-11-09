@@ -29,7 +29,6 @@ impl FloorMat {
 pub struct FLOORValue {
     pub loud: f64,
     pub hard: bool,
-    pub rate: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -50,7 +49,7 @@ pub struct FINISHESItem {
 }
 
 /// (src/game/floor.ts:22 FLOOR: a table nothing writes)
-pub fn floor() -> &'static [(crate::floor::FloorMat, crate::floor::FLOORValue)] { &[(crate::floor::FloorMat::Carpet, crate::floor::FLOORValue { loud: 0.6, hard: false, rate: 0.94 }), (crate::floor::FloorMat::Lino, crate::floor::FLOORValue { loud: 1.0, hard: true, rate: 1.0 }), (crate::floor::FloorMat::Stone, crate::floor::FLOORValue { loud: 1.1, hard: true, rate: 1.08 }), (crate::floor::FloorMat::Tile, crate::floor::FLOORValue { loud: 1.05, hard: true, rate: 1.04 }), (crate::floor::FloorMat::Asphalt, crate::floor::FLOORValue { loud: 0.9, hard: true, rate: 0.97 }), (crate::floor::FloorMat::Grass, crate::floor::FLOORValue { loud: 0.45, hard: false, rate: 0.88 })] }
+pub fn floor() -> &'static [(crate::floor::FloorMat, crate::floor::FLOORValue)] { &[(crate::floor::FloorMat::Carpet, crate::floor::FLOORValue { loud: 0.6, hard: false }), (crate::floor::FloorMat::Lino, crate::floor::FLOORValue { loud: 1.0, hard: true }), (crate::floor::FloorMat::Stone, crate::floor::FLOORValue { loud: 1.1, hard: true }), (crate::floor::FloorMat::Tile, crate::floor::FLOORValue { loud: 1.05, hard: true }), (crate::floor::FloorMat::Asphalt, crate::floor::FLOORValue { loud: 0.9, hard: true }), (crate::floor::FloorMat::Grass, crate::floor::FLOORValue { loud: 0.45, hard: false })] }
 
 /// (src/game/floor.ts:32 BUILDING: a table nothing writes)
 pub fn building() -> crate::floor::BUILDING { crate::floor::BUILDING { x0: 4.0, x1: 36.0, z0: 4.0, z1: 24.0 } }

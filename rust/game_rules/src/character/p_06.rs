@@ -231,7 +231,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         hips: at[0], spine1: at[1], spine2: at[2], spine3: at[3], neck: at[4], head: at[5],
         upper_arm_l: at[6], forearm_l: at[7], hand_l: at[8], upper_arm_r: at[9], forearm_r: at[10], hand_r: at[11],
         thigh_l: at[12], shin_l: at[13], foot_l: at[14], toe_l: at[15], thigh_r: at[16], shin_r: at[17], foot_r: at[18], toe_r: at[19],
-        shoulder_l: at[20], shoulder_r: at[21], middle1_r: at[22], middle1_l: at[23],
+        middle1_r: at[22], middle1_l: at[23],
     };
     let nd = a.nodes;
 

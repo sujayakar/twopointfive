@@ -190,8 +190,6 @@ pub struct Def {
     pub burst: crate::roomfight::DefBurst,
     pub bolt_until: f64,
     pub bolt_from: Option<crate::game::Foe>,
-    /// INVENTED by a review: see the proposals
-    pub pt_stamp: Option<u32>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -239,7 +237,6 @@ pub struct Op {
     pub next: f64,
     pub lost_at: f64,
     pub fell: Option<bool>,
-    pub first: bool,
     pub aim: V3,
     pub ov: crate::roomfight::OpOv,
     pub step: Option<crate::roomfight::OpStep>,
@@ -341,7 +338,6 @@ pub struct RoomFightDoorShot {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RoomFightStepToPatch {
-    pub goal: Option<V3>,
     pub speed: Option<f64>,
     pub face: Option<f64>,
     pub strafe: Option<bool>,

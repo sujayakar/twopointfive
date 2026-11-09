@@ -258,10 +258,8 @@ pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
     let s = g.m.morale.state_of.get(gd)?;
     Some(MoraleOf {
-        drive: s.drive, heard: s.heard, t: s.t, lost: s.lost, next: s.next, hole: s.hole, goal: s.goal, act: s.act, lit: s.lit, said: s.said,
-        alone: s.alone, ask: s.ask, by: s.by, green: s.green, dark: s.dark, rounds: s.rounds, fall: s.fall, drive_t: s.drive_t, calls: s.calls,
-        shock: s.shock, rung: s.rung, leader_down: s.leader_down, broke_t: s.broke_t, call_t: s.call_t, baits: s.baits, at_hole: s.at_hole,
-        bark: s.bark, shout: s.shout,
+        t: s.t, act: s.act,
+        alone: s.alone, green: s.green,
     })
 }
 

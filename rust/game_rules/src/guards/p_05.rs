@@ -664,7 +664,7 @@ pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     }
     let mut spots: Vec<crate::guards::SearchSpot> = Vec::with_capacity(chosen.len());
     for c in chosen.iter() {
-        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, kind: c.kind, hidden: c.hidden, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
+        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, kind: c.kind, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
     }
     let now = g.time;
     let p = g.gd[gd].search_plan.as_mut().unwrap();

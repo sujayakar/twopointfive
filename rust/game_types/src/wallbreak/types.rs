@@ -50,13 +50,10 @@ pub struct LevelChange {
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
     pub id: f64,
-    pub name: Option<String>,
     pub pos: V3,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-    pub sight: bool,
-    pub dead: bool,
     pub who: f64,
 }
 
@@ -165,12 +162,6 @@ pub struct WallBreak {
     pub hidden: JsMap<crate::Num, f64>,
     pub counter: f64,
     pub dirty: bool,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch: Vec<i32>,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch2: Vec<i32>,
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
     pub wear: crate::wallwear::WallWear,
@@ -193,8 +184,6 @@ impl WallBreak {
             hidden: JsMap::new(),
             counter: 1.0,
             dirty: false,
-            scratch: alloc::vec![0; 96],
-            scratch2: alloc::vec![0; 96],
             fixture_boxes: JsSet::new(),
             ghosts: Vec::new(),
             wear: crate::wallwear::WallWear::blank(),
@@ -220,7 +209,6 @@ pub struct WallBreakHungNow {
 pub struct WallBreakBreakableAt {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
-    pub surf: crate::scene_materials::Surf,
     pub open: f64,
     pub cells: f64,
     pub hard: Option<bool>,
@@ -244,14 +232,11 @@ pub struct WallBreakRectBox {
 
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakNoteC {
-    pub dead: bool,
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
-    pub name: Option<String>,
     pub who: f64,
     pub pos: V3,
     pub id: f64,
-    pub sight: bool,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
@@ -261,7 +246,6 @@ pub struct WallBreakNoteC {
 pub struct WallBreakPlanBlastItem {
     pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
-    pub d: f64,
 }
 
 #[derive(Clone, Debug, Default)]

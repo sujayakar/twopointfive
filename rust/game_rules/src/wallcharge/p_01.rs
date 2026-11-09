@@ -156,7 +156,7 @@ pub fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot)
 pub fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     let indoors = charge_indoors_of(g, w);
     let i = if indoors { 1 } else { 0 };
-    crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i], indoors }
+    crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i] }
 }
 /// …for a rule that holds the game: the copy of the boxes stood first
 pub fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {

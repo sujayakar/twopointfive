@@ -481,13 +481,13 @@ pub fn kit_cost(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::Member
     for k in slot_amount().keys() {
         let n = slot_amount_of(g, &k, &m);
         let p = slot_cost(g, &k, n, None);
-        if js::truthy(p) { lines.push(crate::kit::KitCostLinesItem { item: k, n, pouches: p }); }
+        if js::truthy(p) { lines.push(crate::kit::KitCostLinesItem {  }); }
     }
     let t = table(g);
     let used = cost_of(g, &m, &t);
     let total = pouches_at(&t, iu);
     let big = if big_is_on(g) { Some(crate::kit::KitCostBig { used: big_used(g, &m, &t), total: big_slots(&t, iu) }) } else { None };
-    crate::kit::KitCost { used, total, free: total - used, lines, big }
+    crate::kit::KitCost { used, total, free: total - used, big }
 }
 
 /// The pouches the teammates who come fill between them, of the squad's total (kit.ts squadCost)

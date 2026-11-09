@@ -100,7 +100,6 @@ pub struct Destructible {
     pub i: f64,
     pub kind: crate::destruction::DKind,
     pub box_: BoxId,
-    pub flags0: f64,
     pub mate: Option<f64>,
     pub target: Option<FixtureId>,
     pub group: Option<Vec<f64>>,

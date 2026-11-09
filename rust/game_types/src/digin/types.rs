@@ -120,23 +120,15 @@ pub struct StFix {
     pub at: V3,
     pub t: f64,
     pub room: Option<RoomfightRoomId>,
-    pub heard: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DiginModDIGINLOGItem {
-    pub t: f64,
-    pub who: String,
     pub what: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiginModDIGINSHUT {
-    pub home: f64,
-    pub held: f64,
-    pub again: f64,
-    pub more: f64,
-    pub left: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -148,7 +140,6 @@ pub struct ListenersItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HeardBy {
-    pub gd: Option<GuardId>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -183,7 +174,7 @@ impl DiginMod {
     pub fn blank() -> Self {
         DiginMod {
             digin_log: Vec::new(),
-            digin_shut: crate::digin::DiginModDIGINSHUT { home: 0.0, held: 0.0, again: 0.0, more: 0.0, left: 0.0 },
+            digin_shut: crate::digin::DiginModDIGINSHUT {  },
             states: None,
         }
     }
@@ -212,7 +203,6 @@ pub struct DiginStats {
     pub steady: i32,
     pub tried: i32,
     pub deep: i32,
-    pub gathered: i32,
     pub gather_lost: i32,
     pub refuge: i32,
     pub lane_moved: i32,

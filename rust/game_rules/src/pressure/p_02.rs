@@ -116,7 +116,6 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
         iz += 1;
     }
     js::sort_by(&mut cand, |a, b| a.d - b.d);
-    let team = g.gd[gd].team;
     // dark and well clear of his mates and their lines · any light, a body's width clear · a floor too small for lanes: behind a mate
     for (apart, lane, dark) in [(1.4, 0.8, true), (1.0, 0.45, false), (1.0, 0.0, false)] {
         let mut best: Option<(V3, f64)> = None;
@@ -590,7 +589,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             st.serial += 1.0;
             st.presses.push(crate::pressure::Press {
                 id: st.serial, room: tt, at: tat, t0: now, phase: if forms_now { PressPhase::Gather } else { PressPhase::Go }, team_in: false, set_at: -1.0,
-                lone_at: None, sprung: None, listen_at: 0.0, moving: false, word_at: 0.0, go_at: now, n0: 0.0, lone: false, men: Vec::new(),
+                lone_at: None, sprung: None, moving: false, word_at: 0.0, go_at: now, n0: 0.0, lone: false, men: Vec::new(),
             });
             st.stats.press_formed += 1.0;
             st.presses.len() - 1

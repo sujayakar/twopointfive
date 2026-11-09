@@ -107,7 +107,6 @@ pub struct HolderStandArea {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HolderStand {
     pub pos: Option<V3>,
-    pub ok: bool,
     pub clear: bool,
     pub inside: bool,
 }

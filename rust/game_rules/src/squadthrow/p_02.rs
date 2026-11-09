@@ -91,7 +91,7 @@ pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow:
     }
     let who_said = g.gd[gd].callsign.clone();
     let log = &mut g.m.squadthrow.squadthrow_log;
-    log.push(SquadthrowModSQUADTHROWLOGItem { t, kind, who: who_said, from: arc.from, at: v3::copy(at), land: v3::copy(arc.sol.land), rest: arc.rest });
+    log.push(SquadthrowModSQUADTHROWLOGItem { who: who_said, rest: arc.rest });
     if log.len() > 100 {
         log.drain(0..50);
     }
@@ -102,7 +102,7 @@ pub fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
-    g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, laid: None, serial });
+    g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
 }
 
 /// The assignment that walks him to his throw, under the row's own id. (squadthrow.ts walkTo)

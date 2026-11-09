@@ -2,7 +2,7 @@
 //!
 //! A rule that wants a man's body is a line of `rules!` below and a file of this folder. The order of the lines is the rank: the arbiter asks
 //! from the top and the first rule that answers has him. What it decided is written to the man's `Control`, once a tick, so "why is he doing
-//! that" is read in one place (`control_line`, `control_summary`, and the runner's CONTROL line of `control_tally`).
+//! that" is read in one place (`control_line`, and the runner's CONTROL line of `control_tally`).
 //!
 //! A RULE IS `pub struct Rule; impl Reaction for Rule { … }` in its file. Two things must be written, the rest have defaults:
 //!   `Ask`         what it asks of a man, which is also WHERE in his frame it is asked (below).

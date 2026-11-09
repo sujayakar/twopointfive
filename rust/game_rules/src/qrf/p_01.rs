@@ -165,8 +165,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// A row of the response's log, which keeps its last 150 to 200.   (qrf.ts note)
 pub fn note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.qrf.log.push(crate::qrf::QrfLogItem { t, what: String::from(what) });
+    g.qrf.log.push(crate::qrf::QrfLogItem { what: String::from(what) });
     if g.qrf.log.len() > 200 { g.qrf.log.drain(0..50); }
 }
 
@@ -311,7 +310,7 @@ pub fn read_net(g: &mut crate::game::Game) {
             if i.lost { continue; }
             let key = word_key(i.who);
             let newer = match g.qrf.word.get(key) { None => true, Some(w) => i.t > w.t + 1e-6 };
-            if newer { g.qrf.word.set(key, crate::qrf::QrfWordValue { at: i.at, t: i.t, how: String::from(i.how.as_str()) }); }
+            if newer { g.qrf.word.set(key, crate::qrf::QrfWordValue { at: i.at, t: i.t }); }
         }
     }
     for who in g.qrf.word.keys() {
@@ -463,7 +462,7 @@ pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
 
 /// The radio's words for this level's team, for the lines other modules say of it.   (qrf.ts responseWords)
 pub fn response_words(g: &crate::game::Game) -> Option<crate::qrf::ResponseWords> {
-    response_of(g).map(|r| crate::qrf::ResponseWords { site: r.site, at: r.at, team: r.team })
+    response_of(g).map(|r| crate::qrf::ResponseWords { site: r.site, team: r.team })
 }
 
 #[cfg(test)]

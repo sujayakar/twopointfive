@@ -14,19 +14,6 @@ pub struct State {
     pub why: String,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct UnseenModUNSEENLOGItem {
-    pub t: f64,
-    pub what: crate::unseen::UnseenModUNSEENLOGItemWhat,
-    pub why: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum UnseenModUNSEENLOGItemWhat {
-    #[default] Off,
-    On,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct UnseenFollow {
     pub speed: f64,
@@ -36,8 +23,6 @@ pub struct UnseenFollow {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct UnseenMod {
-    /// (src/game/unseen.ts:94 UNSEEN_LOG)
-    pub unseen_log: Vec<crate::unseen::UnseenModUNSEENLOGItem>,
     /// (src/game/unseen.ts:102 states)
     pub states: JsMap<PlayerId, crate::unseen::State>,
     /// (src/game/unseen.ts:153 onWallAt)
@@ -50,7 +35,6 @@ pub struct UnseenMod {
 impl UnseenMod {
     pub fn blank() -> Self {
         UnseenMod {
-            unseen_log: Vec::new(),
             states: JsMap::new(),
             on_wall_at: JsMap::new(),
             kneel_at: JsMap::new(),

@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct Breach {
     pub key: String,
     pub wall: f64,
-    pub c0: [f64; 2],
     pub u: [f64; 2],
     pub n: [f64; 2],
     pub lo: f64,
@@ -16,7 +15,6 @@ pub struct Breach {
     pub half: f64,
     pub into: Option<WallreactBreachId>,
     pub walk: bool,
-    pub t: f64,
     pub cause: crate::wallreact::BreachCause,
     pub who: f64,
     pub blast_by: Option<f64>,

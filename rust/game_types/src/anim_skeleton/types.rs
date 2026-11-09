@@ -89,7 +89,6 @@ impl Default for PoseFK { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSkeletonModPOSEBENCH {
     pub rig: Option<RigId>,
-    pub asked: f64,
     pub in_place: f64,
     pub owed: f64,
 }
@@ -129,22 +128,13 @@ pub struct AnimSkeletonMod {
     pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     /// (src/anim/skeleton.ts:238 CLIP_SIDE)
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
-    /// (src/anim/skeleton.ts:299 ON_HOW)
-    pub on_how: Vec<u8>,
-    /// (src/anim/skeleton.ts:299 ON_LO)
-    pub on_lo: Vec<i32>,
-    /// (src/anim/skeleton.ts:299 ON_F)
-    pub on_f: Vec<f64>,
 }
 impl AnimSkeletonMod {
     pub fn blank() -> Self {
         AnimSkeletonMod {
-            pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, asked: 0.0, in_place: 0.0, owed: 0.0 },
+            pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 },
             layers: crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() },
             clip_side: JsMap::new(),
-            on_how: alloc::vec![0; 8],
-            on_lo: alloc::vec![0; 8],
-            on_f: alloc::vec![0.0; 8],
         }
     }
 }

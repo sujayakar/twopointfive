@@ -178,7 +178,6 @@ pub struct Bang {
     pub spark_count: f64,
     pub trail_count: f64,
     pub trail_reserve: f64,
-    pub hearing: f64,
     pub dazzle_radius: f64,
     pub dazzle_seconds: f64,
     pub dazzle_min: f64,
@@ -190,16 +189,6 @@ pub struct Sparks {
     pub spread: f64,
     pub lift: f64,
     pub life: f64,
-    pub gravity: f64,
-    pub drag: f64,
-    pub brightness: f64,
-    pub hold: f64,
-    pub max_live: f64,
-    pub emissive: f64,
-    pub thickness: f64,
-    pub shutter: f64,
-    pub min_streak: f64,
-    pub collide: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -238,7 +227,6 @@ pub struct MuzzleFrame {
 
 #[derive(Clone, Debug, Default)]
 pub struct SpawnShotO {
-    pub seed: f64,
     pub light_gain: Option<f64>,
     pub light_range: Option<f64>,
     pub track: Option<crate::effects::Track>,
@@ -269,10 +257,10 @@ pub fn muzzle_fx() -> crate::effects::MuzzleFx2 { crate::effects::MuzzleFx2 { pi
 pub fn muzzle_card() -> crate::effects::MuzzleCard { crate::effects::MuzzleCard { albedo: [1.0, 0.8, 0.5], ttl: 0.035 } }
 
 /// (src/game/effects.ts:118 bang: a table nothing writes)
-pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_air: 3.0, height: 0.07, radius: 0.23, density: 6.3, temp: 48.0, expand: 90.0, life: 0.12, attack: 0.02, end_push: 40.0, vent_speed: 7.0, half_length: 0.1, asymmetry: 0.45, tilt: 0.25, jitter: 0.6, body_vents: 5.0, body_fraction: 0.25, body_push: 30.0, body_radius_k: 0.7, body_speed_k: 0.6, body_expand_k: 0.5, wisp_radius: 0.24, wisp_density: 1.2, wisp_temp: 10.5, wisp_rise: 0.6, wisp_push: 5.0, wisp_life: 3.0, wisp_attack: 0.3, frame_jitter: 0.08, density_gain: 1.0, temp_gain: 1.0, light_color: [1.0, 0.98, 0.95], light_power: 1600.0, light_duration: 0.14, light_range: 14.0, light_radius: 0.15, light_lift: 0.3, spark_count: 72.0, trail_count: 12.0, trail_reserve: 2.0, hearing: 28.0, dazzle_radius: 8.0, dazzle_seconds: 6.0, dazzle_min: 2.0 } }
+pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_air: 3.0, height: 0.07, radius: 0.23, density: 6.3, temp: 48.0, expand: 90.0, life: 0.12, attack: 0.02, end_push: 40.0, vent_speed: 7.0, half_length: 0.1, asymmetry: 0.45, tilt: 0.25, jitter: 0.6, body_vents: 5.0, body_fraction: 0.25, body_push: 30.0, body_radius_k: 0.7, body_speed_k: 0.6, body_expand_k: 0.5, wisp_radius: 0.24, wisp_density: 1.2, wisp_temp: 10.5, wisp_rise: 0.6, wisp_push: 5.0, wisp_life: 3.0, wisp_attack: 0.3, frame_jitter: 0.08, density_gain: 1.0, temp_gain: 1.0, light_color: [1.0, 0.98, 0.95], light_power: 1600.0, light_duration: 0.14, light_range: 14.0, light_radius: 0.15, light_lift: 0.3, spark_count: 72.0, trail_count: 12.0, trail_reserve: 2.0, dazzle_radius: 8.0, dazzle_seconds: 6.0, dazzle_min: 2.0 } }
 
 /// (src/game/effects.ts:138 sparks: a table nothing writes)
-pub fn sparks() -> crate::effects::Sparks { crate::effects::Sparks { speed: 20.0, spread: 0.55, lift: 0.5, life: 0.55, gravity: 16.0, drag: 1.6, brightness: 2.6, hold: 0.15, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } }
+pub fn sparks() -> crate::effects::Sparks { crate::effects::Sparks { speed: 20.0, spread: 0.55, lift: 0.5, life: 0.55 } }
 
 /// (src/game/effects.ts:156 tracerFx: a table nothing writes)
 pub fn tracer_fx() -> crate::tracers::TracersParams { crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 } }

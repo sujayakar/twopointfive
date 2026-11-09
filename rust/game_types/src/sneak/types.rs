@@ -117,14 +117,6 @@ pub struct Feet {
     pub must: Option<bool>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SneakModSNEAKLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-    pub at: [f64; 2],
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LINES {
     pub wait: crate::sneak::LINESWait,
@@ -198,8 +190,6 @@ pub struct SneakModKeptLinesValue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SneakMod {
-    /// (src/game/sneak.ts:154 SNEAK_LOG)
-    pub sneak_log: Vec<crate::sneak::SneakModSNEAKLOGItem>,
     /// (src/game/sneak.ts:188 leafT)
     pub leaf_t: JsMap<DoorId, crate::sneak::SneakModLeafTValue>,
     /// (src/game/sneak.ts:193 states)
@@ -214,7 +204,6 @@ pub struct SneakMod {
 impl SneakMod {
     pub fn blank() -> Self {
         SneakMod {
-            sneak_log: Vec::new(),
             leaf_t: JsMap::new(),
             states: None,
             live_at: None,

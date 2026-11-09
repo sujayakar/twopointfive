@@ -60,7 +60,6 @@ pub struct HandlesideModFacesValue {
 pub struct Ahead {
     pub d: DoorId,
     pub k: usize,
-    pub at: V3,
     pub dist: f64,
 }
 
@@ -73,7 +72,6 @@ pub struct BendA {
 pub struct ToolSpot {
     pub pos: V3,
     pub yaw: f64,
-    pub pull: bool,
     pub far: bool,
 }
 

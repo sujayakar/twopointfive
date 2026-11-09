@@ -1323,7 +1323,7 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
         g.pl[pl].wand = st.a.wand_was;
         if let Some((x, was)) = st.a.wand_kit.take() { if let Some(e) = g.m.kit.man_of.get_mut(x) { e.kit.wand = was; } }
     }
-    st.a.last = Some(BeatOver { n: b.n, field: b.field, i: b.i, t: b.time, phase: b.phase, marks: b.marks.clone(), how, rest: b.rest, drift: b.drift });
+    st.a.last = Some(BeatOver { n: b.n, field: b.field, phase: b.phase, marks: b.marks.clone(), how });
     if b.field == "smoke" && !b.mark_t.is_nan() { st.a.vent_at = b.mark_t + K.vent_secs; }
     st.a.clicked = 0.0;
     b.lit = false;

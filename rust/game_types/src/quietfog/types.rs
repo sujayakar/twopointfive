@@ -25,8 +25,6 @@ impl QuietRung {
 pub struct Held {
     pub cone: Option<crate::quietfog::HeldCone>,
     pub own: Option<crate::quietfog::HeldOwn>,
-    /// INVENTED: g.serial() where quietFogStart makes the Held (quietfog.ts:159): quietFogAside asks by identity whether the Held it lifted is still the one held (quietfog.ts:179)
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -44,7 +42,6 @@ pub struct HeldOwn {
 #[derive(Clone, Debug, Default)]
 pub struct QUIETRUNGSItem {
     pub id: String,
-    pub label: String,
     pub words: String,
 }
 
@@ -63,8 +60,6 @@ pub struct QuietfogMod {
     pub cams_read: bool,
     /// (src/game/quietfog.ts:148 HELD)
     pub held: Option<crate::quietfog::Held>,
-    /// (src/game/quietfog.ts:174 ASIDE)
-    pub aside: bool,
 }
 impl QuietfogMod {
     pub fn blank() -> Self {
@@ -75,7 +70,6 @@ impl QuietfogMod {
             cams: None,
             cams_read: false,
             held: None,
-            aside: false,
         }
     }
 }
@@ -84,7 +78,7 @@ impl QuietfogMod {
 pub fn not_solo() -> Vec<String> { alloc::vec![String::from("quiet"), String::from("roomclear"), String::from("nightbreach"), String::from("rescue"), String::from("squad4"), String::from("demo"), String::from("breach")] }
 
 /// (src/game/quietfog.ts:58 QUIET_RUNGS: a table nothing writes)
-pub fn quiet_rungs() -> Vec<crate::quietfog::QUIETRUNGSItem> { alloc::vec![crate::quietfog::QUIETRUNGSItem { id: String::from("off"), label: String::from("off"), words: String::from("no fog of war: the whole floor and every guard on it is drawn") }, crate::quietfog::QUIETRUNGSItem { id: String::from("team"), label: String::from("all round"), words: String::from("you see all around you, and around your partner if you have one. The rest of the floor is drawn as you last saw it") }, crate::quietfog::QUIETRUNGSItem { id: String::from("cones"), label: String::from("cones"), words: String::from("you see only the cone you're looking down, and your partner's if you have one. The floor behind your back is dark") }, crate::quietfog::QUIETRUNGSItem { id: String::from("own"), label: String::from("own eyes"), words: String::from("only the cone you're looking down lifts the fog, and a partner calls out what he sees") }] }
+pub fn quiet_rungs() -> Vec<crate::quietfog::QUIETRUNGSItem> { alloc::vec![crate::quietfog::QUIETRUNGSItem { id: String::from("off"), words: String::from("no fog of war: the whole floor and every guard on it is drawn") }, crate::quietfog::QUIETRUNGSItem { id: String::from("team"), words: String::from("you see all around you, and around your partner if you have one. The rest of the floor is drawn as you last saw it") }, crate::quietfog::QUIETRUNGSItem { id: String::from("cones"), words: String::from("you see only the cone you're looking down, and your partner's if you have one. The floor behind your back is dark") }, crate::quietfog::QUIETRUNGSItem { id: String::from("own"), words: String::from("only the cone you're looking down lifts the fog, and a partner calls out what he sees") }] }
 
 /// (src/game/quietfog.ts:68 LS)
 pub const LS: &str = "twopointsix.quietfog";

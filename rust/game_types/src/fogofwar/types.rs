@@ -66,7 +66,7 @@ impl FogOfWar {
             eyes: Vec::new(),
             mates: Vec::new(),
             hidden_chars: JsSet::new(),
-            stats: crate::fogofwar::FogOfWarStats { frames: 0.0, eyes: 0.0, tested: 0.0, seen: 0.0, hidden: 0.0, smoke_asks: 0.0, smoke_hid: 0.0, by_fire: 0.0 },
+            stats: crate::fogofwar::FogOfWarStats { frames: 0.0, eyes: 0.0, tested: 0.0, seen: 0.0, hidden: 0.0, smoke_hid: 0.0, by_fire: 0.0 },
             fired_n: JsMap::new(),
             fired_at: JsMap::new(),
             fire_clock: 0.0,
@@ -136,7 +136,6 @@ pub struct FogOfWarStats {
     pub tested: f64,
     pub seen: f64,
     pub hidden: f64,
-    pub smoke_asks: f64,
     pub smoke_hid: f64,
     pub by_fire: f64,
 }
@@ -178,11 +177,6 @@ pub struct FogOfWarThingStats {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct FogOfWarCallLogItem {
-    pub t: f64,
-    pub who: String,
-    pub of: String,
-    pub kind: crate::fogofwar::FogOfWarCallLogItemKind,
-    pub text: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -206,10 +200,6 @@ pub struct FogOfWarFullStats {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogofwarModFOGPAGE {
-    pub desat: f64,
-    pub edge: f64,
-    pub air: bool,
-    pub kept: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -235,7 +225,7 @@ pub struct FogofwarMod {
 impl FogofwarMod {
     pub fn blank() -> Self {
         FogofwarMod {
-            fog_page: { let k = crate::knobs::FogK::page(); crate::fogofwar::FogofwarModFOGPAGE { desat: k.desat, edge: k.edge, air: k.air, kept: k.kept } },
+            fog_page: { crate::fogofwar::FogofwarModFOGPAGE {  } },
             thing_pass: { let mut s = JsSet::new(); s.add(crate::Num(1.0)); s.add(crate::Num(4.0)); s.add(crate::Num(5.0)); s },
         }
     }

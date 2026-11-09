@@ -88,7 +88,6 @@ impl Default for NightBreach { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachLogItem {
-    pub t: f64,
     pub what: String,
 }
 

@@ -47,8 +47,6 @@ pub struct ManTake {
     pub born: f64,
     pub spot: V3,
     pub asked: Option<bool>,
-    /// INVENTED by a review: see the proposals
-    pub spot_serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -59,11 +57,6 @@ pub struct ManTakeNo {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SpottedModSPOTTEDLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub to: crate::spotted::SpottedMode,
-    pub what: Option<String>,
-    pub of: Option<String>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -86,14 +79,11 @@ pub struct SpottedFeet {
     pub speed: Option<f64>,
     pub crouch: bool,
     pub watch: Option<V3>,
-    /// INVENTED by a review: see the proposals
-    pub goal_serial: Option<u32>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FreshItem {
     pub pos: V3,
-    pub t: f64,
 }
 
 /// the state this module keeps at its top level

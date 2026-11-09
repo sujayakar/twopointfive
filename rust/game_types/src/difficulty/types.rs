@@ -123,10 +123,8 @@ pub struct SQUADHARDItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TablesOfSet {
-    pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
-    pub told: Option<crate::told::ToldRung>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

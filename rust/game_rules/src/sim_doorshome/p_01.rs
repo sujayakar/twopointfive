@@ -13,7 +13,7 @@ pub fn door_store_new(g: &crate::game::Game, home: crate::Opaque, cap: f64) -> c
         panic!("a level of {} doors: the game holds {} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)", cap, DOOR_CAP);
     }
     let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_DOORS)) >> 3) as f64;
-    DoorStore { base, stride: DOOR_CAP, home, cap }
+    DoorStore {  }
 }
 
 /// Where the doors' hand-over tables are and how much they hold, asked once. An index is a byte address / 8. (doorshome.ts doorIo)
@@ -30,14 +30,12 @@ pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
 /// doorIo's asking, of rust/sim's doors.rs
 fn ask_io(x: crate::sim_sim::SimExports) -> crate::sim_doorshome::DoorIo {
     DoorIo {
-        x,
         def: ::sim::doors::addr(0) as f64 / 8.0,
         out: ::sim::doors::addr(1) as f64 / 8.0,
         con: ::sim::doors::addr(2) as f64 / 8.0,
         ev: ::sim::doors::addr(3) as f64 / 8.0,
         par: ::sim::doors::addr(4) as f64 / 8.0,
         max_contacts: ::sim::doors::cap(2) as f64,
-        max_events: ::sim::doors::cap(3) as f64,
     }
 }
 

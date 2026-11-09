@@ -52,7 +52,6 @@ pub struct FearPassItem {
 pub struct Read {
     pub t: f64,
     pub dark: bool,
-    pub share: f64,
     pub mean: f64,
 }
 
@@ -94,17 +93,12 @@ pub enum FightWalk {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DarkRoom {
-    pub t: f64,
     pub dark: bool,
-    pub share: f64,
     pub mean: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StandsLitR {
-    pub t: f64,
-    pub dark: bool,
-    pub share: f64,
     pub mean: f64,
 }
 
@@ -112,8 +106,6 @@ pub struct StandsLitR {
 pub struct DoorAhead {
     pub d: DoorId,
     pub side: f64,
-    pub at: V3,
-    pub dist: f64,
 }
 
 /// the state this module keeps at its top level

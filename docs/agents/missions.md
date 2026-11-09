@@ -117,7 +117,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row **in both tables**, by hand, as
   nothing compares them, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
 - **Cut one:** `offList` in both tables. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS` (both sides), `start_scenario`, `active_scenario`, `quit_scenario`, an arm in `ended` and in `objective`,
+- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS` (both sides), `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.

@@ -15,7 +15,7 @@ pub fn fresh() -> crate::smokebreak::SmokeBreakStats {
 /// Make the game's row if it has none yet.
 fn ensure_state(g: &mut Game) {
     if g.m.smokebreak.states.is_none() {
-        g.m.smokebreak.states = Some(State { men: JsMap::new(), stats: fresh(), seed: 0x51607e as f64 });
+        g.m.smokebreak.states = Some(State { men: JsMap::new(), stats: fresh() });
     }
 }
 

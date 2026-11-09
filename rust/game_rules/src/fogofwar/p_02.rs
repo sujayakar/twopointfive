@@ -115,7 +115,6 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     g.fog_of_war.loaded = false;
     g.fog_of_war.stats.frames += 1.0;
     g.fog_of_war.frame_no += 1.0;
-    let frame = g.fog_of_war.frame_no;
     // ---- the eyes
     let mut eyes: Vec<crate::fogofwar::FogEye> = Vec::new();
     let cap = m::min(crate::render_fogofwar::FOG_EYES, fog_eye_count(g.k.fog.eyes) + g.seats.len() as f64 - 1.0);
@@ -225,7 +224,6 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     let pl = players(g);
     let held = g.pl[pl[0]].holding.as_ref().map(|h| h.g);
     let held_too = if pl.len() > 1 { g.pl[pl[1]].holding.as_ref().map(|h| h.g) } else { None };
-    let pid = g.ch[g.pl[pl[0]].ch].id;
     // (1) lines of sight
     let mut men: Vec<GuardId> = Vec::new();
     let mut i = 0;
@@ -465,7 +463,6 @@ fn call_fresh(g: &Game, h: GuardId, now: f64) -> bool {
 /// tellCalls' `say`: one call, logged and on the air.
 fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfWarCallWordsKind, at: V3, now: f64) {
     let text = fog_of_war_call_words(g, kind, at);
-    let (who, of, t) = (g.gd[gd].callsign.clone(), g.gd[h].callsign.clone(), to_fixed2(g.time));
     let f = &mut g.fog_of_war;
     f.call_n += 1.0;
     f.last_call = now;
@@ -474,7 +471,7 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
         FogOfWarCallWordsKind::Contact => { f.call_stats.contact += 1.0; FogOfWarCallLogItemKind::Contact }
         FogOfWarCallWordsKind::Heard => { f.call_stats.heard += 1.0; FogOfWarCallLogItemKind::Heard }
     };
-    f.call_log.push(FogOfWarCallLogItem { t, who, of, kind: log_kind, text: text.clone() });
+    f.call_log.push(FogOfWarCallLogItem {  });
     if f.call_log.len() > 200 { f.call_log.drain(0..50); }
     crate::cues::cues_call(g, gd, &text);
 }

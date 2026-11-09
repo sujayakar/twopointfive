@@ -50,9 +50,6 @@ pub struct BoxWorld {
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub undrawn: Option<crate::scene_boxes::BoxWorldUndrawn>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub motion_ids: bool,
     pub max_boxes: f64,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
@@ -81,9 +78,6 @@ pub struct BoxWorld {
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     pub item_buf: crate::Opaque,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub globals: Vec<f64>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     pub info_buf: crate::Opaque,
@@ -107,9 +101,6 @@ pub struct BoxWorld {
     pub capsule_buf: crate::Opaque,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub rig: Option<crate::scene_boxes::BoxWorldRig>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
     pub visible: Vec<u32>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
@@ -117,22 +108,10 @@ pub struct BoxWorld {
     pub geom_serial: f64,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub marking_texel: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
     pub cut_on: bool,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub cut_data: Vec<f32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub cut_split: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub visible_cut_traced: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub cut_traced: f64,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     pub device: crate::Opaque,
@@ -145,7 +124,6 @@ impl BoxWorld {
             statics: Vec::new(),
             dynamics: Vec::new(),
             undrawn: None,
-            motion_ids: true,
             max_boxes: 0.0,
             geo_f32: Vec::new(),
             geo_u32: Vec::new(),
@@ -156,7 +134,6 @@ impl BoxWorld {
             items: Vec::new(),
             cell_buf: crate::Opaque,
             item_buf: crate::Opaque,
-            globals: Vec::new(),
             info_buf: crate::Opaque,
             info_data: alloc::vec![0; 640],
             visible_sent: Vec::new(),
@@ -164,16 +141,11 @@ impl BoxWorld {
             capsule_count: 0.0,
             char_count: 0.0,
             capsule_buf: crate::Opaque,
-            rig: None,
             visible: Vec::new(),
             visible_buf: crate::Opaque,
             geom_serial: 0.0,
-            marking_texel: 0.025,
             cut_on: false,
             cut_data: alloc::vec![0.0; 0],
-            cut_split: 0.0,
-            visible_cut_traced: 0.0,
-            cut_traced: 0.0,
             device: crate::Opaque,
             glass_open: None,
         }
@@ -185,21 +157,6 @@ impl Default for BoxWorld { fn default() -> Self { Self::blank() } }
 pub struct BoxWorldUndrawn {
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct BoxWorldRig {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-    pub k_pad: f64,
-    pub by_owner: Option<JsMap<crate::Num, crate::scene_boxes::BoxWorldRigByOwnerValue>>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct BoxWorldRigByOwnerValue {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-    pub pad: Option<f64>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BoxFlag {
     pub no_primary: f64,
@@ -208,7 +165,6 @@ pub struct BoxFlag {
     pub dynamic: f64,
     pub emissive: f64,
     pub area_lit: f64,
-    pub rot: f64,
     pub gloss: f64,
     pub sound_seal: f64,
     pub glass: f64,
@@ -223,7 +179,6 @@ pub struct MKEY {
     pub item: f64,
     pub rig: f64,
     pub device: f64,
-    pub ring: f64,
     pub test: f64,
     pub debris: f64,
     pub look: f64,
@@ -314,13 +269,13 @@ pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
 pub const BOX_WORLD_RS: f64 = 12.0;
 
 /// (src/scene/boxes.ts:13 BoxFlag: a table nothing writes)
-pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, rot: 64.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
+pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
 
 /// (src/scene/boxes.ts:41 SHEET_MASK)
 pub const SHEET_MASK: f64 = 131083.0;
 
 /// (src/scene/boxes.ts:176 MKEY: a table nothing writes)
-pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, ring: 100663296.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
+pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
 
 /// (src/scene/boxes.ts:236 GEO_STRIDE)
 pub const GEO_STRIDE: f64 = 8.0;

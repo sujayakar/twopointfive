@@ -47,7 +47,7 @@ pub fn fresh() -> crate::showwhy::ShowWhyStats {
 /// This seat's state, made if there is none: the row itself. (showwhy.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
     let (key, t) = (crate::seats::view_key(g, &crate::seats::here(g)), g.time);
-    g.m.showwhy.states.get_or_insert_with(key, || State { stats: fresh(), log: Vec::new(), after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
+    g.m.showwhy.states.get_or_insert_with(key, || State { stats: fresh(), after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
 
 /// The row `st` of the TypeScript, by its key; the tick made it before anything here runs.
@@ -68,12 +68,7 @@ pub fn reset_show_why(g: &mut crate::game::Game) {
 
 /// One row of the log, which keeps its last 120 to 200. (showwhy.ts note)
 pub fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, signal: Option<crate::character::SignalKind>, line: Option<&str>) {
-    let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let st = st_row(g, pl);
-    st.log.push(WhyNote { t, who, why, signal, line: line.map(String::from) });
-    if st.log.len() > 200 {
-        st.log.drain(0..80);
-    }
 }
 
 /// His words are over him this frame, asked of the bubble's clock. (showwhy.ts speaking)

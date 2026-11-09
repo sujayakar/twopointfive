@@ -42,7 +42,6 @@ pub struct HoldAsk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldAfter {
     pub text: String,
-    pub id: String,
 }
 
 #[derive(Clone, Copy, Debug)]

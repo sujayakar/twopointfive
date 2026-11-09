@@ -143,7 +143,6 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::S
             last_t: time,
             men: JsMap::new(),
             serial,
-            base,
             stats: zero(),
             by_id: JsMap::new(),
             said_t: -100.0,
@@ -297,7 +296,6 @@ pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::cove
                     && crate::props::prop_system_raycast(g, from, dir, reach).is_none()
                 {
                     return Some(Ask2::Ask(Ask {
-                        index: x.index,
                         id: -2.0 - x.index,
                         kind: String::from("thru"),
                         hit: x.at,
@@ -350,7 +348,6 @@ pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::cove
     let rounds = m::ceil(left / w - 1e-6);
     if rounds > g.k.coverfire.max_rounds { no(g, "rounds"); return None; }
     Some(Ask2::Ask(Ask {
-        index: st.index,
         id: b.id,
         kind: String::from(kind),
         hit,
@@ -934,7 +931,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 /// QA: what `gd` is on this frame (coverfire.ts coverfireOn)
 pub fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
-    Some(CoverfireOn { id: cw.id, kind: cw.kind.clone(), fired: cw.fired, want: cw.want, to: v3::copy(cw.to) })
+    Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }
 
 /// a restart or a checkpoint load: forget everything about this game (coverfire.ts coverfireReset)

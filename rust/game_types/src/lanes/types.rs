@@ -18,14 +18,12 @@ pub struct Lane {
     pub at: V3,
     pub dx: f64,
     pub dz: f64,
-    pub t0: f64,
     pub last_t: f64,
     pub until: f64,
     pub weight: f64,
     pub downs: f64,
     pub known: bool,
     pub known_at: f64,
-    pub look_at: f64,
     pub guns: Vec<V3>,
     pub saw: JsMap<GuardId, f64>,
     pub knowers: JsSet<GuardId>,
@@ -56,7 +54,6 @@ pub struct LaneRe {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LaneCan {
-    pub who: f64,
     pub t: f64,
     pub land: V3,
 }
@@ -192,7 +189,6 @@ pub struct StateStats {
     pub pin_rounds: f64,
     pub pin_lost: f64,
     pub sets: f64,
-    pub goes: f64,
     pub frags: f64,
     pub frag_lost: f64,
     pub frag_kept: f64,

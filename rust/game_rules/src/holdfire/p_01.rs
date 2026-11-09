@@ -136,10 +136,6 @@ pub fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str
     }
     if !was {
         g.stats.holdfire.lifts[why as usize] += 1;
-        g.m.holdfire.holdfire_log.push(HoldfireModHOLDFIRELOGItem { t: now, why, what: String::from(what) });
-        if g.m.holdfire.holdfire_log.len() > 200 {
-            g.m.holdfire.holdfire_log.drain(0..100);
-        }
     }
 }
 

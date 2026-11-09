@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CameraDef2 {
-    pub kind: crate::devices::CameraDef2Kind,
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
@@ -18,14 +17,8 @@ pub struct CameraDef2 {
     pub mains: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CameraDef2Kind {
-    #[default] Camera,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct KeypadDef2 {
-    pub kind: crate::devices::KeypadDef2Kind,
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
@@ -33,25 +26,14 @@ pub struct KeypadDef2 {
     pub code: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum KeypadDef2Kind {
-    #[default] Keypad,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LaserDef2 {
-    pub kind: crate::devices::LaserDef2Kind,
     pub name: String,
     pub from: V3,
     pub to: V3,
     pub group: Option<String>,
     pub mains: Option<bool>,
     pub alarm: Option<crate::devices::LaserDef2Alarm>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum LaserDef2Kind {
-    #[default] Laser,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -97,7 +79,6 @@ impl Default for CameraRt { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Debug, ToBytes)]
 pub struct LaserRt {
     pub def: crate::devices::LaserDef2,
-    pub index: f64,
     pub target: FixtureId,
     pub dir: V3,
     pub len: f64,
@@ -111,7 +92,6 @@ impl LaserRt {
     pub fn blank() -> Self {
         LaserRt {
             def: crate::devices::LaserDef2::default(),
-            index: 0.0,
             target: FixtureId(0),
             dir: [0.0; 3],
             len: 0.0,
@@ -131,23 +111,6 @@ pub struct KeypadRt {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DeviceLogRow {
-    pub seq: f64,
-    pub t: f64,
-    pub device: String,
-    pub what: crate::devices::DeviceLogRowWhat,
-    pub where_: String,
-    pub sent: Option<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DeviceLogRowWhat {
-    #[default] Dead,
-    Code,
-    Alarm,
-    Trip,
-    Suspicion,
-    Deny,
-    Overheard,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -194,10 +157,6 @@ pub struct ERRAND {
 
 #[derive(Clone, Debug, Default)]
 pub struct DevicesNoteR {
-    pub device: String,
-    pub what: crate::devices::DevicesNoteRWhat,
-    pub sent: Option<String>,
-    pub where_: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]

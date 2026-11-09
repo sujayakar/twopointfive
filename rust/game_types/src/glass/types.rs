@@ -41,15 +41,12 @@ pub enum GlassHitCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct GlassMod {
-    /// (src/game/glass.ts:45 fxForced)
-    pub fx_forced: Option<bool>,
     /// (src/game/glass.ts:59 states)
     pub states: Option<crate::glass::GlassState>,
 }
 impl GlassMod {
     pub fn blank() -> Self {
         GlassMod {
-            fx_forced: None,
             states: None,
         }
     }

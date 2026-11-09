@@ -165,7 +165,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
                         if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
                     g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
                     g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
-                    g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
                 }
             }
         }
@@ -379,8 +378,6 @@ fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::
         props: Some(crate::levelfit::StoodProps {
             all: g.props.all.iter().map(|&p| crate::levelfit::StoodPropsAllItem { boxes: vec![crate::Opaque; g.tab.props_prop[p].boxes.len()] }).collect(),
         }),
-        engine: Some(crate::Opaque),   // (a whole Game has both: levelfit.ts Stood)
-        beacons: Some(crate::Opaque),
         player: Some(seat.player),
         guards: Some(g.guards.clone()),
         civilians: Some(g.civilians.clone()),

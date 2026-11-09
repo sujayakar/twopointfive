@@ -99,8 +99,7 @@ part cost. Seen only in software: stills of the office beside the old page's. Ne
 one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.
 
 - **Where it lives.** `rust/` is a Cargo workspace (`rust-toolchain.toml` names the compiler and the WebAssembly target; no crate from outside, so no network
-  at build time). `rust/sim` is the simulation: `src/lib.rs` (what every line owes the game, and the C exports, named `<module>_<thing>`), `src/maths.rs`,
-  `src/pow10.rs` (the decimal powers as the language reads them, written by `bun run tools/sim/pow10.ts`: the Rust side never parses a decimal). `rust/prim`
+  at build time). `rust/sim` is the simulation: `src/lib.rs` (what every line owes the game, and the C exports, named `<module>_<thing>`), `src/maths.rs`. `rust/prim`
   is three functions (√, floor, trunc): the simulation is `no_std` and the core library lacks them. `rust/dress` is the other side of the line (below,
   gameplay and dressing): its own module, `src/dress/built.ts` and `src/dress/dress.ts`.
   `rust/game_rules/src/sim_built` is the module's bytes as text, WRITTEN BY `bun run tools/sim/build.ts` and checked in. `rust/game_rules/src/sim_sim` is the one TypeScript file that

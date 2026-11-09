@@ -16,8 +16,6 @@ pub struct DayState {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DayStateBlackout {
-    pub active: bool,
-    pub permanent: bool,
     pub until: f64,
     pub since: f64,
 }

@@ -21,9 +21,6 @@ pub struct Opaque;
 /// a function stored in a field, until a hand decision makes it an enum
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct FnField;
-/// an object used as a key, until a hand decision gives it an ID
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, ToBytes)]
-pub struct ObjKey(pub u32);
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
@@ -40,7 +37,6 @@ pub mod aim { pub mod types; pub use types::*; }
 pub mod aimcost { pub mod types; pub use types::*; }
 pub mod aimweight { pub mod types; pub use types::*; }
 pub mod air_dust { pub mod types; pub use types::*; }
-pub mod air_sim { pub mod types; pub use types::*; }
 pub mod anim_characters { pub mod types; pub use types::*; }
 pub mod anim_gltf { pub mod types; pub use types::*; }
 pub mod anim_skeleton { pub mod types; pub use types::*; }
@@ -186,17 +182,12 @@ pub mod quiet { pub mod types; pub use types::*; }
 pub mod quietfog { pub mod types; pub use types::*; }
 pub mod ragdoll { pub mod types; pub use types::*; }
 pub mod rails { pub mod types; pub use types::*; }
-pub mod rain_fx { pub mod types; pub use types::*; }
 pub mod rearwatch { pub mod types; pub use types::*; }
 pub mod render_decals { pub mod types; pub use types::*; }
 pub mod render_fogofwar { pub mod types; pub use types::*; }
 pub mod render_frame { pub mod types; pub use types::*; }
-pub mod render_gbuffer { pub mod types; pub use types::*; }
 pub mod render_lights { pub mod types; pub use types::*; }
-pub mod render_mesh_shadows { pub mod types; pub use types::*; }
-pub mod render_meshbvh { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
-pub mod render_passes { pub mod types; pub use types::*; }
 pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
 pub mod rescuecheck { pub mod types; pub use types::*; }
@@ -263,15 +254,10 @@ pub mod sim_slabshome { pub mod types; pub use types::*; }
 pub mod sim_state { pub mod types; pub use types::*; }
 pub mod sim_weatherhome { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
-pub mod smoke_smoke_grid { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
-pub mod snow_blast { pub mod types; pub use types::*; }
 pub mod snow_bog { pub mod types; pub use types::*; }
-pub mod snow_breath { pub mod types; pub use types::*; }
-pub mod snow_fx { pub mod types; pub use types::*; }
-pub mod snow_tracks { pub mod types; pub use types::*; }
 pub mod sparks { pub mod types; pub use types::*; }
 pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }

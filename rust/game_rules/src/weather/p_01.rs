@@ -368,7 +368,6 @@ pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     WeatherSnap {
         kind,
         thunder_until: if kind.is_some() { Some(weather_thunder_until(g)) } else { None },
-        on: g.weather.on,
         storm: weather_storm(g),
         rain_rate: weather_rain_rate(g),
         wind: [g.weather.wind[0], g.weather.wind[1]],
@@ -429,7 +428,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     // the dice and the thunder are the module's. What was given is a number, what was not is thrown for
     let mut said = [0.0; 8];
     ::sim::weather::strike(wx(g), g.time, opts.bearing.unwrap_or(f64::NAN), opts.elev_deg.unwrap_or(f64::NAN), opts.dist_km.unwrap_or(f64::NAN), opts.peak.unwrap_or(f64::NAN), &mut said);
-    let (bearing, elev, dist_km, peak) = (said[0], said[1], said[2], said[3]);
+    let (bearing, elev, peak) = (said[0], said[1], said[3]);
     // two return strokes, sometimes a third flicker
     let mut stroke = Stroke { pulses: vec![StrokePulsesItem { t0: 0.0, amp: 1.0, tau: 0.022 }, StrokePulsesItem { t0: 0.085, amp: said[4], tau: 0.05 }] };
     if said[5] != 0.0 { stroke.pulses.push(StrokePulsesItem { t0: said[6], amp: said[7], tau: 0.03 }); }
@@ -440,7 +439,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
         ..crate::render_lights::RtLight::default()   // (every field the literal leaves absent)
     });
     crate::render_lights::light_set_add(g, light);
-    g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak, dir, bearing, dist_km });
+    g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak });
     g.weather.stats.flashes += 1.0;
     weather_apply_flash(g, 0.0, 1.0 / 60.0);   // lit from this very frame
     g.weather.flash.clone()
@@ -568,7 +567,7 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
     let opts = crate::audio_iface::PlayOpts::Thunder { lowpass, rate, pan: v3::clamp(right * 0.6, -0.6, 0.6), wet: if near { 0.35 } else { 0.55 } };
     crate::audio_iface::game_audio_like_play(g, name, None, Some(gain), Some(&opts));
     g.weather.stats.thunders += 1.0;
-    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder { at: th.at, dist_km: th.dist_km, bearing: th.bearing, loud: th.loud, played_at: g.time, name: String::from(name), gain });
+    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder {  });
     // the three dice for a remark are thrown on EVERY thunder, whoever is on screen: same seed, same storm
     let (r_bark, r_who, r_line) = (dice[4], dice[5], dice[6]);
     if th.loud > 0.45 && g.time - weather_last_bark_t(g) > BARK_COOLDOWN && r_bark < BARK_CHANCE {

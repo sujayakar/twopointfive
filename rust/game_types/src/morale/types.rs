@@ -101,21 +101,6 @@ impl LineKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct MoraleModMORALELOGItem {
-    pub id: f64,
-    pub t: f64,
-    pub from: V3,
-    pub at: V3,
-    pub of: crate::morale::MoraleModMORALELOGItemOf,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum MoraleModMORALELOGItemOf {
-    #[default] Dust,
-    Bait,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub say: Vec<String>,
@@ -158,41 +143,15 @@ pub enum RoundOf {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MoraleOf {
-    pub drive: bool,
-    pub heard: f64,
     pub t: f64,
-    pub lost: bool,
-    pub next: f64,
-    pub hole: Option<V3>,
     pub act: crate::morale::MoraleAct,
-    pub goal: Option<V3>,
-    pub lit: f64,
     pub alone: bool,
-    pub said: bool,
-    pub ask: f64,
-    pub by: Option<GuardId>,
     pub green: bool,
-    pub dark: bool,
-    pub fall: f64,
-    pub drive_t: f64,
-    pub calls: f64,
-    pub rounds: f64,
-    pub shout: bool,
-    pub shock: f64,
-    pub rung: f64,
-    pub leader_down: bool,
-    pub broke_t: f64,
-    pub call_t: f64,
-    pub baits: f64,
-    pub at_hole: bool,
-    pub bark: f64,
 }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct MoraleMod {
-    /// (src/game/morale.ts:111 MORALE_LOG)
-    pub morale_log: Vec<crate::morale::MoraleModMORALELOGItem>,
     /// (src/game/morale.ts:128 stateOf)
     pub state_of: JsMap<GuardId, crate::morale::Mind>,
     /// (src/game/morale.ts:132 blastsOf)
@@ -203,7 +162,6 @@ pub struct MoraleMod {
 impl MoraleMod {
     pub fn blank() -> Self {
         MoraleMod {
-            morale_log: Vec::new(),
             state_of: JsMap::new(),
             blasts_of: None,
             mix_at: None,

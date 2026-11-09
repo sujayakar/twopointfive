@@ -833,7 +833,7 @@ pub fn anim_to_model_d(g: &crate::game::Game, c: CharId, wd: V3) -> V3 {
 /// The door hand's eased weights per arm and which arm is the wanted one. (character.ts CharacterAnimator.doorHands)
 pub fn anim_door_hands(g: &crate::game::Game, c: CharId) -> crate::character::AnimDoorHands {
     let dp = &g.ch[c].anim.dp;
-    AnimDoorHands { l: v3::clamp(dp.w_l.x, 0.0, 1.0), r: v3::clamp(dp.w_r.x, 0.0, 1.0), right: dp.right }
+    AnimDoorHands { l: v3::clamp(dp.w_l.x, 0.0, 1.0), r: v3::clamp(dp.w_r.x, 0.0, 1.0) }
 }
 
 /// A hand on the door leaf he is pushing open; the free arm only, the weight this layer's own springs. (character.ts CharacterAnimator.doorLayer)

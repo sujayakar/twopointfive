@@ -13,16 +13,9 @@ pub struct Seen {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub seen: Vec<crate::blast_look::Seen>,
-    pub queue: Vec<crate::blast_look::StateQueueItem>,
     pub serial: f64,
     pub first: bool,
     pub last: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct StateQueueItem {
-    pub at: f64,
-    pub run: crate::FnField,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -30,7 +23,6 @@ pub struct BLAST {
     pub on: bool,
     pub stun: bool,
     pub door: bool,
-    pub glow: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -116,7 +108,6 @@ pub struct WALLBLASTShower {
     pub life_jit: f64,
     pub size: f64,
     pub size_jit: f64,
-    pub after: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -130,7 +121,6 @@ pub struct WALLBLASTEmbers {
     pub life_jit: f64,
     pub size: f64,
     pub size_jit: f64,
-    pub after: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -145,7 +135,6 @@ pub struct WALLBLASTChips {
     pub size: f64,
     pub size_jit: f64,
     pub aspect: f64,
-    pub after: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -308,13 +297,13 @@ impl BlastLookMod {
 }
 
 /// (src/game/blastLook.ts:57 BLAST: a table nothing writes)
-pub fn blast() -> crate::blast_look::BLAST { crate::blast_look::BLAST { on: true, stun: true, door: true, glow: false } }
+pub fn blast() -> crate::blast_look::BLAST { crate::blast_look::BLAST { on: true, stun: true, door: true } }
 
 /// (src/game/blastLook.ts:92 REF: a table nothing writes)
 pub fn ref_() -> crate::blast_look::REF { crate::blast_look::REF { sparks: 160.0, speed: 20.0, life: 0.55, size: 0.0025 } }
 
 /// (src/game/blastLook.ts:98 WALL_BLAST: a table nothing writes)
-pub fn wall_blast_table() -> crate::blast_look::WALLBLAST { crate::blast_look::WALLBLAST { jet: crate::blast_look::WALLBLASTJet { count: alloc::vec![30.0, 14.0], speed: alloc::vec![21.0, 15.0], jit: 0.65, cone: alloc::vec![0.36, 0.5], tilt: -0.2, life: 0.24, life_jit: 0.5, size: 0.003, size_jit: 0.5 }, core: crate::blast_look::WALLBLASTCore { count: alloc::vec![14.0, 7.0], speed: alloc::vec![1.6, 1.1], jit: 0.6, cone: alloc::vec![1.3, 1.3], tilt: 0.1, life: 0.95, life_jit: 0.5, size: 0.04, size_jit: 0.5 }, shower: crate::blast_look::WALLBLASTShower { count: alloc::vec![18.0, 10.0], speed: alloc::vec![10.0, 8.0], jit: 0.7, cone: alloc::vec![0.85, 0.95], tilt: -0.3, life: 0.55, life_jit: 0.5, size: 0.004, size_jit: 0.5, after: 1.0 }, embers: crate::blast_look::WALLBLASTEmbers { count: alloc::vec![18.0, 9.0], speed: alloc::vec![6.0, 4.5], jit: 0.85, cone: alloc::vec![1.1, 1.2], tilt: -0.1, life: 1.2, life_jit: 0.8, size: 0.0035, size_jit: 0.8, after: 2.0 }, chips: crate::blast_look::WALLBLASTChips { count: alloc::vec![48.0, 22.0], speed: alloc::vec![7.5, 4.5], jit: 0.75, cone: alloc::vec![0.7, 0.85], tilt: 0.12, life: 20.0, life_jit: 0.3, size: 0.04, size_jit: 0.7, aspect: 1.7, after: 1.0 }, dust: crate::blast_look::WALLBLASTDust { count: alloc::vec![44.0, 24.0], speed: alloc::vec![5.5, 3.6], jit: 0.6, cone: alloc::vec![0.55, 0.7], tilt: 0.05, life: 1.7, life_jit: 0.3, size: 0.3, size_jit: 0.35 } } }
+pub fn wall_blast_table() -> crate::blast_look::WALLBLAST { crate::blast_look::WALLBLAST { jet: crate::blast_look::WALLBLASTJet { count: alloc::vec![30.0, 14.0], speed: alloc::vec![21.0, 15.0], jit: 0.65, cone: alloc::vec![0.36, 0.5], tilt: -0.2, life: 0.24, life_jit: 0.5, size: 0.003, size_jit: 0.5 }, core: crate::blast_look::WALLBLASTCore { count: alloc::vec![14.0, 7.0], speed: alloc::vec![1.6, 1.1], jit: 0.6, cone: alloc::vec![1.3, 1.3], tilt: 0.1, life: 0.95, life_jit: 0.5, size: 0.04, size_jit: 0.5 }, shower: crate::blast_look::WALLBLASTShower { count: alloc::vec![18.0, 10.0], speed: alloc::vec![10.0, 8.0], jit: 0.7, cone: alloc::vec![0.85, 0.95], tilt: -0.3, life: 0.55, life_jit: 0.5, size: 0.004, size_jit: 0.5 }, embers: crate::blast_look::WALLBLASTEmbers { count: alloc::vec![18.0, 9.0], speed: alloc::vec![6.0, 4.5], jit: 0.85, cone: alloc::vec![1.1, 1.2], tilt: -0.1, life: 1.2, life_jit: 0.8, size: 0.0035, size_jit: 0.8 }, chips: crate::blast_look::WALLBLASTChips { count: alloc::vec![48.0, 22.0], speed: alloc::vec![7.5, 4.5], jit: 0.75, cone: alloc::vec![0.7, 0.85], tilt: 0.12, life: 20.0, life_jit: 0.3, size: 0.04, size_jit: 0.7, aspect: 1.7 }, dust: crate::blast_look::WALLBLASTDust { count: alloc::vec![44.0, 24.0], speed: alloc::vec![5.5, 3.6], jit: 0.6, cone: alloc::vec![0.55, 0.7], tilt: 0.05, life: 1.7, life_jit: 0.3, size: 0.3, size_jit: 0.35 } } }
 
 /// (src/game/blastLook.ts:119 STUN_SPARKS: a table nothing writes)
 pub fn stun_sparks_table() -> crate::blast_look::STUNSPARKS { crate::blast_look::STUNSPARKS { lobes: crate::blast_look::STUNSPARKSLobes { count: 34.0, speed: 17.0, jit: 0.6, cone: 0.17, fan: 0.3, rise: 0.05, life: 0.3, life_jit: 0.5, size: 0.0025, size_jit: 0.4 }, fan: crate::blast_look::STUNSPARKSFan { count: 40.0, speed: 10.0, jit: 0.7, lift: 0.12, spread: 0.5, life: 0.5, life_jit: 0.5, size: 0.003, size_jit: 0.4 }, fountain: crate::blast_look::STUNSPARKSFountain { count: 22.0, speed: 6.0, jit: 0.5, spread: 0.55, lift: 0.5, life: 0.6, life_jit: 0.4, size: 0.003, size_jit: 0.4 }, embers: crate::blast_look::STUNSPARKSEmbers { count: 18.0, speed: 3.0, jit: 0.6, spread: 0.8, lift: 0.2, life: 1.5, life_jit: 0.5, size: 0.0045, size_jit: 0.4 } } }

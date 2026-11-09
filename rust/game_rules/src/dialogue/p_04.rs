@@ -111,7 +111,7 @@ pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx:
 pub fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
     let (raw, k) = him_raw(b, ctx)?;
     let text = expand(&raw, &ctx_tokens_map(&ctx.tokens))?;
-    if text.is_empty() { None } else { Some(HimOf { text, k }) }
+    if text.is_empty() { None } else { Some(HimOf { text }) }
 }
 
 /// Which of the beat's lines is this man's: by his knowledge, else his temperament, else '*'; `mild` where STOIC_BITE is 0.   (dialogue.ts himOf)

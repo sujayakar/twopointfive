@@ -142,9 +142,6 @@ pub struct CoverStats {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CoverLogItem {
-    pub t: f64,
-    pub who: String,
-    pub id: Option<String>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

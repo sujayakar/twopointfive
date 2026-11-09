@@ -34,7 +34,7 @@ fn door_index(g: &Game, d: DoorId) -> f64 {
     match g.doors.list.iter().position(|&x| x == d) { Some(i) => i as f64, None => -1.0 }
 }
 fn lit_r(r: crate::darkdoor::DarkRoom) -> crate::darkdoor::StandsLitR {
-    crate::darkdoor::StandsLitR { t: r.t, dark: r.dark, share: r.share, mean: r.mean }
+    crate::darkdoor::StandsLitR { mean: r.mean }
 }
 
 /// one line of a kind from this man, the next of its pool by his own count: spoken, or on the net with the handset's chirp.   (darkdoor.ts bark)
@@ -214,10 +214,10 @@ pub fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
 pub fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkRoom {
     let k = g.k.darkdoor;
     let now_t = g.time;
-    if !js::truthy(room) { return crate::darkdoor::DarkRoom { t: now_t, dark: false, share: 0.0, mean: 1.0 }; }
+    if !js::truthy(room) { return crate::darkdoor::DarkRoom { dark: false, mean: 1.0 }; }
     let r = g.m.darkdoor.reads_of.get_or_insert_with(JsMap::new);
     if let Some(was) = r.get(crate::Num(room)) {
-        if now_t >= was.t && now_t - was.t < k.ask_secs { return crate::darkdoor::DarkRoom { t: was.t, dark: was.dark, share: was.share, mean: was.mean }; }
+        if now_t >= was.t && now_t - was.t < k.ask_secs { return crate::darkdoor::DarkRoom { dark: was.dark, mean: was.mean }; }
     }
     let l = room_cells(g, room);
     let n = (l.len() / 2) as f64;
@@ -237,10 +237,10 @@ pub fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkR
         i += 1.0;
     }
     let share = if n > 0.0 { under / take } else { 0.0 };
-    let now = crate::darkdoor::Read { t: g.time, dark: n > 0.0 && share >= k.dark_share, share, mean: if n > 0.0 { sum / take } else { 1.0 } };
+    let now = crate::darkdoor::Read { t: g.time, dark: n > 0.0 && share >= k.dark_share, mean: if n > 0.0 { sum / take } else { 1.0 } };
     g.m.darkdoor.reads_of.get_or_insert_with(JsMap::new).set(crate::Num(room), now);
     g.stats.darkdoor.asks += 1;
-    crate::darkdoor::DarkRoom { t: now.t, dark: now.dark, share: now.share, mean: now.mean }
+    crate::darkdoor::DarkRoom { dark: now.dark, mean: now.mean }
 }
 
 /// does he stand in the light, against the room ahead.   (darkdoor.ts standsLit)
@@ -275,7 +275,7 @@ pub fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<
         }
         if let Some((d, x)) = hit {
             let dist = run + flat(a, x.at);
-            return if dist <= reach { Some(crate::darkdoor::DoorAhead { d, side: x.side, at: x.at, dist }) } else { None };
+            return if dist <= reach { Some(crate::darkdoor::DoorAhead { d, side: x.side }) } else { None };
         }
         run += flat(a, b);
         a = b;

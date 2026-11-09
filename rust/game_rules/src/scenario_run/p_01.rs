@@ -147,7 +147,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
         g.k.rescue.squad = 2.0;
     }
     crate::kit::kit_solo_stand(g, Some(spec.is_none()));
-    StartFromQuery { spec, why }
+    StartFromQuery { why }
 }
 
 /// A MISSION'S ADDRESS IS READ IN TWO PLACES by whoever starts a game from one. BEFORE THE GAME IS MADE, on the blank game: the mission row's own
@@ -246,16 +246,12 @@ pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: O
     let entry = here.iter().find(|e| e.squad == squad).or(here.first()).map(|e| (*e).clone());
     let team = crate::scene_scenario_list::team_words(crate::scene_scenario_list::TeamWordsE { squad });
     if kind == ActiveScenario::Quiet {
-        let title = match &entry {
-            Some(e) => e.title.clone(),
-            None => String::from("Quiet mission"),
-        };
-        return Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: Some(!js::truthy(squad)) });
+        return Some(RunningScenario { kind: running_kind(kind), entry });
     }
     let title = match &entry {
         Some(e) => e.title.clone(),
         None => capitalised(&word(kind.as_str())),
     };
-    Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: None })
+    Some(RunningScenario { kind: running_kind(kind), entry })
 }
 
