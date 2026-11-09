@@ -3429,9 +3429,6 @@ impl Default for SWAP { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/character.ts:336 HOLD_POLISH_UP, src/game/character.ts:336)
 #[derive(Clone, Copy, Debug)]
 pub struct HOLDPOLISHUP {
-    pub way_shape: bool,
-    pub catch_shape: bool,
-    pub hit_shape: bool,
     pub lay_ahead: f64,
     pub dip: f64,
     pub back: f64,
@@ -3445,9 +3442,6 @@ impl HOLDPOLISHUP {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         HOLDPOLISHUP {
-            way_shape: false,
-            catch_shape: false,
-            hit_shape: false,
             lay_ahead: 0.0,
             dip: 0.0,
             back: 0.0,
@@ -3464,9 +3458,6 @@ impl Default for HOLDPOLISHUP { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/character.ts:337 HOLD_POLISH_DOWN, src/game/character.ts:337)
 #[derive(Clone, Copy, Debug)]
 pub struct HOLDPOLISHDOWN {
-    pub way_shape: bool,
-    pub catch_shape: bool,
-    pub hit_shape: bool,
     pub lay_ahead: f64,
     pub dip: f64,
     pub back: f64,
@@ -3480,9 +3471,6 @@ impl HOLDPOLISHDOWN {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         HOLDPOLISHDOWN {
-            way_shape: false,
-            catch_shape: false,
-            hit_shape: false,
             lay_ahead: 0.0,
             dip: 0.0,
             back: 0.0,
@@ -6728,10 +6716,10 @@ pub const WHIP_THRU: f64 = 0.14;
 pub const SWAP_RATE: f64 = 14.0;
 
 /// (src/game/character.ts:336 HOLD_POLISH_UP: a table nothing writes)
-pub fn hold_polish_up() -> crate::character::HOLDPOLISHUP { crate::character::HOLDPOLISHUP { way_shape: true, catch_shape: true, hit_shape: true, lay_ahead: 0.9, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7.0, tip: 8.0, arch: -5.0 } }
+pub fn hold_polish_up() -> crate::character::HOLDPOLISHUP { crate::character::HOLDPOLISHUP { lay_ahead: 0.9, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7.0, tip: 8.0, arch: -5.0 } }
 
 /// (src/game/character.ts:337 HOLD_POLISH_DOWN: a table nothing writes)
-pub fn hold_polish_down() -> crate::character::HOLDPOLISHDOWN { crate::character::HOLDPOLISHDOWN { way_shape: false, catch_shape: false, hit_shape: false, lay_ahead: 0.0, dip: 0.0, back: 0.0, m: 0.0, twist: 0.0, side: 0.0, tip: 0.0, arch: -11.0 } }
+pub fn hold_polish_down() -> crate::character::HOLDPOLISHDOWN { crate::character::HOLDPOLISHDOWN { lay_ahead: 0.0, dip: 0.0, back: 0.0, m: 0.0, twist: 0.0, side: 0.0, tip: 0.0, arch: -11.0 } }
 
 /// (src/game/character.ts:354 defaultAnimParams: a table nothing writes)
 pub fn default_anim_params() -> crate::character::AnimParams { crate::character::AnimParams { walk_speed: 1.06, jog_speed: 3.3, crouch_speed: 0.72, sprint_speed: 4.7 } }

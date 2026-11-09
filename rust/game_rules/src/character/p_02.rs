@@ -271,7 +271,6 @@ mod tests {
     fn the_polish_numbers_are_the_pages() {
         let u = crate::character::hold_polish_up();
         let h = crate::knobs::page_hold();
-        assert_eq!((u.way_shape, u.catch_shape, u.hit_shape), (h.way_shape, h.catch_shape, h.hit_shape));
         let (a, b): ([f64; 8], [f64; 8]) = (
             [u.lay_ahead, u.dip, u.back, u.m, u.twist, u.side, u.tip, u.arch],
             [h.lay_ahead, h.lunge.dip, h.lunge.back, h.sway.m, h.sway.twist, h.apart.side, h.apart.tip, h.yank.arch],

@@ -26,7 +26,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("aim.player.range_ref", offset_of!(Knobs, aim.player.range_ref), false),
     ("aim.player.near_k", offset_of!(Knobs, aim.player.near_k), false),
     ("aim.player.unsettled_k", offset_of!(Knobs, aim.player.unsettled_k), false),
-    ("aim.player.lose_rate", offset_of!(Knobs, aim.player.lose_rate), false),
     ("aim.player.base_stand", offset_of!(Knobs, aim.player.base_stand), false),
     ("aim.player.base_crouch", offset_of!(Knobs, aim.player.base_crouch), false),
     ("aim.player.target_move_k", offset_of!(Knobs, aim.player.target_move_k), false),
@@ -981,14 +980,8 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("stalk.grab_m", offset_of!(Knobs, stalk.grab_m), false),
     ("stalk.pace", offset_of!(Knobs, stalk.pace), false),
     ("stalk.close_min", offset_of!(Knobs, stalk.close_min), false),
-    ("stalk.close_k", offset_of!(Knobs, stalk.close_k), false),
     ("stalk.ease_up", offset_of!(Knobs, stalk.ease_up), false),
     ("stalk.ease_down", offset_of!(Knobs, stalk.ease_down), false),
-    ("stalk.reach_from", offset_of!(Knobs, stalk.reach_from), false),
-    ("stalk.reach", offset_of!(Knobs, stalk.reach), false),
-    ("stalk.rise_from", offset_of!(Knobs, stalk.rise_from), false),
-    ("stalk.rise_by", offset_of!(Knobs, stalk.rise_by), false),
-    ("stalk.rise", offset_of!(Knobs, stalk.rise), false),
     ("stalk.catch_secs", offset_of!(Knobs, stalk.catch_secs), false),
     ("stalk.catch_m", offset_of!(Knobs, stalk.catch_m), false),
     ("stalk.catch_stride", offset_of!(Knobs, stalk.catch_stride), false),
@@ -1013,14 +1006,7 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("stalk.low_hands", offset_of!(Knobs, stalk.low_hands), false),
     ("stalk.low_spring", offset_of!(Knobs, stalk.low_spring), false),
     ("stalk.low_wind", offset_of!(Knobs, stalk.low_wind), false),
-    ("stalk.wide_out", offset_of!(Knobs, stalk.wide_out), false),
-    ("stalk.wide_down", offset_of!(Knobs, stalk.wide_down), false),
-    ("stalk.wide_fwd", offset_of!(Knobs, stalk.wide_fwd), false),
-    ("stalk.wide_lead", offset_of!(Knobs, stalk.wide_lead), false),
     ("stalk.wide_by", offset_of!(Knobs, stalk.wide_by), false),
-    ("stalk.wide_pole.0", offset_of!(Knobs, stalk.wide_pole), false),
-    ("stalk.wide_pole.1", offset_of!(Knobs, stalk.wide_pole) + 8, false),
-    ("stalk.wide_pole.2", offset_of!(Knobs, stalk.wide_pole) + 16, false),
     ("stalk.heft_twist", offset_of!(Knobs, stalk.heft_twist), false),
     ("stalk.heft_swing", offset_of!(Knobs, stalk.heft_swing), false),
     ("stalk.heft_side", offset_of!(Knobs, stalk.heft_side), false),
@@ -1072,8 +1058,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("ckpt.min_gap_secs", offset_of!(Knobs, ckpt.min_gap_secs), false),
     ("ckpt.pending_secs", offset_of!(Knobs, ckpt.pending_secs), false),
     ("ckpt.body_hide_m", offset_of!(Knobs, ckpt.body_hide_m), false),
-    ("ckpt.auto_slots", offset_of!(Knobs, ckpt.auto_slots), false),
-    ("ckpt.path_keep", offset_of!(Knobs, ckpt.path_keep), false),
     ("ckpt.flash_secs", offset_of!(Knobs, ckpt.flash_secs), false),
     ("ckpt.regret_secs", offset_of!(Knobs, ckpt.regret_secs), false),
     ("fog.dim", offset_of!(Knobs, fog.dim), false),
@@ -1236,7 +1220,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("walls.max_pieces", offset_of!(Knobs, walls.max_pieces), false),
     ("walls.max_changes", offset_of!(Knobs, walls.max_changes), false),
     ("walls.chunks_per_cell", offset_of!(Knobs, walls.chunks_per_cell), false),
-    ("walls.chunks_per_blast", offset_of!(Knobs, walls.chunks_per_blast), false),
     ("walls.fall_max_vol", offset_of!(Knobs, walls.fall_max_vol), false),
     ("walls.falls_per_change", offset_of!(Knobs, walls.falls_per_change), false),
     ("walls.hung.deep", offset_of!(Knobs, walls.hung.deep), false),
@@ -1299,14 +1282,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("hardbreath.chest_rate", offset_of!(Knobs, hardbreath.chest_rate), false),
     ("hardbreath.chest_up", offset_of!(Knobs, hardbreath.chest_up), false),
     ("hardbreath.chest_down", offset_of!(Knobs, hardbreath.chest_down), false),
-    ("hardbreath.every", offset_of!(Knobs, hardbreath.every), false),
-    ("hardbreath.puffs", offset_of!(Knobs, hardbreath.puffs), false),
-    ("hardbreath.count", offset_of!(Knobs, hardbreath.count), false),
-    ("hardbreath.jet", offset_of!(Knobs, hardbreath.jet), false),
-    ("hardbreath.size", offset_of!(Knobs, hardbreath.size), false),
-    ("hardbreath.carry", offset_of!(Knobs, hardbreath.carry), false),
-    ("hardbreath.up", offset_of!(Knobs, hardbreath.up), false),
-    ("hardbreath.down", offset_of!(Knobs, hardbreath.down), false),
     ("castor.decel", offset_of!(Knobs, castor.decel), false),
     ("castor.visc", offset_of!(Knobs, castor.visc), false),
     ("castor.spin", offset_of!(Knobs, castor.spin), false),
@@ -1360,7 +1335,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("coverfire.walk_ask_secs", offset_of!(Knobs, coverfire.walk_ask_secs), false),
     ("coverfire.say_secs", offset_of!(Knobs, coverfire.say_secs), false),
     ("doorblast.tear_m.stun", offset_of!(Knobs, doorblast.tear_m.stun), false),
-    ("doorblast.tear_m.frag", offset_of!(Knobs, doorblast.tear_m.frag), false),
     ("doorblast.charge_k", offset_of!(Knobs, doorblast.charge_k), false),
     ("doorblast.charge_r", offset_of!(Knobs, doorblast.charge_r), false),
     ("doorblast.speed.0", offset_of!(Knobs, doorblast.speed), false),
@@ -1485,8 +1459,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("breaks.share.big.furniture", offset_of!(Knobs, breaks.share.big.furniture), false),
     ("breaks.refuse_chips.0", offset_of!(Knobs, breaks.refuse_chips), false),
     ("breaks.refuse_chips.1", offset_of!(Knobs, breaks.refuse_chips) + 8, false),
-    ("breaks.crumble_chips.0", offset_of!(Knobs, breaks.crumble_chips), false),
-    ("breaks.crumble_chips.1", offset_of!(Knobs, breaks.crumble_chips) + 8, false),
     ("breaks.sized_chips.0", offset_of!(Knobs, breaks.sized_chips), false),
     ("breaks.sized_chips.1", offset_of!(Knobs, breaks.sized_chips) + 8, false),
     ("breaks.sized_span.0", offset_of!(Knobs, breaks.sized_span), false),
@@ -1511,14 +1483,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("breaks.kink.off", offset_of!(Knobs, breaks.kink.off), false),
     ("breaks.kink.min_long", offset_of!(Knobs, breaks.kink.min_long), false),
     ("breaks.kink.gap_secs", offset_of!(Knobs, breaks.kink.gap_secs), false),
-    ("breaks.head.from", offset_of!(Knobs, breaks.head.from), false),
-    ("breaks.head.deep.0", offset_of!(Knobs, breaks.head.deep), false),
-    ("breaks.head.deep.1", offset_of!(Knobs, breaks.head.deep) + 8, false),
-    ("breaks.head.planes", offset_of!(Knobs, breaks.head.planes), false),
-    ("breaks.head.across.0", offset_of!(Knobs, breaks.head.across), false),
-    ("breaks.head.across.1", offset_of!(Knobs, breaks.head.across) + 8, false),
-    ("breaks.head.min_room", offset_of!(Knobs, breaks.head.min_room), false),
-    ("breaks.head.most_of_width", offset_of!(Knobs, breaks.head.most_of_width), false),
     ("breaks.steel.sheet", offset_of!(Knobs, breaks.steel.sheet), false),
     ("breaks.steel.kink.0", offset_of!(Knobs, breaks.steel.kink), false),
     ("breaks.steel.kink.1", offset_of!(Knobs, breaks.steel.kink) + 8, false),
@@ -1615,7 +1579,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("wallsnap.dip", offset_of!(Knobs, wallsnap.dip), false),
     ("wallsnap.nod", offset_of!(Knobs, wallsnap.nod), false),
     ("wallsnap.hit_peak", offset_of!(Knobs, wallsnap.hit_peak), false),
-    ("wallsnap.scuff", offset_of!(Knobs, wallsnap.scuff), false),
     ("wallsnap.step_lift", offset_of!(Knobs, wallsnap.step_lift), false),
     ("wallsnap.step_trail", offset_of!(Knobs, wallsnap.step_trail), false),
     ("wallsnap.cam_room", offset_of!(Knobs, wallsnap.cam_room), false),
@@ -1624,7 +1587,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("wallsnap.away_secs", offset_of!(Knobs, wallsnap.away_secs), false),
     ("wallsnap.away_diag", offset_of!(Knobs, wallsnap.away_diag), false),
     ("wallsnap.off_push", offset_of!(Knobs, wallsnap.off_push), false),
-    ("wallsnap.out_rate", offset_of!(Knobs, wallsnap.out_rate), false),
     ("wallsnap.up_secs", offset_of!(Knobs, wallsnap.up_secs), false),
     ("wallsnap.up_rise", offset_of!(Knobs, wallsnap.up_rise), false),
     ("wallsnap.bore", offset_of!(Knobs, wallsnap.bore), false),
@@ -1677,15 +1639,12 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("close.dark_at", offset_of!(Knobs, close.dark_at), false),
     ("close.lit_at", offset_of!(Knobs, close.lit_at), false),
     ("close.touch_m", offset_of!(Knobs, close.touch_m), false),
-    ("close.fade_m", offset_of!(Knobs, close.fade_m), false),
     ("close.reach.behind", offset_of!(Knobs, close.reach.behind), false),
     ("close.reach.side", offset_of!(Knobs, close.reach.side), false),
     ("close.reach.front", offset_of!(Knobs, close.reach.front), false),
     ("close.reach.seat", offset_of!(Knobs, close.reach.seat), false),
     ("close.reach.seat_front", offset_of!(Knobs, close.reach.seat_front), false),
     ("close.side_from_deg", offset_of!(Knobs, close.side_from_deg), false),
-    ("close.inner", offset_of!(Knobs, close.inner), false),
-    ("close.step_deg", offset_of!(Knobs, close.step_deg), false),
     ("close.strike_dist", offset_of!(Knobs, close.strike_dist), false),
     ("close.seat_dist", offset_of!(Knobs, close.seat_dist), false),
     ("close.noise.behind", offset_of!(Knobs, close.noise.behind), false),
@@ -1714,7 +1673,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("recap.live_hear_m", offset_of!(Knobs, recap.live_hear_m), false),
     ("recap.live_beat", offset_of!(Knobs, recap.live_beat), false),
     ("recap.live_side_m", offset_of!(Knobs, recap.live_side_m), false),
-    ("recap.live_mark_secs", offset_of!(Knobs, recap.live_mark_secs), false),
     ("aimweight.rate", offset_of!(Knobs, aimweight.rate), false),
     ("aimweight.smooth", offset_of!(Knobs, aimweight.smooth), false),
     ("aimweight.heft", offset_of!(Knobs, aimweight.heft), false),
@@ -1732,7 +1690,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("aimcost.bare_device", offset_of!(Knobs, aimcost.bare_device), false),
     ("aimcost.plant_at", offset_of!(Knobs, aimcost.plant_at), false),
     ("aimcost.flank_at", offset_of!(Knobs, aimcost.flank_at), false),
-    ("aimcost.ring_px", offset_of!(Knobs, aimcost.ring_px), false),
     ("friends.reach_m", offset_of!(Knobs, friends.reach_m), false),
     ("friends.past_m", offset_of!(Knobs, friends.past_m), false),
     ("friends.clear_m", offset_of!(Knobs, friends.clear_m), false),
@@ -1758,13 +1715,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("carlamps.fit", offset_of!(Knobs, carlamps.fit), false),
     ("carlamps.tone", offset_of!(Knobs, carlamps.tone), false),
     ("carlamps.twin", offset_of!(Knobs, carlamps.twin), false),
-    ("reach_pace.steps", offset_of!(Knobs, reach_pace.steps), false),
-    ("reach_pace.whole", offset_of!(Knobs, reach_pace.whole), true),
-    ("reach_pace.whole_cells", offset_of!(Knobs, reach_pace.whole_cells), false),
-    ("coatfinish.on", offset_of!(Knobs, coatfinish.on), true),
-    ("solidglass.on", offset_of!(Knobs, solidglass.on), true),
-    ("solidglass.lum", offset_of!(Knobs, solidglass.lum), false),
-    ("solidglass.rough", offset_of!(Knobs, solidglass.rough), false),
     ("wallskin.on", offset_of!(Knobs, wallskin.on), true),
     ("wallskin.thick", offset_of!(Knobs, wallskin.thick), false),
     ("wallskin.off", offset_of!(Knobs, wallskin.off), false),
@@ -1791,8 +1741,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("fireline.reach_m", offset_of!(Knobs, fireline.reach_m), false),
     ("savetimeline.manual", offset_of!(Knobs, savetimeline.manual), false),
     ("savetimeline.auto", offset_of!(Knobs, savetimeline.auto), false),
-    ("savetimeline.pic_px", offset_of!(Knobs, savetimeline.pic_px), false),
-    ("savetimeline.pic_q", offset_of!(Knobs, savetimeline.pic_q), false),
     ("handring.hold_secs", offset_of!(Knobs, handring.hold_secs), false),
     ("handring.turn_max", offset_of!(Knobs, handring.turn_max), false),
     ("sprintdoor.keep", offset_of!(Knobs, sprintdoor.keep), false),
@@ -1865,7 +1813,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("doorforce.kick_secs_no_shot", offset_of!(Knobs, doorforce.kick_secs_no_shot), false),
     ("doorforce.walk_secs", offset_of!(Knobs, doorforce.walk_secs), false),
     ("doorforce.rest_secs", offset_of!(Knobs, doorforce.rest_secs), false),
-    ("slotsetup.secs", offset_of!(Knobs, slotsetup.secs), false),
     ("slotsetup.settle", offset_of!(Knobs, slotsetup.settle), false),
     ("glassreal.hang", offset_of!(Knobs, glassreal.hang), false),
     ("glassreal.blocks", offset_of!(Knobs, glassreal.blocks), false),
@@ -1953,7 +1900,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("kit.holster_pole.0", offset_of!(Knobs, kit.holster_pole), false),
     ("kit.holster_pole.1", offset_of!(Knobs, kit.holster_pole) + 8, false),
     ("kit.holster_pole.2", offset_of!(Knobs, kit.holster_pole) + 16, false),
-    ("kit.sheath_pole", offset_of!(Knobs, kit.sheath_pole), false),
     ("kit.rest.0", offset_of!(Knobs, kit.rest), false),
     ("kit.rest.1", offset_of!(Knobs, kit.rest) + 8, false),
     ("kit.rest.2", offset_of!(Knobs, kit.rest) + 16, false),
@@ -2181,7 +2127,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("gunroles.pistol_max", offset_of!(Knobs, gunroles.pistol_max), false),
     ("gunroles.lane_k", offset_of!(Knobs, gunroles.lane_k), false),
     ("gunroles.file_cost", offset_of!(Knobs, gunroles.file_cost), false),
-    ("kittree.rings", offset_of!(Knobs, kittree.rings), false),
     ("kittree.lend", offset_of!(Knobs, kittree.lend), false),
     ("squadthrow.on", offset_of!(Knobs, squadthrow.on), true),
     ("squadthrow.frag_roll_k", offset_of!(Knobs, squadthrow.frag_roll_k), false),
@@ -2192,7 +2137,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("squadthrow.min_m", offset_of!(Knobs, squadthrow.min_m), false),
     ("squadthrow.max_m", offset_of!(Knobs, squadthrow.max_m), false),
     ("squadthrow.tries", offset_of!(Knobs, squadthrow.tries), false),
-    ("squadthrow.keep_secs", offset_of!(Knobs, squadthrow.keep_secs), false),
     ("squadthrow.walk_secs", offset_of!(Knobs, squadthrow.walk_secs), false),
     ("squadthrow.turn_secs", offset_of!(Knobs, squadthrow.turn_secs), false),
     ("squadthrow.toss_secs", offset_of!(Knobs, squadthrow.toss_secs), false),
@@ -2204,7 +2148,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("squadthrow.lob_wall_h", offset_of!(Knobs, squadthrow.lob_wall_h), false),
     ("squadthrow.lob_sims", offset_of!(Knobs, squadthrow.lob_sims), false),
     ("squadthrow.lob_cells", offset_of!(Knobs, squadthrow.lob_cells), false),
-    ("squadthrow.lob_keep_secs", offset_of!(Knobs, squadthrow.lob_keep_secs), false),
     ("squadthrow.settle_secs", offset_of!(Knobs, squadthrow.settle_secs), false),
     ("squadthrow.duck_secs", offset_of!(Knobs, squadthrow.duck_secs), false),
     ("squadthrow.duck_throw_secs", offset_of!(Knobs, squadthrow.duck_throw_secs), false),
@@ -2223,8 +2166,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("squad40.after_secs", offset_of!(Knobs, squad40.after_secs), false),
     ("squad40.shown_secs", offset_of!(Knobs, squad40.shown_secs), false),
     ("autopilot.show_secs", offset_of!(Knobs, autopilot.show_secs), false),
-    ("autopilot.keep_bangs", offset_of!(Knobs, autopilot.keep_bangs), false),
-    ("autopilot.contact_m", offset_of!(Knobs, autopilot.contact_m), false),
     ("cmdring.wedges", offset_of!(Knobs, cmdring.wedges), false),
     ("cmdring.flick_px", offset_of!(Knobs, cmdring.flick_px), false),
     ("cmdring.hold_secs", offset_of!(Knobs, cmdring.hold_secs), false),
@@ -2235,14 +2176,10 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("cmdring.man_px", offset_of!(Knobs, cmdring.man_px), false),
     ("cmdring.ref_.0", offset_of!(Knobs, cmdring.ref_), false),
     ("cmdring.ref_.1", offset_of!(Knobs, cmdring.ref_) + 8, false),
-    ("cmdring.hint", offset_of!(Knobs, cmdring.hint), true),
     ("cmdring.goal_half", offset_of!(Knobs, cmdring.goal_half), true),
     ("cmdring.twice", offset_of!(Knobs, cmdring.twice), true),
     ("cmdring.twice_secs", offset_of!(Knobs, cmdring.twice_secs), false),
     ("cmdring.twice_px", offset_of!(Knobs, cmdring.twice_px), false),
-    ("cmdring.hint_wall_m", offset_of!(Knobs, cmdring.hint_wall_m), false),
-    ("cmdring.hint_spot_m", offset_of!(Knobs, cmdring.hint_spot_m), false),
-    ("cmdring.hint_man_m", offset_of!(Knobs, cmdring.hint_man_m), false),
     ("torch.lit_at", offset_of!(Knobs, torch.lit_at), false),
     ("torch.off_k", offset_of!(Knobs, torch.off_k), false),
     ("torch.spill_m", offset_of!(Knobs, torch.spill_m), false),
@@ -2339,7 +2276,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("runner.gone_secs", offset_of!(Knobs, runner.gone_secs), false),
     ("runner.stall_secs", offset_of!(Knobs, runner.stall_secs), false),
     ("runner.retry_secs", offset_of!(Knobs, runner.retry_secs), false),
-    ("runner.retries", offset_of!(Knobs, runner.retries), false),
     ("runner.replan_secs", offset_of!(Knobs, runner.replan_secs), false),
     ("runner.ahead_m", offset_of!(Knobs, runner.ahead_m), false),
     ("runner.ask_cells", offset_of!(Knobs, runner.ask_cells), false),
@@ -2792,9 +2728,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("lights.tail", offset_of!(Knobs, lights.tail), false),
     ("lights.on_m", offset_of!(Knobs, lights.on_m), false),
     ("lights.alone_m", offset_of!(Knobs, lights.alone_m), false),
-    ("lights.look_lit", offset_of!(Knobs, lights.look_lit), false),
-    ("lights.look_below", offset_of!(Knobs, lights.look_below), false),
-    ("lights.look_m", offset_of!(Knobs, lights.look_m), false),
     ("lights.lit_at", offset_of!(Knobs, lights.lit_at), false),
     ("lights.lit_m", offset_of!(Knobs, lights.lit_m), false),
     ("lights.lit_mark_m", offset_of!(Knobs, lights.lit_mark_m), false),
@@ -2903,7 +2836,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("doortools.thr_in", offset_of!(Knobs, doortools.thr_in), false),
     ("doortools.thr_pie_apart", offset_of!(Knobs, doortools.thr_pie_apart), false),
     ("doortools.thr_lean_m", offset_of!(Knobs, doortools.thr_lean_m), false),
-    ("doortools.thr_knee_in", offset_of!(Knobs, doortools.thr_knee_in), false),
     ("doortools.thr_lean_look", offset_of!(Knobs, doortools.thr_lean_look), false),
     ("doortools.thr_doors_m", offset_of!(Knobs, doortools.thr_doors_m), false),
     ("doortools.thr_doors_walk", offset_of!(Knobs, doortools.thr_doors_walk), false),
@@ -2935,7 +2867,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("doortools.threat_cap", offset_of!(Knobs, doortools.threat_cap), false),
     ("doortools.threat_near_m", offset_of!(Knobs, doortools.threat_near_m), false),
     ("doortools.threat_stuck", offset_of!(Knobs, doortools.threat_stuck), false),
-    ("doortools.thr_set_secs", offset_of!(Knobs, doortools.thr_set_secs), false),
     ("doortools.thr_first", offset_of!(Knobs, doortools.thr_first), false),
     ("doortools.thr_first_min", offset_of!(Knobs, doortools.thr_first_min), false),
     ("doortools.thr_first_stale", offset_of!(Knobs, doortools.thr_first_stale), false),
@@ -3106,7 +3037,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("entry.known_m", offset_of!(Knobs, entry.known_m), false),
     ("entry.move_m", offset_of!(Knobs, entry.move_m), false),
     ("entry.apart", offset_of!(Knobs, entry.apart), false),
-    ("entry.mouth_m", offset_of!(Knobs, entry.mouth_m), false),
     ("rear.secs", offset_of!(Knobs, rear.secs), false),
     ("silent.on", offset_of!(Knobs, silent.on), true),
     ("silent.start", offset_of!(Knobs, silent.start), true),
@@ -3126,9 +3056,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("pair.stalk_wait", offset_of!(Knobs, pair.stalk_wait), false),
     ("pair.ring_m", offset_of!(Knobs, pair.ring_m), false),
     ("pair.steady_face_secs", offset_of!(Knobs, pair.steady_face_secs), false),
-    ("pair.front_m", offset_of!(Knobs, pair.front_m), false),
-    ("pair.cone_m", offset_of!(Knobs, pair.cone_m), false),
-    ("pair.cone_lit", offset_of!(Knobs, pair.cone_lit), false),
     ("pair.watch_secs", offset_of!(Knobs, pair.watch_secs), false),
     ("pair.watch_aw", offset_of!(Knobs, pair.watch_aw), false),
     ("pair.heel_ring", offset_of!(Knobs, pair.heel_ring), false),
@@ -3141,12 +3068,10 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("pair.lit_secs", offset_of!(Knobs, pair.lit_secs), false),
     ("pair.lit_every", offset_of!(Knobs, pair.lit_every), false),
     ("rescue.resolve_secs", offset_of!(Knobs, rescue.resolve_secs), false),
-    ("rescue.resolve_spread", offset_of!(Knobs, rescue.resolve_spread), false),
     ("rescue.second_hostage_secs", offset_of!(Knobs, rescue.second_hostage_secs), false),
     ("rescue.aim_secs", offset_of!(Knobs, rescue.aim_secs), false),
     ("rescue.set_secs", offset_of!(Knobs, rescue.set_secs), false),
     ("rescue.unset_react", offset_of!(Knobs, rescue.unset_react), false),
-    ("rescue.hold_secs", offset_of!(Knobs, rescue.hold_secs), false),
     ("rescue.roamers", offset_of!(Knobs, rescue.roamers), false),
     ("rescue.crew_call_secs", offset_of!(Knobs, rescue.crew_call_secs), false),
     ("rescue.squad", offset_of!(Knobs, rescue.squad), false),
@@ -3317,8 +3242,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("squads.drill_net", offset_of!(Knobs, squads.drill_net), true),
     ("squads.net_k", offset_of!(Knobs, squads.net_k), false),
     ("squads.reinforce_k", offset_of!(Knobs, squads.reinforce_k), false),
-    ("squads.react_k", offset_of!(Knobs, squads.react_k), false),
-    ("squads.nerve_k", offset_of!(Knobs, squads.nerve_k), false),
     ("squads.follow_m", offset_of!(Knobs, squads.follow_m), false),
     ("squads.drill_own", offset_of!(Knobs, squads.drill_own), true),
     ("squads.own_up", offset_of!(Knobs, squads.own_up), false),
@@ -3362,20 +3285,7 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("wx_sim.thunder_secs", offset_of!(Knobs, wx_sim.thunder_secs), false),
     ("wx_sim.thunder_loud", offset_of!(Knobs, wx_sim.thunder_loud), false),
     ("wx_sim.roof_bed", offset_of!(Knobs, wx_sim.roof_bed), false),
-    ("air_sim.on", offset_of!(Knobs, air_sim.on), true),
-    ("air_sim.ground", offset_of!(Knobs, air_sim.ground), false),
-    ("air_sim.min_top", offset_of!(Knobs, air_sim.min_top), false),
-    ("air_sim.max_foot", offset_of!(Knobs, air_sim.max_foot), false),
-    ("air_sim.roof_share", offset_of!(Knobs, air_sim.roof_share), false),
     ("air_sim.glass_open", offset_of!(Knobs, air_sim.glass_open), false),
-    ("air_sim.leaf_step", offset_of!(Knobs, air_sim.leaf_step), false),
-    ("air_sim.vent_out", offset_of!(Knobs, air_sim.vent_out), false),
-    ("air_sim.gust_k", offset_of!(Knobs, air_sim.gust_k), false),
-    ("air_sim.rate", offset_of!(Knobs, air_sim.rate), false),
-    ("air_sim.sigma_min", offset_of!(Knobs, air_sim.sigma_min), false),
-    ("air_sim.sigma_max", offset_of!(Knobs, air_sim.sigma_max), false),
-    ("air_sim.puff_rate", offset_of!(Knobs, air_sim.puff_rate), false),
-    ("air_sim.settle", offset_of!(Knobs, air_sim.settle), false),
     ("laststand.moved_secs", offset_of!(Knobs, laststand.moved_secs), false),
     ("laststand.still_secs", offset_of!(Knobs, laststand.still_secs), false),
     ("laststand.moved_gap", offset_of!(Knobs, laststand.moved_gap), false),
@@ -3384,24 +3294,12 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("laststand.first.0", offset_of!(Knobs, laststand.first), false),
     ("laststand.first.1", offset_of!(Knobs, laststand.first) + 8, false),
     ("laststand.every", offset_of!(Knobs, laststand.every), false),
-    ("laststand.again", offset_of!(Knobs, laststand.again), false),
     ("laststand.answer.0", offset_of!(Knobs, laststand.answer), false),
     ("laststand.answer.1", offset_of!(Knobs, laststand.answer) + 8, false),
     ("laststand.between.0", offset_of!(Knobs, laststand.between), false),
     ("laststand.between.1", offset_of!(Knobs, laststand.between) + 8, false),
     ("laststand.listen.0", offset_of!(Knobs, laststand.listen), false),
     ("laststand.listen.1", offset_of!(Knobs, laststand.listen) + 8, false),
-    ("laststand.max_m", offset_of!(Knobs, laststand.max_m), false),
-    ("laststand.clear_m", offset_of!(Knobs, laststand.clear_m), false),
-    ("laststand.known_secs", offset_of!(Knobs, laststand.known_secs), false),
-    ("laststand.go.0", offset_of!(Knobs, laststand.go), false),
-    ("laststand.go.1", offset_of!(Knobs, laststand.go) + 8, false),
-    ("laststand.legs", offset_of!(Knobs, laststand.legs), false),
-    ("laststand.dig.0", offset_of!(Knobs, laststand.dig), false),
-    ("laststand.dig.1", offset_of!(Knobs, laststand.dig) + 8, false),
-    ("laststand.thump.0", offset_of!(Knobs, laststand.thump), false),
-    ("laststand.thump.1", offset_of!(Knobs, laststand.thump) + 8, false),
-    ("laststand.thump_level", offset_of!(Knobs, laststand.thump_level), false),
     ("stackroom.apart", offset_of!(Knobs, stackroom.apart), false),
     ("stackroom.squeeze", offset_of!(Knobs, stackroom.squeeze), false),
     ("stackroom.round_m", offset_of!(Knobs, stackroom.round_m), false),
@@ -3473,7 +3371,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("spotted.ear_m", offset_of!(Knobs, spotted.ear_m), false),
     ("spotted.linger_secs", offset_of!(Knobs, spotted.linger_secs), false),
     ("spotted.brace_secs", offset_of!(Knobs, spotted.brace_secs), false),
-    ("spotted.brace_m", offset_of!(Knobs, spotted.brace_m), false),
     ("spotted.take_m", offset_of!(Knobs, spotted.take_m), false),
     ("spotted.take_reach", offset_of!(Knobs, spotted.take_reach), false),
     ("spotted.take_secs", offset_of!(Knobs, spotted.take_secs), false),
@@ -3515,16 +3412,11 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("seenwalk.margin", offset_of!(Knobs, seenwalk.margin), false),
     ("holdfire.lift_secs", offset_of!(Knobs, holdfire.lift_secs), false),
     ("slots.on", offset_of!(Knobs, slots.on), true),
-    ("slots.ok", offset_of!(Knobs, slots.ok), true),
     ("slots.table.v", offset_of!(Knobs, slots.table.v), false),
     ("bigslot.on", offset_of!(Knobs, bigslot.on), true),
     ("bigslot.swings", offset_of!(Knobs, bigslot.swings), false),
     ("bigslot.swing", offset_of!(Knobs, bigslot.swing), false),
-    ("bigslot.windup", offset_of!(Knobs, bigslot.windup), false),
-    ("bigslot.draw", offset_of!(Knobs, bigslot.draw), false),
     ("bigslot.shells", offset_of!(Knobs, bigslot.shells), false),
-    ("bigslot.equip", offset_of!(Knobs, bigslot.equip), false),
-    ("bigslot.stow", offset_of!(Knobs, bigslot.stow), false),
     ("bigslot.reach", offset_of!(Knobs, bigslot.reach), false),
     ("bigslot.heft", offset_of!(Knobs, bigslot.heft), false),
     ("bigslot.equip_w", offset_of!(Knobs, bigslot.equip_w), false),
@@ -3558,7 +3450,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.aim.player.range_ref;
     let _: &f64 = &k.aim.player.near_k;
     let _: &f64 = &k.aim.player.unsettled_k;
-    let _: &f64 = &k.aim.player.lose_rate;
     let _: &f64 = &k.aim.player.base_stand;
     let _: &f64 = &k.aim.player.base_crouch;
     let _: &f64 = &k.aim.player.target_move_k;
@@ -4361,14 +4252,8 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.stalk.grab_m;
     let _: &f64 = &k.stalk.pace;
     let _: &f64 = &k.stalk.close_min;
-    let _: &f64 = &k.stalk.close_k;
     let _: &f64 = &k.stalk.ease_up;
     let _: &f64 = &k.stalk.ease_down;
-    let _: &f64 = &k.stalk.reach_from;
-    let _: &f64 = &k.stalk.reach;
-    let _: &f64 = &k.stalk.rise_from;
-    let _: &f64 = &k.stalk.rise_by;
-    let _: &f64 = &k.stalk.rise;
     let _: &f64 = &k.stalk.catch_secs;
     let _: &f64 = &k.stalk.catch_m;
     let _: &f64 = &k.stalk.catch_stride;
@@ -4392,12 +4277,7 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.stalk.low_hands;
     let _: &f64 = &k.stalk.low_spring;
     let _: &f64 = &k.stalk.low_wind;
-    let _: &f64 = &k.stalk.wide_out;
-    let _: &f64 = &k.stalk.wide_down;
-    let _: &f64 = &k.stalk.wide_fwd;
-    let _: &f64 = &k.stalk.wide_lead;
     let _: &f64 = &k.stalk.wide_by;
-    let _: &[f64; 3] = &k.stalk.wide_pole;
     let _: &f64 = &k.stalk.heft_twist;
     let _: &f64 = &k.stalk.heft_swing;
     let _: &f64 = &k.stalk.heft_side;
@@ -4447,8 +4327,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.ckpt.min_gap_secs;
     let _: &f64 = &k.ckpt.pending_secs;
     let _: &f64 = &k.ckpt.body_hide_m;
-    let _: &f64 = &k.ckpt.auto_slots;
-    let _: &f64 = &k.ckpt.path_keep;
     let _: &f64 = &k.ckpt.flash_secs;
     let _: &f64 = &k.ckpt.regret_secs;
     let _: &f64 = &k.fog.dim;
@@ -4596,7 +4474,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.walls.max_pieces;
     let _: &f64 = &k.walls.max_changes;
     let _: &f64 = &k.walls.chunks_per_cell;
-    let _: &f64 = &k.walls.chunks_per_blast;
     let _: &f64 = &k.walls.fall_max_vol;
     let _: &f64 = &k.walls.falls_per_change;
     let _: &f64 = &k.walls.hung.deep;
@@ -4654,14 +4531,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.hardbreath.chest_rate;
     let _: &f64 = &k.hardbreath.chest_up;
     let _: &f64 = &k.hardbreath.chest_down;
-    let _: &f64 = &k.hardbreath.every;
-    let _: &f64 = &k.hardbreath.puffs;
-    let _: &f64 = &k.hardbreath.count;
-    let _: &f64 = &k.hardbreath.jet;
-    let _: &f64 = &k.hardbreath.size;
-    let _: &f64 = &k.hardbreath.carry;
-    let _: &f64 = &k.hardbreath.up;
-    let _: &f64 = &k.hardbreath.down;
     let _: &f64 = &k.castor.decel;
     let _: &f64 = &k.castor.visc;
     let _: &f64 = &k.castor.spin;
@@ -4715,7 +4584,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.coverfire.walk_ask_secs;
     let _: &f64 = &k.coverfire.say_secs;
     let _: &f64 = &k.doorblast.tear_m.stun;
-    let _: &f64 = &k.doorblast.tear_m.frag;
     let _: &f64 = &k.doorblast.charge_k;
     let _: &f64 = &k.doorblast.charge_r;
     let _: &[f64; 2] = &k.doorblast.speed;
@@ -4836,7 +4704,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.breaks.share.big.heap;
     let _: &f64 = &k.breaks.share.big.furniture;
     let _: &[f64; 2] = &k.breaks.refuse_chips;
-    let _: &[f64; 2] = &k.breaks.crumble_chips;
     let _: &[f64; 2] = &k.breaks.sized_chips;
     let _: &[f64; 2] = &k.breaks.sized_span;
     let _: &f64 = &k.breaks.china_land;
@@ -4854,12 +4721,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.breaks.kink.off;
     let _: &f64 = &k.breaks.kink.min_long;
     let _: &f64 = &k.breaks.kink.gap_secs;
-    let _: &f64 = &k.breaks.head.from;
-    let _: &[f64; 2] = &k.breaks.head.deep;
-    let _: &f64 = &k.breaks.head.planes;
-    let _: &[f64; 2] = &k.breaks.head.across;
-    let _: &f64 = &k.breaks.head.min_room;
-    let _: &f64 = &k.breaks.head.most_of_width;
     let _: &f64 = &k.breaks.steel.sheet;
     let _: &[f64; 2] = &k.breaks.steel.kink;
     let _: &[f64; 2] = &k.breaks.steel.dents;
@@ -4951,7 +4812,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.wallsnap.dip;
     let _: &f64 = &k.wallsnap.nod;
     let _: &f64 = &k.wallsnap.hit_peak;
-    let _: &f64 = &k.wallsnap.scuff;
     let _: &f64 = &k.wallsnap.step_lift;
     let _: &f64 = &k.wallsnap.step_trail;
     let _: &f64 = &k.wallsnap.cam_room;
@@ -4960,7 +4820,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.wallsnap.away_secs;
     let _: &f64 = &k.wallsnap.away_diag;
     let _: &f64 = &k.wallsnap.off_push;
-    let _: &f64 = &k.wallsnap.out_rate;
     let _: &f64 = &k.wallsnap.up_secs;
     let _: &f64 = &k.wallsnap.up_rise;
     let _: &f64 = &k.wallsnap.bore;
@@ -5013,15 +4872,12 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.close.dark_at;
     let _: &f64 = &k.close.lit_at;
     let _: &f64 = &k.close.touch_m;
-    let _: &f64 = &k.close.fade_m;
     let _: &f64 = &k.close.reach.behind;
     let _: &f64 = &k.close.reach.side;
     let _: &f64 = &k.close.reach.front;
     let _: &f64 = &k.close.reach.seat;
     let _: &f64 = &k.close.reach.seat_front;
     let _: &f64 = &k.close.side_from_deg;
-    let _: &f64 = &k.close.inner;
-    let _: &f64 = &k.close.step_deg;
     let _: &f64 = &k.close.strike_dist;
     let _: &f64 = &k.close.seat_dist;
     let _: &f64 = &k.close.noise.behind;
@@ -5050,7 +4906,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.recap.live_hear_m;
     let _: &f64 = &k.recap.live_beat;
     let _: &f64 = &k.recap.live_side_m;
-    let _: &f64 = &k.recap.live_mark_secs;
     let _: &f64 = &k.aimweight.rate;
     let _: &f64 = &k.aimweight.smooth;
     let _: &f64 = &k.aimweight.heft;
@@ -5068,7 +4923,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.aimcost.bare_device;
     let _: &f64 = &k.aimcost.plant_at;
     let _: &f64 = &k.aimcost.flank_at;
-    let _: &f64 = &k.aimcost.ring_px;
     let _: &f64 = &k.friends.reach_m;
     let _: &f64 = &k.friends.past_m;
     let _: &f64 = &k.friends.clear_m;
@@ -5092,13 +4946,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.carlamps.fit;
     let _: &f64 = &k.carlamps.tone;
     let _: &f64 = &k.carlamps.twin;
-    let _: &f64 = &k.reach_pace.steps;
-    let _: &bool = &k.reach_pace.whole;
-    let _: &f64 = &k.reach_pace.whole_cells;
-    let _: &bool = &k.coatfinish.on;
-    let _: &bool = &k.solidglass.on;
-    let _: &f64 = &k.solidglass.lum;
-    let _: &f64 = &k.solidglass.rough;
     let _: &bool = &k.wallskin.on;
     let _: &f64 = &k.wallskin.thick;
     let _: &f64 = &k.wallskin.off;
@@ -5125,8 +4972,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.fireline.reach_m;
     let _: &f64 = &k.savetimeline.manual;
     let _: &f64 = &k.savetimeline.auto;
-    let _: &f64 = &k.savetimeline.pic_px;
-    let _: &f64 = &k.savetimeline.pic_q;
     let _: &f64 = &k.handring.hold_secs;
     let _: &f64 = &k.handring.turn_max;
     let _: &f64 = &k.sprintdoor.keep;
@@ -5199,7 +5044,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.doorforce.kick_secs_no_shot;
     let _: &f64 = &k.doorforce.walk_secs;
     let _: &f64 = &k.doorforce.rest_secs;
-    let _: &f64 = &k.slotsetup.secs;
     let _: &f64 = &k.slotsetup.settle;
     let _: &f64 = &k.glassreal.hang;
     let _: &f64 = &k.glassreal.blocks;
@@ -5261,7 +5105,6 @@ fn typed(k: &Knobs) {
     let _: &[f64; 3] = &k.kit.belt.back;
     let _: &[f64; 3] = &k.kit.belt.pole;
     let _: &[f64; 3] = &k.kit.holster_pole;
-    let _: &f64 = &k.kit.sheath_pole;
     let _: &[f64; 3] = &k.kit.rest;
     let _: &[f64; 3] = &k.kit.cross;
     let _: &f64 = &k.kit.front.stow;
@@ -5432,7 +5275,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.gunroles.pistol_max;
     let _: &f64 = &k.gunroles.lane_k;
     let _: &f64 = &k.gunroles.file_cost;
-    let _: &f64 = &k.kittree.rings;
     let _: &f64 = &k.kittree.lend;
     let _: &bool = &k.squadthrow.on;
     let _: &f64 = &k.squadthrow.frag_roll_k;
@@ -5443,7 +5285,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.squadthrow.min_m;
     let _: &f64 = &k.squadthrow.max_m;
     let _: &f64 = &k.squadthrow.tries;
-    let _: &f64 = &k.squadthrow.keep_secs;
     let _: &f64 = &k.squadthrow.walk_secs;
     let _: &f64 = &k.squadthrow.turn_secs;
     let _: &f64 = &k.squadthrow.toss_secs;
@@ -5455,7 +5296,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.squadthrow.lob_wall_h;
     let _: &f64 = &k.squadthrow.lob_sims;
     let _: &f64 = &k.squadthrow.lob_cells;
-    let _: &f64 = &k.squadthrow.lob_keep_secs;
     let _: &f64 = &k.squadthrow.settle_secs;
     let _: &f64 = &k.squadthrow.duck_secs;
     let _: &f64 = &k.squadthrow.duck_throw_secs;
@@ -5474,8 +5314,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.squad40.after_secs;
     let _: &f64 = &k.squad40.shown_secs;
     let _: &f64 = &k.autopilot.show_secs;
-    let _: &f64 = &k.autopilot.keep_bangs;
-    let _: &f64 = &k.autopilot.contact_m;
     let _: &f64 = &k.cmdring.wedges;
     let _: &f64 = &k.cmdring.flick_px;
     let _: &f64 = &k.cmdring.hold_secs;
@@ -5485,14 +5323,10 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.cmdring.edge_y;
     let _: &f64 = &k.cmdring.man_px;
     let _: &[f64; 2] = &k.cmdring.ref_;
-    let _: &bool = &k.cmdring.hint;
     let _: &bool = &k.cmdring.goal_half;
     let _: &bool = &k.cmdring.twice;
     let _: &f64 = &k.cmdring.twice_secs;
     let _: &f64 = &k.cmdring.twice_px;
-    let _: &f64 = &k.cmdring.hint_wall_m;
-    let _: &f64 = &k.cmdring.hint_spot_m;
-    let _: &f64 = &k.cmdring.hint_man_m;
     let _: &f64 = &k.torch.lit_at;
     let _: &f64 = &k.torch.off_k;
     let _: &f64 = &k.torch.spill_m;
@@ -5589,7 +5423,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.runner.gone_secs;
     let _: &f64 = &k.runner.stall_secs;
     let _: &f64 = &k.runner.retry_secs;
-    let _: &f64 = &k.runner.retries;
     let _: &f64 = &k.runner.replan_secs;
     let _: &f64 = &k.runner.ahead_m;
     let _: &f64 = &k.runner.ask_cells;
@@ -6028,9 +5861,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.lights.tail;
     let _: &f64 = &k.lights.on_m;
     let _: &f64 = &k.lights.alone_m;
-    let _: &f64 = &k.lights.look_lit;
-    let _: &f64 = &k.lights.look_below;
-    let _: &f64 = &k.lights.look_m;
     let _: &f64 = &k.lights.lit_at;
     let _: &f64 = &k.lights.lit_m;
     let _: &f64 = &k.lights.lit_mark_m;
@@ -6139,7 +5969,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.doortools.thr_in;
     let _: &f64 = &k.doortools.thr_pie_apart;
     let _: &f64 = &k.doortools.thr_lean_m;
-    let _: &f64 = &k.doortools.thr_knee_in;
     let _: &f64 = &k.doortools.thr_lean_look;
     let _: &f64 = &k.doortools.thr_doors_m;
     let _: &f64 = &k.doortools.thr_doors_walk;
@@ -6171,7 +6000,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.doortools.threat_cap;
     let _: &f64 = &k.doortools.threat_near_m;
     let _: &f64 = &k.doortools.threat_stuck;
-    let _: &f64 = &k.doortools.thr_set_secs;
     let _: &f64 = &k.doortools.thr_first;
     let _: &f64 = &k.doortools.thr_first_min;
     let _: &f64 = &k.doortools.thr_first_stale;
@@ -6342,7 +6170,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.entry.known_m;
     let _: &f64 = &k.entry.move_m;
     let _: &f64 = &k.entry.apart;
-    let _: &f64 = &k.entry.mouth_m;
     let _: &f64 = &k.rear.secs;
     let _: &bool = &k.silent.on;
     let _: &bool = &k.silent.start;
@@ -6362,9 +6189,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.pair.stalk_wait;
     let _: &f64 = &k.pair.ring_m;
     let _: &f64 = &k.pair.steady_face_secs;
-    let _: &f64 = &k.pair.front_m;
-    let _: &f64 = &k.pair.cone_m;
-    let _: &f64 = &k.pair.cone_lit;
     let _: &f64 = &k.pair.watch_secs;
     let _: &f64 = &k.pair.watch_aw;
     let _: &f64 = &k.pair.heel_ring;
@@ -6377,12 +6201,10 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.pair.lit_secs;
     let _: &f64 = &k.pair.lit_every;
     let _: &f64 = &k.rescue.resolve_secs;
-    let _: &f64 = &k.rescue.resolve_spread;
     let _: &f64 = &k.rescue.second_hostage_secs;
     let _: &f64 = &k.rescue.aim_secs;
     let _: &f64 = &k.rescue.set_secs;
     let _: &f64 = &k.rescue.unset_react;
-    let _: &f64 = &k.rescue.hold_secs;
     let _: &f64 = &k.rescue.roamers;
     let _: &f64 = &k.rescue.crew_call_secs;
     let _: &f64 = &k.rescue.squad;
@@ -6543,8 +6365,6 @@ fn typed(k: &Knobs) {
     let _: &bool = &k.squads.drill_net;
     let _: &f64 = &k.squads.net_k;
     let _: &f64 = &k.squads.reinforce_k;
-    let _: &f64 = &k.squads.react_k;
-    let _: &f64 = &k.squads.nerve_k;
     let _: &f64 = &k.squads.follow_m;
     let _: &bool = &k.squads.drill_own;
     let _: &f64 = &k.squads.own_up;
@@ -6584,20 +6404,7 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.wx_sim.thunder_secs;
     let _: &f64 = &k.wx_sim.thunder_loud;
     let _: &f64 = &k.wx_sim.roof_bed;
-    let _: &bool = &k.air_sim.on;
-    let _: &f64 = &k.air_sim.ground;
-    let _: &f64 = &k.air_sim.min_top;
-    let _: &f64 = &k.air_sim.max_foot;
-    let _: &f64 = &k.air_sim.roof_share;
     let _: &f64 = &k.air_sim.glass_open;
-    let _: &f64 = &k.air_sim.leaf_step;
-    let _: &f64 = &k.air_sim.vent_out;
-    let _: &f64 = &k.air_sim.gust_k;
-    let _: &f64 = &k.air_sim.rate;
-    let _: &f64 = &k.air_sim.sigma_min;
-    let _: &f64 = &k.air_sim.sigma_max;
-    let _: &f64 = &k.air_sim.puff_rate;
-    let _: &f64 = &k.air_sim.settle;
     let _: &f64 = &k.laststand.moved_secs;
     let _: &f64 = &k.laststand.still_secs;
     let _: &f64 = &k.laststand.moved_gap;
@@ -6605,18 +6412,9 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.laststand.quiet;
     let _: &[f64; 2] = &k.laststand.first;
     let _: &f64 = &k.laststand.every;
-    let _: &f64 = &k.laststand.again;
     let _: &[f64; 2] = &k.laststand.answer;
     let _: &[f64; 2] = &k.laststand.between;
     let _: &[f64; 2] = &k.laststand.listen;
-    let _: &f64 = &k.laststand.max_m;
-    let _: &f64 = &k.laststand.clear_m;
-    let _: &f64 = &k.laststand.known_secs;
-    let _: &[f64; 2] = &k.laststand.go;
-    let _: &f64 = &k.laststand.legs;
-    let _: &[f64; 2] = &k.laststand.dig;
-    let _: &[f64; 2] = &k.laststand.thump;
-    let _: &f64 = &k.laststand.thump_level;
     let _: &f64 = &k.stackroom.apart;
     let _: &f64 = &k.stackroom.squeeze;
     let _: &f64 = &k.stackroom.round_m;
@@ -6688,7 +6486,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.spotted.ear_m;
     let _: &f64 = &k.spotted.linger_secs;
     let _: &f64 = &k.spotted.brace_secs;
-    let _: &f64 = &k.spotted.brace_m;
     let _: &f64 = &k.spotted.take_m;
     let _: &f64 = &k.spotted.take_reach;
     let _: &f64 = &k.spotted.take_secs;
@@ -6728,16 +6525,11 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.seenwalk.margin;
     let _: &f64 = &k.holdfire.lift_secs;
     let _: &bool = &k.slots.on;
-    let _: &bool = &k.slots.ok;
     let _: &f64 = &k.slots.table.v;
     let _: &bool = &k.bigslot.on;
     let _: &f64 = &k.bigslot.swings;
     let _: &f64 = &k.bigslot.swing;
-    let _: &f64 = &k.bigslot.windup;
-    let _: &f64 = &k.bigslot.draw;
     let _: &f64 = &k.bigslot.shells;
-    let _: &f64 = &k.bigslot.equip;
-    let _: &f64 = &k.bigslot.stow;
     let _: &f64 = &k.bigslot.reach;
     let _: &f64 = &k.bigslot.heft;
     let _: &f64 = &k.bigslot.equip_w;

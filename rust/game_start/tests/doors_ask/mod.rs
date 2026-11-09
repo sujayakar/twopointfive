@@ -615,7 +615,7 @@ impl DoorsAsk for Play {
     fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
         let k = &mut self.g.k.rescue;
-        (k.resolve_spread, k.resolve_secs, k.second_hostage_secs, k.set_secs) = (0.0, first, second, set);
+        (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
         game::rescue::rescue_restage(&mut self.g);
     }
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
@@ -847,7 +847,7 @@ impl DoorsAsk for Play {
         match (b.get(game::character::Bone::Head), b.get(game::character::Bone::Hips)) { (Some(h), Some(q)) => (h[0] - q[0]) * along[0] + (h[2] - q[2]) * along[1], _ => 0.0 }
     }
     fn men_spared(&mut self) { for m in self.mates() { self.g.gd[m].god = true; } }
-    fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId> { let r = self.g.k.doorblast.tear_m.frag; game::doors::doors_blast(&mut self.g, [at[0], 1.0, at[1]], r, -1.0) }
+    fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId> { game::doors::doors_blast(&mut self.g, [at[0], 1.0, at[1]], 1.5, -1.0) }
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
     fn file_place(&self, gd: GuardId) -> Option<f64> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].follow) }

@@ -121,7 +121,7 @@ mod tests {
         vec![room("c", 20.0, 30.0, 0.0, 4.0), room("a", 0.0, 10.0, 0.0, 4.0), room("e", 40.0, 50.0, 0.0, 4.0), room("b", 10.0, 20.0, 0.0, 4.0), room("d", 30.0, 40.0, 0.0, 4.0)]
     }
     fn page() -> crate::knobs::SquaddealK {
-        crate::knobs::SquaddealK { on: true, one: 5.0, two: 8.0, names: vec![String::from("Alpha"), String::from("Bravo"), String::from("Charlie")] }
+        crate::knobs::SquaddealK { one: 5.0, two: 8.0, names: vec![String::from("Alpha"), String::from("Bravo"), String::from("Charlie")] }
     }
     /// the block as "id name: rooms", one a squad, or None for no block
     fn deal(rooms: Vec<StructureRoom>, men: &[&str]) -> Option<Vec<String>> {
