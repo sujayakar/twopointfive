@@ -309,6 +309,7 @@ fn rescue_clear_cast(g: &mut crate::game::Game) {
     }
     let hostages = g.rescue.hostages.clone();
     g.civilians.retain(|c| !hostages.contains(c));
+    crate::enemysquads::squads_stop(g);
     g.rescue.ops = Vec::new();
     g.rescue.hostiles = Vec::new();
     g.rescue.hostages = Vec::new();
@@ -442,6 +443,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         gd: *gd, watch: cast[k].mark.aim_at, hostage: Some(cast[k].role == Role::Captor),
     }).collect();
     crate::gunroles::gun_deal(g, &deal);
+    let men = g.rescue.hostiles.clone();
+    crate::squaddeal::squads_by_rooms(g, &men);
     let cap_set = g.k.rescue.start == crate::knobs::RescueKStart::Hot;
     if cap_set {
         let captor = g.rescue.hostiles[0];

@@ -79,7 +79,7 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// a man of the hostage rescue's cast (morale.ts rescued)
-fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
+fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { crate::rescue::keeps_hostages(g, gd) }
 
 /// may a sequence have him this frame (morale.ts reacts)
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {

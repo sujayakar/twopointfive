@@ -102,7 +102,6 @@ mod quietfog; pub use quietfog::*;
 mod rails; pub use rails::*;
 mod rearwatch; pub use rearwatch::*;
 mod rescue; pub use rescue::*;
-mod rescuecheck; pub use rescuecheck::*;
 mod rescueend; pub use rescueend::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
@@ -306,7 +305,6 @@ pub struct Knobs {
     pub powerout: PoweroutK,
     pub squaddeal: SquaddealK,
     pub stayask: StayaskK,
-    pub rescuecheck: RescuecheckK,
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflush: RescueflushK,

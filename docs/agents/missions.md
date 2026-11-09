@@ -21,10 +21,10 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
 | `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
 | `scenario_run.rs` | the one way from an address to a staged game; what is up; quit |
-| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none |
+| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none, or from the rooms men stand in |
 | `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
 | `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
-| `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
+| `rescueflow.rs`, `rescueflush.rs` | who covers the openings Sam runs past; the men left coming for the hostages |
 | `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
 | `mission.rs` | the stealth stages, the run's counts, the one objective line (`objective`) |
 | `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |

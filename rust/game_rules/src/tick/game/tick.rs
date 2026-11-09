@@ -141,6 +141,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     }
     crate::nightbreach::night_breach_tick(g, dt, input, Some(cam));
     crate::quiet::quiet_mission_tick(g, Some(cam));
+    crate::enemysquads::squads_tick(g);
     crate::roomclear::room_clear_scenario_tick(g, dt);
     crate::rescue::rescue_tick(g, dt, input, Some(cam));
     crate::wallreact::wall_react_tick_2(g);
@@ -155,7 +156,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats { in_seat(g, s, |g| crate::orders::squad_orders_tick(g)); }
     crate::doorpath::door_path_tick(g, dt);
     crate::powerout::power_out_tick(g, dt);
-    crate::rescuecheck::rescue_check_tick(g, dt);
     crate::roomfight::room_fight_tick(g, dt);
     for &s in &seats { in_seat(g, s, |g| crate::showwhy::show_why_tick(g)); }
     crate::morale::morale_tick(g, dt);

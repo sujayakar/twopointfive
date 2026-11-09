@@ -257,7 +257,6 @@ fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
 /// Once a frame from the game's update. (rescue.ts Rescue.tick)
 pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.rescue.active { return; }
-    crate::rescuecheck::rescue_check_say(g);
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
     if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
@@ -278,6 +277,11 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     crate::rescueend::rescue_end_tick(g);
     rescue_outcome(g);
     rescue_voices(g);
+}
+
+/// He is with the hostages, or on the captor's word: the rescue's to move, and nobody else's.
+pub fn keeps_hostages(g: &crate::game::Game, gd: GuardId) -> bool {
+    g.rescue.active && (g.rescue.defs.get(gd).map_or(false, |d| d.in_room) || crate::owner::has(g, gd, crate::owner::by::MISSION))
 }
 
 /// This frame's loud things: the last one the team did is where a roamer goes. (rescue.ts Rescue.hear)
@@ -328,7 +332,7 @@ fn rescue_defenders(g: &mut crate::game::Game) {
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
         }
-        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::owner::has(g, h, crate::owner::by::WALK) {
+        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) {
             g.rescue.defs.get_mut(h).unwrap().learned = g.time;
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
@@ -998,14 +1002,6 @@ fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
 
 /// The last loud thing the team did. (rescue.ts Rescue.noiseAt)
 pub(in crate::missions) fn rescue_noise_at(g: &crate::game::Game) -> Option<V3> { g.rescue.noise }
-
-/// The living and the dead of the cast as their radio check reads them. (rescue.ts Rescue.cast)
-pub fn rescue_cast(g: &crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
-    g.rescue.hostiles.iter().map(|&gd| {
-        let d = def_of(g, gd);
-        crate::rescuecheck::CastItem { gd, role: d.role, in_room: d.in_room, post: d.mark.pos, learned_at: d.learned, released: d.released, crewed: d.crew != DefCrew::Empty }
-    }).collect()
-}
 
 /// A man the flush sends is nobody's to send again. (rescue.ts Rescue.letGo)
 pub(in crate::missions) fn rescue_let_go(g: &mut crate::game::Game, gd: GuardId) {

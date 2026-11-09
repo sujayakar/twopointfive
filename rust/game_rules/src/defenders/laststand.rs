@@ -534,7 +534,7 @@ pub(super) fn last_stand_tick(g: &mut crate::game::Game) {
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
 fn step_stand(g: &mut crate::game::Game) {
-    if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
+    if !g.night_breach.active || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.night_breach.hostiles.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));

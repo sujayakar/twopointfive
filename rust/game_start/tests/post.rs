@@ -6,12 +6,14 @@ use game_start::play::{Opts, Play};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 
-/// the consulate's rescue, whose defenders are in no squad, stood and still, and a defender of it at his post whom nobody has
+/// the consulate's rescue, stood and still, and a defender of it at his post whom nobody has but his squad, which lets go of him here
 fn consulate(seed: u32) -> (Play, RoomfightDefId) {
     let mut p = Play::mission("consulate.json", "?levelFile=consulate.json&rescue&squad=4", &Opts { seed, ..Default::default() });
     p.sam_unseen();
     p.run(0.5);
-    let d = p.g.fight.defs.iter().copied().find(|&d| at_post(&p.g, d) && owner::kept(&p.g, p.g.tab.roomfight_def[d].gd, owner::By::NOBODY).is_none()).expect("a defender nobody has");
+    let d = p.g.fight.defs.iter().copied().find(|&d| at_post(&p.g, d) && owner::kept(&p.g, p.g.tab.roomfight_def[d].gd, by::SQUAD).is_none()).expect("a defender only his squad has");
+    let (gd, t) = (p.g.tab.roomfight_def[d].gd, p.time());
+    owner::release(&mut p.g, gd, by::SQUAD, t);
     (p, d)
 }
 /// where a defender of another room stands

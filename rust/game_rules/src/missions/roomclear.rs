@@ -661,7 +661,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     if g.room_clear.rooms.is_empty() || g.night_breach.hostiles.len() != g.room_clear.placement.len() {
         return;
     }
-    crate::enemysquads::squads_tick(g);
     let live: Vec<GuardId> = g.night_breach.hostiles.iter().copied().filter(|h| holds(g, *h)).collect();
     let mut i = 0;
     while i < g.room_clear.rooms.len() {

@@ -233,7 +233,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     g.night_breach.beats_seen = 0.0;
     g.night_breach.said.clear();
     g.night_breach.cut = true;
-    if layout.is_some() { crate::roomclear::room_clear_scenario_on_staged(g); }
+    if layout.is_some() { crate::roomclear::room_clear_scenario_on_staged(g); } else { let men = g.night_breach.hostiles.clone(); crate::squaddeal::squads_by_rooms(g, &men); }
     let men: Vec<crate::gunroles::DealMan> = g.night_breach.hostiles.iter().enumerate()
         .map(|(i, gd)| crate::gunroles::DealMan { gd: *gd, watch: marks[i].aim_at, hostage: None })
         .collect();
@@ -402,6 +402,7 @@ fn night_breach_stop(g: &mut crate::game::Game) {
     g.night_breach.drill = None;
     let mut cast = g.night_breach.ops.clone();
     cast.extend_from_slice(&g.night_breach.hostiles);
+    crate::enemysquads::squads_stop(g);
     for gd in cast { crate::guards::despawn_unit(g, gd); }
     g.night_breach.ops = Vec::new();
     g.night_breach.hostiles = Vec::new();

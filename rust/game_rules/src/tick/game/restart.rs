@@ -139,7 +139,6 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
 /// A fresh shift: every system's memory of the old one goes, the response team first. (game.ts Game.resetGuards)
 pub(super) fn game_reset_guards(g: &mut crate::game::Game) {
     crate::powerout::power_out_reset(g);
-    crate::rescuecheck::rescue_check_reset(g);
     crate::doze::doze_reset(g, None);
     crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);

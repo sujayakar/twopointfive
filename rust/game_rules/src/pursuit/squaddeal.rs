@@ -1,4 +1,5 @@
 use crate::game::Game;
+use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{string::String, vec, vec::Vec};
@@ -100,6 +101,41 @@ fn deal_with(knobs: &crate::knobs::SquaddealK, s: Option<&crate::scene_scenarios
     let mut out = s.clone();
     out.squads = Some(squads);
     Some(out)
+}
+
+/// The floor as squads are cut from it where the level lists no rooms: the rooms its men stand in, each with the doors on its edge and which room each man is in.
+fn floor_of(g: &mut Game, men: &[GuardId]) -> (crate::scene_scenarios::StructureData, Vec<String>) {
+    let (cs, w) = (g.col.nav.cell, g.col.nav.w);
+    let mut rooms: Vec<crate::scene_scenarios::StructureRoom> = Vec::new();
+    let mut of: Vec<String> = Vec::new();
+    for &gd in men {
+        let at = g.ch[g.gd[gd].ch].pos;
+        let Some(r) = crate::roomfight::room_fight_room_at(g, at) else { of.push(String::new()); continue };
+        let id = alloc::format!("room{}", js::num_str(g.tab.roomfight_room[r].id));
+        if !rooms.iter().any(|x| x.id == id) {
+            let mut b = crate::scene_scenarios::Rect { x0: m::INF, x1: -m::INF, z0: m::INF, z1: -m::INF };
+            for c in g.tab.roomfight_room[r].cells.keys() {
+                let (x, z) = (js::rem(c.0, w) * cs, m::floor(c.0 / w) * cs);
+                b = crate::scene_scenarios::Rect { x0: m::min(b.x0, x), x1: m::max(b.x1, x + cs), z0: m::min(b.z0, z), z1: m::max(b.z1, z + cs) };
+            }
+            let doors = g.tab.roomfight_room[r].entries.iter().map(|e| crate::scene_scenarios::StructureDoor { id: g.dr[e.door].def.name.clone(), ..Default::default() }).collect();
+            let name = crate::dialogue::place_name(g, at);
+            rooms.push(crate::scene_scenarios::StructureRoom { id: id.clone(), name, bounds: b, doors, ..Default::default() });
+        }
+        of.push(id);
+    }
+    // (a corridor's bounds hold the rooms off it: the smallest room a place is in is its room)
+    let area = |r: &crate::scene_scenarios::StructureRoom| (r.bounds.x1 - r.bounds.x0) * (r.bounds.z1 - r.bounds.z0);
+    js::sort_by(&mut rooms, |a, b| area(a) - area(b));
+    (crate::scene_scenarios::StructureData { name: crate::roomclear::room_clear_scenario_structure(g).map(|s| s.name).unwrap_or_default(), rooms, ..Default::default() }, of)
+}
+
+/// Squads for the men of a mission whose level lists no rooms for them: a few picked men, so trained ones.
+pub(crate) fn squads_by_rooms(g: &mut Game, men: &[GuardId]) {
+    let (floor, of) = floor_of(g, men);
+    let mut cut = squad_deal(g, Some(&floor), &of, None);
+    for q in cut.iter_mut().filter_map(|s| s.squads.as_mut()).flatten() { q.training = Some(crate::scene_scenarios::SquadDataTraining::Trained); }
+    crate::enemysquads::squads_stage(g, cut.as_ref(), men, &of);
 }
 
 #[cfg(test)]
