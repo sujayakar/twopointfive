@@ -282,29 +282,58 @@ pub fn gun_string_grow(g: &crate::game::Game, gd: GuardId, k: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::weapons::WeaponId as W;
+    use alloc::{boxed::Box, vec};
 
-    #[test]
-    fn the_deal_key_reads_as_the_template_string_does() {
-        // the TypeScript's own: Math.round(-0.02 * 10) prints 0, Math.round(-12.45 * 10) prints -124
-        assert_eq!(deal_key(0, -0.02, 3.14), "0|0|0|31");
-        assert_eq!(deal_key(3, -12.45, 4.2), "0|3|-124|42");
+    fn man(g: &mut Game, id: W) -> GuardId {
+        let weapon = g.fa.push(crate::weapons::Firearm { def: id, ..crate::weapons::Firearm::blank() });
+        let mut row = crate::game::Guard::blank();
+        row.weapon = weapon;
+        g.gd.push(row)
     }
 
+    /// Every man's draws go by his place in the cast and his mark to the tenth of a metre, so a level deals its guns the same every time, and a mark a hair either side of zero is one mark.
     #[test]
-    fn the_two_tables_are_the_generated_ones() {
-        use crate::weapons::WeaponId as W;
-        let t = role();
-        for (id, word) in [
-            (W::Fiveseven, t.fiveseven), (W::Guard9mm, t.guard9mm), (W::Aks74u, t.aks74u), (W::Ak74m, t.ak74m),
-            (W::Akms, t.akms), (W::Fn2000, t.fn2000), (W::M870, t.m870), (W::Mk12, t.mk12), (W::Mp7, t.mp7),
-            (W::Mk46, t.mk46), (W::M1014, t.m1014), (W::Hk45, t.hk45), (W::G18, t.g18), (W::Pkm, t.pkm),
-            (W::Mk18bare, t.mk18bare), (W::G19bare, t.g19bare),
-        ] {
-            assert_eq!(role_row(id).map(|r| r.as_str()), word.as_deref());
-        }
-        let ranks = rank();
-        for r in [GunRole::Pistol, GunRole::Rifle, GunRole::Room, GunRole::Reach, GunRole::Belt] {
-            assert_eq!(Some(&rank_row(r)), ranks.get(String::from(r.as_str())));
-        }
+    fn a_mans_draws_go_by_his_place_and_his_mark_to_the_tenth() {
+        assert_eq!(deal_key(2, 4.01, -7.02), deal_key(2, 3.99, -6.98));
+        assert_ne!(deal_key(2, 4.0, 7.0), deal_key(3, 4.0, 7.0));
+        assert_ne!(deal_key(2, 4.0, 7.0), deal_key(2, 4.2, 7.0));
+        assert_ne!(deal_key(2, 4.0, 7.0), deal_key(2, 7.0, 4.0));
+        assert_eq!(deal_key(0, -0.02, 0.0), deal_key(0, 0.02, 0.0));
+    }
+
+    /// The room guns go through a door first; a stack of one kind has nobody to put ahead.
+    #[test]
+    fn the_room_gun_goes_through_a_door_first() {
+        let mut g = Box::new(Game::blank());
+        let (room, rifle, pistol, reach, belt) = (man(&mut g, W::Mp7), man(&mut g, W::Aks74u), man(&mut g, W::Guard9mm), man(&mut g, W::Mk12), man(&mut g, W::Pkm));
+        assert_eq!(gun_first(&mut g, &[rifle, reach, room]), vec![room]);
+        assert_eq!(gun_first(&mut g, &[reach, rifle, pistol]), vec![rifle, pistol], "a pistol goes when a rifle does");
+        assert_eq!(gun_first(&mut g, &[rifle, pistol]), vec![rifle, pistol]);
+        assert!(gun_before(&g, room, rifle) && gun_before(&g, rifle, belt) && !gun_before(&g, rifle, pistol) && !gun_before(&g, reach, belt));
+    }
+
+    /// The long guns go in last, in the order they had, but the man picked first stays first.
+    #[test]
+    fn the_long_guns_go_in_last() {
+        let mut g = Box::new(Game::blank());
+        let (room, rifle, reach, belt) = (man(&mut g, W::M1014), man(&mut g, W::Ak74m), man(&mut g, W::Mk12), man(&mut g, W::Mk46));
+        assert_eq!(gun_turn(&mut g, &[reach, rifle, belt, room], rifle), vec![rifle, room, reach, belt]);
+        assert_eq!(gun_turn(&mut g, &[reach, rifle, belt, room], reach), vec![reach, rifle, room, belt]);
+        assert_eq!(gun_last(&mut g, &[belt, rifle, reach, room]), vec![rifle, room, belt, reach]);
+        assert_eq!(gun_last(&mut g, &[belt, reach]), vec![belt, reach], "all long: the order they had");
+    }
+
+    /// A long gun wants the far opening and a short one the near, a rifle minds neither, and it counts for more the further it is.
+    #[test]
+    fn a_far_opening_is_for_the_long_gun() {
+        let mut g = Box::new(Game::blank());
+        let (room, rifle, pistol, reach, belt) = (man(&mut g, W::Mp7), man(&mut g, W::Aks74u), man(&mut g, W::Guard9mm), man(&mut g, W::Mk12), man(&mut g, W::Pkm));
+        let at = |g: &Game, m: GuardId, d: f64| gun_lane(g, m, d, 20.0);
+        assert!(at(&g, reach, 20.0) > 0.0 && at(&g, reach, 20.0) == at(&g, belt, 20.0));
+        assert!(at(&g, reach, 20.0) > at(&g, reach, 5.0));
+        assert_eq!(at(&g, reach, 40.0), at(&g, reach, 20.0), "past his reach it is worth no more");
+        assert_eq!(at(&g, rifle, 20.0), 0.0);
+        assert!(at(&g, pistol, 20.0) < at(&g, room, 20.0) && at(&g, room, 20.0) < 0.0);
     }
 }

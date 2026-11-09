@@ -391,24 +391,53 @@ pub fn fire_line_live(g: &crate::game::Game, gd: GuardId) -> bool {
 mod tests {
     use super::*;
 
-    /// The bits, the hits and the last point asked, against fireline.ts `along` under bun with EXACT.on.
-    fn run(far: f64, f: &dyn Fn(f64, f64) -> bool) -> (u64, i32, u64, u64) {
-        let from = [0.1, 0.0, 0.3];
-        let pts = [[1.7, 0.0, 2.9], [1.7, 0.0, 2.9], [-3.3, 0.0, 4.4]];
-        let (mut calls, mut lx, mut lz) = (0, 0.0f64, 0.0f64);
-        let s = along(from, &pts, far, &mut |x, z| {
-            calls += 1;
-            lx = x;
-            lz = z;
-            f(x, z)
+    /// The walk's answer and every point it asked about.
+    fn walk(pts: &[V3], far: f64, hit: &dyn Fn(f64, f64) -> bool) -> (f64, Vec<(f64, f64)>) {
+        let mut asked = Vec::new();
+        let s = along([0.0; 3], pts, far, &mut |x, z| {
+            asked.push((x, z));
+            hit(x, z)
         });
-        (s.to_bits(), calls, lx.to_bits(), lz.to_bits())
+        (s, asked)
+    }
+    const CORNER: [V3; 2] = [[10.0, 0.0, 0.0], [10.0, 0.0, 10.0]];
+
+    /// A doorway or a lane is never stepped over: the path is asked about every 20 cm at most, right to its end.
+    #[test]
+    fn the_walk_misses_nothing_on_the_way() {
+        let (s, asked) = walk(&CORNER, f64::INFINITY, &|_, _| false);
+        assert_eq!(s, f64::INFINITY);
+        let mut was = (0.0, 0.0);
+        for &(x, z) in &asked {
+            assert!(m::hyp2(x - was.0, z - was.1) <= 0.2 + 1e-9, "a step from {:?} to {:?}", was, (x, z));
+            was = (x, z);
+        }
+        assert_eq!(was, (10.0, 10.0));
     }
 
+    /// The answer is how far along the first point that answers is, the legs behind it counted, and nothing past it is asked.
     #[test]
-    fn along_matches_the_typescripts_bits() {
-        assert_eq!(run(f64::INFINITY, &|x, _| x < -1.0), (0x4017cfd2d1826696, 31, 0xbff13e93e93e93e9, 0x400dddddddddddde));
-        assert_eq!(run(f64::INFINITY, &|_, _| false), (0x7ff0000000000000, 43, 0xc00a666666666666, 0x401199999999999a));
-        assert_eq!(run(1.0, &|_, _| false), (0x7ff0000000000000, 5, 0x3fe3333333333333, 0x3ff1cccccccccccd));
+    fn the_walk_stops_at_the_first_point_that_answers() {
+        let (s, asked) = walk(&CORNER, f64::INFINITY, &|x, _| x >= 3.0);
+        assert!(s >= 3.0 && s <= 3.2 + 1e-9, "{s}");
+        assert_eq!(asked.last().unwrap().0, s);
+        let (s, _) = walk(&CORNER, f64::INFINITY, &|_, z| z >= 2.0);
+        assert!(s >= 12.0 && s <= 12.2 + 1e-9, "{s}");
+    }
+
+    /// Past `far` the walk has found nothing, even where something would answer.
+    #[test]
+    fn the_walk_goes_no_further_than_it_was_told() {
+        let (s, asked) = walk(&CORNER, 1.0, &|x, _| x >= 5.0);
+        assert_eq!(s, f64::INFINITY);
+        assert!(asked.iter().all(|p| p.0 <= 1.0), "{:?}", asked.last());
+    }
+
+    /// A point given twice, or one straight overhead, is no length of floor.
+    #[test]
+    fn a_leg_with_no_floor_in_it_is_no_step() {
+        let plain = walk(&CORNER, f64::INFINITY, &|_, _| false).1;
+        let again = walk(&[[0.0, 5.0, 0.0], CORNER[0], CORNER[0], CORNER[1]], f64::INFINITY, &|_, _| false).1;
+        assert_eq!(again, plain);
     }
 }

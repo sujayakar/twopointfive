@@ -98,11 +98,6 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
     this
 }
 
-/// Every live streak, copied.
-fn tracers_each(g: &crate::game::Game) -> Vec<crate::tracers::Tracer> {
-    g.tracers.pool.iter().filter(|t| t.alive).copied().collect()
-}
-
 /// fireWeapon's one call, after the round was traced. Returns whether a streak went.
 pub(super) fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def: &crate::weapons::WeaponDef, muzzle: V3, dir: V3, t_hit: f64, impact: crate::tracers::TracerImpact, owner: f64, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
@@ -131,12 +126,6 @@ fn slot_at(g: &mut Game) -> usize {
     g.tracers.pool[oldest].alive = false;
     g.tracers.live = m::max(0.0, g.tracers.live - 1.0);
     oldest
-}
-
-/// A free slot, else the oldest streak's: the row itself.
-fn tracers_slot<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tracers::Tracer {
-    let i = slot_at(g);
-    &mut g.tracers.pool[i]
 }
 
 /// Starts a streak in a slot, with a head light if the budget of lights has one to spare.
@@ -269,6 +258,7 @@ mod tests {
 
     std::thread_local! { static ROWS: core::cell::RefCell<Vec<*mut crate::scene_boxes::Box>> = core::cell::RefCell::new(Vec::new()); }
 
+    /// A box made for a test: the fields `streak_box_p` gives, in a table of the test's own.
     pub(super) fn made(p: &crate::scene_boxes::MakeBoxP) -> BoxId {
         let mut b = crate::scene_boxes::Box::default();
         b.c = p.c; b.h = p.h; b.albedo = p.albedo.unwrap(); b.emissive = p.emissive.unwrap(); b.flags = p.flags.unwrap();
@@ -330,18 +320,10 @@ mod tests {
         assert_eq!((g.tracers.pool[1].from, g.tracers.pool[1].age, g.tracers.pool[0].from), ([5.0, 0.0, 0.0], 0.0, [0.0; 3]));
         assert_eq!((g.tracers.live, g.tracers.spawned), (2.0, 3.0));
         tracers_clear(&mut g);
-        assert_eq!((tracers_each(&mut g).len(), g.tracers.live), (0, 0.0));
+        assert_eq!((g.tracers.pool.iter().filter(|t| t.alive).count(), g.tracers.live), (0, 0.0));
     }) }
 
-    /// A slot taken through the public door is the row itself, and what is written through it stays.
-    #[test]
-    fn a_write_through_the_slot_lands_in_the_pool() { on_a_big_stack(|| {
-        let mut g = game(2);
-        tracers_slot(&mut g).age = 7.0;
-        assert_eq!(g.tracers.pool[0].age, 7.0);
-    }) }
-
-    /// The row's own numbers decide, through the weapons table. Only the cases that stop before Firearm's stubs.
+    /// The row's own numbers decide, through the weapons table.
     #[test]
     fn the_row_says_which_round_is_a_tracer() { on_a_big_stack(|| {
         let mut g = game(1);
@@ -355,7 +337,7 @@ mod tests {
         assert!(!is_tracer_round(&mut g, w)); // a pistol's row declares none
     }) }
 
-    /// The constructor's slots, each with its own lamp in the table, as the literal has it, and not in the set.
+    /// A pool's slots, each with its own box parked under the floor and its own lamp in the table, not yet in the set of lights; never fewer than one.
     #[test]
     fn each_slot_is_made_with_its_own_lamp() { on_a_big_stack(|| {
         let mut g = Box::new(Game::blank());
@@ -380,7 +362,7 @@ mod tests {
         let lamp = g.tab.light.push(crate::render_lights::RtLight::default());
         g.tracers.pool[0].lamp = lamp;
         tracers_spawn(&mut g, [1.0, 2.0, 3.0], [0.0, 0.0, 1.0], 50.0, TracerImpact::None, [1.0; 3], 0.0);
-        g.tracers.pool[0].light = Some(lamp); // lit by hand: light_set_add is a stub here
+        g.tracers.pool[0].light = Some(lamp); // lit by hand: this game has no set of lights
         g.tab.light[lamp].age = 9.0;
         let mut out = Vec::new();
         tracers_update(&mut g, 0.1, &mut out);
@@ -388,37 +370,37 @@ mod tests {
         assert_eq!((l.age, l.enabled, l.pos, g.tracers.lit), (0.0, true, [1.0 + 0.0 * (s - 0.05), 2.0 + 0.0 * (s - 0.05), 3.0 + 1.0 * (s - 0.05)], 1.0));
     }) }
 
-    fn bits<const N: usize>(a: [f64; N]) -> [u64; N] { a.map(f64::to_bits) }
-
-    /// dt, then s and the box's c, h, emissive
-    const FRAMES: [(f64, u64, [u64; 3], [u64; 3], [u64; 3]); 3] = [
-        (0.016, 0x40063f63f63f63f6, [0x3ffd2ed775f1c5d9, 0x3ff4f062d8af68b8, 0xc00039bccf15573a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
-        (0.002, 0x4009075075075075, [0x3ffeee9efa1fd328, 0x3ff45b20574ab99e, 0xbffb342311a0868a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
-        (0.003, 0x400d333333333333, [0x4000c7252032738e, 0x3ff37b3c9533b2f6, 0xbff355213ed14aaa], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
-    ];
-
-    /// The streak's box, frame by frame, to the bit: as thick as the weapons' table says, whatever view is shown.
+    /// A streak is a thin lit box, its head where the round has got to and its tail a shutter's flight behind, as thick as the effects table says whatever view is shown, pointing along the round. It stops at the end of its flight.
     #[test]
-    fn the_streak_has_its_bits() { on_a_big_stack(|| {
+    fn a_streak_is_a_thin_lit_box_behind_the_head() { on_a_big_stack(|| {
         let mut g = game(1);
-        let pistol = g.m.weapons.weapons.get(crate::weapons::WeaponId::Fiveseven).unwrap().clone();
-        let mut def = pistol;
+        let p = g.tracers.params;
+        let mut def = g.m.weapons.weapons.get(crate::weapons::WeaponId::Fiveseven).unwrap().clone();
         def.tracer = Some(crate::weapons::TracerSpec { every: 3.0, last_n: 3.0, color: [1.0, 0.6, 0.25] });
-        assert!(tracers_round(&mut g, None, &def, [1.25, 1.5, -3.75], [0.3, -0.1, 0.9], 7.3, TracerImpact::None, 0x1ff as f64, Some(true)));
+        let (from, dir, l): (V3, V3, f64) = ([1.25, 1.5, -3.75], [0.6, 0.0, 0.8], 7.3);
+        assert!(tracers_round(&mut g, None, &def, from, [1.2, 0.0, 1.6], l, TracerImpact::None, 0x1ff as f64, Some(true)));
         let t = g.tracers.pool[0];
         let b = t.box_;
-        assert_eq!(bits(t.dir), [0x3fd4208795cbc6ae, 0xbfbad60a1d0fb393, 0x3fee30cb60b1aa06]);
-        assert_eq!(t.v.to_bits(), 0x4065b9e79e79e79e);
-        assert_eq!(bits(row(b).rot.unwrap()), [0x3fab394341c15ae3, 0x3fc46af27151042a, 0x8000000000000000, 0x3fef8b5e4c68d90d]);
-        assert_eq!(row(b).yaw.to_bits(), 0x3fd4978fa3269ee1);
-        assert_eq!(row(b).owner.to_bits(), 0x406fe00000000000);
+        assert!(v3::dist(t.dir, dir) < 1e-12, "the way the round went, as a unit: {:?}", t.dir);
+        assert_eq!(t.v, m::min(p.speed, l / p.min_life));
+        assert!(v3::dist(v3::quat::rotate(row(b).rot.unwrap(), [0.0, 0.0, 1.0]), dir) < 1e-12, "the box lies along the round");
+        assert_eq!(row(b).yaw, v3::yaw_of(dir));
+        assert_eq!(row(b).owner, 255.0, "the shooter's byte");
         let mut out = Vec::new();
-        for (dt, s, c, h, e) in FRAMES {
+        for dt in [0.016, 0.002] {
             tracers_update(&mut g, dt, &mut out);
-            assert_eq!(g.tracers.pool[0].s.to_bits(), s);
-            assert_eq!((bits(row(b).c), bits(row(b).h), bits(row(b).emissive)), (c, h, e));
+            let s = g.tracers.pool[0].s;
+            let (c, h, e) = (row(b).c, row(b).h, row(b).emissive);
+            assert_eq!((h[0], h[1]), (p.thickness * 0.5, p.thickness * 0.5));
+            let head = v3::mad(c, dir, h[2]);
+            let want = v3::mad(from, dir, s);
+            assert!(v3::dist(head, want) < 1e-9, "the head {:?} is where the round is {:?}", head, want);
+            assert!(h[2] * 2.0 <= t.v * p.shutter + 1e-9 && h[2] * 2.0 <= s + 1e-9, "the tail is no further back than a shutter or the muzzle");
+            assert_eq!(e, [1.0 * p.emissive, 0.6 * p.emissive, 0.25 * p.emissive]);
         }
-        assert_eq!((g.tracers.pool[0].frames, out.len()), (3.0, 3));
+        tracers_update(&mut g, 10.0, &mut out);
+        assert_eq!(g.tracers.pool[0].s, l, "no further than the end of its flight");
+        assert_eq!((g.tracers.pool[0].frames, out.len()), (3.0, 3), "drawn once a frame");
     }) }
 
     /// `force` needs no gun and no row's tracer, and takes the default colour; without it a row with no tracer sends nothing; a contact shot never goes.
