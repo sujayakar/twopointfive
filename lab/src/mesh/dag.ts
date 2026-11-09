@@ -46,8 +46,8 @@ function cutUp(pool: Pool, tri: Uint32Array, turn: number): Uint32Array[] {
   return done;
 }
 /** `least`: where to stop, in triangles */
-export function buildDag(m: Mesh, least = 24): Dag {
-  const nv = m.pos.length / 3, pool = new Pool(nv * 2 + 64); pool.n = nv; pool.pos.set(m.pos); pool.nrm.set(m.nrm); for (let i = 0; i < nv * 4; i++) pool.col[i] = m.col[i]!;
+export function buildDag(m: Mesh, least = 32): Dag {
+  const nv = m.pos.length / 3, pool = new Pool(nv * 2 + 64); pool.n = nv; pool.pos.set(m.pos); pool.nrm.set(m.nrm); for (let i = 0; i < nv * 4; i++) pool.col[i] = (m.col[i]! / 255) ** 2;
   const simp = new Simplifier(), clusters: Cluster[] = [], none: Ball = { x: 0, y: 0, z: 0, r: 0 };
   let live: Cluster[] = cutUp(pool, m.tri, 0.31).map(tri => { const b = ballOf(pool, tri); return { tri, apart: 0, error: 0, ball: b, parentError: Infinity, parentBall: none, bound: b, level: 0 }; }); clusters.push(...live);
   let owner = new Int32Array(0), level = 0;
@@ -60,7 +60,7 @@ export function buildDag(m: Mesh, least = 24): Dag {
     const next: Cluster[] = []; let made = 0;
     for (const ids of groups) {
       const of = [...ids].map(i => live[i]!); let n = 0; for (const c of of) n += c.tri.length; const all = new Uint32Array(n); n = 0; for (const c of of) { all.set(c.tri, n); n += c.tri.length; }
-      const was = all.length / 3, o = owner, s = simp.run(all, pool, v => o[v] === -2, Math.max(Math.min(least, was >> 1), was >> 1)), now = s.tri.length / 3;
+      const was = all.length / 3, o = owner, s = simp.run(all, pool, v => o[v] === -2, Math.max(was >> 1, Math.min(least, was))), now = s.tri.length / 3;
       if (now > was * 0.85) { next.push(...of); continue; }           // it would not go: perhaps in other company, next time
       made++; const worst = Math.max(...of.map(c => c.error)), apart = Math.hypot(Math.max(...of.map(c => c.apart)), s.apart), error = Math.max(worst * 1.0001, Math.hypot(worst, s.error)) + 1e-9, ball = around(of.map(c => c.ball));
       for (const c of of) { c.parentError = error; c.parentBall = ball; }

@@ -33,9 +33,9 @@ export function split4(m: { pos: Float32Array; tri: Uint32Array }): { pos: Float
   return { pos: pos.slice(0, n * 3), tri };
 }
 
-/** how many edges have other than two triangles on them (0: closed) */
-export function openEdges(tri: Uint32Array): number {
+/** how many edges have one triangle on them (0: closed), and how many have more than two (two sheets that touch: no crack) */
+export function edges(tri: Uint32Array): { open: number; touch: number } {
   const seen = new Map<number, number>(); let top = 0; for (const v of tri) if (v > top) top = v;
   for (let t = 0; t < tri.length; t += 3) for (let k = 0; k < 3; k++) { const a = tri[t + k]!, b = tri[t + (k + 1) % 3]!, key = Math.min(a, b) * (top + 1) + Math.max(a, b); seen.set(key, (seen.get(key) ?? 0) + 1); }
-  let open = 0; for (const n of seen.values()) if (n !== 2) open++; return open;
+  let open = 0, touch = 0; for (const n of seen.values()) if (n === 1) open++; else if (n > 2) touch++; return { open, touch };
 }
