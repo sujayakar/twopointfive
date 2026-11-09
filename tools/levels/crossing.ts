@@ -3,7 +3,7 @@
 // THE LEVEL'S ONE IDEA: TWO MEN WHO WATCH EACH OTHER — nobody crosses by the lane until both drop on one word.
 // Seven beats are authored (the game has seven names for a level's men); a deal mans five or six.
 //   bun run tools/levels/export.ts crossing          → levels/crossing.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
-//   bun run tools/qa/quiet-check.ts crossing.json     the quiet block against the built floor, every deal started
+//   levels stands crossing     the quiet block against the built floor, every deal started
 //   bun run tools/qa/quiet-light.ts crossing          the light a sneaking man stands in, on paper
 //   bun run tools/qa/quiet-pair.ts --level crossing.json --seeds 1-48      the scripted pair beside the same run alone
 //   bun run tools/qa/quiet-plan.ts crossing --png     the plan picture: beats, starts, places, ways out, the cameras' cones
@@ -156,7 +156,7 @@ export const QUIET: QuietData = {
   },
 };
 
-/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
+/** scenarios.response (game/qrf.ts, rust/game_start/tests/response_team.rs): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
  *  they come on foot from the house's side, by one of its two yard gates. Character yaws (forward = [sin, 0, cos]: 0 looks down the plan, toward the road). */
 export const RESPONSE: ResponseData = {
   why: 'A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.',

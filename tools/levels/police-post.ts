@@ -2,7 +2,7 @@
 // shed, a guard hut at the gate, two pickups under a tin canopy, a radio mast behind the radio room and an impound of seized vehicles down the east wall.
 // No story: a place, a thing to take, a way out. Six beats are authored; a run mans five of them (the plain file mans all six).
 //   bun run tools/levels/export.ts police-post      → levels/police-post.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
-//   bun run tools/qa/quiet-check.ts police-post.json  the quiet block against the built floor, every deal started
+//   levels stands police-post  the quiet block against the built floor, every deal started
 //   bun run tools/qa/quiet-light.ts police-post       the light a sneaking man stands in, on paper
 //   bun run tools/qa/quiet-plan.ts police-post --png  the plan picture: beats, starts, places, ways out, the cameras' cones
 //   bun run tools/qa/solo-night.ts --level police-post.json --quiet --plan careful,sneak,walk --out short --seeds 1-12      the scripted player against it
@@ -84,7 +84,7 @@
 //
 // LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. needs.ts NEED_SPOTS and
 // qrf.ts QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
-// NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, quiet-check, quiet-light, the scripted solo night); nobody has looked at it on a GPU.
+// NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, levels stands, quiet-light, the scripted solo night); nobody has looked at it on a GPU.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -194,7 +194,7 @@ export const QUIET: QuietData = {
 /** QUIET_VARIANT=spot,patrolSet,start — CHECKING ONLY: that deal, with level.routes cut down to the one set, written to levels/police-post-v<spot><set><start>.json
  *  (a scratch file, not committed) so the scripted player can be run against one deal. Unset = the committed file: spot 0, start 0, all six routes. */
 const VARIANT = process.env.QUIET_VARIANT ? process.env.QUIET_VARIANT.split(',').map(x => Number(x) || 0) : null;
-/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
+/** scenarios.response (game/qrf.ts, rust/game_start/tests/response_team.rs): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
  *  stride inside it; yaws are Character yaws (forward = [sin, 0, cos]: Math.PI looks up the plan, toward the building). */
 export const RESPONSE: ResponseData = {
   why: 'A district post with a radio room and an army picket down the road: shots here are heard on a net somebody answers, and the picket walks in by a gate.',

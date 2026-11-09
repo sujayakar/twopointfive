@@ -36,7 +36,7 @@
 //     inside 4.5 m of each other turn and talk (dialogue.ts AMBIENT.pairM), which is why they are not nearer.
 //   · THE START is more than ten metres by walking from every man: opening.ts moves on any man of the shift who starts nearer the spawn than that, and a man
 //     moved on comes back to his post facing the way he came. It is outside the wall, on the road by their pickup, where the moon shows the two of them and
-//     no man has a line (tools/qa/quiet-check.ts).
+//     no man has a line (levels stands).
 //   · THE MOON AND THE PARTNER. On the page the partner reads the way to a man's back by the light on himself (sneak.ts stalkAmbient): stood in the moon, he
 //     takes the whole way for lit, and will not cross it in front of a man who looks that way. So the moon is low in the south-west and every mark the
 //     player is led to is in a moon shadow.

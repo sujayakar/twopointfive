@@ -5,7 +5,7 @@
 //
 // Door names are the level's own door ids (Doors.byName); light groups are its switchable groups (Game.setGroup); every point is world metres on the floor (y 0)
 // unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: roomclear.ts checkStructure,
-// rescue.ts checkRescue, rescueflow.ts RescueFlow.check — tools/qa/scenario-level-probes.ts runs all three on a level file.
+// rescue.ts checkRescue, rescueflow.ts RescueFlow.check — levels stands runs all three on a level file.
 import type { Vec3 } from '../math/vec';
 import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
 import type { HourId, WeatherKind } from './words';
@@ -178,7 +178,7 @@ export interface PlacesData { areas: PlaceArea[] }
 /** THE QUIET MISSION (game/quiet.ts — `?quiet`): the level's own night, live — its routes walked, its devices and civilians as on the plain night, nobody posted
  *  and nobody benched — with a thing to take from a place and ways out, alone or with ONE partner (the pair rules, game/pairup.ts, silent from the first
  *  frame). REPLAY: the run's seed deals one of `starts`, one of `spots` and one of `patrols`; every exit is open on every run. Every point is floor (y 0)
- *  but a spot's `front` (the holder's face, y ≈ 1). Checked against the built floor by game/quiet.ts checkQuiet (tools/qa/quiet-check.ts). */
+ *  but a spot's `front` (the holder's face, y ≈ 1). Checked against the built floor by game/quiet.ts checkQuiet (levels stands). */
 export interface QuietStart {
   sam: Vec3; samYaw: number;
   /** where the one partner stands (absent: the nearest free floor a stride behind Sam) */
@@ -454,7 +454,7 @@ export interface KitViewData { ways: KitViewWay[]; /** the bespoke sets a way ma
 /** THE RESPONSE TEAM (game/qrf.ts, behind its switch RESPONSE.on): the men who come from OUTSIDE the level once its own net has called for them. It is part
  *  of a level's design, not a rule of the game: a level carries this block only where somebody would plausibly come (`why` says who, in the level's own
  *  terms), and a level without it has no team — nothing is promised on its radio and nobody is stood up. Every point is floor (y 0). Checked against the
- *  built floor by game/qrf.ts checkResponse (tools/qa/response-check.ts): free cells, a walk from every muster to its fan and on into the level, the door a
+ *  built floor by game/qrf.ts checkResponse (rust/game_start/tests/response_team.rs): free cells, a walk from every muster to its fan and on into the level, the door a
  *  way names. A way's `name` is spoken on the net and drawn on the HUD's radio strip: no compass word in a new one. */
 export interface ResponseWay {
   /** the way in as their net says it, with its article ('the main gate', 'the west stairwell') */
