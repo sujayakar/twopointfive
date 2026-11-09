@@ -11,7 +11,7 @@ const PORT=process.env.PORT||5210, words=process.argv[2]||'levelFile=office.json
    tick(){ __draw.run(1,[],'none'); },
    async solve(dt){ E.lastDt=dt; S.update(dt); const enc=dev.createCommandEncoder(); S.encode(enc,()=>undefined); dev.queue.submit([enc.finish()]); S.afterSubmit(); await dev.queue.onSubmittedWorkDone(); },
    async frames(n){ for(let i=0;i<n;i++){ __draw.run(1,[],'all'); if(i%4===3) await dev.queue.onSubmittedWorkDone(); } await dev.queue.onSubmittedWorkDone(); },
-   still(){ __draw.run(1,[],'all'); const cv=document.getElementById('view'),c=document.createElement('canvas'); c.width=cv.width;c.height=cv.height; c.getContext('2d').drawImage(cv,0,0); return c.toDataURL('image/jpeg',.9); },
+   async still(){ __draw.run(1,[],'all'); E.render(D.cam,5,1/60,false); const f=await E.readbackFrame(), u=new Uint8ClampedArray(f.data); if(f.bgra)for(let i=0;i<u.length;i+=4){const x=u[i];u[i]=u[i+2];u[i+2]=x;} for(let i=3;i<u.length;i+=4)u[i]=255; const c=document.createElement('canvas'); c.width=f.w;c.height=f.h; c.getContext('2d').putImageData(new ImageData(u,f.w,f.h),0,0); return c.toDataURL('image/jpeg',.88); },
    async second(){ const k=Math.round(60/HZ); for(let i=0;i<60;i++){ this.tick(); if(i%k===k-1) await this.solve(1/HZ); } },
    async read(){ const cap=S.grid.cap,words=S.M.size/4,mB=words*4,sB=cap*1664*4; const R=(S.M.size/4-S.bentAt-16-512)/512;
      const rb=dev.createBuffer({size:mB+sB,usage:9}); const enc=dev.createCommandEncoder(); enc.copyBufferToBuffer(S.M,0,rb,0,mB); enc.copyBufferToBuffer(S.S,0,rb,mB,sB); dev.queue.submit([enc.finish()]); await rb.mapAsync(1);
