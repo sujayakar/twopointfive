@@ -29,7 +29,7 @@ pub fn chaos_of(g: &crate::game::Game) -> f64 {
 
 /// The loud levels' rules are live: a scenario is up.   (destruction.ts loudNow)
 pub fn loud_now(g: &crate::game::Game) -> bool {
-    crate::roomclear::room_clear_scenario_active(g) || crate::nightbreach::night_breach_up(g) || crate::rescue::rescue_up(g)
+    g.staged.facts.fight
 }
 
 /// Impulses at all: chaos above 0 and the switch.   (destruction.ts impulsesOn)

@@ -121,7 +121,7 @@ pub fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: O
         g.quiet.mine = Some(held_now(g));
         crate::teams::staff_vs_operatives(g, true);
     }
-    g.staged.up = Some(crate::scene_scenarios::MissionKind::Quiet);
+    g.staged.begin(crate::scene_scenarios::MissionKind::Quiet, crate::mission::Facts { unseen: true, ..Default::default() });
     g.stats.quiet.starts += 1;
     crate::game::game_restart_encounter(g);   // → beforeRestart deals and writes the level; onEncounterRestart stages
     if crate::quiet::quiet_of(g) { None } else { Some(g.quiet.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
@@ -130,7 +130,7 @@ pub fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: O
 /// Stop it: the partner gone, every route manned, the authored mission and spawn back, a fresh night encounter   (quiet.ts QuietMission.stop)
 pub fn quiet_mission_stop(g: &mut crate::game::Game) {
     if !crate::quiet::quiet_of(g) { return; }
-    g.staged.up = None;
+    g.staged.down();
     quiet_mission_put_back(g);
     quiet_mission_release(g);
     g.staged.team = Vec::new();

@@ -48,7 +48,7 @@ pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 fn start_at(g: &Game) -> Option<V3> {
     if !crate::roomclear::room_clear_scenario_active(g) { return None; }
     let s = crate::roomclear::room_clear_scenario_structure(g)?;
-    let way = g.room_clear.way;
+    let way = g.staged.way;
     if way > 0.0 { if let Some(t) = s.starts.as_ref().and_then(|v| v.get(way as usize - 1)) { return Some(t.sam); } }
     s.team.as_ref().map(|t| t.sam)
 }
@@ -180,11 +180,11 @@ fn watch(g: &mut Game) {
 }
 
 /// The way a won run was won: quiet, dark, walls, doors, in that order.   (verdict.ts Verdict.approach)
-fn approach(g: &Game, kind: Option<crate::scene_scenarios::MissionKind>) -> Approach {
+fn approach(g: &Game) -> Approach {
     let (s, n) = (&g.mission.stats, &g.chronicle.counts);
     // a loaded run lost this module's own latches: for the kinds that can be loaded the chronicle says the same, and for the stealth game the
     // mission's own books decide with it, loaded or not
-    let stealth = kind.is_none() || kind == Some(crate::scene_scenarios::MissionKind::Quiet);
+    let stealth = !g.staged.facts.fight;
     let loaded = g.verdict.resumed && stealth;
     let found = g.verdict.found_at >= 0.0 || (stealth && (s.alerts > 0.0 || s.spotted > 0.0 || n.esc1 + n.esc2 > 0.0));
     if !found { return Approach::Quiet; }
@@ -194,18 +194,16 @@ fn approach(g: &Game, kind: Option<crate::scene_scenarios::MissionKind>) -> Appr
 
 /// The run is over: its one verdict is made, and stays.   (verdict.ts Verdict.close)
 fn close(g: &mut Game, end: (bool, &'static str, String)) {
-    use crate::scene_scenarios::MissionKind as K;
-    let kind = g.staged.up;
     let secs = secs(g);
     let men: Vec<VerdictMan> = g.verdict.tracks.values().map(|t| VerdictMan { id: t.id, name: t.name.clone(), tone: t.tone, human: t.human, state: t.state, down_at: t.down_at, down_room: t.down_room.clone(), down_by: t.down_by.clone(), down_pos: t.down_pos, drops: t.drops.clone(), path: t.path.clone() }).collect();
     let lost = men.iter().filter(|x| x.state != ManState::Up).count() as f64;
     let foes_down = g.verdict.foes.iter().filter(|&h| g.gd[h].state == crate::game::GuardState::Dead).count() as f64;
-    let hostages = if kind == Some(K::Rescue) { g.rescue.result.as_ref().map(|r| RunVerdictHostages { alive: r.hostages, of: g.rescue.hostages.len() as f64 }) } else { None };
+    let hostages = if crate::rescue::rescue_up(g) { g.rescue.result.as_ref().map(|r| RunVerdictHostages { alive: r.hostages, of: g.rescue.hostages.len() as f64 }) } else { None };
     let (won, word, why) = end;
     let res = RunVerdict {
-        kind: kind.map(|k| match k { K::Nightbreach => RunVerdictKind::Nightbreach, K::Roomclear => RunVerdictKind::Roomclear, K::Rescue => RunVerdictKind::Rescue, K::Quiet => RunVerdictKind::Quiet }),
+        kind: g.staged.up,
         won, word: String::from(word), why, secs,
-        approach: if won { Some(approach(g, kind)) } else { None },
+        approach: if won { Some(approach(g)) } else { None },
         void: g.verdict.cheat || (g.verdict.resumed && g.mission.stats.sandbox),
         clean: lost == 0.0, of: men.len() as f64, men, lost,
         foes: RunVerdictFoes { down: foes_down, of: g.verdict.foes.keys().len() as f64, fell: g.verdict.fell_at.clone() },
@@ -213,7 +211,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     };
     // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
-    let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
+    let all_down = crate::seats::all_down(g);
     let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
     g.verdict.card_at = if own { -1.0 } else { g.time + if won { g.k.verdict.win_secs } else { g.k.verdict.loss_secs } };
     g.verdict.res = Some(res);
@@ -241,7 +239,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
     // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
     if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }
     watch(g);
-    if let Some(end) = ended(g) { close(g, end); }
+    if let Some(end) = crate::mission::ended(g) { close(g, end); }
 }
 
 /// HOW THE MISSION ENDED, read off the latched record: None while it is being played (and for a run that is not this mission any more), else whether
@@ -272,7 +270,7 @@ pub fn run_on(g: &crate::game::Game) -> (bool, bool) {
 pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
     let (begun, over) = run_on(g);
     let file = row_file(g);
-    let entry = crate::scenario_run::running_scenario(g, file.as_deref(), None).and_then(|r| r.entry);
+    let entry = crate::scenario_run::running_row(g, file.as_deref());
     let level = String::from(crate::difficulty::difficulty_now(g).as_str());
     let res = if over { g.verdict.res.as_ref() } else { None };
     let name = file.as_deref().unwrap_or("office");
@@ -286,7 +284,7 @@ pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
         way: res.and_then(|r| r.approach),
         clean: res.map_or(false, |r| r.clean),
         secs: res.map_or(0.0, |r| r.secs),
-        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.staged.team.len(), level),
+        course: format!("{}|way{}|squad{}|{}", name, g.staged.way + 1.0, g.staged.team.len(), level),
         level,
         par: crate::par::par_result_now(g).map(|r| r.shown),
     }

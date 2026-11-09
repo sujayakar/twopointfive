@@ -75,17 +75,7 @@ pub fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     }) {
         return true;
     }
-    if crate::nightbreach::night_breach_up(g) {
-        let st = crate::nightbreach::night_breach_state(g);
-        if st == crate::nightbreach::NightBreachState::Going || st == crate::nightbreach::NightBreachState::Inside {
-            return true;
-        }
-    }
-    if !crate::rescue::rescue_up(g) || !crate::rescue::rescue_dynamic(g) {
-        return false;
-    }
-    let st = crate::rescue::rescue_state(g);
-    st != crate::rescue::RescueState::Rescued && st != crate::rescue::RescueState::Lost
+    crate::mission::going(g)
 }
 
 /// His shot or his order has started the fight. A stamp from a roster that is gone, or from ahead of the clock, is no lift.   (holdfire.ts holdFireLifted)

@@ -426,7 +426,7 @@ pub fn room_clear_scenario_structure(g: &crate::game::Game) -> Option<crate::sce
 pub fn room_clear_scenario_start_at(g: &crate::game::Game) -> Option<V3> {
     if !room_clear_scenario_active(g) { return None; }
     let s = room_clear_scenario_structure(g)?;
-    let way = g.room_clear.way;
+    let way = g.staged.way;
     let by_way = if way > 0.0 { s.starts.as_ref().and_then(|v| v.get(way as usize - 1)).cloned() } else { None };
     by_way.or(s.team).map(|t| t.sam)
 }
@@ -527,7 +527,7 @@ pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -
             g.k.roomclear.seed = want;
             g.room_clear.fresh = 0.0;
             // (against the seed ON THE FLOOR, not the knob)
-            if want != g.room_clear.seed || room_clear_scenario_way_now(g) != g.room_clear.way {
+            if want != g.room_clear.seed || room_clear_scenario_way_now(g) != g.staged.way {
                 room_clear_scenario_restage(g);
             }
         }
@@ -569,6 +569,7 @@ pub fn room_clear_scenario_restage(g: &mut crate::game::Game) {
 /// the score wiped   (roomclear.ts RoomClearScenario.clear)
 pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
     crate::enemysquads::squads_stop(g);
+    g.staged.over = false;
     let s = &mut g.room_clear;
     s.rooms = Vec::new();
     s.placement = Vec::new();
@@ -589,12 +590,13 @@ pub fn room_clear_scenario_note(g: &crate::game::Game, what: &str) {
 
 /// the night breach's staging asks who the defenders are: every staging is the knob's placement, first attempt (SAMESTART)   (roomclear.ts RoomClearScenario.deal)
 pub fn room_clear_scenario_deal(g: &mut crate::game::Game) -> Vec<crate::nightbreach::NightBreachMark> {
-    g.room_clear.way = room_clear_scenario_way_now(g);
+    g.staged.way = room_clear_scenario_way_now(g);
     let seed = g.k.roomclear.seed;
     g.room_clear.seed = seed;
     g.room_clear.attempt = 1.0;
-    let rooms = room_clear_scenario_structure(g).expect("the room clear dealt on a level with no structure").rooms;
+    let crate::scene_scenarios::StructureData { rooms, wall_charges: walls, .. } = room_clear_scenario_structure(g).expect("the room clear dealt on a level with no structure");
     let placement = place_defenders(seed, Some(1.0), &crate::roomclear::PlaceDefendersS { rooms });
+    g.staged.walls = walls;
     let drill = room_clear_scenario_drill_room(g).map(|r| r.id);
     let marks = placement
         .iter()
@@ -759,10 +761,17 @@ pub fn room_clear_scenario_adopt(g: &mut crate::game::Game, gd: GuardId, p: &cra
     g.room_clear.rooms[r].defenders.push(gd);
 }
 
+/// How it ended, for the run's card.
+pub fn room_clear_scenario_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    use crate::roomclear::RoomClearEnd::{Taken, Wiped};
+    g.room_clear.end.map(|end| match end { Taken => (true, "CLEAR", g.room_clear.end_why.clone()), Wiped => (false, "WIPED", g.room_clear.end_why.clone()) })
+}
+
 /// an end, and what it is called   (roomclear.ts RoomClearScenario.finish)
 pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomclear::RoomClearEnd, why: &str) {
     use crate::roomclear::RoomClearEnd::{Taken, Wiped};
     g.room_clear.end = Some(end);
+    g.staged.over = true;
     g.room_clear.end_at = g.time;
     g.room_clear.end_why = String::from(why);
     room_clear_scenario_note(g, &format!("end:{}", end.as_str()));
@@ -839,7 +848,7 @@ pub fn room_clear_scenario_objective(g: &crate::game::Game, seat: &crate::seats:
 /// the room the marker stands on: the first still held, on a second way in the one nearest that start   (roomclear.ts RoomClearScenario.firstOpen)
 pub fn room_clear_scenario_first_open(g: &crate::game::Game) -> Option<crate::roomclear::RoomState> {
     let open: Vec<crate::roomclear::RoomState> = g.room_clear.rooms.iter().filter(|r| !r.cleared).cloned().collect();
-    let way = g.room_clear.way;
+    let way = g.staged.way;
     let t = if way > 0.0 {
         room_clear_scenario_structure(g).and_then(|s| s.starts).and_then(|v| v.into_iter().nth(way as usize - 1))
     } else {

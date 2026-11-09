@@ -36,11 +36,8 @@ fn at_of(p: &Planned, o: V3) -> V3 {
 /// THE WAY THE MISSION THAT IS UP STAGED ITS TEAM ON, whatever its kind, and whether it has ended. A quiet mission and the solo night have way 0 and their own men.
 struct Way { active: bool, way: usize, ended: bool, fixed: bool }
 fn staged_way_of(g: &Game, asks_none: bool) -> Way {
-    if crate::roomclear::room_clear_scenario_active(g) { return Way { active: true, way: g.room_clear.way as usize, ended: g.room_clear.end.is_some(), fixed: false }; }
-    if crate::rescue::rescue_up(g) { return Way { active: true, way: 0, ended: g.rescue.result.is_some(), fixed: false }; }
-    if crate::nightbreach::night_breach_up(g) { return Way { active: true, way: 0, ended: false, fixed: false }; }
-    if crate::quiet::quiet_of(g) { return Way { active: true, way: 0, ended: false, fixed: true }; }
-    Way { active: asks_none, way: 0, ended: false, fixed: true }
+    let s = &g.staged;
+    Way { active: s.up.is_some() || asks_none, way: s.way as usize, ended: s.over, fixed: !s.facts.fight }
 }
 /// the way a game stood from a link stages: its index, or none (no mission started)
 pub fn staged_way(g: &Game, asks_none: bool) -> Option<usize> { let w = staged_way_of(g, asks_none); if w.active { Some(w.way) } else { None } }

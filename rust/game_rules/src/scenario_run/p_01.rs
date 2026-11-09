@@ -13,15 +13,6 @@ fn word(kind: &str) -> String {
     words().get(String::from(kind)).cloned().expect("a scenario kind with no word")
 }
 
-/// `w[0].toUpperCase() + w.slice(1)`; every word of WORDS starts with an ASCII letter.
-fn capitalised(w: &str) -> String {
-    let mut s = String::from(w);
-    if let Some(first) = s.get_mut(0..1) {
-        first.make_ascii_uppercase();
-    }
-    s
-}
-
 /// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
 pub fn lesson_level(q: &crate::query::Query) -> bool {
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
@@ -186,34 +177,17 @@ pub fn start_at_address(g: &mut crate::game::Game, q: &crate::query::Query) -> c
     // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood)
     if q.has("noweather") { crate::weather::weather_set_enabled_2(g, false); }
     let r = start_from_query(g, &StartFromQuerySearch::URLSearchParams(q.clone()));
-    let solo = q.has("solo") || !crate::quiet::quiet_of(g);
+    let solo = q.has("solo") || !g.staged.facts.unseen;
     crate::kit::kit_solo_if(g, solo);
     r
 }
 
-/// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
-pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
+/// The row of the mission list the mission that is up is of: its kind on this level's file, at its size where one is. None: none is up, or no row has it.
+pub fn running_row(g: &crate::game::Game, level_file: Option<&str>) -> Option<crate::scene_scenarios::ScenarioEntry> {
     let kind = g.staged.up?;
-    let squad = if kind == MissionKind::Quiet { g.quiet.squad } else { m::min(4.0, g.staged.team.len() as f64) };
-    let all;
-    let list = match list {
-        Some(l) => l,
-        None => {
-            all = crate::scene_scenario_list::all_missions();
-            &all[..]
-        }
-    };
-    let here: Vec<&crate::scene_scenarios::ScenarioEntry> =
-        list.iter().filter(|e| e.kind == kind && e.level.as_deref() == level_file).collect();
-    let entry = here.iter().find(|e| e.squad == squad).or(here.first()).map(|e| (*e).clone());
-    let team = crate::loadout::size_words(squad);
-    if kind == MissionKind::Quiet {
-        return Some(RunningScenario { kind: kind, entry });
-    }
-    let title = match &entry {
-        Some(e) => e.title.clone(),
-        None => capitalised(&word(kind.as_str())),
-    };
-    Some(RunningScenario { kind: kind, entry })
+    let squad = m::min(4.0, g.staged.team.len() as f64);
+    let mut here = crate::scene_scenario_list::all_missions().into_iter().filter(|e| e.kind == kind && e.level.as_deref() == level_file).peekable();
+    let first = here.peek().cloned();
+    here.find(|e| e.squad == squad).or(first)
 }
 

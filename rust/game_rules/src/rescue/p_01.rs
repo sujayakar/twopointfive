@@ -227,7 +227,7 @@ pub fn rescue_start(g: &mut crate::game::Game) -> Option<String> {
         }
     }
     rescue_bench(g);
-    g.staged.up = Some(crate::scene_scenarios::MissionKind::Rescue);
+    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, ..Default::default() });
     g.rescue.staged = 0.0;
     g.rescue.log.clear();
     g.rescue.failure = None;
@@ -238,7 +238,7 @@ pub fn rescue_start(g: &mut crate::game::Game) -> Option<String> {
 /// Stop it: the cast gone, the shift back, a fresh night encounter. (rescue.ts Rescue.stop)
 pub fn rescue_stop(g: &mut crate::game::Game) {
     if !crate::rescue::rescue_up(g) { return; }
-    g.staged.up = None;
+    g.staged.down();
     rescue_clear_cast(g);
     if let Some(mut benched) = g.rescue.benched.take() {
         for gd in benched.iter() {
@@ -523,6 +523,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.door_orders = 0.0;
     g.rescue.blind_rounds = 0.0;
     g.rescue.result = None;
+    g.staged.over = false;
     g.rescue.act = None;
     g.rescue.cap_by = None;
     g.rescue.executed.clear();

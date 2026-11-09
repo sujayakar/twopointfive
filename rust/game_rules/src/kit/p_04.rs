@@ -152,7 +152,7 @@ pub fn kit_you_nvg(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// A run that is played quietly: a quiet mission, or the plain night alone off the loadout screen.   (kit.ts stealthRun)
 pub fn stealth_run(g: &crate::game::Game) -> bool {
-    crate::quiet::quiet_of(g) || (g.solo_card && !team_on_floor(g))
+    g.staged.facts.unseen || (g.solo_card && !team_on_floor(g))
 }
 
 /// Your card onto the fresh Player.   (kit.ts kitPlayer)
@@ -310,7 +310,7 @@ pub fn kit_solo(g: &mut crate::game::Game) {
 
 /// The page's own question: the plain night off the loadout screen, or a quiet mission alone, and no squad scenario up.   (kit.ts kitSoloIf)
 pub fn kit_solo_if(g: &mut crate::game::Game, solo: bool) {
-    if (solo || (crate::quiet::quiet_of(g) && !js::truthy(g.quiet.squad))) && !crate::nightbreach::night_breach_up(g) && !crate::rescue::rescue_up(g) { kit_solo(g); }
+    if !g.staged.facts.fight && (solo || (g.staged.facts.unseen && g.staged.team.is_empty())) { kit_solo(g); }
 }
 
 /// A mission started lowers the card on every host, and the harness's shipped stand asks the question too.   (kit.ts kitSoloStand)

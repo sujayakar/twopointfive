@@ -93,7 +93,7 @@ impl ManState {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunVerdict {
-    pub kind: Option<crate::verdict::RunVerdictKind>,
+    pub kind: Option<crate::scene_scenarios::MissionKind>,
     pub won: bool,
     pub word: String,
     pub why: String,
@@ -107,24 +107,6 @@ pub struct RunVerdict {
     pub foes: crate::verdict::RunVerdictFoes,
     pub hostages: Option<crate::verdict::RunVerdictHostages>,
     pub start: [f64; 2],
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum RunVerdictKind {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl RunVerdictKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunVerdictKind::Nightbreach => "nightbreach",
-            RunVerdictKind::Roomclear => "roomclear",
-            RunVerdictKind::Rescue => "rescue",
-            RunVerdictKind::Quiet => "quiet",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]

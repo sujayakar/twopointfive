@@ -41,13 +41,12 @@ pub fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::Resp
 
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub fn raid(g: &crate::game::Game) -> bool {
-    if !crate::nightbreach::night_breach_up(g) || crate::rescue::rescue_up(g) { return false; }
-    response_of(g).map_or(false, |r| r.raid.is_some())
+    g.staged.facts.raid && response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
 /// The raid is over: the room clear ended.   (qrf.ts raidOver)
 pub fn raid_over(g: &crate::game::Game) -> bool {
-    g.room_clear.end.is_some()
+    g.staged.over
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)
@@ -240,7 +239,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !crate::seats::all_down(g) && !crate::nightbreach::night_breach_up(g) && !crate::rescue::rescue_up(g) && has_response(g)
+    g.ai_enabled && !crate::seats::all_down(g) && !g.staged.facts.fight && has_response(g)
 }
 
 /// This level has a response team.   (qrf.ts hasResponse)

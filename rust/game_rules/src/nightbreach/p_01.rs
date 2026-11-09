@@ -1,5 +1,6 @@
 //! src/game/nightbreach.ts lines 1 to 406
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::mission::Facts;
 use crate::scene_scenarios::MissionKind;
 use crate::game::Game;
 use crate::ids::*;
@@ -387,7 +388,8 @@ pub fn night_breach_start(g: &mut crate::game::Game, layout: Option<&crate::nigh
     g.night_breach.layout = layout.cloned();
     night_breach_apply_team(g, layout);
     night_breach_bench(g);
-    g.staged.up = Some(if layout.is_some() { MissionKind::Roomclear } else { MissionKind::Nightbreach });
+    let rooms = layout.is_some();
+    g.staged.begin(if rooms { MissionKind::Roomclear } else { MissionKind::Nightbreach }, Facts { fight: true, raid: true, own_rule: rooms, drilled: !rooms, ..Facts::default() });
     g.night_breach.staged = 0.0;
     g.night_breach.log.clear();
     g.night_breach.failure = None;
@@ -399,7 +401,7 @@ pub fn night_breach_start(g: &mut crate::game::Game, layout: Option<&crate::nigh
 /// Stop it: the cast gone, the shift back, a fresh night encounter. (nightbreach.ts NightBreach.stop)
 pub fn night_breach_stop(g: &mut crate::game::Game) {
     if !crate::nightbreach::night_breach_up(g) { return; }
-    g.staged.up = None;
+    g.staged.down();
     let was = g.night_breach.layout.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| String::from("night breach"));
     g.night_breach.layout = None;
     if g.night_breach.drill.is_some() { crate::breach::breach_drill_end(g); }
@@ -693,6 +695,15 @@ pub fn night_breach_objective(g: &crate::game::Game) -> Option<crate::nightbreac
     Some(NightBreachObjective { text, pos })
 }
 
+/// The drill's pair is at the door's work or in the room.
+pub fn night_breach_going(g: &crate::game::Game) -> bool { matches!(night_breach_state(g), NightBreachState::Going | NightBreachState::Inside) }
+
+/// How it ended, for the run's card: everybody it staged down or gone.
+pub fn night_breach_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    if !g.staged.foes.is_empty() && all_taken(g) { return Some((true, "CLEAR", String::new())); }
+    if g.mission.stage == crate::game::MissionStage::Failed { Some((false, "FAILED", String::new())) } else { None }
+}
+
 /// Where the breach stands, in one word. (nightbreach.ts NightBreach.state)
 pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBreachState {
     if !crate::nightbreach::night_breach_up(g) { return NightBreachState::Off; }
@@ -780,7 +791,7 @@ mod tests {
         use crate::breach::{BreachDrill, BreachDrillBeatsItem, Phase};
         let mut g = Game::blank();
         assert_eq!(night_breach_state(&mut g), NightBreachState::Off);
-        g.staged.up = Some(MissionKind::Nightbreach);
+        g.staged.begin(MissionKind::Nightbreach, Facts { fight: true, ..Facts::default() });
         assert_eq!(night_breach_state(&mut g), NightBreachState::Off);
         g.night_breach.no_drill = true;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Staged);

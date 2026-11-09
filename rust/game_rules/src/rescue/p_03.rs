@@ -328,6 +328,7 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
     let hs = g.rescue.hostages.clone();
     let left = standing(g, &hs).len();
     let grade = if lost { RescueResultGrade::Failed } else if left == hs.len() { RescueResultGrade::Clean } else { RescueResultGrade::Costly };
+    g.staged.over = true;
     g.rescue.result = Some(RescueResult {
         state: if lost { RescueResultState::Lost } else { RescueResultState::Rescued },
         grade,
@@ -342,6 +343,11 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
         alloc::format!("{} — {} · team {}/{} up · {}. press Shift+Enter to restart", if grade == RescueResultGrade::Clean { "CLEAN" } else { "COSTLY" }, why, team, 1 + ops.len(), timed)
     };
     crate::game::game_msg(g, &line);
+}
+
+/// How it ended, for the run's card.
+pub fn rescue_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    g.rescue.result.as_ref().map(|r| if r.state == RescueResultState::Rescued { (true, "RESCUED", r.why.clone()) } else { (false, "LOST", r.why.clone()) })
 }
 
 /// where it stands, in one word   (rescue.ts Rescue.state)

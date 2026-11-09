@@ -69,7 +69,7 @@ pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)
-        None => g.staged.up.map(|a| a == crate::scene_scenarios::MissionKind::Quiet),
+        None => g.staged.up.map(|_| g.staged.facts.unseen),
     };
     if k == Some(false) { return false; }
     if crate::seats::man_of(g, Some(c_2)).is_some() { return true; }

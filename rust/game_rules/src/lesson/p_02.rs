@@ -21,7 +21,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
     if g.puppet.is_some() {
         return None;
     }
-    if crate::quiet::quiet_of(g) || crate::roomclear::room_clear_scenario_active(g) || crate::nightbreach::night_breach_up(g) || crate::rescue::rescue_up(g) {
+    if g.staged.up.is_some() {
         g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref())
     } else {
         None

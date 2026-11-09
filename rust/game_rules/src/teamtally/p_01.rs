@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.   (teamtally.ts teamTallied)
 pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !crate::quiet::quiet_of(g)
+    if !g.staged.facts.unseen
         || g.gd[gd].state != crate::game::GuardState::Dead
         || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)
         || g.gd[gd].civ.is_some()
@@ -29,7 +29,7 @@ pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// At the end of a step: tally the defenders the partner put down in it.   (teamtally.ts teamTallyTick)
 pub fn team_tally_tick(g: &mut crate::game::Game) {
-    if !crate::quiet::quiet_of(g) || !crate::mission::mission_live(g) {
+    if !g.staged.facts.unseen || !crate::mission::mission_live(g) {
         return;
     }
     let mates = g.staged.team.clone();
