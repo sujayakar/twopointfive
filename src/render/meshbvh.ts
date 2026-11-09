@@ -9,7 +9,6 @@
 // bottom-up (deepest depth level first — nodes are also listed by level for that), never rebuilding: a posed limb only ever moves boxes,
 // the topology of a body does not change. A refit tree is looser than a rebuilt one for extreme poses (an arm stretched out overlaps the
 // torso's box); the harness measures the cost of that in node visits.
-import { Vec3 } from '../math/vec';
 
 /** triangles per leaf at most (the GPU leaf loop and the packed count byte assume ≤ 255; 4 is the usual any-hit sweet spot) */
 export const LEAF_MAX = 4;

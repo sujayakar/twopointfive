@@ -2,7 +2,6 @@
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { placeNone } from './placeField';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE } from '../gpu/device';
-import { shaderText } from '../gpu/wgslTrim';
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
@@ -36,7 +35,7 @@ import refractCommonSrc from './shaders/refract_common.wgsl' with { type: 'text'
 import { decalWgslConsts } from './decals';
 import { TexturePool, TargetOps, texBytes } from './texpool';
 import { capUsage } from './framecap';
-import { Denoiser, dnTravel, dnIters, DN_STRIDES } from './denoise';
+import { Denoiser, dnTravel, DN_STRIDES } from './denoise';
 import type { Box } from '../scene/boxes';
 import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
 import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off

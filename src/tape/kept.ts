@@ -51,7 +51,6 @@ export type KeptLine =
   | { k: 'file'; file: ReplayFile };
 
 export const headLine = (sid: string, at: string, h: object): string => JSON.stringify({ k: 'head', sid, at, ...h }) + '\n';
-export const pieceLine = (sid: string, seq: number, at: string, p: KeptPiece): string => JSON.stringify({ k: 'piece', sid, seq, at, ...p }) + '\n';
 
 /** lines of JSON as records; a line that does not parse (a write cut short as the page went away) is counted, not thrown */
 export function parseLines(text: string, into: KeptLine[] = []): { lines: KeptLine[]; bad: number } {
@@ -129,6 +128,3 @@ export function assemble(v: Visit, why = 'kept'): Assembled | null {
   };
   return { file, pieces: seqs.length, missing, n0: S[0].n, n1: S[S.length - 1].n, tapeTicks: tape?.ticks ?? 0, tapeEnd };
 }
-
-/** a kept visit's name as a file */
-export const keptName = (f: ReplayFile): string => `twopointsix-kept-${f.savedAt.replace(/[:.]/g, '-').replace('Z', '')}-${Math.round(f.seconds)}s.json`;

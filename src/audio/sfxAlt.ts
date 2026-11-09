@@ -13,7 +13,7 @@
 // other takes are still here to hear beside it).
 import type { SfxBuffer, SfxContext } from './backend';
 import { HEARD, SLIDE, clack, cluster, knock, thud, tuned, vary, voiced, type SfxName } from './sfx';
-import { biquad, peakTo, type Mode, type Tune, type Voice } from './synth';
+import { biquad, peakTo, type Tune, type Voice } from './synth';
 
 interface Take { say: string; dur: number; seed: number; fn: (v: Voice) => void; picked?: true }
 /** a take he PICKED (10-13): its recipe is the game's own voice now, in sfx.ts. Its place in the list stays, so 'new 2' still names the take it named when he chose */

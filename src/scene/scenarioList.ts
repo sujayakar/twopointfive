@@ -8,7 +8,7 @@
 // Types and pure functions: nothing here imports the game (but game/loadout.ts — itself types and pure functions, importing nothing at run time: keep it so) or
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
-import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { squadOfQuery, sizeWords, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
@@ -182,8 +182,6 @@ export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue',
 
 /** 'you + the pair' / 'you + four' (and the loadout's other sizes: 'solo', 'you + one', 'you + three'): how many teammates, in the picker's words */
 export function teamWords(e: { squad: number }): string { return sizeWords(e.squad); }
-/** the short tag beside a title: 'pair' / 'four' ('solo' / 'one' / 'three') */
-export function teamTag(e: { squad: number }): string { return sizeTag(e.squad); }
 /** what the level is called on the picker: the file's stem, or 'office' for the bundled level */
 export function levelWords(e: { level?: string }): string { return e.level ? e.level.replace(/\.json$/, '') : 'office'; }
 

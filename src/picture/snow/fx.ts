@@ -13,7 +13,7 @@ import { WORLD } from '../../scene/world';
 import type { Engine } from '../../engine';
 import type { Drawn } from '../../draw/drawn';
 import type { DrawWinds } from '../../draw/winds';
-import { Air, Rect, Section } from '../../draw/sections';
+import { Air, Section } from '../../draw/sections';
 import type { AirPicture } from '../air';
 import type { Roofs } from '../rain';
 import { SNOWTRACKS, type SnowKick, type SnowTracks } from './tracks';
@@ -98,30 +98,6 @@ export const SNOWGRAINS = {
   tail: 0.8,          // how far the dash's tail end fades (0 = an even line, 1 = to nothing)
 };
 
-/** SNOW OVER A WALL'S FACE — particles_common.wgsl flakeHidden on the CPU (the same rule, the same number; tools/qa/snow-check.ts `walls` holds the two together).
- *  Is the surface point (x, y, z) one that shows no snow in front of it: UNDER one of the level's roofs — inside its rectangle drawn in by FLAKE_WALL_IN and below
- *  the ceiling. A wall's outer face, the door in it and the wall's top are in the open (the rectangle is the outer walls grown by centimetres, so a test of the bare
- *  rectangle hid the snow over every outer wall). Picture only: nothing in the game asks this. */
-export const FLAKE_WALL_IN = 0.2;   // m
-export function flakeHidden(roofs: readonly (readonly number[])[], x: number, y: number, z: number, ceilY: number, wallIn = FLAKE_WALL_IN): boolean {
-  if (y > ceilY - 0.05) return false;
-  for (const R of roofs) if (x >= R[0] + wallIn && z >= R[1] + wallIn && x <= R[2] - wallIn && z <= R[3] - wallIn) return true;
-  return false;
-}
-export const FLAKE_TOP_IN = 0.5;    // m
-/** UNDER THE ROOFS, WHICHEVER SLAB — particles_common.wgsl flakeUnder on the CPU: is ground point (x, z) `d` or more inside `roofs` on every side (roofed, and the
- *  four corners of a square 2 d wide about it all roofed)? For one rectangle alone that is the rectangle drawn in by d. */
-export function flakeUnder(roofs: readonly (readonly number[])[], x: number, z: number, d: number): boolean {
-  const in1 = (px: number, pz: number) => { for (const R of roofs) if (px >= R[0] && pz >= R[1] && px <= R[2] && pz <= R[3]) return true; return false; };
-  return in1(x, z) && in1(x + d, z + d) && in1(x - d, z + d) && in1(x + d, z - d) && in1(x - d, z - d);
-}
-/** flakeHidden with SNOW_LOOK.under up (the prelude's SNOW_UNDER; the shader's first branch): the roofs asked as one — the seam between two slabs is under them —
- *  and a top at the ceiling takes the snow only within `topIn` of their edge (an outer wall's; a partition's inside is under the roof). What stands above the
- *  ceiling's plane is in the open, as it was. */
-export function flakeHiddenUnder(roofs: readonly (readonly number[])[], x: number, y: number, z: number, ceilY: number, wallIn = FLAKE_WALL_IN, topIn = FLAKE_TOP_IN): boolean {
-  if (y > ceilY + 0.05 || !flakeUnder(roofs, x, z, wallIn)) return false;
-  return y <= ceilY - 0.05 || flakeUnder(roofs, x, z, topIn);
-}
 /** SNOW PAST THE LEVEL'S RIM (SNOW_LOOK.past) — particles_common.wgsl flakeOpen on the CPU: may a flake be in the air over ground point (x, z)? Under none of
  *  `roofed`'s roofs, and inside the world's rim grown by `past` m; with past 0 it is the rain's own rule (a quarter metre INSIDE the rim), as it was. A flake high in
  *  the air is drawn well off its own ground toward the camera's foot, so with the rim on the camera's side the near part of the picture is snowed on by flakes that

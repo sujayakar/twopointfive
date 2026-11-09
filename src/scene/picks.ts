@@ -68,8 +68,6 @@ function without(search: string, drop: string[]): string { const keep = partsOf(
 
 /** the SCENARIOS row a pick starts (null: the solo night; undefined: the list names a mission the build does not have) */
 export function pickEntry(p: Pick, scenarios: ScenarioEntry[] = ALL_MISSIONS): ScenarioEntry | null | undefined { return p.mission === SOLO_ID ? null : scenarios.find(e => e.id === p.mission); }
-/** teammates beside the player in the pick */
-export function pickSquad(p: Pick, scenarios: ScenarioEntry[] = ALL_MISSIONS): number { const e = pickEntry(p, scenarios); return e ? p.squad ?? e.squad : 0; }
 /** the difficulty a row opens on, and the other of the two */
 export function pickDifficulty(p: Pick): Difficulty { return p.difficulty ?? 'standard'; }
 /** the difficulty a URL spells out, where it is one of the two a row can be started at */
