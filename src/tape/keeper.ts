@@ -3,9 +3,8 @@
 // nothing is sent anywhere. A visit is filed only once it has been PLAYED (`played()`: the game has stepped in the player's hands — a title page left running its
 // attract reel keeps nothing); from then on every piece is, the reel included.
 // The keeper only reads its source. No game code is imported: the source is an interface, the head a callback.
-import type { KeptHead } from './kept';
 import { reportWarning } from '../cloud/report';
-import { headLine } from './kept';
+import { headLine, type KeptHead } from './kept';
 import type { KeptStore, KeptRow, Body } from './keepstore';
 import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
 
@@ -13,13 +12,11 @@ import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
 export interface KeepSource { since(): { line(sid: string, seq: number, at: string): string; seconds: number } | null; again(): void;
   /** piece `seq` could not be kept (a source that can give it again does) */
   missed?(seq: number): void; }
-/** what a visit's row says of it, and whatever else its head line has */
-export interface KeepHead extends Pick<KeptHead, 'url' | 'commit'> { level: { file?: string; scenario?: string }; hands?: number; module?: string }
 export interface KeeperOpts {
   sid: string; store: KeptStore;
   /** the game has been stepped in the player's hands (not a show's) */
   played: () => boolean;
-  head: () => KeepHead;
+  head: () => KeptHead;
   now?: () => string; gz?: ((text: string) => Promise<Blob>) | null;
   /** bytes of kept tapes allowed (default: keepstore.ts keepBudget) */
   budget?: () => Promise<number>;
