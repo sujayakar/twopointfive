@@ -16,6 +16,6 @@ export const gravel: ObjectKind = { name: 'gravel', title: 'Patch of gravel', ma
   levels: [
     { shape: 'pieces', error: 0, less: '', put(p) { ground(p, M.gravel!, [0.80, 0.78, 0.76]); for (const s of stones(p.seed)) put(p, s); } },
     { shape: 'pieces', error: 0.015, less: 'stones under 3 cm', put(p) { ground(p, M.gravel!, [0.82, 0.80, 0.78], 0.016); for (const s of stones(p.seed)) if (s.half[0] > 0.0215) put(p, s); } },
-    { shape: 'pieces', error: 0.030, less: 'every stone', put(p) { ground(p, M.gravel!, [0.82, 0.81, 0.79], 0.018); } },
+    { shape: 'pieces', error: 0.030, less: 'every stone', put(p) { ground(p, M.gravel!, [0.835, 0.81, 0.775], 0.018); } },
   ],
 }) };

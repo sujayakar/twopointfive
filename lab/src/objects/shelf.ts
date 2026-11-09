@@ -17,7 +17,7 @@ function frame(p: Put, fine: boolean) { /* (the price strips are most of its yel
 }
 const colorOf = (p: Piece): V3 => p.tint ?? [1, 1, 1];
 /** one box round some pieces, of their mean color by face. Tints are roots of what is sent back, so they are meaned as squares */
-function boxOf(ps: Piece[], bright = 1): Piece { const lo: V3 = [9, 9, 9], hi: V3 = [-9, -9, -9]; let c: V3 = [0, 0, 0], a = 0; for (const p of ps) { const b = boundsOf(p), s = p.half[0] * p.half[1]; for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k]!, b.mn[k]!); hi[k] = Math.max(hi[k]!, b.mx[k]!); } const t = colorOf(p); c = add(c, [t[0] ** 2 * s, t[1] ** 2 * s, t[2] ** 2 * s]); a += s; } c = mul(c, bright * bright / a); return { at: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2], half: [(hi[0] - lo[0]) / 2, (hi[1] - lo[1]) / 2, (hi[2] - lo[2]) / 2], rot: ID, mat: M.print!, flags: 0, tint: [Math.sqrt(c[0]), Math.sqrt(c[1]), Math.sqrt(c[2])] }; }
+function boxOf(ps: Piece[], bright = 1, pale = 0.18): Piece { /* (what is printed on them is paler than they are) */ const lo: V3 = [9, 9, 9], hi: V3 = [-9, -9, -9]; let c: V3 = [0, 0, 0], a = 0; for (const p of ps) { const b = boundsOf(p), s = p.half[0] * p.half[1]; for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k]!, b.mn[k]!); hi[k] = Math.max(hi[k]!, b.mx[k]!); } const t = colorOf(p); c = add(c, [t[0] ** 2 * s, t[1] ** 2 * s, t[2] ** 2 * s]); a += s; } c = mul(c, (1 - pale) * bright * bright / a); c = add(c, [0.8 * pale, 0.8 * pale, 0.78 * pale]); return { at: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2], half: [(hi[0] - lo[0]) / 2, (hi[1] - lo[1]) / 2, (hi[2] - lo[2]) / 2], rot: ID, mat: M.print!, flags: 0, tint: [Math.sqrt(c[0]), Math.sqrt(c[1]), Math.sqrt(c[2])] }; }
 /** the same product side by side and behind: a run */
 function runs(ps: { tier: number; pieces: Piece[] }[]): Piece[][] { const by = new Map<string, Piece[]>(); for (const q of ps) { const main = q.pieces.reduce((a, b) => size(a) > size(b) ? a : b), k = q.tier + ':' + (main.marks?.[0]?.art ?? '') + colorOf(main).join(); const l = by.get(k); if (l) l.push(...q.pieces); else by.set(k, [...q.pieces]); } return [...by.values()]; }
 export const shelf: ObjectKind = { name: 'shelf', title: 'Shelf of packets', make: (): Made => ({
@@ -25,7 +25,7 @@ export const shelf: ObjectKind = { name: 'shelf', title: 'Shelf of packets', mak
   levels: [
     { shape: 'pieces', error: 0, less: '', put(p) { frame(p, true); p.from({ pieces: packets(p.seed).flatMap(q => q.pieces) }); } },
     { shape: 'pieces', error: 0.012, less: 'lids and caps that are thin, the rows behind', put(p) { frame(p, false); p.from({ pieces: packets(p.seed).filter(q => q.tier === TIERS.length - 1 || q.pieces[0]!.at[2] > -0.02).flatMap(q => q.pieces.filter(x => Math.min(...x.half) > 0.013 || x === q.pieces[0])) }); } },
-    { shape: 'pieces', error: 0.035, less: 'packets: a box a run', put(p) { frame(p, false); p.from({ pieces: runs(packets(p.seed)).map(r => boxOf(r, 1.05)) }); } },
-    { shape: 'pieces', error: 0.09, less: 'runs: a box a tier', put(p) { frame(p, false); const all = packets(p.seed); p.from({ pieces: TIERS.map((_, t) => boxOf(all.filter(q => q.tier === t).flatMap(q => q.pieces), 1.06)) }); } },
+    { shape: 'pieces', error: 0.035, less: 'packets: a box a run', put(p) { frame(p, false); p.from({ pieces: runs(packets(p.seed)).map(r => boxOf(r, 1.03)) }); } },
+    { shape: 'pieces', error: 0.09, less: 'runs: a box a tier', put(p) { frame(p, false); const all = packets(p.seed); p.from({ pieces: TIERS.map((_, t) => boxOf(all.filter(q => q.tier === t).flatMap(q => q.pieces), 1.07, 0.25)) }); } },
   ],
 }) };

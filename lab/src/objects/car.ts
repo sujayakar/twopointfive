@@ -13,7 +13,6 @@ export const car: ObjectKind = { name: 'car', title: 'Car', make: (): Made => ({
   levels: [
     { shape: 'pieces', error: 0, less: '', put(p) { p.from({ pieces: all() }); } },
     { shape: 'pieces', error: 0.013, less: 'wipers, seams, the rims\' spokes and beads', put(p) { p.from({ pieces: all().filter(q => girth(q) > 0.0135 || q.flags & F.GLOW || q.marks?.length) }); } },
-    { shape: 'pieces', error: 0.05, less: 'all but body, glass, wheels, mirrors and lamps', put(p) { p.from({ pieces: all().filter(q => girth(q) > 0.05 || (q.flags & F.GLOW && girth(q) > 0.034) || q.mat === M.film).map(q => ({ ...q, marks: undefined })) }); } },
+    { shape: 'pieces', error: 0.05, less: 'all but body, glass, wheels, mirrors and lamps', put(p) { p.from({ pieces: all().filter(q => girth(q) > 0.05 || (q.flags & F.GLOW && girth(q) > 0.034) || q.mat === M.film).map(q => ({ ...q, marks: undefined, /* (the rims' spokes are gone: their disc takes the mean of them and itself) */ ...(q.mat === M.gloss && (q.tint?.[0] ?? 1) < 0.13 ? { tint: [0.40, 0.405, 0.42] as V3 } : {}) })) }); } },
   ],
 }) };
-void ({} as V3);

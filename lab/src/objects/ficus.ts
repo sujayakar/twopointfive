@@ -8,7 +8,7 @@ const H = 2.0, POT = 0.40;
 /** one leaf of `keep`, so many times as large: as much area in all */
 export function thinned(c: Cluster, keep: number, wood: boolean, k = 1): Cluster { let n = 0; return { kind: c.kind, leaves: c.leaves.filter(l => l.wood ? wood : n++ % keep === (keep >> 1)).map(l => l.wood ? l : { ...l, size: l.size * Math.sqrt(keep) * k }) }; }
 const sprays = [0, 1, 2, 3].map(i => spray(700 + i, 9, 10)), kept = new WeakMap<World, Map<string, number[]>>();
-const clusters = (w: World, keep: number, wood: boolean): number[] => { let m = kept.get(w); if (!m) kept.set(w, m = new Map()); const k = keep + (wood ? 'w' : ''); let l = m.get(k); if (!l) m.set(k, l = sprays.map(s => { w.clusters.push(keep === 1 && wood ? s : thinned(s, keep, wood, keep > 4 ? 0.95 : 1)); return w.clusters.length - 1; })); return l; };
+const clusters = (w: World, keep: number, wood: boolean): number[] => { let m = kept.get(w); if (!m) kept.set(w, m = new Map()); const k = keep + (wood ? 'w' : ''); let l = m.get(k); if (!l) m.set(k, l = sprays.map(s => { w.clusters.push(keep === 1 && wood ? s : thinned(s, keep, wood, keep > 4 ? 0.93 : 1)); return w.clusters.length - 1; })); return l; };
 const tree = (seed: number) => apart(w => domeTree(w, { balls: [], tufts: [], sprays: [0, 1, 2, 3] }, [0, POT - 0.02, 0], H, 40 + seed));
 function put(p: Put, keep: number, twigs: boolean, thinnest: number, bright = 1) {
   const t = tree(p.seed), ix = clusters(p.w, keep, twigs); p.from({ pieces: t.pieces.filter(q => Math.max(q.half[0], q.half[2]) >= thinnest), instances: t.instances.map(i => ({ ...i, tint: mul(i.tint, bright) })) }, i => ix[i.cluster]!);
@@ -19,6 +19,6 @@ export const ficus: ObjectKind = { name: 'ficus', title: 'Ficus in a pot', make:
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 1, true, 0); } },
     { shape: 'leaves', error: 0.02, less: 'three leaves of four (the fourth is twice as long), twigs', put(p) { put(p, 4, false, 0.004); } },
-    { shape: 'leaves', error: 0.05, less: 'fifteen leaves of sixteen, thin branches', put(p) { put(p, 16, false, 0.012, 1.06); } },
+    { shape: 'leaves', error: 0.05, less: 'fifteen leaves of sixteen, thin branches', put(p) { put(p, 16, false, 0.012, 1.02); } },
   ],
 }) };
