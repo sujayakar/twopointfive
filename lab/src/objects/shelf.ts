@@ -26,6 +26,6 @@ export const shelf: ObjectKind = { name: 'shelf', title: 'Shelf of packets', mak
     { shape: 'pieces', error: 0, less: '', put(p) { frame(p, true); p.from({ pieces: packets(p.seed).flatMap(q => q.pieces) }); } },
     { shape: 'pieces', error: 0.012, less: 'lids and caps that are thin, the rows behind', put(p) { frame(p, false); p.from({ pieces: packets(p.seed).filter(q => q.tier === TIERS.length - 1 || q.pieces[0]!.at[2] > -0.02).flatMap(q => q.pieces.filter(x => Math.min(...x.half) > 0.013 || x === q.pieces[0])) }); } },
     { shape: 'pieces', error: 0.035, less: 'packets: a box a run', put(p) { frame(p, false); p.from({ pieces: runs(packets(p.seed)).map(r => boxOf(r, 1.03)) }); } },
-    { shape: 'pieces', error: 0.09, less: 'runs: a box a tier', put(p) { frame(p, false); const all = packets(p.seed); p.from({ pieces: TIERS.map((_, t) => boxOf(all.filter(q => q.tier === t).flatMap(q => q.pieces), 1.07, 0.25)).map(q => ({ ...q, mat: M.film! })) }); } },
+    { shape: 'pieces', error: 0.09, less: 'runs: a box a tier', put(p) { frame(p, false); const all = packets(p.seed); p.from({ pieces: TIERS.map((_, t) => boxOf(all.filter(q => q.tier === t).flatMap(q => q.pieces), 1.12, 0.25)).map(q => ({ ...q, mat: M.film! })) }); } },
   ],
 }) };

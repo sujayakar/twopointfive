@@ -4,7 +4,7 @@ You make one object, alone: a small program in `src/objects/<name>.ts` that puts
 
 1. Copy the one most like yours: `chair.ts` (pieces), `car.ts` (curved pieces), `ficus.ts` (leaves), `shelf.ts` (clutter), `person.ts` (a rig), `gravel.ts` (a skin of the floor). Add it to `index.ts`.
 2. `bun run tools/sketch.ts <name>` (seconds, no GPU): a picture of its form, a row a level. Make it look right here first.
-3. `bun run tools/sketch.ts --swap <name>` (seconds): each coarser level where it takes over, from two sides, beside the finest: outline, cover, brightness and color as the card will find them (to about 0.05 stops; highlights, lamps and kept light only the card knows), and a picture of where they part.
+3. `bun run tools/sketch.ts --swap <name>` (seconds): each coarser level where it takes over, from two sides, beside the finest, and a picture of where they part. Over 70 cases its outline is the card's (within 0.06 px) and so is how much is filled (within 1.7 %); brightness is within 0.02 stops in the middle, 0.09 for nine of ten, 0.25 at worst (print, crevices); color within 0.7 % for nine of ten. Highlights, lamps and kept light only the card knows.
 4. `bun run tools/objects.ts <name>` (a second, no GPU): does it stand, is it whole, does it live as it says. `ALL=1` shows what is right too.
 5. `node tools/object.cjs <name>` on a card (two to four minutes): `out/<name>.jpg`, its page, and every mark. `--parts look` (or seen, swap, calm, alive, print, crowd) does only that. Without a card, `--quick` (ten minutes, small and grainy).
 6. Mend, again, until every mark is reached and it looks right beside the reference, close by, and from the game's camera.

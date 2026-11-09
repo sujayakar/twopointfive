@@ -5,7 +5,7 @@ import type { Shape } from './object';
 export interface Mark { /** at most, at least */ most?: number; least?: number; /** the same, where the finest level is leaves */ leaves?: number; /** only said, not judged */ said?: true }
 export const MARKS: Record<string, Mark> = {
   'rule.foot': { most: 4 }, 'rule.floats': { most: 0 }, 'rule.faces': { most: 0 }, 'rule.parted': { most: 6 }, 'rule.tint': { said: true }, 'rule.thing': { most: 0 }, 'rule.same': { most: 0 }, 'rule.size': { most: 8 }, 'rule.order': { least: 1.5 }, 'rule.stems': { most: 2 },
-  'look.noon': { most: 9, leaves: 13 }, 'look.dusk': { most: 14, leaves: 14 }, 'look.lamp': { most: 14, leaves: 17 }, 'look.torch': { most: 17, leaves: 17 }, 'look.far': { said: true }, 'look.stops': { most: 0.25 },
+  'look.noon': { most: 9, leaves: 13 }, 'look.dusk': { most: 14, leaves: 14 }, 'look.lamp': { most: 14, leaves: 17 }, 'look.torch': { most: 17, leaves: 17 }, 'look.far': { said: true }, 'look.cast': { said: true }, 'look.stops': { most: 0.25 },
   'seen.edge': { least: 50 },
   'swap.outline': { most: 1.1 }, 'swap.cover': { most: 6 }, 'swap.holes': { said: true }, 'swap.bright': { most: 0.12 }, 'swap.color': { most: 1.6, leaves: 2.6 }, 'swap.shine': { most: 0.4 }, 'swap.places': { most: 34 }, 'swap.shadow': { most: 14 }, 'swap.grain': { said: true }, 'wide.grain': { said: true }, 'swap.pop': { most: 12 },
   'side.outline': { most: 1.1 }, 'side.cover': { most: 6 }, 'side.bright': { most: 0.12 }, 'side.color': { most: 1.6, leaves: 2.6 }, 'wide.shadow': { most: 10 }, 'wide.bounce': { most: 2 }, 'calm.sparkle': { most: 8 }, 'calm.far': { most: 13 }, 'calm.level': { most: 1.3 }, 'print.kept': { least: 75 }, 'print.seen': { least: 20 },

@@ -16,14 +16,16 @@ function put(p: Put, parts: Part[] | null): Live {
 }
 /** for the bench: do they stand, or walk up and down? */
 export const walk = { on: false };
+/** what is gone was mostly dark (pads, pouches, ears): the suit takes it */
+const DUSKY: V3 = [0.575, 0.59, 0.62];
 const both = (f: (s: string) => Part[]): Part[] => ['L', 'R'].flatMap(f);
-const MID: Part[] = [...['pelvis', 'belly', 'chest', 'yoke', 'neck', 'plateF', 'plateB', 'pack', 'belt', 'head', 'helmet', 'visor', 'jaw', 'recv', 'rail', 'barrel', 'can', 'mag', 'stock', 'mag1'].map(of => ({ of })), { of: 'collar' }, ...both(s => ['shoulder', 'arm', 'fore', 'hand', 'thigh', 'knee', 'shin', 'boot', 'kneeB', 'pad'].map(of => ({ of: of + s }))), { of: 'patch' }, { of: 'holster' }, ...both(s => [{ of: 'pouch' + s }])];
-const FAR: Part[] = [{ of: 'pelvis', half: [0.172, 0.155, 0.135], at: [0, -0.02, -0.01] }, { of: 'chest', half: [0.205, 0.31, 0.155], at: [0, -0.06, 0] }, { of: 'plateF' }, { of: 'pack' }, { of: 'head', half: [0.085, 0.13, 0.10], at: [0, -0.03, 0.01], tint: [0.8, 0.8, 0.8] }, { of: 'helmet' }, { of: 'recv', half: [0.03, 0.05, 0.36], at: [0, -0.004, 0.10], quad: null }, { of: 'mag' }, ...both(s => [{ of: 'shoulder' + s, tint: [0.48, 0.49, 0.515] }, { of: 'arm' + s }, { of: 'fore' + s }, { of: 'thigh' + s, tint: [0.58, 0.595, 0.63] }, { of: 'shin' + s, tint: [0.55, 0.56, 0.59] }, { of: 'boot' + s }])];
+const MID: Part[] = [...['pelvis', 'belly', 'chest', 'yoke', 'neck', 'plateF', 'plateB', 'pack', 'belt', 'head', 'helmet', 'visor', 'jaw', 'recv', 'rail', 'barrel', 'can', 'mag', 'stock', 'mag1'].map(of => ({ of })), { of: 'collar' }, ...both(s => ['shoulder', 'arm', 'fore', 'hand', 'thigh', 'knee', 'shin', 'boot', 'calf', 'pad'].map(of => ({ of: of + s, ...(['shoulder', 'arm', 'fore', 'thigh', 'shin', 'calf'].includes(of) ? { tint: DUSKY } : {}) }))), { of: 'patch' }, { of: 'holster' }, ...both(s => [{ of: 'pouch' + s }])];
+const FAR: Part[] = [{ of: 'pelvis', half: [0.172, 0.155, 0.135], at: [0, -0.02, -0.01], tint: [0.55, 0.56, 0.59] }, { of: 'chest', half: [0.205, 0.31, 0.155], at: [0, -0.06, 0], tint: [0.55, 0.56, 0.59] }, { of: 'plateF' }, { of: 'pack' }, { of: 'head', half: [0.085, 0.13, 0.10], at: [0, -0.03, 0.01], tint: [0.8, 0.8, 0.8] }, { of: 'helmet' }, { of: 'recv', half: [0.03, 0.05, 0.36], at: [0, -0.004, 0.10], quad: null }, { of: 'mag' }, ...both(s => [{ of: 'shoulder' + s, tint: [0.48, 0.49, 0.515] }, { of: 'arm' + s, tint: [0.56, 0.575, 0.61] }, { of: 'fore' + s, tint: [0.56, 0.575, 0.61] }, { of: 'thigh' + s, tint: [0.55, 0.565, 0.60] }, { of: 'shin' + s, tint: [0.52, 0.53, 0.56] }, { of: 'boot' + s }])];
 export const person: ObjectKind = { name: 'person', title: 'Person', make: (): Made => ({
   name: 'person', title: 'Person', size: [0.68, 1.90, 1.16], on: 'floor', close: { at: [0, 1.4, 0.1], far: 3.4 }, read: 0, moves: { kind: 'walks' }, crowd: 49,
   levels: [
     { shape: 'pieces', error: 0, less: '', put: p => put(p, null) },
     { shape: 'pieces', error: 0.015, less: 'straps, pads, muscles, the gun\'s small parts', put: p => put(p, MID) },
-    { shape: 'pieces', error: 0.045, less: 'all but trunk, head, limbs, plate, pack and gun', put: p => put(p, FAR) },
+    { shape: 'pieces', error: 0.055, less: 'all but trunk, head, limbs, plate, pack and gun', put: p => put(p, FAR) },
   ],
 }) };
