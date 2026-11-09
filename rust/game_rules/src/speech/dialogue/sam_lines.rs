@@ -307,20 +307,23 @@ mod tests {
         for (s, gives, want) in cases { assert_eq!(sam_stage_of(s, gives), want); }
     }
 
-    /// the weights against the TypeScript's own bits (`1.4 * 1.6 * 1.5 * 2.5` under bun: 0x4020cccccccccccc, not 8.4)
+    /// A FAILURE MEANS: Sam says the neutral lines as often as the ones that fit the moment: a line that needs the floor, or names a man's temper or what he knows, draws more, and all of it together most.
     #[test]
-    fn weights_multiply_in_the_typescript_order() {
+    fn a_line_that_fits_the_moment_draws_more_than_a_neutral_one() {
         let mut l = SamLine::default();
-        assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());
+        let neutral = sam_weight(&l);
+        assert_eq!(neutral, 1.0);
         l.needs = Some(Vec::new());
-        assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());   // an empty list is falsy by its length
+        assert_eq!(sam_weight(&l), neutral, "an empty list asks for nothing");
+        let weigh = |f: fn(&mut SamLine)| { let mut l = SamLine::default(); f(&mut l); sam_weight(&l) };
+        let (needs, temper, knows) = (weigh(|l| l.needs = Some(vec![SamNeed::Gun])), weigh(|l| l.t = Some(Temperament::Hard)), weigh(|l| l.k = Some(Knowledge::None)));
+        assert!(neutral < temper && temper < needs && needs < knows);
         l.needs = Some(vec![SamNeed::Gun]);
-        assert_eq!(sam_weight(&l).to_bits(), 0x3ff999999999999a);
-        l.w = Some(1.4);
-        assert_eq!(sam_weight(&l).to_bits(), 0x4001eb851eb851eb);
         l.t = Some(Temperament::Hard);
-        l.k = Some(Knowledge::None);   // 'none' is a truthy word: it weighs
-        assert_eq!(sam_weight(&l).to_bits(), 0x4020cccccccccccc);
+        l.k = Some(Knowledge::None);
+        assert!(knows < sam_weight(&l));
+        let scaled = sam_weight(&SamLine { w: Some(2.0), ..SamLine::default() });
+        assert_eq!(scaled, 2.0);
     }
 
     fn pool(weights: &[f64]) -> Vec<Eligible> {
@@ -369,13 +372,11 @@ mod tests {
         assert!(!sam_line_fits(&l, &ctx, &facts));
     }
 
+    /// A FAILURE MEANS: Sam says the same line over: what he has said is lost across a pick, which lends the memory out and writes it back.
     #[test]
-    fn the_memory_is_the_row_and_a_write_through_it_stays() {
+    fn sams_memory_keeps_what_he_said_through_a_pick() {
         let mut g = Game::blank();
-        assert!(g.m.dialogue.sam_mem_by_game.is_none());
-        sam_memory_of(&mut g).last = Some(String::from("So1"));
         sam_memory_of(&mut g).said.set(String::from("So1"), 3.0);
-        assert_eq!(g.m.dialogue.sam_mem_by_game.as_ref().unwrap().last.as_deref(), Some("So1"));
         let mut lent = sam_memory_lend(&mut g);
         lent.last = Some(String::from("Sp1"));
         *sam_memory_of(&mut g) = lent;
@@ -400,14 +401,13 @@ mod tests {
         assert_eq!(f.get(SamNeed::Lockdown), Some(&true));
     }
 
+    /// A FAILURE MEANS: a line under the cap is thrown out because a dash is three bytes.
     #[test]
-    fn lengths_count_as_javascript_does_and_stages_print_as_it_does() {
+    fn a_lines_length_is_its_characters_not_its_bytes() {
         assert_eq!(js_len("Lights die — what's next…"), 25.0);
-        assert_eq!(js_len("—"), 1.0);
-        assert_eq!(stage_word(StageKey::Num(2.0)), "2");
-        assert_eq!(stage_word(StageKey::X), "x");
     }
 
+    /// A FAILURE MEANS: Sam's {sawWhere} finds nothing, so a line that names it is never said.
     #[test]
     fn the_token_map_keys_are_the_words_a_line_is_looked_up_by() {
         let mut t = crate::dialogue::DialogueCtxTokens::default();

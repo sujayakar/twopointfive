@@ -105,7 +105,7 @@ token (`expand`) fills a name, and a line whose token has no value cannot be sai
 | Sam | `SAM_RECENT_SECS` on `SamMemory`, then the whole list but the last |
 | a script | the fewest played first, of the script and of its shape, on the game's `recent` table |
 | a pair | `played`, the fewest first, a pair's talk once only off the office |
-| a cue | `man_secs` for one man, `kind_gap` for the floor, `again_secs` for a "still here" |
+| a cue | `man_secs` for one man, `gap_of` for the floor, `again_secs` for a "still here" |
 | a hostage | never the line over her head; `murmur_at` spaces them |
 | attention, a net call | a pool and a die, never the one he used last (`line`); a net call by kind, on a die (`speak`) |
 | the handler | each beat once a run (`done`), and five seconds between beats; a beat with no quiet moment in twenty is dropped |
@@ -133,9 +133,8 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 
 ## To change it
 
-- **Reword a line:** find its words (`rust/game_types/src/dialogue/types.rs` holds most tables, the rest are in the module that says them). Read `writing.md` first. A reword fails the pin of
-  its table at the foot of the module (`lines_match_the_typescript`, `script_lines_are_the_typescripts`, `beats_rows_are_the_typescripts`, `handler_pools_are_the_typescripts`,
-  `pairs_are_the_typescripts`): change the pin with it. The words are in the game's state and `bubble_secs` times them, so `gate`'s pins can move too.
+- **Reword a line:** find its words (`rust/game_types/src/dialogue/types.rs` holds most tables, the rest are in the module that says them). Read `writing.md` first.
+  The words are in the game's state and `bubble_secs` times them, so `gate`'s pins can move.
 - **Words only for one kind of place:** the `away`, `bare`, `guide` and `now` fields of a row; `own` on a pair's line; `h_now` on the handler's. Add no new branch where a line is read.
 - **A new line for a held man:** a `Line` in `lines` with `k`, `t`, `s` and `needs` (a `Need`, then its fact in `gather` and `hold_fact`). A new token: `Token`, `DialogueCtxTokens`, and the
   table in `ctx_tokens_map`.
