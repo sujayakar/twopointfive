@@ -14,7 +14,7 @@ use alloc::{boxed::Box, collections::BTreeMap, format, string::String, vec::Vec}
 
 /// what the host is to do now
 pub enum Do {
-    /// keep the game as it stands, under this key; `rows` the run's chronicle first (game_run `checkpoint`)
+    /// keep the game as it stands, under this key; `rows` the run's chronicle first (game_start `host::checkpoint`)
     Keep { key: String, label: String },
     /// put back the game kept under this key
     Back { key: String },

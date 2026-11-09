@@ -1,9 +1,9 @@
-//! The desk's two calls (game_run `desk`): what the cards before a game show and press, with no game started.
+//! The desk's two calls (game_start `host::desk`): what the cards before a game show and press, with no game started.
 //!
 //!   face_desk_do(p, n) -> 1 | 0    the host's commands done to the desk: what this machine keeps and what the address says, as a start is done them. 0 = a
 //!                                  number no command has (said at face_out)
 //!   face_desk_ask(p, n) -> 1 | 0   one ask, its answer's bytes at face_out
-use game_run::desk::Desk;
+use game_start::host::desk::Desk;
 use std::cell::RefCell;
 
 thread_local! { static DESK: RefCell<Option<Box<Desk>>> = const { RefCell::new(None) }; }

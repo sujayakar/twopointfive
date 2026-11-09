@@ -1,4 +1,5 @@
 //! THE KNOBS BY NAME: every number of the game's tables that a person may turn while it plays, and the live numbers a panel row turns.
+use alloc::{string::String, vec::Vec};
 use game::game::Game;
 use game::knobs::{KnobTable, Knobs};
 

@@ -265,14 +265,14 @@ export class DrawGame {
     for (let at = 0; at < n;) { const w = d.getUint32(at, true), len = w & 0x7fffffff; out.push({ name: this.dec.decode(new Uint8Array(b, at + 4, len)), yes: w >>> 31 === 1, value: d.getFloat64(at + 4 + len, true) }); at += 12 + len; }
     return out;
   }
-  /** the panel's rows of the game's numbers, as the module lists them (game_run shown.rs) */
+  /** the panel's rows of the game's numbers, as the module lists them (game_start host/shown.rs) */
   shown(): ShownRow[] {
     this.X.face_shown(); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ShownRow[] = []; let at = 0;
     const text = (): string => { const len = d.getUint32(at, true), t = this.dec.decode(new Uint8Array(b, at + 4, len)); at += 4 + len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; };
     while (at < n) { const name = text(), label = text(), section = text(), title = text(), lo = num(), hi = num(), step = num(), scale = num(), def = num(), bits = d.getUint32(at, true); at += 4; out.push({ name, label, section, title, lo, hi, step, scale, def, kept: (bits & 1) !== 0, adv: (bits & 2) !== 0 }); }
     return out;
   }
-  /** the panel's actions, as the module lists them (game_run actions.rs) */
+  /** the panel's actions, as the module lists them (game_start host/actions.rs) */
   actions(): ActionRow[] {
     this.X.face_actions(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ActionRow[] = []; let at = 0;
     const u = (): number => { const v = d.getUint32(at, true); at += 4; return v; }, text = (): string => { const len = u(), t = this.dec.decode(new Uint8Array(b, at, len)); at += len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; }, words = (): string[] => { const k = u(), w: string[] = []; for (let i = 0; i < k; i++) w.push(text()); return w; };

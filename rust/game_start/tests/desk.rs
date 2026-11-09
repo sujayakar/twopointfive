@@ -1,9 +1,9 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
 use game::kit::{MemberKit, TrimId};
 use game::view::{BriefView, CardRow, CardView, MissionRow, MissionsView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
-use game_run::command::apply;
-use game_run::desk::Desk;
-use game_run::kept;
+use game_start::host::command::apply;
+use game_start::host::desk::Desk;
+use game_start::host::kept;
 
 const CARD: u32 = 0;
 const STEP: u32 = 1;

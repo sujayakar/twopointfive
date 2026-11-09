@@ -244,17 +244,17 @@ mod tests {
             ("rust/game/src/doors/p_01.rs", ""),
             ("rust/game/src/doors/mod.rs", ""),
             ("rust/sim/Cargo.toml", "[package]\nname = \"sim\"\n[lib]\ncrate-type = [\"cdylib\", \"rlib\"]\n"),
-            ("rust/game_face/Cargo.toml", "[lib]\ncrate-type = [\"cdylib\"]\n[dependencies]\ngame = { path = \"../game\" }\ngame_run = { path = \"../game_run\" }\n"),
-            ("rust/game_run/Cargo.toml", "[dependencies]\ngame = { path = \"../game\" }\n"),
-            ("rust/game_run/src/bin/mission.rs", ""),
+            ("rust/game_face/Cargo.toml", "[lib]\ncrate-type = [\"cdylib\"]\n[dependencies]\ngame = { path = \"../game\" }\ngame_rest = { path = \"../game_rest\" }\n"),
+            ("rust/game_rest/Cargo.toml", "[dependencies]\ngame = { path = \"../game\" }\n"),
+            ("rust/game_rest/src/bin/mission.rs", ""),
             ("rust/target/x.rs", ""),
         ]);
         let l = find(&d).unwrap();
         assert_eq!(l.game.iter().cloned().collect::<Vec<_>>(), ["game", "game_types"]);
         assert_eq!(l.bodies, ["game"]);
-        assert_eq!(l.users(), ["game_face", "game_run"]);
+        assert_eq!(l.users(), ["game_face", "game_rest"]);
         assert_eq!(l.crates.iter().filter(|c| c.page).map(|c| c.name.as_str()).collect::<Vec<_>>(), ["game_face"]);
-        assert_eq!(l.game_and_users(), ["game", "game_face", "game_run", "game_types"]);
+        assert_eq!(l.game_and_users(), ["game", "game_face", "game_rest", "game_types"]);
         assert_eq!(l.knobs, Path::new("rust/game_types/src/knobs/mod.rs"));
         let _ = std::fs::remove_dir_all(&d);
     }
