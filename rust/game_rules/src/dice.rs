@@ -1,5 +1,5 @@
 //! The keyed draws of a game (the data's `dice` says what they are): they step the game's die, so they stand above the data.
-pub use game_wire::dice::*;
+pub use game_types::dice::*;
 use crate::game::Game;
 use crate::ids::*;
 #[cfg(test)] use sim::dice::Dice;

@@ -35,7 +35,6 @@ const _: () = assert!(CAP % 4 == 0);
 
 // a thing's truths (`flags`): lying at rest · its fuse has run (another rule's: carried here) · in a hand, placed by whoever carries it
 pub const F_SETTLED: u32 = 1;
-pub const F_FIRED: u32 = 2;
 pub const F_CARRIED: u32 = 4;
 // the kinds this step tells apart (throwables.ts ITEM_KINDS, by their place there): what share of a bounce's momentum the furniture gets
 pub const K_SMOKE: u32 = 0;

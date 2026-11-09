@@ -21,7 +21,7 @@ const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioLis
 LOOK.on = true;
 const wasm = faceHere(); if (!wasm) { console.error('tape-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasm)));
-const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module, { env: { face_roll: () => { throw new Error('the game asked a die'); } } }).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
+const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 

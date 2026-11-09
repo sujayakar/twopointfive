@@ -1,6 +1,5 @@
 # THE RUST GAME'S FACE: the wasm module the host loads (tools/blitz/FACE.md). The game's logic (the crate `game`) names no host and no `std`; this crate is
-# the only place of the module that does: the C exports, the panic's message, the bytes in and out. rust/sim is linked into the same module, so its own C
-# exports are this module's too and there is ONE block of rust/sim's a game: the one the Rust game steps.
+# the only place of the module that does: the C exports, the panic's message, the bytes in and out.
 #   cargo build --target wasm32-unknown-unknown                    dev: the game at opt-level 1 with no debug info (a panic still names its file and line)
 #   cargo build --target wasm32-unknown-unknown --release          opt-level 3
 #   cargo build --target wasm32-unknown-unknown --profile small    opt-level "s"
@@ -18,7 +17,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-game = { path = "../game" }
+game = { path = "../game_rules", package = "game_rules" }
 sim = { path = "../sim" }
 # (what the picture is told)
 game_draw = { path = "../game_draw" }

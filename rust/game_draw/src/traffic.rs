@@ -1,4 +1,4 @@
-//! THE TRAFFIC MAP the look's floors read (render/shaders/detail.wgsl; render/wear.ts says why each number is as it is): two bytes a texel, eight texels a metre over the floor. r = where
+//! THE TRAFFIC MAP the look's floors read (render/shaders/detail.wgsl; the numbers are the look's): two bytes a texel, eight texels a metre over the floor. r = where
 //! the level is walked: every way it has, traced along the walk grid's own paths, each kind by its weight, every waypoint stood at and every threshold crossed. g = the band along a wall where
 //! stones gather: each standing box lays its own × how long the straight line of faces is that the texel's nearest face is a piece of. A pure function of the level: made once, as the level
 //! stands when it is first asked for.

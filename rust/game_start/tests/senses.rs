@@ -164,7 +164,7 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     let slot = p.g.sim;
     sim::state::put(slot, &block);
     p.g = kept.clone();
-    game::io::set_slot(&mut p.g, slot);
+    game::game::stand_in(&mut p.g, slot);
     p.g.col.mirror.put_backs = -1.0;
     p.run(4.0);
     let got = field(&p);
@@ -260,7 +260,7 @@ fn a_game_put_back_has_no_smoke_of_the_try_before() {
             let slot = p.g.sim;
             sim::state::put(slot, &block);
             p.g = kept.clone();
-            game::io::set_slot(&mut p.g, slot);
+            game::game::stand_in(&mut p.g, slot);
             p.g.col.mirror.put_backs = -1.0;
             p.run(0.3);
             assert!(through(&mut p, a, b) == 1.0, "try {n}: {:.3} of the light comes through a room with nothing let out in it", through(&mut p, a, b));

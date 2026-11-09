@@ -3,7 +3,7 @@
 use crate::Row;
 use alloc::vec::Vec;
 use game::character::Bone;
-use game::fogofwar::fog_of_war_hidden__body as hidden;
+use game::fogofwar::fog_of_war_hidden as hidden;
 use game::game::{Game, GuardState};
 use game::ids::*;
 use game::m;

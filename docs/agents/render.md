@@ -163,7 +163,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   32, 64 and `mot.w` are free. **KEPT ON PURPOSE**: every row of the performance sweep (`src/ui/perfsweep.ts`: it is how a slow machine sheds work), the glossy
   floors (a storm turns them on where the tier has no traced reflections: `rust/game_rules/src/weather`). **THESE CHANGE SHADER TEXT** (denoise,
   the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
-  no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
+  no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game_rules/src/root_settings`) still lists the removed
   fields: the port's to regenerate. **Never seen on a GPU.**
 - **THE DIRECT LIGHT IS ONE PROGRAM (2026-11-07; the maintainer's yes on the shader survey's row for it).** `restirM`, the estimator compiled a second time for frames
   the camera moved, is gone: `restir.wgsl` is compiled once (label `restir`; the lighting trades' twin `restirT` on first use as before) and the direct-motion
