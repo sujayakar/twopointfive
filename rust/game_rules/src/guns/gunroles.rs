@@ -55,7 +55,7 @@ fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
 }
 
 /// What his primary is for.
-pub fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
+pub(in crate::guns) fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
     if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)

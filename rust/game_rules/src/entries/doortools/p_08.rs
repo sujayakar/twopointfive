@@ -31,7 +31,7 @@ fn pods_of(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, out: &mut Vec<V3>
 }
 
 /// has `gd` a line from where he stands to cell `i`, asked once per cell per place he stands
-pub fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, i: f64) -> bool {
+pub(in crate::entries) fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, i: f64) -> bool {
     let i = i as usize;
     let c = g.gd[gd].ch;
     let leans = g.gd[gd].script.as_ref().and_then(|s| s.lean).map_or(false, js::truthy);
@@ -56,7 +56,7 @@ pub fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, 
 }
 
 /// every cell a man's muzzle is on this frame is looked at
-pub fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, out: Option<&[GuardId]>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId, f64) -> bool>) {
+pub(in crate::entries) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, out: Option<&[GuardId]>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId, f64) -> bool>) {
     let mut ok = ok;
     let outside = out.is_some();
     let men: Vec<GuardId> = match out { Some(l) => l.to_vec(), None => g.tab.doortools_door_op[op].men.clone() };
@@ -83,7 +83,7 @@ pub fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoo
 }
 
 /// a man on his point: his muzzle travels to the unseen floor he has a line to that needs the least turn; false when he has none left
-pub fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub(in crate::entries) fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let (look_m, scan_rate, now) = (g.k.doortools.look_m, g.k.doortools.scan_rate, g.time);
     let c = g.gd[gd].ch;
     let (p, aim) = (g.ch[c].pos, g.ch[c].aim_yaw);
@@ -115,7 +115,7 @@ pub fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoo
 }
 
 /// how far it is from `a` to `b` on foot; Infinity past `lim` or with no way
-pub fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
+pub(in crate::entries) fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
     let d = flat(a, b);
     if d > lim { return f64::INFINITY; }
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
@@ -127,7 +127,7 @@ pub fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) ->
 }
 
 /// walkLen for one deal's questions, each pair measured once, to the longest reach DOORTOOLS.buddy asks about
-pub fn door_tools_walks(g: &crate::game::Game) -> crate::doortools::Walks {
+pub(in crate::entries) fn door_tools_walks(g: &crate::game::Game) -> crate::doortools::Walks {
     let k = &g.k.doortools;
     Walks::Memo { memo: JsMap::new(), lim: m::max_n(&[k.buddy_m, k.buddy_pair_m, k.buddy_left_m]) }
 }
@@ -138,7 +138,7 @@ fn walk_key(a: V3, b: V3) -> String {
 }
 
 /// the call of what walks answers: a pair of places measured once a deal
-pub fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 {
+pub(in crate::entries) fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 {
     let Walks::Memo { memo, lim } = w;
     let key = walk_key(a, b);
     if let Some(l) = memo.get(key.clone()) { return *l; }
@@ -204,7 +204,7 @@ fn nearest_of(g: &Game, list: &[GuardId], gd: GuardId) -> Option<GuardId> {
 }
 
 /// DOORTOOLS.buddy: `gd` would be dealt a walk to P: alone, with this partner, or no. A classifier only
-pub fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[GuardId], where_: &mut dyn FnMut(&mut crate::game::Game, GuardId) -> V3, len: &mut dyn FnMut(&mut crate::game::Game, V3, V3) -> f64, pair: Option<bool>, on_door: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> crate::doortools::DoorToolsAway {
+pub(in crate::entries) fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[GuardId], where_: &mut dyn FnMut(&mut crate::game::Game, GuardId) -> V3, len: &mut dyn FnMut(&mut crate::game::Game, V3, V3) -> f64, pair: Option<bool>, on_door: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> crate::doortools::DoorToolsAway {
     let pair = pair.unwrap_or(false);
     let mut on_door = on_door;
     let (buddy_m, buddy_pair_m) = (g.k.doortools.buddy_m, g.k.doortools.buddy_pair_m);
@@ -255,7 +255,7 @@ pub fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[Gu
 }
 
 /// the partner's point beside P, and the longest look he has there off his partner's sector
-pub fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: GuardId, taken: &[V3], in_room: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> Option<crate::entrypoints::Pod> {
+pub(in crate::entries) fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: GuardId, taken: &[V3], in_room: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> Option<crate::entrypoints::Pod> {
     let apart = m::max(1.0, g.k.doortools.pod_apart);
     let mate_at = pos_of(g, mate);
     let (mut best, mut bc): (Option<V3>, f64) = (None, f64::INFINITY);
@@ -293,7 +293,7 @@ pub fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: 
 }
 
 /// an entry's man sent on to a point of the room it is still looking over
-pub fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod: &mut crate::entrypoints::Pod, going: &str) {
+pub(in crate::entries) fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod: &mut crate::entrypoints::Pod, going: &str) {
     let door = g.tab.doortools_door_op[op].door;
     g.tab.doortools_door_op[op].pod.set(gd, *pod);
     g.tab.doortools_door_op[op].on_pod.delete(gd);
@@ -316,7 +316,7 @@ pub fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, 
 }
 
 /// is this room's floor one the whole-room rule works? A room past the size is said once an order
-pub fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
+pub(in crate::entries) fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
     let flow_max = g.k.doortools.flow_max;
     let cells = search(g, sr).pts.len();
     if !(flow_max > 0.0) || cells as f64 <= flow_max { return true; }
@@ -357,7 +357,7 @@ fn flow_no(g: &mut Game, op: DoorOpId, cells: usize, why: &str) -> bool {
 struct FlowCand { p: V3, sc: f64, d: f64 }
 
 /// DOORTOOLS.flowOn: the biggest piece of the floor nobody has looked at is gone INTO. True when men were sent
-pub fn door_tools_flow_in(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[GuardId]) -> bool {
+pub(in crate::entries) fn door_tools_flow_in(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[GuardId]) -> bool {
     let flow_moves = g.k.doortools.flow_moves;
     if search(g, sr).flows.unwrap_or(0.0) >= flow_moves { return false; }
     if search(g, sr).cell_at.is_none() {
@@ -631,7 +631,7 @@ enum PointMate { Refused, Alone, With(GuardId, crate::entrypoints::Pod) }
 struct MoveCand { i: usize, p: V3, sc: f64 }
 
 /// floor left that no man can see from where he stands: the man nearest it goes on to the point it is best seen from. True when one was sent
-pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
+pub(in crate::entries) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
     let (dead_cells, search_moves, look_m, pod_apart) = { let k = &g.k.doortools; (k.dead_cells, k.search_moves, k.look_m, k.pod_apart) };
     let flowing = door_tools_flows(g, op, sr);
     let (left, moves, left_at_move) = { let s = search(g, sr); (s.left, s.moves, s.left_at_move) };
@@ -765,7 +765,7 @@ fn move_ok(g: &mut Game, gd: GuardId, i: usize, p: V3, mid: V3, men: &[GuardId],
 }
 
 /// the points of domination for a door taken from `side`, with entrypoints.ts's say
-pub fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
+pub(in crate::entries) fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let w = g.dr[d].def.width;
     let were = door_tools_pods_as_were(g, d, side, n);
     crate::entrypoints::entry_points_clear_of(g, d, &were, &mut |g: &mut Game, p: V3| [along_of(g, d, p) - w / 2.0, -off_of(g, d, p, side)])
@@ -811,7 +811,7 @@ fn pods_fit(g: &mut Game, d: DoorId, mid: V3, p: V3, out: &[crate::entrypoints::
 }
 
 /// DOORTOOLS.podFrames: `p` stands in the opening of a door other than `d`, or the line to it from `mid` passes through one
-pub fn door_tools_in_frame(g: &crate::game::Game, d: DoorId, mid: V3, p: V3) -> bool {
+pub(in crate::entries) fn door_tools_in_frame(g: &crate::game::Game, d: DoorId, mid: V3, p: V3) -> bool {
     let frame_m = g.k.doortools.pod_frame_m;
     for &o in g.doors.list.iter() {
         if o == d { continue; }
@@ -831,7 +831,7 @@ pub fn door_tools_in_frame(g: &crate::game::Game, d: DoorId, mid: V3, p: V3) -> 
 }
 
 /// the two deep points: the level's clear plan when authored from that face, else the first free floor to either hand
-pub fn door_tools_pods2(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<crate::entrypoints::Pod> {
+pub(in crate::entries) fn door_tools_pods2(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<crate::entrypoints::Pod> {
     let w = g.dr[d].def.width;
     let into = -side;
     let name = g.dr[d].def.name.clone();
@@ -888,7 +888,7 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
 }
 
 /// the men go in: the lead first, the next `second` later, each to his point of domination
-pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
+pub(in crate::entries) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     if g.tab.doortools_door_op[op].thr.is_some() { door_tools_step_in(g, op); return; }
     let t = g.time;
     let (door, side, lead) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.lead) };
@@ -967,7 +967,7 @@ pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// THE SQUAD OF FOUR, a pair going in: its points kept `podApart` clear of the other order's men and of any teammate posted inside
-pub fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pods: &[crate::entrypoints::Pod], n: f64) -> Vec<crate::entrypoints::Pod> {
+pub(in crate::entries) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pods: &[crate::entrypoints::Pod], n: f64) -> Vec<crate::entrypoints::Pod> {
     let pod_apart = g.k.doortools.pod_apart;
     let (door, side) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side) };
     let mut taken: Vec<V3> = Vec::new();
@@ -994,7 +994,7 @@ pub fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pods: &[cr
 }
 
 /// Sam's trigger: the set charge nearest him (or the one given) goes; what it did, null with none set
-pub fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlow> {
+pub(in crate::entries) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlow> {
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
     let who = g.ch[g.pl[g.player].ch].id;
     let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));

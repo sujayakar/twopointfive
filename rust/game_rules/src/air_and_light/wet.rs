@@ -85,7 +85,7 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
 /// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads.
-pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::air_and_light) fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     mem_at(g, c);
@@ -114,7 +114,7 @@ pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
 const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::Head, crate::character::Bone::Hips, crate::character::Bone::Hips];
 
 /// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript.
-pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
+pub(in crate::air_and_light) fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];

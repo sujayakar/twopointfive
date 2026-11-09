@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 
 pub fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
 
-pub fn sstep(a: f64, b: f64, t: f64) -> f64 {
+pub(in crate::guns) fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
 }
@@ -54,7 +54,7 @@ pub fn disarm_pose(s: crate::disarm::Strip) -> crate::character::StripPose {
 }
 
 /// Sam's right fist is the gun's, not yet the knife's.
-pub fn disarm_hand(g: &crate::game::Game, h: &crate::player::Hold) -> bool {
+pub(in crate::guns) fn disarm_hand(g: &crate::game::Game, h: &crate::player::Hold) -> bool {
     match h.strip { Some(s) => s.t < g.k.hold.strip.knife, None => false }
 }
 

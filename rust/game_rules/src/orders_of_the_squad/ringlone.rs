@@ -5,7 +5,7 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
 /// The way wedge `key` of `n` points, in radians; 1 is up, clockwise. (ringlone.ts wedgeMid)
-pub fn wedge_mid(key: f64, n: f64) -> f64 {
+pub(in crate::orders_of_the_squad) fn wedge_mid(key: f64, n: f64) -> f64 {
     (-90.0 + (key - 1.0) * 360.0 / n) * m::PI / 180.0
 }
 
@@ -47,13 +47,13 @@ pub fn box_of(key: f64, n: f64, text_w: f64, tall: Option<bool>) -> crate::ringl
 }
 
 /// The place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall. (ringlone.ts pillBox)
-pub fn pill_box(g: &crate::game::Game, key: f64, n: f64) -> crate::ringlone::BoxOf {
+pub(in crate::orders_of_the_squad) fn pill_box(g: &crate::game::Game, key: f64, n: f64) -> crate::ringlone::BoxOf {
     let l = crate::ringlone::lone();
     box_of(key, n, l.max * l.char, Some(true))
 }
 
 /// Is a point of the ring's own px (from its middle) on the place of wedge `key`'s pill. (ringlone.ts onPill)
-pub fn on_pill(g: &crate::game::Game, key: f64, n: f64, x: f64, y: f64) -> bool {
+pub(in crate::orders_of_the_squad) fn on_pill(g: &crate::game::Game, key: f64, n: f64, x: f64, y: f64) -> bool {
     let p = pill_box(g, key, n);
     x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1
 }

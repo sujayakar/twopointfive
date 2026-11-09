@@ -35,7 +35,7 @@ fn at_of(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
-pub fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::orders_of_the_squad) fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;
     let r = g.m.weapons.weapons.get(d).unwrap();
     r.cls != crate::weapons::WeaponClass::Pistol && r.pellets.is_none() && r.launcher != Some(false)
@@ -58,7 +58,7 @@ pub fn squad40_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 
 }
 
 /// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
-pub fn squad40_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
+pub(in crate::orders_of_the_squad) fn squad40_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     let key = crate::seats::view_key(g, seat);
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
@@ -135,7 +135,7 @@ pub fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, 
 }
 
 /// ONE MAN'S SHOT to a spot, from where he stands with his gun turned to it (`Close`: not armed there; None: he has none). (squad40.ts shotOf)
-pub fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
+pub(in crate::orders_of_the_squad) fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
     let made;
     let bb: &Bodies = match b { Some(x) => x, None => { made = bodies(g); &made } };
     let c = g.gd[gd].ch;
@@ -273,7 +273,7 @@ fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
 }
 
 /// A MAN TURNING TO HIS SHOT, each frame (the row's `tick`). (squad40.ts turnTick)
-pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub(in crate::orders_of_the_squad) fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let now = g.time;
     let c = g.gd[gd].ch;
@@ -323,7 +323,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 }
 
 /// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
-pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
     let a = match plan(g, men, at) {
         ShellPlan { no: Some(why), .. } => { g.stats.squad40.refused += 1; return Some(why); }
@@ -380,7 +380,7 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
 }
 
 /// Once a frame straight after the menu's own input: the row kept in step with what this staging brought and with the throws' page, a turn whose man is down or under another order ended. (squad40.ts squad40Tick)
-pub fn squad40_tick(g: &mut crate::game::Game) {
+pub(in crate::orders_of_the_squad) fn squad40_tick(g: &mut crate::game::Game) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if g.m.squad40.states.get(key).is_none() { return; }
     let mut at = 0;

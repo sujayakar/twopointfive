@@ -101,7 +101,7 @@ pub fn prop_set_yaw(g: &mut crate::game::Game, id: PropId, v: f64) {
     crate::scene_box_mirror::thing_wrote(g);
 }
 
-pub fn prop_vx(g: &crate::game::Game, id: PropId) -> f64 {
+pub(in crate::fittings) fn prop_vx(g: &crate::game::Game, id: PropId) -> f64 {
     let s = cols_read(g);
     s.vx[row(s, id)]
 }
@@ -112,7 +112,7 @@ pub fn prop_set_vx(g: &mut crate::game::Game, id: PropId, v: f64) {
     s.vx[r] = v;
 }
 
-pub fn prop_vz(g: &crate::game::Game, id: PropId) -> f64 {
+pub(in crate::fittings) fn prop_vz(g: &crate::game::Game, id: PropId) -> f64 {
     let s = cols_read(g);
     s.vz[row(s, id)]
 }
@@ -139,13 +139,13 @@ pub fn prop_asleep(g: &crate::game::Game, id: PropId) -> bool {
     s.flags[row(s, id)] & sim::props::F_ASLEEP != 0
 }
 
-pub fn prop_set_asleep(g: &mut crate::game::Game, id: PropId, v: bool) {
+pub(in crate::fittings) fn prop_set_asleep(g: &mut crate::game::Game, id: PropId, v: bool) {
     let s = cols(g);
     let r = row(s, id);
     set_flag(s, r, sim::props::F_ASLEEP, v);
 }
 
-pub fn prop_set_idle(g: &mut crate::game::Game, id: PropId, v: f64) {
+pub(in crate::fittings) fn prop_set_idle(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
     s.idle[r] = v;
@@ -163,7 +163,7 @@ pub fn prop_rolling(g: &crate::game::Game, id: PropId) -> bool {
     s.flags[row(s, id)] & sim::props::F_ROLLING != 0
 }
 
-pub fn prop_set_rolling(g: &mut crate::game::Game, id: PropId, v: bool) {
+pub(in crate::fittings) fn prop_set_rolling(g: &mut crate::game::Game, id: PropId, v: bool) {
     let s = cols(g);
     let r = row(s, id);
     set_flag(s, r, sim::props::F_ROLLING, v);
@@ -182,12 +182,12 @@ pub fn prop_set_last_who(g: &mut crate::game::Game, id: PropId, v: f64) {
 }
 
 /// last event time, the noise's rate limit
-pub fn prop_noise_t(g: &crate::game::Game, id: PropId) -> f64 {
+pub(in crate::fittings) fn prop_noise_t(g: &crate::game::Game, id: PropId) -> f64 {
     let s = cols_read(g);
     s.noise_t[row(s, id)]
 }
 
-pub fn prop_set_noise_t(g: &mut crate::game::Game, id: PropId, v: f64) {
+pub(in crate::fittings) fn prop_set_noise_t(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
     s.noise_t[r] = v;
@@ -199,14 +199,14 @@ pub fn prop_push_t(g: &crate::game::Game, id: PropId) -> f64 {
     s.push_t[row(s, id)]
 }
 
-pub fn prop_set_push_t(g: &mut crate::game::Game, id: PropId, v: f64) {
+pub(in crate::fittings) fn prop_set_push_t(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
     s.push_t[r] = v;
 }
 
 /// a thing of furniture made: its row written, its facts, its part boxes, placed
-pub fn prop_new(g: &mut crate::game::Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropId {
+pub(in crate::fittings) fn prop_new(g: &mut crate::game::Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropId {
     let id = PropId(id_2 as u32);
     prop_set_x(g, id, def.x);
     prop_set_z(g, id, def.z);
@@ -299,12 +299,12 @@ pub fn prop_wake(g: &mut crate::game::Game, id: PropId) {
 }
 
 /// the system's clock, a number of the block
-pub fn prop_system_time(g: &crate::game::Game) -> f64 {
+pub(in crate::fittings) fn prop_system_time(g: &crate::game::Game) -> f64 {
     cols_read(g).time
 }
 
 /// a noise: held while a step is being taken, heard at once otherwise
-pub fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) {
+pub(in crate::fittings) fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) {
     if g.props.stepping {
         g.props.said.push(e);
     } else {
@@ -377,7 +377,7 @@ pub fn prop_system_reset(g: &mut crate::game::Game) {
 }
 
 /// authoring overlaps resolved once, silently; the settled pose becomes home
-pub fn prop_system_settle(g: &mut crate::game::Game) {
+pub(in crate::fittings) fn prop_system_settle(g: &mut crate::game::Game) {
     g.props.muted = true;
     for i in 0..g.props.props.len() {
         let p = g.props.props[i];
@@ -403,13 +403,13 @@ pub fn prop_system_settle(g: &mut crate::game::Game) {
 }
 
 /// the box world's copy standing for the passes; in Rust the module always takes them
-pub fn prop_system_settle_world(g: &mut crate::game::Game) {
+pub(in crate::fittings) fn prop_system_settle_world(g: &mut crate::game::Game) {
     crate::scene_collision::rules_statics(g);
     debug_assert!(crate::scene_collision::standing(g), "the furniture settled as a level stood up, with no copy of the box world standing");
 }
 
 /// the passes taken in the module: the level's facts by row, the call, and how often a thing was pushed out of a static
-pub fn prop_system_settle_there(g: &mut crate::game::Game) {
+pub(in crate::fittings) fn prop_system_settle_there(g: &mut crate::game::Game) {
     prop_system_facts(g);
     io().par[sim::props::P_PROPS] = g.props.props.len() as f64;
     let walls = sim::props::settle(g.sim, g.col.mirror.slot as usize);
@@ -472,14 +472,14 @@ pub fn prop_system_apply_impulse(g: &mut crate::game::Game, p: PropId, point: V3
 }
 
 /// the speed caps on this thing's row
-pub fn prop_system_clamp_vel(g: &mut crate::game::Game, p: PropId) {
+pub(in crate::fittings) fn prop_system_clamp_vel(g: &mut crate::game::Game, p: PropId) {
     let c = cols(g);
     let r = row(c, p);
     clamp_row(c, r);
 }
 
 /// a noise, rate limited by the thing: a chair along a wall is one scrape and the odd knock
-pub fn prop_system_noise(g: &mut crate::game::Game, p: PropId, sound: crate::props::PropSystemNoiseSound, speed: f64, who: f64, level: f64) {
+pub(in crate::fittings) fn prop_system_noise(g: &mut crate::game::Game, p: PropId, sound: crate::props::PropSystemNoiseSound, speed: f64, who: f64, level: f64) {
     let time = prop_system_time(g);
     let gap = if sound == PropSystemNoiseSound::Thud { 0.35 } else { 0.8 };
     if g.props.muted || time - prop_noise_t(g, p) < gap {
@@ -536,7 +536,7 @@ pub fn prop_system_update(g: &mut crate::game::Game, dt: f64, contacts: &mut Vec
 }
 
 /// the world to step over and which of its leaves sweep; none in a level with no furniture, which has no step
-pub fn prop_system_there(g: &mut crate::game::Game, contacts: &[crate::props::PropContact], leaves: &[BoxId]) -> Option<crate::props::PropSystemThere> {
+pub(in crate::fittings) fn prop_system_there(g: &mut crate::game::Game, contacts: &[crate::props::PropContact], leaves: &[BoxId]) -> Option<crate::props::PropSystemThere> {
     if g.props.all.is_empty() {
         return None;
     }
@@ -560,7 +560,7 @@ pub fn prop_system_there(g: &mut crate::game::Game, contacts: &[crate::props::Pr
 }
 
 /// the level's facts of each thing, by row, into the hand-over
-pub fn prop_system_facts(g: &mut crate::game::Game) {
+pub(in crate::fittings) fn prop_system_facts(g: &mut crate::game::Game) {
     use sim::props::*;
     let io = io();
     for r in 0..g.props.props.len() {
@@ -581,7 +581,7 @@ pub fn prop_system_facts(g: &mut crate::game::Game) {
 }
 
 /// the hand-over written and the step taken: how many noises it listed
-pub fn prop_system_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::props::PropContact], t: &crate::props::PropSystemHandOverT) -> f64 {
+pub(in crate::fittings) fn prop_system_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::props::PropContact], t: &crate::props::PropSystemHandOverT) -> f64 {
     use sim::props::*;
     let n = g.props.props.len();
     prop_system_facts(g);
@@ -638,7 +638,7 @@ pub fn prop_system_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[cra
 }
 
 /// what the step did taken back: where it leaves each man, and the noises in the order they were made, read out before anybody hears one
-pub fn prop_system_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::props::PropContact>, ev: f64) {
+pub(in crate::fittings) fn prop_system_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::props::PropContact>, ev: f64) {
     use sim::props::*;
     let io = io_read();
     for c in 0..contacts.len() {
@@ -665,7 +665,7 @@ pub fn prop_system_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate
 }
 
 /// a noise of the module's list as the event
-pub fn prop_system_heard(g: &crate::game::Game, e: &[f64], o: f64) -> crate::props::PropEvent {
+pub(in crate::fittings) fn prop_system_heard(g: &crate::game::Game, e: &[f64], o: f64) -> crate::props::PropEvent {
     use sim::props::*;
     let o = o as usize;
     let sound = match e[o + E_SOUND] as usize {

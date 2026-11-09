@@ -72,7 +72,7 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
 }
 
 /// WALLSHOT: the shock with no flash
-pub fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
+pub(in crate::entries) fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let now = g.time;
     g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, now + secs);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
@@ -88,7 +88,7 @@ pub fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
 }
 
 /// Flash-blind
-pub fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
+pub(in crate::entries) fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let now = g.time;
     g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
@@ -103,7 +103,7 @@ pub fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at:
 }
 
 /// The charge on the wall: a dark slab and a lit tell, one-frame boxes
-pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
+pub(in crate::entries) fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let height = g.k.wallcharge.height;
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let p = wall_pt(g, &w, 0.0, 0.022, Some(height));
@@ -192,7 +192,7 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// With the cursor on a partition and Sam at its foot, the marker and its row
-pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub(in crate::entries) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     g.wall_charge.offered = None;
     g.wall_charge.marker = None;
     if !wall_charge_on(g) || !g.wall_charge.seated { return; }
@@ -267,7 +267,7 @@ pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &
 }
 
 /// The row performed starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off
-pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
+pub(in crate::entries) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let pl = g.player;
     let ch = g.pl[pl].ch;
     let p = g.ch[ch].pos;

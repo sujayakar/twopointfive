@@ -127,7 +127,7 @@ pub fn quiet_cams_text(g: &crate::game::Game, on: bool) -> String {
 }
 
 /// The pick forgotten, to be read again.
-pub fn quiet_fog_forget(g: &mut crate::game::Game) {
+pub(in crate::squad_ways) fn quiet_fog_forget(g: &mut crate::game::Game) {
     g.m.quietfog.pick = None;
     g.m.quietfog.kept = false;
     g.m.quietfog.cams = None;

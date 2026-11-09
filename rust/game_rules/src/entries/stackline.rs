@@ -6,13 +6,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
-pub fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
+pub(in crate::entries) fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
 }
 
 /// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.
-pub fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
+pub(in crate::entries) fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
     let kn = g.k.stackline;
     let f = crate::guards::frame_of(g, d);
     let mut k = 0.0;

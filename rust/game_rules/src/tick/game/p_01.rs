@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A man easing past furniture: a player crouched and not dashing; anyone else low.
-pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
+pub(in crate::tick) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
     match pl {
         Some(p) => g.pl[p].crouch && !g.pl[p].dash,
         None => g.ch[c].anim.crouch > 0.5,
@@ -15,7 +15,7 @@ pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool
 }
 
 /// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.
-pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
+pub(in crate::tick) fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
     if s.spotted > 0.0 {
         crate::game::MissionRating::Assault
     } else if s.kills == 0.0 && s.alerts == 0.0 && s.bodies == 0.0 {
@@ -34,7 +34,7 @@ pub fn fmt_clock(sec: f64) -> String {
 }
 
 /// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.
-pub fn new_mission(t0: f64) -> crate::game::Mission {
+pub(in crate::tick) fn new_mission(t0: f64) -> crate::game::Mission {
     crate::game::Mission {
         stage: crate::game::MissionStage::Infiltrate,
         t0,

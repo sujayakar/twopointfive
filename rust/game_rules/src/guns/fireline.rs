@@ -73,7 +73,7 @@ pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
 }
 
 /// Is this point of floor inside the lane by its shape alone.
-pub fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
+pub(in crate::guns) fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     let more = more.unwrap_or(0.0);
     let rx = x - l.m[0];
     let rz = z - l.m[2];
@@ -163,7 +163,7 @@ pub fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> 
 }
 
 /// Would waiting leave him standing in an enemy's line, as far as he knows.
-pub fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::guns) fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }

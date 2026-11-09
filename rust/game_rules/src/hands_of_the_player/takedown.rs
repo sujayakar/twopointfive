@@ -14,27 +14,27 @@ pub fn live(g: &mut crate::game::Game, half: crate::takedown::Half) -> bool {
 }
 
 /// How much of the choke's lowering the hold's two poses show.
-pub fn take_lower(g: &mut crate::game::Game) -> f64 {
+pub(in crate::hands_of_the_player) fn take_lower(g: &mut crate::game::Game) -> f64 {
     if live(g, Half::Lower) { 1.0 } else { 0.0 }
 }
 
 /// Whether the hold's poses show the kill as a move.
-pub fn take_kill(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn take_kill(g: &mut crate::game::Game) -> bool {
     live(g, Half::Kill)
 }
 
 /// Whether the hold's poses show the choke's beats.
-pub fn take_beats(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn take_beats(g: &mut crate::game::Game) -> bool {
     live(g, Half::ChokeBeats)
 }
 
 /// Whether the hold's poses show the choke's haul.
-pub fn take_haul(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn take_haul(g: &mut crate::game::Game) -> bool {
     live(g, Half::Haul)
 }
 
 /// Which move a blow is, by the side it comes from and the hand that does it.
-pub fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate::character::BlowStyle {
+pub(in crate::hands_of_the_player) fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate::character::BlowStyle {
     use crate::character::BlowStyle;
     use crate::close::CloseKind;
     let rear = kind.is_none() || kind == Some(CloseKind::Behind) || kind == Some(CloseKind::Seat);
@@ -48,7 +48,7 @@ pub fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate:
 }
 
 /// How the man a blow lands on goes down.
-pub fn fall_style(style: crate::character::BlowStyle) -> crate::character::FallStyle {
+pub(in crate::hands_of_the_player) fn fall_style(style: crate::character::BlowStyle) -> crate::character::FallStyle {
     use crate::character::{BlowStyle, FallStyle};
     if style == BlowStyle::Chop {
         FallStyle::Fold
@@ -98,13 +98,13 @@ fn marks_of(by_pos: V3, by_yaw: f64, vic_pos: V3, vic_yaw: f64, neck: Option<V3>
 }
 
 /// No headroom over him: a crouched Sam does not rise into the blow; everybody else stands.
-pub fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
+pub(in crate::hands_of_the_player) fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
     let p = g.player;
     !(by == g.pl[p].ch && g.pl[p].crouch && !crate::player::can_stand(g))
 }
 
 /// Sam's blow begins: his move by the side and the hand, and what the man does before it lands.
-pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool) {
+pub(in crate::hands_of_the_player) fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool) {
     use crate::character::{BlowLive, BlowOpts, BlowStyle, TakenStyle};
     if !live(g, Half::Blow) { return; }
     let style = blow_style(kind, lethal);
@@ -124,7 +124,7 @@ pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Opti
 }
 
 /// How far a fall wants clear floor, by its style and which way: direction, metres.
-pub fn fall_way(g: &crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
+pub(in crate::hands_of_the_player) fn fall_way(g: &crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
     fall_way_of(g.ch[vic].pos, g.ch[vic].body_yaw, from, style)
 }
 
@@ -146,7 +146,7 @@ fn fall_way_of(p: V3, yaw: f64, from: Option<V3>, style: crate::character::FallS
 }
 
 /// A fall is asked for: its style, where the man who did it stands, and whether the level has room for it.
-pub fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::FallStyle, by: Option<CharId>, ahead: Option<f64>) {
+pub(in crate::hands_of_the_player) fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::FallStyle, by: Option<CharId>, ahead: Option<f64>) {
     use crate::character::FallStyle;
     let ahead = ahead.unwrap_or(0.0);
     let from = by.map(|b| v3::copy(g.ch[b].pos));
@@ -191,7 +191,7 @@ fn fits(g: &mut Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
 }
 
 /// The blow lands, the frame he is put down: how he falls. `how` is a move with no blow of its own.
-pub fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool, how: Option<crate::takedown::TakeFallHow>) {
+pub(in crate::hands_of_the_player) fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool, how: Option<crate::takedown::TakeFallHow>) {
     use crate::character::FallStyle;
     use crate::close::CloseKind;
     if !live(g, Half::Fall) { return; }

@@ -7,24 +7,24 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A door's slab as its row holds it: the handle's ID is the door's number, and the row is found at each read.
-pub fn slab_row_new(g: &crate::game::Game, door: f64) -> SlabRowId {
+pub(in crate::fittings) fn slab_row_new(g: &crate::game::Game, door: f64) -> SlabRowId {
     SlabRowId(door as u32)
 }
 
 /// One double of the slab's row, as it stands now.
-pub fn slab_row_g(g: &crate::game::Game, id: SlabRowId, k: crate::doors::SlabRowGK) -> f64 {
+pub(in crate::fittings) fn slab_row_g(g: &crate::game::Game, id: SlabRowId, k: crate::doors::SlabRowGK) -> f64 {
     let r = row_now(g, id);
     slab_col(&::sim::state::state_read(g.sim).slabs, k, r)
 }
 
 /// The slab row's word of truths.
-pub fn slab_row_f(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_f(g: &crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
     ::sim::state::state_read(g.sim).slabs.flags[r] as f64
 }
 
 /// Its centre.
-pub fn slab_row_p(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
+pub(in crate::fittings) fn slab_row_p(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
     let x = slab_row_g(g, id, SlabRowGK::Px);
     let y = slab_row_g(g, id, SlabRowGK::Py);
     let z = slab_row_g(g, id, SlabRowGK::Pz);
@@ -32,7 +32,7 @@ pub fn slab_row_p(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
 }
 
 /// Its velocity.
-pub fn slab_row_v(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
+pub(in crate::fittings) fn slab_row_v(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
     let x = slab_row_g(g, id, SlabRowGK::Vx);
     let y = slab_row_g(g, id, SlabRowGK::Vy);
     let z = slab_row_g(g, id, SlabRowGK::Vz);
@@ -40,66 +40,66 @@ pub fn slab_row_v(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
 }
 
 /// The world angle of its width axis.
-pub fn slab_row_a(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_a(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::A)
 }
 
 /// Its turn.
-pub fn slab_row_spin(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_spin(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Spin)
 }
 
 /// 0 upright to π/2 flat.
-pub fn slab_row_tip(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_tip(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Tip)
 }
 
 /// How fast it is tipping.
-pub fn slab_row_tip_v(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_tip_v(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::TipV)
 }
 
 /// The slab's own clock.
-pub fn slab_row_t(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_t(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::T)
 }
 
 /// The angle the door reads as while off.
-pub fn slab_row_ang(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_ang(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Ang)
 }
 
 /// The clock before which a slab with no clear spot is not searched for again.
-pub fn slab_row_wedged(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_wedged(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Wedged)
 }
 
 /// The way its top fell: +1 the CCW normal of its width axis, −1 the other.
-pub fn slab_row_side(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_side(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
     let f = slab_row_f(g, id);
     if flag(f, crate::sim_slabshome::slf().back) { -1.0 } else { 1.0 }
 }
 
 /// Lying at rest.
-pub fn slab_row_rest(g: &mut crate::game::Game, id: SlabRowId) -> bool {
+pub(in crate::fittings) fn slab_row_rest(g: &mut crate::game::Game, id: SlabRowId) -> bool {
     let f = slab_row_f(g, id);
     flag(f, crate::sim_slabshome::slf().rest)
 }
 
 /// Slammed flat.
-pub fn slab_row_landed(g: &mut crate::game::Game, id: SlabRowId) -> bool {
+pub(in crate::fittings) fn slab_row_landed(g: &mut crate::game::Game, id: SlabRowId) -> bool {
     let f = slab_row_f(g, id);
     flag(f, crate::sim_slabshome::slf().landed)
 }
 
 /// Whose doing it was.
-pub fn slab_row_who(g: &crate::game::Game, id: SlabRowId) -> f64 {
+pub(in crate::fittings) fn slab_row_who(g: &crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
     ::sim::state::state_read(g.sim).slabs.who[r] as f64
 }
 
 /// The lock rail of a leaf gunfire took apart: half width, half length, where its handles are.
-pub fn slab_row_bits(g: &mut crate::game::Game, id: SlabRowId) -> Option<[f64; 4]> {
+pub(in crate::fittings) fn slab_row_bits(g: &mut crate::game::Game, id: SlabRowId) -> Option<[f64; 4]> {
     let f = slab_row_f(g, id);
     if !flag(f, crate::sim_slabshome::slf().bits) {
         return None;
@@ -112,79 +112,79 @@ pub fn slab_row_bits(g: &mut crate::game::Game, id: SlabRowId) -> Option<[f64; 4
 }
 
 /// A door's drive as its columns hold it: the handle's ID is the door's number.
-pub fn drive_cols_new(g: &crate::game::Game, i: f64) -> DriveColsId {
+pub(in crate::fittings) fn drive_cols_new(g: &crate::game::Game, i: f64) -> DriveColsId {
     DriveColsId(i as u32)
 }
 
 /// One column of this door.
-pub fn drive_cols_g(g: &crate::game::Game, id: DriveColsId, k: f64) -> f64 {
+pub(in crate::fittings) fn drive_cols_g(g: &crate::game::Game, id: DriveColsId, k: f64) -> f64 {
     ::sim::state::state_read(g.sim).doors.c[k as usize][id.0 as usize]
 }
 
 /// Write one column of this door.
-pub fn drive_cols_p(g: &mut crate::game::Game, id: DriveColsId, k: f64, v: f64) {
+pub(in crate::fittings) fn drive_cols_p(g: &mut crate::game::Game, id: DriveColsId, k: f64, v: f64) {
     ::sim::state::state(g.sim).doors.c[k as usize][id.0 as usize] = v;
 }
 
-pub fn drive_cols_set_who(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_who(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_who, v)
 }
 
-pub fn drive_cols_set_dir(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_dir(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_dir, v)
 }
 
 /// How it was driven.
-pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DoorDriveKind {
+pub(in crate::fittings) fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DoorDriveKind {
     let n = drive_cols_g(g, id, crate::sim_doorshome::dc().drive_kind);
     kind_at(n)
 }
 
 /// Answers what it wrote: the skeleton's signature gives the setter the word back.
-pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DoorDriveKind) -> crate::doors::DoorDriveKind {
+pub(in crate::fittings) fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DoorDriveKind) -> crate::doors::DoorDriveKind {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_kind, place_of(v));
     v
 }
 
-pub fn drive_cols_set_t(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_t(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_t, v)
 }
 
-pub fn drive_cols_set_from(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_from(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_from, v)
 }
 
 /// A crouched, silent or calm man's.
-pub fn drive_cols_quiet(g: &mut crate::game::Game, id: DriveColsId) -> bool {
+pub(in crate::fittings) fn drive_cols_quiet(g: &mut crate::game::Game, id: DriveColsId) -> bool {
     drive_cols_g(g, id, crate::sim_doorshome::dc().drive_quiet) != 0.0
 }
 
-pub fn drive_cols_set_quiet(g: &mut crate::game::Game, id: DriveColsId, v: bool) {
+pub(in crate::fittings) fn drive_cols_set_quiet(g: &mut crate::game::Game, id: DriveColsId, v: bool) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_quiet, if v { 1.0 } else { 0.0 })
 }
 
-pub fn drive_cols_set_side(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_side(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_side, v)
 }
 
-pub fn drive_cols_set_rate(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_rate(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_rate, v)
 }
 
-pub fn drive_cols_set_px(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_px(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_px, v)
 }
 
-pub fn drive_cols_set_pz(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_pz(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_pz, v)
 }
 
 /// The man it last struck, −1 nobody.
-pub fn drive_cols_hit(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
+pub(in crate::fittings) fn drive_cols_hit(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
     drive_cols_g(g, id, crate::sim_doorshome::dc().drive_hit)
 }
 
-pub fn drive_cols_set_hit(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
+pub(in crate::fittings) fn drive_cols_set_hit(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_hit, v)
 }
 

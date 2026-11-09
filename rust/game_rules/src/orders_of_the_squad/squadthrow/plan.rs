@@ -109,7 +109,7 @@ fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Op
 }
 
 /// The row's words, with the warning of the plan for this spot.
-pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
+pub(in crate::orders_of_the_squad) fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let warn = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)).filter(|p| p.at == at).and_then(|p| p.warn.clone()).unwrap_or_default();
     let n = left(g, kind);
@@ -117,17 +117,17 @@ pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowK
 }
 
 /// The order is one man's, the thrower's.
-pub fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
+pub(in crate::orders_of_the_squad) fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
     match plan_for(g, men, at, kind).thrower { Some(th) => vec![th.gd], None => Vec::new() }
 }
 
 /// Err: why not.
-pub fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> {
+pub(in crate::orders_of_the_squad) fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> {
     match plan_for(g, men, at, kind).refuse { Some(why) => Err(why), None => Ok(()) }
 }
 
 /// Some: the refusal.
-pub fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
     let at = crate::orders::rows::at(t);
     let p = plan_for(g, men, at, kind);
     if let Some(why) = p.refuse {

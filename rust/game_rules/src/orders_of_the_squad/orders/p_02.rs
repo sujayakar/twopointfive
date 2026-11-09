@@ -68,15 +68,15 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
 // ------------------------------------------------------------ the night breach's owner
 
 /// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
-pub fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::orders_of_the_squad) fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
 }
 /// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
-pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     if g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
 }
 /// owner 'nightbreach'.status
-pub fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     use crate::nightbreach::NightBreachState as St;
     if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
     let state = crate::nightbreach::night_breach_state(g);
@@ -258,7 +258,7 @@ pub fn squad_orders_paired(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
 }
 
 /// The next element: gold, red, blue for a squad in pairs; all, then man by man for the one pair.
-pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> crate::orders::Who {
+pub(in crate::orders_of_the_squad) fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> crate::orders::Who {
     let dir = dir.unwrap_or(1.0);
     let s = squad_orders_squad(g, &crate::seats::here(g));
     let mut ring: Vec<Who> = vec![Who::All];
@@ -330,7 +330,7 @@ pub fn squad_orders_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: 
 }
 
 /// The tick's one write of a follower's latched word: `d` is how far he is off his place.
-pub fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId, d: f64) {
+pub(in crate::orders_of_the_squad) fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId, d: f64) {
     let t = g.time;
     let arrived = g.tab.orders_assignment[a].arrived;
     let (far, hold) = (g.k.orders.word_far_m, g.k.orders.word_hold_s);
@@ -345,7 +345,7 @@ pub fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId
 }
 
 /// Is he shown as there: a follower's is the latch, every other order's is `arrived`.
-pub fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
+pub(in crate::orders_of_the_squad) fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if row.post.is_some() { return row.arrived; }
     match g.m.orders.follow_word.get(a) {
@@ -582,7 +582,7 @@ fn ray_on_door(ro: V3, rd: V3, c: V3, th: f64, width: f64, height: f64, pad: f64
 }
 
 /// The door a ray is on as drawn: the nearest doorway it crosses with nothing of the scene nearer.
-pub fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
+pub(in crate::orders_of_the_squad) fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
     let t_scene = t_scene.unwrap_or(f64::INFINITY);
     let pad = g.k.orders.door_ray_pad;
     let mut best: Option<DoorId> = None;

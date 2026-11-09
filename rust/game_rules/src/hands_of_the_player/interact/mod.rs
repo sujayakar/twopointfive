@@ -86,7 +86,7 @@ pub fn empty_word(t: Option<&crate::interact::EmptyThing>) -> String {
 }
 
 /// the movement keys down, a bit each
-pub fn move_mask(g: &Game, input: InputId) -> f64 {
+pub(in crate::hands_of_the_player) fn move_mask(g: &Game, input: InputId) -> f64 {
     let mut mask = 0i32;
     for (i, k) in MOVE_KEYS.iter().enumerate() {
         if crate::input::input_down(g, input, k) { mask |= 1 << i; }
@@ -115,7 +115,7 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
 }
 
 /// Stop the running sustained verb where it is. True if there was anything to stop.
-pub fn cancel_sustained(g: &mut Game) -> bool {
+pub(in crate::hands_of_the_player) fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
     if g.pl[pl].easing.is_some() { g.pl[pl].easing = None; return true; }
     if g.pl[pl].picking.is_some() { crate::player::stop_picking(g, None); return true; }
@@ -148,13 +148,13 @@ pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// Sam's own ring is on
-pub fn ring_mode(g: &Game) -> bool { g.puppet.is_none() }
+pub(in crate::hands_of_the_player) fn ring_mode(g: &Game) -> bool { g.puppet.is_none() }
 
 /// it is the ring that stays
-pub fn ring_stays(g: &Game) -> bool { g.puppet.is_none() }
+pub(in crate::hands_of_the_player) fn ring_stays(g: &Game) -> bool { g.puppet.is_none() }
 
 /// a wedge's digit pressed this frame
-pub fn wedge_digit(g: &Game, input: InputId) -> bool {
+pub(in crate::hands_of_the_player) fn wedge_digit(g: &Game, input: InputId) -> bool {
     let mut d = 1;
     while d as f64 <= g.k.cmdring.wedges {
         if crate::input::input_hit(g, input, &format!("Digit{}", d)) { return true; }
@@ -172,7 +172,7 @@ pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first
-pub fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
+pub(in crate::hands_of_the_player) fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
     let mut keys = 0i32;
     let n = m::min(seat.nearby.len() as f64, g.k.cmdring.wedges) as usize;
     for i in 0..n { if wedged(&seat.nearby[i]) { keys |= 1 << (i + 1); } }
@@ -209,7 +209,7 @@ pub fn choosable(rows: &[crate::game::Interactable]) -> bool {
 }
 
 /// the list opened, its cancel row at its foot at once
-pub fn open_selector(g: &mut Game) {
+pub(in crate::hands_of_the_player) fn open_selector(g: &mut Game) {
     let pl = g.player;
     if g.pl[pl].sel.open { return; }
     g.pl[pl].sel.open = true;
@@ -221,7 +221,7 @@ pub fn open_selector(g: &mut Game) {
 }
 
 /// the list shut, the press itself untouched
-pub fn shut_list(g: &mut Game) {
+pub(in crate::hands_of_the_player) fn shut_list(g: &mut Game) {
     let pl = g.player;
     let ring = g.pl[pl].sel.ring.is_some();
     g.pl[pl].sel.open = false;
@@ -236,7 +236,7 @@ pub fn shut_list(g: &mut Game) {
 }
 
 /// shut the list AND end the press (`spent`: it must also come up before Space arms again)
-pub fn close_selector(g: &mut Game, spent: bool) {
+pub(in crate::hands_of_the_player) fn close_selector(g: &mut Game, spent: bool) {
     let pl = g.player;
     shut_list(g);
     g.pl[pl].sel.down_t = -1.0;
@@ -245,7 +245,7 @@ pub fn close_selector(g: &mut Game, spent: bool) {
 }
 
 /// the point his ring stands on: the thing its first row is about where that is near him; else his own body
-pub fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
+pub(in crate::hands_of_the_player) fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let p = g.ch[g.pl[seat.player].ch].pos;
     match seat.nearby.iter().find(|r| wedged(r)) {
         Some(h) if v3::dist_xz(h.pos, p) <= RING_THING_M => h.pos,
@@ -254,7 +254,7 @@ pub fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
 }
 
 /// the ring put on its thing (`open`) and kept there. True: the hand has not moved the cursor since the last look.
-pub fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+pub(in crate::hands_of_the_player) fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
     let open = open.unwrap_or(false);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if open {

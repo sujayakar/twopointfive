@@ -20,7 +20,7 @@ fn lists_none(listed: &Option<Vec<String>>, targets: &[String]) -> bool {
 }
 
 /// How much larger than CMDRING's px a ring stands in a view this size. The tick's ringOpen reads it, so it is translated.   (cmdring.ts ringZoom)
-pub fn ring_zoom(g: &crate::game::Game, w: f64, h: f64) -> f64 {
+pub(in crate::orders_of_the_squad) fn ring_zoom(g: &crate::game::Game, w: f64, h: f64) -> f64 {
     zoom_of(&g.k.cmdring, w, h)
 }
 /// ringZoom on the knobs alone.
@@ -123,7 +123,7 @@ pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input
 }
 
 /// Which row is on which wedge (CMDRING.only, the page's way): the rows with digits keep them, the rest take the spare wedges, the last spare is 'more'.   (cmdring.ts ringSeats)
-pub fn ring_seats(g: &crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
+pub(in crate::orders_of_the_squad) fn ring_seats(g: &crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
     ring_seats_of(g.k.cmdring.wedges, rows, place, word_key, first.unwrap_or(true))
 }
 /// ringSeats on the number of wedges alone.
@@ -173,7 +173,7 @@ fn ring_seats_of(wedges: f64, rows: &[SeatRow], place: bool, word_key: &str, fir
 }
 
 /// Which row is on which wedge of the flat tree: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.   (cmdring.ts flatSeats)
-pub fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
+pub(in crate::orders_of_the_squad) fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
     flat_seats_of(g.k.cmdring.wedges, rows, kind, word_key, lead)
 }
 /// flatSeats on the number of wedges alone.
@@ -243,12 +243,12 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead
 }
 
 /// How long the key is kept down before its ring goes up (CMDRING.stay, the page's way: a ring that stays).   (cmdring.ts ringHoldSecs)
-pub fn ring_hold_secs(g: &crate::game::Game) -> f64 {
+pub(in crate::orders_of_the_squad) fn ring_hold_secs(g: &crate::game::Game) -> f64 {
     g.k.cmdring.stay_hold_secs
 }
 
 /// One frame of the latch of a ring that stays.   (cmdring.ts ringLatch)
-pub fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_hit: bool, pointed: bool) -> crate::cmdring::RingLatch {
+pub(in crate::orders_of_the_squad) fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_hit: bool, pointed: bool) -> crate::cmdring::RingLatch {
     if r.free == Some(true) {
         return if key_hit { RingLatch::Give } else { RingLatch::Stay };
     }
@@ -263,7 +263,7 @@ pub fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_hit: bo
 }
 
 /// The wedge a direction points at: 1 at the top, clockwise, `n` of them.   (cmdring.ts wedgeAt)
-pub fn wedge_at(dx: f64, dy: f64, n: f64) -> f64 {
+pub(in crate::orders_of_the_squad) fn wedge_at(dx: f64, dy: f64, n: f64) -> f64 {
     let k = m::round(m::atan2(dx, -dy) / (2.0 * m::PI / n));
     js::rem(js::rem(k, n) + n, n) + 1.0
 }

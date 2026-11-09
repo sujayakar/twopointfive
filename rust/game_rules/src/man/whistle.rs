@@ -18,7 +18,7 @@ pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::whis
 }
 
 /// Crane a calm man's head toward a point for `secs`.
-pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>) {
+pub(in crate::man) fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>) {
     let secs = secs.unwrap_or(g.k.whistle.glance_secs);
     let until = g.time + secs;
     let row = mem(g, gd);
@@ -27,7 +27,7 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
 }
 
 /// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).
-pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
+pub(in crate::man) fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
     g.m.whistle.mem_of.get(gd).copied()
 }
 
@@ -37,7 +37,7 @@ fn fresh_blower() -> Blower {
 }
 
 /// The seat's player's breath, made on first asking.
-pub fn blower<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::whistle::Blower {
+pub(in crate::man) fn blower<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::whistle::Blower {
     let key = g.player;
     g.m.whistle.blower_of.get_or_insert_with(key, fresh_blower)
 }
@@ -99,7 +99,7 @@ pub fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
 }
 
 /// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.
-pub fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
+pub(in crate::man) fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
     if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
@@ -150,7 +150,7 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
 }
 
 /// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.
-pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
+pub(in crate::man) fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
     use crate::game::GuardState;
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
     if crate::seats::is_man_id(g, who) && g.player_invisible { return; }
@@ -258,7 +258,7 @@ pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate:
 }
 
 /// Is this man's suspicion (still) only a whistle's?
-pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(row) = g.m.whistle.mem_of.get(gd) else { return false };
     row.soft
         && g.gd[gd].state == crate::game::GuardState::Suspicious
@@ -267,7 +267,7 @@ pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The patrol branch, once a frame: soft off, and a head still turned toward a whistle is craned that way.
-pub fn whistle_patrol_tick(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn whistle_patrol_tick(g: &mut crate::game::Game, gd: GuardId) {
     let Some(row) = g.m.whistle.mem_of.get_mut(gd) else { return };
     row.soft = false;
     let (until, glance_at) = (row.glance_until, row.glance_at);

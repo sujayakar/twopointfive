@@ -37,7 +37,7 @@ pub fn scenario_query(e: &ScenarioEntry) -> String {
 }
 
 /// The visitor's address with every word that started something dropped; the rest as `bare` writes it.
-pub fn quit_search(search: &str) -> String {
+pub(in crate::missions) fn quit_search(search: &str) -> String {
     let mut q = Query::parse(search);
     for k in SCENARIO_KEYS { q.delete(k); }
     q.delete("way");
@@ -58,7 +58,7 @@ pub fn pick_search(e: &ScenarioEntry, search: &str) -> String {
 }
 
 /// The row of `list` an address boots: same kind, size, level and seed.
-pub fn entry_of_query<'a>(q: &Query, list: impl IntoIterator<Item = &'a ScenarioEntry>) -> Option<&'a ScenarioEntry> {
+pub(in crate::missions) fn entry_of_query<'a>(q: &Query, list: impl IntoIterator<Item = &'a ScenarioEntry>) -> Option<&'a ScenarioEntry> {
     let s = spec_of(q)?;
     list.into_iter().find(|e| {
         e.kind.as_str() == s.kind.as_str()
@@ -71,7 +71,7 @@ pub fn entry_of_query<'a>(q: &Query, list: impl IntoIterator<Item = &'a Scenario
 }
 
 /// The address names something to play: a page that boots it and carries no rows.
-pub fn names_mission(search: &str) -> bool {
+pub(in crate::missions) fn names_mission(search: &str) -> bool {
     let q = Query::parse(search);
     spec_of(&q).is_some() || q.has(SOLO_KEY)
 }
@@ -109,11 +109,11 @@ fn without(search: &str, drop: &[&str]) -> String {
 }
 
 /// The short list's row by its id.
-pub fn pick_by_id(id: &str) -> Option<Pick> { PICKS.into_iter().find(|p| p.id == id) }
+pub(in crate::missions) fn pick_by_id(id: &str) -> Option<Pick> { PICKS.into_iter().find(|p| p.id == id) }
 /// The short list's row for a mission, its first.
-pub fn pick_of_mission(id: &str) -> Option<Pick> { PICKS.into_iter().find(|p| p.mission == id) }
+pub(in crate::missions) fn pick_of_mission(id: &str) -> Option<Pick> { PICKS.into_iter().find(|p| p.mission == id) }
 /// A mission the short list names.
-pub fn on_short_list(id: &str) -> bool { pick_of_mission(id).is_some() }
+pub(in crate::missions) fn on_short_list(id: &str) -> bool { pick_of_mission(id).is_some() }
 /// A row by its id, or by its place ('3' = the third).
 fn pick_named(name: Option<&str>) -> Option<Pick> {
     let name = name.filter(|n| !n.is_empty())?;
@@ -123,7 +123,7 @@ fn pick_named(name: Option<&str>) -> Option<Pick> {
     if at >= 0.0 && at < PICKS.len() as f64 { Some(PICKS[at as usize]) } else { None }
 }
 /// The row a pick starts; none for the solo night.
-pub fn pick_entry(p: &Pick) -> Option<ScenarioEntry> {
+pub(in crate::missions) fn pick_entry(p: &Pick) -> Option<ScenarioEntry> {
     all_missions().into_iter().find(|e| e.id == p.mission)
 }
 /// The difficulty a page's address spells out, where it is one a row can be started at.
@@ -132,7 +132,7 @@ fn difficulty_of(search: &str) -> Option<Difficulty> {
 }
 
 /// THE QUERY STRING A PICK LOADS: the mission's own, its difficulty written out, its name last, the visitor's other flags behind.
-pub fn pick_href(p: &Pick, search: &str, difficulty: Option<Difficulty>) -> String {
+pub(in crate::missions) fn pick_href(p: &Pick, search: &str, difficulty: Option<Difficulty>) -> String {
     let entry = pick_entry(p);
     let own = entry.as_ref().map_or_else(|| format!("?{SOLO_KEY}"), scenario_query);
     let mut parts: Vec<String> = parts_of(&own).map(String::from).collect();
@@ -151,7 +151,7 @@ fn same_parts(a: &str, b: &str) -> bool {
 }
 
 /// THE PICK A PAGE IS RUNNING: its name on an address that is exactly what that pick loads, at either difficulty.
-pub fn pick_of_query(search: &str) -> Option<Pick> {
+pub(in crate::missions) fn pick_of_query(search: &str) -> Option<Pick> {
     let p = pick_by_id(Query::parse(search).get(PICK_KEY)?)?;
     same_parts(&pick_href(&p, search, difficulty_of(search)), search).then_some(p)
 }
@@ -165,7 +165,7 @@ pub fn pick_goes(search: &str) -> Option<String> {
 }
 
 /// A pick's page handing its address to the mission list: the pick's name comes off, so that a mission started from there is not that pick.
-pub fn pick_leave_search(search: &str) -> String {
+pub(in crate::missions) fn pick_leave_search(search: &str) -> String {
     if pick_of_query(search).is_some() { without(search, &[PICK_KEY]) } else { String::from(search) }
 }
 
@@ -178,7 +178,7 @@ pub fn pick_quit_search(search: &str) -> String {
 }
 
 /// The row after this one, and the difficulty the page chose over the row's own, which goes on with it.
-pub fn pick_after(search: &str) -> Option<(Pick, Option<Pick>, Option<Difficulty>)> {
+pub(in crate::missions) fn pick_after(search: &str) -> Option<(Pick, Option<Pick>, Option<Difficulty>)> {
     let now = pick_of_query(search)?;
     let at = PICKS.iter().position(|p| p.id == now.id)?;
     let next = PICKS.get(at + 1).copied();

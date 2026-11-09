@@ -136,7 +136,7 @@ pub fn count(g: &mut Game, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf merely opened into him.
-pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
+pub(in crate::room_fight) fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
     }
@@ -182,7 +182,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf slammed or booted into him: folded and blind for the seconds, by the stun charge's two stamps.
-pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
+pub(in crate::room_fight) fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].held.is_some() {
         return;
     }
@@ -238,7 +238,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
 }
 
 /// A leaf slammed or booted into the seat's man.
-pub fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
+pub(in crate::room_fight) fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;
     let secs = if hard { g.k.doorthrow.kick_secs } else { g.k.doorthrow.push_secs };

@@ -3,7 +3,7 @@ use crate::ids::*;
 use alloc::{string::String};
 
 /// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`).
-pub fn back_hit(g: &crate::game::Game, input: InputId) -> bool {
+pub(in crate::hands_of_the_player) fn back_hit(g: &crate::game::Game, input: InputId) -> bool {
     crate::input::input_hit(g, input, "Escape") || crate::input::input_hit(g, input, "Tab")
 }
 

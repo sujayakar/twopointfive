@@ -12,7 +12,7 @@ pub(crate) fn tone_word(t: crate::orders::Tone) -> Tone {
 }
 
 /// the squad's ring, while it is up
-pub fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
+pub(in crate::tick) fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
     let (r, m) = (seat.orders.cmd_ring?, seat.orders.menu.as_ref()?);
     if m.words.len() != m.rows.len() { return None; }   // (its rows have not been worded yet: a frame's input does it)
     let more = r.more.unwrap_or(false);
@@ -55,7 +55,7 @@ fn before_dash(s: &str) -> &str {
 }
 
 /// his own ring, while it is up: a wedge a row on a digit, and the whistle's the last one
-pub fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
+pub(in crate::tick) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
     let pl = &g.pl[seat.player];
     let r = pl.sel.ring.as_ref()?;
     if !pl.sel.open { return None; }
@@ -78,7 +78,7 @@ pub fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
 }
 
 /// the word of a tap that found no row, for as long as it is up and is still what a tap would say: a step into reach, or away, takes it down
-pub fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
+pub(in crate::tick) fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
     let pl = &g.pl[seat.player];
     if g.puppet.is_some() || pl.down || pl.sel.word.is_empty() || !seat.nearby.is_empty() { return None; }
     let age = g.time - pl.sel.word_t;

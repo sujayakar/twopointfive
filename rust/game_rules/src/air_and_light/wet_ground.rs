@@ -4,4 +4,4 @@
 use crate::game::Game;
 
 /// BOUNDARY NO-OP (the picture's / the host's):
-pub fn wet_ground_follow(g: &crate::game::Game) {}
+pub(in crate::air_and_light) fn wet_ground_follow(g: &crate::game::Game) {}

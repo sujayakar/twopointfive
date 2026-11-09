@@ -13,7 +13,7 @@ fn block_of(ix: f64, iz: f64) -> (f64, f64, f64) {
 }
 
 /// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. Hands back the row.
-pub fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
+pub(in crate::hands_of_the_player) fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut doors = String::new();
     let mut i = 0;
     while i < g.doors.list.len() {

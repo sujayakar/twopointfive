@@ -30,7 +30,7 @@ fn uniq_plus(words: Vec<String>) -> String {
     seen.join(" + ")
 }
 /// the key's letter: `DOORTOOLS.blowKey.replace('Key', '')`
-pub fn blow_letter(g: &Game) -> String {
+pub(in crate::entries) fn blow_letter(g: &Game) -> String {
     g.k.doortools.blow_key.replacen("Key", "", 1)
 }
 /// `closeWords(c)` with the warning's head in capitals (OWNCHARGE.on)
@@ -61,7 +61,7 @@ fn fled_names(g: &Game, op: DoorOpId) -> String {
 
 /// Once a tick for an order whose door is still to be opened: who ran from a grenade and is not back, and true when the order does not move
 /// this tick.
-pub fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+pub(in crate::entries) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let t = g.time;
     let o = &mut g.tab.doortools_door_op[op];
     if o.fled.is_none() {
@@ -126,14 +126,14 @@ pub fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 // ---------------------------------------------------------------- the threshold: who throws, what is lit, where a can goes
 
 /// Is he at the door, on the order's side of it.
-pub fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
+pub(in crate::entries) fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let p = pos_of(g, m);
     v3::dist_xz(p, g.dr[d].frame_centre) < g.k.doortools.throw_reach && off_of(g, d, p, side) > 0.0
 }
 
 /// The one order of men a can is thrown by; with `hand`, the hand a can may leave right now, or none.
-pub fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand: bool, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> {
+pub(in crate::entries) fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand: bool, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> {
     let mut fit = fit;
     let reach = g.k.doortools.throw_reach;
     let o = &g.tab.doortools_door_op[op];
@@ -188,7 +188,7 @@ fn thr_pick_fit(g: &mut Game, fit: &mut Option<&mut dyn FnMut(&mut Game, GuardId
 }
 
 /// Is this cell of the room lit by the place itself (asked once a cell an order).
-pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
+pub(in crate::entries) fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
     let i = i as usize;
     let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
     let c = g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.get_or_insert_with(|| vec![-1i8; n])[i];
@@ -203,7 +203,7 @@ pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: D
 }
 
 /// Does this cell show a standing man through the goggles by the place's own light (asked once a cell an order).
-pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
+pub(in crate::entries) fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
     let i = i as usize;
     let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
     let c = g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().tube_c.get_or_insert_with(|| vec![-1i8; n])[i];
@@ -217,7 +217,7 @@ pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: 
 }
 
 /// Where a can leaves the hand: in the opening's span at the thrower's end, a forearm outside the frame line.
-pub fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
+pub(in crate::entries) fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let w = g.dr[d].def.width;
     let p = pos_of(g, th);
@@ -226,7 +226,7 @@ pub fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) 
 }
 
 /// The blind pocket worth a can: the point in the room whose burst has a line to the most floor nobody has seen; none when too little is left.
-pub fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> Option<crate::doortools::DoorToolsPocketOf> {
+pub(in crate::entries) fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> Option<crate::doortools::DoorToolsPocketOf> {
     let (thr_pocket, thr_throw_m, thr_flash_m, air_h) = (g.k.doortools.thr_pocket, g.k.doortools.thr_throw_m, g.k.doortools.thr_flash_m, g.k.doortools.air_h);
     let cell = g.col.nav.cell;
     let o = &g.tab.doortools_door_op[op];
@@ -290,7 +290,7 @@ pub fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId
 }
 
 /// A can of the stage's has gone off: the floor its burst had a line to is no pocket any more; the next one's turn, or the count to the step in.
-pub fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
+pub(in crate::entries) fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
     let (thr_flash_m, thr_next) = (g.k.doortools.thr_flash_m, g.k.doortools.thr_next);
     let at = g.tab.doortools_door_op[op].bang_at;
     if let (Some(sr), Some(at)) = (g.tab.doortools_door_op[op].search.flatten(), at) {
@@ -406,7 +406,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
 
 /// The step in: the men off the jambs first, each to the shallow point that is the least walk, then the rest in their turn; from here the op
 /// is in 'enter'.
-pub fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
+pub(in crate::entries) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let (reach, thr_in) = (g.k.doortools.throw_reach, g.k.doortools.thr_in);
     let t = g.time;
     let d = g.tab.doortools_door_op[op].door;

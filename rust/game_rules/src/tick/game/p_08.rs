@@ -64,7 +64,7 @@ fn spot(l: &Leaf, right: bool) -> Spot {
 }
 
 /// who is pushing which leaf open right now, and where on it his free hand goes
-pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
+pub(in crate::tick) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
     const FOLLOW: f64 = 0.12;
     const FADE: f64 = 0.4;
     let now = g.time;

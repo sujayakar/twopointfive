@@ -80,7 +80,7 @@ pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Bo
 }
 
 /// A door off its hinges, or unlatched and far enough open.
-pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
+pub(in crate::squad_ways) fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) {
         return true;
     }
@@ -699,7 +699,7 @@ fn walk(g: &mut Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> 
 }
 
 /// A TAKEN ROOM'S OTHER DOOR, KEPT WHILE THE SQUAD LEAVES.
-pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::squad_ways) fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         for m in book!(g, pl).keeps.keys() {
             let_go(g, pl, m, "switched off");
@@ -986,7 +986,7 @@ pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: Gu
 }
 
 /// Somebody not of this stack already has that way.
-pub fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
+pub(in crate::squad_ways) fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
     let (od, at) = (g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if let Some(op) = g_2.op {
         if let Some(l) = g.tab.doortools_door_op[op].lane.as_ref() {
@@ -1032,7 +1032,7 @@ pub fn rear_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, front: V3)
 }
 
 /// cover.ts deal(): the way this man is pinned to.
-pub fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
+pub(in crate::squad_ways) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let key = crate::seats::view_key(g, seat);
     let b = g.m.rearwatch.books.get(key)?;
     match b.pins.get(gd) {

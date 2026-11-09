@@ -35,12 +35,12 @@ pub fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongMode
 }
 
 /// A long gun's model by its id; None: the group draws its own parts.
-pub fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
+pub(in crate::outfit) fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
 /// A hand gun's model by its id.
-pub fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
+pub(in crate::outfit) fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 

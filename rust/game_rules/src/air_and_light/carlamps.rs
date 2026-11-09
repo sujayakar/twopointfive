@@ -14,7 +14,7 @@ struct Cand { i: usize, s: usize }
 fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// What each generator writes for a lamp.
-pub fn sigs() -> Vec<crate::carlamps::LampSig> {
+pub(in crate::air_and_light) fn sigs() -> Vec<crate::carlamps::LampSig> {
     let p = crate::scene_gwot_palette::gwot_palette();
     let (white, red) = (p.plastic_white, p.truck_red);
     vec![
@@ -28,7 +28,7 @@ pub fn sigs() -> Vec<crate::carlamps::LampSig> {
 }
 
 /// Three channels within `eps`, each.
-pub fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
+pub(in crate::air_and_light) fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
     m::abs(a[0] - b[0]) <= eps && m::abs(a[1] - b[1]) <= eps && m::abs(a[2] - b[2]) <= eps
 }
 
@@ -124,7 +124,7 @@ pub fn dead_lamp(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// A broken lamp's box painted dark, a whole one as the level has it (`lens`): every frame, from the target's own `broken` bit.
-pub fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
+pub(in crate::air_and_light) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
     let f = &g.tab.sim_lightshome_fixture[t];
     let (Some(lens), Some(&i)) = (f.lens, f.boxes.first()) else { return };
     let Some(&b) = g.engine.world.statics.get(i as usize) else { return };

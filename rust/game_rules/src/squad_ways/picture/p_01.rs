@@ -41,7 +41,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::Sta
 }
 
 /// a man's picture, made if need be
-pub fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut crate::picture::Pic {
+pub(in crate::squad_ways) fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut crate::picture::Pic {
     let look_secs = g.k.picture.look_secs;
     let s = state_of(g);
     ensure_pic(s, gd, now, look_secs);
@@ -83,7 +83,7 @@ pub fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
 }
 
 /// can his eye make anything out AT a place it has a line to: near enough, or lit
-pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
+pub(in crate::squad_ways) fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
         return true;
     }
@@ -92,12 +92,12 @@ pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 }
 
 /// a man who keeps a picture: a living armed man of an AI side
-pub fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::squad_ways) fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
 }
 
 /// the enemies there are for a side, as a list of men and Sam
-pub fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> {
+pub(in crate::squad_ways) fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> {
     let mut out = Vec::new();
     if team != crate::teams::Team::Player && crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
         out.push(Who::Player);
@@ -234,7 +234,7 @@ pub fn look(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Sam's own eyes, for the squad's net, on S.sam: a hostile the fog shows him with a line from his head
-pub fn look_sam(g: &mut crate::game::Game) {
+pub(in crate::squad_ways) fn look_sam(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
     if g.pl[g.player].down {
@@ -537,7 +537,7 @@ pub fn ideas_of(g: &crate::game::Game, gd: GuardId) -> Vec<crate::picture::Idea>
 }
 
 /// what an idea counts for now: whole while fresh, less as it ages, less again once its place was seen empty; 0 = forgotten
-pub fn idea_weight(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
+pub(in crate::squad_ways) fn idea_weight(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
     weight_at(&g.k.picture, g.time, i)
 }
 fn weight_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
@@ -556,7 +556,7 @@ fn weight_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
 }
 
 /// how far the man may have walked since, in metres
-pub fn idea_reach(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
+pub(in crate::squad_ways) fn idea_reach(g: &crate::game::Game, i: crate::picture::Idea) -> f64 {
     reach_at(&g.k.picture, g.time, i)
 }
 fn reach_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
@@ -565,7 +565,7 @@ fn reach_at(k: &crate::knobs::PictureK, now: f64, i: Idea) -> f64 {
 }
 
 /// the places he may be by now: six ways off the idea at its reach in whole metres, each a straight walk from it
-pub fn maybe_of(g: &crate::game::Game, i: crate::picture::Idea) -> Vec<V3> {
+pub(in crate::squad_ways) fn maybe_of(g: &crate::game::Game, i: crate::picture::Idea) -> Vec<V3> {
     let r = m::floor(idea_reach(g, i));
     let mut out = Vec::new();
     if r < 1.0 {
@@ -819,7 +819,7 @@ pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate
 const N4: [[f64; 2]; 4] = [[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]];
 
 /// where good cover is as far as he knows: floor inside r, beside something solid, no known enemy's line to it; best first
-pub fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Option<f64>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>) -> Vec<crate::picture::CoverSpot> {
+pub(in crate::squad_ways) fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Option<f64>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>) -> Vec<crate::picture::CoverSpot> {
     let n = n.unwrap_or(6.0);
     let mut ok = ok;
     if ideas_of(g, gd).is_empty() {

@@ -262,7 +262,7 @@ pub fn state_mut(g: &mut Game) -> &mut ControlState { g.ctl.at() }
 
 /// THE ARBITER, over `rules` at one stage of a man's frame: ask from the top; the first that answers has him. The caller acts on the answer
 /// and writes the record (`record`).
-pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Listed]) -> Option<(RuleId, Intent)> {
+pub(in crate::man) fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Listed]) -> Option<(RuleId, Intent)> {
     if stage == Stage::Body { state_mut(g).row(gd).declined = 0; }
     for r in rules.iter().filter(|r| r.stage == stage) {
         (r.transition)(g, gd, dt);
@@ -276,12 +276,12 @@ pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Lis
 }
 
 /// the arbiter over the game's list, before anything of his own: the rule that has him and the script his body follows
-pub fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
+pub(in crate::man) fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
     match grant_from(g, gd, dt, Stage::Body, RULES)? { (r, Intent::Script(s)) => Some((r, s)), _ => None }
 }
 
 /// the arbiter over the game's list, in his fight: the rule that has him and the cover he takes
-pub fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
+pub(in crate::man) fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
     match grant_from(g, gd, dt, Stage::Cover, RULES)? { (r, Intent::Cover(c)) => Some((r, c)), _ => None }
 }
 

@@ -81,7 +81,7 @@ pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Opti
 }
 
 /// Once a frame right after the down test: what the two states show on him and keep true while they run.
-pub fn sam_stun_pose(g: &mut crate::game::Game) {
+pub(in crate::hands_of_the_player) fn sam_stun_pose(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
     let blind = sam_blind(g, &crate::seats::here(g), None);

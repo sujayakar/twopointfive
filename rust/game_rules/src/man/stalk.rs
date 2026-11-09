@@ -77,7 +77,7 @@ pub fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// How far off a press can begin one.
-pub fn begin_m(g: &crate::game::Game) -> f64 {
+pub(in crate::man) fn begin_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_m, g.k.stalk.low_begin_m)
 }
 
@@ -86,12 +86,12 @@ pub fn out_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_out_m, g.k.stalk.low_out_m)
 }
 
-pub fn stalk_begin_m(g: &crate::game::Game) -> f64 {
+pub(in crate::man) fn stalk_begin_m(g: &crate::game::Game) -> f64 {
     begin_m(g)
 }
 
 /// Is the held click the ONE way to grab a man from behind: on the page, only on a wall.
-pub fn stalk_click_only(g: &mut crate::game::Game) -> bool {
+pub(in crate::man) fn stalk_click_only(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].wall.is_some() && !shut(g)
 }
@@ -118,7 +118,7 @@ pub fn out_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64], begin: bool) ->
 }
 
 /// Could a press on this man begin one from where Sam stands.
-pub fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !free(g) {
         return false;
     }
@@ -152,7 +152,7 @@ pub fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up.
-pub fn corner_gate(g: &mut crate::game::Game) -> bool {
+pub(in crate::man) fn corner_gate(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     let (kind, drawn) = match &g.pl[me].wall {
         None => return false,
@@ -177,7 +177,7 @@ pub fn corner_gate(g: &mut crate::game::Game) -> bool {
 }
 
 /// The man the wait at a corner takes this frame: the nearest who has come past him.
-pub fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
+pub(in crate::man) fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
     if !corner_gate(g) {
         return None;
     }
@@ -211,7 +211,7 @@ pub fn duck(g: &mut crate::game::Game, gd: GuardId, k: f64) {
 }
 
 /// The man who turned off his back: if he comes on round to face where Sam stood inside `joltSecs`, or is onto him, Sam ducks.
-pub fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::man) fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
     let row = *g.m.stalk.state.get(pl).unwrap();
     let b = match row.broke {
         Some(b) => b,
@@ -344,12 +344,12 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
 }
 
 /// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside.
-pub fn into_keep(g: &crate::game::Game, dist: f64) -> f64 {
+pub(in crate::man) fn into_keep(g: &crate::game::Game, dist: f64) -> f64 {
     v3::clamp((dist - g.k.stalk.key_m - 0.04) / 0.16, 0.0, 1.0)
 }
 
 /// A way across the floor taken round the man, split as first asked into its share toward him and its share round him.
-pub fn orbited(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: V3, dist: f64, dx: f64, dz: f64, pace: f64, dt: f64) -> crate::stalk::StalkMove {
+pub(in crate::man) fn orbited(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: V3, dist: f64, dx: f64, dz: f64, pace: f64, dt: f64) -> crate::stalk::StalkMove {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
     let d = m::max(1e-3, dist);
@@ -414,7 +414,7 @@ fn by(d: f64, from: f64, to: f64) -> f64 {
 }
 
 /// The man Sam's body speaks of, where the hands go, and how far he is sunk.
-pub fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::StalkTell> {
+pub(in crate::man) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::StalkTell> {
     if !free(g) {
         return None;
     }

@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The one gate: the switch on AND glass breaking live.
-pub fn shards_live(g: &crate::game::Game) -> bool {
+pub(in crate::breakage) fn shards_live(g: &crate::game::Game) -> bool {
     g.tune.glass_shards && crate::glassbreak::glass_break_live(g)
 }
 

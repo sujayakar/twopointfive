@@ -26,7 +26,7 @@ pub fn in_a_standoff(g: &Game, gd: GuardId) -> bool { g.gd[gd].standoff.is_some(
 pub fn changing_magazine(g: &Game, gd: GuardId) -> bool { g.gd[gd].reload_t >= 0.0 }
 
 /// How much of the gun in his hands is spent: 0 full, 1 no round left in it. 0 too for a gun that is not his to load: none in his hand, or his sidearm or a tool out, which is put away first.
-pub fn gun_spent(g: &Game, gd: GuardId) -> f64 {
+pub(in crate::man) fn gun_spent(g: &Game, gd: GuardId) -> f64 {
     let man = &g.gd[gd];
     if man.civ.is_some() || man.fled || man.gun_lost_at >= 0.0 || man.second.map_or(false, |s| s.out) || man.big_out.is_some() || man.slung.as_ref().map_or(false, |l| l.out) { return 0.0; }
     let left = crate::weapons::firearm_rounds_ready(g, man.weapon);
@@ -35,10 +35,10 @@ pub fn gun_spent(g: &Game, gd: GuardId) -> f64 {
 }
 
 /// A blast has broken him, or has him ducked: what he does is that rule's.
-pub fn nerve_gone(g: &Game, gd: GuardId) -> bool { crate::morale::rung_of(g, gd) >= 2.0 || crate::owner::has(g, gd, crate::owner::by::MORALE | crate::owner::by::RUNNER) }
+pub(in crate::man) fn nerve_gone(g: &Game, gd: GuardId) -> bool { crate::morale::rung_of(g, gd) >= 2.0 || crate::owner::has(g, gd, crate::owner::by::MORALE | crate::owner::by::RUNNER) }
 
 /// He has seen nobody he fights, and heard no shot, for `secs` seconds.
-pub fn quiet_for(g: &Game, gd: GuardId, secs: f64) -> bool {
+pub(in crate::man) fn quiet_for(g: &Game, gd: GuardId, secs: f64) -> bool {
     !saw_his_man_within(g, gd, secs) && g.time - g.gd[gd].witness.heard.last_shot_t >= secs
         && crate::roomfight::room_fight_op_of(g, gd).map_or(true, |o| { let x = &g.tab.roomfight_op[o]; x.tgt.is_none() && g.time - x.lost_at >= secs })
 }
@@ -50,7 +50,7 @@ pub fn hands_at_work(g: &Game, gd: GuardId) -> bool {
 }
 
 /// A man he fights is in front of him now, by his own eyes or, for a squad man under an order, by the room fight's.
-pub fn has_a_man_in_front(g: &Game, gd: GuardId) -> bool {
+pub(in crate::man) fn has_a_man_in_front(g: &Game, gd: GuardId) -> bool {
     saw_his_man_within(g, gd, 0.5) || crate::roomfight::room_fight_op_of(g, gd).map_or(false, |o| { let x = &g.tab.roomfight_op[o]; x.tgt.is_some() || g.time - x.lost_at < 0.5 })
 }
 

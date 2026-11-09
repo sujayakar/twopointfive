@@ -36,7 +36,7 @@ fn gun_slot(field: KitField) -> Option<GunSlot> {
 }
 
 /// The gun row a row hangs under as the card stands, if any.
-pub fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
+pub(in crate::outfit) fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
     match r.field {
         KitField::Suppressed | KitField::Rings | KitField::Shells | KitField::Cams => Some(GunSlot::Primary),
         KitField::SideCan => Some(GunSlot::Secondary),
@@ -46,7 +46,7 @@ pub fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
 }
 
 /// What the value now set changes in the run, in a line.
-pub fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
+pub(in crate::outfit) fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
     let you = i == 0.0;
     let pick = |g: &Game, id: &str| crate::gear::gear_text(g, &crate::gunslots::pick_word(g, id, None));
     let line: &str = match r.field {
@@ -113,7 +113,7 @@ fn primary_quiet(g: &Game, m: &MemberKit) -> bool {
 }
 
 /// The gun of a row wears a suppressor.
-pub fn kit_row_can(g: &Game, m: &MemberKit, field: KitField) -> bool {
+pub(in crate::outfit) fn kit_row_can(g: &Game, m: &MemberKit, field: KitField) -> bool {
     match field {
         KitField::Primary => m.weapon != KitWeapon::Pistol && kit_slot_can(g, m, GunSlot::Primary),
         KitField::Secondary => kit_slot_can(g, m, GunSlot::Secondary),
@@ -156,7 +156,7 @@ fn rounds_out(def: &crate::weapons::WeaponDef) -> f64 {
 }
 
 /// What a gun is good at, each 0 to 1 off its own row: reach, volume, handling, quiet.
-pub fn gun_stats(def: &crate::weapons::WeaponDef) -> [f64; 4] {
+pub(in crate::outfit) fn gun_stats(def: &crate::weapons::WeaponDef) -> [f64; 4] {
     let unit = |x: f64| m::min(1.0, m::max(0.0, x));
     [
         unit(reach_m(def) / 20.0),
@@ -214,7 +214,7 @@ fn seq(g: &Game, rows: &[KitRow], m: &MemberKit) -> Vec<KitRow> {
 }
 
 /// The kind of gun a pick is drawn as (empty: no gun).
-pub fn pick_kind(g: &Game, id: &str) -> String { crate::gunslots::pick_icon(g, id).map_or(String::new(), |k| String::from(k.as_str())) }
+pub(in crate::outfit) fn pick_kind(g: &Game, id: &str) -> String { crate::gunslots::pick_icon(g, id).map_or(String::new(), |k| String::from(k.as_str())) }
 
 /// A gun's picks: every value of its row, tried on a copy of the card.   (kitCard.ts drawDense)
 fn card_picks(g: &mut Game, i: f64, r: &KitRow, m: &MemberKit, now: &KitValue, slot: GunSlot) -> Vec<CardPick> {

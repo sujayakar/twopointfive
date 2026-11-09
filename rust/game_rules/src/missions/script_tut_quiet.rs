@@ -11,7 +11,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-pub fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of levels/tut-quiet.script.ts") } }
+pub(in crate::missions) fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of levels/tut-quiet.script.ts") } }
 
 /// where he looks from, where he smokes, and the lane's side of the level
 const LOOK: V3 = [26.4, 0.0, 17.75];
@@ -39,7 +39,7 @@ const NIGHT_ROUND: u16 = 8;
 const NIGHT_SMOKED: u16 = 9;
 
 /// the define pass.
-pub fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_quiet::TutQuietVars, String> {
+pub(in crate::missions) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_quiet::TutQuietVars, String> {
     let walk = crate::director::manifest_volume(m, "tq_walk");
     let beam = crate::director::manifest_volume(m, "tq_beam");
     let past = crate::director::manifest_volume(m, "tq_past");
@@ -62,7 +62,7 @@ fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::directo
 }
 
 /// a voice behind the wall the player creeps along.
-pub fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;
@@ -128,7 +128,7 @@ fn turns(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate:
 }
 
 /// the man who comes to the whistle: looks through the gap, finds nothing, has a smoke.
-pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietNightFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietNightFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
             0 => {
@@ -272,7 +272,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// night's c.until closures, by the TEST_ ids.
-pub fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
+pub(in crate::missions) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
     let u = f.u.clone().expect("tut-quiet night: u is set at its start");
     let vars = tut_quiet_vars(g, r).clone();
     match id {
@@ -286,7 +286,7 @@ pub fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// by ear, from the dark: two men in the lit room ahead.
-pub fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietStoreFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietStoreFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;

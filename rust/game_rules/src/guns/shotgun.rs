@@ -23,7 +23,7 @@ pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, wh
 }
 
 /// Where a pellet stopped, if it was not in a man.
-pub fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: V3) {
+pub(in crate::guns) fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: V3) {
     s.ends.push(crate::shotgun::ShellEndsItem { index, t, at });
 }
 

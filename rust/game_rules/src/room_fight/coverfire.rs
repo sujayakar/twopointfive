@@ -115,7 +115,7 @@ pub fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
 }
 
 /// the engine's half: walls and cover give under rounds
-pub fn chew_live(g: &crate::game::Game) -> bool {
+pub(in crate::room_fight) fn chew_live(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
@@ -163,7 +163,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// whose body
-pub fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
+pub(in crate::room_fight) fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
     match who {
         crate::game::Foe::Player => g.pl[crate::seats::faced_man(g, gd)].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
@@ -187,7 +187,7 @@ pub fn log(g: &mut crate::game::Game, s: &str) {
 }
 
 /// this gun's round in the engine's units
-pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::room_fight) fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let cls = g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().cls;
     let k = if cls == crate::weapons::WeaponClass::Pistol { g.k.walls.pistol_k } else { 1.0 };
     k * crate::destruction::chaos_of(g) * 2.0
@@ -674,7 +674,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
 }
 
 /// NOBODY IN HIS SIGHT: the same choice with the room fight's own trigger; true = his gun is on a piece this frame
-pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
+pub(in crate::room_fight) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
     if !live(g) { return false; }
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -929,7 +929,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// QA: what `gd` is on this frame
-pub fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
+pub(in crate::room_fight) fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
     Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }

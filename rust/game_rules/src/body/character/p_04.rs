@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.
-pub fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
+pub(in crate::body) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
     let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
     for &blow in &b.blows {
         if blow <= b.t { prev = m::max(prev, blow); } else if !(b.end >= 0.0 && blow > b.end) { next = m::min(next, blow); }
@@ -19,7 +19,7 @@ pub fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
 }
 
 /// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.
-pub fn layer_tables_fit() {
+pub(in crate::body) fn layer_tables_fit() {
     let cross_jab = knife_blow();
     let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", knife_slash().keys.len()), ("back", knife_back().keys.len())];
     for (k, n) in blows {
@@ -37,7 +37,7 @@ pub fn layer_tables_fit() {
 }
 
 /// A swing's tables as the module's layer is handed them, by name and in its order: eleven of numbers, then six of vectors. A table the underhand lacks is the overhand's (`T[n] ?? THR[n]`).
-pub fn throw_tables(low: bool) -> crate::character::ThrowTables {
+pub(in crate::body) fn throw_tables(low: bool) -> crate::character::ThrowTables {
     let t = thr();
     if !low {
         return ThrowTables {

@@ -242,7 +242,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
 }
 
 /// threat proximity → how deliberately Sam moves
-pub fn game_threat_tick(g: &mut crate::game::Game) {
+pub(in crate::tick) fn game_threat_tick(g: &mut crate::game::Game) {
     use crate::character::Bone;
     use crate::game::GuardState;
     let pl = g.player; let pc = g.pl[pl].ch;
@@ -289,7 +289,7 @@ fn stand_in_muzzle(g: &Game, long: Option<crate::guards::LongRigOf>, cb: bool, d
 }
 
 /// the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands
-pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
+pub(in crate::tick) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     use crate::character::AnimLongGrip;
     use crate::game::{CarbineDeal, GuardState};
     use crate::guards::LongRigOf;
@@ -402,7 +402,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
 }
 
 /// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody
-pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64) -> bool {
+pub(in crate::tick) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64) -> bool {
     g.dyn_boxes.clear();
     // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
     let mut out = core::mem::take(&mut g.dyn_boxes);
@@ -449,7 +449,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
 }
 
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world
-pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
+pub(in crate::tick) fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
     game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     let mut list = core::mem::take(&mut g.dyn_boxes);
     crate::fogofwar::picture::keep_raw(g, &list);

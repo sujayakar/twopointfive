@@ -13,7 +13,7 @@ fn office_spots() -> crate::civilians::CivSpots {
 }
 
 /// The phones and the ways off this level's floor: the quiet mission's own, else the office's.
-pub fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
+pub(in crate::missions_men) fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
     let Some(sc) = g.level.scenarios.as_ref() else { return office_spots(); };
     if sc.quiet.is_none() {
         return office_spots();
@@ -112,7 +112,7 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
 }
 
 /// A civilian of the usual make at her first mark, doing what she does there.
-pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
+pub(in crate::missions_men) fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
     let id = CIV_ID0 + i;
     let route = crate::scene_level::PatrolRoute {
         name: def.name.clone(),
@@ -207,7 +207,7 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
 }
 
 /// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.
-pub fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHostageDef) -> GuardId {
+pub(in crate::missions_men) fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHostageDef) -> GuardId {
     let kind = match def.kind {
         SpawnHostageDefKind::Cleaner => crate::scene_level::CivilianDefKind::Cleaner,
         SpawnHostageDefKind::Worker => crate::scene_level::CivilianDefKind::Worker,

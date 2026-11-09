@@ -53,7 +53,7 @@ pub fn sam_sneaks(g: &Game, pl: PlayerId) -> bool {
 }
 
 /// what has given the squad away (None: nothing)
-pub fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
+pub(in crate::squad_ways) fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
     for &gd in men {
         if crate::roomfight::room_fight_hot_for(g, gd) {
             return Some(String::from("loud"));
@@ -72,7 +72,7 @@ pub fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
 }
 
 /// The squad is unseen this frame, read once a frame by whoever asks first
-pub fn unseen_live(g: &mut Game) -> bool {
+pub(in crate::squad_ways) fn unseen_live(g: &mut Game) -> bool {
     let now = g.time;
     let s = state_of(g);
     if s.t == now {
@@ -218,7 +218,7 @@ pub fn unseen_wall_lost(g: &mut Game, gd: GuardId) {
 }
 
 /// the place itself: along Sam's face, on the file's side, a body's width off it
-pub fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V3> {
+pub(in crate::squad_ways) fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V3> {
     if !under_unseen(g, gd) {
         return None;
     }

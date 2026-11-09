@@ -23,7 +23,7 @@ pub fn net_feed_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[
 }
 
 /// What was filed since the last take; the book is left empty.
-pub fn net_feed_take(g: &mut crate::game::Game) -> Vec<crate::netquietfeed::NetFeed> {
+pub(in crate::man) fn net_feed_take(g: &mut crate::game::Game) -> Vec<crate::netquietfeed::NetFeed> {
     let filed = &mut g.m.netquietfeed.filed;
     match filed {
         Some(f) if !f.is_empty() => core::mem::take(f),

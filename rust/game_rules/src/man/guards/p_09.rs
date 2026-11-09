@@ -90,7 +90,7 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
 }
 
 /// The next of the lines he said in one frame comes up once the one showing has been up for a moment.
-pub fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].bubble_next.is_empty() { return; }
     if g.gd[gd].state == crate::game::GuardState::Dead { g.gd[gd].bubble_next.clear(); return; }
     let (now, showing) = (g.time, g.gd[gd].bubble.as_ref().map_or(0.0, |b| b.t));
@@ -165,7 +165,7 @@ pub fn alarm_view(g: &crate::game::Game) -> Option<crate::view::AlarmView> {
     Some(crate::view::AlarmView { level, left: if g.escalation_t > g.time { g.escalation_t - g.time } else { 0.0 }, live: g.alarm.episode })
 }
 /// The living man best placed to radio something about `pos`: the nearest not mid-fight, else the nearest at all, never `except`.
-pub fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
+pub(in crate::man) fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
     let guards = g.guards.clone();
@@ -261,12 +261,12 @@ pub fn rollcall_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::guards
     g.m.guards.rollcalls.get_or_insert_with(|| Rollcall { next_at: -1.0, stage: RollcallStage::Idle, t0: 0.0, caller: None, missing: None, answered: false, checks: 0.0 })
 }
 /// Seconds to the next check, jittered: a die.
-pub fn rollcall_interval(g: &mut crate::game::Game) -> f64 {
+pub(in crate::man) fn rollcall_interval(g: &mut crate::game::Game) -> f64 {
     let secs = if escalation_of(g) >= 1.0 { ROLLCALL_ALARMED_SECS } else { ROLLCALL_CALM_SECS };
     secs * (1.0 + (crate::dice::draw_world(g, "guards::rollcall_interval#1") * 2.0 - 1.0) * ROLLCALL_JITTER)
 }
 /// Who calls the check: a living man with his hands free for the radio, one on his route for choice.
-pub fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
+pub(in crate::man) fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;
     let mut br = -1;
     let guards = g.guards.clone();
@@ -288,7 +288,7 @@ pub fn checker_for(g: &crate::game::Game, m: GuardId) -> Option<GuardId> {
     g.guards.iter().copied().find(|&x| g.gd[x].state != GuardState::Dead && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(k)) if k.who == m))
 }
 /// A silent man is being looked for right now: the floor's alarm level holds meanwhile.
-pub fn still_looking(g: &mut crate::game::Game) -> bool {
+pub(in crate::man) fn still_looking(g: &mut crate::game::Game) -> bool {
     rollcall_state(g).stage == RollcallStage::Asked
         || g.guards.iter().any(|&x| g.gd[x].state != GuardState::Dead && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(_))))
 }
@@ -298,7 +298,7 @@ fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && d.team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
-pub fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
+pub(in crate::man) fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
     let pts = match route_points(g, m) { Some(p) => p, None => vec![g.ch[g.gd[m].ch].pos] };
     if let Some(p) = prefer { if checker_free(g, p, m) { return Some(p); } }
     let mut best: Option<GuardId> = None;
@@ -313,7 +313,7 @@ pub fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) 
     best
 }
 /// Send `gd` round M's route: the checkOn errand from the waypoint of M's nearest him.
-pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str) {
+pub(in crate::man) fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str) {
     let pts = route_points(g, m).unwrap_or_default();
     let mut i0 = 0usize;
     let mut bd = f64::INFINITY;
@@ -337,7 +337,7 @@ pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &
     play_rate(g, "radio", at, 0.5, 1.05);
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.
-pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
     let k = match &g.gd[gd].task { Some(GuardTask::CheckOn(k)) => *k, _ => return };
     let who = k.who;
     if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) {
@@ -359,7 +359,7 @@ pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].react_t <= 0.0 && near && g.gd[gd].search_t > CHECK_LOOK_SECS { advance_check_on(g, gd); }
 }
 /// The next of the missing man's waypoints, or, the last one looked at, he is not on his route.
-pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
     let who = match &g.gd[gd].task { Some(GuardTask::CheckOn(k)) => k.who, _ => return };
     let pts = route_points(g, who).unwrap_or_default();
     let left = match &mut g.gd[gd].task {
@@ -385,7 +385,7 @@ pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.
-pub fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: bool) {
+pub(in crate::man) fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: bool) {
     g.gd[gd].task = None;
     g.gd[gd].search_t = 0.0;
     { let to = v3::clamp(g.gd[gd].awareness, 0.2, 0.3); crate::mind::set(g, gd, to, "guards"); }
@@ -425,7 +425,7 @@ fn rollcall_idle(g: &mut Game) {
     r.next_at = next;
 }
 /// Once a frame: the radio check's clock and its short exchange.
-pub fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::man) fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
     if g.quiet_utility || !g.ai_enabled {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
@@ -598,7 +598,7 @@ pub fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
     }
 }
 /// Lockdown follower, each frame on patrol: when he last had his leader in plain sight, and what he does about losing him.
-pub fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
     let l = match g.gd[gd].leader { Some(l) => l, None => return };
     let c = g.gd[gd].ch;
     let lc = g.gd[l].ch;
@@ -653,7 +653,7 @@ struct RoomRow {
     inside: bool,
 }
 /// Locked down: hand the pair the rooms whose doors are nearest the last fix, the tampered ones first.
-pub fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<crate::guards::PlanClearsCause>) -> bool {
+pub(in crate::man) fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<crate::guards::PlanClearsCause>) -> bool {
     let force = force.unwrap_or(false);
     let cause = cause.unwrap_or(PlanClearsCause::Search);
     if g.quiet_utility || !g.ai_enabled || escalation_of(g) < 2.0 { return false; }
@@ -741,7 +741,7 @@ pub fn force_clear(g: &mut crate::game::Game) {
 }
 
 /// One level down: lockdown to a shorter heightened spell, then calm.
-pub fn step_down_escalation(g: &mut crate::game::Game) {
+pub(in crate::man) fn step_down_escalation(g: &mut crate::game::Game) {
     let lvl: f64 = if g.escalation >= 2.0 { 1.0 } else { 0.0 };
     g.escalation = lvl;
     g.escalation_t = if lvl >= 1.0 { g.time + STEPDOWN_SECS } else { -1.0 };
@@ -796,7 +796,7 @@ fn known_dead(g: &Game, x: GuardId) -> bool {
 }
 
 /// Keep the lockdown duties dealt, as far as the men know.
-pub fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
+pub(in crate::man) fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
     let (mut follower, mut postman): (Option<GuardId>, Option<GuardId>) = (None, None);
     let mut standing = 0_i32;
     let mut i = 0;

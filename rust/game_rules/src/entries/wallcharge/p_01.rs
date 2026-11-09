@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box { &g.tab.boxes[b] }
 
 /// How near a point passes a line on the floor, a to b.
-pub fn near_seg(q: V3, a: V3, b: V3) -> f64 {
+pub(in crate::entries) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
     let dx = b[0] - a[0];
     let dz = b[2] - a[2];
     let l = dx * dx + dz * dz;
@@ -25,7 +25,7 @@ pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
 }
 
 /// Where the charge sits: on the near face, at the charge's height.
-pub fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
+pub(in crate::entries) fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
     let height = g.k.wallcharge.height;
     wall_pt(g, w, 0.0, FACE, Some(height))
 }
@@ -59,22 +59,22 @@ fn wall_off_of(c: V3, h: V3, w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
 }
 
 /// Metres along the wall from the charge.
-pub fn wall_along(w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
+pub(in crate::entries) fn wall_along(w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
     (if w.along_x { p[0] } else { p[2] }) - w.u
 }
 
 /// Two spots on the one wall, near enough to be one place.
-pub fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::WallSpot) -> bool {
+pub(in crate::entries) fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::WallSpot) -> bool {
     a.index == b.index && m::abs(a.u - b.u) < 1.6
 }
 
 /// Is the wall charge live in this game right now: the walls' switch, outside a show, chaos above 0.
-pub fn wall_charge_on(g: &crate::game::Game) -> bool {
+pub(in crate::entries) fn wall_charge_on(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
 /// …asked of the game shared: what is kept, or worked out and not kept
-pub fn sky_faces_of(g: &Game, index: f64) -> f64 {
+pub(in crate::entries) fn sky_faces_of(g: &Game, index: f64) -> f64 {
     if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) {
         return n;
     }
@@ -136,7 +136,7 @@ fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
 }
 
 /// Is the charge's own side indoors: a roof over the floor at its foot, by nine upward rays off the charge's face.
-pub fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+pub(in crate::entries) fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let world = crate::ask::WorldAsk::of(g);
     let sky_off = sky_off();
     let mut roof = 0;
@@ -152,19 +152,19 @@ pub fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot)
 }
 
 /// The safety radius at a place: how far the squad stands off, and how far the blast reaches on its own side.
-pub fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
+pub(in crate::entries) fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     let indoors = charge_indoors_of(g, w);
     let i = if indoors { 1 } else { 0 };
     crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i] }
 }
 /// …for a rule that holds the game: the copy of the boxes stood first
-pub fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
+pub(in crate::entries) fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     crate::scene_collision::stands(g);
     safe_radius_of(g, w)
 }
 
 /// The room a hole in `w` at `du` opens into (0: none): the first room a point beyond the far face stands in, a pace to either hand.
-pub fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, t: f64) -> f64 {
+pub(in crate::entries) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, t: f64) -> f64 {
     let mut d = 0.45;
     while d <= 1.95 {
         for s in [0.0, 0.5, -0.5] {

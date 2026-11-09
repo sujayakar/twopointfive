@@ -13,7 +13,7 @@ use alloc::{format, string::String, vec::Vec};
 // THE LENT SCRIPT COMES HOME (conventions 4, "an object lent and written back"). guards.ts:2145 lends `S.script` to the man for the frame and
 // runGuardScript writes `arrived` (and its clocks) INTO THAT OBJECT, which morale.ts:478-500 reads. p_guards_07 hands back what the run left; the skeleton's stub
 // (INVENTED, no origin line) was on nobody's list, and four parts' notes said it would panic. None back: the run ended the script, nothing to put home.
-pub fn morale_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
+pub(in crate::man) fn morale_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(s)) = (ran, g.m.morale.state_of.get_mut(gd)) { s.script = ran; }
 }
 
@@ -103,7 +103,7 @@ pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::mor
 }
 
 /// is he blind-dark where he stands
-pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.k.morale.dark_read == crate::knobs::MoraleKDarkRead::Watch { return crate::darkfoe::dark_foe_blind(g, gd); }
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
@@ -141,7 +141,7 @@ pub fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
 }
 
 /// the difficulty's mix, read once a tick
-pub fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
+pub(in crate::man) fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
     let key = format!("{}|{}|{}", g.time, g.k.pressure.on, g.k.digin.on);
     if let Some(had) = &g.m.morale.mix_at {
         if had.key == key { return if had.mix == MoraleModMixAtValueMix::Hard { MixNow::Hard } else { MixNow::Mixed }; }
@@ -180,7 +180,7 @@ pub fn training_of(g: &mut crate::game::Game, gd: GuardId) -> crate::morale::Tra
 }
 
 /// the first man of his band, where that man is steady
-pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub(in crate::man) fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     if g.k.morale.training == Training::None { return None; }
     let l = band_of(g, gd).and_then(|men| men.first().copied())?;
     if training_of(g, l) == TrainingOf::Steady { Some(l) } else { None }
@@ -190,7 +190,7 @@ pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 pub fn folds(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).green || g.k.morale.training == Training::None }
 
 /// what a shock of `x` is to these men
-pub fn nerved(g: &crate::game::Game, x: f64) -> f64 {
+pub(in crate::man) fn nerved(g: &crate::game::Game, x: f64) -> f64 {
     let n = g.k.morale.nerve_k;
     x * match g.k.morale.nerve { Nerve::Brittle => n.brittle, Nerve::Normal => n.normal, Nerve::Steady => n.steady }
 }
@@ -230,7 +230,7 @@ pub fn standing(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 pub fn dread(g: &mut crate::game::Game, gd: GuardId) -> f64 { let shock = now(g, gd).shock; v3::clamp(shock + standing(g, gd), 0.0, 1.0) }
 
 /// may he break, whatever his shock
-pub fn may_break(s: crate::morale::Mind) -> bool { if s.green { s.alone || (s.leader_down && s.lost) } else { s.alone && s.dark } }
+pub(in crate::man) fn may_break(s: crate::morale::Mind) -> bool { if s.green { s.alone || (s.leader_down && s.lost) } else { s.alone && s.dark } }
 
 /// the rung his dread reads, with hysteresis
 pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
@@ -244,7 +244,7 @@ pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// a feed for any event: shock on one man
-pub fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
+pub(in crate::man) fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
     if !ours(g, gd) || rescued(g, gd) { return; }
     mind(g, gd);
     let n = nerved(g, amount);
@@ -287,7 +287,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
 }
 
 /// seconds since he saw his leader go down
-pub fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::man) fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd) { Some(s) if s.fall >= 0.0 => s.fall, _ => f64::INFINITY }
 }
 
@@ -395,7 +395,7 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// the enemies plainly in his eyes this frame
-pub fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<CharId> {
+pub(in crate::man) fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<CharId> {
     let mut out: Vec<CharId> = Vec::new();
     if crate::control::man::blind(g, gd) { return out; }
     let gc = g.gd[gd].ch;
@@ -457,7 +457,7 @@ pub fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
 }
 
 /// how far he can go from where he stands along (dx, dz)
-pub fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> f64 {
+pub(in crate::man) fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> f64 {
     let c = g.gd[gd].ch;
     let (p, radius) = (g.ch[c].pos, g.ch[c].radius);
     let prop = match crate::props::prop_system_raycast(g, [p[0], 0.45, p[2]], [dx, 0.0, dz], max + radius) { Some(h) => h.t, None => f64::INFINITY };
@@ -487,7 +487,7 @@ pub fn away_from(g: &crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
 }
 
 /// where the scrabble ends: straight back, else the longest run of a small fan
-pub fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
+pub(in crate::man) fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let [dx, dz] = away_from(g, c, hole);
@@ -511,7 +511,7 @@ pub fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3>
 }
 
 /// the leader's one side step off the hole's line
-pub fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardId>) -> Option<V3> {
+pub(in crate::man) fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardId>) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let [dx, dz] = away_from(g, c, hole);
@@ -554,7 +554,7 @@ pub fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: cr
 }
 
 /// the long burst is spent: the guards' own magazine change, stretched
-pub fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     begin(g, gd, MoraleAct::Reload, None);
     let w = g.gd[gd].weapon;
@@ -571,7 +571,7 @@ pub fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a bait taken: the magazine, then a short burst, then a word
-pub fn bait(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn bait(g: &mut crate::game::Game, gd: GuardId) {
     g.m.morale.state_of.get_mut(gd).unwrap().baits += 1.0;
     g.stats.morale.baits += 1;
     let st = now(g, gd);
@@ -932,7 +932,7 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
 
 /// THE FIRST OF A RULE'S THREE PARTS (control/), for one man: a man the rule drives who is down and folds clutches himself. The rest of its state is
 /// moved by `morale_tick`.
-pub fn morale_transition(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn morale_transition(g: &mut crate::game::Game, gd: GuardId) {
     let Some(s) = g.m.morale.state_of.get(gd).copied() else { return };
     if !s.drive || s.drive_t != g.time { return; }
     if s.act == MoraleAct::Down && folds(g, gd) {
@@ -942,7 +942,7 @@ pub fn morale_transition(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// WHAT IT WANTS OF HIM (the second part; it only reads): the script his body follows this tick, None = he is nobody's but his own.
-pub fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+pub(in crate::man) fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let s = g.m.morale.state_of.get(gd)?;
     if !s.drive || s.drive_t != g.time { return None; }
     Some(s.script)
@@ -962,7 +962,7 @@ pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// QA: what the rule has of a man, None = never met
-pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
+pub(in crate::man) fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
     let s = g.m.morale.state_of.get(gd)?;
     Some(MoraleOf {
         t: s.t, act: s.act,
@@ -971,7 +971,7 @@ pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale
 }
 
 /// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay
-pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(s) = g.m.morale.state_of.get(gd).copied() {
         if s.act != MoraleAct::None || s.drive { end(g, gd); }
     }

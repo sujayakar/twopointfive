@@ -30,7 +30,7 @@ pub fn free(g: &mut crate::game::Game) -> bool {
 }
 
 /// A man who is onto him, or has him in view this moment with his notice risen.
-pub fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::hands_of_the_player) fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     man.state == GuardState::Alert || man.state == GuardState::Search || man.state == GuardState::Suspicious || (man.awareness > 0.08 && g.time - man.sight_t < 0.4)
@@ -83,7 +83,7 @@ pub fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.
-pub fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::hands_of_the_player) fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }
     let slip_from = g.k.samlook.slip_from;
     let d = reach(g, gd, slip_from, 180.0);
@@ -102,7 +102,7 @@ pub fn slips(g: &mut crate::game::Game) -> bool {
 }
 
 /// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.
-pub fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
+pub(in crate::hands_of_the_player) fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     if !slips(g) { return None; }
     let p = g.ch[g.pl[g.player].ch].pos;
     let (mut vx, mut vz, mut top) = (0.0, 0.0, 0.0);

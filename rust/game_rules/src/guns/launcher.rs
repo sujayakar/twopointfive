@@ -252,7 +252,7 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Velocity coming back off a surface: the normal share reversed × restitution, the slide × keepTangent.
-pub fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
+pub(in crate::guns) fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
     let vn = v3::dot(v, n);
     let v_n = v3::scale(n, vn);
     let v_t = v3::sub(v, v_n);
@@ -279,7 +279,7 @@ pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
 }
 
 /// A ring has found a man at `at`: high is out cold, low the stagger, a civilian low a fright, the player a flinch; the ring drops at his feet.
-pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
+pub(in crate::guns) fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
     let c = c_2;
     let shooter_id = g.ch[r.shooter].id;
     let by_player = crate::seats::is_man_id(g, shooter_id);

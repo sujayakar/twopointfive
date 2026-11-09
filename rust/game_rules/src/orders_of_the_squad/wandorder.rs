@@ -56,7 +56,7 @@ pub fn on_face(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
 }
 
 /// His kneeling spot on that face of the leaf.
-pub fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot {
+pub(in crate::orders_of_the_squad) fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot {
     let from = on_face(g, d, side);
     let along = g.dr[d].def.width * 0.5;
     crate::doors::doors_work_spot(g, d, from, Some(0.5), Some(along))
@@ -104,7 +104,7 @@ pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::Order
 }
 
 /// The lens comes out and he gets up; the next feed is a full one if he had been on his knee. `j` is the caller's copy: the caller puts it back.
-pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job) {
+pub(in crate::orders_of_the_squad) fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job) {
     if j.knelt {
         let c = g.gd[gd].ch;
         g.ch[c].anim.lockpick = false;

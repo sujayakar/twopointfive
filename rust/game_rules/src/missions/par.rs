@@ -150,7 +150,7 @@ pub fn par_row(g: &Game) -> String {
 }
 
 /// the room clear's objective row with the clock on it: the clock FIRST, then the room clear's own words; at the end the result
-pub fn par_objective(g: &Game, text: &str) -> String {
+pub(in crate::missions) fn par_objective(g: &Game, text: &str) -> String {
     match par_result_now(g) {
         None => { let mut s = par_row(g); s.push_str(text); s }
         Some(r) => format!("structure taken · {} — press shift+enter to restart", r.line.strip_prefix("par ▸ ").unwrap_or(&r.line)),

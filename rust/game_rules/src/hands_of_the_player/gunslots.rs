@@ -17,7 +17,7 @@ pub fn guns_broken() -> bool {
 }
 
 /// The pick of that id, or None.
-pub fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
+pub(in crate::hands_of_the_player) fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)
 }
 

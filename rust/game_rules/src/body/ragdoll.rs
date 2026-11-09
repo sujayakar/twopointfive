@@ -47,7 +47,7 @@ fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
 }
 
 /// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.
-pub fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, world: Option<&crate::ragdoll::RagdollWorld>) -> RagdollId {
+pub(in crate::body) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, world: Option<&crate::ragdoll::RagdollWorld>) -> RagdollId {
     let id = g.tab.ragdoll.push(crate::ragdoll::Ragdoll::blank());
     let this = &mut g.tab.ragdoll[id];
     this.world = world.is_some();
@@ -113,7 +113,7 @@ pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&
 /// (Ragdoll.radius)
 pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
 /// (Ragdoll.addVelocity)
-pub fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
+pub(in crate::body) fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
 pub fn ragdoll_add_rigid_velocity(g: &mut crate::game::Game, id: RagdollId, v: V3, omega: V3) { rd_add_rigid_velocity(&mut g.tab.ragdoll[id], v, omega) }
 /// (Ragdoll.nudge)
@@ -123,9 +123,9 @@ pub fn ragdoll_wake(g: &mut crate::game::Game, id: RagdollId) { rd_wake(&mut g.t
 /// (Ragdoll.setPin)
 pub fn ragdoll_set_pin(g: &mut crate::game::Game, id: RagdollId, i: f64, target: V3) { rd_set_pin(&mut g.tab.ragdoll[id], i, target) }
 /// (Ragdoll.unpin)
-pub fn ragdoll_unpin(g: &mut crate::game::Game, id: RagdollId, i: f64) { rd_unpin(&mut g.tab.ragdoll[id], i) }
+pub(in crate::body) fn ragdoll_unpin(g: &mut crate::game::Game, id: RagdollId, i: f64) { rd_unpin(&mut g.tab.ragdoll[id], i) }
 /// (Ragdoll.isPinned)
-pub fn ragdoll_is_pinned(g: &crate::game::Game, id: RagdollId, i: f64) -> bool { rd_is_pinned(&g.tab.ragdoll[id], i) }
+pub(in crate::body) fn ragdoll_is_pinned(g: &crate::game::Game, id: RagdollId, i: f64) -> bool { rd_is_pinned(&g.tab.ragdoll[id], i) }
 /// (Ragdoll.clearPins)
 pub fn ragdoll_clear_pins(g: &mut crate::game::Game, id: RagdollId) { rd_clear_pins(&mut g.tab.ragdoll[id]) }
 /// (Ragdoll.ride)
@@ -264,7 +264,7 @@ fn rd_take_impact(this: &mut crate::ragdoll::Ragdoll, min: Option<f64>, gap: Opt
 }
 
 /// Advance by dt (s): fixed 180 Hz substeps from an accumulator, at most MAX_SUBSTEPS a call.
-pub fn ragdoll_step(g: &mut crate::game::Game, id: RagdollId, dt: f64) {
+pub(in crate::body) fn ragdoll_step(g: &mut crate::game::Game, id: RagdollId, dt: f64) {
     let this = &mut g.tab.ragdoll[id];
     this.since_impact += dt;
     if this.sleeping { return; }
@@ -284,7 +284,7 @@ pub fn ragdoll_step(g: &mut crate::game::Game, id: RagdollId, dt: f64) {
 }
 
 /// One 180 Hz substep: integrate, gather, project, contacts, sleep.
-pub fn ragdoll_substep(g: &mut crate::game::Game, id: RagdollId) {
+pub(in crate::body) fn ragdoll_substep(g: &mut crate::game::Game, id: RagdollId) {
     rd_integrate(&mut g.tab.ragdoll[id]);
     // 2. what is around the body this substep
     ragdoll_gather_near(g, id);
@@ -524,7 +524,7 @@ fn rd_shape_match(this: &mut crate::ragdoll::Ragdoll) {
 }
 
 /// Statics whose footprint overlaps the body's box (± a margin) and door leaves within reach, with their yaw cos/sin.
-pub fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
+pub(in crate::body) fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     let this = &mut g.tab.ragdoll[id];
     this.n_near = 0.0;
     this.n_dyn = 0.0;
@@ -675,7 +675,7 @@ fn rd_sphere_box(this: &mut crate::ragdoll::Ragdoll, i: f64, r: f64, b: &[f64], 
 }
 
 /// Rotational part of the 3×3 matrix A (row-major), refined from the warm start q in place (Müller et al. 2016).
-pub fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
+pub(in crate::body) fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
     let mut rr = [0.0; 9];   // (erR: module scratch in the TypeScript)
     let mut it = 0.0;
     while it < iters {
@@ -705,7 +705,7 @@ pub fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
 }
 
 /// Row-major 3×3 rotation matrix of unit quaternion q into out.
-pub fn quat_to_mat(q: Quat, out: &mut Vec<f64>) {
+pub(in crate::body) fn quat_to_mat(q: Quat, out: &mut Vec<f64>) {
     quat_mat(q, out.as_mut_slice());
 }
 

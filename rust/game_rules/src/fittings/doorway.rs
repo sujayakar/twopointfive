@@ -156,7 +156,7 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
 }
 
 /// Is the place at (along, perp) of `d`'s frame behind its open leaf.
-pub fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
+pub(in crate::fittings) fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let w = g.dr[d].def.width;
     let angle = crate::doors::door_angle(g, d);
@@ -259,7 +259,7 @@ pub fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::Fr
 }
 
 /// Ease `gd` to `p` over open floor, his feet moved; true = there.
-pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, turn: bool) -> bool {
+pub(in crate::fittings) fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, turn: bool) -> bool {
     let c = g.gd[gd].ch;
     let at = g.ch[c].pos;
     let (dx, dz) = (p[0] - at[0], p[2] - at[2]);
@@ -282,7 +282,7 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64
 }
 
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.
-pub fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
+pub(in crate::fittings) fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[seat.player].down && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
@@ -297,7 +297,7 @@ pub fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.
-pub fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+pub(in crate::fittings) fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
     let (jamb_past, file_gap, jamb_out, apart) = (g.k.doormanners.jamb_past, g.k.doormanners.file_gap, g.k.doormanners.jamb_out, g.k.doormanners.apart);
@@ -715,7 +715,7 @@ pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
 }
 
 /// HE MEANS TO GO THROUGH IT: what is left of his way, or his step to where he is sent, crosses the door's frame.
-pub fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub(in crate::fittings) fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let man = &g.gd[gd];
     let mut a = g.ch[man.ch].pos;
     for &q in man.path.iter().skip(man.path_i) {

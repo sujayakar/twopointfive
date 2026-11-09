@@ -47,7 +47,7 @@ pub fn hands_busy(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 pub fn mid(a: V3, b: V3) -> V3 { [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, (a[2] + b[2]) / 2.0] }
 
 /// Floor distance from the player to an END of a body, Infinity when a static stands between.
-pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f64 {
+pub(in crate::hands_of_the_player) fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f64 {
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -62,7 +62,7 @@ pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::HaulE
 }
 
 /// player.ts bodyDist's extra term: the reach to a body's HEAD end.
-pub fn body_grip_dist(g: &mut crate::game::Game, gd: GuardId, within: f64) -> f64 {
+pub(in crate::hands_of_the_player) fn body_grip_dist(g: &mut crate::game::Game, gd: GuardId, within: f64) -> f64 {
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
     let (a, b) = (pt(g, rc, rag.sho_l), pt(g, rc, rag.sho_r));
@@ -72,7 +72,7 @@ pub fn body_grip_dist(g: &mut crate::game::Game, gd: GuardId, within: f64) -> f6
 }
 
 /// player.ts toggleDrag, the body just taken: which end, which hand has which limb, the move's first beat.
-pub fn haul_begin(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::hands_of_the_player) fn haul_begin(g: &mut crate::game::Game, gd: GuardId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     g.pl[pl].haul = None;
@@ -115,7 +115,7 @@ pub fn haul_begin(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The haul along the floor: which end, which hand has which limb.
-pub fn drag_haul(g: &mut crate::game::Game, gd: GuardId) -> crate::hands::Haul {
+pub(in crate::hands_of_the_player) fn drag_haul(g: &mut crate::game::Game, gd: GuardId) -> crate::hands::Haul {
     let c = g.pl[g.player].ch;
     let rc = rag_char(g, gd).unwrap();
     let rag = crate::ragdoll::rag();
@@ -157,14 +157,14 @@ pub fn unit(v: V3, or: V3) -> V3 {
 }
 
 /// Room for him to stand upright at p.
-pub fn stand_room(g: &mut crate::game::Game, p: V3) -> bool {
+pub(in crate::hands_of_the_player) fn stand_room(g: &mut crate::game::Game, p: V3) -> bool {
     let mut q: V3 = [p[0], p[1], p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.42, 1.0, 1.7, Some(2.0));
     m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.01
 }
 
 /// The unit direction a turned toward b by s of the angle between them.
-pub fn turn_dir(a: V3, b: V3, s: f64) -> V3 {
+pub(in crate::hands_of_the_player) fn turn_dir(a: V3, b: V3, s: f64) -> V3 {
     let ang = m::acos(v3::clamp(v3::dot(a, b), -1.0, 1.0));
     if ang < 1e-4 { return b; }
     let mut ax = v3::cross(a, b);
@@ -192,7 +192,7 @@ fn lie_of_g(g: &mut Game, r: RagdollId) -> crate::hands::Lie {
 }
 
 /// Between two lies: the hips along the straight line, every direction turned.
-pub fn lie_mix(a: crate::hands::Lie, b: crate::hands::Lie, s: f64) -> crate::hands::Lie {
+pub(in crate::hands_of_the_player) fn lie_mix(a: crate::hands::Lie, b: crate::hands::Lie, s: f64) -> crate::hands::Lie {
     let u = turn_dir(a.u, b.u, s);
     let t0 = turn_dir(a.t, b.t, s);
     let t = unit(v3::mad(t0, u, -v3::dot(t0, u)), b.t);
@@ -200,7 +200,7 @@ pub fn lie_mix(a: crate::hands::Lie, b: crate::hands::Lie, s: f64) -> crate::han
 }
 
 /// On his shoulder the body rides him: its free limbs go through `carryRide` of his own step and turn since the last frame.
-pub fn carry_rides(g: &mut crate::game::Game, c_2: crate::hands::CarryRidesC, rag: RagdollId, k: &mut crate::hands::HaulCarry) {
+pub(in crate::hands_of_the_player) fn carry_rides(g: &mut crate::game::Game, c_2: crate::hands::CarryRidesC, rag: RagdollId, k: &mut crate::hands::HaulCarry) {
     let was = k.at;
     let ride = g.k.hands.carry_ride;
     k.at = Some([c_2.pos[0], c_2.pos[2], c_2.body_yaw]);
@@ -225,7 +225,7 @@ fn lie_pins_g(g: &mut Game, r: RagdollId, dim: [f64; 4], l: crate::hands::Lie) {
 }
 
 /// Over his left shoulder, face down.
-pub fn shoulder_lie(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::hands::Lie {
+pub(in crate::hands_of_the_player) fn shoulder_lie(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::hands::Lie {
     let c = g.pl[seat.player].ch;
     let f = crate::character::character_forward(g, c);
     let l: V3 = [f[2], 0.0, -f[0]];
@@ -237,7 +237,7 @@ pub fn shoulder_lie(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crat
 }
 
 /// Where it can be laid: on its back, straight, across the front of him, else round to whichever side has the floor. None = no clear floor.
-pub fn lay_lie(g: &mut crate::game::Game) -> Option<crate::hands::LayLie> {
+pub(in crate::hands_of_the_player) fn lay_lie(g: &mut crate::game::Game) -> Option<crate::hands::LayLie> {
     let c = g.pl[g.player].ch;
     let pos = g.ch[c].pos;
     let body_yaw = g.ch[c].body_yaw;
@@ -263,7 +263,7 @@ pub fn lay_lie(g: &mut crate::game::Game) -> Option<crate::hands::LayLie> {
 }
 
 /// Is he walking with it on his shoulder?
-pub fn haul_upright(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::hands_of_the_player) fn haul_upright(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     match g.pl[seat.player].haul {
         Some(h) => h.carry.is_some() && h.phase == crate::hands::HaulPhase::Carry,
         None => false,
@@ -271,7 +271,7 @@ pub fn haul_upright(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 }
 
 /// Is he down on his heels for this beat?
-pub fn haul_crouch(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn haul_crouch(g: &mut crate::game::Game) -> bool {
     use crate::hands::HaulPhase as P;
     let Some(h) = g.pl[g.player].haul else { return true };
     h.carry.is_none()
@@ -281,7 +281,7 @@ pub fn haul_crouch(g: &mut crate::game::Game) -> bool {
 }
 
 /// The facing he keeps through the lift and the laying-down of a carried body.
-pub fn haul_yaw(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f64> {
+pub(in crate::hands_of_the_player) fn haul_yaw(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f64> {
     use crate::hands::HaulPhase as P;
     let h = g.pl[seat.player].haul?;
     let k = h.carry?;
@@ -289,7 +289,7 @@ pub fn haul_yaw(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f
 }
 
 /// The two spots in front of him the held limbs are carried at (left hand's, right hand's).
-pub fn carry_spots(g: &crate::game::Game, h: crate::hands::Haul) -> [V3; 2] {
+pub(in crate::hands_of_the_player) fn carry_spots(g: &crate::game::Game, h: crate::hands::Haul) -> [V3; 2] {
     let c = g.pl[g.player].ch;
     let f = crate::character::character_forward(g, c);
     let feet = h.end == crate::hands::HaulEnd::Feet;
@@ -301,7 +301,7 @@ pub fn carry_spots(g: &crate::game::Game, h: crate::hands::Haul) -> [V3; 2] {
 }
 
 /// Each frame a body is in tow: runs the move's beat, places the pins, feeds the animator's hands. False = no move of this file's is on.
-pub fn haul_pins(g: &mut crate::game::Game, dt: f64) -> bool {
+pub(in crate::hands_of_the_player) fn haul_pins(g: &mut crate::game::Game, dt: f64) -> bool {
     use crate::hands::HaulPhase as P;
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -457,7 +457,7 @@ pub fn feed(g: &mut crate::game::Game, h: crate::hands::Haul) {
 }
 
 /// The body in his hands by the head end, when it is wedged in a way the leg sticks do not show.
-pub fn haul_slack(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn haul_slack(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let Some(h) = g.pl[pl].haul else { return false };
     let Some(rc) = g.pl[pl].dragging.and_then(|b| rag_char(g, b)) else { return false };
@@ -498,7 +498,7 @@ pub fn haul_set_down(g: &mut crate::game::Game) -> bool {
 }
 
 /// Has the laying-down run its course?
-pub fn haul_set_done(g: &mut crate::game::Game) -> bool {
+pub(in crate::hands_of_the_player) fn haul_set_done(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let Some(h) = g.pl[pl].haul else { return false };
     if h.phase != crate::hands::HaulPhase::Set { return false; }
@@ -513,7 +513,7 @@ pub fn haul_set_done(g: &mut crate::game::Game) -> bool {
 }
 
 /// How fast his feet may go with a body, as a share of the crouch.
-pub fn haul_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+pub(in crate::hands_of_the_player) fn haul_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     use crate::hands::HaulPhase as P;
     match g.pl[seat.player].haul {
         None => 0.6,
@@ -531,7 +531,7 @@ pub fn haul_speed(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
 // ------------------------------------------------------------------------------------------------ a door
 
 /// The unit line of the leaf were it at `angle`.
-pub fn leaf_u(g: &crate::game::Game, d: DoorId, angle: f64) -> [f64; 2] {
+pub(in crate::hands_of_the_player) fn leaf_u(g: &crate::game::Game, d: DoorId, angle: f64) -> [f64; 2] {
     let a = g.dr[d].def.closed_dir + angle;
     [m::cos(a), m::sin(a)]
 }
@@ -546,7 +546,7 @@ pub fn leaf_dist(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
 }
 
 /// Which side of the leaf's line at `angle` q is on, and how far off it.
-pub fn leaf_perp(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
+pub(in crate::hands_of_the_player) fn leaf_perp(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
     let u = leaf_u(g, d, angle);
     let h = hinge(g, d);
     u[0] * (q[2] - h[1]) - u[1] * (q[0] - h[0])
@@ -556,7 +556,7 @@ pub fn leaf_perp(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
 pub fn body_r(g: &crate::game::Game, d: DoorId) -> f64 { 0.34 + g.dr[d].thick / 2.0 + g.k.hands.clear_m }
 
 /// The nearest the leaf's line comes to q anywhere on its way from a0 to a1.
-pub fn sweep_dist(g: &crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3) -> f64 {
+pub(in crate::hands_of_the_player) fn sweep_dist(g: &crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3) -> f64 {
     let n = m::max(1.0, m::ceil(m::abs(a1 - a0) / 0.1));
     let mut best = m::INF;
     let mut k = 0.0;
@@ -568,7 +568,7 @@ pub fn sweep_dist(g: &crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3) -> 
 }
 
 /// Does the floor segment p → q cross the leaf's line as it stands at `angle`?
-pub fn crosses_leaf(g: &crate::game::Game, d: DoorId, angle: f64, p: V3, q: V3) -> bool {
+pub(in crate::hands_of_the_player) fn crosses_leaf(g: &crate::game::Game, d: DoorId, angle: f64, p: V3, q: V3) -> bool {
     let (s0, s1) = (leaf_perp(g, d, angle, p), leaf_perp(g, d, angle, q));
     if s0 * s1 > 0.0 { return false; }
     let t = s0 / js::or(s0 - s1, 1e-9);
@@ -580,7 +580,7 @@ pub fn crosses_leaf(g: &crate::game::Game, d: DoorId, angle: f64, p: V3, q: V3) 
 }
 
 /// The side of the line the leaf will STAND on at a1 that q is on: > 0 = the opening's, < 0 = the pocket behind the leaf.
-pub fn open_side(g: &crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
+pub(in crate::hands_of_the_player) fn open_side(g: &crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
     let u = leaf_u(g, d, 0.0);
     let h = hinge(g, d);
     let w = g.dr[d].def.width;
@@ -591,7 +591,7 @@ pub fn open_side(g: &crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
 
 /// Where to stand for the leaf to go from a0 to a1 without meeting him: Some(None) = where he is (`null`); Some(Some(spot)) = the nearest standing room the sweep
 /// misses, on his side of the wall; None = there is none within a step (`undefined`).
-pub fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> {
+pub(in crate::hands_of_the_player) fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> {
     let p = g.ch[g.pl[g.player].ch].pos;
     let need = body_r(g, d);
     let clear = sweep_dist(g, d, a0, a1, p) >= need;
@@ -784,7 +784,7 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// What the hands' moves do to his feet this frame: None = nothing, [0, 0] = planted, else the unit direction of the step being taken for him.
-pub fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Option<[f64; 2]> {
+pub(in crate::hands_of_the_player) fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Option<[f64; 2]> {
     use crate::hands::HaulPhase as P;
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -829,7 +829,7 @@ pub fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Option<[f64;
 }
 
 /// Does the door he is working bring his gun down off the cursor?
-pub fn door_move_lowers(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::hands_of_the_player) fn door_move_lowers(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     let c = g.pl[pl].ch;
     let Some(mv) = g.pl[pl].door_move else { return false };
@@ -932,7 +932,7 @@ fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) 
 }
 
 /// A cancel or a restart: hands off everything.
-pub fn hands_cancel(g: &mut crate::game::Game) {
+pub(in crate::hands_of_the_player) fn hands_cancel(g: &mut crate::game::Game) {
     let p = g.player;
     g.pl[p].door_move = None;
 }

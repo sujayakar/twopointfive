@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec::Vec};
 
 /// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.   (fire.ts axisAt)
-pub fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
+pub(in crate::air_and_light) fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
     axis_with(&g.k.fire, up, wind)
 }
 fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
@@ -32,7 +32,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireSt
 }
 
 /// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.   (fire.ts fireStats)
-pub fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
+pub(in crate::air_and_light) fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
     match g.m.fire.states {
         Some(s) => s,
         None => fresh(),
@@ -72,7 +72,7 @@ fn seed_at(p: V3) -> f64 {
 }
 
 /// The cracks of the wood near `time`, the latest first, none older than `back` s.   (fire.ts firePops)
-pub fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
+pub(in crate::air_and_light) fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
     pops_with(&g.k.fire, seed, time, back)
 }
 fn pops_with(fk: &crate::knobs::FireK, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
@@ -165,7 +165,7 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).   (fire.ts windAt)
-pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
+pub(in crate::air_and_light) fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
     let wl = m::hyp2(wv[0], wv[2]);

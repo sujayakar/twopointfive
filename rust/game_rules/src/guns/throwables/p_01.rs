@@ -105,7 +105,7 @@ fn set_word(c: &mut sim::items::Items, at: usize, r: usize, v: u32) {
 }
 
 /// The sponge round's three boxes about `c_2`, its length along `rot`'s z, the nose toward +z.
-pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
+pub(in crate::guns) fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
     let s = sponge_item();
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -115,17 +115,17 @@ pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3,
 }
 
 /// A handle on row `r` of the pool's columns (the store is `g.items.store`).
-pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
+pub(in crate::guns) fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
     g.tab.item.push(Item { r, kept: None, side: None, on_bounce: None, clatters: None, hand: None })
 }
 
 /// Which row it stands in, -1 out of the pool.
-pub fn item_row(g: &crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_row(g: &crate::game::Game, id: ItemId) -> f64 {
     if g.tab.item[id].kept.is_none() { g.tab.item[id].r } else { -1.0 }
 }
 
 /// Out of the pool, with its numbers.
-pub fn item_leave(g: &mut crate::game::Game, id: ItemId) {
+pub(in crate::guns) fn item_leave(g: &mut crate::game::Game, id: ItemId) {
     if g.tab.item[id].kept.is_none() {
         let r = g.tab.item[id].r;
         let kept = crate::sim_itemshome::item_store_row_out(g, r);
@@ -135,7 +135,7 @@ pub fn item_leave(g: &mut crate::game::Game, id: ItemId) {
 }
 
 /// Its numbers as they stand, by their places.
-pub fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
+pub(in crate::guns) fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
     if let Some(k) = &g.tab.item[id].kept {
         return k.clone();
     }
@@ -144,13 +144,13 @@ pub fn item_numbers(g: &mut crate::game::Game, id: ItemId) -> Vec<f64> {
 }
 
 /// Into row `r`.
-pub fn item_stand(g: &mut crate::game::Game, id: ItemId, r: f64) {
+pub(in crate::guns) fn item_stand(g: &mut crate::game::Game, id: ItemId, r: f64) {
     g.tab.item[id].kept = None;
     g.tab.item[id].r = r;
 }
 
 /// A double by its place.
-pub fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+pub(in crate::guns) fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -159,7 +159,7 @@ pub fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
 }
 
 /// …and written.
-pub fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
+pub(in crate::guns) fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
     if let Some(k) = &mut g.tab.item[id].kept {
         k[c_2 as usize] = v;
         return;
@@ -169,7 +169,7 @@ pub fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A word by its place.
-pub fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+pub(in crate::guns) fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -178,7 +178,7 @@ pub fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
 }
 
 /// …and written: ToUint32 both ways, by `>>> 0` kept and by the Uint32Array's store in a row.
-pub fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
+pub(in crate::guns) fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
     if let Some(k) = &mut g.tab.item[id].kept {
         k[c_2 as usize] = js::to_u32(v) as f64;
         return;
@@ -188,12 +188,12 @@ pub fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A truth: a bit of `flags`.
-pub fn item_bit(g: &crate::game::Game, id: ItemId, b: f64) -> bool {
+pub(in crate::guns) fn item_bit(g: &crate::game::Game, id: ItemId, b: f64) -> bool {
     (js::to_i32(item_w(g, id, ic::FLAGS)) & js::to_i32(b)) != 0
 }
 
 /// …and written.
-pub fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
+pub(in crate::guns) fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
     let f = js::to_i32(item_w(g, id, ic::FLAGS));
     let b = js::to_i32(b);
     item_pw(g, id, ic::FLAGS, (if on { f | b } else { f & !b }) as f64);
@@ -203,7 +203,7 @@ pub fn item_kind(g: &crate::game::Game, id: ItemId) -> crate::throwables::ItemKi
     ITEM_KINDS[item_w(g, id, ic::KIND) as usize]
 }
 
-pub fn item_set_kind(g: &mut crate::game::Game, id: ItemId, v: crate::throwables::ItemKind) {
+pub(in crate::guns) fn item_set_kind(g: &mut crate::game::Game, id: ItemId, v: crate::throwables::ItemKind) {
     let at = ITEM_KINDS.iter().position(|k| *k == v).unwrap();
     item_pw(g, id, ic::KIND, at as f64);
 }
@@ -236,7 +236,7 @@ pub fn item_radius(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::RADIUS)
 }
 
-pub fn item_set_radius(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_radius(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::RADIUS, v);
 }
 
@@ -244,7 +244,7 @@ pub fn item_restitution(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::RESTITUTION)
 }
 
-pub fn item_set_restitution(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_restitution(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::RESTITUTION, v);
 }
 
@@ -252,7 +252,7 @@ pub fn item_friction(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::FRICTION)
 }
 
-pub fn item_set_friction(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_friction(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::FRICTION, v);
 }
 
@@ -260,15 +260,15 @@ pub fn item_yaw(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::YAW)
 }
 
-pub fn item_set_yaw(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_yaw(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::YAW, v);
 }
 
-pub fn item_spin(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_spin(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::SPIN)
 }
 
-pub fn item_set_spin(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_spin(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::SPIN, v);
 }
 
@@ -276,15 +276,15 @@ pub fn item_tumble(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::TUMBLE)
 }
 
-pub fn item_set_tumble(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_tumble(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::TUMBLE, v);
 }
 
-pub fn item_tumble_rate(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_tumble_rate(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::TUMBLE_RATE)
 }
 
-pub fn item_set_tumble_rate(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_tumble_rate(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::TUMBLE_RATE, v);
 }
 
@@ -292,7 +292,7 @@ pub fn item_age(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::AGE)
 }
 
-pub fn item_set_age(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_age(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::AGE, v);
 }
 
@@ -320,15 +320,15 @@ pub fn item_set_emit_t(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::EMIT_T, v);
 }
 
-pub fn item_fill(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_fill(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::FILL)
 }
 
-pub fn item_set_fill(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_fill(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::FILL, v);
 }
 
-pub fn item_heading(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub(in crate::guns) fn item_heading(g: &mut crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::HEADING)
 }
 
@@ -336,7 +336,7 @@ pub fn item_set_heading(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::HEADING, v);
 }
 
-pub fn item_set_on_pose(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_on_pose(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::ON_POSE, v);
 }
 
@@ -361,7 +361,7 @@ pub fn item_carried(g: &crate::game::Game, id: ItemId) -> Option<bool> {
     g.tab.item[id].hand
 }
 
-pub fn item_set_carried(g: &mut crate::game::Game, id: ItemId, v: Option<bool>) {
+pub(in crate::guns) fn item_set_carried(g: &mut crate::game::Game, id: ItemId, v: Option<bool>) {
     g.tab.item[id].hand = v;
     item_pbit(g, id, crate::sim_itemshome::itf().carried, v == Some(true));
 }
@@ -379,7 +379,7 @@ pub fn item_who(g: &crate::game::Game, id: ItemId) -> f64 {
     js::to_i32(item_w(g, id, ic::WHO)) as f64
 }
 
-pub fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pw(g, id, ic::WHO, v);
 }
 
@@ -387,7 +387,7 @@ pub fn item_serial(g: &crate::game::Game, id: ItemId) -> f64 {
     item_w(g, id, ic::SERIAL)
 }
 
-pub fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
+pub(in crate::guns) fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pw(g, id, ic::SERIAL, v);
 }
 
@@ -406,7 +406,7 @@ pub fn item_set_on(g: &mut crate::game::Game, id: ItemId, p: Option<PropId>) {
 }
 
 /// A box for an item's part.
-pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
+pub(in crate::guns) fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
     crate::scene_boxes::box_of_frame(g, c_2, h, yaw, albedo, [0.0, 0.0, 0.0], flags, 0.0, Some(rot), None)
 }
 

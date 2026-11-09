@@ -91,19 +91,19 @@ pub fn sprint_door_after(g: &mut crate::game::Game, pl: PlayerId, own: &crate::d
 }
 
 /// The share of his top speed his run is held to this frame: `ripPace` while his hand is ripping a leaf round, else 1.
-pub fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> f64 {
+pub(in crate::hands_of_the_player) fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
     if live(g, crate::sprintdoor::LivePl { down: pl.down }) && now < pl.door_rip_until { g.k.sprintdoor.rip_pace } else { 1.0 }
 }
 
 /// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.
-pub fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
+pub(in crate::hands_of_the_player) fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     g.k.sprintdoor.lean_secs > 0.0 && now - pl.door_bash_at < g.k.sprintdoor.lean_secs + SETTLE
 }
 
 /// Radians added to the yaw his body runs at: the shoulder turned into the leaf, easing back square. None = no turn running and none just ended.
-pub fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> Option<f64> {
+pub(in crate::hands_of_the_player) fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> Option<f64> {
     let now = now.unwrap_or(g.time);
     if !sprint_door_turning(g, pl, Some(now)) { return None; }
     let t = (now - pl.door_bash_at) / g.k.sprintdoor.lean_secs;
@@ -112,7 +112,7 @@ pub fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps
 }
 
 /// The look his head is given while his body is `off` radians off his run: the same angle back the other way.
-pub fn sprint_door_head(off: f64) -> f64 {
+pub(in crate::hands_of_the_player) fn sprint_door_head(off: f64) -> f64 {
     let w = off - m::round(off / (2.0 * m::PI)) * 2.0 * m::PI;
     if m::abs(w) < 1e-6 { 0.0 } else { HEAD_SIGN * w }
 }

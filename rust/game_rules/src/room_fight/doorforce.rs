@@ -96,7 +96,7 @@ pub fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) ->
 }
 
 /// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man.
-pub fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
+pub(in crate::room_fight) fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let from: V3 = [pos[0], pos[1] + 1.5, pos[2]];
@@ -331,7 +331,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
 }
 
 /// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it.
-pub fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
+pub(in crate::room_fight) fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
     if g.dr[d].def.steel == Some(true) || !crate::wallpen::wall_men_live(g) { return None; }
@@ -515,7 +515,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
 }
 
 /// The walk to the boot's spot, the set, the boot. None = it is over: the caller's own branch goes on.
-pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::KickStep> {
+pub(in crate::room_fight) fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::KickStep> {
     let row = man!(g, gd);
     let kk = row.kick.unwrap();
     let d = kk.door;
@@ -582,7 +582,7 @@ pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crat
 }
 
 /// QA: hand `gd` the record a real sighting of his foe at `at` leaves, `age` seconds old.
-pub fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
+pub(in crate::room_fight) fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     let t = g.time - age;
     man_of(g, gd).saw = Some(ManSaw { at: [at[0], 0.0, at[2]], t, used: false });

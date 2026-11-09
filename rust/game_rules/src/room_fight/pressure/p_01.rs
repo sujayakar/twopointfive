@@ -60,7 +60,7 @@ pub fn way_out(g: &crate::game::Game) -> bool {
 }
 
 /// The press forms up outside the doors before it goes; `gather` is off on the page and under hard.
-pub fn forms(g: &crate::game::Game) -> bool {
+pub(in crate::room_fight) fn forms(g: &crate::game::Game) -> bool {
     way_out(g)
 }
 
@@ -136,7 +136,7 @@ pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pre
 }
 
 /// Who the press has, for the one record: in a press, or on his beat toward one. Said as its tick ends.
-pub fn press_say(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn press_say(g: &mut crate::game::Game) {
     let press = crate::owner::by::PRESS;
     let on = g.k.pressure.on && g.m.pressure.states.is_some();
     let mut i = 0;
@@ -173,7 +173,7 @@ pub fn press_keeps_home(g: &mut crate::game::Game, d: RoomfightDefId, stop_clock
 }
 
 /// digin.ts asks this too: true = a press has left him to keep his room, and a mate of that room has gone.
-pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
+pub(in crate::room_fight) fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
     if !g.k.pressure.on {
         return false;
     }
@@ -188,7 +188,7 @@ pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
 }
 
 /// The man left to keep his room still has it to keep: a mate of that room is up.
-pub fn stays_home(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub(in crate::room_fight) fn stays_home(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let d_room = g.tab.roomfight_def[d].room;
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -215,7 +215,7 @@ fn dear(g: &mut Game, t: RoomfightRoomId, ix: f64, iz: f64) -> f64 {
 const SPOTS: [[f64; 2]; 9] = [[3.0, 1.6], [3.0, -1.6], [2.4, 1.2], [2.4, -1.2], [1.2, 2.4], [1.2, -2.4], [1.2, 1.7], [1.2, -1.7], [2.6, 0.0]];
 
 /// A spot outside entry `e` of room T, off the door's line, that he can walk to without crossing T.
-pub fn gather_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry) -> Option<crate::pressure::GatherSpot> {
+pub(in crate::room_fight) fn gather_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry) -> Option<crate::pressure::GatherSpot> {
     let c = g.gd[g.tab.roomfight_def[d].gd].ch;
     let fr = crate::guards::frame_of(g, e.door);
     if way_out(g) {

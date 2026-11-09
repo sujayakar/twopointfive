@@ -62,7 +62,7 @@ const MISSION_KIT: &str = "This mission issues its own kit, whatever this machin
 fn is_lesson(e: &LoadoutEntry) -> bool { e.group == Some(MissionGroup::Tutorial) }
 
 /// Which sizes a mission can stage, in the order of the sizes.   (loadout.ts squadChoices)
-pub fn squad_choices(e: &LoadoutEntry) -> Vec<SquadChoice> {
+pub(in crate::outfit) fn squad_choices(e: &LoadoutEntry) -> Vec<SquadChoice> {
     SIZES.iter().map(|&n| {
         let no = if is_lesson(e) && n != e.squad { LESSON_ONLY }
             else if let Some(only) = e.only.as_deref().filter(|_| n != e.squad) { only }
@@ -74,7 +74,7 @@ pub fn squad_choices(e: &LoadoutEntry) -> Vec<SquadChoice> {
 }
 
 /// What a size changes on a kind of mission; `office`: the bundled level, the one with a breach plan.   (loadout.ts noteOf)
-pub fn note_of(kind: LoadoutKind, n: f64, office: bool, own: f64) -> &'static str {
+pub(in crate::outfit) fn note_of(kind: LoadoutKind, n: f64, office: bool, own: f64) -> &'static str {
     use LoadoutKind::{Quiet, Rescue, Solo};
     if kind == Solo { return "Alone on the office floor."; }
     if kind == Quiet {
@@ -103,7 +103,7 @@ const FOUR: [RosterMan; 4] = [
 ];
 
 /// The men of a size, in staging order: up to two are the pair, three or four the four-man squad's first three or all of it.   (loadout.ts rosterOf)
-pub fn roster_of(n: f64) -> &'static [RosterMan] {
+pub(in crate::outfit) fn roster_of(n: f64) -> &'static [RosterMan] {
     let n = n as usize;
     if n > 2 { &FOUR[..n] } else { &PAIR[..n] }
 }
@@ -117,7 +117,7 @@ fn joined(note: String, then: &str) -> String { if note.is_empty() { String::fro
 pub fn lesson_note(note: &str) -> String { joined(not_yours(note), LESSON_KIT) }
 
 /// A size's note on a mission that issues its own kit, with who carries what.   (loadout.ts issueNote)
-pub fn issue_note(note: &str, who: &str) -> String {
+pub(in crate::outfit) fn issue_note(note: &str, who: &str) -> String {
     let said = if who.is_empty() { format!("{MISSION_KIT}.") } else { format!("{MISSION_KIT}: {who}.") };
     joined(not_yours(note), &said)
 }
@@ -126,4 +126,4 @@ pub fn issue_note(note: &str, who: &str) -> String {
 pub fn kit_as_issued(e: &LoadoutEntry) -> bool { is_lesson(e) }
 
 /// The five sizes a screen with no mission offers: all of them, with nothing to say.
-pub fn any_size() -> Vec<SquadChoice> { SIZES.iter().map(|&n| SquadChoice { n, ok: true, own: false, note: String::new() }).collect() }
+pub(in crate::outfit) fn any_size() -> Vec<SquadChoice> { SIZES.iter().map(|&n| SquadChoice { n, ok: true, own: false, note: String::new() }).collect() }

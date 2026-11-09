@@ -18,7 +18,7 @@ fn gate_read(g: &mut Game, man: GuardId) -> Option<GateRead> {
 }
 
 /// One frame of a man's gate.
-pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, dt: f64) -> bool {
+pub(in crate::enemies) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, dt: f64) -> bool {
     use crate::game::GuardState;
     let c = g.gd[gd].ch;
     let d = g_2.door;
@@ -213,14 +213,14 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
 }
 
 /// Eyes and muzzle down and away from the opening: the foot of the wall behind him along it.
-pub fn away_look(g: &mut crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, pos: V3) -> V3 {
+pub(in crate::enemies) fn away_look(g: &mut crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, pos: V3) -> V3 {
     let f = crate::guards::frame_of(g, d);
     let out = if g_2.near_a <= 0.0 { -1.0 } else { 1.0 };
     [pos[0] + f.ux * out * 1.4 + f.nx * g_2.side * 0.4, 0.15, pos[2] + f.uz * out * 1.4 + f.nz * g_2.side * 0.4]
 }
 
 /// Across the opening, or straight to the cross where there is no floor for it or the leaf is shut.
-pub fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
+pub(in crate::enemies) fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     let st = slice_stations(g, g_2.door, g_2.side, g_2.near_a);
     let st = match st {
         Some(st) if !crate::doors::door_is_closed(g, g_2.door) => st,
@@ -235,7 +235,7 @@ pub fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tact
 }
 
 /// The legs through the doorway; a second goes half a second behind.
-pub fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
+pub(in crate::enemies) fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     let k = if g_2.role == GateRole::Lead { 0.0 } else { 1.0 };
     let plan = plan_for(g, g_2.door, g_2.side, g_2.near_a);
     g_2.legs = entry_legs(g, g_2.door, g_2.side, g_2.near_a, k, plan.as_ref());
@@ -244,7 +244,7 @@ pub fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tact
 }
 
 /// The charge goes in round the near jamb, on a fuse only this gate's clock runs.
-pub fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, thrower: GuardId) {
+pub(in crate::enemies) fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, thrower: GuardId) {
     let d = g_2.door;
     if let Some(k) = g.m.tactics.kit.get_mut(thrower) { k.stuns = m::max(0.0, k.stuns - 1.0); }
     let ch = g.gd[thrower].ch;
@@ -273,7 +273,7 @@ pub fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tacti
 }
 
 /// Keep the gates honest once a frame (a man reset out of the list, a corpse); the phases run from followPath.
-pub fn tick_gates(g: &mut crate::game::Game) {
+pub(in crate::enemies) fn tick_gates(g: &mut crate::game::Game) {
     let men = s(g).gates.keys();
     for man in men {
         if !g.guards.contains(&man) || g.gd[man].state == crate::game::GuardState::Dead || g.gd[man].held.is_some() {

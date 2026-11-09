@@ -16,7 +16,7 @@ use alloc::{vec::Vec};
 // would have left every trail standing at the burst point. `tracker` itself is effects' Track::Spark { slot, gen_ } (p_effects_01 track_at): its stub stays.
 
 /// a free slot, else the spark nearest its end
-pub fn sparks_slot(g: &crate::game::Game) -> f64 {
+pub(in crate::breakage) fn sparks_slot(g: &crate::game::Game) -> f64 {
     let n = m::min(js::to_i32(g.sparks.params.max_live) as f64, g.sparks.pool.len() as f64);
     let (mut worst, mut wf) = (0usize, -1.0);
     let mut i = 0usize;
@@ -29,14 +29,14 @@ pub fn sparks_slot(g: &crate::game::Game) -> f64 {
     }
     worst as f64
 }
-pub fn sparks_spawn(g: &mut crate::game::Game, at: V3, vel: V3, life: f64) -> f64 {
+pub(in crate::breakage) fn sparks_spawn(g: &mut crate::game::Game, at: V3, vel: V3, life: f64) -> f64 {
     let i = sparks_slot(g);
     let s = &mut g.sparks.pool[i as usize];
     s.pos = v3::copy(at); s.vel = vel; s.age = 0.0; s.life = life; s.alive = true; s.gen_ += 1.0;
     i
 }
 /// deterministic per-spark hash in [0,1)
-pub fn sparks_h(i: f64, k: f64, seed: f64) -> f64 {
+pub(in crate::breakage) fn sparks_h(i: f64, k: f64, seed: f64) -> f64 {
     let t = m::sin((i + 1.0) * 12.9898 + k * 78.233 + seed * 53.17) * 43758.5453;
     t - m::floor(t)
 }

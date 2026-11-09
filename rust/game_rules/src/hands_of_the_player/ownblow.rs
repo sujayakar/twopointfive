@@ -42,7 +42,7 @@ pub fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
 }
 
 /// player.ts buildInteractables: the row, or None.
-pub fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactable> {
+pub(in crate::hands_of_the_player) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactable> {
     let c = own_set(g)?;
     if !(crate::rails::rails_offers(g, "blow") || crate::rails::rails_offers(g, "charge"))
         || (crate::rails::rails_locks(g, "blow") && crate::rails::rails_locks(g, "word")) { return None; }
@@ -60,7 +60,7 @@ pub fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactab
 }
 
 /// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down.
-pub fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
+pub(in crate::hands_of_the_player) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
     if !own_set(g).map_or(false, |c| c.fatal) { return false; }

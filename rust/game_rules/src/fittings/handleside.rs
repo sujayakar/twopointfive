@@ -64,13 +64,13 @@ pub fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> b
 }
 
 /// Which face of the closed leaf `p` is on.
-pub fn side_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub(in crate::fittings) fn side_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
 }
 
 /// How far `p` stands off the frame's line.
-pub fn off_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub(in crate::fittings) fn off_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     m::abs((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz)
 }
@@ -82,7 +82,7 @@ pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) 
 }
 
 /// The handle, on the floor.
-pub fn handle_at(g: &crate::game::Game, d: DoorId) -> V3 {
+pub(in crate::fittings) fn handle_at(g: &crate::game::Game, d: DoorId) -> V3 {
     let along = g.dr[d].def.width - g.k.handle.handle_in;
     pt_of(g, d, along, 0.0, 1.0)
 }
@@ -137,7 +137,7 @@ pub fn handle_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<cr
 }
 
 /// Searches a face's floor for its stand and its way through.
-pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
+pub(in crate::fittings) fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
     let k = g.k.handle;
     let w = g.dr[d].def.width;
     let hd = handle_at(g, d);
@@ -207,13 +207,13 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
 }
 
 /// The angle under which a leaf stands in a man's way.
-pub fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
+pub(in crate::fittings) fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
     let open = crate::doors::doors_swing_of(g, d).open;
     m::min(g.k.handle.ajar, 0.8 * open)
 }
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already.
-pub fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
+pub(in crate::fittings) fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
     if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
     if crate::doors::door_off(g, d) { return false; }
     let latched = crate::doors::door_latched(g, d);
@@ -271,7 +271,7 @@ pub fn release(g: &mut crate::game::Game, gd: GuardId, rest: bool) {
 }
 
 /// His hand on the leaf from the face it opens into.
-pub fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
+pub(in crate::fittings) fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
     let who = g.ch[g.gd[gd].ch].id;
     let quiet = crate::silent::silent_ease(g, gd);
     crate::doors::doors_pull(g, d, who, Some(quiet));
@@ -296,7 +296,7 @@ pub fn bend(g: &mut crate::game::Game, gd: GuardId, d: DoorId, a: crate::handles
 }
 
 /// He stands still this frame.
-pub fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
+pub(in crate::fittings) fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -568,7 +568,7 @@ pub fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
 }
 
 /// A man's feet taken the last of the way onto `to`: true once he stands on it.
-pub fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, strafe: bool, pass: Option<bool>) -> bool {
+pub(in crate::fittings) fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, strafe: bool, pass: Option<bool>) -> bool {
     let pass = pass.unwrap_or(false);
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -656,7 +656,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
 }
 
 /// Where a door order's lead works the handle from without standing in the opening.
-pub fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
+pub(in crate::fittings) fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
     let k = g.k.handle;
     let f = crate::guards::frame_of(g, d);
     let hd = handle_at(g, d);

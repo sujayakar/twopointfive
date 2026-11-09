@@ -7,12 +7,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.
-pub fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
+pub(in crate::missions) fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
     if crate::rails::rails_live(g) { Some(16.0) } else { None }
 }
 
 /// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.
-pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
+pub(in crate::missions) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
     let mut manifest = Manifest::default();
     seam_script_define(script, &mut manifest)?;
     Ok(manifest)
@@ -22,7 +22,7 @@ pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::d
 fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.
-pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
+pub(in crate::missions) fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
     if !m.marks.has(id.into()) || pos.is_some() {
         let pos = match pos {
             Some(p) => Some(v3::copy(p)),
@@ -33,22 +33,22 @@ pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3
     MarkRef { id: id.into() }
 }
 /// D.volume.
-pub fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
+pub(in crate::missions) fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
     m.volumes.add(id.into());
     VolumeRef { id: id.into() }
 }
 /// D.door.
-pub fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
+pub(in crate::missions) fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
     m.doors.add(id.into());
     DoorRef { id: id.into() }
 }
 /// D.loadout.
-pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
+pub(in crate::missions) fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
     m.loadouts.set(id.into(), spec);
     LoadoutRef { id: id.into() }
 }
 /// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.
-pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
+pub(in crate::missions) fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
     if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
     let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::default), beats: JsMap::new(), triggers: Vec::new() };
     body(&mut program)?;
@@ -56,15 +56,15 @@ pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mu
     Ok(())
 }
 /// P.onStart.
-pub fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
+pub(in crate::missions) fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::default() });
 }
 /// P.onSignal.
-pub fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
+pub(in crate::missions) fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::default() });
 }
 /// P.beat: `script` is whose match holds this beat's code. Err = declared twice.
-pub fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
+pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
     if p.beats.has(name.into()) { return Err(format!("script: beat '{}' declared twice in program '{}'", name, p.name)); }
     p.beats.set(name.into(), ProgramDefBeatsValue { fn_: *script, atomic: atomic.unwrap_or(true) });
     Ok(())
@@ -116,7 +116,7 @@ fn device_group(d: &crate::scene_level::DeviceDef) -> String {
 fn door_is_in(level: &LintManifestLevel, name: &str) -> bool { level.doors.iter().any(|d| d.name == name) }
 
 /// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.
-pub fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
+pub(in crate::missions) fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
     let route_names: Vec<String> = level.routes.iter().map(|r| g.tab.route[*r].name.clone()).collect();
     lint_with_routes(m, level, &route_names)
 }

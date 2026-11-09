@@ -23,7 +23,7 @@ fn as_in_view(vp: &Option<crate::game::GameViewProj>) -> Option<InViewVp> {
 
 // ---------------------------------------------------------------- her voice, the gates, the floor's queue
 /// A hostage says a line of this moment, off her own die, never the one over her head now. False: down, held, or no such line.
-pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialogue::HostageMoment, other: Option<GuardId>) -> bool {
+pub(in crate::missions_men) fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialogue::HostageMoment, other: Option<GuardId>) -> bool {
     use crate::dialogue::HostageMoment as M;
     let cv = match g.gd[gd].civ { Some(c) => c, None => return false };
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.cv[cv].state == CivState::Gone { return false; }
@@ -100,7 +100,7 @@ pub fn later(g: &mut crate::game::Game, secs: f64, p: &crate::civilians::LaterP)
 fn on_shift(g: &Game, o: Option<GuardId>) -> Option<GuardId> { o.filter(|x| g.guards.contains(x)) }
 
 /// The doing itself, when its time comes.
-pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
+pub(in crate::missions_men) fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
     use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue as D, ChronicleNDataValue as N};
     use crate::game::GuardState;
     use crate::guards::RaiseEscalationCause as Why;
@@ -204,7 +204,7 @@ pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
 }
 
 /// She says it: a bubble over her head, and the log under her name when she is off screen.
-pub fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>, unheard: Option<bool>) {
+pub(in crate::missions_men) fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>, unheard: Option<bool>) {
     let hold = hold.unwrap_or(0.0);
     let unheard = unheard.unwrap_or(false);
     let text = String::from(text);
@@ -221,7 +221,7 @@ pub fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<
 }
 
 /// On a player's screen: with two, on either's.
-pub fn on_screen_head(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::missions_men) fn on_screen_head(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = bone_or(g, g.gd[gd].ch, crate::character::Bone::Head, [0.0, 1.7, 0.0]);
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
@@ -258,7 +258,7 @@ pub fn pick(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) -> String {
 pub fn away(g: &mut crate::game::Game) -> bool { !crate::dialogue::is_office(g) }
 
 /// What she tells the man she reaches, by cause.
-pub fn report_pool(g: &crate::game::Game, cause: Option<&str>) -> Vec<String> {
+pub(in crate::missions_men) fn report_pool(g: &crate::game::Game, cause: Option<&str>) -> Vec<String> {
     let lines = crate::dialogue::civ_lines();
     let k = match cause { Some(c) if lines.report.has(String::from(c)) => c, _ => "sam" };
     let was = lines.report.get(String::from(k));
@@ -266,7 +266,7 @@ pub fn report_pool(g: &crate::game::Game, cause: Option<&str>) -> Vec<String> {
 }
 
 /// A pool without its shouts for 'security' where there is no such desk.
-pub fn no_security(g: &mut crate::game::Game, pool: &[String]) -> Vec<String> {
+pub(in crate::missions_men) fn no_security(g: &mut crate::game::Game, pool: &[String]) -> Vec<String> {
     if !away(g) { return pool.to_vec(); }
     pool.iter().filter(|t| !t.to_ascii_lowercase().contains("security")).cloned().collect()
 }
@@ -371,7 +371,7 @@ fn yield_to(g: &mut Game, c: CharId, p: V3, r: f64) {
 }
 
 /// One civilian's frame: perception, the little state machine, the figure, solidity.
-pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
+pub(in crate::missions_men) fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     use crate::game::GuardState;
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
@@ -453,7 +453,7 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 }
 
 /// The sound of her feet: nothing of the game reads it.
-pub fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
+pub(in crate::missions_men) fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
     let c = g.gd[gd].ch;
     let prev = g.gd[gd].step_phase;
     g.gd[gd].step_phase = g.ch[c].anim.phase;
@@ -569,7 +569,7 @@ pub fn hear(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// A crash right by her: the first startles, a second inside the startle is somebody IN here.
-pub fn startle_or_worse(g: &mut crate::game::Game, gd: GuardId, at: V3) {
+pub(in crate::missions_men) fn startle_or_worse(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let cv = civ_of(g, gd);
     let st = g.cv[cv].state;
     if st == CivState::Work { to_startled(g, gd, at, true); }
@@ -612,7 +612,7 @@ pub fn bodies(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Her light meter, for the men's eyes on her.
-pub fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
+pub(in crate::missions_men) fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     let [stands, e] = crate::guards::light_on(g, c);
@@ -755,7 +755,7 @@ pub fn work(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilians
 }
 
 /// Leaving a mark: the clip comes off, and a seated / kneeling woman takes a moment to be on her feet.
-pub fn end_task(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::missions_men) fn end_task(g: &mut crate::game::Game, gd: GuardId) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     let task = task_at(g, gd);
@@ -775,7 +775,7 @@ pub fn end_task(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Back to the loop from wherever she is: the nearest mark is the next, walked to.
-pub fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
+pub(in crate::missions_men) fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     let r = g.gd[gd].route;
@@ -801,7 +801,7 @@ pub fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
 
 // ---------------------------------------------------------------- STARTLED: she stops and looks
 /// A glimpse or a noise stops her at her work.
-pub fn to_startled(g: &mut crate::game::Game, gd: GuardId, at: V3, sound: bool) {
+pub(in crate::missions_men) fn to_startled(g: &mut crate::game::Game, gd: GuardId, at: V3, sound: bool) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     if g.cv[cv].state != CivState::Work { return; }
@@ -965,7 +965,7 @@ pub fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate::civili
 }
 
 /// May this man be run to and told.
-pub fn tellable(g: &crate::game::Game, o: GuardId) -> bool {
+pub(in crate::missions_men) fn tellable(g: &crate::game::Game, o: GuardId) -> bool {
     let x = &g.gd[o];
     x.state != crate::game::GuardState::Dead && x.team == crate::teams::Team::Guard && x.held.is_none() && x.script.is_none() && x.state != crate::game::GuardState::Alert && g.guards.contains(&o)
 }
@@ -1040,7 +1040,7 @@ pub fn pick_target(g: &mut crate::game::Game, gd: GuardId, opts: Option<crate::c
 }
 
 /// The run begins (or is re-chosen): a shout the first time.
-pub fn to_flee(g: &mut crate::game::Game, gd: GuardId, t: &crate::civilians::CivTarget, evac: bool) {
+pub(in crate::missions_men) fn to_flee(g: &mut crate::game::Game, gd: GuardId, t: &crate::civilians::CivTarget, evac: bool) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     g.cv[cv].target = Some(t.clone());
@@ -1153,12 +1153,12 @@ pub fn flee(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
 
 // ---------------------------------------------------------------- REPORT: telling the man
 /// Is what she tells first-hand of him or his doing.
-pub fn first_hand(cause: Option<crate::civilians::CivCause>) -> bool {
+pub(in crate::missions_men) fn first_hand(cause: Option<crate::civilians::CivCause>) -> bool {
     matches!(cause, Some(CivCause::Sam) | Some(CivCause::Gun) | Some(CivCause::Grabbed) | Some(CivCause::Body) | Some(CivCause::Gunfire) | Some(CivCause::Shot))
 }
 
 /// She has reached the man: she starts telling him, and he stops and takes it in.
-pub fn to_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId) {
+pub(in crate::missions_men) fn to_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     g.cv[cv].report_to = Some(o); g.cv[cv].talk_t = 0.0; g.cv[cv].acked = false;

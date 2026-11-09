@@ -42,7 +42,7 @@ fn smoke_emit(g: &mut Game, e: &Emitter) {
 
 // ---------------------------------------------------------------- spawners
 /// Muzzle frame for the emitter offsets: z = bore, y = up-ish, x = right.
-pub fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame {
+pub(in crate::air_and_light) fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame {
     let z = v3::normalize(d);
     let mut y = v3::sub([0.0, 1.0, 0.0], v3::scale(z, z[1]));
     if v3::len(y) < 1e-3 {

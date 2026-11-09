@@ -12,7 +12,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
 /// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.
-pub fn row_file(g: &crate::game::Game) -> Option<String> {
+pub(in crate::missions) fn row_file(g: &crate::game::Game) -> Option<String> {
     let name = crate::scene_level_load::level_name_of(g)?;
     if name.is_empty() || name == "office" { return None; }
     Some(alloc::format!("{}.json", name))

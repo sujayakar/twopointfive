@@ -11,7 +11,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// the script runner.ts lent for the frame, as the run left it, put back on his row (conventions 4; see morale's b_01).
-pub fn runner_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
+pub(in crate::man) fn runner_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(r)) = (ran, g.m.runner.state_of.get_mut(gd)) { r.script = ran; }
 }
 
@@ -80,7 +80,7 @@ pub fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
 }
 
 /// an enemy as a run reckons with him   (runner.ts foeAt)
-pub fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
+pub(in crate::man) fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
     let eye = head_of(g, c_2);
     Foe { pos: g.ch[c_2].pos, eye, who }
 }
@@ -107,7 +107,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
 }
 
 /// is a run planned from the man's own picture: a show keeps no pictures   (runner.ts byPicture)
-pub fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
+pub(in crate::man) fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
 
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
 pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
@@ -121,7 +121,7 @@ pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> 
 }
 
 /// the nearest enemy plainly in his eyes inside `closeM`; nobody for a man with magnesium in his eyes   (runner.ts closeFoe)
-pub fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
+pub(in crate::man) fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     if crate::control::man::blind(g, gd) { return None; }
     let mut best: Option<CharId> = None;
     let mut bd = g.k.runner.close_m;
@@ -151,7 +151,7 @@ pub fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
 }
 
 /// is he the man: broken, alone, dry, and nobody else's   (runner.ts ripe)
-pub fn ripe(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn ripe(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     let mo = match crate::morale::morale_of(g, gd) { Some(x) if x.alone => x, _ => return false };
     if mo.act == crate::morale::MoraleAct::Bait { return false; }
@@ -382,7 +382,7 @@ pub fn path_len(from: V3, path: &[V3]) -> f64 {
 }
 
 /// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air   (runner.ts pickMate)
-pub fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub(in crate::man) fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let mate_m = g.k.runner.mate_m;
     let mut best: Option<GuardId> = None;
@@ -412,7 +412,7 @@ pub fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// is there an enemy in the `aheadM` of his way in front of him, nearer to it than to him   (runner.ts wayBarred)
-pub fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
+pub(in crate::man) fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
     if e.is_empty() { return false; }
     let (shy, ahead) = (g.k.runner.shy_m, g.k.runner.ahead_m);
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -493,7 +493,7 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
 fn plan_f(f: &Flood) -> PlanOutF { PlanOutF { out: f.out, shied: f.shied } }
 
 /// out of the building by the nearest floor that is outside; no such floor: the corner   (runner.ts toOut)
-pub fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) {
+pub(in crate::man) fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) {
     let f = flood(g, gd, e, None, None);
     {
         let r = run!(g, gd);
@@ -509,7 +509,7 @@ pub fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) 
 }
 
 /// to a corner, low   (runner.ts toLow)
-pub fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner::Foe]) {
+pub(in crate::man) fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner::Foe]) {
     {
         let r = run!(g, gd);
         r.phase = RunPhase::Low;
@@ -522,7 +522,7 @@ pub fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner
 }
 
 /// a way out, planned: round the enemies he knows of, else the nearest the floor itself gives him. True = he is on it   (runner.ts planOut)
-pub fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f: crate::runner::PlanOutF) -> bool {
+pub(in crate::man) fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f: crate::runner::PlanOutF) -> bool {
     if let Some(out) = f.out {
         if route(g, gd, out, e) {
             run!(g, gd).bold = false;
@@ -828,7 +828,7 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// WHAT IT WANTS OF HIM (a rule's second part, control/; it only reads): the same answer. Its state is moved by `runner_tick`.
-pub fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+pub(in crate::man) fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let now = g.time;
     match g.m.runner.state_of.get(gd) {
         Some(r) if r.drive && r.drive_t == now => Some(r.script),

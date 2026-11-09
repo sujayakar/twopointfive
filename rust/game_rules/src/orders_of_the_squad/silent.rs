@@ -16,7 +16,7 @@ fn new_state(cast: Vec<GuardId>, since: f64) -> State {
 pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
 
 /// the squad of this seat
-pub fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
+pub(in crate::orders_of_the_squad) fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
 
 /// is the squad silent right now
 pub fn squad_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
@@ -144,7 +144,7 @@ pub fn quiet_gun(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the order's own hold on a silent man's round at `h`, nothing counted
-pub fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+pub(in crate::orders_of_the_squad) fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if reached(g, gd) || quiet_gun(g, gd) { return false; }
     let st = g.gd[h].state;
     !(st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed || urgent(g))
@@ -156,7 +156,7 @@ pub fn round_held(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
 }
 
 /// his round at `h` is held
-pub fn silent_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+pub(in crate::orders_of_the_squad) fn silent_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !under_silence(g, gd) {
         if !crate::holdfire::hold_fire_loud(g) {
             let (noticed, quiet) = (g.k.silent.noticed, quiet_gun(g, gd));
@@ -210,7 +210,7 @@ pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 }
 
 /// `only` of the posture's two rows: the whole squad, whoever was addressed
-pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
+pub(in crate::orders_of_the_squad) fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
 
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
@@ -233,7 +233,7 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
 }
 
 /// the word that follows 'loud' on the HUD
-pub fn loud_word(w: Option<&str>) -> String {
+pub(in crate::orders_of_the_squad) fn loud_word(w: Option<&str>) -> String {
     match w {
         Some(w) if !w.is_empty() => alloc::format!("loud · {}", w),
         _ => String::from("loud"),

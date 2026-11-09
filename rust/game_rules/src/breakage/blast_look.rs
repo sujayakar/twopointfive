@@ -45,7 +45,7 @@ pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::fogofwar::fog_of_war_done(g, was);
 }
 
-pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+pub(in crate::breakage) fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
@@ -102,7 +102,7 @@ pub fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64
 }
 
 /// the frame of strip, the blinking lamp, the firing line and its reel: thirteen boxes of the frame
-pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<AnyBoxId>) {
+pub(in crate::breakage) fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<AnyBoxId>) {
     let k = charge_look();
     let w = g.tab.wallcharge_set_wall_charge[s.c].wall.clone();
     let h = g.k.wallcharge.height;
@@ -150,7 +150,7 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
 }
 
 /// the stun charge's flash a wall charge borrowed (detonateStun lit it this frame where spawnBurst put it); None: none burning there
-pub fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
+pub(in crate::breakage) fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
     let b = crate::effects::bang();
     let mut at = burst_at(g, w);
     at[1] += b.light_lift;
@@ -171,7 +171,7 @@ pub fn nudge(_g: &crate::game::Game, x: f64, up: bool) -> f64 { let bits = x.to_
 
 /// WALL_FLASH's hue at `c`'s luminance, the meter's sum kept TO THE BIT: red and blue scaled, green solved for, then green (failing that, blue) walked
 /// one representable number at a time until the sum lands; a colour it cannot land stays as it was.
-pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
+pub(in crate::breakage) fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
     let t = WALL_FLASH_COLOR;
     let l0 = lum(c_2[0], c_2[1], c_2[2]);
     let k = l0 / lum(t[0], t[1], t[2]);
@@ -197,7 +197,7 @@ fn state_mut(g: &mut Game) -> &mut State {
 }
 
 /// this module's own dice: a counter of its own through a hash
-pub fn hash_u(n: f64) -> f64 {
+pub(in crate::breakage) fn hash_u(n: f64) -> f64 {
     let mut x = m::imul(js::to_i32(n) ^ (0x9e3779b9u32 as i32), 0x85ebca6bu32 as i32) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0xc2b2ae35u32 as i32) as u32;
@@ -221,7 +221,7 @@ pub fn scale(g: &mut crate::game::Game) -> crate::blast_look::BurstOfK {
 }
 
 /// the 'flash' item a burst stands over (`born`: the one born this very frame, else an older one)
-pub fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
+pub(in crate::breakage) fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
     use crate::throwables as t;
     let h = crate::effects::bang().height;
     let mut i = 0;
@@ -240,7 +240,7 @@ pub fn can_at(g: &mut crate::game::Game, at: V3) -> bool { flash_under(g, at, fa
 
 /// Is this burst a door charge's (a 'flash' item born this frame, 0.2 m off the door's frame line and 0.7 of its width along it)? The way the blast goes,
 /// where the room's share starts (ahead of the leaf the charge threw in), where the rest starts. None: not one, or a leaf flung in on its hinges.
-pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
+pub(in crate::breakage) fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
     if !flash_under(g, at, true) { return None; }
     let k = door_sparks();
     let mut i = 0;
@@ -383,7 +383,7 @@ pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge
 
 /// A thrown stun can's fragments: two unequal lobes along the can's own axis (effects.ts spawnBurst's draws for this burst's seed: the jets of smoke
 /// go the same two ways), a low fan all round, a small fountain, embers.
-pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
+pub(in crate::breakage) fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     let (kk, b, k) = (stun_sparks_table(), crate::effects::bang(), scale(g));
     let seed = g.fx_seed - 1.0;

@@ -55,7 +55,7 @@ pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
 }
 
 /// The flags a bar this rule took was authored with, or None.
-pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
+pub(in crate::breakage) fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
     let s = g.sim;
     for i in 0..::sim::panes::bars_gone(s) as usize {
@@ -118,7 +118,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 }
 
 /// Bar `index` goes: hidden to every question, its pieces thrown the way `dir` from where it was struck. False = gone already or no standing bar.
-pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
+pub(in crate::breakage) fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
     let taken = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
         let flags = seam_box(g, b).flags;
@@ -219,7 +219,7 @@ pub fn changed(g: &mut crate::game::Game) {
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.
-pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
+pub(in crate::breakage) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
     if !bars_live(g) || g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];

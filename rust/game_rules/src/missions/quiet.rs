@@ -23,7 +23,7 @@ pub fn held_set(g: &mut crate::game::Game, h: crate::quiet::Held) {
 }
 
 /// out through this exit: past its point going its own way, inside its width
-pub fn out_through(x: &crate::scene_scenarios::QuietExit, p: V3) -> bool {
+pub(in crate::missions) fn out_through(x: &crate::scene_scenarios::QuietExit, p: V3) -> bool {
     let dx = p[0] - x.x;
     let dz = p[2] - x.z;
     let along = dx * x.out[0] + dz * x.out[1];
@@ -43,7 +43,7 @@ pub fn quiet_mission_new(g: &crate::game::Game) -> crate::quiet::QuietMission {
 }
 
 /// the start dealt
-pub fn quiet_mission_start_(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
+pub(in crate::missions) fn quiet_mission_start_(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
     if !g.quiet.active { return None; }
     let at = g.quiet.deal.start as usize;
     g.quiet.data.as_ref().and_then(|q| q.starts.get(at).cloned())
@@ -63,12 +63,12 @@ pub fn quiet_mission_exits(g: &crate::game::Game) -> Vec<crate::scene_scenarios:
 }
 
 /// what is to be taken
-pub fn quiet_mission_thing(g: &crate::game::Game) -> String {
+pub(in crate::missions) fn quiet_mission_thing(g: &crate::game::Game) -> String {
     match g.quiet.data.as_ref().and_then(|q| q.thing.as_ref()) { Some(t) => t.clone(), None => String::from("the drive") }
 }
 
 /// the routes manned on this run, by name
-pub fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
+pub(in crate::missions) fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
     if !g.quiet.active { return Vec::new(); }
     let q = match g.quiet.data.as_ref() { Some(q) => q, None => return Vec::new() };
     let at = g.quiet.deal.patrol;   // (−1: past every list, so every route)
@@ -79,7 +79,7 @@ pub fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
 }
 
 /// why it cannot start right now
-pub fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<String> {
+pub(in crate::missions) fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<String> {
     let squad = squad.unwrap_or(0.0);
     let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
         Some(q) => q,
@@ -98,7 +98,7 @@ pub fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Opt
 }
 
 /// Start it: the deal, a fresh encounter on it, the partner beside Sam. The reason when refused or when the staging failed
-pub fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: Option<f64>) -> Option<String> {
+pub(in crate::missions) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: Option<f64>) -> Option<String> {
     let squad = squad.unwrap_or(0.0);
     if g.quiet.active { return None; }
     if let Some(why) = quiet_mission_can_start(g, Some(squad)) { return Some(why); }
@@ -128,7 +128,7 @@ pub fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: O
 }
 
 /// Stop it: the partner gone, every route manned, the authored mission and spawn back, a fresh night encounter
-pub fn quiet_mission_stop(g: &mut crate::game::Game) {
+pub(in crate::missions) fn quiet_mission_stop(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
     g.quiet.active = false;
     quiet_mission_put_back(g);
@@ -140,7 +140,7 @@ pub fn quiet_mission_stop(g: &mut crate::game::Game) {
 }
 
 /// the level as authored
-pub fn quiet_mission_put_back(g: &mut crate::game::Game) {
+pub(in crate::missions) fn quiet_mission_put_back(g: &mut crate::game::Game) {
     quiet_mission_unbench(g);
     if let Some(a) = g.quiet.authored.take() {
         g.level.player_spawn = a.spawn;
@@ -150,7 +150,7 @@ pub fn quiet_mission_put_back(g: &mut crate::game::Game) {
 }
 
 /// THE RUN IS OVER: the switches it took put back, each only while it still stands as the run wrote it
-pub fn quiet_mission_release(g: &mut crate::game::Game) {
+pub(in crate::missions) fn quiet_mission_release(g: &mut crate::game::Game) {
     if let (Some(w), Some(mine)) = (g.quiet.was, g.quiet.mine) {
         let n = held_now(g);
         held_set(g, released(w, mine, n));
@@ -272,7 +272,7 @@ fn cut_lens(lens: &mut crate::camera::FollowCamera, p: V3) {
 }
 
 /// the run in a line
-pub fn quiet_mission_summary(g: &crate::game::Game) -> String {
+pub(in crate::missions) fn quiet_mission_summary(g: &crate::game::Game) -> String {
     if !g.quiet.active || g.quiet.data.is_none() {
         let carries = g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some());
         return String::from(if carries { "off · this level carries one" } else { "off · this level carries none" });
@@ -301,14 +301,14 @@ pub fn quiet_mission_summary(g: &crate::game::Game) -> String {
 }
 
 /// a line of the mission's own log
-pub fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
+pub(in crate::missions) fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.quiet.log.push(line);
     if g.quiet.log.len() > 60 { g.quiet.log.drain(0..30); }
 }
 
 /// one deal: the pinned seed's, and with no pin the first of each list
-pub fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::QuietData) -> crate::quiet::QuietDeal {
+pub(in crate::missions) fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::QuietData) -> crate::quiet::QuietDeal {
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
         None => crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } },
@@ -331,7 +331,7 @@ fn pinned_deal(mut die: crate::dice::Die, starts: usize, spots: usize, sets: Opt
 }
 
 /// the benched routes' men back on the guard list, in route order, torches back in the light set
-pub fn quiet_mission_unbench(g: &mut crate::game::Game) {
+pub(in crate::missions) fn quiet_mission_unbench(g: &mut crate::game::Game) {
     if g.quiet.benched.is_empty() { return; }
     let benched = g.quiet.benched.clone();
     for &gd in &benched {
@@ -347,7 +347,7 @@ pub fn quiet_mission_unbench(g: &mut crate::game::Game) {
 }
 
 /// what goes dark when the thing comes out: the switchables named for the mission's holder
-pub fn quiet_mission_rack(g: &mut crate::game::Game) {
+pub(in crate::missions) fn quiet_mission_rack(g: &mut crate::game::Game) {
     let n = js::num_str(g.level.mission.rack.index);
     let leds = format!("rack{}_leds", n);
     let glow = format!("rack{}_glow", n);
@@ -488,7 +488,7 @@ pub fn quiet_words(g: &crate::game::Game) -> Option<crate::quiet::QuietWords> {
 }
 
 /// the exit Sam went out by (the nearest whose line he is past)
-pub fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
+pub(in crate::missions) fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
     if !g.quiet.active { return None; }
     let mut best = None;
     let mut bd = m::INF;
@@ -502,7 +502,7 @@ pub fn exit_taken(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios
 }
 
 /// the way out nearest `p` on foot-less distance
-pub fn nearest_exit(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
+pub(in crate::missions) fn nearest_exit(g: &crate::game::Game, p: V3) -> Option<crate::scene_scenarios::QuietExit> {
     if !g.quiet.active { return None; }
     let mut best = None;
     let mut bd = m::INF;

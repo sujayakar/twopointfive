@@ -56,7 +56,7 @@ fn key(s: &str) -> String {
 }
 
 /// Where a need is answered on this level, or None.
-pub fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
+pub(in crate::man) fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
     let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) else { return need_spots().get(key(kind.as_str())).cloned() };
     let s = q.needs.as_ref().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
@@ -69,7 +69,7 @@ pub fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<
 }
 
 /// A level's own place as a NeedSpot.
-pub fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
+pub(in crate::man) fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
     NeedSpot { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
 
@@ -103,7 +103,7 @@ pub fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
 }
 
 /// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
-pub fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
+pub(in crate::man) fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
     let r = g.tab.route[g.gd[gd].route].clone();
     let mut best = -1.0;
     let mut bm = m::INF;
@@ -161,7 +161,7 @@ pub fn deal(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// May the needs play in this run at all?
-pub fn needs_live(g: &crate::game::Game) -> bool {
+pub(in crate::man) fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
         && !g.quiet_utility
@@ -173,12 +173,12 @@ pub fn needs_live(g: &crate::game::Game) -> bool {
 }
 
 /// Would a man leave his route on this floor?
-pub fn floor_calm(g: &crate::game::Game) -> bool {
+pub(in crate::man) fn floor_calm(g: &crate::game::Game) -> bool {
     crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
 }
 
 /// Is he calm and free?
-pub fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
+pub(in crate::man) fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
     let x = &g.gd[gd];
     x.state == GuardState::Patrol
         && x.awareness < awareness
@@ -194,7 +194,7 @@ pub fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 }
 
 /// Why a trip under way must be broken off now, or None.
-pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
+pub(in crate::man) fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
     }
@@ -344,7 +344,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Put this man on a trip, the telegraph starting now. False if the place cannot be reached.
-pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, forced: bool) -> bool {
+pub(in crate::man) fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, forced: bool) -> bool {
     let spot = need_spot(g, kind);
     let c = g.gd[gd].ch;
     let Some(spot) = spot else {
@@ -427,7 +427,7 @@ pub fn path_len(from: V3, p: &[V3]) -> f64 {
 }
 
 /// Break the trip off wherever he is; nothing is resumed.
-pub fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
+pub(in crate::man) fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     if !on_trip(g, gd) {
         return;
     }
@@ -470,7 +470,7 @@ pub fn pick_line(g: &mut crate::game::Game, pool: &[String], gd: GuardId, salt: 
 }
 
 /// The colleague he tells: the nearest staff man his words reach.
-pub fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub(in crate::man) fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mouth = head_or_guess(g, gd);
     let my_pos = g.ch[g.gd[gd].ch].pos;
     let mut best = None;
@@ -497,7 +497,7 @@ pub fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// Say it: to the partner's face, else over the net.
-pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
+pub(in crate::man) fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
     t.told = true;
     g.stats.needs.told += 1;
     let p = partner_for(g, gd);
@@ -534,7 +534,7 @@ pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Tr
 }
 
 /// The partner's grumble, if he is still one to give it.
-pub fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
+pub(in crate::man) fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
     t.replied = true;
     let Some(p) = t.partner else { return };
     let now = g.time;
@@ -581,7 +581,7 @@ fn stand(g: &mut Game, gd: GuardId, dt: f64) {
 }
 
 /// If a trip owns his feet this frame, run them and return true; false = the branch walks his route.
-pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
+pub(in crate::man) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     if !on_trip(g, gd) {
         return false;
     }

@@ -31,7 +31,7 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
 }
 
 /// The hold simply ceases: Sam's side cleared, and his if he is still about.
-pub fn drop_hold(g: &mut crate::game::Game) {
+pub(in crate::hands_of_the_player) fn drop_hold(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let Some(gd) = g.pl[pl].holding.as_ref().map(|h| h.g) else { return };
@@ -76,7 +76,7 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
 }
 
 /// Hands off the tools: the progress stays on the door, he stays on his knee.
-pub fn stop_picking(g: &mut crate::game::Game, text: Option<&str>) {
+pub(in crate::hands_of_the_player) fn stop_picking(g: &mut crate::game::Game, text: Option<&str>) {
     let pl = g.player;
     if g.pl[pl].picking.is_none() {
         return;
@@ -91,7 +91,7 @@ pub fn stop_picking(g: &mut crate::game::Game, text: Option<&str>) {
 }
 
 /// Working the lock, on its own clock once begun.
-pub fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub(in crate::hands_of_the_player) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let d = g.pl[pl].picking.unwrap();
@@ -172,7 +172,7 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
 }
 
 /// The wand pulled out: he stays on his knee.
-pub fn stop_wand(g: &mut crate::game::Game, text: Option<&str>) {
+pub(in crate::hands_of_the_player) fn stop_wand(g: &mut crate::game::Game, text: Option<&str>) {
     let pl = g.player;
     if g.pl[pl].wanding.is_none() {
         return;
@@ -185,7 +185,7 @@ pub fn stop_wand(g: &mut crate::game::Game, text: Option<&str>) {
 }
 
 /// One frame of the look: planted on his knee at the leaf; once there the lens is live and turns after the aim point.
-pub fn update_wanding(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::hands_of_the_player) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     // The TypeScript's W outlives a stop (its object is only dropped from pl.wanding), so a local copy written back while he still has the look does the same.
@@ -259,7 +259,7 @@ fn wand_row_back(g: &mut crate::game::Game, pl: PlayerId, w: crate::wand::Wandin
 }
 
 /// Keying a code in: stood at the pad with the feet still, turned to the plate, the rifle low. HANDWORK.on and .work are settled on.
-pub fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::hands_of_the_player) fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let coding = g.pl[pl].coding.unwrap();
@@ -293,7 +293,7 @@ pub fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Hands at work on a thing that is not a lock or a pad: the keypad's plant.
-pub fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crate::handwork::SamWork) {
+pub(in crate::hands_of_the_player) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crate::handwork::SamWork) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     if g.pl[pl].wall.is_some() {
@@ -438,7 +438,7 @@ fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTo
 }
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
-pub fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
+pub(in crate::hands_of_the_player) fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
     if crate::doors::door_off(g, d) {
         return None;
     }
@@ -455,7 +455,7 @@ pub fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<
 }
 
 /// The kick beat: eased to the kicking distance over the wind-up, rooted there; on the impact frame the lock goes.
-pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::hands_of_the_player) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     // `spot` stays the same object in the TypeScript even if pl.kick is cleared under the walk: what it is read for below is taken here.
@@ -526,7 +526,7 @@ pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Planar distance from the player to a corpse: the nearer of its ankles, its hips and its grip.
-pub fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
+pub(in crate::hands_of_the_player) fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
     let within = within.unwrap_or(f64::INFINITY);
     let me = g.pl[g.player].ch;
     let p = g.ch[me].pos;
@@ -554,7 +554,7 @@ fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, 
 }
 
 /// Throw origin, right hand-ish.
-pub fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+pub(in crate::hands_of_the_player) fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
     let pl = seat.player;
     let c = g.pl[pl].ch;
     let f = crate::character::character_forward(g, c);
@@ -563,7 +563,7 @@ pub fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
 }
 
 /// The wind-up of a throw: the can counted now, it leaves the hand at THROW_RELEASE along the arc previewed.
-pub fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
+pub(in crate::hands_of_the_player) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
     let pl = g.player;
     if crate::game::game_throw_count(g, &crate::seats::here(g), kind) <= 0.0 {
         let text = match kind {

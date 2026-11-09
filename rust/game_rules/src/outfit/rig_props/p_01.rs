@@ -20,12 +20,12 @@ pub fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Fr
 }
 
 /// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is.
-pub fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
+pub(in crate::outfit) fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
     if m::abs(ang) < 1e-6 { v } else { v3::quat::rotate(v3::quat::axis_angle(axis, ang), v) }
 }
 
 /// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z).
-pub fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
+pub(in crate::outfit) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
     let adj = match adj {
         Some(a) => a,
         None => return Frame { o: v3::copy(f.o), x: f.x, y: f.y, z: f.z },
@@ -64,7 +64,7 @@ pub fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>)
 }
 
 /// A new all-zero adjustment.
-pub fn zero_adj() -> crate::rig_props::Adj {
+pub(in crate::outfit) fn zero_adj() -> crate::rig_props::Adj {
     Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
 }
 
@@ -137,7 +137,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::ri
 }
 
 /// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down.
-pub fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub(in crate::outfit) fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
     let hd = crate::character::character_head_dir(g, c_2);
     let flat = m::hyp2(hd[0], hd[2]);
     if flat > 0.2 {

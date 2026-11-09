@@ -65,7 +65,7 @@ pub fn solid_between(a: &mut impl crate::ask::Asker, from: V3, to: V3) -> bool {
 }
 
 /// May a contact shot from `a` count on `b`: no panel between their chests.
-pub fn contact_clear(g: &mut crate::game::Game, a: CharId, b: CharId) -> bool {
+pub(in crate::guns) fn contact_clear(g: &mut crate::game::Game, a: CharId, b: CharId) -> bool {
     if v3::dist_xz(g.ch[a].pos, g.ch[b].pos) > 1.2 { return true; }
     let from = v3::add(g.ch[a].pos, [0.0, 1.1, 0.0]);
     let or = g.ch[b].pos;
@@ -263,7 +263,7 @@ pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// Motion identity: every rig box from `n0` on gets its man's id and its ordinal among his boxes this frame. Owner 0 stays on the index rule.
-pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
+pub(in crate::guns) fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
     let mut ord = hand_ord();
     let mut k = n0 as usize;
     while k < out.len() {
@@ -278,7 +278,7 @@ pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
 }
 
 /// Each player's own kit, then each man's, then the hostages' wrist ties.
-pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+pub(in crate::guns) fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::seats::each_seat(g, &mut |g| player_props(g, out));
     let mut i = 0usize;
     while i < g.guards.len() {
@@ -299,7 +299,7 @@ pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// What the player carries and wears, as boxes, and the fist's and the figure's words for this frame.
-pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+pub(in crate::guns) fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::kitanim::KitShowVRifle as Rf;
     use crate::rig_props::{RigOpts, RigOptsRifle};
     let p = g.player;
@@ -394,7 +394,7 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.
-pub fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
+pub(in crate::guns) fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
     let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideBindWhat::Hammer, None)?;
     let rig = g.ch[c_2].rig;
     let l = crate::packside::side_local(g, rig, p)?;
@@ -402,7 +402,7 @@ pub fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::comb
 }
 
 /// What one guard or unit carries and wears, as boxes.
-pub fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+pub(in crate::guns) fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let c = g.gd[gd].ch;
     let big = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let stow = crate::workstow::stow_hang(g, gd);
@@ -436,7 +436,7 @@ pub fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxI
 }
 
 /// A man throwing with his free hand, the long gun still in the other: the grenade in the left fist until it leaves him.
-pub fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+pub(in crate::guns) fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let c = g.gd[gd].ch;
     if crate::character::anim_throw_off(g, c) && crate::frag::frag_in_fist(g, gd) {
         crate::rig_props::free_can_boxes(g, c, crate::game::ThrowKind::Frag, out, None);
@@ -444,7 +444,7 @@ pub fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>)
 }
 
 /// A teammate with his sidearm out: the long gun he let go of hangs down his front.
-pub fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+pub(in crate::guns) fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     if let Some(own) = crate::gunslots::side_hung(g, gd) {
         let c = g.gd[gd].ch;
         let w = match own { crate::gunslots::SideHung::Carbine => crate::rig_props::HungBoxesWeapon::Carbine, crate::gunslots::SideHung::Sc20k => crate::rig_props::HungBoxesWeapon::Sc20k };
@@ -454,7 +454,7 @@ pub fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>
 }
 
 /// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.
-pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
+pub(in crate::guns) fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
     use crate::guards::RigOf;
     use crate::handwork::{SwapHeld, SwapHeldHeld};
     use crate::rig_props::{rig, RigOpts, RigOptsRifle, RigOptsWeapon};
@@ -703,7 +703,7 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The attached solver's canister tuning, or None behind a stand-in without any.
-pub fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
+pub(in crate::guns) fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
     g.smoke.params
 }
 
@@ -713,7 +713,7 @@ pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
 }
 
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.
-pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
+pub(in crate::guns) fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let seconds: f64;
     if crate::effects::flags().vent_canister {
         let yaw = crate::throwables::item_heading(g, it);

@@ -101,7 +101,7 @@ pub fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// in a fight, what his walk this frame is.
-pub fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightWalk {
+pub(in crate::room_fight) fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightWalk {
     if crate::teams::foe_down(g, gd) { return FightWalk::Other; }
     if g.time - g.gd[gd].last_seen_t < g.k.darkdoor.seen_secs { return FightWalk::Seen; }
     match (g.gd[gd].path_goal, g.gd[gd].last_known) {
@@ -111,7 +111,7 @@ pub fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightW
 }
 
 /// free to come to a mate, or to go in with one.
-pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
+pub(in crate::room_fight) fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
     if !ours(g, o) { return false; }
     let st = g.gd[o].state;
     if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has(g, o, crate::owner::by::NEEDS) { return false; }
@@ -128,7 +128,7 @@ fn fear<'g>(g: &'g mut Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear {
 }
 
 /// is he green: morale's own answer unless `who` overrides.
-pub fn green_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn green_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let who = g.k.darkdoor.who;
     if who != crate::knobs::DarkdoorKWho::Rest { return who == crate::knobs::DarkdoorKWho::All; }
     crate::morale::training_of(g, gd) == crate::morale::TrainingOf::Green
@@ -159,7 +159,7 @@ pub fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMu
 }
 
 /// the man to call: of the `mateTry` nearest free to come and not yet dropped, the shortest walk to him inside `mateM`.
-pub fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub(in crate::room_fight) fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let k = g.k.darkdoor;
     let p = pos_of(g, gd);
     let tried = fear(g, gd).tried.clone();
@@ -186,7 +186,7 @@ pub fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// the level's rooms as lists of floor cells, dealt once a game (a game has one nav grid).
-pub fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
+pub(in crate::room_fight) fn room_cells(g: &mut crate::game::Game, room: f64) -> Vec<f64> {
     if g.m.darkdoor.cells_of.is_none() {
         g.m.darkdoor.cells_of = Some(JsMap::new());
         let (cell, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
@@ -244,7 +244,7 @@ pub fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkR
 }
 
 /// does he stand in the light, against the room ahead.
-pub fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::StandsLitR) -> bool {
+pub(in crate::room_fight) fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::StandsLitR) -> bool {
     let k = g.k.darkdoor;
     let p = pos_of(g, gd);
     let here = crate::calmtorch::place_light(g, p[0], p[2]);
@@ -285,7 +285,7 @@ pub fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<
 }
 
 /// where he waits: short of the frame, off the middle of the opening; None = nowhere but where he stands.
-pub fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+pub(in crate::room_fight) fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let k = g.k.darkdoor;
     let f = crate::guards::frame_of(g, d);
     let p = pos_of(g, gd);

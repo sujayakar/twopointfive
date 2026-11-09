@@ -38,7 +38,7 @@ pub fn is_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
 }
 /// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)
-pub fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
+pub(in crate::entries) fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
     let size = g.tab.roomfight_room[room].cells.len() as f64;
     if let Some(hit) = g.m.doortools.sky.get(room) {
         if hit.n == size { return hit.open; }
@@ -132,7 +132,7 @@ pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 // ---------------------------------------------------------------- the class
 
 /// the menu's switches as one number, to see one move: on the page all four are settled on
-pub fn door_tools_thr_sig_now(g: &mut crate::game::Game) -> f64 {
+pub(in crate::entries) fn door_tools_thr_sig_now(g: &mut crate::game::Game) -> f64 {
     (1 | 2 | 4 | 8) as f64
 }
 
@@ -331,7 +331,7 @@ pub fn door_tools_charge_on(g: &crate::game::Game, seat: &crate::seats::SeatRef,
 }
 
 /// can these men stack on that face of that door (the entry orders' menu test)
-pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+pub(in crate::entries) fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
     use crate::doortools::DoorToolsStackable as V;
     let Some((d, side)) = door_of(t) else { return V::Bool(false) };
     let Some(deal) = door_tools_deal_stack(g, d, side, men) else {
@@ -357,7 +357,7 @@ pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderT
 }
 
 /// is the door locked against the team from that face
-pub fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
+pub(in crate::entries) fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);
     let ring = crate::orders::squad_orders_ring(g, &crate::seats::here(g));
@@ -365,7 +365,7 @@ pub fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> boo
 }
 
 /// locked against the team on the face it opens toward: a boot only drives it onto its frame
-pub fn door_tools_frame_held(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub(in crate::entries) fn door_tools_frame_held(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
     if g.dr[d].def.steel.unwrap_or(false) || is_open(g, d) || !door_tools_locked_out(g, d, side) { return false; }
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);

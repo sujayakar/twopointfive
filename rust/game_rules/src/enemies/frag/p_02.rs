@@ -177,7 +177,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
 }
 
 /// The burst itself, in its order: flash and sound, glass, lines before the break, destruction, torn leaves, the men, the books.
-pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -> crate::frag::BlastReport {
+pub(in crate::enemies) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -> crate::frag::BlastReport {
     let lethal = spec.lethal_m.unwrap_or(g.k.frag.lethal_m);
     let wound = m::max(lethal, spec.wound_m.unwrap_or(g.k.frag.wound_m));
     let serial = match spec.serial { Some(s) => s, None => m::floor(g.time * 1000.0) };
@@ -353,7 +353,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
 }
 
 /// The hand grenade goes off where it lies, and the item is gone.
-pub fn detonate_frag(g: &mut crate::game::Game, it: ItemId) -> crate::frag::BlastReport {
+pub(in crate::enemies) fn detonate_frag(g: &mut crate::game::Game, it: ItemId) -> crate::frag::BlastReport {
     crate::throwables::item_set_fired(g, it, true);
     crate::throwables::item_set_life(g, it, 0.0);
     let at = crate::throwables::item_pos(g, it);
@@ -372,7 +372,7 @@ pub fn frag_fuse(g: &mut crate::game::Game, it: ItemId, dt: f64) {
 }
 
 /// The game's list of live grenades: the row itself, a writer writes through it.
-pub fn books_of(g: &mut crate::game::Game) -> &mut Vec<crate::frag::Live> {
+pub(in crate::enemies) fn books_of(g: &mut crate::game::Game) -> &mut Vec<crate::frag::Live> {
     g.m.frag.books.get_or_insert_with(Vec::new)
 }
 
@@ -493,7 +493,7 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
 }
 
 /// Where a live thrown thing will rest and the floor it crosses to get there.
-pub fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
+pub(in crate::enemies) fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
     let body = RollBody {
         pos: crate::throwables::item_pos(g, it),
         vel: crate::throwables::item_vel(g, it),
@@ -545,7 +545,7 @@ pub fn frag_marks(g: &crate::game::Game) -> Vec<crate::view::FragMark> {
 }
 
 /// The height a grenade lying at y is judged from, less the lift: what it lies on.
-pub fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
+pub(in crate::enemies) fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
     m::max(0.05, y)
 }
 
@@ -584,7 +584,7 @@ pub fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
 }
 
 /// The leaves standing open within `r` m of `p`, each as hinge and end on the floor (x, z, x, z).
-pub fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
+pub(in crate::enemies) fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
     let mut out: Vec<Vec<f64>> = Vec::new();
     for x in g.doors.list.clone() {
         if !crate::doors::door_off(g, x) && m::abs(crate::doors::door_angle(g, x)) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
@@ -609,7 +609,7 @@ pub fn leaf_dist(l: &[Vec<f64>], x: f64, z: f64) -> f64 {
 }
 
 /// A straight leg a → b comes within fleeDoorLeaf of a leaf, and nearer it than `ref_`.
-pub fn leg_by_leaf(g: &crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
+pub(in crate::enemies) fn leg_by_leaf(g: &crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
     let r = flat(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
@@ -635,7 +635,7 @@ pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3,
 
 /// `fleeSpot`, and whether its answer is THE LEG HE HAS (`wise.keep` itself, the object: frag.ts:765 asks `spot === keep.goal`, an identity; a spot
 /// weighed afresh with the kept goal's very numbers is another spot there). The body is fleeSpot's, whole.
-pub fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> (Option<V3>, bool) {
+pub(in crate::enemies) fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> (Option<V3>, bool) {
     let accel = accel.unwrap_or(f64::INFINITY);
     let cpos = c_2.pos;
     let mut ask = match who { Some(w) => crate::picture::exposure_asker(g, w, Some(true)), None => None };
@@ -774,7 +774,7 @@ pub fn open_way(g: &crate::game::Game, d: DoorId) -> bool {
 }
 
 /// His spot is in the mouth of an open doorway.
-pub fn in_mouth(g: &crate::game::Game, p: V3) -> bool {
+pub(in crate::enemies) fn in_mouth(g: &crate::game::Game, p: V3) -> bool {
     for d in g.doors.list.clone() {
         if open_way(g, d) && flat(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
     }
@@ -855,7 +855,7 @@ fn door_take(g: &mut Game, k: &mut DoorDeal, goal: V3, p: V3, len: f64, v: bool)
 }
 
 /// The spot beside an open doorway, on its far side, that the grenade has no line to and his legs make by the floor's own path.
-pub fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDoorC, at: V3, speed: f64, left: f64, accel: f64, wise: &crate::frag::FleeByDoorWise, who: Option<GuardId>) -> Option<crate::frag::FleeByDoor> {
+pub(in crate::enemies) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDoorC, at: V3, speed: f64, left: f64, accel: f64, wise: &crate::frag::FleeByDoorWise, who: Option<GuardId>) -> Option<crate::frag::FleeByDoor> {
     let cpos = c_2.pos;
     let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
     let tt = m::max(0.0, left - 0.15);

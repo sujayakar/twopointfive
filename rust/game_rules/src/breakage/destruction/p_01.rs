@@ -33,12 +33,12 @@ pub fn chaos_of(g: &crate::game::Game) -> f64 {
 }
 
 /// The loud levels' rules are live: a scenario is up.
-pub fn loud_now(g: &crate::game::Game) -> bool {
+pub(in crate::breakage) fn loud_now(g: &crate::game::Game) -> bool {
     crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active
 }
 
 /// Impulses at all: chaos above 0 and the switch.
-pub fn impulses_on(g: &crate::game::Game) -> bool {
+pub(in crate::breakage) fn impulses_on(g: &crate::game::Game) -> bool {
     chaos_of(g) > 0.0 && g.tune.debris_impulses
 }
 
@@ -48,7 +48,7 @@ pub fn load_chaos(g: &mut crate::game::Game) {
 }
 
 /// The impulses' strength scale off the knob.
-pub fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
+pub(in crate::breakage) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
@@ -58,13 +58,13 @@ pub fn indoors(p: V3) -> bool {
 }
 
 /// The point just over a box's top, where line-of-sight targets aim.
-pub fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
+pub(in crate::breakage) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }
 
 /// The lane's capped log, for the panel and the probes.
-pub fn dlog(g: &mut crate::game::Game, s: &str) {
+pub(in crate::breakage) fn dlog(g: &mut crate::game::Game, s: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.destruction.destr_log;
     log.push(line);
@@ -74,12 +74,12 @@ pub fn dlog(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A cap of n() events in any one-second window.
-pub fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
+pub(in crate::breakage) fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
     RateCap { n, ..RateCap::blank() }
 }
 
 /// One more event at time t, if the window has room.
-pub fn rate_cap_take(this: &mut crate::destruction::RateCap, t: f64, k: &crate::knobs::ChaosK) -> bool {
+pub(in crate::breakage) fn rate_cap_take(this: &mut crate::destruction::RateCap, t: f64, k: &crate::knobs::ChaosK) -> bool {
     let n = match this.n {
         RateCapN::Puff => k.puffs_per_sec,
         RateCapN::Paper => k.papers_per_sec,
@@ -109,7 +109,7 @@ fn rate_cap_take_n(this: &mut RateCap, t: f64, n: f64) -> bool {
 }
 
 /// The window afresh.
-pub fn rate_cap_reset(this: &mut crate::destruction::RateCap) {
+pub(in crate::breakage) fn rate_cap_reset(this: &mut crate::destruction::RateCap) {
     for x in this.ts.iter_mut() {
         *x = -1e9;
     }
@@ -137,7 +137,7 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
 }
 
 /// Walks the statics once: what can break, by shape and by its word.
-pub fn destruction_index(g: &mut crate::game::Game) {
+pub(in crate::breakage) fn destruction_index(g: &mut crate::game::Game) {
     let world = crate::scene_world::world();
     let boxes_len = g.col.boxes.len();
     let bf = crate::scene_boxes::box_flag();
@@ -317,7 +317,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
 }
 
 /// The underside of the roof over (x, z), or none under the open sky: five rays a 0.6 m square, remembered per square.
-pub fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f64> {
+pub(in crate::breakage) fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f64> {
     let key = crate::Num(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6) + 0.0);
     if let Some(&c) = g.destr.roofs.get(key) {
         return if c < 0.0 { None } else { Some(c) };
@@ -339,7 +339,7 @@ pub fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f
 }
 
 /// Destructibles registered in the 3×3 cells round p, hidden ones left out.
-pub fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate::destruction::Destructible>) -> Vec<crate::destruction::Destructible> {
+pub(in crate::breakage) fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate::destruction::Destructible>) -> Vec<crate::destruction::Destructible> {
     out.clear();
     let world = crate::scene_world::world();
     let cx = m::floor((p[0] - world.min[0]) / g.destr.cs);
@@ -369,7 +369,7 @@ pub fn destruction_item_of(g: &crate::game::Game, i: f64) -> Option<crate::destr
 }
 
 /// The heat cell of a point, clamped to the grid.
-pub fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
+pub(in crate::breakage) fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
     let world = crate::scene_world::world();
     let cell = g.k.chaos.cell;
     let x = m::min(g.destr.hw - 1.0, m::max(0.0, m::floor((p[0] - world.min[0]) / cell)));
@@ -378,21 +378,21 @@ pub fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
 }
 
 /// Adds heat at p and gives the escalation there after it.
-pub fn destruction_stoke(g: &mut crate::game::Game, p: V3, amount: f64, chaos: f64) -> f64 {
+pub(in crate::breakage) fn destruction_stoke(g: &mut crate::game::Game, p: V3, amount: f64, chaos: f64) -> f64 {
     let i = destruction_hidx(g, p) as usize;
     g.destr.heat[i] = (g.destr.heat[i] as f64 + amount) as f32;
     g.destr.heat[i] as f64 * 2.0 * chaos
 }
 
 /// The module's own hashed choice, counting off its serial.
-pub fn destruction_hash(g: &mut crate::game::Game) -> f64 {
+pub(in crate::breakage) fn destruction_hash(g: &mut crate::game::Game) -> f64 {
     let s = g.destr.serial;
     g.destr.serial = s + 1.0;
     crate::debris::hash01(s * 2654435761.0)
 }
 
 /// One event out of a cap; a knock-off riding on its group leader's slot is free.
-pub fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
+pub(in crate::breakage) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
     if k == DestructionTakeK::Knock && g.destr.free_knocks > 0.0 {
         g.destr.free_knocks -= 1.0;
         return true;
@@ -516,7 +516,7 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
 
 
 /// The men on their feet this frame, bar a seated civilian.
-pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
+pub(in crate::breakage) fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
     for gd in g.guards.iter() {
         if g.gd[*gd].state != crate::game::GuardState::Dead {

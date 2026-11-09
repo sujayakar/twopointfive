@@ -89,7 +89,7 @@ pub fn reset(g: &mut crate::game::Game) {
 }
 
 /// The picture's face of a lamp: its boxes drawn lit or dark through `fog_emit` / `fog_mark`, which the upload alone reads; `lit` None = as it stands.   (fogofwar.ts FogOfWar.lampFace)
-pub fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<bool>) {
+pub(in crate::air_and_light) fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<bool>) {
     let rec = if lit == Some(true) { g.fog_picture.face_recs.get(t).cloned() } else { None };
     let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
     let base = g.tab.sim_lightshome_fixture[t].base_emissive;
@@ -123,7 +123,7 @@ fn face_of(on: bool, kept: Option<V3>, base: V3) -> (V3, f64) {
 }
 
 /// A lamp the team knows lit: its face as it glows now is kept, the brightest of the last moments.   (fogofwar.ts FogOfWar.faceSeen)
-pub fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
+pub(in crate::air_and_light) fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
     let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
     if boxes.is_empty() { return; }
     let n = boxes.len();

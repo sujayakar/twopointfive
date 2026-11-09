@@ -43,7 +43,7 @@ fn swap_cols(s: &mut ::sim::slabs::Slabs, a: usize, b: usize) {
 }
 
 /// Where each column starts for columns `cap` rows long: doubles index doubles, words index words, from the part's start.
-pub fn slab_cols(cap: f64) -> crate::sim_slabshome::SlabCols {
+pub(in crate::breakage) fn slab_cols(cap: f64) -> crate::sim_slabshome::SlabCols {
     let mut o = SlabCols::default();
     let mut at = SLAB_HEAD;
     for k in [&mut o.px, &mut o.py, &mut o.pz, &mut o.vx, &mut o.vy, &mut o.vz, &mut o.a, &mut o.spin, &mut o.tip, &mut o.tip_v, &mut o.t, &mut o.ang, &mut o.wedged, &mut o.bw, &mut o.bl, &mut o.bx, &mut o.by] {
@@ -70,7 +70,7 @@ pub fn slab_store_new(g: &crate::game::Game, st: crate::Opaque, doors: f64) -> c
 }
 
 /// Slabs in all.
-pub fn slab_store_n(g: &crate::game::Game) -> f64 {
+pub(in crate::breakage) fn slab_store_n(g: &crate::game::Game) -> f64 {
     cols_read(g).n as f64
 }
 
@@ -90,7 +90,7 @@ pub fn slab_store_door_at(g: &crate::game::Game, r: f64) -> f64 {
 }
 
 /// Rows a and b change places, every column; the table follows.
-pub fn slab_store_swap(g: &crate::game::Game, a: f64, b: f64) {
+pub(in crate::breakage) fn slab_store_swap(g: &crate::game::Game, a: f64, b: f64) {
     if a == b { return; }
     let (a, b) = (a as usize, b as usize);
     let s = cols(g);
@@ -232,7 +232,7 @@ fn col_diff_slabs(o: &SlabStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut 
 }
 
 /// Where two takes of a store's bytes differ, in words: at most `most` lines, none if they are the same state.
-pub fn slab_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
+pub(in crate::breakage) fn slab_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let (o, doors) = (g.doors.slabs.o, g.doors.slabs.doors);
     let (ua0, ub0) = (word(a, 0), word(b, 0));

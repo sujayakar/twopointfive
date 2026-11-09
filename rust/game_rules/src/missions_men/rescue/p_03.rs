@@ -167,7 +167,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him
-pub fn rescue_end_act(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_end_act(g: &mut crate::game::Game) {
     let a = match g.rescue.act.take() {
         Some(a) => a,
         None => return,
@@ -185,7 +185,7 @@ pub fn rescue_end_act(g: &mut crate::game::Game) {
 }
 
 /// the captor's clock moves to a step: noted, and two of the steps told to the player
-pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
+pub(in crate::missions_men) fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
     if s == g.rescue.step { return; }
     g.rescue.step = s;
     rescue_note(g, &alloc::format!("step:{}", s.as_str()));
@@ -197,7 +197,7 @@ pub fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) 
 }
 
 /// the hostages' count, the room secured and held, the run's end
-pub fn rescue_outcome(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_outcome(g: &mut crate::game::Game) {
     if rescue_over(g) { return; }
     let mut i = 0;
     while i < g.rescue.hostages.len() {
@@ -263,7 +263,7 @@ pub fn rescue_outcome(g: &mut crate::game::Game) {
 }
 
 /// the hostages' voices: one low line at a time across the room, off no game die
-pub fn rescue_voices(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_voices(g: &mut crate::game::Game) {
     let b = room(g);
     let hs = g.rescue.hostages.clone();
     let alive = standing(g, &hs);
@@ -312,7 +312,7 @@ fn next_voice(g: &mut Game, alive: &[GuardId]) -> GuardId {
 }
 
 /// the run's end: the result kept, the act let go, the card's line
-pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
+pub(in crate::missions_men) fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
     let lost = state == RescueEndState::Lost;
     let ops = g.rescue.ops.clone();
     let team = (if g.pl[g.player].down { 0 } else { 1 }) + standing(g, &ops).len();

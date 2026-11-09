@@ -86,7 +86,7 @@ pub fn round_energy(g: &crate::game::Game, def: crate::weapons::WeaponId) -> f64
 }
 
 /// …and of the gun in this man's hands
-pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+pub(in crate::guns) fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if let Some(pl) = crate::seats::man_of(g, Some(c_2)) {
         let gun = match crate::game::player_gun_in_hand(g, pl) { Some(f) => f, None => g.pl[pl].pistol };
         let def = g.fa[gun].def;
@@ -131,7 +131,7 @@ pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
 }
 
 /// remember a crossing on pane `bi`: the module keeps it, the oldest going past `holes`
-pub fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
+pub(in crate::guns) fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
     crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p));
 }
@@ -150,7 +150,7 @@ pub fn cross_at(m: &[f64], o: f64, into: f64) -> crate::glasspen::PaneCross {
 }
 
 /// one pane on a round's flight: what it takes and where the round leaves it, or None: spent in it
-pub fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
+pub(in crate::guns) fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
     crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> Option<PaneCross> {
         if ::sim::pen_cross(js::to_u32(bi), o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth as usize) == 0 { return None; }
         let m = scratch();
@@ -161,7 +161,7 @@ pub fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e
 // ---------------------------------------------------------------- the round's flight
 
 /// the flight of a round over statics and leaves, or None: it crosses no pane. `first` None = cast here, Some(None) = the caller cast and hit nothing
-pub fn round_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::glasspen::RoundPath> {
+pub(in crate::guns) fn round_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::glasspen::RoundPath> {
     let nth0 = nth0.unwrap_or(0.0);
     let hit = match first { Some(h) => h, None => cast(g, from, dir, range) };
     let hit = hit?;
@@ -197,25 +197,25 @@ pub fn seg_at(p: &crate::glasspen::RoundPath, t: f64) -> crate::glasspen::RoundS
 }
 
 /// the point `t` metres along the path
-pub fn path_at(p: &crate::glasspen::RoundPath, t: f64) -> V3 {
+pub(in crate::guns) fn path_at(p: &crate::glasspen::RoundPath, t: f64) -> V3 {
     let s = seg_at(p, t);
     v3::mad(s.o, s.d, v3::clamp(t - s.t0, 0.0, s.len))
 }
 
 /// the impact call, one per pane a round meets, entry side
-pub fn pane_impact(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, through: bool, quiet: Option<bool>) {
+pub(in crate::guns) fn pane_impact(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, through: bool, quiet: Option<bool>) {
     let e = energy * g.k.glasspen.fracture_k;
     crate::glass::glass_impact(g, bi, at, Some(dir), e, who, Some(crate::glass::GlassImpactCause::Shot), Some(quiet.unwrap_or(false)), Some(crate::glass::GlassImpactOpts { through: Some(through) }));
 }
 
 /// the shell rule's one question: did this pellet land on a mark its own shell made, else book it
-pub fn shell_mark(g: &crate::game::Game, shell: &mut crate::glasspen::ShellGlass, bi: f64, at: V3, through: bool) -> crate::glasspen::ShellMark {
+pub(in crate::guns) fn shell_mark(g: &crate::game::Game, shell: &mut crate::glasspen::ShellGlass, bi: f64, at: V3, through: bool) -> crate::glasspen::ShellMark {
     let shell_r = g.k.glasspen.shell_r;
     mark_on(shell.glass.get_or_insert_with(crate::Num(bi), Vec::new), at, through, shell_r * shell_r)
 }
 
 /// the round got as far as `t_hit` metres of path: every pane it crossed before that is filed
-pub fn commit_crossings(g: &mut crate::game::Game, cross: &[crate::glasspen::PaneCross], t_hit: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
+pub(in crate::guns) fn commit_crossings(g: &mut crate::game::Game, cross: &[crate::glasspen::PaneCross], t_hit: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
     let mut shell = shell;
     for x in cross.iter() {
         if x.t > t_hit + 1e-6 { break; }
@@ -244,7 +244,7 @@ pub fn commit_crossings(g: &mut crate::game::Game, cross: &[crate::glasspen::Pan
 }
 
 /// the round stopped in static `bi`: if that is glass it gets the impact call with the energy it arrived with
-pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
+pub(in crate::guns) fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
     let b = level_box(g, bi);
     let sheet = crate::glass::is_sheet(g, b);
     if sheet { g.stats.glasspen.spent += 1; }
@@ -262,7 +262,7 @@ pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy
 }
 
 /// the muzzle already past the glass: what the panes across the arm left the round, filed at the arm's crossing; None: the old rule stands
-pub fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
+pub(in crate::guns) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
     if !glass_pen_live(g) { return None; }
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let mz = g.ch[c_2].muzzle;

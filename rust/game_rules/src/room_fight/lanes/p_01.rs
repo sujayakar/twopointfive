@@ -72,25 +72,25 @@ pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// He is held short of a lane.
-pub fn held_on(g: &mut crate::game::Game, gd: GuardId, h: crate::lanes::StateHeldValue) {
+pub(in crate::room_fight) fn held_on(g: &mut crate::game::Game, gd: GuardId, h: crate::lanes::StateHeldValue) {
     s(g).held.set(gd, h);
     lane_say(g, gd);
 }
 
 /// He is no longer held.
-pub fn held_off(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::room_fight) fn held_off(g: &mut crate::game::Game, gd: GuardId) {
     s(g).held.delete(gd);
     lane_say(g, gd);
 }
 
 /// He is out for a look.
-pub fn peek_on(g: &mut crate::game::Game, gd: GuardId, p: crate::lanes::Peek) {
+pub(in crate::room_fight) fn peek_on(g: &mut crate::game::Game, gd: GuardId, p: crate::lanes::Peek) {
     s(g).peek.set(gd, p);
     lane_say(g, gd);
 }
 
 /// He is back from his look.
-pub fn peek_off(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::room_fight) fn peek_off(g: &mut crate::game::Game, gd: GuardId) {
     s(g).peek.delete(gd);
     lane_say(g, gd);
 }
@@ -107,7 +107,7 @@ pub fn let_go(g: &mut crate::game::Game) {
 }
 
 /// A lane has gone: whoever it held is nobody's until the half-second's sweep says what becomes of him.
-pub fn lanes_gone(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn lanes_gone(g: &mut crate::game::Game) {
     for gd in s(g).held.keys() {
         lane_say(g, gd);
     }
@@ -138,7 +138,7 @@ pub fn cell_at(g: &crate::game::Game, p: V3) -> f64 {
 }
 
 /// A point lies on a mask's floor.
-pub fn in_mask(g: &crate::game::Game, m: Option<&[u8]>, p: V3) -> bool {
+pub(in crate::room_fight) fn in_mask(g: &crate::game::Game, m: Option<&[u8]>, p: V3) -> bool {
     let Some(m) = m else { return false };
     let i = cell_at(g, p);
     i >= 0.0 && m.get(i as usize) == Some(&1)
@@ -174,7 +174,7 @@ pub fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The energy a lane's lines are asked at: its heaviest gun's, or nothing. (LANES.glass settled on.)
-pub fn lane_e(g: &crate::game::Game, l: LanesLaneId) -> Option<f64> {
+pub(in crate::room_fight) fn lane_e(g: &crate::game::Game, l: LanesLaneId) -> Option<f64> {
     e_of(&g.tab.lanes_lane[l])
 }
 
@@ -195,7 +195,7 @@ pub fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
 }
 
 /// He is sent round at the guns; a lapsed entry is dropped, and his errand unless he is set.
-pub fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).flank.get(gd).copied() else { return false };
     if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
         return true;
@@ -209,7 +209,7 @@ pub fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The body with this id is up.
-pub fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
+pub(in crate::room_fight) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
     if crate::seats::is_man_id(g, id_2) {
         return match crate::seats::man_by_id(g, id_2) {
             Some(p) => g.ch[g.pl[p].ch].alive,
@@ -294,7 +294,7 @@ pub fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, 
 }
 
 /// The floor of every lane the side knows.
-pub fn remask(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn remask(g: &mut crate::game::Game) {
     let size = (g.col.nav.w * g.col.nav.h) as usize;
     s(g);
     let mut mask: Option<Vec<u8>> = None;
@@ -633,7 +633,7 @@ pub fn sees(g: &mut crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
 }
 
 /// The lane goes on the net.
-pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
+pub(in crate::room_fight) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
     let k = g.k.lanes;
     let now = g.time;
     {
@@ -676,7 +676,7 @@ pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
 }
 
 /// This frame's rounds (the shot events' own muzzle → impact segments): who of the side they dropped, whom they passed.
-pub fn read_rounds(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn read_rounds(g: &mut crate::game::Game) {
     let mut ei = 0;
     while ei < g.events.len() {
         let i = ei;

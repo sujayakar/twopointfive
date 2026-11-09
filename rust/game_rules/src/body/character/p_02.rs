@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle.
-pub fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
+pub(in crate::body) fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
 }
 
@@ -25,22 +25,22 @@ fn out_rate(last: crate::character::HoldPose, speed: f64, busy: bool, show: crat
 }
 
 /// A goggle nod shown as a lift of the head: as big less a little whichever way the nod went.
-pub fn nod_lift(n: f64) -> f64 {
+pub(in crate::body) fn nod_lift(n: f64) -> f64 {
     2.0 * crate::character::DEGR - m::hyp2(n, 2.0 * crate::character::DEGR)
 }
 
 /// Model-axis yaw: + turns to the figure's left.
-pub fn q_yaw(a: f64) -> Quat {
+pub(in crate::body) fn q_yaw(a: f64) -> Quat {
     v3::quat::axis_angle(crate::character::ay(), a)
 }
 
 /// A critically damped follower at `x`, at rest.
-pub fn spring_new(x: Option<f64>) -> crate::character::Spring {
+pub(in crate::body) fn spring_new(x: Option<f64>) -> crate::character::Spring {
     crate::character::Spring { v: 0.0, x: x.unwrap_or(0.0) }
 }
 
 /// One step toward `target`; w is about 6 / settle time.
-pub fn spring_step(this: &mut crate::character::Spring, target: f64, w: f64, dt: f64) -> f64 {
+pub(in crate::body) fn spring_step(this: &mut crate::character::Spring, target: f64, w: f64, dt: f64) -> f64 {
     let y = this.x - target;
     let j = this.v + y * w;
     let e = m::exp(-w * dt);
@@ -67,7 +67,7 @@ pub fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
 }
 
 /// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after, since a `pose_new` would hold a place in the pool for good where the TypeScript's scratch held none.
-pub fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
+pub(in crate::body) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64);
     let stale = match g.m.character.at0.get(clip) {
         None => true,
@@ -109,7 +109,7 @@ fn replay_slots(d: &mut [f32], at: &[i32], v: &[f32]) {
 }
 
 /// `p` with the difference between two poses laid on it by w, on the joints of `only`.
-pub fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
+pub(in crate::body) fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
     if w <= 0.0 { return; }
     let nr = crate::anim_skeleton::pose_rows(p.nodes as f64) as usize;
     for i in 0..p.nodes as usize {
@@ -161,12 +161,12 @@ pub fn bump(t: f64, a: f64, b: f64, c_2: f64, d: f64) -> f64 {
 }
 
 /// A carriage flattened into spring channels (CharacterAnimator.lg.ch; indices: LC).
-pub fn long_flat(s: crate::character::LongShape) -> Vec<f64> {
+pub(in crate::body) fn long_flat(s: crate::character::LongShape) -> Vec<f64> {
     vec![s.side, s.up, s.fwd, s.pitch, s.aim_k, s.yaw, s.blade, s.lean, s.head_yaw, s.head_pitch, s.head_roll, s.elbow_r[0], s.elbow_r[1], s.elbow_r[2], s.elbow_l[0], s.elbow_l[1], s.elbow_l[2], s.pole_w, s.sway, s.anchor, s.steady]
 }
 
 /// The carriage's spring targets for the posture shown: LONG toward LONG_CROUCH by the crouch weight.
-pub fn long_targets(stance: crate::character::LongStance, crouch_w: f64) -> Vec<f64> {
+pub(in crate::body) fn long_targets(stance: crate::character::LongStance, crouch_w: f64) -> Vec<f64> {
     let mut a = long_flat(*crate::character::long().get(String::from(stance.as_str())).unwrap());
     if crouch_w <= 1e-4 { return a; }
     let b = long_flat(*crate::character::long_crouch().get(String::from(stance.as_str())).unwrap());

@@ -12,12 +12,12 @@ fn ambient_fresh() -> AmbientState {
 }
 
 /// The game's ambient state, made if none: the row itself.
-pub fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::AmbientState {
+pub(in crate::speech) fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::AmbientState {
     g.m.dialogue.ambient_by_game.get_or_insert_with(ambient_fresh)
 }
 
 /// Is the floor one the pairs may talk on?
-pub fn ambient_live(g: &mut crate::game::Game) -> bool {
+pub(in crate::speech) fn ambient_live(g: &mut crate::game::Game) -> bool {
     if !g.ai_enabled || g.quiet_utility || g.puppet.is_some() || g.touring { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
@@ -40,14 +40,14 @@ pub fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
 }
 
 /// Still fit to keep talking (the hold flag is ours by now).
-pub fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
+pub(in crate::speech) fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let m = &g.gd[x];
     m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.task.is_none()
         && m.body_duty.is_none() && m.awareness < 0.3 && g.guards.contains(&x)
 }
 
 /// A conversation over: the men's holds back as they were, the cooldown from now.
-pub fn end_ambient(g: &mut crate::game::Game) {
+pub(in crate::speech) fn end_ambient(g: &mut crate::game::Game) {
     let time = g.time;
     let s = ambient_state(g);
     let Some(r) = s.run.take() else { return; };

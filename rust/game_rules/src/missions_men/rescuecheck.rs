@@ -90,7 +90,7 @@ pub fn walking(g: &Game, gd: GuardId) -> bool {
 }
 
 /// Said as the rescue's tick opens, the frame's senses all in: the record of who is walking.
-pub fn rescue_check_say(g: &mut Game) {
+pub(in crate::missions_men) fn rescue_check_say(g: &mut Game) {
     let rule = crate::owner::by::WALK;
     let mut i = 0;
     while i < g.guards.len() {
@@ -106,7 +106,7 @@ pub fn rescue_check_reset(g: &mut Game) { g.m.rescuecheck.states = None; }
 
 /// Who goes: a roamer on his own post first, then the door man or a guard posted outside the hostage room, the nearest by the straight line;
 /// a man any other rule has is not free.
-pub fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option<Goer> {
+pub(in crate::missions_men) fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option<Goer> {
     let mut first: Vec<CastItem> = Vec::new();
     for c in cast.iter().copied() {
         if c.gd != about && !c.in_room && c.role != crate::rescue::Role::Captor && c.learned_at.is_nan() && !c.released && !c.crewed
@@ -152,7 +152,7 @@ pub fn walk(g: &mut Game, d: RoomfightDefId, to: V3) {
 pub fn rescue_check_tick(g: &mut Game, dt: f64) { step_check(g, dt); rescue_check_say(g); }
 
 /// The rule's step: the words, the fight, the check, the man out.
-pub fn step_check(g: &mut Game, _dt: f64) {
+pub(in crate::missions_men) fn step_check(g: &mut Game, _dt: f64) {
     if !ruled(g) {
         if g.m.rescuecheck.states.is_some() { let_go(g); g.m.rescuecheck.states = None; }
         return;

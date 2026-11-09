@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// Everything the reactions keep, back to rest; the scalar itself stays.
-pub fn sup_clear_reactions(this: &mut crate::suppression::Sup) {
+pub(in crate::man) fn sup_clear_reactions(this: &mut crate::suppression::Sup) {
     this.down_t = 0.0;
     this.latched = false;
     this.pinned_t = 0.0;
@@ -22,7 +22,7 @@ fn temperament_row(callsign: &str) -> Option<crate::game::Temperament> {
 }
 
 /// How readily this body accrues suppression, by his temperament.
-pub fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> f64 {
+pub(in crate::man) fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> f64 {
     if c_2 == g.pl[seat.player].ch { return 1.0; }
     let mut t: Option<crate::game::Temperament> = None;
     for &x in &g.guards {
@@ -194,7 +194,7 @@ pub fn watch_your_fire(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// One suppression line from this man if the clocks allow; a line held back is kept `pending`.
-pub fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::SupMoment, force: Option<bool>) -> bool {
+pub(in crate::man) fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::SupMoment, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let now = g.time;
     if crate::runner::runner_mute(g, gd) { return false; }
@@ -233,7 +233,7 @@ pub fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppressi
 }
 
 /// The suppression lines, every moment's or one moment's.
-pub fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<String> {
+pub(in crate::man) fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<String> {
     let mut out = Vec::new();
     for row in SUP_LINES.iter() {
         if let Some(wanted) = moment {
@@ -398,7 +398,7 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
 }
 
 /// The alert branch's question each frame: is this man's head down, or is he shifting to cover.
-pub fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::suppression::HeadDown {
+pub(in crate::man) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::suppression::HeadDown {
     if !reacts(g, gd) {
         sup_clear_reactions(&mut g.gd[gd].sup);
         return HeadDown::None;
@@ -458,7 +458,7 @@ pub fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::supp
 }
 
 /// The shift is over: hold the spot a few seconds, the first round from there a beat late.
-pub fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
+pub(in crate::man) fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     let until = g.time + g.k.suppression.cover_hold;
     let delay = g.k.suppression.head_down_delay;
     let sup = &mut g.gd[gd].sup;
@@ -472,7 +472,7 @@ pub fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
 }
 
 /// May the plain fight close on the player right now, or is he holding the cover he has just reached.
-pub fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.time < g.gd[gd].sup.cover_until
 }
 

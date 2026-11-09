@@ -16,7 +16,7 @@ pub fn band_of(a: f64) -> crate::dialogue::Band {
 }
 
 /// What this man knows of Sam, the highest level that holds, from his own record only.
-pub fn knowledge_of(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Knowledge {
+pub(in crate::speech) fn knowledge_of(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Knowledge {
     if g.gd[gd].witness.saw_act.is_some() || g.gd[gd].witness.saw_held.is_some() { return Knowledge::SawHurt; }
     if g.gd[gd].last_seen_t >= 0.0 || g.gd[gd].witness.alerted_by == Some(crate::game::WitnessAlertedBy::Sight) || {
         let weapon = g.gd[gd].weapon;
@@ -47,7 +47,7 @@ fn add(a: &mut f64, why: &mut Vec<String>, v: f64, label: &str) {
 }
 
 /// The sum of what has rattled this man, clamped, with its terms for the panel and the probes.
-pub fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::AgitationTerms {
+pub(in crate::speech) fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::AgitationTerms {
     use crate::game::{GuardState, Temperament};
     let t = temperament_of(g, gd);
     let talk = g.gd[gd].talk;
@@ -99,7 +99,7 @@ pub fn temperament_of(g: &crate::game::Game, gd: GuardId) -> crate::game::Temper
 }
 
 /// The stages at which this temperament gives the useful thing.
-pub fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec<crate::dialogue::StageKey> {
+pub(in crate::speech) fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec<crate::dialogue::StageKey> {
     match t {
         crate::game::Temperament::Nervy => vec![StageKey::Num(2.0), StageKey::Num(3.0)],
         crate::game::Temperament::Hard => if band == Band::Low { vec![] } else { vec![StageKey::Num(3.0)] },
@@ -113,7 +113,7 @@ pub fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec
 fn said(s: &Option<String>) -> Option<String> { s.as_ref().filter(|x| !x.is_empty()).cloned() }
 
 /// The words of a row as they are said to this man and by him.
-pub fn said_text(g: &crate::game::Game, l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
+pub(in crate::speech) fn said_text(g: &crate::game::Game, l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
 
 fn said_of(l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String {
     if ctx.nameless == Some(true) { if let Some(x) = said(&l.bare) { return x; } }
@@ -253,7 +253,7 @@ fn of_shape_t(x: &crate::dialogue::IntelTable, shape: ShapeKey, t: crate::game::
 }
 
 /// The words for what was taken, off the office: DRIVE_AWAY with DRIVE_AWAY_GUIDE laid over.
-pub fn drive_away(g: &crate::game::Game) -> crate::dialogue::DriveAway { drive_away_of() }
+pub(in crate::speech) fn drive_away(g: &crate::game::Game) -> crate::dialogue::DriveAway { drive_away_of() }
 
 fn drive_away_of() -> crate::dialogue::DriveAway {
     let (was, now) = (crate::dialogue::drive_away_table(), crate::dialogue::drive_away_guide());
@@ -271,7 +271,7 @@ fn intel_text_of(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> 
 }
 
 /// The text a man of this temperament and knowledge gives for `kind`, the most specific variant written.
-pub fn intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
+pub(in crate::speech) fn intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
     intel_text_of(kind, t, k)
 }
 
@@ -281,17 +281,17 @@ fn shaped_of(kind: IntelKind, id: &str, shape: ShapeKey, t: crate::game::Tempera
 }
 
 /// The script's own or the shape-voiced variant of `kind`, or None when none is written.
-pub fn shaped_intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
+pub(in crate::speech) fn shaped_intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
     shaped_of(kind, &sc.id, sc.shape, t)
 }
 
 /// The checker's own words when he is the man walking the silent colleague's route.
-pub fn check_on_self(g: &crate::game::Game) -> String {
+pub(in crate::speech) fn check_on_self(g: &crate::game::Game) -> String {
     st(crate::dialogue::CHECKON_SELF_NOW)
 }
 
 /// What goes in front of a given fact.
-pub fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
+pub(in crate::speech) fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
     match t {
         crate::game::Temperament::Hard => st("…Fine. "),
         crate::game::Temperament::Steady if k == Knowledge::Saw || k == Knowledge::SawHurt => st("…All right. "),
@@ -322,7 +322,7 @@ fn run_on_text(lead: &str, fact: &str) -> String {
 pub fn run_on(g: &mut crate::game::Game, lead: &str, fact: &str) -> String { run_on_text(lead, fact) }
 
 /// Four digits off a callsign, the same every night for the same man.
-pub fn badge_of(callsign: &str) -> String {
+pub(in crate::speech) fn badge_of(callsign: &str) -> String {
     let n = 1000.0 + js::rem(crate::math_dice::hash_str(&format!("badge:{}", callsign)), 9000.0);
     format!("{}", n as i64)
 }

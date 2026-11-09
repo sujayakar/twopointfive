@@ -12,7 +12,7 @@ pub fn staff(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A man of the room fight's on its own walk carries a script that is not choreography.
-pub fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
@@ -22,12 +22,12 @@ pub fn run_on(g: &crate::game::Game) -> bool {
 }
 
 /// Does a hostile round that came only `s` m from its muzzle still count here.
-pub fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
+pub(in crate::man) fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
     s >= g.k.flinch.min_travel
 }
 
 /// One round went close to `c`: duck him off it, and count a green man's fire. `gd` = the man, None for the player.
-pub fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>, near: f64, from: V3, hostile: bool) {
+pub(in crate::man) fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>, near: f64, from: V3, hostile: bool) {
     let c = c_2;
     if near < g.k.flinch.least || !hostile || g.quiet_utility { return; }
     match gd {
@@ -67,7 +67,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// How much of the duck his training leaves him: a steady defender or night-staff man `steady_k`, anybody else 1.
-pub fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
+pub(in crate::man) fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
     if let Some(man) = gd {
         if staff(g, man) && !g.gd[man].trained && crate::morale::training_of(g, man) == crate::morale::TrainingOf::Steady {
             return g.k.flinch.steady_k;
@@ -131,7 +131,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// QA: a man's seconds under close fire (0 = none on record).
-pub fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::man) fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.flinch.state_of.get(gd) { Some(t) => t.under, None => 0.0 }
 }
 

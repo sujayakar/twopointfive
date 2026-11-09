@@ -8,7 +8,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// This game's wall reaction, made on first asking: by then the destruction engine stands. It lives at
 /// `g.m.wallreact.wall_react`; `unsub`, set by its constructor, says it was made.
-pub fn wall_react_of(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn wall_react_of(g: &mut crate::game::Game) {
     if !g.m.wallreact.wall_react.unsub {
         g.m.wallreact.wall_react = wall_react_new(g);
     }
@@ -28,7 +28,7 @@ pub fn wall_react_reset_2(g: &mut crate::game::Game) {
 }
 
 /// roomfight.ts applyWatch: a hole he knows of may take his gun. An unmade one has no breaches.
-pub fn wall_react_look_2(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
+pub(in crate::room_fight) fn wall_react_look_2(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
     if !g.m.wallreact.wall_react.breaches.is_empty() {
         wall_react_look(g, gd, pt);
     }

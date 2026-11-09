@@ -24,11 +24,11 @@ pub fn place_name(g: &crate::game::Game, p: V3) -> String {
 pub fn is_office(g: &crate::game::Game) -> bool {
     ["corridor", "cubicles", "lobby_break"].iter().all(|n| g.level.routes.iter().any(|r| g.tab.route[*r].name == *n))
 }
-pub fn with_the(n: &str) -> String {
+pub(in crate::speech) fn with_the(n: &str) -> String {
     if n.starts_with("the ") || n.as_bytes().last().map_or(false, |c| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
 /// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.
-pub fn level_rects(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
+pub(in crate::speech) fn level_rects(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
     let mut r: Option<Vec<PlaceRect>> = None;
     if !is_office(g) {
         let mut out: Vec<PlaceRect> = Vec::new();
@@ -88,7 +88,7 @@ pub fn watched_place(g: &crate::game::Game, from: V3, p: V3) -> Option<String> {
         _ => Some(a.rect.name),
     }
 }
-pub fn own_name(g: &crate::game::Game, p: V3) -> Option<String> {
+pub(in crate::speech) fn own_name(g: &crate::game::Game, p: V3) -> Option<String> {
     let w = own_place(g, p)?;
     Some(if w.d == 0.0 { w.rect.name } else { alloc::format!("outside {}", w.rect.name) })
 }
@@ -192,7 +192,7 @@ pub fn num_word(n: f64) -> String {
     if n >= 0.0 && m::floor(n) == n { if let Some(w) = num_words().get(n as usize) { return w.clone(); } }
     js::num_str(n)
 }
-pub fn dist_to_route(pts: &[V3], p: V3) -> f64 {
+pub(in crate::speech) fn dist_to_route(pts: &[V3], p: V3) -> f64 {
     let mut best = f64::INFINITY;
     for i in 0..pts.len() {
         let (a, b) = (pts[i], pts[(i + 1) % pts.len()]);
@@ -204,7 +204,7 @@ pub fn dist_to_route(pts: &[V3], p: V3) -> f64 {
     best
 }
 /// the keyed door nearest this man's route line, within DOOR_ROUTE_M, by its authored lock
-pub fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
+pub(in crate::speech) fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
     let route = route_at(g, g.gd[gd].route_i)?;
     let pts = g.tab.route[route].points.clone();
     if pts.is_empty() { return None; }
@@ -218,7 +218,7 @@ pub fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
     best
 }
 /// coarse words for the seconds until the next radio check
-pub fn eta_words(secs: f64) -> String {
+pub(in crate::speech) fn eta_words(secs: f64) -> String {
     if secs <= 20.0 { String::from("any second now") }
     else if secs <= 75.0 { String::from("in a minute or so") }
     else if secs <= 150.0 { String::from("in a couple of minutes") }
@@ -228,9 +228,9 @@ pub fn eta_words(secs: f64) -> String {
 
 // ---------------------------------------------------------------- the context: everything the picker needs, read off the game once per exchange
 /// does a fact stamped on the net at game time T reach a man held since `held_since`
-pub fn heard_on_net(held_since: f64, t: f64) -> bool { t >= 0.0 && (held_since < 0.0 || t <= held_since + 0.5) }
+pub(in crate::speech) fn heard_on_net(held_since: f64, t: f64) -> bool { t >= 0.0 && (held_since < 0.0 || t <= held_since + 0.5) }
 /// the first colleague the net has asked after by name and not raised, as far as THIS man followed it
-pub fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub(in crate::speech) fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let hs = held_since_of(g, gd);
     g.guards.iter().copied().find(|&x| {
         let (at, raised) = (g.gd[x].missed_at, g.gd[x].missing_raised);
@@ -238,7 +238,7 @@ pub fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     })
 }
 /// the men this man KNOWS to be down
-pub fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
+pub(in crate::speech) fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
     let mut s: JsSet<String> = JsSet::default();
     let w = &g.gd[gd].witness;
     if let Some(x) = w.saw_act.as_ref() { s.add(x.victim.clone()); }
@@ -249,7 +249,7 @@ pub fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
     s
 }
 /// the roster he counts from: the level's own men
-pub fn staff_count(g: &crate::game::Game) -> f64 {
+pub(in crate::speech) fn staff_count(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &x in g.guards.iter() { if g.gd[x].unit.is_none() { n += 1.0; } }
     m::max(1.0, n)
@@ -272,7 +272,7 @@ pub fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     best
 }
 /// since when this man counts as HELD: the hold's own clock, else the sandbox's stand-in, else -1
-pub fn held_since_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::speech) fn held_since_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     if let Some(h) = g.gd[gd].held.as_ref() { return h.since; }
     let talk = &g.tab.game_talk[g.gd[gd].talk];
     if talk.held_since >= 0.0 && (talk.last_t < talk.held_since || g.time - talk.last_t <= HOLD_LAPSE_SECS) { talk.held_since } else { -1.0 }
@@ -466,15 +466,15 @@ pub fn expand(text: &str, tokens: &JsMap<String, Option<String>>) -> Option<Stri
     out.push_str(&text[last..]);
     if ok { Some(out) } else { None }
 }
-pub fn stage_key_of(n: f64) -> crate::dialogue::StageKey {
+pub(in crate::speech) fn stage_key_of(n: f64) -> crate::dialogue::StageKey {
     if n <= 1.0 { StageKey::Num(1.0) } else if n == 2.0 { StageKey::Num(2.0) } else if n == 3.0 { StageKey::Num(3.0) } else { StageKey::X }
 }
 /// Is stage `s` one this man GIVES the useful thing at?
-pub fn giving_stage(t: crate::game::Temperament, band: crate::dialogue::Band, s: crate::dialogue::StageKey, stage_n: f64, given_none: bool) -> bool {
+pub(in crate::speech) fn giving_stage(t: crate::game::Temperament, band: crate::dialogue::Band, s: crate::dialogue::StageKey, stage_n: f64, given_none: bool) -> bool {
     let gives = gives_at(t, band);
     gives.contains(&s) || (s == StageKey::X && given_none && !gives.is_empty() && stage_n == 4.0)
 }
-pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: crate::dialogue::Band, t: crate::game::Temperament, s: crate::dialogue::StageKey, use_t: bool, use_a: bool) -> bool {
+pub(in crate::speech) fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: crate::dialogue::Band, t: crate::game::Temperament, s: crate::dialogue::StageKey, use_t: bool, use_a: bool) -> bool {
     if l.s != s { return false; }
     let lk = l.k.as_str();
     if lk != "*" && lk != k.as_str() { return false; }
@@ -490,12 +490,12 @@ pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, ba
     }
     true
 }
-pub fn needs_hold(g: &crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
+pub(in crate::speech) fn needs_hold(g: &crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
     let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(facts, Need::Shift), Some(LineOnly::Office) => hold_fact(facts, Need::Office) };
     only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
 /// The pending useful things: true now, known to him, not yet given, in the order he would give them.
-pub fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
+pub(in crate::speech) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
     let mut out: Vec<PendingIntelItem> = Vec::new();
     let kinds = intel_kinds();
     let order: Vec<IntelKind> = match sc.and_then(|x| x.pin) {
@@ -522,11 +522,11 @@ pub fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueC
     out
 }
 /// The first pending useful thing, or null.
-pub fn intel_for(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Option<crate::dialogue::IntelFor> {
+pub(in crate::speech) fn intel_for(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Option<crate::dialogue::IntelFor> {
     pending_intel(g, ctx, talk, sc).into_iter().next().map(|x| IntelFor { kind: x.kind, text: x.text })
 }
 /// The rambler's stream swallows a giving stage, when exactly ONE thing is pending.
-pub fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+pub(in crate::speech) fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     match sc {
         Some(x) => x.shape == ShapeKey::Ramble && RAMBLE_SWALLOWS > 0.0 && s == StageKey::Num(2.0) && ctx.t == crate::game::Temperament::Nervy && pending_intel(g, ctx, talk, sc).len() == 1,
         None => false,

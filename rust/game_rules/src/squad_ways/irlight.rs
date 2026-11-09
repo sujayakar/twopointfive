@@ -85,7 +85,7 @@ pub fn dark_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// Is the floor his flood would fall on too dark? A fan across the cone, each ray to the first wall; FAN_NEED of its readings must be dark.
-pub fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
+pub(in crate::squad_ways) fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
     let eye: V3 = [at[0], 1.5, at[2]];
     let mut n = 0.0;
     for off in fan_deg() {
@@ -196,7 +196,7 @@ pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
 }
 
 /// (QA) how far a carrier's light stands turned down this frame: 1 not at all, or no reading of his this frame.
-pub fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
+pub(in crate::squad_ways) fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
     let s = g.m.irlight.kits.as_ref().and_then(|kit| kit.near.get(crate::Num(key)).copied());
     match s {
         Some(s) if s.t == g.time => s.k,
@@ -360,7 +360,7 @@ pub fn ir_light_at(g: &mut crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
 }
 
 /// The infrared light ON a man this frame, as a goggled teammate's tube takes it; asked once a man a frame.
-pub fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
+pub(in crate::squad_ways) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
     if g.engine.lights.ir.is_empty() {
         return 0.0;
     }

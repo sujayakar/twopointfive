@@ -37,7 +37,7 @@ pub fn net_quiet_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
 }
 
 /// How he stands and where his gun goes: low on his spot he is crouched; a whipping man comes round to the noise.
-pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
+pub(in crate::man) fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
     let n = g.m.netquiet.state_of.get(gd)?;
     let (low, whip_at) = (n.low, n.whip_at);
     if low { return Some(crate::netquiet::NetQuietPose { aim: None, crouch: g.k.netquiet.crouch }); }

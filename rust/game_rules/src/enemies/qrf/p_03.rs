@@ -32,7 +32,7 @@ fn in_cast<R>(g: &mut Game, mut f: impl FnMut(&mut Game) -> R) -> R {
 fn head_or_pos(g: &Game, m: GuardId) -> V3 { let c = g.gd[m].ch; g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos) }
 
 /// The point on the trail `s` metres back from the head, walking the crumbs backwards; the oldest crumb if the trail is shorter.
-pub fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
+pub(in crate::enemies) fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
     let mut prev = head;
     let mut left = s;
     let mut i = trail.len();
@@ -51,7 +51,7 @@ pub fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
 }
 
 /// The trail's forward direction at that point (unit, flat), or None if the trail has no length yet.
-pub fn trail_dir(trail: &[V3], head: V3, s: f64) -> Option<V3> {
+pub(in crate::enemies) fn trail_dir(trail: &[V3], head: V3, s: f64) -> Option<V3> {
     let a = trail_point(trail, head, s + 0.5);
     let b = trail_point(trail, head, m::max(0.0, s - 0.5));
     let d = flat(a, b);
@@ -60,7 +60,7 @@ pub fn trail_dir(trail: &[V3], head: V3, s: f64) -> Option<V3> {
 }
 
 /// Hold all round where they stand: each man squares off to a quarter, guns up, for a beat.
-pub fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
+pub(in crate::enemies) fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
     g.qrf.phase = Phase::Hold;
     g.qrf.phase_t = 0.0;
     let f = man_yaw(g, el[0]);
@@ -76,7 +76,7 @@ pub fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// Where n men stack on a plan's door: its two marks, then on down the line, on free floor.
-pub fn stack_marks_for(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan, n: f64) -> Vec<V3> {
+pub(in crate::enemies) fn stack_marks_for(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan, n: f64) -> Vec<V3> {
     let mut out: Vec<V3> = vec![v3::copy(p.stack[0]), v3::copy(p.stack[1])];
     let u = v3::normalize([p.stack[1][0] - p.stack[0][0], 0.0, p.stack[1][2] - p.stack[0][2]]);
     let mut k = 2.0;
@@ -95,7 +95,7 @@ pub fn stack_marks_for(g: &crate::game::Game, p: &crate::scene_level::RoomClearP
 }
 
 /// The element walks onto the stack marks of the target's door.
-pub fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
+pub(in crate::enemies) fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
     let p = target_plan(g);
     g.qrf.phase = Phase::Stack;
     g.qrf.phase_t = 0.0;
@@ -119,7 +119,7 @@ pub fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// The stack forms; planted (or out of time) the point man steps to the lock.
-pub fn phase_stack(g: &mut crate::game::Game, el: &Vec<GuardId>) {
+pub(in crate::enemies) fn phase_stack(g: &mut crate::game::Game, el: &Vec<GuardId>) {
     for &man in el.iter() { advance(g, man); }
     let planted = el.iter().filter(|&&man| man_arrived(g, man)).count() as f64;
     if (planted >= m::min(el.len() as f64, 3.0) && g.qrf.phase_t > 1.2) || g.qrf.phase_t > STACK_CAP {
@@ -141,7 +141,7 @@ pub fn phase_stack(g: &mut crate::game::Game, el: &Vec<GuardId>) {
 }
 
 /// The shove of the leaf, then the can chopped in, or going dry.
-pub fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub(in crate::enemies) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     let p = target_plan(g);
     let d = crate::doors::doors_by_name(g, &p.door);
     let lead = el[0];
@@ -226,7 +226,7 @@ pub fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 }
 
 /// A can of the element's that went off this tick: the floor-wide 'bang' report is re-filed as THEIRS, a slam's worth of noise carrying their man's id.
-pub fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
+pub(in crate::enemies) fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
     let mut i = g.events.len();
     while i > 0 {
         i -= 1;
@@ -242,7 +242,7 @@ pub fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
 }
 
 /// The can cooks: on their own count it goes off, with the element out of its view, and they flow.
-pub fn phase_bang(g: &mut crate::game::Game, el: &[GuardId]) {
+pub(in crate::enemies) fn phase_bang(g: &mut crate::game::Game, el: &[GuardId]) {
     let it = match g.qrf.can { Some(it) => it, None => { start_flow(g, el); return; } };
     if g.qrf.can_land_t.is_nan() && (crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it)) { g.qrf.can_land_t = g.time; }
     if (!g.qrf.can_land_t.is_nan() && g.time - g.qrf.can_land_t >= BANG_FUSE) || g.qrf.phase_t > 2.4 {
@@ -259,7 +259,7 @@ pub fn phase_bang(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// All of them in, a beat apart.
-pub fn start_flow(g: &mut crate::game::Game, el: &[GuardId]) {
+pub(in crate::enemies) fn start_flow(g: &mut crate::game::Game, el: &[GuardId]) {
     g.qrf.phase = Phase::Flow;
     g.qrf.phase_t = 0.0;
     g.qrf.flowed = 0.0;
@@ -269,7 +269,7 @@ pub fn start_flow(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// Man k's way in: one and two the plan's legs, three up the point man's wall to the deep point, four onto the door side.
-pub fn flow_legs(p: &crate::scene_level::RoomClearPlan, k: f64) -> crate::qrf::FlowLegs {
+pub(in crate::enemies) fn flow_legs(p: &crate::scene_level::RoomClearPlan, k: f64) -> crate::qrf::FlowLegs {
     fn last(a: &[V3]) -> V3 { a[a.len() - 1] }
     if k == 0.0 { return FlowLegs { pts: p.entry[0].clone(), face: p.pod_face[0], aim: v3::copy(last(&p.entry_aim[0])) }; }
     if k == 1.0 { return FlowLegs { pts: p.entry[1].clone(), face: p.pod_face[1], aim: v3::copy(last(&p.entry_aim[1])) }; }
@@ -279,7 +279,7 @@ pub fn flow_legs(p: &crate::scene_level::RoomClearPlan, k: f64) -> crate::qrf::F
 }
 
 /// They go in on the beat; in (or out of time) the room is called.
-pub fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub(in crate::enemies) fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     let p = target_plan(g);
     let due = m::min(el.len() as f64, m::floor(g.qrf.phase_t / FLOW_GAP) + 1.0);
     while g.qrf.flowed < due {
@@ -323,7 +323,7 @@ pub fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 }
 
 /// At the door: the element handed to the squad's door tools as a second cast. False (and nothing begun) when the tools refuse it.
-pub fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
+pub(in crate::enemies) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     let t = g.qrf.target.clone().unwrap();
     let p = t.plan.clone().unwrap();
     let d = match crate::doors::doors_by_name(g, &p.door) { Some(d) => d, None => return false };
@@ -368,7 +368,7 @@ pub fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
 }
 
 /// The entry let go of: every man off the cast's orders where he stands, the tools emptied, a can not yet thrown back in the element's pool.
-pub fn drop_drill(g: &mut crate::game::Game) {
+pub(in crate::enemies) fn drop_drill(g: &mut crate::game::Game) {
     let op = g.qrf.op;
     g.qrf.op = None;
     if g.qrf.cast.is_none() { return; }
@@ -391,7 +391,7 @@ pub fn drop_drill(g: &mut crate::game::Game) {
 }
 
 /// Once a frame while the entry runs: the cast's two ticks, its beats into the log, its can made theirs, and its end read.
-pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub(in crate::enemies) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     let (op, t) = match (g.qrf.cast.is_some(), g.qrf.op, g.qrf.target.clone()) {
         (true, Some(op), Some(t)) => (op, t),
         _ => { drop_drill(g); hold360(g, el); return; }
@@ -467,7 +467,7 @@ pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 }
 
 /// Contact: every man off his script and onto the AI, on the seer's fix; the entry let go of.
-pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
+pub(in crate::enemies) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
     let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(near_man_pos(g, seer)) };
     for &man in el {
         if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::squad::EndGuardScriptState::Alert)); }
@@ -509,7 +509,7 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
 }
 
 /// The fight is the AI's: warm, men dropped to the search go back on the fix; cold, the element re-forms on the point man.
-pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub(in crate::enemies) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     // contact = anybody of theirs with eyes on him lately, or Sam's own report in their ears lately (the dead man's last sight counts)
     let mut contact_t = -1e9;
     for i in 0..g.qrf.men.len() {
@@ -583,7 +583,7 @@ pub fn route(g: &mut crate::game::Game, m: GuardId, pts: &[V3], patch: Option<cr
 }
 
 /// Past a waypoint, on to the next; true when on the last one and arrived.
-pub fn advance(g: &mut crate::game::Game, m: GuardId) -> bool {
+pub(in crate::enemies) fn advance(g: &mut crate::game::Game, m: GuardId) -> bool {
     if !g.qrf.wps.has(m) || g.gd[m].script.is_none() { return man_arrived(g, m); }
     loop {
         let next = {
@@ -600,7 +600,7 @@ pub fn advance(g: &mut crate::game::Game, m: GuardId) -> bool {
 }
 
 /// Tier 2's trigger past deployment: one of theirs down, enough men down, a running gunfight.
-pub fn maybe_perimeter(g: &mut crate::game::Game) {
+pub(in crate::enemies) fn maybe_perimeter(g: &mut crate::game::Game) {
     if !g.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
     if !marks_of(g).map_or(false, |mk| !mk.posts.is_empty()) { return; }   // (this place has no second tier)
     let mut down = 0usize;
@@ -621,7 +621,7 @@ pub fn maybe_perimeter(g: &mut crate::game::Game) {
 }
 
 /// Lock the compound down: control's word, the exterior lamps up, men to the outside posts, spawned if there is room, else the element's rear men. One a night.
-pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
+pub(in crate::enemies) fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let why = why.unwrap_or("panel");
     if g.qrf.perim.is_some() { return false; }
     if g.qrf.state != QrfState::Deployed && why != "panel" { return false; }
@@ -710,7 +710,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
 }
 
 /// An outside man's walk to his post.
-pub fn to_post(g: &mut crate::game::Game, p: usize) {
+pub(in crate::enemies) fn to_post(g: &mut crate::game::Game, p: usize) {
     let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
     row.fighting = false;
     let (gd, post) = (row.gd, row.post.clone());
@@ -723,7 +723,7 @@ pub fn to_post(g: &mut crate::game::Game, p: usize) {
 }
 
 /// The outside men: the walk, the light working the door, eyes on him, back to the post when cold; the perimeter called set.
-pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
+pub(in crate::enemies) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
     let mut i = 0usize;
     while i < g.qrf.perim.as_ref().unwrap().men.len() {
         let idx = i;

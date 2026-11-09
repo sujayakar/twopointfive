@@ -101,14 +101,14 @@ impl crate::bytes::ToBytes for MarkSet { fn w(&self, _: &mut crate::bytes::W) {}
 
 /// the marks of a game
 pub fn mark_set(g: &Game) -> Option<&MarkSet> { g.mark_set.get() }
-pub fn mark_set_mut(g: &mut Game) -> &mut MarkSet { g.mark_set.at() }
+pub(in crate::breakage) fn mark_set_mut(g: &mut Game) -> &mut MarkSet { g.mark_set.at() }
 /// a rule asks for a mark
-pub fn mark_asked(g: &mut Game, a: Ask) { mark_set_mut(g).asks.push(a); }
+pub(in crate::breakage) fn mark_asked(g: &mut Game, a: Ask) { mark_set_mut(g).asks.push(a); }
 /// particles thrown for the picture this tick
 pub fn thrown(g: &mut Game, e: OutEvent) { mark_set_mut(g).thrown.push(e); }
 
 /// every mark goes, and what was asked before this with them
-pub fn marks_clear(g: &mut Game) {
+pub(in crate::breakage) fn marks_clear(g: &mut Game) {
     let s = mark_set_mut(g);
     s.asks.clear();
     s.list.clear();
@@ -204,7 +204,7 @@ pub fn mark_of(s: &mut MarkSet, serial: u32) -> Option<&mut Mark> {
 }
 
 // ---- a box's own frame (local +X is world (cos yaw, 0, −sin yaw), local +Z is (sin yaw, 0, cos yaw); its rotation where it has one)
-pub fn to_local(b: &crate::scene_boxes::Box, v: V3, point: bool) -> V3 {
+pub(in crate::breakage) fn to_local(b: &crate::scene_boxes::Box, v: V3, point: bool) -> V3 {
     let d = if point { v3::sub(v, b.c) } else { v };
     if let Some(q) = b.rot { return quat::rotate(quat::conj(q), d); }
     let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw));

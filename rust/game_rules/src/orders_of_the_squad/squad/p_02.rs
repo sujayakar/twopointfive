@@ -94,7 +94,7 @@ pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::Room
 }
 
 /// Seconds the whole job may take before they are put back on the corridor.
-pub fn clearing_cap(g: &mut crate::game::Game) -> f64 {
+pub(in crate::orders_of_the_squad) fn clearing_cap(g: &mut crate::game::Game) -> f64 {
     42.0 * m::max(1.0, cl!(g).rooms.len() as f64) + 15.0
 }
 
@@ -109,13 +109,13 @@ pub fn clearing_cancel(g: &mut crate::game::Game) {
 }
 
 /// The pair, or the one.
-pub fn clearing_men(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub(in crate::orders_of_the_squad) fn clearing_men(g: &mut crate::game::Game) -> Vec<GuardId> {
     let c = cl!(g);
     match c.b { Some(b) => vec![c.a, b], None => vec![c.a] }
 }
 
 /// The point man's line, if he lives.
-pub fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
+pub(in crate::orders_of_the_squad) fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
     let a = cl!(g).a;
     if g.gd[a].state != crate::game::GuardState::Dead {
         crate::game::game_say(g, a, text, Some(radio.unwrap_or(false)), None, None);
@@ -292,7 +292,7 @@ fn muster_busy(g: &Game, gd: Option<GuardId>) -> bool {
 }
 
 /// Nobody is scripted yet: wait for both to be calm and free, then the word and off.
-pub fn clearing_muster(g: &mut crate::game::Game) -> bool {
+pub(in crate::orders_of_the_squad) fn clearing_muster(g: &mut crate::game::Game) -> bool {
     let (a, b, t) = { let c = cl!(g); (c.a, c.b, c.t) };
     if t > 1.2 && muster_free(g, a) && b.map_or(true, |b| muster_free(g, b)) {
         clearing_approach(g);
@@ -310,7 +310,7 @@ pub fn clearing_muster(g: &mut crate::game::Game) -> bool {
 }
 
 /// Doors within reach of either man that give the intruder away: said once a door, and that door's room jumps the queue. True: the approach was re-planned.
-pub fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
+pub(in crate::orders_of_the_squad) fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
     let mut at = 0;
     while at < g.doors.list.len() {
         let d = g.doors.list[at];
@@ -389,7 +389,7 @@ fn to_kick_from(p: &crate::scene_level::RoomClearPlan) -> V3 { p.kick_from }
 fn to_stack(p: &crate::scene_level::RoomClearPlan) -> V3 { p.stack[0] }
 
 /// The walk to a room's stack: the nearest variant, out through the room they stand in first, each to his own mark.
-pub fn clearing_approach(g: &mut crate::game::Game) {
+pub(in crate::orders_of_the_squad) fn clearing_approach(g: &mut crate::game::Game) {
     let a = cl!(g).a;
     let from = g.ch[g.gd[a].ch].pos;
     let variants = { let c = cl!(g); c.rooms[c.room_i].clone() };
@@ -476,7 +476,7 @@ pub fn clearing_approach(g: &mut crate::game::Game) {
 }
 
 /// Hand the pair to the drill.
-pub fn clearing_start_drill(g: &mut crate::game::Game) {
+pub(in crate::orders_of_the_squad) fn clearing_start_drill(g: &mut crate::game::Game) {
     let (plan, a, b) = { let c = cl!(g); (c.cur.clone().unwrap(), c.a, c.b) };
     let d = room_clear_new(g, &plan, a, b, Some(RoomClearNewOpts { live: Some(true) }));
     cl!(g).drill = Some(d);
@@ -489,7 +489,7 @@ pub fn clearing_start_drill(g: &mut crate::game::Game) {
 }
 
 /// On to the next room, or done: back to the paired patrol, calm. `cleared` goes in the lockdown's ledger.
-pub fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> bool {
+pub(in crate::orders_of_the_squad) fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> bool {
     let cleared = cleared.unwrap_or(true);
     let now = g.time;
     if cleared {

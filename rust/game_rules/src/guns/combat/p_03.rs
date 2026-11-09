@@ -20,7 +20,7 @@ pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<boo
 }
 
 /// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.
-pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam: Option<crate::combat::DetonateStunRawSam>) {
+pub(in crate::guns) fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam: Option<crate::combat::DetonateStunRawSam>) {
     let b = crate::effects::bang();
     let p = crate::throwables::item_pos(g, it);
     let at: V3 = [p[0], p[1] + b.height, p[2]];

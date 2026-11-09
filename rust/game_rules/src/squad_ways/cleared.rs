@@ -31,7 +31,7 @@ fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
 }
 
 /// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.
-pub fn cleared_rooms_build(g: &mut crate::game::Game) {
+pub(in crate::squad_ways) fn cleared_rooms_build(g: &mut crate::game::Game) {
     if g.cleared.room_of_cell.is_some() { return; }
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let dc = crate::guards::door_cells(g);
@@ -157,7 +157,7 @@ pub fn cleared_rooms_has_floor(g: &mut crate::game::Game, d: DoorId, side: f64) 
 }
 
 /// The room a mark is in; a mark on a cell that is no room's is in every room a cell away.
-pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
+pub(in crate::squad_ways) fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) { return vec![r]; }
     cleared_rooms_build(g);
@@ -208,7 +208,7 @@ pub fn cleared_rooms_unknown_eyes(g: &mut crate::game::Game, step: f64) -> Vec<c
 }
 
 /// One of ours stands at `p`.
-pub fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
+pub(in crate::squad_ways) fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) && !known_flag(g, r) {
         g.cleared.known_room[r as usize] = 1;

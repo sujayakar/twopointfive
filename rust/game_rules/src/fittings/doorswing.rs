@@ -87,7 +87,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 }
 
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
-pub fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
+pub(in crate::fittings) fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
     let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
     roof_points(&boxes, &g.dr[d].def, s)
@@ -107,7 +107,7 @@ fn outside_side(p: f64, mi: f64) -> f64 {
 }
 
 /// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.
-pub fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
+pub(in crate::fittings) fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
     if !g.dr[d].def.exterior.unwrap_or(false) {
         return 0.0;
     }
@@ -339,7 +339,7 @@ pub fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
 }
 
 /// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.
-pub fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
+pub(in crate::fittings) fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
     let stop = m::min(if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth }, LEAF_REST);
     let c = g.dr[d].def.closed_dir;
     let w = g.dr[d].def.width;

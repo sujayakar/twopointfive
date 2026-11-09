@@ -19,7 +19,7 @@ pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
 }
 
 /// Makes a player: his guns first (the field initialisers), then his body.
-pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
+pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
     let has_rifle = has_rifle.unwrap_or(true);
     let seat = seat.unwrap_or(0.0);
     let pistol = crate::weapons::pistol_new(g, None);
@@ -122,7 +122,7 @@ pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// What a man has personally perceived, as an encounter starts.
-pub fn new_witness() -> crate::game::Witness {
+pub(in crate::tick) fn new_witness() -> crate::game::Witness {
     crate::game::Witness {
         heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 },
         peak_awareness: 0.0,
@@ -138,7 +138,7 @@ pub fn new_witness() -> crate::game::Witness {
 }
 
 /// A man's interrogation progress, as an encounter starts.
-pub fn new_talk(g: &mut crate::game::Game) -> GameTalkId {
+pub(in crate::tick) fn new_talk(g: &mut crate::game::Game) -> GameTalkId {
     g.tab.game_talk.push(fresh_talk())
 }
 

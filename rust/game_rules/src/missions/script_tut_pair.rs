@@ -15,7 +15,7 @@ fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::directo
 }
 
 /// The define pass: the program 'tutorial', its three cues and their beats, in the script's order.
-pub fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_pair::TutPairVars, String> {
+pub(in crate::missions) fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_pair::TutPairVars, String> {
     use crate::director::{manifest_program, program_beat, program_on_signal};
     let script = crate::scene_level::LevelScriptFn::TutPair;
     manifest_program(m, "tutorial", &mut |p| {
@@ -31,7 +31,7 @@ pub fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::scrip
 }
 
 /// The beat 'gate': the man at the pickup is one of several.
-pub fn tut_pair_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairGateFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_pair_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairGateFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_radio, director_beat_say, director_beat_wait};
     match f.at {
         0 => {
@@ -52,7 +52,7 @@ pub fn tut_pair_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// The beat 'park': the two at the lantern talk to each other.
-pub fn tut_pair_park_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairParkFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_pair_park_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairParkFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_say, director_beat_wait};
     match f.at {
         0 => {
@@ -76,7 +76,7 @@ pub fn tut_pair_park_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// The beat 'yard': the last man is alone and has noticed nothing.
-pub fn tut_pair_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairYardFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(in crate::missions) fn tut_pair_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_pair::TutPairYardFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::{director_beat_say, director_beat_wait};
     match f.at {
         0 => {

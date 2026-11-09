@@ -45,18 +45,18 @@ fn two_ops(t: &crate::scene_scenarios::TeamStart) -> bool {
 }
 
 /// the placement seed a fresh start deals for a Game's die
-pub fn fresh_seed_of(dice_seed: f64) -> f64 {
+pub(in crate::missions) fn fresh_seed_of(dice_seed: f64) -> f64 {
     1.0 + js::rem(js::to_u32(dice_seed) as f64, 9973.0)
 }
 
 /// which of a level's `n` ways in a fresh start takes for a Game's die
-pub fn fresh_way_of(dice_seed: f64, n: f64) -> f64 {
+pub(in crate::missions) fn fresh_way_of(dice_seed: f64, n: f64) -> f64 {
     if n > 1.0 { js::rem(js::rem(js::to_u32(dice_seed) as f64, 7919.0), n) } else { 0.0 }
 }
 
 /// WHO STANDS WHERE, a pure function of (seed, attempt)
 /// The rooms are the level's own (`level.scenarios.roomClear`), handed in: this module holds no level's rooms of its own.
-pub fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceDefendersS) -> Vec<crate::roomclear::Placement> {
+pub(in crate::missions) fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceDefendersS) -> Vec<crate::roomclear::Placement> {
     let attempt = attempt.unwrap_or(1.0);
     let authored = seed == 0.0 && attempt <= 1.0;
     let word = m::imul(js::to_i32(seed), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(attempt), 0x85EBCA6Bu32 as i32);
@@ -207,7 +207,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
 }
 
 /// The squads block against the floor. Empty = sound; no squads block = nothing to say.
-pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Vec<String> {
+pub(in crate::missions) fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Vec<String> {
     let squads = match &s.squads {
         Some(q) if !q.is_empty() => q,
         _ => return Vec::new(),
@@ -302,7 +302,7 @@ pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquads
 }
 
 /// the floor a stride either side of a door's opening
-pub fn door_sides(g: &crate::game::Game, d: DoorId) -> Vec<V3> {
+pub(in crate::missions) fn door_sides(g: &crate::game::Game, d: DoorId) -> Vec<V3> {
     let f = crate::guards::frame_of(g, d);
     let cx = f.hx + f.ux * f.w / 2.0;
     let cz = f.hz + f.uz * f.w / 2.0;
@@ -310,7 +310,7 @@ pub fn door_sides(g: &crate::game::Game, d: DoorId) -> Vec<V3> {
 }
 
 /// the same four numbers
-pub fn same_bounds(a: crate::scene_scenarios::Rect, b: crate::scene_scenarios::Rect) -> bool {
+pub(in crate::missions) fn same_bounds(a: crate::scene_scenarios::Rect, b: crate::scene_scenarios::Rect) -> bool {
     a.x0 == b.x0 && a.x1 == b.x1 && a.z0 == b.z0 && a.z1 == b.z1
 }
 
@@ -398,7 +398,7 @@ fn stood(g: &mut Game, r: &crate::scene_scenarios::StructureRoom) -> bool {
 }
 
 /// the one line for rooms that came clear together
-pub fn clear_words(g: &mut crate::game::Game, rooms: &[crate::scene_scenarios::StructureRoom]) -> String {
+pub(in crate::missions) fn clear_words(g: &mut crate::game::Game, rooms: &[crate::scene_scenarios::StructureRoom]) -> String {
     let mut ours: Vec<String> = Vec::new();
     for r in rooms {
         if stood(g, r) {
@@ -436,7 +436,7 @@ pub fn room_clear_scenario_start_at(g: &crate::game::Game) -> Option<V3> {
 }
 
 /// the way in a staging made now would take
-pub fn room_clear_scenario_way_now(g: &mut crate::game::Game) -> f64 {
+pub(in crate::missions) fn room_clear_scenario_way_now(g: &mut crate::game::Game) -> f64 {
     let way = g.k.roomclear.way;
     let s = room_clear_scenario_structure(g);
     let n = match &s {
@@ -494,7 +494,7 @@ pub fn room_clear_scenario_active(g: &crate::game::Game) -> bool {
 }
 
 /// why it cannot start right now (None = it can)
-pub fn room_clear_scenario_can_start(g: &mut crate::game::Game) -> Option<String> {
+pub(in crate::missions) fn room_clear_scenario_can_start(g: &mut crate::game::Game) -> Option<String> {
     if g.night_breach.active {
         return Some(String::from("the night breach is already staged — stop it first"));
     }
@@ -510,7 +510,7 @@ pub fn room_clear_scenario_can_start(g: &mut crate::game::Game) -> Option<String
 }
 
 /// Start it (`seed`: the placement to deal, written to the knob). Returns the reason when refused, or when the staging failed.
-pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -> Option<String> {
+pub(in crate::missions) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -> Option<String> {
     let want = match seed {
         Some(x) if x.is_finite() => Some(m::floor(x)),
         _ => None,
@@ -553,14 +553,14 @@ pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -
 }
 
 /// Stage it afresh
-pub fn room_clear_scenario_restage(g: &mut crate::game::Game) {
+pub(in crate::missions) fn room_clear_scenario_restage(g: &mut crate::game::Game) {
     if room_clear_scenario_active(g) {
         crate::nightbreach::night_breach_restage(g);
     }
 }
 
 /// the score wiped
-pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
+pub(in crate::missions) fn room_clear_scenario_clear(g: &mut crate::game::Game) {
     crate::enemysquads::squads_stop(g);
     let s = &mut g.room_clear;
     s.rooms = Vec::new();
@@ -577,7 +577,7 @@ pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
 }
 
 /// what happened when, on the game clock
-pub fn room_clear_scenario_note(g: &mut crate::game::Game, what: &str) {
+pub(in crate::missions) fn room_clear_scenario_note(g: &mut crate::game::Game, what: &str) {
 }
 
 /// the night breach's staging asks who the defenders are: every staging is the knob's placement, first attempt (SAMESTART)
@@ -598,7 +598,7 @@ pub fn room_clear_scenario_deal(g: &mut crate::game::Game) -> Vec<crate::nightbr
 }
 
 /// the room behind the breach plan's door
-pub fn room_clear_scenario_drill_room(g: &crate::game::Game) -> Option<crate::scene_scenarios::StructureRoom> {
+pub(in crate::missions) fn room_clear_scenario_drill_room(g: &crate::game::Game) -> Option<crate::scene_scenarios::StructureRoom> {
     let door = g.level.breach.as_ref()?.door.clone();
     room_clear_scenario_structure(g)?.rooms.into_iter().find(|r| r.doors.iter().any(|d| d.id == door))
 }
@@ -753,7 +753,7 @@ pub fn room_clear_scenario_adopt(g: &mut crate::game::Game, gd: GuardId, p: &cra
 }
 
 /// an end, and what it is called
-pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomclear::RoomClearEnd, why: &str) {
+pub(in crate::missions) fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomclear::RoomClearEnd, why: &str) {
     use crate::roomclear::RoomClearEnd::{Taken, Wiped};
     g.room_clear.end = Some(end);
     g.room_clear.end_at = g.time;
@@ -779,7 +779,7 @@ pub fn room_clear_scenario_room_at(g: &crate::game::Game, p: V3) -> Option<Strin
 
 /// The mission's line while it is up (None: not its to say): the rooms, ticked off as they clear, and a marker on the first still held. A read, worded as
 /// things stand each time it is asked.
-pub fn room_clear_scenario_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::roomclear::RoomClearScenarioObjective> {
+pub(in crate::missions) fn room_clear_scenario_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::roomclear::RoomClearScenarioObjective> {
     if !room_clear_scenario_active(g) || g.room_clear.rooms.is_empty() {
         return None;
     }
@@ -830,7 +830,7 @@ pub fn room_clear_scenario_objective(g: &crate::game::Game, seat: &crate::seats:
 }
 
 /// the room the marker stands on: the first still held, on a second way in the one nearest that start
-pub fn room_clear_scenario_first_open(g: &crate::game::Game) -> Option<crate::roomclear::RoomState> {
+pub(in crate::missions) fn room_clear_scenario_first_open(g: &crate::game::Game) -> Option<crate::roomclear::RoomState> {
     let open: Vec<crate::roomclear::RoomState> = g.room_clear.rooms.iter().filter(|r| !r.cleared).cloned().collect();
     let way = g.room_clear.way;
     let t = if way > 0.0 {

@@ -13,7 +13,7 @@ fn leg_point(p: V3, q: V3, s: f64, l: f64) -> V3 {
 }
 
 /// Marks the address word as read; the reading itself (?fairstart=0) is the host's and sits behind the settled row OPENING.on.
-pub fn read_url(g: &mut crate::game::Game) {
+pub(in crate::squad_ways) fn read_url(g: &mut crate::game::Game) {
     g.m.opening.url_read = true;
 }
 
@@ -40,7 +40,7 @@ pub fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route.
-pub fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::OpeningSpot> {
+pub(in crate::squad_ways) fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::OpeningSpot> {
     let spawn = g.level.player_spawn;
     let key = alloc::format!("{}|{}|{}|{}", js::num_str(g.k.opening.clear_m), js::num_str(g.k.opening.step_m), js::num_str(spawn[0]), js::num_str(spawn[2]));
     let route = g.gd[gd].route;

@@ -129,7 +129,7 @@ fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&
 }
 
 /// The said name of every shorthand door the level's structure lists, by door id.
-pub fn door_names_of(g: &crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
+pub(in crate::fittings) fn door_names_of(g: &crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     names_of(&g.level, ids, written)
 }
 
@@ -146,7 +146,7 @@ fn authored_of(level: &crate::scene_level::Level, ids: &[String]) -> JsMap<Strin
 }
 
 /// The names the level gives its own doors (scenarios.doorNames); a door's first usable row wins.
-pub fn authored_door_names(g: &crate::game::Game, ids: &[String]) -> JsMap<String, String> {
+pub(in crate::fittings) fn authored_door_names(g: &crate::game::Game, ids: &[String]) -> JsMap<String, String> {
     authored_of(&g.level, ids)
 }
 

@@ -38,7 +38,7 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
 }
 
 /// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks.
-pub fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
+pub(in crate::guns) fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
     use crate::sim_lightshome::FixtureKind;
     let kind = g.tab.sim_lightshome_fixture[t].kind;
     let pos = g.tab.sim_lightshome_fixture[t].pos;
@@ -53,7 +53,7 @@ pub fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::Ro
 }
 
 /// A guard's own hands: the row's spread off the man he is firing at.
-pub fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
+pub(in crate::guns) fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
     let foe = match sg { Some(s) => crate::teams::foe_char(g, s), None => None };
     let tc = match foe { Some(c) => c, None => g.pl[seat.player].ch };
     let tv = m::hyp2(g.ch[tc].vel[0], g.ch[tc].vel[2]);
@@ -70,7 +70,7 @@ pub fn fire_weapon(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
 }
 
 /// fireWeapon for one pellet of a shell, the shell lent so the round writes on it.
-pub fn fire_pellet(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
+pub(in crate::guns) fn fire_pellet(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
     round_in_view(g, shooter, target, is_player, o, Some(shell));
 }
 
@@ -174,7 +174,7 @@ fn scan(g: &mut Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
 }
 
 /// What a round in a man does, in the shooter's seat: at once for a single round, once the whole pattern has flown for a pellet. (fireWeapon's manDown and samHit, the rows of Shell.late)
-pub fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLate) {
+pub(in crate::guns) fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLate) {
     match *late {
         crate::shotgun::ShellLate::ManDown { hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p } =>
             man_down(g, hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p),
@@ -279,7 +279,7 @@ fn lamp_own(g: &Game, t: FixtureId) -> Vec<f64> {
 }
 
 /// The round itself, the shooter's muzzle to where it stops: what it found, what it broke, what the floor heard.
-pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, pel: Option<&mut crate::shotgun::Shell>) {
+pub(in crate::guns) fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, pel: Option<&mut crate::shotgun::Shell>) {
     use crate::game::GuardState;
     use crate::glasspen::{path_at, seg_at, spent_in_pane};
     use crate::sim_lightshome::FixtureKind;
@@ -779,7 +779,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
 }
 
 /// What the arm is through and where: a leaf's index (>= 1e6) is what the lock rule wants of a muzzle pressed to the keep.
-pub fn across_arm(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::AcrossArm> {
+pub(in crate::guns) fn across_arm(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::AcrossArm> {
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&b) => b, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let d = v3::sub(g.ch[c_2].muzzle, from);
     let l = v3::len(d);
@@ -790,7 +790,7 @@ pub fn across_arm(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::comba
 }
 
 /// The panel between shoulder and muzzle, if a glass pane, takes the round point-blank.
-pub fn glass_across_arm(g: &mut crate::game::Game, c_2: CharId, dir: V3) {
+pub(in crate::guns) fn glass_across_arm(g: &mut crate::game::Game, c_2: CharId, dir: V3) {
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&b) => b, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let d = v3::sub(g.ch[c_2].muzzle, from);
     let l = v3::len(d);
@@ -805,7 +805,7 @@ pub fn glass_across_arm(g: &mut crate::game::Game, c_2: CharId, dir: V3) {
 }
 
 /// The static between shoulder and muzzle takes the round as the wall engine counts one.
-pub fn wall_across_arm(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::WeaponDef) {
+pub(in crate::guns) fn wall_across_arm(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::WeaponDef) {
     let chaos = crate::destruction::chaos_of(g);
     if chaos <= 0.0 { return; }
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&b) => b, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };

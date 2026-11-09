@@ -310,7 +310,7 @@ pub fn num_word(_k: &str, x: f64) -> Option<&'static str> {
 }
 
 /// The number a word stands for; None = the string is no such word.
-pub fn word_num(_k: &str, x: &str) -> Option<f64> {
+pub(in crate::hands_of_the_player) fn word_num(_k: &str, x: &str) -> Option<f64> {
     match x {
         "-0" => Some(-0.0),
         "nan" => Some(f64::NAN),
@@ -506,13 +506,13 @@ pub fn check_cmd(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>,
 }
 
 /// The check itself, on a copy: `raw` is only lent here, so a caller always takes `cmd` from the answer.
-pub fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
+pub(in crate::hands_of_the_player) fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
     let (cmd, fixed) = check_record(g, raw.cloned(), near);
     CheckCmdIn { cmd, fixed }
 }
 
 /// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.
-pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
+pub(in crate::hands_of_the_player) fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let c = c_2;
     PlayerCmd {
         keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0,

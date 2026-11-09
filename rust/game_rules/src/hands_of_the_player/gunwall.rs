@@ -77,7 +77,7 @@ pub fn closing(s: crate::gunwall::St, f: V3) -> f64 {
 }
 
 /// The line a raised gun lies along on `yaw`: `a` at the hand end, `b` at the muzzle.
-pub fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
+pub(in crate::hands_of_the_player) fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
     let o = o.unwrap_or(g.ch[c_2].pos);
     let fr = frame(g, c_2, yaw);
     let af = AtF { f: fr.f, r: fr.r };
@@ -104,7 +104,7 @@ fn hits(g: &mut Game, a: V3, b: V3, most: f64) -> bool {
 }
 
 /// Stood at (x, z) with the long gun in the shoulder on `to`: would the gun, and the first `ahead` metres of its round's way, lie clear?
-pub fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
+pub(in crate::hands_of_the_player) fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
     let yaw = m::atan2(to[0] - x, to[2] - z);
     let fr = frame(g, c_2, yaw);
     let py = g.ch[c_2].pos[1];
@@ -120,7 +120,7 @@ pub fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to
 }
 
 /// How far ahead of his feet the low ready leaves the muzzle, untucked.
-pub fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
+pub(in crate::hands_of_the_player) fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
     let ahead = g.ch[c_2].muzzle_ahead;
     if g.ch[c_2].anim.long_gun { 0.145 + 0.7 * ahead } else { 0.241 + 0.74 * ahead }
 }
@@ -132,7 +132,7 @@ pub fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through.
-pub fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
+pub(in crate::hands_of_the_player) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
     if !crate::combat::solid_between(q, a, b) { return false; }
     if !crate::glasspen::glass_pen_live(q.game()) { return true; }
     let d = v3::sub(b, a);
@@ -166,7 +166,7 @@ fn held(g: &mut Game, c: CharId, sh: f64, hot: bool, a: V3, b: V3) -> bool {
 }
 
 /// Is the gun he wants up kept down by a wall this frame?
-pub fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, to: Option<V3>, dt: f64, hot: bool, deep: bool) -> bool {
+pub(in crate::hands_of_the_player) fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, to: Option<V3>, dt: f64, hot: bool, deep: bool) -> bool {
     let c = c_2;
     let aim_yaw = g.ch[c].aim_yaw;
     let fr = frame(g, c, aim_yaw);
@@ -221,7 +221,7 @@ pub fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::Gu
 }
 
 /// YOUR BREACH SHOT: where the raised gun's own line meets a lock a shell takes, inside the gun's reach and a stride: that point; else none.
-pub fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
+pub(in crate::hands_of_the_player) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
     let aim_yaw = g.ch[c_2].aim_yaw;
     let ml = raised_line(g, c_2, GunUp::Aim, aim_yaw, None);
     let rd = v3::sub(ml.b, ml.a);
@@ -350,7 +350,7 @@ pub fn gun_wall_pose(g: &mut crate::game::Game, c_2: CharId) {
 }
 
 /// Sam's pistol: the low ready this rule put him in is taken off again by it and by nobody else.
-pub fn gun_wall_stance(g: &mut crate::game::Game, c_2: CharId, set: bool) {
+pub(in crate::hands_of_the_player) fn gun_wall_stance(g: &mut crate::game::Game, c_2: CharId, set: bool) {
     if set {
         st(g, c_2);
         if g.ch[c_2].anim.stance == crate::character::Stance::None {

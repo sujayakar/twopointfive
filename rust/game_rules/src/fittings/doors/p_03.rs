@@ -54,7 +54,7 @@ fn mem_copy(from: f64, to: f64) -> Vec<f64> {
 }
 
 /// What the step did taken back: each contact's end and what a leaf did to him, the tallies, each door's noises and then its box.
-pub fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>, ev: f64) {
+pub(in crate::fittings) fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>, ev: f64) {
     let (dk, dp, dout, de) = (crate::sim_doorshome::dk(), crate::sim_doorshome::dp(), crate::sim_doorshome::do_(), crate::sim_doorshome::de());
     let io = crate::sim_doorshome::door_io(g);
     let n = g.doors.list.len();
@@ -149,7 +149,7 @@ pub fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::door
 }
 
 /// Door i's box and handles made what the step placed.
-pub fn doors_follow(g: &mut crate::game::Game, i: f64) {
+pub(in crate::fittings) fn doors_follow(g: &mut crate::game::Game, i: f64) {
     let dout = crate::sim_doorshome::do_();
     let io = crate::sim_doorshome::door_io(g);
     let o = io.out + i;
@@ -165,7 +165,7 @@ pub fn doors_follow(g: &mut crate::game::Game, i: f64) {
 }
 
 /// A leaf's two handle boxes placed.
-pub fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1: f64, x2: f64, z2: f64) {
+pub(in crate::fittings) fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1: f64, x2: f64, z2: f64) {
     let (h0, h1) = (g.dr[d].handle_boxes[0], g.dr[d].handle_boxes[1]);
     let b = seam_box(g, h0);
     b.c = [x1, 1.0, z1];

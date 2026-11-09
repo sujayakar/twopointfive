@@ -388,7 +388,7 @@ fn witness(g: &mut Game) {
 }
 
 /// The run is over for everybody: nobody is left who could be told something he should not know. Every player down, or the mission ended either way.
-pub fn recap_over(g: &Game) -> bool {
+pub(in crate::speech) fn recap_over(g: &Game) -> bool {
     crate::seats::all_down(g) || matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done)
 }
 

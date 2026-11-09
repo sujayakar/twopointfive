@@ -39,7 +39,7 @@ pub fn note(g: &mut Game, s: &str) {
 }
 
 /// does the plan segment p → q cross the rect inflated by `pad`
-pub fn seg_rect(p: V3, q: V3, r: [f64; 4], pad: f64) -> bool {
+pub(in crate::room_fight) fn seg_rect(p: V3, q: V3, r: [f64; 4], pad: f64) -> bool {
     let (x0, z0, x1, z1) = (r[0] - pad, r[1] - pad, r[2] + pad, r[3] + pad);
     let (mut t0, mut t1) = (0.0, 1.0);
     let (dx, dz) = (q[0] - p[0], q[2] - p[2]);
@@ -57,27 +57,27 @@ pub fn seg_rect(p: V3, q: V3, r: [f64; 4], pad: f64) -> bool {
     true
 }
 
-pub fn rect_dist(p: V3, r: [f64; 4]) -> f64 {
+pub(in crate::room_fight) fn rect_dist(p: V3, r: [f64; 4]) -> f64 {
     m::hyp2(m::max_n(&[r[0] - p[0], 0.0, p[0] - r[2]]), m::max_n(&[r[1] - p[2], 0.0, p[2] - r[3]]))
 }
 
-pub fn wall_react_new(g: &mut Game) -> WallReact {
+pub(in crate::room_fight) fn wall_react_new(g: &mut Game) -> WallReact {
     let mut s = WallReact::blank();
     crate::wallbreak::wall_break_on_change(g, crate::wallbreak::ChangeListener::WallReact);
     s.unsub = true;
     s
 }
 
-pub fn wall_react_live(g: &Game) -> bool {
+pub(in crate::room_fight) fn wall_react_live(g: &Game) -> bool {
     g.m.wallreact.wall_react.unsub && g.ai_enabled && !g.quiet_utility && !g.touring
 }
 
-pub fn wall_react_def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
+pub(in crate::room_fight) fn wall_react_def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
 /// a restart: nothing known, nobody owed a move
-pub fn wall_react_reset(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_reset(g: &mut Game) {
     let s = &mut g.m.wallreact.wall_react;
     s.pend.clear();
     s.minds.clear();
@@ -95,7 +95,7 @@ pub fn wall_react_reset(g: &mut Game) {
     wall_react_drop_openings(g);
 }
 
-pub fn wall_react_tick(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_tick(g: &mut Game) {
     use crate::wallbreak::LevelChangeKind as Kind;
     if g.m.wallreact.wall_react.stale {
         let s = &mut g.m.wallreact.wall_react;
@@ -178,7 +178,7 @@ fn take_ask(g: &mut Game, row: &crate::wallbreak::LevelChange, b: Option<Wallrea
     }
 }
 
-pub fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
+pub(in crate::room_fight) fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
     use crate::wallbreak::LevelChangeKind as Kind;
     if row.kind == Kind::Reset || row.kind == Kind::Door { return; }
     g.stats.wallreact.rows += 1;
@@ -206,7 +206,7 @@ pub fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
 }
 
 /// what a question keeps behind its newest: past goneMax - 1 the furthest is let go, the oldest of two as far
-pub fn wall_react_kept(g: &Game, at: V3, list: &mut Vec<Gone>) -> Vec<Gone> {
+pub(in crate::room_fight) fn wall_react_kept(g: &Game, at: V3, list: &mut Vec<Gone>) -> Vec<Gone> {
     let n = g.k.wallreact.gone_max - 1.0;
     if n <= 0.0 { return Vec::new(); }
     while list.len() as f64 > n {
@@ -240,7 +240,7 @@ fn sweep_ask(g: &mut Game, gd: GuardId, at: V3, b: WallreactBreachId) {
 }
 
 /// once a second: a man who has since planted himself in front of a breach he knows of is asked
-pub fn wall_react_sweep(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_sweep(g: &mut Game) {
     let retry = g.k.wallreact.retry_secs;
     for b in breaches_of(g) {
         for gd in g.tab.wallreact_breach[b].men.keys() {
@@ -271,7 +271,7 @@ fn cause_of(c: crate::wallbreak::LevelChangeCause) -> BreachCause {
 fn seam_box(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 /// the breach a wall's row belongs to: a new one, or the one on that wall it widens
-pub fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {
+pub(in crate::room_fight) fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {
     use crate::wallbreak::{LevelChangeCause, LevelChangeKind};
     let w = crate::wallbreak::wall_break_all(g).into_iter().find(|x| x.id == row.id)?;
     let (c, h, yaw) = seam_box(g, w.box_);
@@ -383,7 +383,7 @@ pub fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> O
 // ================================================================ (c) the room fight's rooms
 
 /// the walls are whole again: the rooms are flooded afresh, every defender's is re-read where he stands
-pub fn wall_react_unflood(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_unflood(g: &mut Game) {
     g.fight.rooms.clear();
     g.fight.room_of_cell.clear();
     for d in g.fight.defs.clone() {
@@ -430,7 +430,7 @@ fn entry_index(i: f64, was: &[crate::roomfight::Entry], now: &[crate::roomfight:
 }
 
 /// floor opened: the rooms it touches are flooded again; two joined by a hole are ONE, each defender's evidence carried by door
-pub fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
+pub(in crate::room_fight) fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
     use crate::Num;
     let (w, cs) = (g.col.nav.w, g.col.nav.cell);
     let mut touched: JsSet<RoomfightRoomId> = JsSet::new();
@@ -518,19 +518,19 @@ pub fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
 
 // ================================================================ (b) noticing
 
-pub fn wall_react_head(g: &Game, seat: &crate::seats::SeatRef, gd: WallReactHeadGd) -> V3 {
+pub(in crate::room_fight) fn wall_react_head(g: &Game, seat: &crate::seats::SeatRef, gd: WallReactHeadGd) -> V3 {
     let p = match gd { WallReactHeadGd::Sam => player_pos(g, seat), WallReactHeadGd::Guard(gd) => pos_of(g, gd) };
     [p[0], EYE, p[2]]
 }
 
-pub fn wall_react_face_of(g: &Game, b: WallreactBreachId, from: V3, y: Option<f64>) -> V3 {
+pub(in crate::room_fight) fn wall_react_face_of(g: &Game, b: WallreactBreachId, from: V3, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(1.3);
     let r = &g.tab.wallreact_breach[b];
     let s = if (from[0] - r.at[0]) * r.n[0] + (from[2] - r.at[2]) * r.n[1] >= 0.0 { 1.0 } else { -1.0 };
     [r.at[0] + r.n[0] * s * 0.3, y, r.at[2] + r.n[1] * s * 0.3]
 }
 
-pub fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option<f64>) -> bool {
+pub(in crate::room_fight) fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option<f64>) -> bool {
     let (see_m, fov) = (g.k.wallreact.see_m, g.k.wallreact.fov_deg);
     let r = &g.tab.wallreact_breach[b];
     let (at, n, u, half) = (r.at, r.n, r.u, r.half);
@@ -547,7 +547,7 @@ pub fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option
     false
 }
 
-pub fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId, by: &str) {
+pub(in crate::room_fight) fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId, by: &str) {
     if g.tab.wallreact_breach[b].ops >= 0.0 { return; }
     g.tab.wallreact_breach[b].ops = g.time;
     g.stats.wallreact.learned_ops += 1;
@@ -555,7 +555,7 @@ pub fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId, by: &str) {
     note(g, &text);
 }
 
-pub fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: WallReactManKnowsHow) {
+pub(in crate::room_fight) fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: WallReactManKnowsHow) {
     use WallReactManKnowsHow as How;
     if g.tab.wallreact_breach[b].men.has(gd) { return; }
     let now = g.time;
@@ -603,7 +603,7 @@ fn hears(g: &mut Game, head: V3, src: V3, r: f64) -> bool {
 }
 
 /// the wall going, as a noise: who hears it open knows where
-pub fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::LevelChange) {
+pub(in crate::room_fight) fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::LevelChange) {
     use crate::wallbreak::LevelChangeCause as C;
     let k = &g.k.wallreact;
     let r = match row.cause { C::Blast => k.hear_blast_m, C::Fire => k.hear_fire_m, _ => k.hear_fall_m };
@@ -689,11 +689,11 @@ pub fn wall_react_notice(g: &mut Game) {
 
 // ================================================================ (b) the squad's book
 
-pub fn wall_react_drop_opening(g: &mut Game, o: CoverOpeningId) {
+pub(in crate::room_fight) fn wall_react_drop_opening(g: &mut Game, o: CoverOpeningId) {
     if let Some(i) = g.cover.openings.iter().position(|x| *x == o) { g.cover.openings.remove(i); }
 }
 
-pub fn wall_react_drop_openings(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_drop_openings(g: &mut Game) {
     for b in breaches_of(g) {
         if let Some(o) = g.tab.wallreact_breach[b].opening {
             wall_react_drop_opening(g, o);
@@ -703,7 +703,7 @@ pub fn wall_react_drop_openings(g: &mut Game) {
 }
 
 /// a breach the team knows is one of its openings, kept in the list whoever rebuilds it
-pub fn wall_react_book(g: &mut Game) {
+pub(in crate::room_fight) fn wall_react_book(g: &mut Game) {
     if !crate::seats::team_active(g) { return; }
     let mut readied = false;
     for b in breaches_of(g) {
@@ -728,7 +728,7 @@ pub fn wall_react_book(g: &mut Game) {
 // ================================================================ (b) the defenders' watch
 
 /// ten times a second: what each man who knows a breach has against it
-pub fn wall_react_evidence(g: &mut Game, dt: f64) {
+pub(in crate::room_fight) fn wall_react_evidence(g: &mut Game, dt: f64) {
     let now = g.time;
     let (forget, ev_seen, ev_fire) = (g.k.wallreact.forget, g.k.wallreact.ev_seen, g.k.wallreact.ev_fire);
     // (each walk deletes only the entry it stands on: a copy of the keys is the same walk)
@@ -757,7 +757,7 @@ pub fn wall_react_evidence(g: &mut Game, dt: f64) {
 }
 
 /// does the plan line p → q go through the breach
-pub fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool {
+pub(in crate::room_fight) fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool {
     let r = &g.tab.wallreact_breach[b];
     let sp = (p[0] - r.at[0]) * r.n[0] + (p[2] - r.at[2]) * r.n[1];
     let sq = (q[0] - r.at[0]) * r.n[0] + (q[2] - r.at[2]) * r.n[1];
@@ -768,7 +768,7 @@ pub fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool 
 }
 
 /// roomfight.ts applyWatch: a breach he knows, has a line to and has more against than the door `pt` is on, takes it
-pub fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
+pub(in crate::room_fight) fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
     match g.m.wallreact.wall_react.minds.get(gd) { Some(mind) if !mind.is_empty() => {} _ => return }
     let d = match wall_react_def_of(g, gd) {
         Some(d) if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold => d,
@@ -815,7 +815,7 @@ pub fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
 
 // ================================================================ (a) cover gone
 
-pub fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
+pub(in crate::room_fight) fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     let mut out = Vec::new();
     if !crate::seats::team_active(g) { return out; }
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
@@ -827,7 +827,7 @@ pub fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     out
 }
 
-pub fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
+pub(in crate::room_fight) fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) {
         if g.pl[pl].down { return None; }
         return Some(WallReactCharOf { pos: g.ch[g.pl[pl].ch].pos, team: crate::teams::Team::Player });
@@ -838,7 +838,7 @@ pub fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
 }
 
 /// where the trouble is, for this man, about this change
-pub fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Option<V3> {
+pub(in crate::room_fight) fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Option<V3> {
     let who = wall_react_char_of(g, x.who);
     let h = if is_op(g, gd) { 1.2 } else { 0.9 };
     let man = &g.gd[gd];
@@ -855,14 +855,14 @@ pub fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Opti
 }
 
 /// what a question is about, in the order it is asked
-pub fn wall_react_things(g: &Game, p: &Pend) -> Vec<Gone> {
+pub(in crate::room_fight) fn wall_react_things(g: &Game, p: &Pend) -> Vec<Gone> {
     let mut out = vec![Gone { rect: p.rect, b: p.b, who: p.who }];
     if let Some(also) = &p.also { out.extend(also.iter().copied()); }
     out
 }
 
 /// the first thing of the question with a threat he is open to, else why not
-pub fn wall_react_asks(g: &mut Game, gd: GuardId, p: &Pend, at: V3, h: f64) -> WallReactAsks {
+pub(in crate::room_fight) fn wall_react_asks(g: &mut Game, gd: GuardId, p: &Pend, at: V3, h: f64) -> WallReactAsks {
     let mut why = String::new();
     for x in wall_react_things(g, p) {
         let threat = match wall_react_threat_for(g, gd, x, at) {
@@ -879,7 +879,7 @@ pub fn wall_react_asks(g: &mut Game, gd: GuardId, p: &Pend, at: V3, h: f64) -> W
 }
 
 /// the floor just beyond a breach from where a man stands; none when it is no danger to him
-pub fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) -> Option<V3> {
+pub(in crate::room_fight) fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) -> Option<V3> {
     let beyond_m = g.k.wallreact.beyond_m;
     let r = &g.tab.wallreact_breach[b];
     let (bat, n) = (r.at, r.n);
@@ -905,7 +905,7 @@ pub fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3
 }
 
 /// open to `threat` along a line through what went, a chest at `h` over `at`
-pub fn wall_react_open_gone(g: &mut Game, threat: V3, at: V3, h: f64, x: Gone) -> bool {
+pub(in crate::room_fight) fn wall_react_open_gone(g: &mut Game, threat: V3, at: V3, h: f64, x: Gone) -> bool {
     seg_rect(threat, at, x.rect, 0.45) && !crate::scene_collision::segment_blocked(g, [threat[0], 1.15, threat[2]], [at[0], h, at[2]], None, None, None)
 }
 
@@ -925,7 +925,7 @@ fn no_floor(g: &Game, dc: &JsMap<crate::Num, DoorId>, p: V3) -> bool {
 }
 
 /// a couple of strides to somewhere a chest at `h` is hidden from `threat` (and from the face of the breach), walked to in a straight line
-pub fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, b: Option<WallreactBreachId>, taken: &[V3], loosely: Option<bool>) -> Option<V3> {
+pub(in crate::room_fight) fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, b: Option<WallreactBreachId>, taken: &[V3], loosely: Option<bool>) -> Option<V3> {
     let loosely = loosely.unwrap_or(false);
     let step_m = g.k.wallreact.step_m;
     let t = [threat[0], 1.15, threat[2]];
@@ -994,7 +994,7 @@ pub fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f
 }
 
 /// is a chest at `h` over `p` open THROUGH the breach to the floor just beyond it
-pub fn wall_react_open_through(g: &mut Game, b: WallreactBreachId, p: V3, h: f64) -> bool {
+pub(in crate::room_fight) fn wall_react_open_through(g: &mut Game, b: WallreactBreachId, p: V3, h: f64) -> bool {
     let r = &g.tab.wallreact_breach[b];
     let (at, n, u, half) = (r.at, r.n, r.u, r.half);
     let d = (p[0] - at[0]) * n[0] + (p[2] - at[2]) * n[1];
@@ -1008,7 +1008,7 @@ pub fn wall_react_open_through(g: &mut Game, b: WallreactBreachId, p: V3, h: f64
 }
 
 /// the breaches a man knows of (his side's book for a teammate)
-pub fn wall_react_known(g: &Game, gd: GuardId) -> Vec<WallreactBreachId> {
+pub(in crate::room_fight) fn wall_react_known(g: &Game, gd: GuardId) -> Vec<WallreactBreachId> {
     let op = is_op(g, gd);
     breaches_of(g).into_iter().filter(|b| {
         let r = &g.tab.wallreact_breach[*b];
@@ -1036,7 +1036,7 @@ fn spot_own(g: &mut Game, gd: GuardId, p: V3, threat: V3, t: V3, kn: &[Wallreact
 }
 
 /// where a crouching man goes
-pub fn wall_react_spot(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> Option<V3> {
+pub(in crate::room_fight) fn wall_react_spot(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> Option<V3> {
     let p = pos_of(g, gd);
     let kn: Vec<WallreactBreachId> = wall_react_known(g, gd).into_iter().filter(|o| Some(*o) != b).collect();
     let t = [threat[0], 1.15, threat[2]];
@@ -1051,7 +1051,7 @@ pub fn wall_react_spot(g: &mut Game, gd: GuardId, threat: V3, b: Option<Wallreac
 }
 
 /// nothing within a few strides: the nearest corner he can run to that hides a crouched chest
-pub fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken: &[V3], kn: &[WallreactBreachId]) -> Option<V3> {
+pub(in crate::room_fight) fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken: &[V3], kn: &[WallreactBreachId]) -> Option<V3> {
     let run_m = g.k.wallreact.run_m;
     let t = [threat[0], 1.15, threat[2]];
     let dc = crate::guards::door_cells(g);
@@ -1083,7 +1083,7 @@ pub fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken
     best
 }
 
-pub fn wall_react_reconsider(g: &mut Game, p: &mut Pend) -> WallReactReconsider {
+pub(in crate::room_fight) fn wall_react_reconsider(g: &mut Game, p: &mut Pend) -> WallReactReconsider {
     match wall_react_reconsider1(g, p).0 {
         WallReactReconsider10::Fine => WallReactReconsider::Fine,
         WallReactReconsider10::Moved => WallReactReconsider::Moved,
@@ -1095,7 +1095,7 @@ fn shift_word(r: WallReactShift) -> WallReactReconsider10 {
     match r { WallReactShift::Fine => WallReactReconsider10::Fine, WallReactShift::Moved => WallReactReconsider10::Moved, WallReactShift::Later => WallReactReconsider10::Later }
 }
 
-pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10, String) {
+pub(in crate::room_fight) fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10, String) {
     use crate::roomfight::DefMode;
     use crate::teams::Team;
     use WallReactReconsider10 as R;
@@ -1175,7 +1175,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
 }
 
 /// a man in the fight AI: its own shift to cover
-pub fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> WallReactShift {
+pub(in crate::room_fight) fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> WallReactShift {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     if man.script.is_some() || man.pinned || man.standoff.is_some() || !g.tune.suppression { return WallReactShift::Fine; }
@@ -1207,7 +1207,7 @@ pub fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<Wallrea
 }
 
 /// a teammate on a mark (or walking to one): the mark is moved out of the line
-pub fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
+pub(in crate::room_fight) fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let gd = p.gd;
     let v = crate::seats::view_of(g, gd);
     let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
@@ -1256,7 +1256,7 @@ pub fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
 }
 
 /// tactics.ts: one of a plan's men has learned, since it was dealt, of a hole a man fits through
-pub fn wall_react_replan(g: &mut Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
+pub(in crate::room_fight) fn wall_react_replan(g: &mut Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
     for b in breaches_of(g) {
         let r = &g.tab.wallreact_breach[b];
         if !r.walk { continue; }

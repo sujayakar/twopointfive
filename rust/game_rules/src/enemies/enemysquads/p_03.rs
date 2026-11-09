@@ -65,7 +65,7 @@ fn sent_of(g: &mut Game, q: EnemysquadsSquadId, s: GuardId) -> &mut crate::enemy
     sq!(g, q).sent.iter_mut().find(|x| x.gd == s).unwrap()
 }
 /// drillFollow's and drillBack's ears: a holding man hears the team go on somewhere else, and nobody of the pair (his mates on that door within `reach`) has one of them in sight.
-pub fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId, reach: f64) -> Option<crate::enemysquads::MovedOn> {
+pub(in crate::enemies) fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId, reach: f64) -> Option<crate::enemysquads::MovedOn> {
     let gd = s;
     let at = def!(g, d).noise_at?;
     let (aim, since) = {
@@ -222,7 +222,7 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
 }
 
 /// A drilled garrison goes and looks: once a tick the word of the team is kept, and gone quiet a pair is called and sent.
-pub fn look_out(g: &mut crate::game::Game) {
+pub(in crate::enemies) fn look_out(g: &mut crate::game::Game) {
     let k = match squad_drill(g) {
         Some(k) => k,
         None => return,
@@ -461,7 +461,7 @@ fn may_look(g: &mut Game, d: RoomfightDefId, at: V3) -> bool {
 }
 
 /// Is that place in, or within three metres of, the room a holding man's door leads to.
-pub fn lost_room_has(g: &mut crate::game::Game, s: GuardId, at: V3, q: EnemysquadsSquadId) -> bool {
+pub(in crate::enemies) fn lost_room_has(g: &mut crate::game::Game, s: GuardId, at: V3, q: EnemysquadsSquadId) -> bool {
     let door = match sent_of(g, q, s).door {
         Some(d) => d,
         None => return false,
@@ -494,7 +494,7 @@ fn check_word(name: &str, salt: f64, phases: f64) -> u32 {
     (h ^ js::to_i32(m::floor(phases * 8388607.0))) as u32
 }
 /// The check's own dice, never the game's: seeded off the squad's name and its men's stride phases.
-pub fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
+pub(in crate::enemies) fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
     let salt = salt.unwrap_or(0.0);
     let mut phases = 0.0;
     for x in sq!(g, q).men.iter() {
@@ -504,7 +504,7 @@ pub fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64
     crate::math_dice::die_of(word as f64)
 }
 /// How long till the next check: a squad that has heard of the team counts its men oftener.
-pub fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
+pub(in crate::enemies) fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
     let k = g.k.squads;
     let r = &sq!(g, q);
     let alert = if r.news_t > -100.0 || r.contact_t > -100.0 || r.wary == Some(true) { k.check_alert_k } else { 1.0 };
@@ -522,7 +522,7 @@ fn rc_roll(g: &mut Game, q: EnemysquadsSquadId) -> f64 {
     crate::math_dice::roll(&mut rc!(g, q).die)
 }
 /// The squad's check, made on the first asking: the row itself.
-pub fn rc_of<'g>(g: &'g mut crate::game::Game, q: EnemysquadsSquadId) -> &'g mut crate::enemysquads::Check {
+pub(in crate::enemies) fn rc_of<'g>(g: &'g mut crate::game::Game, q: EnemysquadsSquadId) -> &'g mut crate::enemysquads::Check {
     if sq!(g, q).rc.is_none() {
         let mut die = check_dice(g, q, None);
         let first = crate::math_dice::roll(&mut die);
@@ -563,7 +563,7 @@ fn small0_of(g: &Game, q: EnemysquadsSquadId) -> JsMap<GuardId, f64> {
     out
 }
 /// A man of the squad has gone quiet: where he stood, when, and what each mate's ears had counted by then. Nobody is told by it.
-pub fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>, broke: Option<bool>) {
+pub(in crate::enemies) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>, broke: Option<bool>) {
     let at = match at {
         Some(a) => a,
         None => pos(g, m),
@@ -645,7 +645,7 @@ pub fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f6
     crate::game::game_msg(g, &line);
 }
 /// A mate at home has gunfire in his ears with a drop.
-pub fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
+pub(in crate::enemies) fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
     for x in up.iter() {
         let x = *x;
         let at = pos(g, x);
@@ -1257,7 +1257,7 @@ pub fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefI
     }
 }
 /// Every looker out for `who` turns for the post he left.
-pub fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
+pub(in crate::enemies) fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
     let mut i = 0;
     while i < rc!(g, q).look.len() {
         let (x_who, x_back, man) = {
@@ -1616,7 +1616,7 @@ pub fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> 
     false
 }
 /// The floor is quiet as far as this squad knows: only then is a call a thing with a length.
-pub fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
+pub(in crate::enemies) fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
     let r = &sq!(g, q);
     if r.state == SquadState::Contact || r.state == SquadState::Alerted || !(r.contact_t <= -100.0) || !(r.news_t <= -100.0) {
         return false;

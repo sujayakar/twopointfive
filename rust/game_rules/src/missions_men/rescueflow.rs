@@ -41,16 +41,16 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// The level's route data; None = this level's rescue has no flow.
-pub fn rescue_flow_f(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueFlowData> {
+pub(in crate::missions_men) fn rescue_flow_f(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueFlowData> {
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
-pub fn rescue_flow_new(g: &crate::game::Game) -> crate::rescueflow::RescueFlow {
+pub(in crate::missions_men) fn rescue_flow_new(g: &crate::game::Game) -> crate::rescueflow::RescueFlow {
     RescueFlow::blank()
 }
 
 /// A fresh staging: nothing known, nobody on a job.
-pub fn rescue_flow_reset(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_flow_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flow;
     f.jobs.clear();
     f.passed.clear();
@@ -66,7 +66,7 @@ pub fn rescue_flow_reset(g: &mut crate::game::Game) {
 }
 
 /// Is this assignment one the flow gave.
-pub fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
+pub(in crate::missions_men) fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
     match a {
         Some(a) => g.rescue.flow.mine.has(a),
         None => false,
@@ -74,14 +74,14 @@ pub fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) ->
 }
 
 /// F has taken these men: their jobs end where they stand.
-pub fn rescue_flow_release(g: &mut crate::game::Game, men: &[GuardId]) {
+pub(in crate::missions_men) fn rescue_flow_release(g: &mut crate::game::Game, men: &[GuardId]) {
     for &gd in men {
         g.rescue.flow.jobs.delete(gd);
     }
 }
 
 /// Sample each region's floor and make a row per opening.
-pub fn rescue_flow_build(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_flow_build(g: &mut crate::game::Game) {
     let f = rescue_flow_f(g);
     g.rescue.flow.built = true;
     g.rescue.flow.known = Vec::new();
@@ -139,7 +139,7 @@ pub fn rescue_flow_build(g: &mut crate::game::Game) {
 }
 
 /// What of the room can be seen through this opening at all, from the cover mark and three places across its threshold. `k` is not in the table while this runs.
-pub fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow::Known) {
+pub(in crate::missions_men) fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow::Known) {
     let (mark, at) = (k.o.mark, k.o.at);
     let dz = if k.o.north { 0.7 } else { -0.7 };
     let eyes: [V3; 4] = [[mark[0], EYE, mark[2]], [at[0], EYE, at[2] + dz], [at[0] - 0.9, EYE, at[2] + dz], [at[0] + 0.9, EYE, at[2] + dz]];
@@ -157,7 +157,7 @@ pub fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow
     }
 }
 
-pub fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
+pub(in crate::missions_men) fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     match door_of(g, o) {
         None => true,
         Some(d) => m::abs(crate::doors::door_angle(g, d)) > 0.5,
@@ -165,7 +165,7 @@ pub fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::Route
 }
 
 /// The team's eyes this moment: Sam's, and every living operative's who is not blind.
-pub fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<V3> {
+pub(in crate::missions_men) fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     let pl = seat.player;
     if !g.pl[pl].down {
@@ -182,7 +182,7 @@ pub fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 }
 
 /// Is this man of theirs seen by the team: the room fight's answer, else the fog's while it is up, else a plain line from any eye to his chest.
-pub fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
+pub(in crate::missions_men) fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
     if crate::roomfight::room_fight_team_sees(g, h) {
         return true;
     }
@@ -202,12 +202,12 @@ pub fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> b
     false
 }
 
-pub fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
+pub(in crate::missions_men) fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
     g.rescue.flow.regions.values().copied().find(|&r| in_rect(p, &g.tab.rescueflow_region[r].rect))
 }
 
 /// A few times a second: the floor seen, who of theirs is known where, what each room and opening reads.
-pub fn rescue_flow_sense(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_flow_sense(g: &mut crate::game::Game) {
     let t = g.time;
     let k = g.rescue.flow.knobs;
     let eyes = rescue_flow_eyes(g, &crate::seats::here(g));
@@ -386,7 +386,7 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
 }
 
 /// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's.
-pub fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
+pub(in crate::missions_men) fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
     let mut i = 0;
     while i < g.rescue.ops.len() {
         let op = g.rescue.ops[i];
@@ -425,7 +425,7 @@ pub fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o
 }
 
 /// Once a frame from Rescue.tick.
-pub fn rescue_flow_tick(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_flow_tick(g: &mut crate::game::Game) {
     let k = g.rescue.flow.knobs;
     let f = rescue_flow_f(g);
     let f = match f {
@@ -721,7 +721,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
 }
 
 /// Nothing for a man to do at it: the room behind it is cleared, or a man Sam posted has it already.
-pub fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
+pub(in crate::missions_men) fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     let Some(k) = g.rescue.flow.known.iter().find(|x| x.o.id == o.id) else { return false };
     if g.tab.rescueflow_region[k.region].cleared {
         return true;
@@ -733,12 +733,12 @@ pub fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::Ro
 }
 
 /// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody.
-pub fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::missions_men) fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }
 
 /// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first.
-pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
+pub(in crate::missions_men) fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut out: Vec<(GuardId, f64)> = Vec::new();
     let mut i = 0;
     while i < g.rescue.ops.len() {
@@ -761,7 +761,7 @@ pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 }
 
 /// Send a man to cover an opening.
-pub fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_scenarios::RouteOpening, chain: &[crate::scene_scenarios::RouteOpening], said_wait: bool, leap: bool) {
+pub(in crate::missions_men) fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_scenarios::RouteOpening, chain: &[crate::scene_scenarios::RouteOpening], said_wait: bool, leap: bool) {
     let door = door_of(g, o);
     crate::orders::squad_orders_new_group(g); // (his own: a 'set.' Sam's last order is waiting to call does not wait on this man's mark)
     crate::orders::squad_orders_assign(
@@ -792,7 +792,7 @@ pub fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene
 }
 
 /// Back into the file behind Sam, at its tail.
-pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str>) {
+pub(in crate::missions_men) fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str>) {
     g.rescue.flow.jobs.delete(gd);
     crate::orders::squad_orders_new_group(g);
     crate::orders::squad_orders_assign(
@@ -818,7 +818,7 @@ pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<
     }
 }
 
-pub fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
+pub(in crate::missions_men) fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     for gd in g.rescue.flow.jobs.keys() {
         let Some(j) = g.rescue.flow.jobs.delete(gd) else { continue };
         if back && g.gd[gd].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(j.a) {
@@ -829,7 +829,7 @@ pub fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
 }
 
 /// The strips: one flat glowing bar on the corridor floor across each opening, in its state's colour (a hot one beats).
-pub fn rescue_flow_boxes(g: &mut crate::game::Game) {
+pub(in crate::missions_men) fn rescue_flow_boxes(g: &mut crate::game::Game) {
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     let colours = colour();
@@ -858,7 +858,7 @@ pub fn rescue_flow_boxes(g: &mut crate::game::Game) {
     }
 }
 
-pub fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> String {
+pub(in crate::missions_men) fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> String {
     let shut = k.o.kind == crate::scene_scenarios::RouteOpeningKind::Door && !rescue_flow_open(g, &k.o);
     let w = match k.state {
         OpenState::Hot => {
@@ -883,7 +883,7 @@ pub fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> 
 }
 
 /// The objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him.
-pub fn rescue_flow_line(g: &crate::game::Game) -> String {
+pub(in crate::missions_men) fn rescue_flow_line(g: &crate::game::Game) -> String {
     let mut behind: Vec<String> = Vec::new();
     let mut ahead: Vec<String> = Vec::new();
     for at in 0..g.rescue.flow.known.len() {
@@ -908,7 +908,7 @@ pub fn rescue_flow_line(g: &crate::game::Game) -> String {
     parts.join(" · ")
 }
 
-pub fn rescue_flow_summary(g: &crate::game::Game) -> String {
+pub(in crate::missions_men) fn rescue_flow_summary(g: &crate::game::Game) -> String {
     if g.rescue.flow.known.is_empty() {
         return String::from("flow: not staged");
     }
@@ -932,7 +932,7 @@ pub fn rescue_flow_summary(g: &crate::game::Game) -> String {
 }
 
 /// The marks against the floor: returns what is wrong.
-pub fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {
+pub(in crate::missions_men) fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {
     let mut bad: Vec<String> = Vec::new();
     if rescue_flow_f(g).is_none() {
         return bad;

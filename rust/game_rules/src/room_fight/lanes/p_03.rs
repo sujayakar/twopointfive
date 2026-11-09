@@ -48,7 +48,7 @@ fn peek_back(g: &mut Game, gd: GuardId, d: RoomfightDefId) {
 }
 
 /// every frame, a man out for a look: one of them in sight by the guns = the lane stands; a line down it and nobody there for `peekLook` = clear, forgotten, and the men held on it go on together
-pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::room_fight) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     use crate::lanes::{PeekPhase, StateHeldValue};
     // `p` is the row in the TypeScript. This copy is kept equal to it: every write below goes to both, and pin_step and frag_step (which write the row by path) end this call
     let mut p = match s(g).peek.get(gd) { Some(&p) => p, None => return };
@@ -351,7 +351,7 @@ pub fn along(g: &crate::game::Game, gd: GuardId, m: f64) -> V3 {
 }
 
 /// He stops where he stands, short of a lane, his gun on `look`.
-pub fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, look: V3) {
+pub(in crate::room_fight) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, look: V3) {
     if !mine(g, gd) { return; }
     let mut named = false;
     for l in lane_ids(g) {
@@ -414,7 +414,7 @@ pub fn lane_bars(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool
 }
 
 /// He has shouted for a lane and the wind-up still has his arm: the dig-in does not adopt him.
-pub fn lane_throws(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn lane_throws(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(st) = g.m.lanes.states.as_ref() else { return false };
     if st.peek.is_empty() { return false; }
     if !live(g) { return false; }
@@ -460,7 +460,7 @@ pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 }
 
 /// He stands in a lane his side knows is covered: no place to plant himself.
-pub fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.m.lanes.states.is_none() || !live(g) || !mine(g, gd) { return false; }
     if pushing(g, gd) || flanking(g, gd) { return false; }
     if no_lanes(g) || close_fight(g, gd) { return false; }

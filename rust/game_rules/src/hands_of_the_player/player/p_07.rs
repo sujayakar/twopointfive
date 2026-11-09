@@ -137,7 +137,7 @@ fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::g
 }
 
 /// The markers Space concerns itself with, and the rows: what Space can do right now, one verb a row, the highlighted one.
-pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) {
+pub(in crate::hands_of_the_player) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) {
     let pl = g.player;
     let mut list: Vec<crate::game::Interactable> = Vec::new();
     let p = g.ch[g.pl[pl].ch].pos;
@@ -732,7 +732,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
 }
 
 /// the man or the door a row is about, by the name it goes by ('' = neither)
-pub fn who_of<'g>(g: &'g crate::game::Game, r: &crate::game::Interactable) -> &'g str {
+pub(in crate::hands_of_the_player) fn who_of<'g>(g: &'g crate::game::Game, r: &crate::game::Interactable) -> &'g str {
     match (r.door, r.guard) {
         (Some(d), _) => g.dr[d].def.name.as_str(),
         (None, Some(gd)) => g.gd[gd].callsign.as_str(),
@@ -764,7 +764,7 @@ pub fn pick_hover(g: &mut crate::game::Game) {
 }
 
 /// the selector's bottom row while it is open: letting go of Space on it does nothing
-pub fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::game::Interactable {
+pub(in crate::hands_of_the_player) fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::game::Interactable {
     let p = g.ch[g.pl[seat.player].ch].pos;
     let mut it = mark(crate::game::InteractableKind::Cancel, [p[0], 1.3, p[2]], String::from("cancel"), String::from("let go here — nothing happens"), true, false);
     it.verb = Some(crate::game::Verb::Cancel);
@@ -773,7 +773,7 @@ pub fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer
-pub fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) -> f64 {
+pub(in crate::hands_of_the_player) fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) -> f64 {
     let d = v3::dist_xz(it.pos, p);
     match it.door {
         Some(door) => m::min(d, v3::dist_xz(g.dr[door].frame_centre, p)),
@@ -792,7 +792,7 @@ pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: cr
 }
 
 /// a thrown thing not yet out of the hand goes back on the belt
-pub fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
+pub(in crate::hands_of_the_player) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
     match kind {
         crate::game::ThrowKind::Frag => g.pl[pl].frags += 1.0,
         crate::game::ThrowKind::Flash => g.pl[pl].flashbangs += 1.0,
@@ -801,7 +801,7 @@ pub fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::Thro
 }
 
 /// a wind-up called off with the can still in his fist: back on the belt
-pub fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::hands_of_the_player) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
     if let Some(kind) = g.pl[pl].pending_throw.as_ref().map(|t| t.kind) {
         can_back(g, pl, kind);
         g.pl[pl].pending_throw = None;
@@ -863,7 +863,7 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
 }
 
 /// Let go of the body in tow: the ankle pins come off and its feet fall where they are
-pub fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
+pub(in crate::hands_of_the_player) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
     let laid = laid.unwrap_or(false);
     let pl = g.player;
     let b = match g.pl[pl].dragging {

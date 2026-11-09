@@ -65,7 +65,7 @@ pub fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
 }
 
 /// What a fixture lying from (x, z) along (ux, uz) rests on: the highest of three samples down its length, and whether that is flat bare floor.
-pub fn rest_on(g: &mut crate::game::Game, x: f64, z: f64, ux: f64, uz: f64, l: f64, from: f64) -> crate::fixture_break::RestOn {
+pub(in crate::breakage) fn rest_on(g: &mut crate::game::Game, x: f64, z: f64, ux: f64, uz: f64, l: f64, from: f64) -> crate::fixture_break::RestOn {
     let (mut y, mut lo, mut prop) = (0.0, 1e9, false);
     for a in rest_at() { let f = floor_at(g, x + ux * l * a, z + uz * l * a, from); if g.m.fixture_break.floor.on.is_some() { prop = true; } if f > y { y = f; } if f < lo { lo = f; } }
     RestOn { y, flat: y - lo < 0.05 && !prop }
@@ -196,7 +196,7 @@ pub fn land(r: &mut crate::fixture_break::Rec, s: f64) {
 }
 
 /// The arc at the torn lead `a` seconds after the light died: 0‥1, and whether a pop or a spit STARTS inside this frame (→ sparks).
-pub fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
+pub(in crate::breakage) fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
     let f = g.m.fixture_break.fixlook.clone(); let mut gl = 0.0; out.sparks = 0.0;
     for k in 0..f.pops.len() {
         let tk = f.pops[k] * (0.85 + 0.3 * h01(r.seed + 11.0 * k as f64 + 5.0)); if a < tk { break; }

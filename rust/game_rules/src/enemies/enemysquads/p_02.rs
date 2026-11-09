@@ -63,19 +63,19 @@ pub fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
 pub fn path_len(from: V3, path: &[V3]) -> f64 { along(from, path, &mut |_, _| {}) }
 
 /// out on a leg, or about to be sent, so not free to be sent anywhere else: `OWN.squadLeg`
-pub fn squad_leg_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
+pub(in crate::enemies) fn squad_leg_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
     let x = &g.tab.enemysquads_squad[q];
     x.sent.iter().any(|s| s.gd == gd) || x.due.iter().any(|d| d.gd == gd)
 }
 /// his squad has heard and not yet said, he is about to go, on his way round, or looking for a man who does not answer: `OWN.squadWord`
-pub fn squad_word_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
+pub(in crate::enemies) fn squad_word_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
     let x = &g.tab.enemysquads_squad[q];
     x.state == SquadState::Alerted || x.due.iter().any(|d| d.gd == gd)
         || x.sent.iter().any(|s| s.gd == gd && s.role == SentRole::Flank && s.phase != SentPhase::Loose)
         || x.rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.gd == gd))
 }
 /// what the squads have, as this frame's tick leaves it
-pub fn squad_say(g: &mut crate::game::Game) {
+pub(in crate::enemies) fn squad_say(g: &mut crate::game::Game) {
     let Some(squads) = g.m.enemysquads.states.as_ref().map(|st| st.squads.clone()) else { return };
     for q in squads {
         for m0 in g.tab.enemysquads_squad[q].men.clone() {
@@ -86,7 +86,7 @@ pub fn squad_say(g: &mut crate::game::Game) {
     }
 }
 /// the staging is over: nobody is its man
-pub fn squads_let_go(g: &mut crate::game::Game, st: Option<&crate::enemysquads::State>) {
+pub(in crate::enemies) fn squads_let_go(g: &mut crate::game::Game, st: Option<&crate::enemysquads::State>) {
     let Some(st) = st else { return };
     let all = crate::owner::by::SQUAD | crate::owner::by::SQUAD_LEG | crate::owner::by::SQUAD_WORD;
     for &q in &st.squads {
@@ -194,7 +194,7 @@ pub fn fit(g: &crate::game::Game, m: GuardId) -> bool {
     alive(g, m) && g.gd[m].held.is_none() && !crate::control::man::blind(g, m) && !crate::control::man::staggered(g, m) && !crate::owner::has(g, m, crate::owner::by::RUNNER)
 }
 /// when this man was sent to look where the team was last put, or None. Words only
-pub fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
+pub(in crate::enemies) fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     let q = squad_id_of(g, gd)?;
     g.tab.enemysquads_squad[q].sent.iter().find(|x| x.gd == gd && x.role == SentRole::Look).map(|s| s.t0)
 }
@@ -228,7 +228,7 @@ pub fn tell(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     row.noise_at = Some(v3::copy(at)); row.noise_t = t; row.noise_out = true;
 }
 /// where the team is as far as the defenders know: these few seconds' sightings and loud things, never its true positions
-pub fn team_known(g: &crate::game::Game) -> Vec<V3> {
+pub(in crate::enemies) fn team_known(g: &crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -335,7 +335,7 @@ pub fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[
 }
 
 /// teamKnown, each place with how well it is known
-pub fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Known> {
+pub(in crate::enemies) fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Known> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -399,7 +399,7 @@ fn ctx_dearer(g: &Game, cost: &mut JsMap<crate::Num, f64>, ix: f64, iz: f64, c: 
 }
 
 /// what a way round is judged against, built once a decision and shared by the men it sends
-pub fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enemysquads::Known], theirs: &[DoorId]) -> crate::enemysquads::RoundCtx {
+pub(in crate::enemies) fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enemysquads::Known], theirs: &[DoorId]) -> crate::enemysquads::RoundCtx {
     let names: Vec<String> = theirs.iter().map(|d| door_name(g, *d)).collect();
     let key = format!("{}#{}", names.join("|"), known.len());
     if let Some(c) = g.m.enemysquads.ctx.as_ref() { if c.t == g.time && c.t_2 == t && c.key == key { return c.clone(); } }
@@ -476,7 +476,7 @@ pub fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::
 }
 
 /// wayRound with goRound on: the net's door, no wall between a known place and a spot, every spot tried, a way walked mark by mark
-pub fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>, says: Option<&mut crate::enemysquads::WayRound2Says>) -> Option<crate::enemysquads::Way> {
+pub(in crate::enemies) fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>, says: Option<&mut crate::enemysquads::WayRound2Says>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
     let pos = pos_of(g, gd);
@@ -587,7 +587,7 @@ pub fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crate::enem
     if what == SquadEventWhat::Found { let men = g.tab.enemysquads_squad[q].men.clone(); crate::netquietfeed::net_feed_body(g, by, &men); }
 }
 /// the men who go: nearest the fight first, a man left in every room that had one
-pub fn goers(g: &crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) -> Vec<RoomfightDefId> {
+pub(in crate::enemies) fn goers(g: &crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) -> Vec<RoomfightDefId> {
     let mut by: Vec<(RoomfightDefId, f64)> = h.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; (*d, flat(pos_of(g, gd), at)) }).collect();
     js::sort_by(&mut by, |a, b| a.1 - b.1);
     let mut left: JsMap<Option<RoomfightRoomId>, f64> = JsMap::new();
@@ -611,9 +611,9 @@ pub fn mate(g: &crate::game::Game, m: GuardId) -> String {
     }
     cs.clone()
 }
-pub fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
+pub(in crate::enemies) fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
 /// × a squad's beats on the net: a drilled garrison's `netK`, read off the map's own rows
-pub fn net_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
+pub(in crate::enemies) fn net_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
 /// × the beat of a hit squad's own men in its other rooms
 pub fn own_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.reinforce_k, _ => 1.0 } }
 /// how many rooms these men are in: `new Set(H.map(D => D.room)).size`
@@ -623,7 +623,7 @@ fn rooms_held(g: &Game, h: &[RoomfightDefId]) -> usize {
     seen.len()
 }
 /// a squad that could send men out on a call now: decide()'s own first three tests
-pub fn may_go(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> bool {
+pub(in crate::enemies) fn may_go(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> bool {
     if g.tab.enemysquads_squad[q].def.may_leave == Some(false) { return false; }
     let sent: Vec<GuardId> = g.tab.enemysquads_squad[q].sent.iter().map(|s| s.gd).collect();
     for s in sent { if alive(g, s) { return false; } }

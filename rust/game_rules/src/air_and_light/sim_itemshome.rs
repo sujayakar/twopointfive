@@ -80,7 +80,7 @@ fn places_of(o: &ItemStoreO) -> Vec<f64> {
 }
 
 /// Where each column starts and how long the part is.
-pub fn item_cols() -> crate::sim_itemshome::ItemCols {
+pub(in crate::air_and_light) fn item_cols() -> crate::sim_itemshome::ItemCols {
     // colsOf(ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS), walked here: the skeleton's cols_of hands back only `bytes`.
     let mut s = [0.0; COLS_ALL];
     let mut at = ITEM_HEAD;
@@ -106,14 +106,14 @@ pub fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_it
 }
 
 /// `n` rows fit, or it is a fault.
-pub fn item_store_room(g: &crate::game::Game, n: f64) {
+pub(in crate::air_and_light) fn item_store_room(g: &crate::game::Game, n: f64) {
     if n > g.items.store.cap {
         panic!("a pool of {} thrown things: its columns hold {} (sim/itemshome.ts ITEM_ROWS, rust/sim/src/items.rs CAP; game/throwables.ts spawn gives one up for each new one past {})", n, g.items.store.cap, ITEM_CAP);
     }
 }
 
 /// Things in the pool.
-pub fn item_store_n(g: &crate::game::Game) -> f64 {
+pub(in crate::air_and_light) fn item_store_n(g: &crate::game::Game) -> f64 {
     sim::state::state_read(g.sim).items.n as f64
 }
 
@@ -136,7 +136,7 @@ pub fn item_store_row_out(g: &crate::game::Game, r: f64) -> Vec<f64> {
 }
 
 /// …and into it; a word takes its number as a Uint32Array does.
-pub fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
+pub(in crate::air_and_light) fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
     let c = &mut sim::state::state(g.sim).items;
     let row = r as usize;
     for k in 0..COLS_F { double_col(c, k)[row] = v[k]; }
@@ -195,7 +195,7 @@ fn same_double(x: f64, y: f64) -> bool {
 }
 
 /// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state.
-pub fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
+pub(in crate::air_and_light) fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let o = g.items.store.o;
     let (ua0, ub0) = (word_of(a, 0), word_of(b, 0));

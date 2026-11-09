@@ -59,7 +59,7 @@ pub fn frac(x: f64) -> f64 {
 }
 
 /// his id's share of 0‥1, no dice.
-pub fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::room_fight) fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
     frac(g.ch[g.gd[gd].ch].id * 0.6180339887)
 }
 
@@ -128,7 +128,7 @@ pub fn event(g: &mut crate::game::Game, what: crate::powerout::PowerOutEventWhat
 }
 
 /// a mains-fed fixture that was burning, in his plain view inside `seeM`.
-pub fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = pos_of(g, gd);
     let eye: V3 = [c[0], 1.5, c[2]];
     let mut i = 0;
@@ -162,7 +162,7 @@ fn floor_at(g: &mut Game, x: f64, z: f64) -> f64 {
 }
 
 /// the brightest floor he stands on, watches or has about him, by the place's own light.
-pub fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::room_fight) fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let k = g.k.powerout;
     let c = pos_of(g, gd);
     let yaw = g.ch[g.gd[gd].ch].aim_yaw;
@@ -219,7 +219,7 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
 }
 
 /// where the man at the lever stands.
-pub fn lever_spot(g: &mut crate::game::Game) -> V3 {
+pub(in crate::room_fight) fn lever_spot(g: &mut crate::game::Game) -> V3 {
     let e = crate::workthings::breaker_errand(g);
     let bp = g.level.breaker.pos;
     match e {
@@ -363,7 +363,7 @@ pub fn power_out(g: &mut crate::game::Game) {
 }
 
 /// who knows the lights have gone, and when their word is due.
-pub fn decide_out(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn decide_out(g: &mut crate::game::Game) {
     let defs = ruled(g);
     if defs.is_empty() {
         return;
@@ -484,7 +484,7 @@ pub fn power_out_lit(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// darkfoe.ts hasWord: their side holds this dark for the team's doing.
-pub fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) || !g.m.powerout.states.as_ref().map_or(false, |s| s.word) {
         return false;
     }
@@ -499,7 +499,7 @@ pub fn power_out_reset(g: &mut crate::game::Game) {
 }
 
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent.
-pub fn breaker_say(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn breaker_say(g: &mut crate::game::Game) {
     let rule = crate::owner::by::BREAKER;
     let mut i = 0;
     while i < g.guards.len() {
@@ -708,7 +708,7 @@ pub fn power_out_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// their word when it is due, and every man out a step on.
-pub fn step_power_out(g: &mut crate::game::Game, _dt: f64) {
+pub(in crate::room_fight) fn step_power_out(g: &mut crate::game::Game, _dt: f64) {
     if g.m.powerout.states.is_none() {
         return;
     }
@@ -966,7 +966,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
 }
 
 /// the beat is up: the party steps off as one, or does not.
-pub fn step_off(g: &mut crate::game::Game, fight: bool) {
+pub(in crate::room_fight) fn step_off(g: &mut crate::game::Game, fight: bool) {
     let wait: Vec<usize> = (0..st(g).men.len()).filter(|&i| man(g, i).phase == Phase::Wait).collect();
     let all: Option<&str> = if !bo_active(g) {
         Some("the mains are back")
@@ -1065,7 +1065,7 @@ pub fn missed(g: &mut crate::game::Game, defs: &[RoomfightDefId], fight: bool) {
 }
 
 /// the rule let go of in the middle of a walk: every man out goes back to his post at a run.
-pub fn stand_down(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn stand_down(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < st(g).men.len() {
         let gd = man(g, i).gd;

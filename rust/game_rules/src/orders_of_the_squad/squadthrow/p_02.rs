@@ -58,7 +58,7 @@ pub fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::Sta
 }
 
 /// The thing leaves his hand; the count is taken already.
-pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow::Arc, kind: crate::squadthrow::SquadThrowKind, at: V3) {
+pub(in crate::orders_of_the_squad) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow::Arc, kind: crate::squadthrow::SquadThrowKind, at: V3) {
     let key = state_key(g);
     let c = g.gd[gd].ch;
     let who = g.ch[c].id;
@@ -97,7 +97,7 @@ pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow:
 }
 
 /// The squad's order log, in its own words for a floor order.
-pub fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3) {
+pub(in crate::orders_of_the_squad) fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3) {
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
@@ -127,7 +127,7 @@ pub fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::
 }
 
 /// The order's walking case: he is sent to the floor he has a throw from; the can stays in the bag.
-pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadThrower, t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) {
+pub(in crate::orders_of_the_squad) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadThrower, t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) {
     let key = state_key(g);
     let gd = th.gd;
     let post = th.post.unwrap();
@@ -170,7 +170,7 @@ pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadTh
 }
 
 /// What a man is doing NOW, kept so that he can be handed back to it.
-pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
+pub(in crate::orders_of_the_squad) fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let was = crate::orders::squad_orders_of(g, seat, gd);
@@ -222,7 +222,7 @@ pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
 }
 
 /// The throw is made, or will not be: back to where he stood and to what he was doing.
-pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Lent, back: Option<bool>) {
+pub(in crate::orders_of_the_squad) fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Lent, back: Option<bool>) {
     let back = back.unwrap_or(true);
     let gd = w.gd;
     let c = g.gd[gd].ch;
@@ -333,7 +333,7 @@ fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
 }
 
 /// A WALKING THROWER'S FRAME: the rows' `tick`, while he is under the row's id and the fight does not have him.
-pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub(in crate::orders_of_the_squad) fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let key = state_key(g);
     let now = g.time;
     let c = g.gd[gd].ch;

@@ -15,7 +15,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
 }
 
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.
-pub fn nv_hand_free(g: &mut crate::game::Game) -> bool {
+pub(in crate::outfit) fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     if g.pl[p].down
@@ -171,7 +171,7 @@ pub fn kit_sling_rest(g: &mut crate::game::Game) -> Option<f64> {
 }
 
 /// How close a man `d` metres off is: 0 at the close-in mode's edge, 1 in the knife's reach.
-pub fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
+pub(in crate::outfit) fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
     let mode_m = g.k.close.mode_m;
     m::max(0.0, m::min(1.0, (mode_m - d) / m::max(0.1, mode_m - g.k.kitanim.close_near)))
 }

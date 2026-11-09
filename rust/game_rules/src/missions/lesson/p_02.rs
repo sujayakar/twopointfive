@@ -28,7 +28,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
 }
 
 /// The step that is up for the mission that is running: a fresh run is on its first step.
-pub fn lesson_at(g: &crate::game::Game) -> f64 {
+pub(in crate::missions) fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
@@ -106,7 +106,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.
-pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
+pub(in crate::missions) fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
     g.lesson.i += 1.0;
@@ -126,7 +126,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
 }
 
 /// What a step that has just come up has seen: nothing, counted from now.
-pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
+pub(in crate::missions) fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
     let last_order = seat.orders.log.last().map(|r| r.serial);
@@ -155,7 +155,7 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
 }
 
 /// This frame's deeds into the step's counts.
-pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
+pub(in crate::missions) fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;
@@ -227,7 +227,7 @@ pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut
 
 
 /// The run is over, whichever scenario it was.
-pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::missions) fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
         || stage == crate::game::MissionStage::Done
@@ -236,7 +236,7 @@ pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
 }
 
 /// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.
-pub fn lesson_settling(g: &crate::game::Game) -> bool {
+pub(in crate::missions) fn lesson_settling(g: &crate::game::Game) -> bool {
     run_is_mission(g) && g.lesson.seen.as_ref().map_or(false, |s| s.done_t.is_some() && s.done_i == Some(g.lesson.i))
 }
 

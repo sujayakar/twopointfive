@@ -44,7 +44,7 @@ fn touches(a: AABB, b: AABB, e: f64) -> bool {
 fn scratch() -> Vec<i32> { vec![0; 96] }
 
 /// What a broken cell throws: this cell's pieces, chips and fines by its material's row.
-pub fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell: &crate::scene_boxes::Box, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) {
+pub(in crate::breakage) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell: &crate::scene_boxes::Box, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) {
     let (surf, hard) = { let r = &g.tab.wallbreak_breakable[b]; (r.surf, r.hard) };
     let as_ = if hard == Some(true) { Some(crate::break_table::Mat::Blockwork) } else { None };
     let cell = seam_box_push(g, cell);
@@ -56,7 +56,7 @@ pub fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell:
 // ---------------------------------------------------------------- what stood on it / hung on it
 
 /// What `a` (static j) rests on; `extra` counts as still standing.
-pub fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> Vec<crate::wallbreak::AABB> {
+pub(in crate::breakage) fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> Vec<crate::wallbreak::AABB> {
     let mine = owner_of(g, j);
     let mut out: Vec<AABB> = Vec::new();
     let mut list = scratch();
@@ -84,7 +84,7 @@ pub fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbrea
 }
 
 /// Is static j (bounds a) held up, by what it rests on or what it hangs from?
-pub fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> bool {
+pub(in crate::breakage) fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> bool {
     if a.y0 <= 0.06 { return true; }
     let rest = wall_break_rests_on(g, j, a, extra);
     if !rest.is_empty() {
@@ -114,7 +114,7 @@ pub fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
 }
 
 /// Authored statics touching `a`, ghosts and part-gone cover included, in index order.
-pub fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64> {
+pub(in crate::breakage) fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64> {
     let e = 0.05;
     let mut out: Vec<f64> = Vec::new();
     let mut list = scratch();
@@ -146,7 +146,7 @@ pub fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> 
 }
 
 /// After cells of B opened: what B held up and nothing holds now comes down.
-pub fn wall_break_settle(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) {
+pub(in crate::breakage) fn wall_break_settle(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) {
     let mut queue: Vec<AABB> = Vec::new();
     let (kind, bx) = { let r = &g.tab.wallbreak_breakable[b]; (r.kind, r.box_) };
     if kind == BKind::Wall { wall_break_hangers(g, b, rect, dir, who, quiet, &mut queue, rects); } else { queue.push(aabb(g, bx)); }
@@ -154,7 +154,7 @@ pub fn wall_break_settle(g: &mut crate::game::Game, b: WallbreakBreakableId, rec
 }
 
 /// Whatever the things in `queue` were holding, and what those held in turn, never B itself.
-pub fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, queue: &mut Vec<crate::wallbreak::AABB>, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) {
+pub(in crate::breakage) fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, queue: &mut Vec<crate::wallbreak::AABB>, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) {
     let mut falls = 0.0;
     let mut seen: JsSet<crate::Num> = JsSet::new();
     let (glass, primary) = { let f = crate::scene_boxes::box_flag(); (f.glass, f.no_primary) };
@@ -182,7 +182,7 @@ pub fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId
 }
 
 /// The boards hung on the charge's face of `wall`, within `r` of the charge. Pure.
-pub fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f64> {
+pub(in crate::breakage) fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f64> {
     let row = match owner_of(g, wall) { Some(b) => b, None => return Vec::new() };
     let (kind, nx, bx) = { let b = &g.tab.wallbreak_breakable[row]; (b.kind, b.nx, b.box_) };
     if kind != BKind::Wall { return Vec::new(); }
@@ -214,7 +214,7 @@ pub fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) 
 }
 
 /// Could authored static `j` be a board hung on a wall, by what it was authored as?
-pub fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool {
+pub(in crate::breakage) fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool {
     if j < 0.0 || j >= g.col.boxes.len() as f64 || j >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(j)) { return false; }
     let b = box_at(g, j);
     if seam_box(g, b).rot.is_some() { return false; }
@@ -232,7 +232,7 @@ pub fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool {
 }
 
 /// Things mounted on the stretch of wall B that opened: down once half of the cells behind them are gone.
-pub fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, queue: &mut Vec<crate::wallbreak::AABB>, rects: &mut Vec<[f64; 4]>) {
+pub(in crate::breakage) fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, queue: &mut Vec<crate::wallbreak::AABB>, rects: &mut Vec<[f64; 4]>) {
     let (b_id, bx, nx, ny, nz) = { let r = &g.tab.wallbreak_breakable[b]; (r.id, r.box_, r.nx, r.ny, r.nz) };
     let wa = aabb(g, bx);
     let along = along_x(g, nx, bx);
@@ -307,7 +307,7 @@ pub fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, re
 }
 
 /// Static j has nothing left to stand on or hang from. True = it is gone from where it was.
-pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) -> bool {
+pub(in crate::breakage) fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) -> bool {
     let b = box_at(g, j);
     let d: V3 = match dir { Some(x) => v3::normalize([x[0], 0.2, x[2]]), None => [0.0, -1.0, 0.0] };
     if let Some(cid) = owner_of(g, j) {   // cover that stood on it: all of it goes
@@ -386,7 +386,7 @@ pub fn wall_break_round(g: &mut crate::game::Game, who: f64, hit_p: V3, dir: V3,
 }
 
 /// The plan of a blast at `at`, the boards the charge is set on out of its lines. Writes nothing it does not put back.
-pub fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64, hung: Option<&[f64]>) -> Vec<crate::wallbreak::WallBreakPlanBlastItem> {
+pub(in crate::breakage) fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64, hung: Option<&[f64]>) -> Vec<crate::wallbreak::WallBreakPlanBlastItem> {
     let own: Vec<f64> = match hung {
         Some(h) => Vec::from(h),
         None => match opts.hung { Some(x) => wall_break_hung_at(g, x.wall, at, x.r), None => Vec::new() },
@@ -438,7 +438,7 @@ fn widen_hole(full: &[f64], nearest: f64, min_hole: f64, nn: f64) -> (f64, f64) 
 }
 
 /// The plan of a blast at `at`: which cells of which breakables it opens, nearest first. Pure.
-pub fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64) -> Vec<crate::wallbreak::WallBreakPlanOfItem> {
+pub(in crate::breakage) fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64) -> Vec<crate::wallbreak::WallBreakPlanOfItem> {
     let k_ = g.k.walls.blast;
     let col = g.k.walls.col;
     let eye: V3 = [at[0], m::max(0.3, m::min(at[1] + 0.3, crate::scene_world::world().ceiling_y - 0.3)), at[2]];
@@ -530,7 +530,7 @@ pub fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbr
 }
 
 /// READ ONLY: what a blast at `at` would open, asked before it goes off.
-pub fn wall_break_would_open(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> Vec<crate::wallbreak::WallOpening> {
+pub(in crate::breakage) fn wall_break_would_open(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> Vec<crate::wallbreak::WallOpening> {
     let opts = opts.unwrap_or_default();
     if !wall_break_on(g) { return Vec::new(); }
     let r = opts.radius.unwrap_or(g.k.walls.blast.radius) * opts.power.unwrap_or(1.0);
@@ -566,14 +566,14 @@ pub fn wall_break_would_open(g: &mut crate::game::Game, at: V3, opts: Option<cra
 }
 
 /// The blast: open what it reaches; `hung_now` lasts as long as it does.
-pub fn wall_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
+pub(in crate::breakage) fn wall_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
     let res = wall_break_blast_of(g, at, opts.unwrap_or_default());
     g.destr.walls.hung_now = None;
     res
 }
 
 /// Everything is judged against the level as it stood when it went off, then opened.
-pub fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
+pub(in crate::breakage) fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
     let mut res = BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, panes: 0.0, opened: 0.0, serial: g.destr.walls.serial };
     if !wall_break_on(g) { return res; }
     let k_ = g.k.walls.blast;
@@ -659,7 +659,7 @@ fn let_go(g: &mut Game) {
 }
 
 /// The level put back: authored boxes as they were, appended statics cut off, nav re-baked. Nothing at all when nothing broke.
-pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
+pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     let silent = silent.unwrap_or(false);
     g.destr.walls.counter = 1.0;
     crate::wallwear::wall_wear_reset(g);

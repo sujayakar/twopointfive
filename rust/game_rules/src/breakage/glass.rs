@@ -95,13 +95,13 @@ pub fn is_sheet(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
 }
 
 /// the pane's unit normal: the world direction of its thin axis, sign arbitrary
-pub fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
+pub(in crate::breakage) fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (yaw, h) = { let row = seam_box(g, b); (row.yaw, row.h) };
     normal_of(yaw, h)
 }
 
 /// files a pane's crash for the floor's ears, heard from both its faces
-pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who: f64) {
+pub(in crate::breakage) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who: f64) {
     let serial = g.serial();
     let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() };
     let n = pane_normal(g, b);
@@ -116,7 +116,7 @@ pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who:
 }
 
 /// nearest point of box b (yawed, no rot) to p, and the distance
-pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
+pub(in crate::breakage) fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
     let (yaw, c, h) = { let row = seam_box(g, b); (row.yaw, row.c, row.h) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let (dx, dy, dz) = (p[0] - c[0], p[1] - c[1], p[2] - c[2]);
@@ -128,13 +128,13 @@ pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glas
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
-pub fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
+pub(in crate::breakage) fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
     let (c, hs) = { let row = seam_box(g, b); (row.c, row.h) };
     box_word(c, hs)
 }
 
 /// a box's word and a point to the millimetre, as one 32-bit word
-pub fn point_seed(word: f64, p: V3) -> f64 {
+pub(in crate::breakage) fn point_seed(word: f64, p: V3) -> f64 {
     ::sim::panes::point_seed(js::to_u32(word), p[0], p[1], p[2]) as f64
 }
 
@@ -144,7 +144,7 @@ pub fn hit_seed(g: &mut crate::game::Game, b: BoxId, p: V3) -> f64 {
 }
 
 /// the seed of a blast on a box: the charge's point on the floor plan, its height left out
-pub fn blast_seed(word: f64, at: V3) -> f64 {
+pub(in crate::breakage) fn blast_seed(word: f64, at: V3) -> f64 {
     point_seed(word, [at[0], 0.0, at[2]])
 }
 

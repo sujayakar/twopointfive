@@ -26,7 +26,7 @@ fn ray(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RayHit> {
 }
 
 /// Where a thing thrown from `from` at `v0` goes off: the item pool's own flight, moving nothing and rolling no die.
-pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, from: V3, v0: V3, step: Option<f64>) -> crate::throwplan::ThrowFlight {
+pub(in crate::orders_of_the_squad) fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, from: V3, v0: V3, step: Option<f64>) -> crate::throwplan::ThrowFlight {
     let step = step.unwrap_or(1.0 / 60.0);
     let frag = kind == crate::squadthrow::SquadThrowKind::Frag;
     let (radius, restitution, friction) = if frag {
@@ -127,7 +127,7 @@ pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThr
 }
 
 /// The walls that stand by a spot, for a bank: where rays out from over it first meet something solid, a hand's width off its face, the nearest first.
-pub fn throw_walls(g: &mut crate::game::Game, at: V3) -> Vec<V3> {
+pub(in crate::orders_of_the_squad) fn throw_walls(g: &mut crate::game::Game, at: V3) -> Vec<V3> {
     let (lob_walls, lob_wall_h, lob_wall_m) = (g.k.squadthrow.lob_walls, g.k.squadthrow.lob_wall_h, g.k.squadthrow.lob_wall_m);
     let o: V3 = [at[0], at[1] + lob_wall_h, at[2]];
     let mut out: Vec<(V3, f64)> = Vec::new();
@@ -158,7 +158,7 @@ pub fn hand_at(g: &mut crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option
 }
 
 /// It went off by the spot: within lobNearM of it over the floor, not up on something tall, nothing solid between the two.
-pub fn throw_hits(g: &mut crate::game::Game, end: V3, at: V3, slack: Option<f64>) -> bool {
+pub(in crate::orders_of_the_squad) fn throw_hits(g: &mut crate::game::Game, end: V3, at: V3, slack: Option<f64>) -> bool {
     let slack = slack.unwrap_or(0.0);
     v3::dist_xz(end, at) <= g.k.squadthrow.lob_near_m + slack
         && end[1] - at[1] <= g.k.squadthrow.lob_up_m
@@ -196,7 +196,7 @@ fn fly(g: &mut Game, kind: crate::squadthrow::SquadThrowKind, at: V3, from: V3, 
 }
 
 /// One man's worked-out throw at a spot: the hand, the throw and where it goes off. None: no way of throwing there.
-pub fn throw_to(g: &mut crate::game::Game, gd: GuardId, at: V3, kind: crate::squadthrow::SquadThrowKind, stood: Option<V3>, walls: Option<&[V3]>, lim: Option<&mut crate::throwplan::ThrowToLim>) -> Option<crate::throwplan::ThrowTo> {
+pub(in crate::orders_of_the_squad) fn throw_to(g: &mut crate::game::Game, gd: GuardId, at: V3, kind: crate::squadthrow::SquadThrowKind, stood: Option<V3>, walls: Option<&[V3]>, lim: Option<&mut crate::throwplan::ThrowToLim>) -> Option<crate::throwplan::ThrowTo> {
     let mut lim = lim;
     let c = g.gd[gd].ch;
     let p = match stood { Some(s) => s, None => g.ch[c].pos };

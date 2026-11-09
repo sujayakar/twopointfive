@@ -48,21 +48,21 @@ pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCa
 // ------------------------------------------------------------ the page's kind, a mission's issue
 
 /// A page that plays the kit as issued.
-pub fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
+pub(in crate::outfit) fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
 
 /// The page of a lesson says so: its stagings wear the issue.
 pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_page = on; }
 
 /// Every staging on this page wears the issue cards.
-pub fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_page }
+pub(in crate::outfit) fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_page }
 
 /// The level's block names a card for you: nothing is handed over it.
-pub fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
+pub(in crate::outfit) fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
     members.map_or(false, |m| m.has(String::from("0")))
 }
 
 /// A mission's own issue: `f` (the staging, asked again) runs under the mission's cards. False: no such block, or already issuing.
-pub fn kit_issue(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) -> bool {
+pub(in crate::outfit) fn kit_issue(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) -> bool {
     if issuing_on(g) { return false; }
     let Some(d) = g.level.scenarios.as_ref().and_then(|s| s.issue.clone()) else { return false; };
     as_issued(g, &mut |g| {
@@ -150,12 +150,12 @@ pub fn kit_you_nvg(g: &crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// A run that is played quietly: a quiet mission, or the plain night alone off the loadout screen.
-pub fn stealth_run(g: &crate::game::Game) -> bool {
+pub(in crate::outfit) fn stealth_run(g: &crate::game::Game) -> bool {
     g.quiet.active || (g.solo_card && !team_on_floor(g))
 }
 
 /// Your card onto the fresh Player.
-pub fn kit_player(g: &mut crate::game::Game) {
+pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
     if !g.m.kit.kit.on { return; }
     if kit_issue(g, &mut |g| kit_player(g)) { return; }
     if page_issued(g) && !issuing_on(g) { return as_issued(g, &mut |g| kit_player(g)); }
@@ -290,7 +290,7 @@ fn mine(g: &mut Game, tree: bool, w: crate::weapons::WeaponId, m: &MemberKit, sl
 }
 
 /// Nobody came with you: the counts the door tools and the wall charge spend are your card's.
-pub fn kit_alone(g: &mut crate::game::Game) {
+pub(in crate::outfit) fn kit_alone(g: &mut crate::game::Game) {
     if team_on_floor(g) { return; }
     crate::wallcharge::wall_charge_raise_carried(g, 0.0);
     let n = if charge_row(g, 0.0) { g.m.kit.kit.members[0].charges } else { 0.0 };
@@ -302,7 +302,7 @@ pub fn kit_alone(g: &mut crate::game::Game) {
 }
 
 /// The solo night wears your card.
-pub fn kit_solo(g: &mut crate::game::Game) {
+pub(in crate::outfit) fn kit_solo(g: &mut crate::game::Game) {
     g.solo_card = true;
     crate::seats::each_seat(g, &mut |v| kit_player(v));
 }
@@ -442,7 +442,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
 }
 
 /// The wall charges you and the `n` teammates who come carry between you.
-pub fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
+pub(in crate::outfit) fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
     if !g.m.kit.kit.on { return 0.0; }
     let mut w = 0.0;
     let top = m::min(n, KIT_MEMBERS - 1.0);
@@ -455,7 +455,7 @@ pub fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
 }
 
 /// The squad's counted stun canisters and charges with `n` teammates coming.
-pub fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
+pub(in crate::outfit) fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
     let issued = issued.unwrap_or(KitPoolIssued { bangs: g.k.doortools.bangs, charges: g.k.doortools.charges });
     let (mut b, mut c, mut f) = (issued.bangs, issued.charges, g.k.frag.squad);
     let on = g.m.kit.kit.on;
@@ -479,7 +479,7 @@ pub fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::Ki
 }
 
 /// The smoke canisters the squad brings to a run of `n` teammates.
-pub fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
+pub(in crate::outfit) fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
     let mut s = 0.0;
     if g.m.kit.kit.on {
         let mut i = 1usize;

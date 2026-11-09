@@ -12,12 +12,12 @@ use crate::v3::{self, Quat, V3};
 pub fn particles_impulse(g: &mut crate::game::Game, pos: V3, radius: f64, strength: f64, o: Option<&crate::render_particles::ImpulseOpts>) -> bool { g.out.push(crate::out_events::OutEvent::ParticlesImpulse(crate::out_events::OutParticlesImpulse { pos: pos, radius: radius, strength: strength, o: o.cloned() })); false }
 
 /// (src/render/particles.ts:417 Particles.setHeat)
-pub fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource]) { g.out.push(crate::out_events::OutEvent::ParticlesSetHeat(crate::out_events::OutParticlesSetHeat { srcs: srcs.to_vec() })); }
+pub(in crate::air_and_light) fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource]) { g.out.push(crate::out_events::OutEvent::ParticlesSetHeat(crate::out_events::OutParticlesSetHeat { srcs: srcs.to_vec() })); }
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/particles.ts:421 Particles.setWind)
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/particles.ts:423 Particles.clear)
-pub fn particles_clear(g: &crate::game::Game) {}
+pub(in crate::air_and_light) fn particles_clear(g: &crate::game::Game) {}
 
 /// THE POOL'S EMIT, the game's half: the record goes to the host's pool as an out event, as the generated boundary sends it (one with nothing to
 /// throw is not sent: the TypeScript returns before it queues). What the event says beside the record:

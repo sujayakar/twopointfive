@@ -10,7 +10,7 @@ use alloc::{vec::Vec};
 
 /// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
 /// down.
-pub fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::squad_ways) fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
     if !(crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl)) { return false; }

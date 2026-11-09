@@ -255,12 +255,12 @@ pub fn said(g: &mut crate::game::Game, k: crate::cues::CueKind) -> Vec<String> {
 }
 
 /// A line is shouted when its writer put an exclamation mark in it.
-pub fn is_shout(text: &str) -> bool {
+pub(in crate::speech) fn is_shout(text: &str) -> bool {
     text.contains('!')
 }
 
 /// Every new line's words, for the QA probe.
-pub fn cue_lines(g: &mut crate::game::Game) -> Vec<crate::cues::CueLinesItem> {
+pub(in crate::speech) fn cue_lines(g: &mut crate::game::Game) -> Vec<crate::cues::CueLinesItem> {
     let mut out = Vec::new();
     for l in LINES {
         for text in said(g, l.kind) { out.push(CueLinesItem { kind: l.kind, cls: l.cls, text }); }
@@ -332,7 +332,7 @@ fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFi
 }
 
 /// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.
-pub fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
+pub(in crate::speech) fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
     let t = g.time;
     prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
     let c = cls as usize;
@@ -438,7 +438,7 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 }
 
 /// Every ear of the team's a shout could reach.
-pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
+pub(in crate::speech) fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
@@ -507,7 +507,7 @@ pub fn cues_net_wait(g: &crate::game::Game, cls: f64) -> f64 {
 }
 
 /// The message ring has been put back as it was saved: its 'radio: ' rows are the strip's again.
-pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsItem]) {
+pub(in crate::speech) fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsItem]) {
     g.cues.heard_row = None;
     let radio: Vec<&crate::cues::CuesAdoptMsgsItem> = msgs.iter().filter(|m| m.text.starts_with("radio: ")).collect();
     let from = tail_from(radio.len(), g.k.cues.rows);
@@ -515,14 +515,14 @@ pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsI
 }
 
 /// A word over a man and nothing else: the bubble, no strip row, no class clock: nothing the net's own lines wait on (the recap's side call)
-pub fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) {
+pub(in crate::speech) fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
 }
 
 /// What a man is saying: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running. A cue that has had its time is passed over and
 /// left where it is: the next one takes its place.
-pub fn cues_bubble_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
+pub(in crate::speech) fn cues_bubble_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
     let b = g.gd[gd].bubble.as_ref().map(|b| Bubble { text: b.text.clone(), t: b.t, dur: b.dur, radio: b.radio });
     let Some(c) = g.cues.bubbles.get(gd).cloned() else { return b; };
     let t = g.time;
@@ -585,7 +585,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
 // ---------------------------------------------------------------- the words
 
 /// A place as a line says it.
-pub fn cues_at(g: &crate::game::Game, p: V3) -> crate::cues::CuesAt {
+pub(in crate::speech) fn cues_at(g: &crate::game::Game, p: V3) -> crate::cues::CuesAt {
     let n = crate::dialogue::place_name(g, p);
     let at = if n.starts_with("outside ") { n.clone() } else { alloc::format!("in {}", n) };
     CuesAt { the: n, at }
@@ -599,7 +599,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 }
 
 /// His row of `men`, made the first time he is asked after: the row itself.
-pub fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
+pub(in crate::speech) fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
         let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
         g.cues.men.set(gd, row);
@@ -608,7 +608,7 @@ pub fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate:
 }
 
 /// One cue from this man, if he can speak and has not just spoken: a bubble, and (a net line) a row for the strip.
-pub fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, vars: Option<&JsMap<String, String>>) -> bool {
+pub(in crate::speech) fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, vars: Option<&JsMap<String, String>>) -> bool {
     let t = g.time;
     let said_t = cues_man(g, gd).said_t;
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || t < g.gd[gd].dazzled_until || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
@@ -635,7 +635,7 @@ pub fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKi
 }
 
 /// Has the floor just heard this kind from somebody?
-pub fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool {
+pub(in crate::speech) fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool {
     let t = g.time;
     match *kind_t_of(&mut g.cues.kind_t, kind) {
         Some(kt) => t >= kt && t - kt < kind_gap(kind),
@@ -644,13 +644,13 @@ pub fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> 
 }
 
 /// Can he speak for his squad?
-pub fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::speech) fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     let t = g.time;
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
 }
 
 /// Who says a squad's word: the man the note names, else one holding, else the first fit.
-pub fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
+pub(in crate::speech) fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
     let mut men = Vec::new();
     for m in crate::enemysquads::squad_men(g, name) {
         if cues_fit(g, m) { men.push(m); }
@@ -760,7 +760,7 @@ fn squad_vars(sq: &str, ally: Option<&str>) -> JsMap<String, String> {
 }
 
 /// One note of the fight's log, in the words of the man it is about.
-pub fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
+pub(in crate::speech) fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
     let d = if who == "-" { None } else {
         g.fight.defs.iter().copied().find(|&d| { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].callsign == who && g.gd[gd].state != crate::game::GuardState::Dead })
     };
@@ -837,7 +837,7 @@ pub fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
 }
 
 /// The panel's line.
-pub fn cues_summary(g: &crate::game::Game) -> String {
+pub(in crate::speech) fn cues_summary(g: &crate::game::Game) -> String {
     let S = &g.cues.stats;
     let (drawn, of) = (S.heard_drawn + S.cue_drawn, S.heard + S.cue_net);
     let held = if js::truthy(S.dup + S.gap + S.full) { alloc::format!(" · held back: {} said already, {} too soon, {} outranked", js::num_str(S.dup), js::num_str(S.gap), js::num_str(S.full)) } else { String::new() };

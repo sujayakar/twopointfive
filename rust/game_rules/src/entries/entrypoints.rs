@@ -40,7 +40,7 @@ pub fn entry_points_tick(g: &mut crate::game::Game) {
 }
 
 /// One of ours stands at `p`: his side of every near opening he has a line to is known; in the opening, both.
-pub fn entry_points_mark(g: &mut crate::game::Game, p: V3) {
+pub(in crate::entries) fn entry_points_mark(g: &mut crate::game::Game, p: V3) {
     let known_m = g.k.entry.known_m;
     for o in crate::cover::cover_ready(g) {
         let (at, n, half) = opening_shape(g, o);
@@ -59,7 +59,7 @@ pub fn entry_points_mark(g: &mut crate::game::Game, p: V3) {
 }
 
 /// A line from a man at `p` to the face of `o` on side `sg` (its middle, or either third of its width). `open`: leaves out of the way.
-pub fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
+pub(in crate::entries) fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
     let eye: V3 = [p[0], EYE, p[2]];
     let (at, n, half) = opening_shape(g, o);
     for k in [0.0, 0.6, -0.6] {
@@ -79,7 +79,7 @@ pub fn entry_points_far_known(g: &crate::game::Game, o: CoverOpeningId, p: V3) -
 }
 
 /// The nearest uncleared opening that makes `p` a bad place to stand still. `skip`: the door this entry comes in by. `gaps`: count the nav grid's gaps too.
-pub fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Option<DoorId>, gaps: Option<bool>) -> Option<CoverOpeningId> {
+pub(in crate::entries) fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Option<DoorId>, gaps: Option<bool>) -> Option<CoverOpeningId> {
     let gaps = gaps.unwrap_or(false);
     let k = g.k.entry;
     let tan = m::tan(k.line_deg * m::PI / 180.0);
@@ -116,7 +116,7 @@ pub fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Option<DoorI
 }
 
 /// An entry's points through door `d`, each risky one moved off its opening where the room has the floor and given that opening to hold a gun on. `frame(p)`: p in the door's frame.
-pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate::entrypoints::Pod], frame: &mut dyn FnMut(&mut crate::game::Game, V3) -> [f64; 2]) -> Vec<crate::entrypoints::Pod> {
+pub(in crate::entries) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate::entrypoints::Pod], frame: &mut dyn FnMut(&mut crate::game::Game, V3) -> [f64; 2]) -> Vec<crate::entrypoints::Pod> {
     let k = g.k.entry;
     if pods.is_empty() { return pods.to_vec(); }
     let cs = g.col.nav.cell;
@@ -181,12 +181,12 @@ pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate
 }
 
 /// A search point taken over a better-seeing one by an uncleared opening: it counts as moved.
-pub fn entry_points_swapped(g: &crate::game::Game, pod: &mut crate::entrypoints::Pod) {
+pub(in crate::entries) fn entry_points_swapped(g: &crate::game::Game, pod: &mut crate::entrypoints::Pod) {
     pod.moved = true;
 }
 
 /// A point an entry has just dealt to a man: the tallies.
-pub fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
+pub(in crate::entries) fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
     g.entry.stats.pods += 1.0;
     let risky = entry_points_risk_at(g, pod.pos, skip, None).is_some();
     if risky { g.entry.stats.risky += 1.0; }
@@ -198,7 +198,7 @@ pub fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Po
 }
 
 /// The tallies in a line.
-pub fn entry_points_summary(g: &crate::game::Game) -> String {
+pub(in crate::entries) fn entry_points_summary(g: &crate::game::Game) -> String {
     let s = g.entry.stats;
     let n = g.entry.been.values().filter(|&&v| js::truthy(v)).count();
     alloc::format!(

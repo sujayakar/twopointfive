@@ -67,7 +67,7 @@ fn go_to_plan(g: &mut Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::La
 // ---- the translation ----
 
 /// The alert branch for a man in the standoff: feet, gun, mouth; his move speed and the point he looks / aims at.
-pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::guards::Pair) -> crate::guards::StandoffAlert {
+pub(in crate::man) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::guards::Pair) -> crate::guards::StandoffAlert {
     let s = g.gd[gd].standoff.unwrap();
     let c = g.gd[gd].ch;
     let aim = p.aim;
@@ -207,7 +207,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
 }
 
 /// Every frame for a man carrying a standoff record: is it still one? The pair when it stands.
-pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
+pub(in crate::man) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
@@ -288,7 +288,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
 }
 
 /// he sees a man who is up: any player, each asked of on his own seat
-pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.seats.len() == 1 { let p = g.player; return !g.pl[p].down && can_see(g, gd).visible; }
     for s in g.seats.clone() {
         if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !g.pl[p].down && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
@@ -340,7 +340,7 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.
-pub fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+pub(in crate::man) fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if g.touring { return g.k.guard_eye.range; }
     if is_player {
         let vis = g.pl[sam].visibility;
@@ -364,7 +364,7 @@ pub fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: Char
 }
 
 /// True = this glimpse from past `range` feeds his awareness and writes no fix.
-pub fn far_faint(g: &crate::game::Game, gd: GuardId, dist: f64, was: f64) -> bool {
+pub(in crate::man) fn far_faint(g: &crate::game::Game, gd: GuardId, dist: f64, was: f64) -> bool {
     let k = g.k.guard_eye;
     faint_of(&k, g.gd[gd].state, g.gd[gd].awareness, dist, was)
 }
@@ -378,7 +378,7 @@ fn faint_of(k: &crate::knobs::GuardEyeK, state: crate::game::GuardState, awarene
 }
 
 /// The distance term of a sighting's rate.
-pub fn dist_term(g: &crate::game::Game, dist: f64) -> f64 {
+pub(in crate::man) fn dist_term(g: &crate::game::Game, dist: f64) -> f64 {
     let k = g.k.guard_eye;
     dist_term_of(&k, dist)
 }
@@ -395,7 +395,7 @@ pub fn team_through(g: &crate::game::Game) -> f64 {
 }
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
-pub fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::man) fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].team == crate::teams::Team::Operative { team_through(g) } else { crate::scene_boxes::box_flag().glass }
 }
 
@@ -430,7 +430,7 @@ pub fn stranded_at(g: &crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// Can his body be walked straight from `from` to `to`?
-pub fn leg_clear(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
+pub(in crate::man) fn leg_clear(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l = m::hyp2(dx, dz);
@@ -448,7 +448,7 @@ pub fn leg_clear(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
 }
 
 /// The free cell centre nearest to `from` within `reach` that passes `test`.
-pub fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: crate::guards::FreeCellNearTest) -> Option<V3> {
+pub(in crate::man) fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: crate::guards::FreeCellNearTest) -> Option<V3> {
     let cs = g.col.nav.cell;
     let r = m::ceil(reach / cs);
     let cx = m::floor(from[0] / cs);
@@ -484,7 +484,7 @@ pub fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: cra
 }
 
 /// Put him on the free cell centre `to` (or the nearest free one) here and now: the last resort, counted, never spoken.
-pub fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &str) {
+pub(in crate::man) fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &str) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let p = match to {
@@ -508,7 +508,7 @@ pub fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why:
 }
 
 /// The side-step he has going, if it still means anything.
-pub fn live_leg(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::UnstickLeg> {
+pub(in crate::man) fn live_leg(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::UnstickLeg> {
     let u = *g.m.guards.unstick_legs.get(gd)?;
     let pos = g.ch[g.gd[gd].ch].pos;
     if v3::dist_xz(pos, u.to) > 0.36 && !crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) {
@@ -519,7 +519,7 @@ pub fn live_leg(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards:
 }
 
 /// If he stands stranded and has no side-step going, begin one, or snap.
-pub fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::UnstickBegin {
+pub(in crate::man) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::UnstickBegin {
     let c = g.gd[gd].ch;
     if live_leg(g, gd).is_some() { return crate::guards::UnstickBegin::Leg; }
     let pos = g.ch[c].pos;
@@ -549,7 +549,7 @@ pub fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::U
 }
 
 /// One frame of the side-step: `u` is the frame's copy of his row of unstick_legs; what it remembers is written through the table.
-pub fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guards::UnstickStep {
+pub(in crate::man) fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guards::UnstickStep {
     let u = *g.m.guards.unstick_legs.get(gd).unwrap();
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -582,7 +582,7 @@ pub fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::g
 }
 
 /// The leg ahead of any path-following this frame; when it ends, plan the remembered goal afresh. True = the leg had this frame.
-pub fn unstick_first(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
+pub(in crate::man) fn unstick_first(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     if !g.m.guards.unstick_legs.has(gd) { return false; }
     let r = unstick_step(g, gd, dt);
     if r == crate::guards::UnstickStep::Walking { return true; }

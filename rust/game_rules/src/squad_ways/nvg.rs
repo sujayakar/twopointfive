@@ -72,7 +72,7 @@ pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
 }
 
 /// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.
-pub fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
+pub(in crate::squad_ways) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
     tube_curve(g, e).1
 }
 
@@ -115,7 +115,7 @@ fn read_at(g: &mut Game, x: f64, z: f64, tube: bool, lamp: bool, dim: &mut bool,
 }
 
 /// His place, read twice a second: dark to the bare eye, too dark for the tube.
-pub fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
+pub(in crate::squad_ways) fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     if g.time - m.place_t >= 0.0 && g.time - m.place_t < 0.5 {
         return;
     }

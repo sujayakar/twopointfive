@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The net's ask runs on this floor: a floor whose every squad stays in its rooms.
-pub fn net_asks(g: &crate::game::Game) -> bool {
+pub(in crate::enemies) fn net_asks(g: &crate::game::Game) -> bool {
     match &g.m.enemysquads.states {
         Some(st) => st.stay_ask == Some(true),
         None => false,

@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// Shift + the key adds a goal: on Sam's own squad, and on a lesson only from the step that teaches it.
-pub fn goals_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::orders_of_the_squad) fn goals_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     crate::orders::squad_orders_sams(g, seat) && !crate::rails::rails_locks(g, "goal")
 }
 
 /// The squad as the goals it is on now: the men with nothing to do, and the rest by what they were sent to.
-pub fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::planmode::GoalParts {
+pub(in crate::orders_of_the_squad) fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::planmode::GoalParts {
     let mut idle: Vec<GuardId> = Vec::new();
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
     for m in crate::orders::squad_orders_men(g, seat, Some(crate::orders::SquadOrdersMenSel::All), None) {
@@ -96,7 +96,7 @@ pub fn goal_men(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> Option
 }
 
 /// Shift + the key kept down is the ring for those men.
-pub fn goal_ring_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub(in crate::orders_of_the_squad) fn goal_ring_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     goals_on(g, seat)
 }
 
@@ -117,12 +117,12 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
 }
 
 /// Shift + the ring's key is the goal's own this frame, only where the ring has no hold to wait out.
-pub fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
+pub(in crate::orders_of_the_squad) fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
     (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && goals_on(g, seat) && !(g.k.cmdring.hold_secs > 0.0)
 }
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down.
-pub fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+pub(in crate::orders_of_the_squad) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     if !(goal_shift(g, &crate::seats::here(g), input) && g.orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
         return;
     }

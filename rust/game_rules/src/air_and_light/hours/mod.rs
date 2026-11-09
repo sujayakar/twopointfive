@@ -35,11 +35,11 @@ pub const HOUR_ROW: [HourId; 5] = [HourId::Dawn, HourId::Midday, HourId::Overcas
 /// The hour's label on the sheet.
 pub fn hour_label(id: HourId) -> String { if id == HourId::Night { night().label } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.label.clone()) } }
 /// The local time it stands for.
-pub fn hour_clock(id: HourId) -> String { if id == HourId::Night { night().clock } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.clock.clone()) } }
+pub(in crate::air_and_light) fn hour_clock(id: HourId) -> String { if id == HourId::Night { night().clock } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.clock.clone()) } }
 /// The sheet's sentence.
-pub fn hour_words(id: HourId) -> String { if id == HourId::Night { night().words } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.words.clone()) } }
+pub(in crate::air_and_light) fn hour_words(id: HourId) -> String { if id == HourId::Night { night().words } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.words.clone()) } }
 /// The cloud already in an hour's numbers.
-pub fn hour_cloud(id: HourId) -> f64 { hours().get(String::from(id.as_str())).and_then(|h| h.cloud).unwrap_or(0.0) }
+pub(in crate::air_and_light) fn hour_cloud(id: HourId) -> f64 { hours().get(String::from(id.as_str())).and_then(|h| h.cloud).unwrap_or(0.0) }
 
 /// A link with the hour on it (night = none): whatever hour it carried is replaced.
 pub fn hour_href(href: &str, id: HourId) -> String {
@@ -89,7 +89,7 @@ pub fn exposure_of(g: &crate::game::Game) -> f64 {
 }
 
 /// The level's brightest steady directional light that is up, when no hour is laid over it.
-pub fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
+pub(in crate::air_and_light) fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
     if g.m.hours.states.is_some() { return None; }
     let mut moon: Option<LightId> = None;
     let mut best = 0.002;
@@ -129,12 +129,12 @@ pub fn set_sun_strength(g: &mut crate::game::Game, k: f64, given: Option<bool>) 
 // ---------------------------------------------------------------- the weather over the hour
 
 /// The light on open ground under cloud cover c, of a clear sky's.
-pub fn cloud_sun(c_2: f64) -> f64 {
+pub(in crate::air_and_light) fn cloud_sun(c_2: f64) -> f64 {
     1.0 - 0.75 * m::pow(v3::clamp(c_2, 0.0, 1.0), 3.4)
 }
 
 /// How far cloud cover c has spread the sun and greyed the sky.
-pub fn cloud_soft(c_2: f64) -> f64 {
+pub(in crate::air_and_light) fn cloud_soft(c_2: f64) -> f64 {
     v3::smoothstep(0.5, 1.0, c_2)
 }
 
@@ -151,7 +151,7 @@ pub fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
 }
 
 /// The sky's share of the light on open ground at an hour as authored.
-pub fn sky_share(d: &crate::hours::HourDef) -> f64 {
+pub(in crate::air_and_light) fn sky_share(d: &crate::hours::HourDef) -> f64 {
     let rays = sky();
     let zen = lum(d.sky.zenith);
     let hor = lum(d.sky.horizon);
@@ -162,7 +162,7 @@ pub fn sky_share(d: &crate::hours::HourDef) -> f64 {
 }
 
 /// [sun, sky] under cover c, each as a factor of the hour's own.
-pub fn cloud_light(d: &crate::hours::HourDef, c_2: f64) -> [f64; 2] {
+pub(in crate::air_and_light) fn cloud_light(d: &crate::hours::HourDef, c_2: f64) -> [f64; 2] {
     let ch = d.cloud.unwrap_or(0.0);
     let c = m::max(v3::clamp(c_2, 0.0, 1.0), ch);
     if c == ch { return [1.0, 1.0]; }
@@ -173,13 +173,13 @@ pub fn cloud_light(d: &crate::hours::HourDef, c_2: f64) -> [f64; 2] {
 }
 
 /// The light on level open ground under cover c as a factor of the hour's own.
-pub fn cloud_total(d: &crate::hours::HourDef, c_2: f64) -> f64 {
+pub(in crate::air_and_light) fn cloud_total(d: &crate::hours::HourDef, c_2: f64) -> f64 {
     let ch = d.cloud.unwrap_or(0.0);
     cloud_sun(m::max(v3::clamp(c_2, 0.0, 1.0), ch)) / cloud_sun(ch)
 }
 
 /// The weather this game is in laid over the hour's row: the storm's switch, the sun and the sky.
-pub fn under_weather(g: &mut crate::game::Game) {
+pub(in crate::air_and_light) fn under_weather(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let (d, was_off, sun) = (st.def.clone(), st.was_off, st.sun);
     let kind = crate::weather::weather_kind(g).is_some();
@@ -217,14 +217,14 @@ pub fn under_weather(g: &mut crate::game::Game) {
 }
 
 /// The weather under a running game changed: the hour's storm switch, sun and sky follow; nothing at night.
-pub fn hour_weather_changed(g: &mut crate::game::Game) {
+pub(in crate::air_and_light) fn hour_weather_changed(g: &mut crate::game::Game) {
     if g.m.hours.states.is_none() { return; }
     under_weather(g);
     crate::host_api::host_api_invalidate_world_cache(g);
 }
 
 /// A sun strength set by hand handed back to the weather's cloud.
-pub fn sun_to_cloud(g: &mut crate::game::Game) {
+pub(in crate::air_and_light) fn sun_to_cloud(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_mut() else { return };
     st.given = false;
     under_weather(g);
@@ -235,7 +235,7 @@ pub fn lum(c_2: V3) -> f64 {
 }
 
 /// Where the hour's sun stands, as a unit vector.
-pub fn to_sun_of(d: &crate::hours::HourDef) -> V3 {
+pub(in crate::air_and_light) fn to_sun_of(d: &crate::hours::HourDef) -> V3 {
     let e = d.sun.elev_deg * DEG;
     let b = d.sun.bearing_deg * DEG;
     v3::normalize([m::sin(b) * m::cos(e), m::sin(e), -m::cos(b) * m::cos(e)])
@@ -254,7 +254,7 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
 }
 
 /// The moon out, the hour's sun in at the moon's place, the sky, haze and exposure, the weather over it, the photocell.
-pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
+pub(in crate::air_and_light) fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
     let kind = crate::weather::weather_kind(g).is_some();
     let stood = g.stood;
@@ -300,7 +300,7 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
 pub const NIGHT_HAZE: f64 = 0.035;
 
 /// The picture's settings as the level's own night has them, once the hour or the show's day taken off was at this exposure.
-pub fn night_picture(g: &mut crate::game::Game, was_exposure: f64) {
+pub(in crate::air_and_light) fn night_picture(g: &mut crate::game::Game, was_exposure: f64) {
     g.engine.settings.sky_zenith = v3::copy(g.level.sky.zenith);
     g.engine.settings.sky_horizon = v3::copy(g.level.sky.horizon);
     g.engine.settings.haze_density = NIGHT_HAZE;
@@ -308,7 +308,7 @@ pub fn night_picture(g: &mut crate::game::Game, was_exposure: f64) {
 }
 
 /// Everything the hour laid over the level put back.
-pub fn take_out(g: &mut crate::game::Game) {
+pub(in crate::air_and_light) fn take_out(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let lamps: Vec<(FixtureId, bool)> = st.lamps.iter().map(|(t, was)| (t, *was)).collect();
     let moons = st.moons.clone();
@@ -359,7 +359,7 @@ pub fn hour_after_reset(g: &mut crate::game::Game) {
 // ---------------------------------------------------------------- the meter's stand-in
 
 /// THE SKY THE GAME'S LIGHT IS WORKED FROM NOW: the hour's as its weather leaves it, else the level's own night. Worked out from state the game keeps, as `exposure_of` is, and never read off the picture's settings, which a panel turns. What `under_weather` tells the picture is this.
-pub fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
+pub(in crate::air_and_light) fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
     match g.m.hours.states.as_ref() {
         Some(st) => crate::hours::SkyStateDome { zenith: greyed(st.def.sky.zenith, st.soft, Some(st.sky_k)), horizon: greyed(st.def.sky.horizon, st.soft, Some(st.sky_k)) },
         None => crate::hours::SkyStateDome { zenith: g.level.sky.zenith, horizon: g.level.sky.horizon },
@@ -367,7 +367,7 @@ pub fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
 }
 
 /// The sky's luminance at height y, off the game's sky now or the dome given.
-pub fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
+pub(in crate::air_and_light) fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
     let d = match sky { Some(d) => d, None => sky_dome(g) };
     let (zen, hor) = (lum(d.zenith), lum(d.horizon));
     let t = v3::clamp(y * 2.5, 0.0, 1.0);
@@ -407,7 +407,7 @@ pub fn reach_of(b: crate::hours::SkyStateBox, p: V3, d: V3) -> f64 {
 }
 
 /// The statics alone between a and b: no door leaf is in the way.
-pub fn static_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub(in crate::air_and_light) fn static_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
 }
 
@@ -448,7 +448,7 @@ fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) -> Vec<Open> {
 }
 
 /// The ambient's rays that leave point C unblocked by the statics.
-pub fn open_rays(g: &mut crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
+pub(in crate::air_and_light) fn open_rays(g: &mut crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
     let to_sun = g.m.hours.reach.to_sun;
     let (sky_rays, gnd_rays) = (sky(), gnd());
     let mut out: Vec<Open> = Vec::new();

@@ -27,7 +27,7 @@ pub fn sim_part(p: f64) -> f64 {
 }
 
 /// How long part `p` of a block is, in bytes.
-pub fn sim_part_len(p: f64) -> f64 {
+pub(in crate::world) fn sim_part_len(p: f64) -> f64 {
     ::sim::state::PARTS[p as usize].len as f64
 }
 

@@ -32,7 +32,7 @@ fn inner(i: f64, dc: &JsMap<Num, DoorId>, line_of: &JsMap<Num, CoverOpeningId>) 
 
 /// The space round `p` and its ways out; pure, draws no dice. `reach`: metres of walking followed; `hint`: whose side, with `p` on a line; `ring`:
 /// the keys a locked leaf is judged against, default the team's.
-pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Option<V3>, ring: Option<&JsSet<String>>) -> crate::roomread::RoomRead {
+pub(in crate::entries) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Option<V3>, ring: Option<&JsSet<String>>) -> crate::roomread::RoomRead {
     let reach = reach.unwrap_or(9.0);
     let hint = hint.unwrap_or(p);
     let (w, cs) = (g.col.nav.w, g.col.nav.cell);
@@ -170,7 +170,7 @@ fn door_face(g: &Game, d: DoorId) -> SideSignD {
 }
 
 /// Which face of a door a point is on, in orders.ts sideOf's sign.
-pub fn side_sign(d: &crate::roomread::SideSignD, p: V3) -> f64 {
+pub(in crate::entries) fn side_sign(d: &crate::roomread::SideSignD, p: V3) -> f64 {
     let th = d.def.closed_dir;
     let (h0, h1) = match &d.def.hinge {
         SideSignDDefHinge::List(h) => (h[0], h[1]),

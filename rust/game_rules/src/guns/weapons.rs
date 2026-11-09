@@ -201,7 +201,7 @@ pub fn firearm_auto_idle(g: &mut crate::game::Game, id: FirearmId, dt: f64, trig
 }
 
 /// never runs out of spares
-pub fn firearm_bottomless(g: &mut crate::game::Game, id: FirearmId) -> bool {
+pub(in crate::guns) fn firearm_bottomless(g: &mut crate::game::Game, id: FirearmId) -> bool {
     let def = g.fa[id].def;
     !row(g, def).spare_mags.is_finite()
 }
@@ -297,7 +297,7 @@ pub fn firearm_cancel_reload(g: &mut crate::game::Game, id: FirearmId) {
     fa.reload_t = -1.0; fa.stage = 0.0; fa.beat = None; fa.cues = None; fa.shell_t = None;
 }
 
-pub fn firearm_plan_shells(g: &mut crate::game::Game, id: FirearmId, times: &[f64], port: bool) {
+pub(in crate::guns) fn firearm_plan_shells(g: &mut crate::game::Game, id: FirearmId, times: &[f64], port: bool) {
     let fa = &mut g.fa[id];
     let tube = *fa.mag.get_or_insert(0.0);
     fa.shell_t = Some(times.to_vec());
@@ -309,13 +309,13 @@ pub fn firearm_plan_shells(g: &mut crate::game::Game, id: FirearmId, times: &[f6
 }
 
 /// a man whose reload is a beat of his own feeds a shell at a time on `row`
-pub fn firearm_plan_feed(g: &mut crate::game::Game, id: FirearmId, row: crate::weapons::WeaponDefReload, times: &[f64], port: bool) {
+pub(in crate::guns) fn firearm_plan_feed(g: &mut crate::game::Game, id: FirearmId, row: crate::weapons::WeaponDefReload, times: &[f64], port: bool) {
     g.fa[id].beat = Some(row);
     firearm_plan_shells(g, id, times, port);
 }
 
 /// his beat has come to `t` seconds: the shells due by then are in the gun
-pub fn firearm_feed_to(g: &mut crate::game::Game, id: FirearmId, t: f64, free: Option<bool>) {
+pub(in crate::guns) fn firearm_feed_to(g: &mut crate::game::Game, id: FirearmId, t: f64, free: Option<bool>) {
     let free = free.unwrap_or(true);
     loop {
         let i = g.fa[id].shell_i;
@@ -328,7 +328,7 @@ pub fn firearm_feed_to(g: &mut crate::game::Game, id: FirearmId, t: f64, free: O
 }
 
 /// one shell into the gun, out of the fewest loose ones he carries; false: no room, or none left
-pub fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<bool>, free: Option<bool>) -> bool {
+pub(in crate::guns) fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<bool>, free: Option<bool>) -> bool {
     let (port, free) = (port.unwrap_or(false), free.unwrap_or(false));
     let def = g.fa[id].def;
     let tube = g.fa[id].mag.unwrap_or(0.0);

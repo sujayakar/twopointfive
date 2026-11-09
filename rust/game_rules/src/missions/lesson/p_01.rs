@@ -33,7 +33,7 @@ fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
 /// a line that names the knife, while there is none: the right click's knockout is the blow
-pub fn bare_line(line: &str) -> String {
+pub(in crate::missions) fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
     let s = replace_words(&s, "left click to knife him", "right-click to knock him out");
     replace_words(&s, "left-click to kill him with the knife", "right-click to knock him out")
@@ -81,7 +81,7 @@ pub fn lesson_token(name: &str) -> bool {
 }
 
 /// a line's tokens written out; on the page `held` is false and `bare` true when not given
-pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
+pub(in crate::missions) fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     // (held = stalkClickOnly() with NO game: STALK.on && STALK.only && !STALK.key, false on the page · bare = CLOSE.on && CLOSE.noKnife, true on it)
     let (held, bare) = (held.unwrap_or(false), bare.unwrap_or(true));
     if !line.contains('{') { return String::from(line); }
@@ -134,7 +134,7 @@ pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p
 pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none
-pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
+pub(in crate::missions) fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
@@ -415,7 +415,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
 /// a row's `below` and `above`
-pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
+pub(in crate::missions) fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
     let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }

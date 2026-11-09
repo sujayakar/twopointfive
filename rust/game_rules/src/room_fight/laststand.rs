@@ -149,7 +149,7 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him
-pub fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
@@ -249,14 +249,14 @@ pub fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineK
 }
 
 /// a line that says where its man stands: the place is asked again as the line is said
-pub fn net_at(g: &mut crate::game::Game, d: RoomfightDefId, kind: crate::laststand::LineKind, f: &crate::laststand::LaterRedo) {
+pub(in crate::room_fight) fn net_at(g: &mut crate::game::Game, d: RoomfightDefId, kind: crate::laststand::LineKind, f: &crate::laststand::LaterRedo) {
     let gd = g.tab.roomfight_def[d].gd;
     let a = redo_words(g, f);
     net(g, gd, kind, Some(&a.vars), a.then.as_ref(), Some(f));
 }
 
 /// the lines waiting their turn on the strip: said by the same man if he is still fit to say it
-pub fn tick_later(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn tick_later(g: &mut crate::game::Game) {
     if st_of(g).later.is_empty() { return; }
     let list = core::mem::take(&mut st_of(g).later);
     let mut kept = Vec::new();
@@ -284,7 +284,7 @@ pub fn name(g: &mut crate::game::Game, d: RoomfightDefId, id_2: Option<&str>) {
 }
 
 /// named by what he said, the room or the place; kept, to be said again when it stops being true
-pub fn name_at(g: &mut crate::game::Game, d: RoomfightDefId, w: Option<&crate::laststand::Spoken>) {
+pub(in crate::room_fight) fn name_at(g: &mut crate::game::Game, d: RoomfightDefId, w: Option<&crate::laststand::Spoken>) {
     name(g, d, w.and_then(|w| w.id.as_deref()));
     let w = match w { Some(w) if id_truthy(&w.id) || w.spot.is_some() => w, _ => return };
     let (p, time) = (man_pos(g, d), g.time);
@@ -295,7 +295,7 @@ pub fn name_at(g: &mut crate::game::Game, d: RoomfightDefId, w: Option<&crate::l
 }
 
 /// a man who is no longer where he said says where he is now, or that he has gone after the team
-pub fn tick_moved(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn tick_moved(g: &mut crate::game::Game) {
     let (moved_secs, still_secs, moved_gap) = (g.k.laststand.moved_secs, g.k.laststand.still_secs, g.k.laststand.moved_gap);
     for d in st_of(g).at.keys() {
         if !alive(g, d) { st_of(g).at.delete(d); continue; }
@@ -327,7 +327,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
 }
 
 /// one of the fit asks the net who is still up; every other man up gets his beat to answer
-pub fn start_check(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn start_check(g: &mut crate::game::Game) {
     let men = up_defs(g);
     let can: Vec<RoomfightDefId> = men.iter().copied().filter(|&d| calm(g, d)).collect();
     let caller = can.iter().copied().find(|&d| g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold)
@@ -358,7 +358,7 @@ pub fn start_check(g: &mut crate::game::Game) {
 }
 
 /// the answers on their beats; at its close what the survivors know of each other. C is st.check, read by its path
-pub fn tick_check(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn tick_check(g: &mut crate::game::Game) {
     let caller = check_of(g).caller;
     let caller_gd = g.tab.roomfight_def[caller].gd;
     if !alive(g, caller) {
@@ -423,7 +423,7 @@ pub fn lone(st: &mut crate::laststand::State) -> bool {
 }
 
 /// call out only: the one who asked says what the count is, and where he is
-pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
+pub(in crate::room_fight) fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     let free = g.tab.roomfight_def[c_2].mode == crate::roomfight::DefMode::Free;
     let st = st_of(g);
     let n = st.known.len() as i32;
@@ -560,12 +560,12 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
 }
 
 /// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.
-pub fn last_stand_tick(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
 }
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.
-pub fn step_stand(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn step_stand(g: &mut crate::game::Game) {
     if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.night_breach.hostiles.clone();
@@ -598,7 +598,7 @@ pub fn step_stand(g: &mut crate::game::Game) {
 }
 
 /// The fight is over (RoomFight.stop): everything forgotten but the counts and the lines.
-pub fn last_stand_stop(g: &mut crate::game::Game) {
+pub(in crate::room_fight) fn last_stand_stop(g: &mut crate::game::Game) {
     let Some(st) = g.m.laststand.states.as_mut() else { return };
     st.check = None;
     st.known.clear();

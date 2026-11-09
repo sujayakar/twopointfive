@@ -21,7 +21,7 @@ pub fn big_off(b: crate::character::BigOffB) -> bool {
 }
 
 /// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax.
-pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
+pub(in crate::body) fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
     let ox = ro[0] - cx;
     let oz = ro[2] - cz;
     let a = rd[0] * rd[0] + rd[2] * rd[2];
@@ -59,13 +59,13 @@ pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
 }
 
 /// A MOVES reaction has the trunk and head this frame.
-pub fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
+pub(in crate::body) fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }
 
 /// A MOVES reaction that also has his arms: all of them but a soft duck.
-pub fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
+pub(in crate::body) fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     (m.fl_t >= 0.0 && !m.fl_soft) || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }

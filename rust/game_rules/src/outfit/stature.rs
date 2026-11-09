@@ -26,7 +26,7 @@ pub fn hash01(n: f64) -> f64 {
 }
 
 /// The man's own stature (1 for a player's man, and for everybody with no cast loaded).
-pub fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+pub(in crate::outfit) fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
@@ -62,7 +62,7 @@ pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool 
 pub fn stature_of(g: &crate::game::Game, c_2: CharId) -> f64 { g.m.stature.shown.get(c_2).copied().unwrap_or(1.0) }
 
 /// Where a point of the simulation's man is DRAWN: scaled about his feet.
-pub fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
+pub(in crate::outfit) fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
     let s = match s { Some(s) => s, None => stature_of(g, c_2) };
     let f = g.ch[c_2].pos;
     if s == 1.0 { p } else { [f[0] + (p[0] - f[0]) * s, f[1] + (p[1] - f[1]) * s, f[2] + (p[2] - f[2]) * s] }

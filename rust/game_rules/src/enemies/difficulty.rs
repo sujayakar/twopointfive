@@ -267,7 +267,7 @@ pub fn fog_off_now(g: &crate::game::Game) -> bool {
 }
 
 /// a lever is moved off the level by hand.
-pub fn any_set(g: &crate::game::Game) -> bool {
+pub(in crate::enemies) fn any_set(g: &crate::game::Game) -> bool {
     let s = &g.m.difficulty.set;
     s.fog.is_some() || s.ai.is_some() || s.kit.is_some() || s.told.is_some()
 }
@@ -281,7 +281,7 @@ pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<
 }
 
 /// where a level puts every lever, on the structure the game stands on.
-pub fn preset_levers(g: &crate::game::Game, level: crate::difficulty::Difficulty, structure: Option<&str>) -> crate::difficulty::Levers {
+pub(in crate::enemies) fn preset_levers(g: &crate::game::Game, level: crate::difficulty::Difficulty, structure: Option<&str>) -> crate::difficulty::Levers {
     let here;
     let structure = match structure {
         Some(s) => s,
@@ -320,7 +320,7 @@ pub fn same(a: &crate::difficulty::SameOf, b: &crate::difficulty::SameOf) -> boo
 }
 
 /// the two tables a level and the levers over it write.
-pub fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: Option<crate::difficulty::TablesOfSet>) -> crate::difficulty::TablesOf {
+pub(in crate::enemies) fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: Option<crate::difficulty::TablesOfSet>) -> crate::difficulty::TablesOf {
     let set = set.unwrap_or(TablesOfSet { ai: None, kit: None });
     let mut p = crate::pressure::pressure_defaults();
     let mut d = crate::digin::digin_defaults();
@@ -397,18 +397,18 @@ pub fn levers_shown(g: &crate::game::Game, structure: Option<&str>) -> crate::di
 }
 
 /// the two tables still stand where the level and the levers last wrote them.
-pub fn tables_stand(g: &crate::game::Game) -> bool {
+pub(in crate::enemies) fn tables_stand(g: &crate::game::Game) -> bool {
     let (base, set) = (g.m.difficulty.base, set_as_tables(g.m.difficulty.set));
     let t = tables_of(g, base, Some(set));
     pressure_same(&t.p, &g.k.pressure) && digin_same(&t.d, &g.k.digin)
 }
 
-pub fn cone_of(rung: crate::quietfog::QuietRung) -> bool {
+pub(in crate::enemies) fn cone_of(rung: crate::quietfog::QuietRung) -> bool {
     rung == crate::quietfog::QuietRung::Cones || rung == crate::quietfog::QuietRung::Own
 }
 
 /// the level whose fog, AI and kit rungs the levers stand on as set.
-pub fn level_of_three(g: &crate::game::Game) -> crate::difficulty::Difficulty {
+pub(in crate::enemies) fn level_of_three(g: &crate::game::Game) -> crate::difficulty::Difficulty {
     let (s, base) = (g.m.difficulty.set, g.m.difficulty.base);
     if s.fog.is_none() && s.ai.is_none() && s.kit.is_none() { return base; }
     let b = preset_levers(g, base, None);
@@ -421,7 +421,7 @@ pub fn level_of_three(g: &crate::game::Game) -> crate::difficulty::Difficulty {
 }
 
 /// the fog's cone stands where the fog lever put it.
-pub fn fog_stands(g: &crate::game::Game) -> bool {
+pub(in crate::enemies) fn fog_stands(g: &crate::game::Game) -> bool {
     match g.m.difficulty.set.fog {
         None => true,
         Some(f) => g.k.fog.cone == g.m.difficulty.cone_visit.unwrap_or(cone_of(f)),
@@ -429,7 +429,7 @@ pub fn fog_stands(g: &crate::game::Game) -> bool {
 }
 
 /// every lever of the three with rows stands on a rung.
-pub fn shown_whole(g: &crate::game::Game) -> bool {
+pub(in crate::enemies) fn shown_whole(g: &crate::game::Game) -> bool {
     let s = levers_shown(g, None);
     s.fog.is_some() && s.ai.is_some() && s.kit.is_some()
 }
@@ -470,7 +470,7 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 }
 
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`.
-pub fn store_levers(g: &crate::game::Game, all: Option<bool>) {
+pub(in crate::enemies) fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
     let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
     match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
@@ -735,7 +735,7 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
 }
 
 /// the levers in a line; `all` false: only the ones moved by hand.
-pub fn levers_line(g: &crate::game::Game, all: Option<bool>) -> String {
+pub(in crate::enemies) fn levers_line(g: &crate::game::Game, all: Option<bool>) -> String {
     let all = all.unwrap_or(false);
     let s = levers_shown(g, None);
     let set = g.m.difficulty.set;

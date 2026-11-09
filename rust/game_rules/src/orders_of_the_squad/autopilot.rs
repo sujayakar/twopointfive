@@ -11,7 +11,7 @@ pub fn in_sight(g: &crate::game::Game, o: GuardId) -> bool {
 }
 
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.
-pub fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
+pub(in crate::orders_of_the_squad) fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g, seat) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
     crate::autopilot::AutoEntries { ids: vec![String::from(crate::orders::rows::openclear::ORDER.id)], why, kept: None }
 }
@@ -140,7 +140,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
 }
 
 /// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.
-pub fn auto_hint(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: Option<&crate::autopilot::AutoPick>) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn auto_hint(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: Option<&crate::autopilot::AutoPick>) -> Option<String> {
     let own;
     let p = match p {
         Some(p) => p,

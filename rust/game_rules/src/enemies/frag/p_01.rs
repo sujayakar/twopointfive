@@ -32,9 +32,9 @@ pub fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fro
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst.
-pub fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
+pub(in crate::enemies) fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
 /// …of the world as the question takes it
-pub fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
+pub(in crate::enemies) fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
     if !crate::glassbreak::glass_break_live(g) {
         return crate::scene_collision::shot_blocked_over(g, over, a, b, None, None);
     }
@@ -55,7 +55,7 @@ pub fn burst_line(g: &mut crate::game::Game, from: V3, to: V3, view: Option<crat
 /// Share (0‥1) of a man the burst point has a clear line to: four points from shin to head.
 pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 { exposure_over(g, &Over::OWN, from, feet, head, view) }
 /// …of the world as the question takes it
-pub fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
+pub(in crate::enemies) fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
     let view = view.unwrap_or(GlassView::Wary);
     let h = m::max(0.5, head[1] - feet[1]);
     let pts: [V3; 4] = [
@@ -79,7 +79,7 @@ fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
 }
 
 /// The leaves a hand grenade bursting at `from` would take off its hinges.
-pub fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
+pub(in crate::enemies) fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
     let opts = crate::destruction::DestructionDoorsForOpts { radius: Some(g.k.frag.destr_m), power: Some(1.0) };
     let doors = crate::destruction::destruction_doors_for(g, from, Some(opts));
     doors.into_iter().map(|d| g.dr[d].box_).collect()
@@ -99,7 +99,7 @@ pub fn exposed_to(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view:
 }
 
 /// The walls and cover a hand grenade bursting at `from` would open; the plan asked once a tick for a point.
-pub fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallOpening> {
+pub(in crate::enemies) fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallOpening> {
     let serial = g.destr.walls.serial;
     let time = g.time;
     let keep = match &g.m.frag.walls_for {
@@ -138,7 +138,7 @@ pub fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
 }
 
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian.
-pub fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::enemies) fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
         return false;
     }
@@ -166,9 +166,9 @@ fn lying_up(p: V3) -> V3 {
 }
 
 /// How much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it.
-pub fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
+pub(in crate::enemies) fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
 /// …of the world as the question takes it
-pub fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
+pub(in crate::enemies) fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
     through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, pts))
 }
 

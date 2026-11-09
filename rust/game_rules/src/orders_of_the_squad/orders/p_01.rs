@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A row's digit off its key code: `Digit1` to `Digit9`, else 0.
-pub fn digit_of(code: &str) -> f64 {
+pub(in crate::orders_of_the_squad) fn digit_of(code: &str) -> f64 {
     match code.strip_prefix("Digit").map(str::as_bytes) {
         Some(&[d @ b'1'..=b'9']) => (d - b'0') as f64,
         _ => 0.0,

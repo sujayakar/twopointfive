@@ -13,7 +13,7 @@ use alloc::{string::String, vec::Vec};
 // packside's boxes, which are in the frame's list. No die is drawn.
 
 /// Of a cast's defenders, the ones dressed for a building.
-pub fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) -> Vec<AnimGltfCastVariantId> {
+pub(in crate::outfit) fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) -> Vec<AnimGltfCastVariantId> {
     let field = field_parts();
     let mut bits: u32 = 0;
     for (i, n) in parts.iter().enumerate() { if field.contains(n) { bits |= 1u32 << (i as u32 & 31); } }
@@ -21,7 +21,7 @@ pub fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) 
     if !keep.is_empty() { keep } else { list.to_vec() }
 }
 /// The teammate at a place of the roster.
-pub fn operator_at(g: &Game, cast: AnimGltfCastInfoId, place: f64) -> Option<AnimGltfCastVariantId> {
+pub(in crate::outfit) fn operator_at(g: &Game, cast: AnimGltfCastInfoId, place: f64) -> Option<AnimGltfCastVariantId> {
     let ops = crate::anim_gltf::cast_side(g, cast, crate::anim_gltf::CastSide::Operator);
     if ops.is_empty() { return None; }
     Some(if ops.len() > 1 { ops[1 + (place as usize) % (ops.len() - 1)] } else { ops[0] })
@@ -36,7 +36,7 @@ fn defenders(g: &Game, cast: AnimGltfCastInfoId) -> Vec<AnimGltfCastVariantId> {
     if crate::scene_look::look_office(g) { let parts = g.tab.anim_gltf_cast_info[cast].parts.clone(); office_dress(g, &parts, &d) } else { d }
 }
 /// The variant this man wears (None with no cast loaded).
-pub fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantId> {
+pub(in crate::outfit) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantId> {
     use crate::anim_gltf::CastSide;
     use crate::teams::Team;
     let cast = g.tab.rig[g.ch[c_2].rig].cast?;

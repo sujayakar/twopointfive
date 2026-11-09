@@ -74,7 +74,7 @@ fn way_to(g: &mut Game, from: V3, q: V3, t: RoomfightRoomId, dear: &mut dyn FnMu
     if flat(w0, q) > 0.8 { None } else { Some(l) }
 }
 /// PRESSURE.wayOut: a spot to hold entry `e` of T from that a can through that door does not reach, nearest on foot of the first few that pass.
-pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry, dear: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> Option<crate::pressure::StandOffSpot> {
+pub(in crate::room_fight) fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoomId, e: crate::roomfight::Entry, dear: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> Option<crate::pressure::StandOffSpot> {
     let gd = gd_of(g, d);
     let c_pos = pos_of(g, gd);
     let cs = g.col.nav.cell;
@@ -185,7 +185,7 @@ pub fn charge(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId, t: Opt
     true
 }
 /// the rooms a door gives on to, the one he stands in and the one he holds aside.
-pub fn rooms_by(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) -> Vec<RoomfightRoomId> {
+pub(in crate::room_fight) fn rooms_by(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) -> Vec<RoomfightRoomId> {
     let fr = crate::guards::frame_of(g, door);
     let c = door_centre(g, door);
     let here = pos_of(g, gd_of(g, d));
@@ -212,7 +212,7 @@ pub fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
     false
 }
 /// a man of the team stands in R: the floor's truth, for the counts only.
-pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
+pub(in crate::room_fight) fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
@@ -221,7 +221,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     false
 }
 /// the last of his side alive: nobody left to go to.
-pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
+pub(in crate::room_fight) fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) { return false; }
@@ -229,7 +229,7 @@ pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     true
 }
 /// PRESSURE.stunKnown: what their side has to go on that the team is in room T.
-pub fn team_placed(g: &mut crate::game::Game, t: RoomfightRoomId) -> crate::pressure::TeamPlaced {
+pub(in crate::room_fight) fn team_placed(g: &mut crate::game::Game, t: RoomfightRoomId) -> crate::pressure::TeamPlaced {
     let mut in_t = -m::INF;
     let mut other = -m::INF;
     let heard: Vec<crate::pressure::StateHeardItem> = state_of(g).heard.clone();   // (put changes nothing of it)
@@ -376,7 +376,7 @@ pub fn boots(g: &mut crate::game::Game, gd: GuardId, last: f64) -> f64 {
     g.time
 }
 /// a teammate's boots in his ears, and where they come to him from, by the rule every man's ears use on an enemy's step.
-pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
+pub(in crate::room_fight) fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let here = pos_of(g, gd);
     let ear = v3::add(here, [0.0, 1.5, 0.0]);
     let mut best: Option<V3> = None;
@@ -393,7 +393,7 @@ pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     best
 }
 /// planted outside a door: that door is what he watches.
-pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
+pub(in crate::room_fight) fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let room = match df(g, d).room { Some(r) => r, None => return };
     let i = match g.tab.roomfight_room[room].entries.iter().position(|e| e.door == door) { Some(i) => i, None => return };
     let at = g.tab.roomfight_room[room].entries[i].at;
@@ -408,7 +408,7 @@ pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
 }
 
 /// a far fight he placed or was told of, while it is still worth going to.
-pub fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::StateToldValue> {
+pub(in crate::room_fight) fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::StateToldValue> {
     let (now, memory) = (g.time, g.k.pressure.memory_secs);
     match state_of(g).told.get(d) { Some(t) if now - t.t < memory => Some(*t), _ => None }
 }
@@ -655,7 +655,7 @@ pub fn drop(g: &mut crate::game::Game, m: PressureManId) {
     st.done_at.set(d, now);
 }
 /// one frame of a press: its men, then its phase. True = it is over. `p` is lent by pressTick, out of st.presses for the call: nothing under this reads st.presses.
-pub fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Press) -> bool {
+pub(in crate::room_fight) fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Press) -> bool {
     let mut team_in = false;
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
@@ -1155,7 +1155,7 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
     false
 }
 /// the report is heard or called and no room is hit yet.
-pub fn awaiting(g: &mut crate::game::Game) -> bool {
+pub(in crate::room_fight) fn awaiting(g: &mut crate::game::Game) -> bool {
     g.k.pressure.warned && state_of(g).warn.map_or(false, |w| w.phase != WarnPhase::Over)
 }
 /// a report was called and a room has since been hit: all hands, for the rest of the fight.

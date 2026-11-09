@@ -4,7 +4,7 @@ use super::*;
 use crate::game::Game;
 
 /// the look, as the tables stand
-pub fn hud_look(g: &Game) -> HudLook {
+pub(in crate::tick) fn hud_look(g: &Game) -> HudLook {
     let (k, b, l) = (&g.k, crate::ringlone::ring_box(), crate::ringlone::lone());
     HudLook {
         ring: RingLook {

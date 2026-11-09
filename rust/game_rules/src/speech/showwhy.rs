@@ -137,7 +137,7 @@ pub fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A mate stands in this man's line to `to` nearer to him than the player does.
-pub fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: V3) -> bool {
+pub(in crate::speech) fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: V3) -> bool {
     let c = g.ch[g.gd[gd].ch].pos;
     let pl = g.ch[g.pl[seat.player].ch].pos;
     let dx = to[0] - c[0];
@@ -186,7 +186,7 @@ pub fn line_side(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// A mate has "you're in my line." up as this rule's right now.
-pub fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
+pub(in crate::speech) fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -239,7 +239,7 @@ pub fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: Door
 }
 
 /// A mate of the order in reach of his hand ahead of him, nearer the door and in front of his chest.
-pub fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub(in crate::speech) fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let reach = g.k.showwhy.squeeze_reach;
     let c = g.gd[gd].ch;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);

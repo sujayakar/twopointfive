@@ -29,7 +29,7 @@ fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
 }
 
 /// the gun in his hands, as the setup names it; None: none
-pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
+pub(in crate::hands_of_the_player) fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
     let f = crate::game::player_gun_in_hand(g, pl);
     let f = match f {
         Some(f) if !g.pl[pl].down => f,
@@ -127,7 +127,7 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up
-pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
+pub(in crate::hands_of_the_player) fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
     let a = g.fa[rf].attachments.clone();
     let n = a.len();
@@ -145,7 +145,7 @@ pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
 }
 
 /// a row's digit: step its position, and the click
-pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &crate::slotsetup::SetupRow) {
+pub(in crate::hands_of_the_player) fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &crate::slotsetup::SetupRow) {
     let pl = g.player;
     let f = gun_of(g, pl, gun);
     match row.kind {
@@ -168,7 +168,7 @@ pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row:
 }
 
 /// a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on
-pub fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
+pub(in crate::hands_of_the_player) fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
     for gun in [SetupGun::Pistol, SetupGun::Rifle] {
         if Some(gun) != in_hand && crate::input::input_hit(g, input, &digit_code(slot_digit(gun))) {
             let (pl, t) = (g.player, g.time);
@@ -179,7 +179,7 @@ pub fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<cra
 
 /// player.ts updatePlayer, ahead of the digits' own lines: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
 /// A digit used here is taken out of the frame
-pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
+pub(in crate::hands_of_the_player) fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let pl = g.player;
     let gun = setup_gun(g, pl);
     let came = match g.pl[pl].setup_hand {

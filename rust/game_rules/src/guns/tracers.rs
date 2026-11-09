@@ -38,7 +38,7 @@ fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
 }
 
 /// A round just cycled out of `w`: is it a tracer? Every `every`-th out of the box, or fewer than `lastN` left.
-pub fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
+pub(in crate::guns) fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
     let def = g.fa[w].def;
     let Some(t) = g.m.weapons.weapons.get(def).unwrap().tracer else { return false; };
     let k = if g.fa[w].infinite { g.fa[w].shots_fired } else { crate::weapons::firearm_spent(g, w) };
@@ -99,12 +99,12 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
 }
 
 /// Every live streak, copied.
-pub fn tracers_each(g: &crate::game::Game) -> Vec<crate::tracers::Tracer> {
+pub(in crate::guns) fn tracers_each(g: &crate::game::Game) -> Vec<crate::tracers::Tracer> {
     g.tracers.pool.iter().filter(|t| t.alive).copied().collect()
 }
 
 /// fireWeapon's one call, after the round was traced. Returns whether a streak went.
-pub fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def: &crate::weapons::WeaponDef, muzzle: V3, dir: V3, t_hit: f64, impact: crate::tracers::TracerImpact, owner: f64, force: Option<bool>) -> bool {
+pub(in crate::guns) fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def: &crate::weapons::WeaponDef, muzzle: V3, dir: V3, t_hit: f64, impact: crate::tracers::TracerImpact, owner: f64, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let spec = def.tracer;
     if spec.is_none() && !force { return false; }
@@ -134,7 +134,7 @@ fn slot_at(g: &mut Game) -> usize {
 }
 
 /// A free slot, else the oldest streak's: the row itself.
-pub fn tracers_slot<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tracers::Tracer {
+pub(in crate::guns) fn tracers_slot<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tracers::Tracer {
     let i = slot_at(g);
     &mut g.tracers.pool[i]
 }
@@ -235,7 +235,7 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId
 }
 
 /// The splash where a tracer stops in geometry, its shooter's doing: a few sparks back off the surface and a brief glow. Nothing in a man, nothing for a round that met nothing.
-pub fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
+pub(in crate::guns) fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     if t.impact != TracerImpact::Solid { return; }
     let p = g.tracers.params;
     let at = [t.from[0] + t.dir[0] * (t.l - 0.03), t.from[1] + t.dir[1] * (t.l - 0.03), t.from[2] + t.dir[2] * (t.l - 0.03)];

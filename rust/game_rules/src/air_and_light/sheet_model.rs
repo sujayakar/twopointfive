@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// Linear falloff of an impulse: 1 − d/r inside the radius, 0 outside. Not in stubs.json, but impulse_kick reaches it.   (sheetModel.ts impulseFalloff)
-pub fn impulse_falloff(d: f64, r: f64) -> f64 {
+pub(in crate::air_and_light) fn impulse_falloff(d: f64, r: f64) -> f64 {
     if !(d < r) || r <= 0.0 { return 0.0; }
     1.0 - m::max(0.0, d) / r
 }

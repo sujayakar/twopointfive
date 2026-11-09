@@ -90,9 +90,9 @@ pub fn thing(g: &Game, f: &str, i: u32) -> Option<&'static str> {
     }
 }
 /// the man of the open card (member i is the team's [i - 1])
-pub fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
+pub(in crate::outfit) fn actor(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
 /// the card asked for, if its man is on the team as it now stands. True: another card.
-pub fn open_card(g: &Game, st: &mut KitStage) -> bool {
+pub(in crate::outfit) fn open_card(g: &Game, st: &mut KitStage) -> bool {
     let n = crate::scenario_run::team_of(g).len() as u32;
     let i = if st.want >= 1 && st.want <= n { st.want } else { 0 };
     if i == st.who { return false; }
@@ -101,7 +101,7 @@ pub fn open_card(g: &Game, st: &mut KitStage) -> bool {
     true
 }
 /// A RESTAGE THE PAGE SHOULD COVER: nothing is directed until it has laid its copy, or half a second of game time from now.
-pub fn ask_veil(g: &Game, st: &mut KitStage) {
+pub(in crate::outfit) fn ask_veil(g: &Game, st: &mut KitStage) {
     if st.veil_asked.is_some() { return; }
     st.veil = st.veil.wrapping_add(1);
     st.veil_asked = Some(g.time);
@@ -1595,7 +1595,7 @@ pub(super) fn pick(st: &mut KitStage, f: Option<&'static str>) {
     if st.a.beat.is_some() { st.a.cut_now = true; }
 }
 /// EACH TICK, BEFORE THE GAME'S STEP. `cmd`'s cursor is the foot of the door already.
-pub fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
+pub(in crate::outfit) fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
     let now = g.time;
     st.a.step_dt = clamp(now - st.a.step_t, 0.0, 0.25);
     st.a.step_t = now;
@@ -1629,7 +1629,7 @@ pub fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
     st.a.hand_due = None;
 }
 /// …AND AFTER IT: Sam's yaws, the thing thrown followed, a can's vent shut off, the hold through Sam's frag
-pub fn after_step(g: &mut Game, st: &mut KitStage) {
+pub(in crate::outfit) fn after_step(g: &mut Game, st: &mut KitStage) {
     let now = g.time;
     let pl = g.player;
     let c = g.pl[pl].ch;

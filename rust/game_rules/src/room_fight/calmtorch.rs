@@ -60,7 +60,7 @@ pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> 
 }
 
 /// His place read for the switch: 1 lit all down his look, -1 dark here or just ahead, 0 between.
-pub fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub(in crate::room_fight) fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let x = g.ch[c].pos[0];
     let z = g.ch[c].pos[2];
@@ -92,7 +92,7 @@ pub fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind.
-pub fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::room_fight) fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.touring
         && !g.quiet_utility
         && g.gd[gd].unit.is_none()

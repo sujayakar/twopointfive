@@ -24,7 +24,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{vec::Vec};
 
 /// The kick's strength as this machine last left it: the host's storage. Here only "asked".
-pub fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
+pub(in crate::breakage) fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
@@ -33,7 +33,7 @@ fn state_mut(g: &mut Game) -> &mut State {
 }
 
 /// This module's own dice: a counter of its own through a hash.
-pub fn hash_u(n: f64) -> f64 {
+pub(in crate::breakage) fn hash_u(n: f64) -> f64 {
     let mut x = (m::imul(js::to_i32(n) ^ 0x51ed270b, 0x85ebca6bu32 as i32)) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0xc2b2ae35u32 as i32) as u32;
@@ -61,7 +61,7 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
     crate::seats::first_of(g, &mut |v: &mut Game| if wall_report_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is: seats.ts)
 }
 
-pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
+pub(in crate::breakage) fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
@@ -93,7 +93,7 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
     crate::fogofwar::fog_of_war_done(g, was);
 }
 
-pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
+pub(in crate::breakage) fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
@@ -119,7 +119,7 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
 }
 
 /// THE KICK this frame: every live blast's snap away from it, ringing down: metres to add to the look-at for the render (None: none).
-pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
+pub(in crate::breakage) fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
     let f = g.m.blast_feel.feel.clone(); let time = g.time;
     let (target, forward) = { let c = &g.tab.camera[cam]; (c.target, c.forward) };
     let s = g.m.blast_feel.state.get_mut(pl)?;

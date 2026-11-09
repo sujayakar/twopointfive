@@ -41,7 +41,7 @@ pub fn paced(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
 }
 
 /// One of these, by the die.
-pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, a: &[T]) -> T {
+pub(in crate::room_fight) fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, a: &[T]) -> T {
     let i = m::floor(crate::dice::draw_for(g, "digin::one_of#1", who) * a.len() as f64);
     match a.get(i as usize) {
         Some(x) => x.clone(),
@@ -98,7 +98,7 @@ pub fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::Hea
 }
 
 /// The same by the hearing model's law for door and furniture noise.
-pub fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::HeardNoise> {
+pub(in crate::room_fight) fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::HeardNoise> {
     let mut best = None;
     let mut bd = m::INF;
     for l in listeners(g) {
@@ -163,7 +163,7 @@ pub fn way_to(g: &mut Game, a: V3, b: V3) -> f64 {
 }
 
 /// The room's entries by the way round from `from` to their far side, never through the room: [expected, second or -1].
-pub fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [f64; 2] {
+pub(in crate::room_fight) fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [f64; 2] {
     let src = crate::roomfight::room_fight_free_near(g, from).unwrap_or(from);
     let entries = g.tab.roomfight_room[room].entries.clone();
     let mut l: Vec<f64> = Vec::with_capacity(entries.len());
@@ -439,7 +439,7 @@ pub fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &cra
 }
 
 /// Off the door's line: every second living man of the room.
-pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
+pub(in crate::room_fight) fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
     let me = g.tab.roomfight_def[d].gd;
     let mut at_ = 0usize;
     for id in r.men.iter() {
@@ -489,7 +489,7 @@ pub fn fear(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) {
 }
 
 /// The nearest unused furniture of his room within reach of him and of the door.
-pub fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight::Entry, skip: Option<&JsSet<PropId>>) -> Option<PropId> {
+pub(in crate::room_fight) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight::Entry, skip: Option<&JsSet<PropId>>) -> Option<PropId> {
     let (gd, room) = { let row = &g.tab.roomfight_def[d]; (row.gd, row.room) };
     let c = g.gd[gd].ch;
     let mut best = None;
@@ -604,10 +604,10 @@ pub fn door_of(g: &Game, m: crate::digin::Man) -> f64 {
 }
 
 /// Seconds a hand waits on a pulled leaf.
-pub fn latch_secs(g: &mut Game) -> f64 { 2.5 }
+pub(in crate::room_fight) fn latch_secs(g: &mut Game) -> f64 { 2.5 }
 
 /// His hand goes on the leaf: pulled to, the wait begun.
-pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) {
+pub(in crate::room_fight) fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) {
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;
     let who = g.ch[c].id;
@@ -624,7 +624,7 @@ pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: 
 }
 
 /// …and stays on it: true = still waiting for the latch. A man with furniture to wedge it with stays while the leaf is still coming home: from wide open that takes about five seconds, and it can be wedged only once it latches. His clock is for a leaf a body has stopped, and for a man who only came to shut it, whose pull finishes without him.
-pub fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
+pub(in crate::room_fight) fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
     !crate::doors::door_latched(g, d_2) && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
 }
 

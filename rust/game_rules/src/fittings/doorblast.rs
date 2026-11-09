@@ -69,7 +69,7 @@ pub fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: 
 }
 
 /// The nearest spot within maxR where that rectangle stands clear, by rings of sixteen bearings.
-pub fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
+pub(in crate::fittings) fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
     let mut r = 0.03;
     while r <= max_r + 1e-9 {
         for i in 0..16 {
@@ -86,7 +86,7 @@ pub fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn:
 }
 
 /// A step that has met nothing yet.
-pub fn nothing_met() -> crate::doorblast::SlabMet {
+pub(in crate::fittings) fn nothing_met() -> crate::doorblast::SlabMet {
     crate::doorblast::SlabMet { landed: false, lx: 0.0, lz: 0.0, rested: false, nudged: 0.0, nudge_max: 0.0, laid: 0.0 }
 }
 
@@ -285,7 +285,7 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
 }
 
 /// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's.
-pub fn leaf_tough(g: &crate::game::Game) -> f64 {
+pub(in crate::fittings) fn leaf_tough(g: &crate::game::Game) -> f64 {
     let drywall = g.k.walls.tough.get(String::from("drywall")).copied().unwrap_or(6.0);
     let wood = g.k.walls.tough.get(String::from("wood")).copied().unwrap_or(9.0);
     m::min(drywall, wood) * m::max(0.1, g.k.doorshot.toll)
@@ -626,7 +626,7 @@ pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// One slab's step, and what it met said in one place: the tallies, the slam for the floor to hear, the log line.
-pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
+pub(in crate::fittings) fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
     if r < 0.0 {
@@ -661,7 +661,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
 }
 
 /// The row read out, stepped, written back.
-pub fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
+pub(in crate::fittings) fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
     let mut s = crate::sim_slabshome::slab_store_load(g, r);
     let mut met = nothing_met();
     step_slab(g, d, &mut s, dt, &mut met);
@@ -670,7 +670,7 @@ pub fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate
 }
 
 /// Can this slab's step run in the module: the world standing with the game's own leaves in it, which of them is the slab's own box (−1: none), and the pane's rule; None: a pane rule the module cannot judge by.
-pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
+pub(in crate::fittings) fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     let ask = crate::scene_collision::rules_panes(g);
@@ -683,7 +683,7 @@ pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorbla
 }
 
 /// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back.
-pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
+pub(in crate::fittings) fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
     let q = slab_par();
     q[sim::slabs::P_DT] = dt;
     q[sim::slabs::P_ROW] = r;
@@ -732,7 +732,7 @@ pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crat
 }
 
 /// TWIN of sim::slabs::step: `s` put in the door's row, stepped there and read back, what it met added to `t`.
-pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
+pub(in crate::fittings) fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
     if s.rest {
         return;
     }
@@ -757,7 +757,7 @@ pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabsh
 }
 
 /// The slab's box (and the two handles on it) where the slab is: tilted while it topples, then an ordinary yaw-only box lying flat.
-pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
+pub(in crate::fittings) fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
     if r < 0.0 {

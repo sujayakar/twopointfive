@@ -77,7 +77,7 @@ pub fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> 
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs`
-pub fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
+pub(in crate::squad_ways) fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, seat, h)
 }
@@ -131,7 +131,7 @@ pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -
 }
 
 /// an alert / searching man is a danger to one of them now
-pub fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+pub(in crate::squad_ways) fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     if since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, &crate::seats::here(g), h) { return true; }
     let hp = pos(g, h);
@@ -242,7 +242,7 @@ pub fn ring(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3, max_m: f
 }
 
 /// between Sam's gun and the man it may be on
-pub fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, h: GuardId) -> bool {
+pub(in crate::squad_ways) fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, h: GuardId) -> bool {
     let (a, b) = (sam_pos(g, seat), pos(g, h));
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = m::hyp2(dx, dz);
@@ -326,7 +326,7 @@ pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a round from a man stood at `q` to a body at `hp`, stopped a body's breadth short of it
-pub fn shot_line(g: &mut crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
+pub(in crate::squad_ways) fn shot_line(g: &mut crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
     let (dx, dz) = (hp[0] - q[0], hp[2] - q[2]);
     let l = m::hyp2(dx, dz);
     if l < 0.5 { return true; }
@@ -365,7 +365,7 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// `h` has turned to `gd`: roused, a line between them, and his fix on this man or squared up to him
-pub fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+pub(in crate::squad_ways) fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let st = g.gd[h].state;
     if st != crate::game::GuardState::Suspicious && st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search { return false; }
     let (p, hp) = (pos(g, gd), pos(g, h));

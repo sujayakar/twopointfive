@@ -58,7 +58,7 @@ pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
 /// distance on the floor
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces
-pub fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
+pub(in crate::man) fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
     let y = crate::props::prop_yaw(g, p);
     m::atan2(-m::sin(y), -m::cos(y))
 }
@@ -101,7 +101,7 @@ pub fn dark(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 /// a screen a man was got away from stays lit `idle_secs`
-pub fn left_lit(g: &mut crate::game::Game, gd: GuardId) {
+pub(in crate::man) fn left_lit(g: &mut crate::game::Game, gd: GuardId) {
     let Some(d) = g.m.doze.rec.get(gd).copied() else { return };
     if d.phase != Phase::Work || d.mon_was { return; }
     let Some(mon) = d.mon else { return };
@@ -110,13 +110,13 @@ pub fn left_lit(g: &mut crate::game::Game, gd: GuardId) {
     g.m.doze.left.get_or_insert_with(JsMap::new).set(mon, until);
 }
 /// every left screen off, the table gone
-pub fn left_off(g: &mut crate::game::Game) {
+pub(in crate::man) fn left_off(g: &mut crate::game::Game) {
     let Some(l) = g.m.doze.left.as_ref() else { return };
     for t in l.keys() { switch(g, t, 0.0); }
     g.m.doze.left = None;
 }
 /// a left screen blanks when its time comes, or is gone when it is dead
-pub fn left_tick(g: &mut crate::game::Game) {
+pub(in crate::man) fn left_tick(g: &mut crate::game::Game) {
     if g.m.doze.left.is_none() { return; }
     let mut walk = 0usize;
     while let Some(t) = g.m.doze.left.as_ref().and_then(|l| l.next_key(&mut walk)) {
@@ -151,7 +151,7 @@ pub fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 
     r[0] + crate::dice::draw_for(g, "doze::span#1", who) * (r[1] - r[0])
 }
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye
-pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
+pub(in crate::man) fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
     let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
     let (screen_m, pull_m, chair_m) = (g.k.doze.screen_m, g.k.doze.pull_m, g.k.doze.chair_m);
     let mut out = touch();
@@ -192,7 +192,7 @@ pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<
     None
 }
 /// the chair for this wait and the way he will sit in it
-pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Seat> {
+pub(in crate::man) fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Seat> {
     let route = g.gd[gd].route;
     let wp_i = g.gd[gd].wp;
     let wp = g.tab.route[route].points[wp_i];
@@ -249,7 +249,7 @@ pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze:
 }
 
 /// the patrol's seam: true = his feet are this file's this frame, walking to the chair
-pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
+pub(in crate::man) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     let d = match g.m.doze.rec.get(gd).copied() {
         Some(d) => d,
         None => {
@@ -353,7 +353,7 @@ pub fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, a
 }
 
 /// the senses' seam: true = he is asleep and his senses were run here, ears only, at `hear_k`; a sound that counted wakes him
-pub fn doze_deaf(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn doze_deaf(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.m.doze.rec.get(gd).map_or(true, |d| d.phase != Phase::Asleep) { return false; }
     let (aw, lk, st) = (g.gd[gd].awareness, g.gd[gd].fix_stamp, g.gd[gd].state);
     let hear_k = g.k.doze.hear_k;
@@ -597,11 +597,11 @@ pub fn doze_asleep(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Asleep)
 }
 /// his torch is dark: sat down to it, or asleep
-pub fn doze_dark(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::man) fn doze_dark(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.doze.rec.get(gd).map_or(false, |d| seated(*d))
 }
 /// his ears this frame: [noises, foot]; headphones on at his screen, whole for everybody else
-pub fn doze_ear(g: &crate::game::Game, gd: GuardId) -> [f64; 2] {
+pub(in crate::man) fn doze_ear(g: &crate::game::Game, gd: GuardId) -> [f64; 2] {
     if g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Work) {
         return [g.k.doze.noises, g.k.doze.ears];
     }

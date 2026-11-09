@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is.
-pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
+pub(in crate::entries) fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("on the way to {}", p),
         _ => String::from("on the opening"),
@@ -40,7 +40,7 @@ fn front_of(front_k: f64, yaw: f64, front: f64) -> f64 {
 }
 
 /// What there is to watch from the space round `at`, heaviest first.
-pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, front: f64, reach: Option<f64>) -> Vec<crate::roomfit::Threat> {
+pub(in crate::entries) fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, front: f64, reach: Option<f64>) -> Vec<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     let reach = reach.unwrap_or(k.reach);
     let mut out: Vec<crate::roomfit::Threat> = Vec::new();
@@ -330,7 +330,7 @@ pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3
 }
 
 /// The longest clear run from `q` at eye height that is `sectorDeg` clear of every mate's gun.
-pub fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
+pub(in crate::entries) fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     const B: usize = 16;
     let step = 2.0 * m::PI / (B as f64);

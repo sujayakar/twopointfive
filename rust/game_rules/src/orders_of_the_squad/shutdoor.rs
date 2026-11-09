@@ -26,7 +26,7 @@ pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) 
 }
 
 /// Where the door's handle comes to.
-pub fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
+pub(in crate::orders_of_the_squad) fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
     let w = g.dr[d].def.width;
     pt_of(g, d, w - k().handle_in, 0.0, 1.0)
 }
@@ -36,12 +36,12 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed).
-pub fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
+pub(in crate::orders_of_the_squad) fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
 }
 
 /// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack.
-pub fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
+pub(in crate::orders_of_the_squad) fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
     let pad = pad.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     let (px, pz) = (x - f.hx, z - f.hz);
@@ -74,7 +74,7 @@ fn spot_ok(g: &mut Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
 }
 
 /// The place d is shut from on face `side`, as it stands now; None: none.
-pub fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
+pub(in crate::orders_of_the_squad) fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
     let w = g.dr[d].def.width;
     let hd = handle_of(g, d);
     let ref_ = pt_of(g, d, w - k().handle_in, 0.2, side);
@@ -118,7 +118,7 @@ pub fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crat
 }
 
 /// Both faces' places for the leaf as it stands, kept for the frame.
-pub fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
+pub(in crate::orders_of_the_squad) fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
     let angle = crate::doors::door_angle(g, d);
     let key = alloc::format!("{}|{}|{}", js::num_str(g.time), g.dr[d].def.name, js::to_fixed(angle, 3));
     if let Some(hit) = &g.m.shutdoor.spotted {
@@ -146,7 +146,7 @@ pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).
-pub fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+pub(in crate::orders_of_the_squad) fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(g, seat, gd) { Some(a) => a, None => return false };
     let row = &g.tab.orders_assignment[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
@@ -201,7 +201,7 @@ fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
 }
 
 /// Who or what is in the leaf's way shut (None: nothing); `seen`: the menu's question, an enemy the picture does not show is not given away.
-pub fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
     let seen = seen.unwrap_or(false);
     let player = g.player;
     let sam_ch = g.pl[player].ch;
@@ -231,7 +231,7 @@ pub fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, se
 }
 
 /// An enemy somebody of the team has in sight right now through that doorway.
-pub fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub(in crate::orders_of_the_squad) fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
     let player = g.player;
     let sam_ch = g.pl[player].ch;
     for h in g.guards.clone() {
@@ -254,7 +254,7 @@ pub fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
 }
 
 /// Why these men cannot shut that door (None: one of them can): the row's `valid`.
-pub fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Option<String> {
+pub(in crate::orders_of_the_squad) fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Option<String> {
     if crate::doors::door_off(g, d) { return Some(String::from("it's off its hinges.")); }
     if crate::doors::door_latched(g, d) { return Some(String::from("it's shut.")); }
     if !stands_open(g, d) { return Some(String::from("it's all but shut.")); }
