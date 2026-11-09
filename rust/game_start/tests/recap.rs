@@ -334,7 +334,7 @@ fn a_restart_starts_the_record_over() {
         // CONTROL: run on, it is kept.
         assert_eq!(p.recap_deaths().len(), 1, "seed {}", seed);
         assert_eq!(p.recap_lost().len(), 1, "seed {}", seed);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.g.ai_enabled = false;
         p.run(0.5);
         assert!(p.recap_deaths().is_empty() && p.recap_lost().is_empty(), "seed {}: that run's deaths are not this run's: {:?}", seed, p.recap_deaths());
