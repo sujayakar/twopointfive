@@ -107,5 +107,5 @@ const PLACE: Place = {
   start: { hour: 16.9, look: [0, 0.8, -1.2], yaw: 0.35, pitch: 0.72, dist: 24, level: 1, wet: 1, rain: 1, steam: 1 }, floors: [0.05, 0.05], pan: [16, 11],
   legs: [{ name: 'camp', look: [0, 0.8, -2.5], dist: 22, level: 1 }, { name: 'pond', look: [6, 0.5, 4], dist: 16, level: 1 }, { name: 'hut', look: [-10.5, 1, -5], dist: 15, level: 1 }, { name: 'canopy', look: [0, 5, 0], dist: 52, level: 0 }],
   groups: ['trailer', 'string', 'lantern', 'tent', 'hut', 'porch'], quiet: { hour: 23, groups: { trailer: 0, string: 0, lantern: 0.3, tent: 0.3, hut: 0, porch: 0 } },
-  fires: [[0.2, 0.06, -3.9]], smokes: [[-6, 0.05, 1.2], [4.6, 0.05, -1.0]], judged: [['camp', [-7, -1, -7, 6, 4, 1]], ['pond', [2, -1, 2, 11, 3, 9]], ['all', [-99, -99, -99, 99, 99, 99]]],
+  outdoors: 1, fires: [[0.2, 0.06, -3.9]], smokes: [[-6, 0.05, 1.2], [4.6, 0.05, -1.0]], judged: [['camp', [-7, -1, -7, 6, 4, 1]], ['pond', [2, -1, 2, 11, 3, 9]], ['all', [-99, -99, -99, 99, 99, 99]]],
 };

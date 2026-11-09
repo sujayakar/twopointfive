@@ -11,6 +11,7 @@ export interface Place {
   /** the tour's legs */ legs: { name: string; look: V3; dist: number; level: number }[];
   /** lamp groups with a switch of their own; and the scene in the dark */ groups: string[]; quiet: { hour: number; groups: Record<string, number> };
   /** where the air is solved: x0 y0 z0 x1 y1 z1. Walls and floors are best on its cells' faces (1 m, 0.85 m up) */ air?: Room;
+  /** which level shows when the character is out of doors (else the first: nothing cut) */ outdoors?: number;
   fires: V3[]; smokes: V3[]; judged: [string, Room][];
 }
 const f = (x: number) => x.toFixed(4);
