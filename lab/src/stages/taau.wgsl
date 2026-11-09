@@ -10,7 +10,7 @@ fn cat(uv: vec2f, dim: vec2f) -> vec4f { let p = uv * dim; let c = floor(p - 0.5
   let rd = frame.size.xy; let r = rd / od; let so = vec2f(id.xy) + 0.5; let s = so * r; let q = vec2i(floor(s - frame.jitter.xy)); let hi = vec2i(rd) - 1;
   let go = sat(length(textureLoad(auxT, clamp(q, vec2i(0), vec2i(rd) - 1), 0).xy * od)); var acc = vec3f(0.0); var wa = 0.0; var m1 = vec3f(0.0); var m2 = vec3f(0.0); var near = 1e9; var nq = clamp(q, vec2i(0), hi); var prox = 0.0;
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
-    let t = clamp(q + vec2i(x, y), vec2i(0), hi); let v = textureLoad(color, t, 0); let c = ycc(tm(v.rgb)); m1 += c; m2 += c * c; let d = (vec2f(t) + 0.5 + frame.jitter.xy - s) / r; let w = exp(-dot(d, d) * mix(1.9, 1.2, go)); acc += c * w; wa += w; let a = abs(d); prox = max(prox, sat(1.35 - a.x) * sat(1.35 - a.y)); if (v.a < near) { near = v.a; nq = t; }
+    let t = clamp(q + vec2i(x, y), vec2i(0), hi); let v = textureLoad(color, t, 0); let c = ycc(tm(v.rgb)); m1 += c; m2 += c * c; let d = (vec2f(t) + 0.5 + frame.jitter.xy - s) / r; let w = exp(-dot(d, d) * mix(4.0, 1.2, go)); acc += c * w; wa += w; let a = abs(d); prox = max(prox, sat(1.35 - a.x) * sat(1.35 - a.y)); if (v.a < near) { near = v.a; nq = t; }
   } }
   let mean = m1 / 9.0; let sd = sqrt(max(m2 / 9.0 - mean * mean, vec3f(0.0))); let cur = select(mean, acc / max(wa, 1e-6), wa > 1e-4);
   var aux = textureLoad(auxT, nq, 0);
