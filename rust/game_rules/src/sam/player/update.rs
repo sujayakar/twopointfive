@@ -183,7 +183,8 @@ fn draw(g: &mut Game, pl: PlayerId, name: &str) {
     };
     if on_plaster {
         g.pl[pl].wall.as_mut().unwrap().drawn = true;
-        crate::game::game_msg(g, &format!("{} comes out when you leave the wall", name));
+        let text = format!("{} comes out when you leave the wall", item_name(g, pl));
+        crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), &text);
     } else {
         g.pl[pl].holstered = false;
         crate::game::game_msg(g, name);
@@ -354,8 +355,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 if to != g.pl[pl].wall.unwrap().drawn {
                     g.pl[pl].wall.as_mut().unwrap().drawn = to;
                     let text = if to { format!("{} comes out when you leave the wall", item_name(g, pl)) }
-                        else { format!("{}, and it'll stay that way when you leave the wall", if crate::game::player_rifle_sel(g, pl) { "slung" } else { "holstered" }) };
-                    game_msg(g, &text);
+                        else { format!("it'll stay {} when you leave the wall", if crate::game::player_rifle_sel(g, pl) { "slung" } else { "holstered" }) };
+                    crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), &text);
                 }
             } else {
                 let on = if e_key { !g.pl[pl].holstered } else { true };
@@ -468,7 +469,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         else if !want_sprint {
             let mut why = crate::player::WallSnapWhy { blocked: false };
             if !wall_snap(g, cam, Some(&mut why), None) && !wall_snap_later(g, ml, crate::player::WallSnapLaterWhy { blocked: why.blocked }) {
-                game_msg(g, if g.pl[pl].dragging.is_some() { "hands full" } else if why.blocked { "can't get to the wall here" } else { "nothing to put your back to here" });
+                let text = if g.pl[pl].dragging.is_some() { "your hands are full" } else if why.blocked { "can't get to that wall" } else { "no wall to take here" };
+                crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), text);
             }
         }
     }
@@ -657,13 +659,13 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     if walled {
         g.ch[c].anim.upper = crate::character::UpperMode::None;
         if rifle_aim { arm_rifle(g, true, Some(crate::character::LongStance::LowLong)); }
-        if input_lmb_hit(g, input) {
-            let text = if stunned { String::from("you're stunned, so you can't raise the gun yet") }
+        if input_lmb(g, input) {   // (held, not only pressed: the word stays up while the trigger is down)
+            let text = if stunned { String::from("you're still stunned") }
                 else if off_friend_on {
-                    match off_friend { Some(crate::friends::SamOffFriend::Guard(f)) => format!("gun down — {} is in your line", g.gd[f].callsign), _ => String::from("gun down — a friend is in your line") }
+                    match off_friend { Some(crate::friends::SamOffFriend::Guard(f)) => format!("{} is in your line of fire", g.gd[f].callsign), _ => String::from("a friend is in your line of fire") }
                 }
-                else { String::from("no room to bring the gun up") };
-            game_msg(g, &text);
+                else { String::from("no room to raise your gun here") };
+            crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), &text);
         }
     }
     crate::gunwall::gun_wall_stance(g, c, walled && !rifle_aim);

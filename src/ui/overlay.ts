@@ -362,11 +362,11 @@ export class Overlay implements HudLike {
     });
   }
 
-  /** What the panel lists this frame: the list as the view has it, with the word an empty tap left; under the corner (`interact.corner`) reduced to its three things (ui/corner.ts). */
+  /** What the panel lists this frame: the list as the view has it, with why his last press did nothing; under the corner (`interact.corner`) reduced to its three things (ui/corner.ts). */
   deriveInteractions(V: TickView): { rows: InteractRow[]; primary: number; more: number; open: boolean; hint?: string; cancel?: string } {
     const I = V.interact, rows: InteractRow[] = I.rows.map((r: ListRow) => ({ kind: r.kind, label: r.label, opts: r.opts, inReach: r.inReach, off: r.off, dist: r.dist ?? undefined, progress: r.progress ?? undefined, cont: r.cont }));
-    // (the key tapped with no row to give: said here for a moment, where his rows come up, with how far off a door a step short is; the view says while it is up, and a step into reach, or away, takes it down)
-    { const E = V.empty; if (E && !rows.length) rows.push({ kind: E.kind, label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
+    // (a press that did nothing: said for a moment as a greyed row of its own after his rows, with how far off a door a step short is; the view says while it is up, and a step into reach, or away, takes an empty tap's down)
+    { const E = V.empty; if (E) rows.push({ kind: E.kind, label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
     if (I.corner) {   // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
       const S = V.squad, shut = locked(V, 'menu'), quick = S?.quick ?? null;
       const men: InteractRow['opts'] = (S?.mates ?? []).map(M => ({ key: '', text: `${S!.picked ? (M.addressed ? '▸ ' : '· ') : ''}${M.name} · ${M.doing}`, tone: M.pair ?? undefined, gone: M.down }));

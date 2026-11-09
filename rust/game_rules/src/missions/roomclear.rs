@@ -716,8 +716,8 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     if !g.room_clear.entry_said && crate::nightbreach::night_breach_state(g) == crate::nightbreach::NightBreachState::Failed {
         g.room_clear.entry_said = true;
         if pair_up > 0 && play {
-            let room = room_clear_scenario_drill_room(g).map_or(String::from("room"), |r| r.name);
-            crate::game::game_msg(g, &format!("your point man is down at the door, so you'll have to take the {} yourself", room));
+            let line = crate::nightbreach::night_breach_down_line(g);
+            crate::squadnet::team_says(g, None, &line);
         }
     }
     if g.room_clear.end.is_some() {

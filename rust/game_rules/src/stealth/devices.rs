@@ -436,12 +436,12 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     let k = match g.devices.keypads.iter().find(|k| k.def.name == lock_id) { Some(k) => k.clone(), None => return false };
     g.pl[pl].codes.add(String::from(lock_id));
     let sign = callsign_of(g, from);
-    let who = match how {
-        LearnCodeHow::Told => format!("{} gave up", match &sign { Some(s) => s.as_str(), None => "he" }),
-        LearnCodeHow::Overheard => String::from("overheard"),
-    };
     let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} the {} code — {}", who, door_says, spell(&k.def.code)));
+    // (not with a man in his arm: Sam's bubble holds back the next question, and the man's own answer has just said it)
+    if g.pl[pl].holding.is_none() {
+        let time = g.time;
+        crate::player::say_over_sam(g, &format!("got the {} code.", door_says), time);
+    }
     let door_name = g.dr[k.door].def.name.clone();
     let row = data(&[("door", text(&door_name)), ("how", text(how.as_str())), ("from", opt_text(&sign))]);
     let at = from.map(|f| g.ch[g.gd[f].ch].pos);
