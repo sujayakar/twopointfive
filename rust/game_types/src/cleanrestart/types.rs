@@ -7,8 +7,4 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, Default)]
 pub struct CleanrestartStats {
     pub restarts: i32,
-    pub relit: i32,
-    pub lines: i32,
-    pub cuts: i32,
-    pub pictures: i32,
 }
