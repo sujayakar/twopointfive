@@ -344,7 +344,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // (ON THE FIRST LAP he has not arrived from anywhere: for those first ten seconds he faces EAST along the lorry, down his first leg, not west. Every
     // number of this level was measured that way; a lead-in waypoint would turn him west from the first frame and wants the deals measured again.)
     // (hand-set waits, the original points: 17 s by the bed, 10.75 s at the cab, so his lap is HALF the east torch's own (35.95 of 71.9 s). The east
-    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/dialogue
+    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/speech/dialogue
     // AMBIENT: each of the level's three talks is heard once a run, and a talk holds both men, so they stay in step through it). He is then by the bed,
     // his back to the pharmacy, for about 14 s after the torch leaves the shutter: that is the shops route's way across the shop. He must be walking east
     // by t = 20 s: stood by the bed then he is within talking reach of the west torch and the first talk holds the west round up instead.)
@@ -665,7 +665,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
-  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
+  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/pursuit/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
   // It walks in by the street's open end or by a gate; every mark is out past the row or a stride inside it (Character yaws: forward = [sin, 0, cos]).
   const response: ResponseData = {
     why: 'A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.',

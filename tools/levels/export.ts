@@ -54,7 +54,7 @@ const dressBare = (dressLevel: (l: Level, g: string[]) => { added: number; surfa
   return st; };
 const nGen = level.boxes.length;   // (the generator's own boxes + its lived things: what follows is the dressing)
 { const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
-  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — rust/game_rules/src/floor; a generator that gives none gets the office's)
+  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — rust/game_rules/src/world/floor.rs; a generator that gives none gets the office's)
 if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.length} groups for ${level.boxes.length} boxes`);
 // THE FLOOR IN ORDER (tools/levels/flatLayers.ts layFloor): two ground finishes or floor decals of different paint that overlap never share a plane — the picture
 // cannot order them (each pixel of the overlap went to either). Swept in tiers, so the level with its lived things or its dressing left out is the same level;

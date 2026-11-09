@@ -48,7 +48,7 @@ pictures are key art: frames of the real game, closer and lower than the play ca
 
 ![Night vision: white phosphor through an oval eyepiece](public/assets/menu/solo-night.jpg)
 
-Numbers: `levels/office.json` (`lights`, `switchables`), `rust/game_rules/src/rig_props`, `rust/game_rules/src/effects`, `rust/game_rules/src/hours`.
+Numbers: `levels/office.json` (`lights`, `switchables`), `outfit/rig_props`, `tick/effects.rs` and `air/hours` of `rust/game_rules/src/`.
 
 ## The grade
 
@@ -155,7 +155,7 @@ racks in blue light, a storage room with one dim bulb. A room may be bare when t
 
 ## Gear
 
-Guns, goggles, canisters and tools are small sets of flat-colored boxes bolted to bones (`rust/game_rules/src/rig_props`): gunmetal, dark-earth
+Guns, goggles, canisters and tools are small sets of flat-colored boxes bolted to bones (`rust/game_rules/src/outfit/rig_props`): gunmetal, dark-earth
 furniture, black polymer. They need to read as what they are from play distance, no more. Canisters are told by a band (smoke red, stun pale, frag
 yellow). What glows on gear: a lit weapon light's lens. The squad's lasers are infrared, hair-thin lines seen only through night vision. Goggles never
 glow.
@@ -182,7 +182,7 @@ glow.
 - **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn but dim and nearly gray; men there are not drawn,
   and doors and furniture stay as the team last saw them. Its edge is cut by walls and door frames, as on a plan.
 
-Effect numbers are tuned by eye (`rust/game_rules/src/effects`): treat them as authored data.
+Effect numbers are tuned by eye (`rust/game_rules/src/tick/effects.rs`): treat them as authored data.
 
 ## Screens
 

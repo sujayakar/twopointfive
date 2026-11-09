@@ -253,7 +253,7 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
  *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
 export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
-/** FIRE SMOKE SHED (settings.fireSmokeShed, default on, `?fireshed=0`; off = every preset keeps an open fire's smoke, as it was). An open fire (rust/game_rules/src/fire) files a hot
+/** FIRE SMOKE SHED (settings.fireSmokeShed, default on, `?fireshed=0`; off = every preset keeps an open fire's smoke, as it was). An open fire (rust/game_rules/src/air/fire.rs) files a hot
  *  smoke source on the solver every second while it is near the view, so near a fire the solver is awake and steps the plume's bricks: by the solver's figures on the
  *  maintainer's Mac (0.43 ms awake + 0.39 µs a stepping brick, 10-10) and the fire's own brick count (about 1,300, software adapter) 0.5 ms where other smoke already runs
  *  and 0.95 ms where the fire is the only smoke — the same at every preset, and fixed: the render scale does not shrink it. Against the model's rungs that is 3.5 to 6.5 %
@@ -576,7 +576,7 @@ export class Quality {
     const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
-    S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — rust/game_rules/src/fire reads it)
+    S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — rust/game_rules/src/air/fire.rs reads it)
     this.shedRoomy = 0; this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
     this.lastChange = `preset ${name}`; this.cooldown = 3; this.slow = this.fast = 0;

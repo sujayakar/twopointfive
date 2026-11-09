@@ -6,7 +6,7 @@ import type { HudCam, HudSource } from '../view/hud';
  *  points, width / height the backing store in device px) */
 export interface View { clientWidth: number; clientHeight: number; width: number; height: number; }
 
-/** a showcase's chapter list for the timeline (rust/game_rules/src/director chapters()) */
+/** a showcase's chapter list for the timeline (rust/game_rules/src/missions/director chapters()) */
 export interface Chapters { list: { title: string; dur: number }[]; i: number; frac: number; }
 
 export interface HudLike {

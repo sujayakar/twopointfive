@@ -1,4 +1,4 @@
-/** EVERY DEATH EXPLAINS ITSELF — the end card's panel (the game's half is rust/game_rules/src/deathrecap, which decides WHETHER anything may be shown: nothing while
+/** EVERY DEATH EXPLAINS ITSELF — the end card's panel (the game's half is rust/game_rules/src/speech/deathrecap.rs, which decides WHETHER anything may be shown: nothing while
  *  anybody still plays).
  *
  *  One small plan of the floor round the man who went down, fog lifted: every man where he stood, the man who did it and the round's line in the card's one

@@ -1,7 +1,7 @@
 # Defenders, night staff and civilians
 
 The men Sam is up against and the people caught in it: what they sense, believe and do. `ai-architecture.md` holds the design of a man's records
-(`control/`, `owner/`, `belief/`). `stealth.md` holds attention and the fog, `team-feel.md` the room fight, `missions.md` a rescue's crew,
+(`control/`, `owner.rs`, `belief.rs`). `stealth.md` holds attention and the fog, `team-feel.md` the room fight, `missions.md` a rescue's crew,
 `dialogue.md` the cues and words.
 
 ## What the player gets
@@ -22,17 +22,17 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `guards/` | one man's tick (`frame.rs`), `senses/`, `behave/`, the floor's alarm and radio check |
-| `mind.rs`, `belief/`, `control/`, `owner/` | the one door to his mind, what his gun covers, who has his body, whose man he is |
-| `difficulty/` | the levels and levers, written over the `pressure/` and `digin/` tables |
-| `enemysquads/`, `squaddeal/`, `stayask/` | squads, their net, choices and radio check; squads cut from rooms; squads told to stay |
-| `pressure/`, `digin/`, `laststand/` | a room fight's press, furniture and wedges, the last few |
-| `tactics/`, `lanes/`, `doorforce/` | pursuit and doorways, covered lanes, a shut door between him and his man |
-| `suppression/`, `flinch/`, `startle/`, `morale/`, `runner/`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
-| `darkdoor/`, `darkfoe/`, `calmtorch/`, `powerout/` | men and the dark |
-| `gunhold/`, `gunroles/`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
-| `qrf/`, `squadcast/` | the response team, and its room drill by the squad's own code |
-| `needs/`, `doze/`, `smokebreak/` | men at their ease |
-| `civilians/`, `rescuecheck/`, `rescueflush/` | civilians and hostages; a rescue's men checking in and coming for the hostages |
+| `mind.rs`, `belief.rs`, `control/`, `owner.rs` | the one door to his mind, what his gun covers, who has his body, whose man he is |
+| `difficulty.rs` | the levels and levers, written over the `pressure/` and `digin/` tables |
+| `enemysquads/`, `squaddeal.rs`, `stayask.rs` | squads, their net, choices and radio check; squads cut from rooms; squads told to stay |
+| `pressure/`, `digin/`, `laststand.rs` | a room fight's press, furniture and wedges, the last few |
+| `tactics/`, `lanes/`, `doorforce.rs` | pursuit and doorways, covered lanes, a shut door between him and his man |
+| `suppression.rs`, `flinch.rs`, `startle.rs`, `morale.rs`, `runner.rs`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
+| `darkdoor.rs`, `darkfoe.rs`, `calmtorch.rs`, `powerout.rs` | men and the dark |
+| `gunhold.rs`, `gunroles.rs`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
+| `qrf/`, `squadcast.rs` | the response team, and its room drill by the squad's own code |
+| `needs.rs`, `doze.rs`, `smokebreak.rs` | men at their ease |
+| `civilians/`, `rescuecheck.rs`, `rescueflush.rs` | civilians and hostages; a rescue's men checking in and coming for the hostages |
 
 The start card's difficulty row is `difficulty_row` in `start_list/`.
 
@@ -59,7 +59,7 @@ his fix and a look round. `alert`: a cover rule, his reaction beat, a standoff, 
 `supervise_lockdown` deals followers and posts. `update_rollcall` is the staff's radio check, which is how a death nobody found comes out.
 
 **Who has him.** The body list in `control/` is `frag`, `runner`, `morale`, `startle`, `duck`; the first to answer wins, and the first four are asked
-before his own script and state. Rules that task him set a bit in `owner/` (`taskers!` in its types, strongest first), and a rule asks `kept` before
+before his own script and state. Rules that task him set a bit in `owner.rs` (`taskers!` in its types, strongest first), and a rule asks `kept` before
 it takes him. That order is why a squad's man is not the press's.
 
 **Difficulty.** `tables_of` writes `PressureK` and `DiginK` from a level and the levers. Hard's AI turns on the press (`on`, `warned`, `second`,
@@ -102,7 +102,7 @@ men walk to the lever and back.
 `def_max`). A throw has a wind-up, a longer fuse (`def_fuse`) and a HUD line (`sam_cue`), and none goes near a hostage (`hostage_near`). `gun_deal`
 deals guns by post at staging.
 
-**Sam with a man in his arm.** In `standoff_alert` men ring and talk. Once the pistol is known `gunhold/` has them: `pick_cover`, `plan_round`, peeks,
+**Sam with a man in his arm.** In `standoff_alert` men ring and talk. Once the pistol is known `gunhold.rs` has them: `pick_cover`, `plan_round`, peeks,
 and `gun_hold_free` opens the clean line at Sam's back once he has fired from behind a man who is no civilian.
 
 **Response team.** A level has one only if its file has a `ResponseData` block (`has_response`). `update_qrf` calls it on a locked-down floor that
@@ -138,7 +138,7 @@ breach or a rescue, and `spawn_hostage` makes a rescue's.
   Done-test: the last man never dies standing upright without firing". One dead man is one shock to one man.
 - **Cover** stays in rooms his squad stays in, never behind a latched door (`cover_from`).
 - **The response team is level design.** "let's make it part of the level design" and "not all levels should have it".
-- **Warnings come first.** A wedge, a grenade, a charge and a press each have a sound or a line first (`cues/`).
+- **Warnings come first.** A wedge, a grenade, a charge and a press each have a sound or a line first (`cues.rs`).
 
 ## To change it
 
@@ -169,5 +169,5 @@ Native tests in `rust/game_start/tests/`:
 
 ## Not seen
 
-The numbers of `morale/`, `runner/`, `flinch/`, `netquiet/`, `darkdoor/`, `darkfoe/`, `doze/` and `powerout/` are first numbers, never tuned by play.
+The numbers of `morale.rs`, `runner.rs`, `flinch.rs`, `netquiet/`, `darkdoor.rs`, `darkfoe.rs`, `doze.rs` and `powerout.rs` are first numbers, never tuned by play.
 Beams whipping, a lit face at a screen, a man dropping his gun and a smoke break are unseen on a GPU.

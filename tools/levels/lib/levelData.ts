@@ -66,15 +66,15 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
  *  prop's part that wears the row does that, unless it says its own (BoxData.does). Absent = the default row. The rules' alone, never worked out from
  *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }
-/** What is underfoot for everyone who listens to a footstep (rust/game_rules/src/floor: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
- *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY rust/game_rules/src/floor still owns its copy of these
- *  numbers (FINISHES / BUILDING / GRASS_EDGE); wiring rust/game_rules/src/floor to read this is a follow-up. */
+/** What is underfoot for everyone who listens to a footstep (rust/game_rules/src/world/floor.rs: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
+ *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY rust/game_rules/src/world/floor.rs still owns its copy of these
+ *  numbers (FINISHES / BUILDING / GRASS_EDGE); wiring rust/game_rules/src/world/floor.rs to read this is a follow-up. */
 export interface SurfacesData { building: Rect; grassEdge: number; inside: SurfaceMat; outside: SurfaceMat; verge: SurfaceMat; zones: { id: string; mat: SurfaceMat; x0: number; z0: number; x1: number; z1: number; notes?: string }[]; }
 export type SurfaceMat = 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass';
 
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** as BoxData.does */ does?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
-/** Loose furniture (rust/game_rules/src/props): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
+/** Loose furniture (rust/game_rules/src/fittings/props.rs): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
 export interface PropData { id: string; kind: PropKindName; /** PropDef.name; absent = id */ name?: string; floor?: string; x: number; z: number; /** heading; absent = 0 */ yaw?: number; mass: number; parts: PropPartData[]; half?: [number, number]; height?: number; }
 
@@ -83,33 +83,33 @@ export interface SwitchableData { id: string; boxes: string[]; group: string; on
 /** One man's beat (level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
 export interface RouteData { id: string; name?: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 export interface ChokepointData { id: string; name?: string; floor?: string; pos: Vec3; yaw: number; }
-/** One of the building's night people (level.ts CivilianDef — rust/game_rules/src/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
+/** One of the building's night people (level.ts CivilianDef — rust/game_rules/src/people/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
 /** A NAMED MARK (level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
- *  way (rust/game_draw/src/traffic.rs) and a level script's place (rust/game_rules/src/director). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
+ *  way (rust/game_draw/src/traffic.rs) and a level script's place (rust/game_rules/src/missions/director). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
 export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
 export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; floor?: string; c: Vec3; h: Vec3; yaw?: number; notes?: string; }
 
-/** The level-design devices (rust/game_rules/src/devices runs them; docs/level-format.md 'Devices'). Every one is drawn by the game itself from its record (a camera's body,
+/** The level-design devices (rust/game_rules/src/stealth/devices.rs runs them; docs/level-format.md 'Devices'). Every one is drawn by the game itself from its record (a camera's body,
  *  lens and LED; a keypad's plate and LED; a laser's emitter, receiver and beam) — none of it is in `boxes` — and every one but the keypad is a light TARGET
- *  (rust/game_rules/src/game LightTarget kind 'device'): the pistol's OCP knocks it out for the OCP's spell, a round kills it for the encounter, `mains` (absent = true) puts
+ *  (rust/game_rules/src/tick/game LightTarget kind 'device'): the pistol's OCP knocks it out for the OCP's spell, a round kills it for the encounter, `mains` (absent = true) puts
  *  it on the breaker so a blackout takes it down and the restrike brings it back; `group` (absent = 'security') is the Lights-panel / daylight group.
  *   camera  at `pos` (the lens), looking along `yaw` (Character convention: forward = [sin yaw, 0, cos yaw]) tilted `pitch` (radians, negative = down; absent
  *           −0.35), panning between `sweep[0]`‥`sweep[1]` (absolute yaws) over `sweepPeriod` seconds there and back (absent 9; no sweep = fixed); `fovDeg` = the full cone
- *           (absent 70), `range` metres (absent 14). It sees Sam through the guards' own eye test and light meter (rust/game_rules/src/devices).
+ *           (absent 70), `range` metres (absent 14). It sees Sam through the guards' own eye test and light meter (rust/game_rules/src/stealth/devices.rs).
  *   keypad  the plate at `pos` facing `yaw` (out of the wall) beside DoorData `door`, which must be `locked` with `lock` = this keypad's id (the lock IS the
- *           link: rust/game_rules/src/doors Door.lockId); `code` = four digits. Sam opens it once he knows the code (interrogation / overheard); staff always do.
+ *           link: rust/game_rules/src/fittings/doors Door.lockId); `code` = four digits. Sam opens it once he knows the code (interrogation / overheard); staff always do.
  *   laser   a beam from `from` (the emitter) to `to` (the receiver) — its height is simply their y (0.35 = shin: no way over; ~1.0 = waist: crouch under);
  *           `alarm` = what breaking it does (absent 'suspicion': the radio and the nearest man over; 'alarm': the floor goes up a step). */
 export type DeviceData =
   | { id: string; kind: 'camera'; floor?: string; pos: Vec3; yaw: number; pitch?: number; sweep?: [number, number]; sweepPeriod?: number; fovDeg?: number; range?: number; group?: string; mains?: boolean; notes?: string }
   | { id: string; kind: 'keypad'; floor?: string; pos: Vec3; yaw: number; /** DoorData.id it unlocks */ door: string; code: string; notes?: string }
   | { id: string; kind: 'laser'; floor?: string; from: Vec3; to: Vec3; group?: string; mains?: boolean; alarm?: 'suspicion' | 'alarm'; notes?: string };
-/** the defaults an absent optional device field means (rust/game_rules/src/devices and the editor read them from here) */
+/** the defaults an absent optional device field means (rust/game_rules/src/stealth/devices.rs and the editor read them from here) */
 export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPeriod: 9, group: 'security', alarm: 'suspicion' as 'suspicion' | 'alarm', codeRe: /^\d{4}$/ };
-/** An HVAC supply VENT (rust/game_rules/src/wind runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
+/** An HVAC supply VENT (rust/game_rules/src/air/wind.rs runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
  *  just under the ceiling for a ceiling one) blowing along `dir` (need not be unit) at `speed` m/s at the face, a cone of half-angle `spread` DEGREES; the air slows to
  *  half by `reach` m and is gone by 2.5 × reach; a jet aimed down turns along its floor in its last half metre. `size?` = face width (m, absent 0.6), `period?` /
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
@@ -119,7 +119,7 @@ export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; sp
 export type ConnectorData =
   | { id: string; kind: 'stair' | 'ladder'; from: { floor: string; c: Vec3; h: Vec3 }; to: { floor: string; c: Vec3; h: Vec3 }; cost?: number; mat?: SurfaceMat; notes?: string };
 
-/** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/mission) maps onto: v1 wants exactly one of each kind. */
+/** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/missions/mission.rs) maps onto: v1 wants exactly one of each kind. */
 export type ObjectiveData =
   | { id: string; kind: 'reach'; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
   | { id: string; kind: 'drive'; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
@@ -132,7 +132,7 @@ export interface DaylightData { sun: LightData; sky: SkyData; groupsOn: string[]
 
 /** The drill plans are the RUNTIME structs verbatim (level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
  *  DoorData.id. Deliberately typed BY REFERENCE and handled generically below (canonical order = known keys first, anything else after, alphabetically;
- *  validation = the RoomClearPlan fields rust/game_rules/src/squad indexes blind + 'every leaf finite'), so a lane that re-choreographs the breach and grows BreachPlan
+ *  validation = the RoomClearPlan fields rust/game_rules/src/squad_orders/squad indexes blind + 'every leaf finite'), so a lane that re-choreographs the breach and grows BreachPlan
  *  changes level.ts + the generator and re-exports — nothing here drops, reorders unstably or rejects its new fields. */
 export type RoomClearPlanData = RoomClearPlan & { id: string };
 export type BreachPlanData = BreachPlan & { id: string };
@@ -151,20 +151,20 @@ export interface LevelData {
   doors: DoorData[];
   routes: RouteData[];
   chokepoints: ChokepointData[];
-  /** the cleaner / the late worker (rust/game_rules/src/civilians) — absent = nobody but the shift on the floor */
+  /** the cleaner / the late worker (rust/game_rules/src/people/civilians) — absent = nobody but the shift on the floor */
   civilians?: CivilianData[];
   volumes: VolumeData[];
   /** named marks — optional block: absent = the level names none (every file before the key) */
   marks?: MarkData[];
   devices: DeviceData[];
-  /** HVAC supply vents (rust/game_rules/src/wind) — optional block: absent = still air indoors */
+  /** HVAC supply vents (rust/game_rules/src/air/wind.rs) — optional block: absent = still air indoors */
   vents?: VentData[];
   connectors: ConnectorData[];
   mission: MissionData;
   /** the mains panel: `panel` / `led` are BoxData ids (OCP the panel for a blackout, shoot it for a permanent one); `fumble?` = seconds a man sent to the
    *  tripped panel works at it before the mains come back (absent = 2.2, as on every level before the key; 7 at most) */
   breaker: { pos: Vec3; panel: string; led: string; fumble?: number };
-  /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/game slaves the beam to that target) */
+  /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/tick/game slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
   sky: SkyData;
   daylight?: DaylightData;
@@ -319,7 +319,7 @@ export function validateLevelData(d: LevelData): string[] {
   const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
-  // (HOW BIG A LEVEL MAY BE — docs/level-format.md; rust/game_rules/src/levelfit refuses the level as it loads. Said here of the document whole, lived-in things and all)
+  // (HOW BIG A LEVEL MAY BE — docs/level-format.md; rust/game_rules/src/world/levelfit.rs refuses the level as it loads. Said here of the document whole, lived-in things and all)
   if (props.length > PROP_CAP) err('props', `at most ${PROP_CAP} loose things of furniture (${props.length})`);
   { let parts = 0; for (const p of props) parts += Array.isArray((p as any)?.parts) ? (p as any).parts.length : 0; if (parts > PROP_PARTS) err('props', `at most ${PROP_PARTS} boxes in all the loose furniture (${parts})`); }
   props.forEach((p, i) => {
@@ -375,7 +375,7 @@ export function validateLevelData(d: LevelData): string[] {
     if (!pts.length) err(w, 'at least one point'); if (pts.length !== wt.length) err(w, `wait has ${wt.length} entries for ${pts.length} points`);
     pts.forEach((p, j) => { if (!isVec(p)) err(`${w}.points[${j}]`, 'Vec3'); }); wt.forEach((x, j) => { if (!(isNum(x) && x >= 0)) err(`${w}.wait[${j}]`, '≥ 0'); });
     if (r.keys !== undefined && !(Array.isArray(r.keys) && r.keys.every(isStr))) err(w, 'keys string[]'); if (r.weapon !== undefined && !isStr(r.weapon)) err(w, 'weapon id');
-    if (r.name !== undefined && !isStr(r.name)) err(w, 'name string');   // (rust/game_rules/src/game looks routes up by name: a number or '' would silently never match)
+    if (r.name !== undefined && !isStr(r.name)) err(w, 'name string');   // (rust/game_rules/src/tick/game looks routes up by name: a number or '' would silently never match)
   });
   const cps = recs('chokepoints', d.chokepoints); uniq('chokepoints', cps.map(c => (c as any)?.id));
   cps.forEach((c, i) => { if (!isObj(c)) return; const w = `chokepoints[${i}]`; known(w, c, KEYS.chokepoint); floorOk(w, c.floor); if (!isVec(c.pos)) err(w, 'pos Vec3'); if (!isNum(c.yaw)) err(w, 'yaw'); if (c.name !== undefined && !isStr(c.name)) err(w, 'name string'); });
@@ -398,7 +398,7 @@ export function validateLevelData(d: LevelData): string[] {
     const ms = recs('marks', d.marks); uniq('marks', ms.map(m => (m as any)?.id));
     ms.forEach((m, i) => { if (!isObj(m)) return; const w = `marks[${i}] '${show(m.id)}'`; known(w, m, KEYS.mark); if (!isStr(m.id)) err(w, 'id: a non-empty string'); if (!isVec(m.pos)) err(w, 'pos Vec3'); if (m.yaw !== undefined && !isNum(m.yaw)) err(w, 'yaw'); });
   }
-  // devices (rust/game_rules/src/devices) / connectors (stub: shapes only)
+  // devices (rust/game_rules/src/stealth/devices.rs) / connectors (stub: shapes only)
   const devs = recs('devices', d.devices); uniq('devices', devs.map(v => (v as any)?.id));
   const padDoors = new Map<string, string>();   // door id → the keypad that claims it (one per door)
   devs.forEach((v, i) => {
@@ -419,7 +419,7 @@ export function validateLevelData(d: LevelData): string[] {
       if (!(isStr(v.code) && DEVICE_DEFAULTS.codeRe.test(v.code))) err(w, `code must be four digits (got '${show(v.code)}')`);
       doorOk(`${w}.door`, v.door);
       const dr = isStr(v.door) ? (doors.find(o => isObj(o) && o.id === v.door) as DoorData | undefined) : undefined;
-      if (dr) {   // the lock IS the link (rust/game_rules/src/doors Door.lockId): the door must be locked, on this keypad's own lock, and nobody else's keypad
+      if (dr) {   // the lock IS the link (rust/game_rules/src/fittings/doors Door.lockId): the door must be locked, on this keypad's own lock, and nobody else's keypad
         if (!dr.locked) err(w, `door '${v.door}' is not locked — a keypad on an open door does nothing`);
         if (dr.lock !== v.id) err(w, `door '${v.door}' has lock '${show(dr.lock ?? '(the floor key)')}' — a keypad door's lock must be the keypad's id ('${show(v.id)}')`);
         const other = padDoors.get(v.door); if (other !== undefined) err(w, `door '${v.door}' already has keypad '${other}'`); else if (isStr(v.id)) padDoors.set(v.door, v.id);
@@ -431,7 +431,7 @@ export function validateLevelData(d: LevelData): string[] {
       if (v.alarm !== undefined && v.alarm !== 'suspicion' && v.alarm !== 'alarm') err(w, "alarm 'suspicion' | 'alarm'");
     } else err(w, `kind '${show((v as any).kind)}'`);
   });
-  // vents (rust/game_rules/src/wind) — optional block: absent = none
+  // vents (rust/game_rules/src/air/wind.rs) — optional block: absent = none
   if (d.vents !== undefined) {
     const vents = recs('vents', d.vents); uniq('vents', vents.map(v => (v as any)?.id));
     vents.forEach((v, i) => {
@@ -516,7 +516,7 @@ export function validateLevelData(d: LevelData): string[] {
     if (B !== undefined) {
       if (!isObj(B)) err('plans.breach', 'must be an object');
       else {
-        // the RoomClearPlan half is checked field by field (planOk); the breach's own fields belong to rust/game_rules/src/breach and change with its choreography, so
+        // the RoomClearPlan half is checked field by field (planOk); the breach's own fields belong to rust/game_rules/src/missions/breach.rs and change with its choreography, so
         // here they only get the generic finite-leaf pass (inside planOk) plus the one shape every version has had: men on marks
         const w = `plans.breach '${show(B.id)}'`; if (!isStr(B.id)) err('plans.breach', 'id'); planOk(w, B);
         const hs = recs(`${w}.hostiles`, B.hostiles); if (!hs.length) err(w, 'hostiles: at least one');
@@ -525,8 +525,8 @@ export function validateLevelData(d: LevelData): string[] {
     }
   }
   // scenarios: the container's keys, every leaf a finite number / string / boolean / null, every door named is a door of this level, and the handful of shapes
-  // the scenarios index without asking (the rest — marks on free floor, lines to what they watch, garrisons — is checked against the built level: rust/game_rules/src/roomclear
-  // checkStructure, rust/game_rules/src/rescue check_rescue, rescueflow check)
+  // the scenarios index without asking (the rest — marks on free floor, lines to what they watch, garrisons — is checked against the built level: rust/game_rules/src/missions/roomclear.rs
+  // checkStructure, rust/game_rules/src/missions/rescue check_rescue, rescueflow check)
   if (d.scenarios !== undefined) {
     const S = d.scenarios as any;
     if (!isObj(S)) err('scenarios', 'must be an object');
@@ -616,7 +616,7 @@ export function validateLevelData(d: LevelData): string[] {
           }
         }
       }
-      if (S.quiet !== undefined) {   // (lib/scenarios.ts QuietData: what the file alone can say — free floor, the ways on foot and first sight are rust/game_rules/src/quiet check_quiet's)
+      if (S.quiet !== undefined) {   // (lib/scenarios.ts QuietData: what the file alone can say — free floor, the ways on foot and first sight are rust/game_rules/src/missions/quiet.rs check_quiet's)
         const Q = S.quiet, w = 'scenarios.quiet';
         if (!isObj(Q)) err(w, 'must be an object');
         else {
@@ -645,13 +645,13 @@ export function validateLevelData(d: LevelData): string[] {
           for (const k of ['phones', 'wayouts'] as const) if (Q[k] !== undefined) recs(`${w}.${k}`, Q[k]).forEach((o, i) => standOk(`${w}.${k}[${i}]`, o, false));
         }
       }
-      if (S.lesson !== undefined) {   // (lib/scenarios.ts LessonData: the shapes only — what each test kind wants and whether its doors, lights and areas exist is rust/game_rules/src/lesson checkLesson's, against the built floor)
+      if (S.lesson !== undefined) {   // (lib/scenarios.ts LessonData: the shapes only — what each test kind wants and whether its doors, lights and areas exist is rust/game_rules/src/missions/lesson checkLesson's, against the built floor)
         const L = S.lesson, w = 'scenarios.lesson';
         if (!isObj(L)) err(w, 'must be an object');
         else {
           known(w, L, ['title', 'steps', 'rails']);
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
-          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'waits', 'rows', 'orders', 'lasers', 'flatRing']); if (R.flatRing !== undefined && typeof R.flatRing !== 'boolean') err(`${w}.rails.flatRing`, 'true or false'); if (R.lasers !== undefined && typeof R.lasers !== 'boolean') err(`${w}.rails.lasers`, 'true or false'); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); } }   // (rust/game_rules/src/rails: the action names are checked against the built floor by checkLesson)
+          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'waits', 'rows', 'orders', 'lasers', 'flatRing']); if (R.flatRing !== undefined && typeof R.flatRing !== 'boolean') err(`${w}.rails.flatRing`, 'true or false'); if (R.lasers !== undefined && typeof R.lasers !== 'boolean') err(`${w}.rails.lasers`, 'true or false'); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); } }   // (rust/game_rules/src/missions/rails.rs: the action names are checked against the built floor by checkLesson)
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
           steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'flatLine', 'done', 'hold', 'settle', 'at', 'atMan', 'allow', 'deny', 'cue', 'checkpoint', 'fog', 'noTap', 'eye', 'onWay', 'explain', 'toward', 'after']);
@@ -672,7 +672,7 @@ export function validateLevelData(d: LevelData): string[] {
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
         }
       }
-      if (S.par !== undefined) {   // (lib/scenarios.ts ParData: a room clear against a clock — rust/game_rules/src/par)
+      if (S.par !== undefined) {   // (lib/scenarios.ts ParData: a room clear against a clock — rust/game_rules/src/missions/par.rs)
         const P = S.par, w = 'scenarios.par';
         if (!isObj(P)) err(w, 'must be an object');
         else {
@@ -682,7 +682,7 @@ export function validateLevelData(d: LevelData): string[] {
           if (S.roomClear === undefined) err(w, 'a par stands over a room clear: the level has no scenarios.roomClear');
         }
       }
-      if (S.issue !== undefined) {   // (lib/scenarios.ts IssueData: kit this level hands the squad — rust/game_rules/src/kit kit_issue)
+      if (S.issue !== undefined) {   // (lib/scenarios.ts IssueData: kit this level hands the squad — rust/game_rules/src/outfit/kit kit_issue)
         const I = S.issue, w = 'scenarios.issue', BOOLS = ['suppressed', 'light', 'nvg'], NUMS = ['bangs', 'charges', 'smoke', 'frags', 'walls', 'shells'];
         if (!isObj(I) || !isObj(I.members)) err(w, 'must be an object { members: { <place>: { … } } }');
         else {
@@ -692,10 +692,10 @@ export function validateLevelData(d: LevelData): string[] {
             if (!isObj(c)) { err(cw, 'must be an object'); continue; }
             if (c.shield !== undefined) err(`${cw}.shield`, 'the ballistic shield is out of the game: take the key out (the rest of the card stands)');
             known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS, 'rings', 'loaded']);   // ('shield': said above, in words of its own)
-            if (k !== '0' && c.shells !== undefined) err(`${cw}.shells`, 'yours alone: a teammate carries no 40 mm');   // (your own `charges` and `walls` are read where your own charges are switched on — rust/game_rules/src/owncharge, rust/game_rules/src/kit charge_row / wallRow — and are nothing where they are off)
+            if (k !== '0' && c.shells !== undefined) err(`${cw}.shells`, 'yours alone: a teammate carries no 40 mm');   // (your own `charges` and `walls` are read where your own charges are switched on — rust/game_rules/src/owncharge, rust/game_rules/src/outfit/kit charge_row / wallRow — and are nothing where they are off)
             if (c.weapon !== undefined && !['rifle', 'pistol', 'shotgun'].includes(c.weapon)) err(`${cw}.weapon`, "'rifle' | 'pistol' | 'shotgun'");
-            // (your rifle's launcher: its sponge rounds — rust/game_rules/src/kit RINGS_MAX; a mission's own card for you is handed
-            //  none: ISSUE.whole — and the load it comes up on, rust/game_rules/src/kit kit_player)
+            // (your rifle's launcher: its sponge rounds — rust/game_rules/src/outfit/kit RINGS_MAX; a mission's own card for you is handed
+            //  none: ISSUE.whole — and the load it comes up on, rust/game_rules/src/outfit/kit kit_player)
             for (const key of ['rings', 'loaded'] as const) if (c[key] !== undefined) {
               if (k !== '0') err(`${cw}.${key}`, 'yours alone: the launcher is on your rifle'); else if (c.weapon === 'pistol' || c.weapon === 'shotgun') err(`${cw}.${key}`, 'the launcher is the rifle\'s: this card carries none');
               else if (key === 'rings' ? !(Number.isInteger(c.rings) && c.rings >= 0 && c.rings <= 5) : c.loaded !== 'ring' && c.loaded !== 'he40') err(`${cw}.${key}`, key === 'rings' ? 'a whole number 0‥5' : "'ring' | 'he40'"); }
@@ -704,7 +704,7 @@ export function validateLevelData(d: LevelData): string[] {
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
         }
       }
-      if (S.kitView !== undefined) {   // (lib/scenarios.ts KitViewData: the Team & kit picture of the team at the way-in door, rust/game_rules/src/kitstage; whether a place is free floor is the planner's to say, tools/qa/kitview-plan.ts)
+      if (S.kitView !== undefined) {   // (lib/scenarios.ts KitViewData: the Team & kit picture of the team at the way-in door, rust/game_rules/src/outfit/kitstage; whether a place is free floor is the planner's to say, tools/qa/kitview-plan.ts)
         const K = S.kitView, w = 'scenarios.kitView', nWays = isObj(S.roomClear) && S.roomClear.team !== undefined ? 1 + (Array.isArray(S.roomClear.starts) ? S.roomClear.starts.length : 0) : 1;
         if (!isObj(K)) err(w, 'must be an object');
         else {
@@ -769,7 +769,7 @@ export function validateLevelData(d: LevelData): string[] {
             if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
         }
       }
-      if (S.doorNames !== undefined) {   // (lib/scenarios.ts: what a door is called where its id cannot say it — rust/game_rules/src/doornames)
+      if (S.doorNames !== undefined) {   // (lib/scenarios.ts: what a door is called where its id cannot say it — rust/game_rules/src/speech/doornames.rs)
         const w = 'scenarios.doorNames', seen = new Set<string>();
         if (!Array.isArray(S.doorNames)) err(w, 'must be an array of { door, name }');
         else S.doorNames.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;
@@ -787,7 +787,7 @@ export function validateLevelData(d: LevelData): string[] {
           for (const k of ['from', 'to'] as const) if (!isStr(r[k]) || !r[k].trim() || r[k].length > 64) err(`${rw}.${k}`, 'must be a name of 1 to 64 characters');   // (as long as an id may be: the editor's rename writes a door's or a route's new id here)
           if (r.weight !== undefined && !(isNum(r.weight) && r.weight > 0 && r.weight <= 8)) err(`${rw}.weight`, 'must be a number over 0, at most 8'); });
       }
-      if (S.response !== undefined) {   // (lib/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are rust/game_rules/src/qrf checkResponse's)
+      if (S.response !== undefined) {   // (lib/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are rust/game_rules/src/pursuit/qrf checkResponse's)
         const R = S.response, w = 'scenarios.response';
         if (!isObj(R)) err(w, 'must be an object');
         else {

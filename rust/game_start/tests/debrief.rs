@@ -1,4 +1,4 @@
-//! THE END CARD'S RECORD (rust/game_rules/src/view, `debrief_view`): the rows in words, the counts, the score and the recap come out of the Rust game as one record; the
+//! THE END CARD'S RECORD (rust/game_rules/src/tick/view, `debrief_view`): the rows in words, the counts, the score and the recap come out of the Rust game as one record; the
 //! page lays it out. Each test holds one thing the card says over three seeds beside a control. Before this, the page worked all of it out over its own copy of the chronicle.
 use game::chronicle::{self, ChronCheckpointWhat, ChronDoorKind, ChronKind};
 use game::game::DownKind;

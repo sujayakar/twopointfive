@@ -37,7 +37,7 @@ export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) loo
  *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
  *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
- *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/devices), so a tripwire's beam coming or going still moves the
+ *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/stealth/devices.rs), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
  *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot

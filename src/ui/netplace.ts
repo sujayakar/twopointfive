@@ -1,4 +1,4 @@
-// WHERE A TEAMMATE'S LINE FROM OFF THE SCREEN IS PUT (rust/game_rules/src/squadnet says what such a line is, the view says it is one and how it is laid: `view.look.net`). Pure, and nothing of the game under it.
+// WHERE A TEAMMATE'S LINE FROM OFF THE SCREEN IS PUT (rust/game_rules/src/speech/squadnet.rs says what such a line is, the view says it is one and how it is laid: `view.look.net`). Pure, and nothing of the game under it.
 import { clamp } from '../math/vec';
 import type { NetLook } from '../view/read';
 

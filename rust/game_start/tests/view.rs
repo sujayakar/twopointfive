@@ -1,4 +1,4 @@
-//! THE VIEW (rust/game_rules/src/view): what a HUD is told of the game, asked of the game and never kept by it.
+//! THE VIEW (rust/game_rules/src/tick/view): what a HUD is told of the game, asked of the game and never kept by it.
 use game::orders::Who;
 use game::roomclear::RoomClearEnd;
 use game::view::MissionOf;

@@ -6,7 +6,7 @@ export class Input {
   pressed = new Set<string>();     // edge-triggered this frame
   mouseX = 0; mouseY = 0;          // CSS pixels relative to canvas
   orbitDX = 0;                     // horizontal mouse travel this frame WHILE the camera's key is held (Ctrl, or the Space bar while it is spare — host/keymap.ts camKey; the loop consumes it)
-  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (rust/game_rules/src/player)
+  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (rust/game_rules/src/sam/player)
   buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see mmb() / rmb())
   suppressClick = false;           // set by the title card: swallow the very next mouse press
   wheel = 0;
@@ -14,7 +14,7 @@ export class Input {
   /** when set, real keyboard / mouse input is ignored except these key codes (the showcase tour drives the player itself; P still stops it).
    *  Synthetic input (pressed.add / clicked |= / mouseX =) is unaffected. */
   lockExcept: Set<string> | null = null;
-  /** is F5 the game's right now (the save by hand — rust/game_rules/src/savestate SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
+  /** is F5 the game's right now (the save by hand — rust/game_rules/src/tick/savestate SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
   saveKey: (() => boolean) | null = null;
   /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
   onLockedInput: (() => void) | null = null;

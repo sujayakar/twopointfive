@@ -331,7 +331,7 @@ const TOYS = ['rifleSuppressed', 'magOut', 'doorBang', 'doorLatch', 'doorRattle'
   // the bar's keys are still the bar's: M opens its big map and Esc shuts THAT, a stretch being heard goes on under it
   await page.evaluate(() => { window.__sndlanes.relisten(); }); await page.keyboard.press('KeyM'); const m1 = await escAt(); await page.evaluate(() => window.__sndlanes.paint()); await page.keyboard.press('Escape'); const m2 = await escAt();
   line(m1.map && !m2.map && m1.on && m2.on, 'with the bar\'s map up, Esc shuts the map and the stretch plays on', `map ${m1.map} → ${m2.map}, heard ${m2.on}`);
-  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (rust/game_rules/src/input, aria-label
+  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (rust/game_rules/src/tick/input.rs, aria-label
   // 'game input') is no field: focus leaving it must not cost the lanes their Esc. Staged with a textarea of each kind and an Esc let go at once, then put back
   const sink = await page.evaluate(async of => { const L = window.__sndlanes, wait = ms => new Promise(r => setTimeout(r, ms)), was = L.relistening().on;
     if (!document.querySelector('#sndcard')) L.show(of);

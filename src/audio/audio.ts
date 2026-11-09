@@ -258,8 +258,8 @@ export class AudioEngine implements GameAudioLike {
    *  the roof and the cars, built by the backend on first use, its gain eased toward `level` × its own ceiling on the ambience bus (src/audio/webaudio.ts rainLevel). */
   rain(level: number) { this.backend?.rainLevel(level); }
 
-  /** One footfall. The floor it lands on comes from the shared material map (rust/game_rules/src/floor — the same map the guards' ears and the SOUND meter read; `mat` arrives
-   *  resolved by the caller, rust/game_rules/src/floor tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
+  /** One footfall. The floor it lands on comes from the shared material map (rust/game_rules/src/world/floor.rs — the same map the guards' ears and the SOUND meter read; `mat` arrives
+   *  resolved by the caller, rust/game_rules/src/world/floor.rs tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
    *  sample runs a touch brighter on stone / duller on carpet. `loudness` already carries the material's share (carpet 0.6 ×, stone 1.1 × …), so it goes straight to the gain. */
   /** what is underfoot, where a footfall does not say (the page's game; none = the reference floor) */
   floorAt: (p: Vec3) => FloorMat = () => 'lino';
@@ -270,7 +270,7 @@ export class AudioEngine implements GameAudioLike {
 
   /** A followed voice let go: faded out, kept in the list (and in the cap's count) until the fade is done. */
   private unfollow(v: Voice, t: number) { this.backend!.stop(v.v, FOLLOW_FADE_MS); v.dying = true; v.end = Math.min(v.end, t + 6 * FOLLOW_FADE_MS / 1000); }
-  /** A sound that lasts as long as its thing does (a chair rolling on its castors: rust/game_rules/src/game): ONE looping voice, started at the buffer's head and then held on
+  /** A sound that lasts as long as its thing does (a chair rolling on its castors: rust/game_rules/src/tick/game): ONE looping voice, started at the buffer's head and then held on
    *  the buffer's loop stretch. `update()` asks `src` every frame for the thing's place and how hard it goes: level and pitch follow per frame, the panner and the
    *  low-pass with the other loops' (four times a second; its reverb send is the start's), and it is faded out when `src` answers null. Outside the one-shots' budget:
    *  at most MAX_FOLLOW alive (a nearer newcomer takes the farthest one's place, any other is not voiced) and two more still fading. It cannot run on: stopped when

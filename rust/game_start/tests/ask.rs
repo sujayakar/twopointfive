@@ -1,4 +1,4 @@
-//! THE WORLD AS A QUESTION TAKES IT (rust/game_rules/src/ask): a line or a ray asked of the level as it stands, of its statics alone, or with a leaf let through,
+//! THE WORLD AS A QUESTION TAKES IT (rust/game_rules/src/world/ask.rs): a line or a ray asked of the level as it stands, of its statics alone, or with a leaf let through,
 //! and nothing of the game changed to ask it.
 use game::ask::Over;
 use game::scene_collision::{raycast_over, segment_blocked_over, shot_blocked_over, solid_blocked_over};

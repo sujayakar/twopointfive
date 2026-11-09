@@ -133,8 +133,8 @@ heavy features one at a time. F9 records frames, read with `tools/qa/perf-report
 mode, enemies that don't think and unlimited ammunition.
 
 **Saves and what a machine keeps.** A save is a `Moment`: a clone of the whole game in the module's memory, so a reload loses it. Saves by hand and autosaves are two rings, and a fresh run starts with
-none. In `rust/game_rules/src/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while anybody is alert,
-searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
+none. In `rust/game_rules/src/tick/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while
+anybody is alert, searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
 
 What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineBefore`, `machineAfter`). A fresh Playwright
 context has none of it, and a person's browser may. An address word wins over what is kept.

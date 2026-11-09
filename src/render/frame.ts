@@ -56,12 +56,12 @@ export const FRAME_HEAD_BYTES = 928;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
-/** What the weather (rust/game_rules/src/weather) hands the frame: everything the volumetric pass needs to draw rain / splashes / the sky flash in the OUTDOOR air. All zero =
+/** What the weather (rust/game_rules/src/air/weather.rs) hands the frame: everything the volumetric pass needs to draw rain / splashes / the sky flash in the OUTDOOR air. All zero =
  *  no weather work anywhere (the shader's first test), which is what ?noweather and every Engine nobody attaches a Weather to get. */
 export interface WeatherFrame {
   /** rain rate 0‥1: the fraction of the drop-column lattice that is falling (0 = dry: the pass skips the whole block) */
   rain: number;
-  /** SNOWFALL 0‥1 on a level built for snow (rust/game_rules/src/weather → src/picture/snow/fx.ts: how many flakes the particle layer keeps in the air). Read on the CPU only — it is
+  /** SNOWFALL 0‥1 on a level built for snow (rust/game_rules/src/air/weather.rs → src/picture/snow/fx.ts: how many flakes the particle layer keeps in the air). Read on the CPU only — it is
    *  not in the Frame; with it > 0 `rain` is 0, so no streak, ring or wet ground is drawn anywhere. Absent / 0 = none. */
   snow?: number;
   /** wind shear of the falling streaks: metres sideways per metre of height, x and z (wind speed ÷ fall speed) */
@@ -76,7 +76,7 @@ export interface WeatherFrame {
   interior: [number, number, number, number];
   /** a second, small roofed footprint outside the main one — the west stair tower the QRF comes up (rays ending in it draw no rain; all zero = none) */
   annex: [number, number, number, number];
-  /** WEATHER KINDS (rust/game_rules/src/weather_kinds; absent / 0 = none — the frame as it was): a third and a fourth roof footprint packed x0 z0 x1 z1 in 8 bits each of
+  /** WEATHER KINDS (rust/game_rules/src/air/weather_kinds.rs; absent / 0 = none — the frame as it was): a third and a fourth roof footprint packed x0 z0 x1 z1 in 8 bits each of
    *  0.2 m (packRect), and the fog in the outdoor air in 32 bits (packFog). They ride in the three spare words of cardCfg (.y .z .w): the Frame keeps its size. */
   roofC?: number; roofD?: number; fog?: number;
   /** PARTICLE RAIN (experiment, src/picture/rain.ts): the near-field particle layer's disc — centre x, z, radius (m), and 0‥1 = the share of the LATTICE rain the shader drops
@@ -244,7 +244,7 @@ export const reachBinding = { storage: true };
  *  constructor turns it off on adapters whose per-stage budget cannot take scene 6 + reach 1 + mesh 1 + the cascade trace's / probe's 2 = 10 (Chrome on
  *  Metal offers exactly 10); the prelude then declares a stub meshLoad() and the setting is inert (engine.meshShadowsAvailable says which). */
 export const meshBinding = { enabled: true };
-/** GLASS BREAKING (rust/game_rules/src/glassbreak): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
  *  glassTransmit passing fallen cells in common.wgsl, the crack network in composite.wgsl). host/drawpage.ts raises it at BOOT from the persisted `tune.glassBreak` before the Engine
  *  builds a pipeline; false = every such statement is dead code the compiler drops — the modules as they were (flag-off identity is hash-proven against main). A page
  *  reload applies a change of the switch to the GPU side. */
@@ -255,15 +255,15 @@ export const glassBreakConfig = { on: false };
  *  mission compiled every program that read one of them a second time (about a third of the programs between the title and a snow level). Now each is a bit of the frame
  *  block's `levelCfg.x` (`LevelSw`, written by writeFrame from these tables) and a shader asks `lv(WX_KINDS)`: the same answer at every use, on every
  *  level, from ONE text. A branch a level does not raise is not taken; it is no longer left out of the program. Nothing in the update reads the word. */
-/** WEATHER KINDS (rust/game_rules/src/weather_kinds, rust/game_rules/src/weather): their shader reads (the level's own roofs and the fog in the outdoor air: common.wgsl wx*, read by
+/** WEATHER KINDS (rust/game_rules/src/air/weather_kinds.rs, rust/game_rules/src/air/weather.rs): their shader reads (the level's own roofs and the fog in the outdoor air: common.wgsl wx*, read by
  *  composite / vol_common / volumetrics / fgather / particles_common). host/drawpage.ts raises it at BOOT when the page is opened with ?weather=<kind>, or
  *  on a level that is not the office's family, or once a game is stood under its own roofs (Weather.levelRoofs) — its own storm reads its own roofs; false = no such statement runs. */
 export const weatherKindConfig = { on: false };
-/** SNOW (rust/game_rules/src/weather_kinds SNOW_LEVELS, src/picture/snow/fx.ts): the particle shaders' flake half, `lv(WX_SNOW)` (particles.wgsl rainStep: a flake rides the air,
+/** SNOW (rust/game_rules/src/air/weather_kinds.rs SNOW_LEVELS, src/picture/snow/fx.ts): the particle shaders' flake half, `lv(WX_SNOW)` (particles.wgsl rainStep: a flake rides the air,
  *  flutters, wraps round the view's disc and lands without a splash; particles_draw.wgsl rainFragment: a soft round flake, nothing refracted). host/drawpage.ts raises
  *  it at BOOT on a page whose level is one built for snow; false = no such statement runs. A page is one level for its whole life, so the two never meet. */
 export const snowConfig = { on: false };
-/** THE SNOW'S LOOK (rust/game_rules/src/weather_kinds SNOW_LOOK; picture only): the rows of a page opened on a snow level, raised by host/drawpage.ts at BOOT with snowConfig.
+/** THE SNOW'S LOOK (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK; picture only): the rows of a page opened on a snow level, raised by host/drawpage.ts at BOOT with snowConfig.
  *  `surface` → the g-buffer module's second writing (render/gbuffer.ts `GBUF_SNOW`: its programs come in two texts and a level picks; no shader asks the level word's SNOW_SURF bit, which says the same to whoever reads the word): the g-buffer shades the snow paint as one surface off the level's snow field and draws its drifts as a mesh
  *  (shaders/snow.wgsl, render/snowField.ts). `wisps` → `lv(SNOW_WISPS)`: the particle shaders' half of the wisps the wind runs over the ground
  *  (src/picture/snow/fx.ts). false = no such statement runs. */
@@ -281,7 +281,7 @@ export function levelSwitches(): number {
  *  scene prelude's `const WX_EDGE`. On by default; host/pictureopens.ts lowers it at BOOT for ?nowallfog = the fog classed by the surface point alone, the picture as it was
  *  (composite.wgsl takes wxFogApply, the statement it always had). Read only under WX_KINDS: with no weather picked it is dead code either way. Picture only. */
 export const weatherEdgeConfig = { on: true };
-/** THE WEATHER'S AIR AS A VOLUME (common.wgsl wxAir / wxIndoor, volumetrics.wgsl wxAirMarch; rust/game_rules/src/air_dust): a picked weather's dust / fog is a MEDIUM the
+/** THE WEATHER'S AIR AS A VOLUME (common.wgsl wxAir / wxIndoor, volumetrics.wgsl wxAirMarch; rust/game_rules/src/air/air_dust.rs): a picked weather's dust / fog is a MEDIUM the
  *  volumetric pass marches — thicker the more of it a pixel looks through, lit by the sun / moon with shadow rays and by the sky's light, carried into rooms at
  *  open doors and blown walls — in place of composite.wgsl's flat veil over what counts as outdoors (wxFogApply / wxFogApplySurf). The scene prelude's `const WX_VOL`.
  *  On by default; host/pictureopens.ts lowers it at BOOT for ?flatfog = the veil exactly as it was. Read only under WX_KINDS: with no weather picked it is dead code either way. */
@@ -330,7 +330,7 @@ export const wallSidesConfig = { on: true };
  *  it outside the g-buffer (the reflection pass: how far a stuff's own `mirrors` stands in for a plain coat's, passes.ts setBeams); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
  *  the setting itself is the hour's to write). Never seen on a GPU. */
 export const lookConfig = { kept: 0, pressed: 1, bounce: 0.7, air: 1, sky: 1, shade: 0.7, lamps: 1, exposure: null as (() => number | null) | null, puffs: 1, veil: 1, snow: null as (() => boolean) | null, eyes: 1, eyeAt: null as (() => readonly [number, number] | null) | null, doorGaps: null as (() => readonly (readonly [number, number, number, number])[]) | null, nightSky: null as (() => { zenith: ArrayLike<number>; horizon: ArrayLike<number> } | null) | null, fireSmoke: 1, longFoot: 1, walked: 1, fireSnow: 1, rooms: 1, steady: 1, roomBright: 1, order: 1, dark: 1, windows: 1, glare: 0.1, stir: 1, gradeExp: 1, gradeC: 1.35, gradeH: 0, gradeS: 0, gradeSat: 1 };   // (nightSky: the level's own sky as its file has it, a night's on every level but one that is its own day: the page's word, host/drawpage.ts, for render/lookexpo.ts lookNightSkyE while an hour is up · dark: the Eyes open in the dark row, how far past the night's exposure a place under the dim level is shown, × LOOK_EXPO.dark stops · stir: the Stirred smoke row, Game.smokeWake: a man moving through smoke is a body the smoke goes round, with a kick behind him at every stride, and the solver keeps the eddies he sheds turning, smoke.wgsl emBody; 0 = the two soft shoves as the build has them; glare: the Glare outside row, render/lookexpo.ts LOOK_EXPO.out; grade*: the grading rows as the tone map takes them, render/gbuffer.ts lookSync: × the exposure, the contrast, + the highlights' and the shadows' stops, × the saturation)
-//   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, host/drawpage.ts from rust/game_rules/src/hours, null = a night or nobody says; puffs: the Snow puffs row, × what a boot kicks into the powder's field, src/picture/snow/fx.ts bootKicks; veil: the Blowing snow row, × what the wind picks up into it, render/powderField.ts; snow: the page's word for whether snow lies on this level, host/drawpage.ts: no snow, no powder; fireSmoke: the Fire smoke row, rust/game_rules/src/fire FIRE_LOOK_SMOKE; eyes: the Eyes follow Sam row, how far the one exposure model's own eye goes to the place he stands in, render/lookexpo.ts; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
+//   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, host/drawpage.ts from rust/game_rules/src/air/hours, null = a night or nobody says; puffs: the Snow puffs row, × what a boot kicks into the powder's field, src/picture/snow/fx.ts bootKicks; veil: the Blowing snow row, × what the wind picks up into it, render/powderField.ts; snow: the page's word for whether snow lies on this level, host/drawpage.ts: no snow, no powder; fireSmoke: the Fire smoke row, rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE; eyes: the Eyes follow Sam row, how far the one exposure model's own eye goes to the place he stands in, render/lookexpo.ts; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
 /** A METAL NEVER MIRRORS THE ROOM BEHIND A WALL (the maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like
  *  irradiance cache leak through wall? and showing up in specular?"). A ray-traced reflection shades its hit with the radiance cache read a probe spacing along
  *  the hit's normal. For a hit on a wall that is sound. For a hit on a shelf board, a desk top or the floor within half a cell of a partition the spacing runs

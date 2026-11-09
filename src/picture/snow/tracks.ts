@@ -50,7 +50,7 @@ export const SNOWTRACKS = {
   dragDeep: 0.3,      // how deep a scuff is cut at the boot's end, of the way from the outline to the floor (in the byte: 0.5 + dragDeep × 0.45); it runs out to nothing
   // ---- a RUN tears the snow up (the maintainer, 10-15: "sprinting should leave messier trails"). How fast the man is going when the foot lands = `run` 0‥1
   // (0 at runLo and under: a walk's print is the print above, byte for byte; 1 at runHi: a flat sprint, 4.7 m/s; a jog's 3.3 m/s is about two fifths). Every
-  // number below is × run × runMess × mess. The player's trail, a defender's who runs, and a teammate's where rust/game_rules/src/teampace has him run.
+  // number below is × run × runMess × mess. The player's trail, a defender's who runs, and a teammate's where rust/game_rules/src/teammates/teampace.rs has him run.
   runMess: 1,         // 0‥1: all of it at once (0 = a sprinter's print is a walker's)
   runLo: 2.4,         // m/s
   runHi: 4.4,         // m/s
@@ -65,7 +65,7 @@ export const SNOWTRACKS = {
   spray: 12,          // … and this many more thrown out BEHIND it, the way the foot came from, where the push-off flings them …
   sprayFar: 0.85,     // m: … the furthest of them this far back …
   sprayFan: 0.5,      // rad: … in a fan this wide either side of that line
-  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2 (rust/game_rules/src/snow_marks has the
+  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2 (rust/game_rules/src/air/snow_marks.rs has the
   // things'). 0 on `form` = a mark is whole at once.
   form: 0.2,          // s: a mark's floor sinks in over this ÷ (0.5 + force) — a walker's print about a seventh of a second, a sprinter's an eighth, a blast's at once
   throwLag: 0.16,     // s: the lumps it threw land this × (0.6 + 0.4 × force) after it was made (thrown harder, they fly longer) …
@@ -87,11 +87,11 @@ export interface SnowTracks {
   dirty: [number, number, number, number] | null;
   /** prints pressed so far (feet) and hollows (bodies) — for the panel and a check */
   prints: number; hollows: number;
-  /** … and the craters blasts have blown in it (rust/game_rules/src/snow_blast) */
+  /** … and the craters blasts have blown in it (rust/game_rules/src/air/snow_blast.rs) */
   craters: number;
   /** every piece of `data` changed since the last hand-over, each by itself (`dirty` is the one rect round them all) */
   rects: [number, number, number, number][];
-  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent (rust/game_rules/src/snow_marks) */
+  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent (rust/game_rules/src/air/snow_marks.rs) */
   marks: number;
   /** the marks still forming (SNOW_LOOK.marks; `formSnowTracks` brings them on) */
   forming: Forming[];
@@ -332,15 +332,15 @@ function pressMessy(T: Stamp, TC: Stamp, cx: number, cz: number, ux: number, uz:
   }
 }
 
-/** how a crater is shaped (rust/game_rules/src/snow_blast SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
+/** how a crater is shaped (rust/game_rules/src/air/snow_blast.rs SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
 export interface CraterLook { lobe: number; rag: number; floor: number; rim: number; rays: number; rayLen: number; rayWide: number; clods: number; clodFar: number; clodR: number }
-/** A BLAST'S CRATER at (cx, cz), its pan `r0` m across the middle (rust/game_rules/src/snow_blast; the maintainer, 10-15: "grenades/he don't seem to really affect snow"). In the
+/** A BLAST'S CRATER at (cx, cz), its pan `r0` m across the middle (rust/game_rules/src/air/snow_blast.rs; the maintainer, 10-15: "grenades/he don't seem to really affect snow"). In the
  *  prints' own byte, read by the shader as a print is: THE PAN — snow blown out down to a churned floor, its edge thrown into lobes and broken into lumps, a bank
  *  heaped wider than a boot's round it; THE RAYS — grooves the burst scoured outward, each narrowing and running out to nothing, bank and all; THE CLODS — lumps
  *  of snow thrown clear, lying on the surface out to several radii, most of them near. All off a hash of the place and the crater's number (never the game's
  *  die): the same blast presses the same bytes. Never lifts what is already pressed. */
 export function pressCrater(T: SnowTracks, cx: number, cz: number, r0: number, serial: number, L: CraterLook) {
-  stampMark(T, 2, (S, SC) => craterInto(S, SC, cx, cz, r0, serial, L));   // (a blast: its pan is there at once, its clods land after — and it kicks nothing up here: the blast throws its own snow, rust/game_rules/src/snow_blast)
+  stampMark(T, 2, (S, SC) => craterInto(S, SC, cx, cz, r0, serial, L));   // (a blast: its pan is there at once, its clods land after — and it kicks nothing up here: the blast throws its own snow, rust/game_rules/src/air/snow_blast.rs)
   T.craters++;
 }
 function craterInto(T: Stamp, TC: Stamp, cx: number, cz: number, r0: number, serial: number, L: CraterLook) {
@@ -405,7 +405,7 @@ function craterInto(T: Stamp, TC: Stamp, cx: number, cz: number, r0: number, ser
   }
 }
 
-/** A THING'S MARK (rust/game_rules/src/snow_marks — what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
+/** A THING'S MARK (rust/game_rules/src/air/snow_marks.rs — what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
  *  its first end and `r` about its last, pressed down to `deep` (0‥1 of a boot's full depth: a light thing rides high), its outline broken into lumps and its
  *  bank's reach broken along its length as a print's are (`m` = how untidy, 0‥1; SNOWTRACKS.crumble / lump / reach). Never lifts what is already pressed. */
 export function pressGroove(T: Stamp, ax: number, az: number, bx: number, bz: number, r0: number, r: number, deep: number, m: number) {

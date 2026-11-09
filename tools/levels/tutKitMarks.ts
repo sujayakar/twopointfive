@@ -1,5 +1,5 @@
 // TUT-KIT'S PLACES: where its fights' men come in, stand and shoot, which the generator lays the level round (tools/levels/tut-kit.ts). The game's program of those fights holds the same numbers
-// (rust/game_rules/src/script_tut_kit).
+// (rust/game_rules/src/missions/script_tut_kit.rs).
 import type { Vec3 } from '../../src/math/vec';
 
 /** THE TWO FOR THE LAUNCHER come through the building behind him once he is back at the arch: where they come onto the floor (the lane behind the store,

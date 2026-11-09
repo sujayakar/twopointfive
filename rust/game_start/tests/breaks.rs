@@ -1,5 +1,5 @@
-//! WHAT BREAKS OFF A THING IS MADE OF THAT THING, AND A PIECE LIES ON WHAT IS UNDER IT AND NOT ON A BODY (rust/game_rules/src/break_table,
-//! rust/game_rules/src/edge_look, rust/game_rules/src/debris).
+//! WHAT BREAKS OFF A THING IS MADE OF THAT THING, AND A PIECE LIES ON WHAT IS UNDER IT AND NOT ON A BODY (rust/game_rules/src/breakage/break_table,
+//! rust/game_rules/src/breakage/edge_look.rs, rust/game_rules/src/breakage/debris).
 //!
 //! The Pass's inside partitions are mud (`mudLight`: stuff "mud wall", does "plasterboard": a charge cuts it, a round goes through). A charge is set on one
 //! by the game's own order and blown by the game's own call, and what is on the floor a few seconds on is asked what it is and where it lies.

@@ -39,7 +39,7 @@
 //   moon        one directional light, in `exterior` (the hour's sun goes in at its place)
 //   doorway     no painted band or other wall decal runs across a doorway
 //   roof        no DRAWN slab at ceiling height (the camera cannot see the room under it), and no more roofs than the rain reads (four)
-//   response    a level has a response team only where its file says so (scenarios.response, rust/game_rules/src/qrf). With the block: its `why` is a sentence,
+//   response    a level has a response team only where its file says so (scenarios.response, rust/game_rules/src/pursuit/qrf). With the block: its `why` is a sentence,
 //               and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
 //               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
 //               and a call played through, are rust/game_start/tests/response_team.rs's
@@ -97,7 +97,7 @@ const read = (name: string): LevelFile => { let L = FILES.get(name); if (!L) FIL
 export const rowsOf = (name: string): Row[] => missionRows().filter(e => e.level === `${name}.json`);
 /** the generator a file names (meta.generator), as a path in the tree */
 const generatorOf = (L: LevelFile) => L.meta?.generator?.match(/[\w./-]+\.ts/)?.[0] ?? null;
-/** the slabs in the rain's roof band (rust/game_rules/src/weather roofs_of: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
+/** the slabs in the rain's roof band (rust/game_rules/src/air/weather.rs roofs_of: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
  *  across both ways) */
 const roofBand = (L: LevelFile) => L.boxes.filter(b => b.c[1] - b.h[1] >= WORLD.ceilingY - 0.25 && b.c[1] + b.h[1] <= WORLD.ceilingY + 0.45 && b.h[0] >= 0.45 && b.h[2] >= 0.45);
 
@@ -211,7 +211,7 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
  *  THE MEASURE, in plan, from the file alone. A WALL is cut as tools/qa/bouncewalls-check.ts cuts one (casts a shadow, from the floor to the ceiling,
  *  long and thin: a mast or a pillar is not; its numbers are typed again here, and a turned wall is kept here), and the line of a door the file does
  *  not hold open. Between a face and a probe a wall counts a hand's width short of each end, so that a line grazing its end goes round it. A LAMP is a
- *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that rust/game_rules/src/game stands an area light in for (a
+ *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that rust/game_rules/src/tick/game stands an area light in for (a
  *  ceiling panel, a screen: its brightest channel times its face). A probe is LIT by a lamp in range with no wall between them (a spot too: its
  *  bounce fills the room its cone is in), or by the sky where no roof is over it and the file has a sun or moon; a probe inside a wall is dark. For
  *  every box a ray can land on that is not the building's own (no decal, not glass, no group of STRUCTURE), and every loose prop, a point every `step`
@@ -261,7 +261,7 @@ export function leakReads(L: LevelFile): LeakRead[] {
   type Lamp = { id: string; pos: number[]; range: number; power: number; dir?: number[]; cos: number };
   const lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2], byId = new Map(L.boxes.map(b => [b.id, b]));
   const lamps: Lamp[] = L.lights.filter(l => l.kind !== 'dir' && l.enabled !== false).map(l => ({ id: l.id, pos: l.pos, range: l.range ?? 8, power: l.intensity ?? 1, dir: l.kind === 'spot' ? l.dir : undefined, cos: Math.cos((l.outerDeg ?? 90) * Math.PI / 180) }));
-  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (rust/game_rules/src/game, the flat fixtures it lights the scene by)
+  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (rust/game_rules/src/tick/game, the flat fixtures it lights the scene by)
     for (const id of s.boxes ?? []) { const b = byId.get(id); if (!b) continue; const h = [...b.h].sort((p, q) => q - p), power = Math.max(...s.baseEmissive, 1e-3) * 4 * h[0] * h[1];
       if (h[2] <= 0.06 && 4 * h[0] * h[1] >= 0.01) lamps.push({ id: s.id, pos: b.c, range: Math.min(26, Math.max(3, Math.sqrt(power / 0.0015))), power, cos: -1 }); } }
   /** what this lamp gives a point a metre up, walls aside: nothing out of its range, or (`cone`) out of a spot's cone */
@@ -422,7 +422,7 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
     if (R) { const why = typeof R.why === 'string' ? R.why.trim() : '', raid = !!R.raid;
       say('response', why.length > WHY_MIN, `a response team comes here (${typeof R.team === 'string' ? R.team : 'no `team` word'}; it answers ${raid ? 'a squad\'s room clear and nothing else' : 'a quiet night gone loud'}): ${why.length > WHY_MIN ? 'the file says why' : `its \`why\` is not a sentence (over ${WHY_MIN} characters)`}`);
       if (none !== undefined) say('response', false, `NOBODY_COMES says nobody comes here ('${none}') and the file carries a response block: one of the two is stale`);
-      // (rust/game_rules/src/qrf live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
+      // (rust/game_rules/src/pursuit/qrf live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
       if (!(raid ? rows.some(e => e.kind === 'nightbreach' || e.kind === 'roomclear') : name === 'office' || rows.some(e => e.kind === 'quiet')))
         say('response', 'note', `the block answers ${raid ? 'a squad\'s room clear' : 'a quiet night gone loud'} and no row of this level is one (${rows.map(e => `${e.id}: ${e.kind}`).join(', ')}): nobody would ever be called`);
  }

@@ -3,8 +3,8 @@
 // = its centre, axes = its own: before the yaw / Box.rot, metres). The planes ride with the box for free: move, yaw or tumble the box and the cut goes with it.
 //
 // ONE MODEL: the rasteriser draws that solid (gbuffer.wgsl, the cut pass), every GPU ray meets it (common.wgsl isectBox → shadows, bounce, reflections, the light
-// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, rust/game_rules/src/scene_collision line_box → rounds, aim, sight, sound, throw arcs).
-// What stays the UNCUT box, by decision: everything that pushes against it (rust/game_rules/src/scene_collision collide_circle / gather, the nav grid, debris / prop contact), its
+// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, rust/game_rules/src/world/scene_collision.rs line_box → rounds, aim, sight, sound, throw arcs).
+// What stays the UNCUT box, by decision: everything that pushes against it (rust/game_rules/src/world/scene_collision.rs collide_circle / gather, the nav grid, debris / prop contact), its
 // registration in the trace grid and the ray grid (a superset: only costs a test), and the smoke solver's obstacle bake.
 //
 // THE SWITCH: cutConfig.on (raised once at boot; the scene prelude's `const CUT_BOXES` is compiled from it, so flipping it wants a reload). OFF in this module;

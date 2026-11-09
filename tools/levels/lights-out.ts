@@ -142,7 +142,7 @@ export function build() {
   T.add({ c: [27.4, 0.67, 13.72], h: [0.44, 0.55, 0.34], ...GWOT_MATERIALS.iron });
   T.add({ c: [27.4, 0.67, 14.07], h: [0.36, 0.46, 0.012], ...GWOT_MATERIALS.galv, flags: BoxFlag.NoShadow });
   T.add({ c: [27.56, 0.72, 14.095], h: [0.07, 0.07, 0.014], ...GWOT_MATERIALS.iron, flags: BoxFlag.NoShadow });
-  // the holder's tell-tale (rust/game_rules/src/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
+  // the holder's tell-tale (rust/game_rules/src/tick/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
   { const led = T.add({ c: [27.16, 1.04, 14.088], h: [0.03, 0.012, 0.006], ...GWOT_MATERIALS.iron, emissive: [3, 0.4, 0.2], flags: BoxFlag.NoShadow });
     T.switchables.push({ name: 'rack0_leds', boxes: [led], group: 'objective', on: true, baseEmissive: [3, 0.4, 0.2], mains: false }); }
   // the signallers' room: the set on its table, bedrolls, the spares

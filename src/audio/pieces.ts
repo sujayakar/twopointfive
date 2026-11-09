@@ -13,7 +13,7 @@
 //                 keeps the music it has. Switch off (or a host that names no level): music.ts deals them from a shuffled bag (the page's own die, never the game's) — the
 //                 visit opens on a new one, a mission that starts once a piece has had MUSIC.missionAfter seconds moves on, and so does a piece that has had MUSIC.minutes.
 //   how tense     THE OPPOSITION'S NERVES (MUSIC.theirs — ON in the page, OFF here): the tension the
-//                 score follows (rust/game_rules/src/guards tension; the page hands it this switch) is how roused the men against the player are. In live play a teammate counts
+//                 score follows (rust/game_rules/src/people/guards tension; the page hands it this switch) is how roused the men against the player are. In live play a teammate counts
 //                 only while he is in a fight of his own ('alert'); what a blast, a noise or a tripped breaker left on him does not. A man under an order never talks
 //                 himself calm, so with the switch off (as it was) one can left a teammate's wariness holding the score up for as long as his order stood, every
 //                 defender down or not. While a show runs (the day showcase's pair hunting) its men's scripted states are the score's cue and read as they always did.

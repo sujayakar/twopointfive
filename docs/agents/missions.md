@@ -20,15 +20,15 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
 | `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
-| `scenario_run/` | the one way from an address to a staged game; what is up; quit |
-| `roomclear/`, `squaddeal/` | rooms, marks and the two ends; squads cut along a house whose file names none |
-| `nightbreach/`, `breach/` | the staging a room clear stands on; F's drill |
-| `rescue/`, `rescueend/` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
-| `rescueflow/`, `rescuecheck/`, `rescueflush/` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
-| `quiet/`, `quietfog/`, `takecheck/` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission/` | the stealth stages, the run's counts, the one objective line (`objective`) |
-| `verdict/`, `par/` | how a run ended, latched; the medal clock |
-| `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
+| `scenario_run.rs` | the one way from an address to a staged game; what is up; quit |
+| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none |
+| `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
+| `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
+| `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
+| `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
+| `mission.rs` | the stealth stages, the run's counts, the one objective line (`objective`) |
+| `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
+| `lesson/`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
 
 The table of missions is `scenarios`, `quiet_missions` and `tutorial_missions` in `rust/game_types/src/scene_scenario_list/rows.rs`, and there is no other: the page asks the desk
@@ -71,10 +71,10 @@ in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; wal
 Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
 
-**How it ended** (`ended` in `verdict/b_01.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
+**How it ended** (`ended` in `verdict.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
 The objective line is one read, first speaker wins: script, lesson, room clear with its par, rescue, night breach, stages.
 
-**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/player/p_02.rs`). Inside
+**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/sam/player/update.rs`). Inside
 `game_restart_encounter`, the first act is the quiet deal and the last is each scenario's staging again. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
 carries the quiet deal, the lesson's step and a script's place in its beat.
 

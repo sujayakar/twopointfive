@@ -21,14 +21,14 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `doortools/` | the orders: `DoorOp` and its phases, the counts, the word, Sam's own charge. Most numbers: `DoortoolsK` |
 | `orders/rows/` | one file a row (`openclear.rs`, `bangclear.rs`, `charge.rs`, `fragclear.rs`, `bigclear.rs`, `threshold.rs`, `go.rs`, `stack.rs`): label, `valid`, `issue` |
 | `orders/` | `squad_orders_stack_posts` and the marks behind it, `squad_orders_pair` (who takes which mark), `squad_orders_assign` |
-| `stackroom/`, `stackline/` | marks kept on the door's own face, in no other door's way; `stack_line_pace`, a man slowing in view of an open door |
-| `handleside/` | `tool_spot`: where a lead opens a door by hand |
-| `shotgun/`, `bigkit/` | the lock shell and the hammer: `breach_spot`, `big_spots`, `gun_up`, `hammer_blow` |
-| `doorpath/` | who may cross when, and each man's walk round the leaves |
-| `entrypoints/` | which openings the squad has been beyond; `entry_points_clear_of` moves a point off an uncleared one |
-| `roomread/`, `roomfit/` | the space round a spot; marks for the move-there order and what a rear man can watch. A door order does not use them |
-| `rearwatch/` | who keeps the way behind a stack (`rear_watch_tick`); a taken room's other door as the squad leaves (`room_keep_tick`) |
-| `wandorder/` | the wand on order: its row is `wand.rs`, on V (`stealth.md`) |
+| `stackroom.rs`, `stackline.rs` | marks kept on the door's own face, in no other door's way; `stack_line_pace`, a man slowing in view of an open door |
+| `handleside.rs` | `tool_spot`: where a lead opens a door by hand |
+| `shotgun.rs`, `bigkit.rs` | the lock shell and the hammer: `breach_spot`, `big_spots`, `gun_up`, `hammer_blow` |
+| `doorpath.rs` | who may cross when, and each man's walk round the leaves |
+| `entrypoints.rs` | which openings the squad has been beyond; `entry_points_clear_of` moves a point off an uncleared one |
+| `roomread.rs`, `roomfit.rs` | the space round a spot; marks for the move-there order and what a rear man can watch. A door order does not use them |
+| `rearwatch.rs` | who keeps the way behind a stack (`rear_watch_tick`); a taken room's other door as the squad leaves (`room_keep_tick`) |
+| `wandorder.rs` | the wand on order: its row is `wand.rs`, on V (`stealth.md`) |
 
 Other systems use the same machine through `door_tools_order`: `rescue/` starts its doors on a `DoorGate`, `qrf/` runs a response team with its own counts. The page has no
 rule here: the ring and its marks come through `view/`, and `door_tools_draw_charge` shows a set charge.
@@ -74,7 +74,7 @@ from an ended order goes on a short fuse (`door_tools_defuse`). A frag has its o
 `door_tools_seen_most`. Three or more go in turn off alternate jambs (`gun_turn`, `rear_last`); a man with no point stays out and leaves the order. The queue lets each go
 by `door_path_may_go`. On his point a man works through a known enemy's place (`door_tools_threat_step`), his corners (`door_tools_corner_step`), his sweep or
 `door_tools_scan` of unseen floor, then his sector. `door_tools_move_on` and `door_tools_flow_in` send men on to floor nobody has seen. The order ends "in" when they have
-swept it or at `search_cap`, and the lead says the room's call (`squadnet/`).
+swept it or at `search_cap`, and the lead says the room's call (`squadnet.rs`).
 
 **After the entry.** `door_tools_keep_sectors` swings a man's sector off a teammate in it. `door_tools_other_doors` turns one man's gun onto each other door
 of the room nobody has been beyond (`other_door_m`). With three or more in, one man looks back at the door they came by (`last_out_m`). `room_keep_tick` keeps a man on
@@ -98,7 +98,7 @@ open is refunded (`door_tools_tick_set`) and its men hold (`door_tools_short`). 
 **Big tools.** `door_tools_gun_step` puts up to `shells` into the lock, then gives up to the boot. `door_tools_hammer_step` takes one blow, or `k.bigslot.swings` where the
 frame would hold a boot.
 
-**A silent team** (`silent/`, `squad_silent`) picks (`door_tools_pick_step`), eases the leaf (`silent_ease`) and throws no can unless told (`silent_no_cans`). It does not halt at
+**A silent team** (`silent.rs`, `squad_silent`) picks (`door_tools_pick_step`), eases the leaf (`silent_ease`) and throws no can unless told (`silent_no_cans`). It does not halt at
 a shut door. A door no pick opens ends the order until the squad is caught (`silent_boot`). A rescue's last warning (`urgent`) lifts the pick and the ban
 on the boot. Giving a row marked `Is::Loud` ends silence (`silent_tool`).
 

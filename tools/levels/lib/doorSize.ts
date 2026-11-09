@@ -6,7 +6,7 @@
 // slot as wall. So the size is one number here, every level takes it by being exported again, and nothing a generator placed beside a door can end up in one: a
 // doorway only ever shrinks, within the slot it was drawn in.
 //
-// WHERE in its slot the door goes is the walk grid's call. The nav bake (rust/game_rules/src/scene_collision NavGrid) asks of each half-metre cell's CENTRE whether a man has 0.34 m of
+// WHERE in its slot the door goes is the walk grid's call. The nav bake (rust/game_rules/src/world/scene_collision.rs NavGrid) asks of each half-metre cell's CENTRE whether a man has 0.34 m of
 // air round it, and every path is laid through cell centres. Between the stops of a 0.9 m door there are 0.83 m: a cell centre standing in the frame is free
 // only within 7 cm of the middle. So the door is slid along its slot until its middle stands ON a cell centre: a 1.2 m slot has 0.3 m to slide and the centres
 // are 0.5 m apart, so most slots reach one inside themselves; one that cannot (drawn 0.4 m past a cell edge) lets its door stand up to `reach` outside it, into
@@ -21,7 +21,7 @@ export const DOOR_SIZE = {
   head: 2.05,
   /** a doorway drawn wider than this is not a door slot (an arch, a gate, a shutter): it is left as drawn */
   slotMax: 1.3,
-  /** the walk grid's cell (rust/game_rules/src/scene_collision NavGrid.cell) */
+  /** the walk grid's cell (rust/game_rules/src/world/scene_collision.rs NavGrid.cell) */
   cell: 0.5,
   /** how far outside its slot a door may stand to put its middle on a cell centre */
   reach: 0.1,
@@ -95,7 +95,7 @@ export function exitThrough(d: Pick<LevelDoorDef, 'hinge' | 'closedDir' | 'width
 export function fitWaysOut(level: { doors: LevelDoorDef[]; mission?: { exfilDoor: string; exfilX: number; exfilZ: number } }, quiet?: { exits?: { door?: string; x: number; z: number }[] } | null): void {
   const door = (n?: string) => level.doors.find(d => d.name === n);
   const M = level.mission as { exfilDoor: string; exfilX: number; exfilZ: number; exfilOut?: [number, number] } | undefined, md = M && door(M.exfilDoor);
-  if (M && md) { const [x, z] = exitThrough(md, M.exfilX, M.exfilZ); M.exfilZ = z; if (M.exfilOut) M.exfilX = x; }   // (an exit that does not say which way is out faces east — rust/game_rules/src/mission out_now: its x is the LINE he must be past, never a point on a wall, so only its place along a north-south wall follows the door)
+  if (M && md) { const [x, z] = exitThrough(md, M.exfilX, M.exfilZ); M.exfilZ = z; if (M.exfilOut) M.exfilX = x; }   // (an exit that does not say which way is out faces east — rust/game_rules/src/missions/mission.rs out_now: its x is the LINE he must be past, never a point on a wall, so only its place along a north-south wall follows the door)
   for (const X of quiet?.exits ?? []) { const d = door(X.door); if (d) [X.x, X.z] = exitThrough(d, X.x, X.z); }
 }
 

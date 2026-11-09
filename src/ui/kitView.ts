@@ -1,6 +1,6 @@
 // THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's top-down picture of the team as picked, stood at the mission's own way-in door. The game
 // behind the start page is not the picked mission's level, so the picture is a SECOND page in an iframe: this page again, on the very query Deploy would load plus `&kitview&mute&noreplay`. Its module is that mission
-// with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/kitstage; `&stillkit` on it = drawn for a warm window, then
+// with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/outfit/kitstage; `&stillkit` on it = drawn for a warm window, then
 // held). The window is read-only on this origin's storage (host/kitguard.ts) and answers through host/kitpage.ts. It is thrown away when the page closes or Deploy fires, so its seat on the kept device goes with it.
 //
 // WHEN: the Team & kit step, a mission whose level file says where the team stands for the way in picked (`scenarios.kitView.ways`: ui/missions.ts kitViewWays, the plan's own fetch), and a window the figure's
@@ -46,7 +46,7 @@ const KIT_VIEW_PLACE = {
   /** from the column's right edge: the picture whole up to here (the edge itself: the room behind the door is in the column's last third) · three tenths
    *  of it here (the first tile's left edge — or at that edge itself if it is nearer: no tile has more of the picture under it than it had) · gone here (on the tile rows) */
   fade0: 0, fadeA: 0.07, fade1: 1,
-  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: rust/game_rules/src/kitstage/quiet.rs): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
+  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: rust/game_rules/src/outfit/kitstage/quiet.rs): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
    *  this share of ITS OWN window's width on (the iframe's; or from the first tile's left edge where that is further right) — the clear column is as
    *  it is, the fade runs from its edge to there and nothing of the picture lies under the panel — and the pool of picture under the last row of
    *  tiles is not laid at all */
@@ -123,7 +123,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
     tell({ kv: 'frame', cx: nx(c.left + c.width * P.cx), cy: 1 - ((c.top + c.height * P.cy - f.top) / f.height) * 2, h: Math.min(0.9, c.height * P.h / f.height), w: Math.min(0.9, c.width * P.w / f.width), man: Math.min(0.9, c.height * P.man / f.height),
       door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep,
-      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — rust/game_rules/src/kitstage/quiet.rs)
+      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — rust/game_rules/src/outfit/kitstage/quiet.rs)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)

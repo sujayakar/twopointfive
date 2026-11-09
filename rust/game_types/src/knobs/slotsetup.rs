@@ -28,7 +28,7 @@ use game_derive::Knobs;
 ///            have it switch a mode", "it should be something that pops up above the equipment menu rather than always taking up space". With `pop`
 ///            off it also shuts by itself `secs` after it opened or was last used (0: never), as that build did.
 /// His feet, his aim and his trigger are his own throughout: nothing is held, nothing is frozen, and no key is read here but the digits and the back key.
-/// THE RULE IS THE RUST GAME'S (rust/game_rules/src/slotsetup): this file keeps its table and how a line of words names its keys. What the HUD shows is what the game
+/// THE RULE IS THE RUST GAME'S (rust/game_rules/src/outfit/slotsetup.rs): this file keeps its table and how a line of words names its keys. What the HUD shows is what the game
 /// says (rust `setup_view`, game.view.kit.setup), drawn by ui/handbox.ts: the setup's rows stand above the kit column while it is up and at no other time; the box of
 /// the thing in his hands says what is set in plain words.
 /// THE TWO KEYS IT REPLACES (Z the selector, L the light) are the board's to drop, not the game's (host/keymap.ts `setFree`): the game goes on asking for

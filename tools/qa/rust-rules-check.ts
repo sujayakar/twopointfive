@@ -25,7 +25,7 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
 /** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS (rust/sim/src/state.rs): STATE = the games' blocks, the one place a game keeps anything from one
- *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/sim_state) · SCRATCH = written and read inside one call · COPY = the host's own
+ *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/tick/sim_state.rs) · SCRATCH = written and read inside one call · COPY = the host's own
  *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',

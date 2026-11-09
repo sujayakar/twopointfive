@@ -1,6 +1,6 @@
 // THE KIT'S SILHOUETTES: one small flat drawing per row of a member's card (ui/kitCard.ts) — the gun, a canister, a charge, the goggles — so a card reads as
 // kit laid out on a table and not as a list of words. Each is an inline SVG in the page's own colour (`currentColor`), drawn here from plain shapes on a
-// 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (rust/game_rules/src/kit KitField) and, for the
+// 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (rust/game_rules/src/outfit/kit KitField) and, for the
 // gun, its id. Pure strings: this file imports nothing, and what kind of gun a pick is drawn as is the card's to say (src/view/read.ts CardRow.icon).
 const BOARD = (body: string) => `<svg viewBox="0 0 64 32" aria-hidden="true" focusable="false" fill="currentColor" stroke="none">${body}</svg>`;
 const line = (d: string, w = 1.6) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -56,7 +56,7 @@ const GUN_CAN: Record<string, string> = {
   rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
   pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',
 };
-// (the big slot's row — rust/game_rules/src/kit BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
+// (the big slot's row — rust/game_rules/src/outfit/kit BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
 const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3.6l1.4 1.5-1.4 1.5H16z" opacity="0.7"/><path d="M9 18h2.6v-1H52v1c3 0 5.4.8 8 2.6l-1 1.8c-2.4-1.2-4.4-1.8-7-1.8H9z"/><path d="M26 16.4h14v3.6H26z" fill="#0c0b09" opacity="0.4"/>';
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
 const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL };

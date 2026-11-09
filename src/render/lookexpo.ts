@@ -14,7 +14,7 @@
 // Eyes open in the dark row at the most (place_common.wgsl lookExpoFor). It is the rule the model has by day for a place darker than the open air, about
 // the level a night's exposure leaves off at, and it is the same wherever the eyes are: no two dark places are ever drawn at one level. A night's yard and
 // its lit rooms are to the number as the night drew them, and a room lit by its own lamps is one picture at dusk and at night. Under the goggles the tube
-// is the eye, and nothing is brought up (rust/game_rules/src/nvg models the tube on the light as it is). By day the guards and the light meter read a room through the same gain, for eyes that are in it (rust/game_rules guards eyes_at); the dim level's is the picture's only. The check: tools/qa/lookexpo-check.ts.
+// is the eye, and nothing is brought up (rust/game_rules/src/teammates/nvg.rs models the tube on the light as it is). By day the guards and the light meter read a room through the same gain, for eyes that are in it (rust/game_rules guards eyes_at); the dim level's is the picture's only. The check: tools/qa/lookexpo-check.ts.
 export const LOOK_EXPO = {
   out: 0.6,      // the open is overexposed by his place's darkness to this power × the Glare outside row (0.1 of a row is a seventh brighter from a window room)
   band: 1.25,    // a place IS the open air while its floor gets 1 ∕ this of the open ground's light or more, and a darker one is counted from there (place_common.wgsl EXPO_BAND, the same number)

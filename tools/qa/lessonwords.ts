@@ -1,5 +1,5 @@
 // WHAT A LESSON'S TOKENS WRITE OUT TO, for the writing check (writing-check.ts): a line or a card names a move by a token (`{grab him}`) and the build writes the token out by
-// the keys it has. The game's own is rust/game_rules/src/lesson/p_01.rs (`token_line`, `token_say`, `lesson_token`), which the page shows; this is the same list and the same
+// the keys it has. The game's own is rust/game_rules/src/missions/lesson/asks.rs (`token_line`, `token_say`, `lesson_token`), which the page shows; this is the same list and the same
 // sentences, for a check that runs no game.
 //  `{grab him}` · `{grab him from behind}` · `{knock him out}` (the blow in reach) · `{take him out}` (the silent blow from behind). `him` may be any words for the man
 //  (`{grab the near guard from behind}`, `{grab yours}`): letters and apostrophes, one space between words. A capital first letter begins a sentence. A name in braces that is

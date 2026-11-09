@@ -24,15 +24,15 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `hours/` | the hours (`hours()`), one laid over the level and taken off, cloud on the light, the sky's light on a man |
-| `weather_kinds/` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
-| `weather/` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `air_trans` |
-| `air_dust/` | the fog's share in each half-meter cell, carried through openings and settling back |
-| `wind/` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
-| `wet/` | who is soaked and who dries; Sam's drips and prints |
-| `fire/` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
-| `moths/` | moths round the lit yard lamps; dress |
-| `snow_bog/`, `render_snow_field/` | how deep snow takes a thing that lands; which box is lying snow, by its word |
-| `snow_blast/`, `snow_marks/` | only what is told to the picture |
+| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
+| `weather.rs` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `air_trans` |
+| `air_dust.rs` | the fog's share in each half-meter cell, carried through openings and settling back |
+| `wind.rs` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
+| `wet.rs` | who is soaked and who dries; Sam's drips and prints |
+| `fire.rs` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
+| `moths.rs` | moths round the lit yard lamps; dress |
+| `snow_bog.rs`, `render_snow_field.rs` | how deep snow takes a thing that lands; which box is lying snow, by its word |
+| `snow_blast.rs`, `snow_marks.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
 Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs`, `bog_of` in `items.rs`, `glow.rs`.
@@ -81,13 +81,13 @@ other roll.
 
 | what | who reads it | the road |
 |---|---|---|
-| rain's noise | every ear (`hearing_check`, `whistle/`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
+| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
 | fog, dust | men, teammates, civilians, cameras | `air_trans` multiplies into `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
 | sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
-| the hour | `darkdoor/`, `calmtorch/`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
-| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense/`. No other wind reaches a rule |
-| deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan/`, `squadsmoke/` |
+| the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
+| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
+| deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
 | the soaked lot | what a round knocks out of it | `surf_at` asks the word's wet row |
 | a fire's lamp | the light meter | a real light, moved by `update_fire` |
 
@@ -102,7 +102,7 @@ air; the picture's air; a fire's flame and plume; moths.
 picture down. This system reads two rows of `DressModDRESS`, `wind` and `moths`, both in the tick, because the moths are boxes of the frame's list. A
 cut (a load, a restart) starts each `src/picture/` part again from the rows.
 
-**Wind.** `wind_new` makes the sources: one storm, each vent, each outside door; a broken window adds one (`glassbreak/`). `wind_update` works each
+**Wind.** `wind_new` makes the sources: one storm, each vent, each outside door; a broken window adds one (`glassbreak.rs`). `wind_update` works each
 one's speed for the tick (ramps, `vent_due`, gusts off `vnoise`) and hands them to the picture's solver. `wind_reroof` cuts the storm by the roofs.
 Fires and moths read `wind_at`.
 
@@ -157,7 +157,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`: `weather.rs` (`WxSimK`), `wet.rs`, `wind.rs`, `air_dust.rs`, `fire.rs`, `snow_bog.rs`. One that
-  `rust/sim/` reads also has its name in `rust/sim/src/knobs.rs` and its line in `rust/game_rules/src/rustknobs/base.rs`.
+  `rust/sim/` reads also has its name in `rust/sim/src/knobs.rs` and its line in `rust/game_rules/src/tick/rustknobs.rs`.
 - **A kind:** its row in `WeatherKindsMod::blank`. A new one is also a word of `WeatherKind`, `weather_kinds()`, `ALL_KINDS`, `WEATHER_ROW` and
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
@@ -179,7 +179,7 @@ Native tests in `rust/game_start/tests/`:
 | `smoke_said.rs`, `fire_look.rs` | a fire's plume is seen by no man; its hot air reaches the page |
 | `marks.rs`, `kit_stage.rs` | `a_wet_print_dries_by_itself`; `by_day_the_porch_lamp_is_out_with_the_levels_own` |
 
-`hours/`, `wind/` and `fire/` have unit tests beside their code. `levels rain` holds every level: open ground is rained on, ground under a ceiling is
+`hours/`, `wind.rs` and `fire.rs` have unit tests beside their code. `levels rain` holds every level: open ground is rained on, ground under a ceiling is
 not. `gate`'s pins cover `weather` and `sim.weather`. Checks: `bun run tools/qa/checks.ts rainscale`, `rainwalls`, `sunglint` read the shaders' text
 and run no shader. Page script: `bun run tools/qa/pages.ts weather-page` (on the software adapter).
 

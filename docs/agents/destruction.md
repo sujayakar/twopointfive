@@ -1,7 +1,7 @@
 # What breaks
 
 Rounds and blasts on walls, cover, furniture, glass and fixtures: what goes, what is left, who is caught. A door's leaf is `doors.md`; what a thing is
-made of is `levels.md` (`MATERIALS`); the fog's dust (`air_dust/`) is `weather.md`; how it is drawn is `render.md`; the door charge and the stun can
+made of is `levels.md` (`MATERIALS`); the fog's dust (`air_dust.rs`) is `weather.md`; how it is drawn is `render.md`; the door charge and the stun can
 on order are `door-tools.md`; the row that orders a wall charge is `squad.md`; a man running from a grenade is `enemies.md`.
 
 ## What the player gets
@@ -25,18 +25,18 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `destruction_switch/` | the numbers of kicked rubble (`RubbleK`) and a piece's landing (`DebrisK`) |
 | `wallbreak/` | the wall engine: what can break, its cells, what stands afterward, a blast's plan, the change list |
 | `wallcharge/` | the wall charge: where it may go, Sam's and the squad's, the safety radius, the blow |
-| `wallpen/`, `coverfire/` | a round through thin things; men who fire through what hides a known enemy |
-| `wallreact/` | what men make of a hole or of lost cover |
-| `wallwear/`, `wallskin/`, `edge_look/` | a wall's look under fire; what is painted on it; ragged edges, soot and litter |
-| `break_table/`, `debris/`, `falling/` | what a broken thing throws and its shapes (`Mat`, `break_row`); the pool of pieces; where a thing comes down |
-| `furnblast/` | furniture and a blast |
-| `frag/`, `he40/` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
-| `glass/`, `glassbreak/`, `glasspen/`, `glass_pattern/` | a blow on a pane; its breaking; a round through it; the cracks |
-| `shards/`, `shard_model/`, `winbars/` | what a falling piece of glass becomes; a window's bars |
-| `fixture_break/`, `blast_look/`, `blast_feel/`, `dust_look/`, `floormess/` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
-| `marks/`, `render_decals/` | who asks for a mark, the list of marks |
-| `scene_cut/` | planes that shave a box, for a ragged end or a torn piece |
-| `scene_materials/`, `scene_stuff/` | `does_of` and `BoxStuff`, the two words a box says |
+| `wallpen.rs`, `coverfire.rs` | a round through thin things; men who fire through what hides a known enemy |
+| `wallreact.rs` | what men make of a hole or of lost cover |
+| `wallwear.rs`, `wallskin.rs`, `edge_look.rs` | a wall's look under fire; what is painted on it; ragged edges, soot and litter |
+| `break_table/`, `debris/`, `falling.rs` | what a broken thing throws and its shapes (`Mat`, `break_row`); the pool of pieces; where a thing comes down |
+| `furnblast.rs` | furniture and a blast |
+| `frag/`, `he40.rs` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
+| `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `glass_pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
+| `shards/`, `shard_model.rs`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
+| `fixture_break.rs`, `blast_look.rs`, `blast_feel/`, `dust_look.rs`, `floormess.rs` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
+| `marks.rs`, `render_decals/` | who asks for a mark, the list of marks |
+| `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
+| `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
 What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `falls.rs` for landings and
 litter; `slabs.rs` for a leaf in the air (`doors.md`). The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
@@ -65,7 +65,7 @@ the box world's room, the cells stay shut and it answers no.
 **A round.** `thin_path` is the flight: each thin thing takes a toll (`thin_toll`), the round turns a little (`deflect`), and it ends under
 `min_energy`. A pane on the way is priced by `pen.rs`; a bar is met by `bar_meet` and broken by `bars_settle`. `commit_walls` lays both holes,
 `wall_break_round` counts on the cell it stopped in (rifle 1, pistol `pistol_k`, × chaos × 2), and a cell goes at its `tough`. A sill never goes from
-under a standing upper. `destruction_round` does the rest. `coverfire/` lets a man spend rounds on what hides an enemy he knows of, by asking the same
+under a standing upper. `destruction_round` does the rest. `coverfire.rs` lets a man spend rounds on what hides an enemy he knows of, by asking the same
 engine.
 
 **A blast.** `destruction_blast` runs its listeners (`BlastListener`: the glass and the bars), snow in the way, `doors_blast`, `wall_break_blast`,
@@ -110,7 +110,7 @@ density is real, so men's eyes read it as the picture does. `destruction_dust_pu
 
 
 **Marks.** `bullet_mark`, `bang_scorch` and `chip_mark` only ask. `marks_settle`, near the tick's end, answers, and `lay` keeps the list (`CAP`).
-`wallwear/` sizes a round's own mark by how far gone its cell is.
+`wallwear.rs` sizes a round's own mark by how far gone its cell is.
 
 **Cut boxes.** A box carries up to `MAX_CUT_PLANES` planes. The rules make them in `shape_box` and `breaks_ragged`. The game's rays meet the cut solid
 (`cut_met`, `cut_clip`).
@@ -141,7 +141,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
   bullet?"
 - **Pieces are dressing; their landings are not.** "let's make sure we're very explicit about what's gameplay affecting (and also run on the server)
   and what's just client side only dressing (debris, smoke details)". A full pool hears the same landings. No rule reads a mark.
-- **A floor keeps what happened.** "maybe we've just blown up too much stuff but the office floor looks too clean" (`floormess/`).
+- **A floor keeps what happened.** "maybe we've just blown up too much stuff but the office floor looks too clean" (`floormess.rs`).
 - **Pieces are made of the thing** (`mat_of_surf`), and a hit goes by `does`, never by a color (`surf_at`).
 - **A level's places for a charge are counted.** `levels charges`: a loss is fine "so long as it's deliberate", and a line in the count's file says
   why.

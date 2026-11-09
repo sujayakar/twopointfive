@@ -16,7 +16,7 @@ carry the voice of these notes into the game. They run noun first with no contra
 | a lesson's lines and cards | `tools/levels/tut-*.ts`, written out to `levels/tut-*.json` as `line`, `after`, `explain` | `lesson_line`, then `capsPlain` in `src/ui/tabcard.ts` |
 | a mission's row: `blurb`, `scene`, `teaches`, `only`, `place` | `rust/game_types/src/scene_scenario_list/rows.rs` | `src/ui/loadbrief.ts`, `start_list` |
 | the objective | `mission::objective` and the modules it asks | the view |
-| a row beside what Sam can use | `interact_view`, `player/p_07.rs` | the view |
+| a row beside what Sam can use | `interact_view`, `player/interactables.rs` | the view |
 | squad rows and answers | `orders/`, `orders/rows/`, `doortools/` (`squad.md`) | the view |
 | spoken lines | `rust/game_types/src/dialogue/types.rs` and each rule's own tables (`dialogue.md`) | the view |
 | menus | `src/ui/`, for instance `startpage.ts` | the page |
