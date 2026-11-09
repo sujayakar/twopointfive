@@ -329,7 +329,7 @@ pub fn going(g: &crate::game::Game) -> bool {
 }
 
 /// The captives who live.
-pub fn captives_up(g: &crate::game::Game) -> Vec<GuardId> { g.staged.captives.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect() }
+pub fn captives_up(g: &crate::game::Game) -> Vec<GuardId> { g.staged.captives.iter().copied().filter(|&h| !crate::condition::down(g, g.gd[h].ch)).collect() }
 
 /// Who holds the captives now.
 pub fn captor(g: &mut crate::game::Game) -> Option<GuardId> { if g.staged.captives.is_empty() { None } else { crate::rescue::rescue_captor(g) } }
