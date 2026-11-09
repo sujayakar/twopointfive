@@ -1,7 +1,7 @@
 # Writing Rust in this game
 
 How the Rust is laid out, what it must never do, and how to add to it. A test is `rust/game_start/README.md`, the module as a host loads it is
-`tools/blitz/FACE.md`, dead code is `tools/fold/README.md`.
+`tools/blitz/FACE.md`.
 
 ## What it is for
 
@@ -174,7 +174,7 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 | `JsMap`, `JsSet` | Keep them: the walk's order is play. Use a `Tab` or `Vec` where ids are dense. Swap one only if the pins hold |
 | `Option<f64>` arguments, `js::truthy(x)`, `js::or(x, d)` | Match when calling. A new function takes plain arguments and compares |
 | `c_2`, `g_2`, `weather_set_wet_2`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
-| `&mut Game` on a function that only reads | `tools/fold/readers.sh --soften`, or by hand. A new one takes `&Game` |
+| `&mut Game` on a function that only reads | By hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
 | `Opaque`, `FnField`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
 
