@@ -465,8 +465,6 @@ export class Director {
     if (P.opts.showcase && !this.g.tune.teams && [...this.manifest.loadouts.values()].length && [...P.beats.values()].some(B => /\.\s*spawn\s*\(/.test(String(B.fn)))) return 'sides are switched off (tune.teams) — the cast cannot be spawned';   // (only a program whose beats spawn anybody: the night showcase casts the shift itself and runs with sides off)
     return null;
   }
-  /** why a checkpoint cannot be written (savestate.ts canSave): M1 refuses throughout a program — its cursor (fired triggers, flags, live beats, units) has no save slice until M3 */
-  blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
   get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.view.lesson?.rails; }
