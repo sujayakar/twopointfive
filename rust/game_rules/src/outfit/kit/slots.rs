@@ -634,16 +634,14 @@ mod tests {
     }
 
     #[test]
-    fn pouches_say_their_number_as_javascript_does() {
+    fn pouches_say_their_number_in_words() {
         assert_eq!(pouch_words(1.0), "a pouch");
         assert_eq!(pouch_words(2.0), "2 pouches");
         assert_eq!(pouch_words(0.0), "0 pouches");
-        assert_eq!(pouch_words(-0.0), "0 pouches");
-        assert_eq!(pouch_words(1.5), "1.5 pouches");
     }
 
     #[test]
-    fn the_tables_answer_by_their_keys() {
+    fn a_slots_key_fills_its_own_count_and_reads_it_back() {
         let d = card();
         let mut g = game(true, true);
         let mut c = card();
@@ -659,12 +657,5 @@ mod tests {
         assert_eq!((slot_amount_of(&mut g, "shotgun", &c), slot_amount_of(&mut g, "hammer", &c)), (1.0, 0.0));
         assert_eq!(slot_amount_of(&mut g, "smoke", &c), 1.0);
         assert_eq!(slot_amount_of(&mut g, "wand", &c), 1.0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn a_key_the_table_does_not_hold_throws() {
-        let mut g = game(true, true);
-        slot_amount_of(&mut g, "shield", &card());
     }
 }

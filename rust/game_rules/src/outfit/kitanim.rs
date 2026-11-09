@@ -481,57 +481,52 @@ mod tests {
         }
     }
 
-    /// The bits of kitanim.ts kitReload itself, run under bun with EXACT on: (long, row's dur, keeps, racks, kind, dur, out, in_, rack, keep).
+    /// A FAILURE MEANS: the magazine in his hand says something else than the hands do: he keeps a part mag on a tactical, and racks only when the gun asks.
     #[test]
-    fn reload_plan_has_the_typescripts_bits() {
-        const ROWS: &[(bool, f64, bool, bool, &str, u64, u64, u64, Option<u64>, Option<u64>)] = &[
-            (false, 1.6, false, false, "dry", 0x3ff7333333333333, 0x3fd0000000000000, 0x3fee666666666666, None, None),
-            (false, 1.6, false, true, "empty", 0x3ff999999999999a, 0x3fd0000000000000, 0x3fee666666666666, Some(0x3ff4cccccccccccd), None),
-            (false, 1.6, true, false, "tactical", 0x4000000000000000, 0x3fdccccccccccccd, 0x3ff8000000000000, None, Some(0x3fee666666666666)),
-            (false, 1.6, true, true, "tactical", 0x4001333333333334, 0x3fdccccccccccccd, 0x3ff8000000000000, Some(0x3ffd99999999999a), Some(0x3fee666666666666)),
-            (false, 2.4, false, false, "dry", 0x4001666666666666, 0x3fd7ffffffffffff, 0x3ff6cccccccccccc, None, None),
-            (false, 2.4, false, true, "empty", 0x4003333333333333, 0x3fd7ffffffffffff, 0x3ff6cccccccccccc, Some(0x3fff333333333332), None),
-            (false, 2.4, true, false, "tactical", 0x4007ffffffffffff, 0x3fe5999999999999, 0x4001ffffffffffff, None, Some(0x3ff6cccccccccccc)),
-            (false, 2.4, true, true, "tactical", 0x4009cccccccccccd, 0x3fe5999999999999, 0x4001ffffffffffff, Some(0x4006333333333333), Some(0x3ff6cccccccccccc)),
-            (false, 1.73, false, false, "dry", 0x3ff915c28f5c28f4, 0x3fd14ccccccccccc, 0x3ff06f5c28f5c28e, None, None),
-            (false, 1.73, false, true, "empty", 0x3ffbae147ae147ad, 0x3fd14ccccccccccc, 0x3ff06f5c28f5c28e, Some(0x3ff67d70a3d70a3d), None),
-            (false, 1.73, true, false, "tactical", 0x40014ccccccccccc, 0x3fdf23d70a3d70a3, 0x3ff9f33333333332, None, Some(0x3ff06f5c28f5c28e)),
-            (false, 1.73, true, true, "tactical", 0x400298f5c28f5c29, 0x3fdf23d70a3d70a3, 0x3ff9f33333333332, Some(0x400000a3d70a3d70), Some(0x3ff06f5c28f5c28e)),
-            (false, 3.1, false, false, "dry", 0x4006799999999999, 0x3fdf000000000000, 0x3ffd733333333333, None, None),
-            (false, 3.1, false, true, "empty", 0x4008cccccccccccd, 0x3fdf000000000000, 0x3ffd733333333333, Some(0x4004266666666667), None),
-            (false, 3.1, true, false, "tactical", 0x400f000000000000, 0x3febe66666666667, 0x4007400000000000, None, Some(0x3ffd733333333333)),
-            (false, 3.1, true, true, "tactical", 0x4010a9999999999a, 0x3febe66666666667, 0x4007400000000000, Some(0x400caccccccccccd), Some(0x3ffd733333333333)),
-            (true, 1.6, false, false, "dry", 0x3ff7777777777778, 0x3fd1111111111112, 0x3feeeeeeeeeeeef0, None, None),
-            (true, 1.6, false, true, "empty", 0x3ff999999999999a, 0x3fd1111111111112, 0x3feeeeeeeeeeeef0, Some(0x3ff4cccccccccccd), None),
-            (true, 1.6, true, false, "tactical", 0x3ffe666666666667, 0x3fd7777777777779, 0x3ff6666666666667, None, Some(0x3fe999999999999a)),
-            (true, 1.6, true, true, "tactical", 0x4000444444444445, 0x3fd7777777777779, 0x3ff6666666666667, Some(0x3ffbbbbbbbbbbbbd), Some(0x3fe999999999999a)),
-            (true, 2.4, false, false, "dry", 0x3fff333333333333, 0x3fd999999999999a, 0x3ff7333333333333, None, None),
-            (true, 2.4, false, true, "empty", 0x4003333333333333, 0x3fd999999999999a, 0x3ff7333333333333, Some(0x3fff333333333333), None),
-            (true, 2.4, true, false, "tactical", 0x4006000000000000, 0x3fe199999999999a, 0x4000cccccccccccd, None, Some(0x3ff3333333333333)),
-            (true, 2.4, true, true, "tactical", 0x4008666666666666, 0x3fe199999999999a, 0x4000cccccccccccd, Some(0x4004cccccccccccd), Some(0x3ff3333333333333)),
-            (true, 1.73, false, false, "dry", 0x3ff8b92c5f92c5f9, 0x3fd2740da740da74, 0x3ff0b92c5f92c5f9, None, None),
-            (true, 1.73, false, true, "empty", 0x3ffbae147ae147ae, 0x3fd2740da740da74, 0x3ff0b92c5f92c5f9, Some(0x3ff67d70a3d70a3d), None),
-            (true, 1.73, true, false, "tactical", 0x40001c28f5c28f5c, 0x3fd95f92c5f92c60, 0x3ff83851eb851eb9, None, Some(0x3febae147ae147ae)),
-            (true, 1.73, true, true, "tactical", 0x4001969d0369d036, 0x3fd95f92c5f92c60, 0x3ff83851eb851eb9, Some(0x3ffdfc962fc962fd), Some(0x3febae147ae147ae)),
-            (true, 3.1, false, false, "dry", 0x4004266666666667, 0x3fe0888888888889, 0x3ffdf77777777778, None, None),
-            (true, 3.1, false, true, "empty", 0x4008cccccccccccd, 0x3fe0888888888889, 0x3ffdf77777777778, Some(0x4004266666666667), None),
-            (true, 3.1, true, false, "tactical", 0x400c6aaaaaaaaaab, 0x3fe6bbbbbbbbbbbd, 0x4005b33333333334, None, Some(0x3ff8cccccccccccd)),
-            (true, 3.1, true, true, "tactical", 0x400f844444444444, 0x3fe6bbbbbbbbbbbd, 0x4005b33333333334, Some(0x400adddddddddddf), Some(0x3ff8cccccccccccd)),
-        ];
-        for &(long, row_dur, keeps, racks, kind, dur, out, in_, rack, keep) in ROWS {
-            let p = reload_plan(&beats(long), row_dur, long, keeps, racks);
-            assert_eq!(p.kind.as_str(), kind);
-            assert_eq!(p.row.dur.to_bits(), dur);
-            assert_eq!(p.beat.dur.to_bits(), dur);
-            assert_eq!(p.row.out.map(f64::to_bits), Some(out));
-            assert_eq!(p.beat.out.map(f64::to_bits), Some(out));
-            assert_eq!(p.row.in_.map(f64::to_bits), Some(in_));
-            assert_eq!(p.beat.in_.map(f64::to_bits), Some(in_));
-            assert_eq!(p.row.rack.map(f64::to_bits), rack);
-            assert_eq!(p.beat.rack.map(|r| r.map(f64::to_bits)), Some(rack));
-            assert_eq!(p.beat.keep.map(f64::to_bits), keep);
-            assert_eq!(p.beat.hand, Some(!long));
-        }
+    fn a_reload_is_tactical_if_he_keeps_the_mag_empty_if_he_racks_and_dry_if_neither() {
+        let kind = |keeps, racks| reload_plan(&beats(true), 2.4, true, keeps, racks).kind;
+        assert_eq!(kind(true, false), crate::kitanim::ReloadKind::Tactical);
+        assert_eq!(kind(true, true), crate::kitanim::ReloadKind::Tactical);
+        assert_eq!(kind(false, true), crate::kitanim::ReloadKind::Empty);
+        assert_eq!(kind(false, false), crate::kitanim::ReloadKind::Dry);
     }
 
+    /// A FAILURE MEANS: the hands and the gun part company: the old mag comes out, the new goes in, then the rack, in that order, the whole scaled to the gun's own reload; the row and the beat tell the same, and a pistol is one hand's.
+    #[test]
+    fn a_reloads_beats_run_in_order_and_scale_with_the_guns_own_length() {
+        for long in [true, false] { for row in [1.6, 2.4, 3.1] { for (keeps, racks) in [(false, false), (false, true), (true, false), (true, true)] {
+            let p = reload_plan(&beats(long), row, long, keeps, racks);
+            let (out, in_) = (p.beat.out.unwrap(), p.beat.in_.unwrap());
+            assert!(0.0 < out && out < in_ && in_ < p.beat.dur);
+            assert_eq!(p.beat.rack.unwrap().is_some(), racks);
+            if let Some(r) = p.beat.rack.unwrap() { assert!(in_ < r && r < p.beat.dur); }
+            assert_eq!(p.beat.keep.is_some(), keeps);
+            if let Some(k) = p.beat.keep { assert!(out < k && k < in_); }
+            assert_eq!((p.row.dur, p.row.out, p.row.in_, p.row.rack), (p.beat.dur, p.beat.out, p.beat.in_, p.beat.rack.unwrap()));
+            assert_eq!(p.beat.hand, Some(!long));
+            let twice = reload_plan(&beats(long), row * 2.0, long, keeps, racks);
+            assert!((twice.beat.in_.unwrap() - in_ * 2.0).abs() < 1e-9);
+            if row >= beats(long).ref_ { assert!((twice.beat.dur - p.beat.dur * 2.0).abs() < 1e-9, "(below the gun's reference the last beat's floor can hold the end)"); }
+        } } }
+    }
+
+    /// A FAILURE MEANS: a tactical reload that must also rack skips the rack's time: it goes as long after the new mag as an empty one does.
+    #[test]
+    fn a_tactical_reload_that_racks_takes_the_racks_time_after_the_new_mag() {
+        let t = beats(true);
+        let p = reload_plan(&t, t.ref_, true, true, true);
+        let in_ = p.beat.in_.unwrap();
+        assert!((p.beat.rack.unwrap().unwrap() - (in_ + t.empty.rack.unwrap() - t.empty.in_)).abs() < 1e-9);
+        assert!((p.beat.dur - (in_ + t.empty.dur - t.empty.in_)).abs() < 1e-9);
+    }
+
+    /// A FAILURE MEANS: on a very quick gun the weapon comes back while his hands are still on it: a reload never ends before its last beat has had its time.
+    #[test]
+    fn a_reload_scaled_small_still_ends_after_its_last_beat() {
+        let t = beats(true);
+        let dry = reload_plan(&t, 0.1, true, false, false);
+        assert!(dry.beat.dur >= dry.beat.in_.unwrap() + 0.5 - 1e-9);
+        let empty = reload_plan(&t, 0.1, true, false, true);
+        assert!(empty.beat.dur >= empty.beat.rack.unwrap().unwrap() + 0.25 - 1e-9);
+    }
 }

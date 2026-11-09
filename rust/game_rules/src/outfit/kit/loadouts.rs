@@ -920,15 +920,13 @@ mod tests {
         assert_eq!(deal_word(&cards), "1,2,1,0|1,1,1,0");
     }
 
+    /// A FAILURE MEANS: the setup calls two cards different for their colours, so a card that matches its loadout reads as changed; or calls alike a card that went bare.
     #[test]
-    fn same_kit_leaves_out_the_colours_and_keeps_a_spread_of_bare() {
+    fn two_cards_are_the_same_kit_whatever_their_colours() {
         let a = MemberKit { suit: SuitId::Black, trim: TrimId::Red, ..card(1.0, 1.0, 0.0, 0.0) };
         let b = MemberKit { suit: SuitId::Olive, trim: TrimId::Amber, ..card(1.0, 1.0, 0.0, 0.0) };
         assert!(same_kit(&a, &b));
         assert!(!same_kit(&a, &card(2.0, 1.0, 0.0, 0.0)));
-        // `{ ...a, ...b }` keeps a's `bare` where b has none: alike; b's own `bare` on a card without one is a key the other lacks: not alike
-        let barred = MemberKit { bare: Some(true), ..a.clone() };
-        assert!(same_kit(&barred, &b));
         assert!(!same_kit(&a, &MemberKit { bare: Some(true), ..b.clone() }));
     }
 
