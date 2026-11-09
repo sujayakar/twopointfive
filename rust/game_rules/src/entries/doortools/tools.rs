@@ -511,7 +511,7 @@ pub(super) fn door_tools_pick_step(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     let a = g.tab.doortools_door_op[op].mine.get(lead).copied();
-    let busy = a.map_or(false, |a| g.tab.orders_assignment[a].yield_t >= 0.0) || t < g.gd[lead].dazzled_until || t < g.gd[lead].stagger_until
+    let busy = a.map_or(false, |a| g.tab.orders_assignment[a].yield_t >= 0.0) || t < g.ch[g.gd[lead].ch].cond.dazzled_until || t < g.ch[g.gd[lead].ch].cond.stagger_until
         || (g.gd[lead].script.as_ref().map_or(false, |s| s.over.is_some()) && (crate::silent::silent_compromised(g, &crate::seats::here(g)) || !crate::silent::squad_silent(g, &crate::seats::here(g))));
     if !busy {
         with_kick(g, op, |k| k.off_t = None);
@@ -645,7 +645,7 @@ pub(super) fn door_tools_gun_step(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     let a = g.tab.doortools_door_op[op].mine.get(by).copied();
-    let busy = a.map_or(false, |a| g.tab.orders_assignment[a].yield_t >= 0.0) || t < g.gd[by].dazzled_until || t < g.gd[by].stagger_until;
+    let busy = a.map_or(false, |a| g.tab.orders_assignment[a].yield_t >= 0.0) || t < g.ch[g.gd[by].ch].cond.dazzled_until || t < g.ch[g.gd[by].ch].cond.stagger_until;
     if !busy {
         with_kick(g, op, |k| k.off_t = None);
     } else {

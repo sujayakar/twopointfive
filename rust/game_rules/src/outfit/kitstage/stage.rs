@@ -761,8 +761,8 @@ pub fn after(g: &mut Game) {
     let pl = g.player;
     g.pl[pl].hit_flash = 0.0;
     let now = g.time;
-    if g.pl[pl].dazzled_until > now { g.pl[pl].dazzled_until = -1.0; }
-    if g.pl[pl].stagger_until > now { g.pl[pl].stagger_until = -1.0; }
+    if g.ch[g.pl[pl].ch].cond.dazzled_until > now { g.ch[g.pl[pl].ch].cond.dazzled_until = -1.0; }
+    if g.ch[g.pl[pl].ch].cond.stagger_until > now { g.ch[g.pl[pl].ch].cond.stagger_until = -1.0; }
     if let Some(c) = g.host_cam { g.tab.camera[c].kick = None; }
     let seat = crate::game::game_host_seat(g);
     let seat_cam = g.tab.cmd_seat[seat].cam;

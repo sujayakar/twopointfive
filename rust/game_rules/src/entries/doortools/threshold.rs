@@ -103,8 +103,8 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
         } else {
             let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);
             door_tools_dazzle(g, gd, v3::lerp(s0, s1, v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
-            let until = g.time + g.k.doortools.stagger_secs;
-            g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
+            let (c, secs) = (g.gd[gd].ch, g.k.doortools.stagger_secs);
+            crate::condition::fold(g, c, secs);
             let wp = g.gd[gd].weapon;
             g.fa[wp].burst = None;
             stunned += 1.0;
@@ -157,19 +157,9 @@ fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: 
 
 /// flash-blind (combat.ts detonateStun's own rule for a man with the charge in his open view)   (doortools.ts DoorTools.dazzle)
 fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
-    let until = g.time + secs;
-    let ai = g.ai_enabled;
-    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    crate::mind::raise(g, gd, 0.6, "doortools");
-    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    if ai { g.gd[gd].witness.dazzled += 1.0; }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    let r = &mut g.gd[gd];
-    r.path_goal = None; r.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
-    r.speed = 0.0;
-    r.dazzled_at = Some(v3::copy(at));
-    let c = r.ch;
+    let c = g.gd[gd].ch;
+    crate::condition::dazzled(g, gd, secs, at, "doortools");
+    g.ch[c].cond.dazzled_at = Some(at);
     let along = v3::sub(g.ch[c].pos, at);
     crate::character::anim_hit_from(g, c, Some(along));
 }

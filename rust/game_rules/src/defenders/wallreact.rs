@@ -580,7 +580,7 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     let ev_open = g.k.wallreact.ev_open;
     let ev = match how { How::Told => ev_open * 0.5, How::Made => 0.0, _ => ev_open };
     let t = if how == How::Made { -1e9 }
-        else if g.tab.wallreact_breach[b].cause == BreachCause::Blast && any_seat_blown(g) { m::max(now, g.gd[gd].dazzled_until) }
+        else if g.tab.wallreact_breach[b].cause == BreachCause::Blast && any_seat_blown(g) { m::max(now, g.ch[g.gd[gd].ch].cond.dazzled_until) }
         else { now };
     let minds = &mut g.m.wallreact.wall_react.minds;
     if !minds.has(gd) { minds.set(gd, JsMap::new()); }
@@ -668,7 +668,7 @@ pub fn wall_react_notice(g: &mut Game) {
                 wall_react_ops_know(g, b, "the player saw it");
             } else {
                 for gd in g.guards.clone() {
-                    if g.gd[gd].team != Team::Operative || is_dead(g, gd) || now < g.gd[gd].dazzled_until { continue; }
+                    if g.gd[gd].team != Team::Operative || is_dead(g, gd) || now < g.ch[g.gd[gd].ch].cond.dazzled_until { continue; }
                     let (pos, yaw) = { let c = &g.ch[g.gd[gd].ch]; (c.pos, c.aim_yaw) };
                     if !wall_react_sees(g, b, pos, Some(yaw)) { continue; }
                     let by = format!("{} saw it", g.gd[gd].callsign);
@@ -682,7 +682,7 @@ pub fn wall_react_notice(g: &mut Game) {
         }
         for gd in g.guards.clone() {
             let team = g.gd[gd].team;
-            if is_dead(g, gd) || team == Team::Operative || team == Team::Civilian || g.tab.wallreact_breach[b].men.has(gd) || now < g.gd[gd].dazzled_until { continue; }
+            if is_dead(g, gd) || team == Team::Operative || team == Team::Civilian || g.tab.wallreact_breach[b].men.has(gd) || now < g.ch[g.gd[gd].ch].cond.dazzled_until { continue; }
             let (pos, yaw) = { let c = &g.ch[g.gd[gd].ch]; (c.pos, c.aim_yaw) };
             if wall_react_sees(g, b, pos, Some(yaw)) { wall_react_man_knows(g, b, gd, WallReactManKnowsHow::Saw); }
         }
@@ -761,7 +761,7 @@ fn wall_react_evidence(g: &mut Game, dt: f64) {
         let p = pos_of(g, gd);
         let man = &g.gd[gd];
         let seen = if now - man.last_seen_t < 0.3 { man.last_known } else { None };
-        let fire = match man.sup.src { Some(s) if now - man.sup.src_t < 1.5 => Some(s), _ => None };
+        let fire = match g.ch[man.ch].cond.sup.src { Some(s) if now - g.ch[man.ch].cond.sup.src_t < 1.5 => Some(s), _ => None };
         for b in g.m.wallreact.wall_react.minds.get(gd).unwrap().keys() {
             if !g.m.wallreact.wall_react.breaches.contains(&b) {
                 g.m.wallreact.wall_react.minds.get_mut(gd).unwrap().delete(b);
@@ -865,7 +865,7 @@ fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Option<V
     let h = if is_op(g, gd) { 1.2 } else { 0.9 };
     let man = &g.gd[gd];
     let sight = if g.time - man.sight_t < 6.0 { Some(man.sight_pos) } else { None };
-    let fire = match man.sup.src { Some(s) if g.time - man.sup.src_t < g.k.suppression.src_memory_secs => Some(s), _ => None };
+    let fire = match g.ch[man.ch].cond.sup.src { Some(s) if g.time - g.ch[man.ch].cond.sup.src_t < g.k.suppression.src_memory_secs => Some(s), _ => None };
     let team = man.team;
     let maker = match who { Some(w) if crate::teams::is_hostile(g, team, w.team) => Some(w.pos), _ => None };
     for c in [sight, fire, maker] {
@@ -1127,7 +1127,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
     let gd = p.gd;
     if is_dead(g, gd) { return (R::Fine, String::from("dead")); }
     let man = &g.gd[gd];
-    if g.time < man.dazzled_until || g.time < man.stagger_until || man.held.is_some() { return (R::Later, String::from("blind, staggered or held")); }
+    if g.time < g.ch[man.ch].cond.dazzled_until || g.time < g.ch[man.ch].cond.stagger_until || man.held.is_some() { return (R::Later, String::from("blind, staggered or held")); }
     if let Some(mv) = g.m.wallreact.wall_react.moved_t.get(gd).copied() {
         if g.time >= mv && g.time - mv < g.k.wallreact.retry_secs { return (R::Later, String::from("only just moved")); }
     }
@@ -1207,19 +1207,19 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     if man.state != GuardState::Alert {
         return if man.state == GuardState::Search || man.state == GuardState::Suspicious { WallReactShift::Later } else { WallReactShift::Fine };
     }
-    if man.sup.cover.is_some() { return WallReactShift::Fine; }
+    if g.ch[man.ch].cond.sup.cover.is_some() { return WallReactShift::Fine; }
     let to = match wall_react_spot(g, gd, threat, b, others) {
         Some(q) => q,
         None => { g.stats.wallreact.no_cover += 1; return WallReactShift::Later; }
     };
     let now = g.time;
     let man = &mut g.gd[gd];
-    man.sup.cover = Some(to);
-    man.sup.displaced_at = now;
-    man.sup.displaces += 1.0;
-    man.sup.pinned_t = 0.0;
-    man.sup.down_t = 0.0;
-    man.sup.latched = false;
+    g.ch[man.ch].cond.sup.cover = Some(to);
+    g.ch[man.ch].cond.sup.displaced_at = now;
+    g.ch[man.ch].cond.sup.displaces += 1.0;
+    g.ch[man.ch].cond.sup.pinned_t = 0.0;
+    g.ch[man.ch].cond.sup.down_t = 0.0;
+    g.ch[man.ch].cond.sup.latched = false;
     man.path_goal = None;
     man.path_goal_orbit = false;
     man.stall_ref = None;

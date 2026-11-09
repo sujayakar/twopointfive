@@ -261,8 +261,8 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     let h = g.tab.roomfight_def[d].gd; let s = hostile_skill(g);
     if !crate::control::man::blind(g, h) { return; }
     let bl = crate::nightbreach::blind();
-    if g.gd[h].dazzled_until > g.tab.roomfight_def[d].burst.until + 1e-6 {
-        let (until, next) = (g.gd[h].dazzled_until, g.time + bl.after + k * bl.stagger);
+    if g.ch[g.gd[h].ch].cond.dazzled_until > g.tab.roomfight_def[d].burst.until + 1e-6 {
+        let (until, next) = (g.ch[g.gd[h].ch].cond.dazzled_until, g.time + bl.after + k * bl.stagger);
         let broke = crate::dice::draw_def(g, "roomfight::room_fight_blind#1", d) < s.bang_break;
         let daze = if s.daze[1] > 0.0 { let p = pick(g, crate::dice::Who::Def(d), s.daze); p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 }) } else { 0.0 };
         let B = &mut g.tab.roomfight_def[d].burst;
@@ -271,7 +271,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     }
     if g.gd[h].held.is_none() { cover_pt(g, d); }
     if g.tab.roomfight_def[d].burst.broke {
-        if g.tune.suppression { g.gd[h].sup.down_t = m::max(g.gd[h].sup.down_t, 0.2); }
+        if g.tune.suppression { g.ch[g.gd[h].ch].cond.sup.down_t = m::max(g.ch[g.gd[h].ch].cond.sup.down_t, 0.2); }
         return;
     }
     if !g.fight.blind_fire || g.tab.roomfight_def[d].burst.n >= bl.rounds || g.time < g.tab.roomfight_def[d].burst.next { return; }
@@ -280,7 +280,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     g.tab.roomfight_def[d].burst.next = next;
     let c = g.gd[h].ch;
     if g.gd[h].held.is_some() || crate::control::man::staggered(g, h) || g.ch[c].gun_dir[1] < -bl.low_gun { return; }
-    if g.tune.suppression && (g.gd[h].sup.v >= g.k.suppression.pinned || g.gd[h].sup.latched || g.gd[h].sup.down_t > 0.0) { return; }
+    if g.tune.suppression && (g.ch[g.gd[h].ch].cond.sup.v >= g.k.suppression.pinned || g.ch[g.gd[h].ch].cond.sup.latched || g.ch[g.gd[h].ch].cond.sup.down_t > 0.0) { return; }
     let gun = g.gd[h].weapon;
     if !crate::weapons::firearm_fire(g, gun) { return; }
     let at = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
@@ -313,10 +313,10 @@ fn room_fight_lost(g: &mut crate::game::Game, d: RoomfightDefId) {
         if seg_blocked(g, eye, [b[0], 0.3, b[2]]) { continue; }
         if flat(b, g.ch[c].pos) < 5.0 || !g.tune.body_light || crate::guards::body_visibility(g, xg) >= g.k.body_light.lit { dead += 1.0; }
     }
-    let sup_v = g.gd[gd].sup.v;
+    let sup_v = g.ch[g.gd[gd].ch].cond.sup.v;
     let pressed = g.time - g.gd[gd].last_seen_t < 4.0 || (g.tune.suppression && sup_v >= g.k.suppression.flinch) || g.time - g.gd[gd].witness.heard.last_shot_t < 2.5;
     let frac = dead / m::max(1.0, dead + up);
-    let alone = dead + up <= 1.0 && g.tune.suppression && g.gd[gd].sup.latched && g.gd[gd].sup.pinned_t > 1.2;
+    let alone = dead + up <= 1.0 && g.tune.suppression && g.ch[g.gd[gd].ch].cond.sup.latched && g.ch[g.gd[gd].ch].cond.sup.pinned_t > 1.2;
     if !pressed || !((dead > 0.0 && frac >= g.tab.roomfight_def[d].nerve) || alone) { return; }
     room_fight_break_off(g, d);
 }
@@ -325,7 +325,7 @@ fn room_fight_lost(g: &mut crate::game::Game, d: RoomfightDefId) {
 fn room_fight_threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     let gd = g.tab.roomfight_def[d].gd;
     if g.time - g.gd[gd].sight_t < 6.0 { return g.gd[gd].sight_pos; }
-    if let Some(src) = g.gd[gd].sup.src { if g.time - g.gd[gd].sup.src_t < g.k.suppression.src_memory_secs { return src; } }
+    if let Some(src) = g.ch[g.gd[gd].ch].cond.sup.src { if g.time - g.ch[g.gd[gd].ch].cond.sup.src_t < g.k.suppression.src_memory_secs { return src; } }
     let D = &g.tab.roomfight_def[d];
     let (mut bi, mut bv) = (-1i32, 0.3);
     for (i, &v) in D.ev.iter().enumerate() { if v > bv { bv = v; bi = i as i32; } }
@@ -547,7 +547,7 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str) {
     g.tab.roomfight_def[d].home = home;
     move_pt(g, d, [home[0], 0.0, home[2]]);
     cover_pt(g, d);
-    if move_kind == DefMoveKind::Cover && g.tune.suppression { g.gd[gd].sup.down_t = m::max(g.gd[gd].sup.down_t, 1.0); } // into cover: a breath with his head down
+    if move_kind == DefMoveKind::Cover && g.tune.suppression { g.ch[g.gd[gd].ch].cond.sup.down_t = m::max(g.ch[g.gd[gd].ch].cond.sup.down_t, 1.0); } // into cover: a breath with his head down
     let room_id = match room { Some(r) => alloc::format!("{}", g.tab.roomfight_room[r].id), None => String::from("-") };
     let watching = match room {
         Some(r) if e >= 0.0 => { let door = g.tab.roomfight_room[r].entries[e as usize].door; g.dr[door].def.name.clone() }

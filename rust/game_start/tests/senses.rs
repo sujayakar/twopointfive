@@ -191,7 +191,7 @@ fn smoke_hides_a_lit_man_from_a_guard() {
     can(&mut p, [15.5, 0.2, 13.0], 30.0);
     // (the sentry is held blind while the smoke fills the room between them)
     let post = p.guard("post");
-    for _ in 0..360 { p.g.gd[post].dazzled_until = p.g.time + 0.1; p.frame(); }
+    for _ in 0..360 { p.g.ch[p.g.gd[post].ch].cond.dazzled_until = p.g.time + 0.1; p.frame(); }
     let eye = { let a = p.at(post); [a[0], 1.65, a[1]] };
     let sam = { let a = p.sam_at(); [a[0], 1.2, a[1]] };
     assert!(through(&mut p, eye, sam) < 0.05, "the scene: six seconds on, {:.3} of the light comes through the smoke", through(&mut p, eye, sam));

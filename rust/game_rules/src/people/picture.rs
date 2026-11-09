@@ -199,7 +199,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
             }
         }
     }
-    let blind = now < g.gd[gd].dazzled_until;
+    let blind = now < g.ch[g.gd[gd].ch].cond.dazzled_until;
     let mut at = 0;
     while let Some(who) = pic!(g, gd).ideas.next_key(&mut at) {
         let i = *pic!(g, gd).ideas.get(who).unwrap();

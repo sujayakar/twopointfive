@@ -148,7 +148,7 @@ fn tick_plans(g: &mut crate::game::Game) {
         if suppressed(g, presser) && now - replanned_at > REPLAN_GAP_SECS {
             let mut fl = None;
             for &m in &live {
-                if plan_role_kind(g, plan, m) == Some(RoleKind::Flanker) && g.gd[m].sup.v < g.gd[presser].sup.v - 0.05 && !suppressed(g, m) {
+                if plan_role_kind(g, plan, m) == Some(RoleKind::Flanker) && g.ch[g.gd[m].ch].cond.sup.v < g.ch[g.gd[presser].ch].cond.sup.v - 0.05 && !suppressed(g, m) {
                     fl = Some(m);
                     break;
                 }
@@ -906,7 +906,7 @@ pub(super) fn entry_legs(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: 
 /// Step him along a local path to `target` at `speed`; true once there.   (tactics.ts stepGate)
 pub(super) fn step_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, dt: f64, target: V3, speed: f64, face: Option<f64>) -> bool {
     let c = g.gd[gd].ch;
-    let speed = crate::condition::condition_pace(g, gd, speed);
+    let speed = crate::condition::condition_pace(g, g.gd[gd].ch, speed);
     // (the TypeScript asks `pathFor !== target` of the array; every caller hands a held point, so its numbers say the same)
     if g_2.path.is_none() || g_2.path_for != Some(target) {
         let from = g.ch[c].pos;

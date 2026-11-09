@@ -190,7 +190,7 @@ pub(super) fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
     r.state == crate::game::GuardState::Alert
         || r.state == crate::game::GuardState::Search
         || r.awareness >= 0.3
-        || r.sup.src_t >= t - 1e-6
+        || g.ch[r.ch].cond.sup.src_t >= t - 1e-6
         || r.last_seen_t >= t - 1.0
         || (r.witness.heard.last_shot_t >= 0.0 && r.witness.heard.last_shot_t >= t - 2.5)
 }

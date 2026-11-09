@@ -414,7 +414,7 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     let now = g.time;
     if g.gd[gd].state == crate::game::GuardState::Dead
         || now - j.last_t > 0.25
-        || now < g.gd[gd].dazzled_until
+        || now < g.ch[g.gd[gd].ch].cond.dazzled_until
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
         || !crate::wand::wand_fits(g, j.door)
     {

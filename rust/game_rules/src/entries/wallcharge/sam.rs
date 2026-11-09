@@ -72,34 +72,19 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
     best
 }
 
-/// WALLSHOT: the shock with no flash (wallcharge.ts WallCharge.shock)
+/// WALLSHOT: the shock with no flash
 pub(super) fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
-    let now = g.time;
-    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, now + secs);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    let fa = g.gd[gd].weapon;
+    let (c, fa) = (g.gd[gd].ch, g.gd[gd].weapon);
+    crate::condition::fold(g, c, secs);
     g.fa[fa].burst = None;
-    crate::mind::raise(g, gd, 0.6, "wallcharge");
-    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
-    g.gd[gd].speed = 0.0;
-    let c = g.gd[gd].ch;
+    crate::condition::dazed(g, gd, secs, at, "wallcharge");
     crate::character::anim_hit(g, c);
 }
 
-/// Flash-blind (wallcharge.ts WallCharge.dazzle)
+/// Flash-blind
 pub(super) fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
-    let now = g.time;
-    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    crate::mind::raise(g, gd, 0.6, "wallcharge");
-    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
-    g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
+    crate::condition::dazzled(g, gd, secs, at, "wallcharge");
     crate::character::anim_hit(g, c);
 }
 

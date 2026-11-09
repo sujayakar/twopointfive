@@ -60,7 +60,7 @@ fn at_the_corridor(seed: u32, carrier: bool) -> Throw {
     let (men, ops) = (p.men_on_the_floor(), p.mates());
     let cars = p.frag_carriers();
     let c = men.iter().copied().find(|m| cars.contains(m) == carrier).unwrap_or_else(|| panic!("seed {seed}: no such man ({} carriers)", cars.len()));
-    for (i, &h) in men.iter().enumerate() { if h != c { p.man_stands(h, [2.0 + 1.5 * i as f64, 2.0]); p.man_posted(h); p.g.gd[h].dazzled_until = 1e9; } }
+    for (i, &h) in men.iter().enumerate() { if h != c { p.man_stands(h, [2.0 + 1.5 * i as f64, 2.0]); p.man_posted(h); p.g.ch[p.g.gd[h].ch].cond.dazzled_until = 1e9; } }
     for &x in [c].iter().chain(ops.iter()) { p.man_cannot_fall(x); }
     p.man_stands(ops[0], T1);
     p.man_stands(ops[1], T2);

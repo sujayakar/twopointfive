@@ -490,7 +490,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         }
         return;
     }
-    let dazzled = now < g.gd[gd].dazzled_until;
+    let dazzled = now < g.ch[g.gd[gd].ch].cond.dazzled_until;
     let contact = now - last_seen < 3.0;
     // the word on the net: the first of a room to have eyes on them, once he is past his own start
     if !crate::enemysquads::squads_live(g) && !dazzled && !state_of(g).called.has(gd) && now - last_seen < 0.25 && g.gd[gd].react_t <= 0.0

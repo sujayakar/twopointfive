@@ -45,7 +45,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
     if let Some(seat) = crate::seats::view_of_id(g, who) {
         // a player's man: over his own seat's view
         let (folded, until) = crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
-            (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.pl[g.player].stagger_until)
+            (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.ch[g.pl[g.player].ch].cond.stagger_until)
         });
         let braced = if g.puppet.is_some() {
             braced_bit | held_bit
@@ -60,7 +60,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
         Some(gd) => gd,
         None => return 0.0,
     };
-    let until = m::max(g.gd[gd].stagger_until, g.gd[gd].dazzled_until);
+    let until = m::max(g.ch[g.gd[gd].ch].cond.stagger_until, g.ch[g.gd[gd].ch].cond.dazzled_until);
     let side = if g.gd[gd].civ.is_some() { 3.0 } else { side_of(g.gd[gd].team) };
     let state = g.gd[gd].state;
     let braced = if g.gd[gd].held.is_some() {
@@ -195,7 +195,7 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     crate::character::anim_hit_from(g, c, Some(away));
     let heard = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
-    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
+    g.ch[g.gd[gd].ch].cond.stagger_until = m::max(g.ch[g.gd[gd].ch].cond.stagger_until, until);
     count(g, s);
     if g.gd[gd].civ.is_some() {
         crate::civilians::to_alarmed(g, gd, crate::civilians::CivCause::Noise, [at[0], 0.0, at[2]], false);
@@ -210,8 +210,8 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         };
         crate::squad::end_guard_script(g, gd, Some(then));
     }
-    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
-    g.gd[gd].dazzled_at = Some(v3::copy(at));
+    g.ch[g.gd[gd].ch].cond.dazzled_until = m::max(g.ch[g.gd[gd].ch].cond.dazzled_until, until);
+    g.ch[g.gd[gd].ch].cond.dazzled_at = Some(v3::copy(at));
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;

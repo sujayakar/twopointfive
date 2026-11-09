@@ -238,13 +238,13 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
         let ours = on_entry(g, op, &word, &gate, x) || ((if sams { g.gd[x].team == crate::teams::Team::Operative } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) }) && { let at = pos(g, x); near_door(g, d, side, at) });
         if !ours { rest.push(x); }
     }
-    let was: Vec<f64> = rest.iter().map(|x| g.gd[*x].stagger_until).collect();
+    let was: Vec<f64> = rest.iter().map(|x| g.ch[g.gd[*x].ch].cond.stagger_until).collect();
     g.guards = rest.clone();
     let order_team = crate::orders::squad_orders_team(g, &crate::seats::here(g));
     crate::combat::detonate_stun(g, it, Some(false), Some(crate::combat::DetonateStunSam { side: Some(order_team), spare: Some(sam_ours) }));
     g.guards = all;
     for (i, x) in rest.iter().enumerate() {
-        if g.gd[*x].team == crate::teams::Team::Operative && g.gd[*x].stagger_until > was[i] { g.door_tools.stats.own_flashed += 1.0; }
+        if g.gd[*x].team == crate::teams::Team::Operative && g.ch[g.gd[*x].ch].cond.stagger_until > was[i] { g.door_tools.stats.own_flashed += 1.0; }
     }
     let at = crate::throwables::item_pos(g, it);
     dop!(g, op).bang_t = g.time;

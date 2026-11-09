@@ -426,8 +426,8 @@ fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.civ.is_none()
         && man.script.is_none()
         && man.body_duty.is_none()
-        && time >= man.dazzled_until
-        && time >= man.stagger_until;
+        && !crate::condition::is_blind(g, man.ch)
+        && !crate::condition::is_folded(g, man.ch);
     own && !crate::doze::doze_asleep(g, gd) && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 

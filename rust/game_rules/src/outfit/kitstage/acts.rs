@@ -1688,7 +1688,7 @@ pub(in crate::outfit) fn after_step(g: &mut Game, st: &mut KitStage) {
         if (b.man.is_none() && info.damage == Damage::Leaf) || info.team {
             for k in 0..st.order.len() {
                 let x = st.order[k];
-                let r = &mut g.gd[x];
+                let r = &mut g.ch[g.gd[x].ch].cond;
                 if r.dazzled_until > now || r.stagger_until > now { st.a.hits_team += 1; }
                 if r.dazzled_until > now { r.dazzled_until = -1.0; }
                 if r.stagger_until > now { r.stagger_until = -1.0; }
@@ -1697,7 +1697,7 @@ pub(in crate::outfit) fn after_step(g: &mut Game, st: &mut KitStage) {
         st.a.beat = Some(b);
     }
     st.a.pin_t = now;
-    if g.pl[pl].stagger_until > now { st.a.hits_sam += 1; }
+    if g.ch[g.pl[pl].ch].cond.stagger_until > now { st.a.hits_sam += 1; }
     // (a can whose fuse runs out under a cut vents nothing: the word to shut comes before a tick's sources are played, so one told this very tick has to be told shut. And what has been told since the air was last cleared)
     let killed = now < st.a.vent_kill && !st.a.beat.as_ref().map_or(false, |b| b.field == "smoke");
     for e in g.out.iter_mut() {

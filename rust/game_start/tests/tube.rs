@@ -16,7 +16,7 @@ fn no_half_dark_place_blinds_a_goggled_man() {
         // (five metres short of the spot and looking along the corridor at it, with nobody who can do anything about him)
         let x = 21.6 + k as f64;
         for _ in 0..150 {
-            for &o in &theirs { let until = p.g.time + 5.0; p.g.gd[o].dazzled_until = until; p.man_stands(o, [4.0, 4.0]); }
+            for &o in &theirs { let until = p.g.time + 5.0; p.g.ch[p.g.gd[o].ch].cond.dazzled_until = until; p.man_stands(o, [4.0, 4.0]); }
             p.man_stands(mate, [x - 5.0, 14.2]);
             let c = p.g.gd[mate].ch;
             (p.g.ch[c].aim_yaw, p.g.ch[c].body_yaw) = (core::f64::consts::FRAC_PI_2, core::f64::consts::FRAC_PI_2);

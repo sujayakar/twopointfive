@@ -143,7 +143,7 @@ mod tests {
             release(g, m, t.by, 2.0);
         }
         g.time = 5.0;
-        g.gd[m].dazzled_until = 6.0;
+        g.ch[g.gd[m].ch].cond.dazzled_until = 6.0;
         assert!(TASKERS.iter().all(|t| kept(g, m, t.by) == Some("blind")), "nobody takes a man who cannot see");
     }
 }

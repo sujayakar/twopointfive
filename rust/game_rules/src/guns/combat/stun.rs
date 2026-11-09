@@ -111,20 +111,13 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
                 } else {
                     secs = v3::lerp(g.k.flash.secs[0], g.k.flash.secs[1], u) * k;
                     let drilled = crate::roomfight::drilled_k(g, gd);
-                    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, g.time + v3::lerp(g.k.flash.stagger[0], g.k.flash.stagger[1], u) * k * drilled);
+                    { let c = g.gd[gd].ch; crate::condition::fold(g, c, v3::lerp(g.k.flash.stagger[0], g.k.flash.stagger[1], u) * k * drilled); }
                     let gun = g.gd[gd].weapon;
                     g.fa[gun].burst = None;
                 }
             }
-            g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, g.time + secs);
-            g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-            crate::mind::raise(g, gd, 0.6, "combat");
-            if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-            if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-            crate::game::guard_set_path(g, gd, Vec::new());
-            crate::guards::guard_set_path_goal(g, gd, None);
-            g.gd[gd].speed = 0.0;
-            g.gd[gd].dazzled_at = Some(at);
+            crate::condition::dazzled(g, gd, secs, at, "combat");
+            g.ch[c].cond.dazzled_at = Some(at);
             let along = v3::sub(g.ch[c].pos, at);
             crate::character::anim_hit_from(g, c, Some(along));
             n += 1;

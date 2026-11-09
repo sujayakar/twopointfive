@@ -1358,6 +1358,8 @@ pub struct Character {
     #[is(crate::M4_IDENTITY)] pub world: crate::v3::m4::Mat4,
     #[is(0.3)] pub radius: f64,
     #[is(true)] pub alive: bool,
+    /// how he is
+    pub cond: crate::condition::Cond,
     /// NOT dressing: sight lines and shots read chest and head
     pub bones: JsMap<crate::character::Bone, V3>,
     #[is([0.0, 0.0])] pub bones_at: [f64; 2],

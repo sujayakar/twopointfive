@@ -372,7 +372,7 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     for x in all {
         let cap = g.k.trained.react_cap;
         let t = g.time;
-        if t >= g.gd[x].dazzled_until && t >= g.gd[x].stagger_until && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
+        if t >= g.ch[g.gd[x].ch].cond.dazzled_until && t >= g.ch[g.gd[x].ch].cond.stagger_until && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
         if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
             crate::mind::set_state(g, x, GuardState::Search, "qrf");
             crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");

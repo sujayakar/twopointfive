@@ -7,10 +7,10 @@ use crate::ids::*;
 pub fn dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == GuardState::Dead }
 
 /// He cannot see. It does not say WHAT took his eyes: a flash, a wall charge, a door thrown in his face and the door tools all write it.
-pub fn blind(g: &Game, gd: GuardId) -> bool { g.time < g.gd[gd].dazzled_until }
+pub fn blind(g: &Game, gd: GuardId) -> bool { g.time < g.ch[g.gd[gd].ch].cond.dazzled_until }
 
 /// He is reeling from a blow or a blast: he neither aims nor fires until it passes.
-pub fn staggered(g: &Game, gd: GuardId) -> bool { g.time < g.gd[gd].stagger_until }
+pub fn staggered(g: &Game, gd: GuardId) -> bool { g.time < g.ch[g.gd[gd].ch].cond.stagger_until }
 
 /// Somebody's arm is on him: a hostage hold or a grab.
 pub fn held(g: &Game, gd: GuardId) -> bool { g.gd[gd].held.is_some() }
@@ -76,10 +76,10 @@ mod tests {
         let all = |g: &Game| [dead(g, gd), blind(g, gd), staggered(g, gd), held(g, gd), saw_his_man_within(g, gd, 5.0), in_a_standoff(g, gd), changing_magazine(g, gd)];
         assert_eq!(all(&g), [false; 7]);
         assert!(still(&g, gd));
-        g.gd[gd].dazzled_until = 10.5;
+        g.ch[g.gd[gd].ch].cond.dazzled_until = 10.5;
         assert_eq!(all(&g), [false, true, false, false, false, false, false]);
-        g.gd[gd].dazzled_until = 10.0;                    // the moment it ends he can see
-        g.gd[gd].stagger_until = 11.0;
+        g.ch[g.gd[gd].ch].cond.dazzled_until = 10.0;                    // the moment it ends he can see
+        g.ch[g.gd[gd].ch].cond.stagger_until = 11.0;
         g.gd[gd].last_seen_t = 6.0;
         g.gd[gd].reload_t = 0.0;
         assert_eq!(all(&g), [false, false, true, false, true, false, true]);

@@ -298,7 +298,7 @@ pub fn team_paced(g: &crate::game::Game, gd: GuardId) -> bool {
 pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     let capped = if team_paced(g, gd) { m::min(speed, crate::teampace::team_cap(g, gd)) } else { speed };
     let silent = crate::silent::silent_pace(g, gd, capped);
-    crate::condition::condition_pace(g, gd, silent)
+    crate::condition::condition_pace(g, g.gd[gd].ch, silent)
 }
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg (guards.ts teamLegs)

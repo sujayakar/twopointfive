@@ -84,7 +84,7 @@ pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate:
     if s.pre { s.torch = s.calm_torch; } else if s.until < 0.0 { s.torch = false; }
     if !unaware || state != crate::game::GuardState::Alert || !seen { return; }
     let calm_torch = s.calm_torch;
-    if now < g.gd[gd].dazzled_until || now < g.gd[gd].stagger_until { return; }
+    if now < g.ch[g.gd[gd].ch].cond.dazzled_until || now < g.ch[g.gd[gd].ch].cond.stagger_until { return; }
     let at = if now - g.gd[gd].sight_t < 0.1 { g.gd[gd].sight_pos } else { g.gd[gd].last_known.unwrap_or(g.gd[gd].sight_pos) };
     let beat = g.k.startle.beat;
     if give_startle(g, gd, at, Some(beat), Some(calm_torch)) {
@@ -143,7 +143,7 @@ pub(super) fn startle_transition(g: &mut crate::game::Game, gd: GuardId) {
     let Some(run) = g.m.startle.state_of.get(gd).and_then(|s| s.run) else { return };
     let now = g.time;
     let m = &g.gd[gd];
-    if !g.ai_enabled || g.touring || g.quiet_utility || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || now < m.dazzled_until || now < m.stagger_until { stop(g, gd, false); return; }
+    if !g.ai_enabled || g.touring || g.quiet_utility || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || now < g.ch[m.ch].cond.dazzled_until || now < g.ch[m.ch].cond.stagger_until { stop(g, gd, false); return; }
     let pos = g.ch[m.ch].pos;
     let (stuck_secs, stuck_m, run_secs) = (g.k.startle.stuck_secs, g.k.startle.stuck_m, g.k.startle.run_secs);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
@@ -181,7 +181,7 @@ pub(super) fn startle_propose(g: &crate::game::Game, gd: GuardId) -> Option<crat
 /// The beat is over: he draws (the fight as it was, from here) or he runs.   (startle.ts choose)
 fn choose(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
-    if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].held.is_some() || now < g.gd[gd].dazzled_until || now < g.gd[gd].stagger_until { return; }
+    if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].held.is_some() || now < g.ch[g.gd[gd].ch].cond.dazzled_until || now < g.ch[g.gd[gd].ch].cond.stagger_until { return; }
     if runs(g, gd) {
         g.stats.startle.ran += 1;
     } else {

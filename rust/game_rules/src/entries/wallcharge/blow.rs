@@ -679,7 +679,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
 fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
     let (after, now) = (g.k.wallcharge.after_blow, g.time);
     let h = match o!(g, op).hole { Some(h) => h, None => return after };
-    if o!(g, op).men.iter().any(|&m| g.gd[m].dazzled_until > now) { return after; }   // (a man the blast caught: the beat as it was)
+    if o!(g, op).men.iter().any(|&m| g.ch[g.gd[m].ch].cond.dazzled_until > now) { return after; }   // (a man the blast caught: the beat as it was)
     let wall = o!(g, op).wall.clone();
     let at = wall_pt(g, &wall, h.du, 0.0, None);
     let mut near = f64::INFINITY;
@@ -863,8 +863,8 @@ fn wall_charge_sam_caught(g: &mut crate::game::Game, pl: PlayerId, k: f64, from:
     g.pl[pl].hit_flash = m::max(g.pl[pl].hit_flash, k);
     let (ss, sup) = (g.k.wallcharge.sam_secs, g.k.wallcharge.sam_sup);
     g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, v3::lerp(ss[1], ss[0], k));
-    g.pl[pl].sup.v = m::max(g.pl[pl].sup.v, v3::lerp(sup, 1.0, k));
-    g.pl[pl].sup.kick = m::max(g.pl[pl].sup.kick, k);
+    g.ch[g.pl[pl].ch].cond.sup.v = m::max(g.ch[g.pl[pl].ch].cond.sup.v, v3::lerp(sup, 1.0, k));
+    g.ch[g.pl[pl].ch].cond.sup.kick = m::max(g.ch[g.pl[pl].ch].cond.sup.kick, k);
 }
 
 /// the charge's own side: blind the seconds the safety radius gives   (blowRaw's nearSecs)
@@ -1014,7 +1014,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             if !(ours && wk) { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
         } else {
             wall_charge_dazzle(g, gd, v3::lerp(ss[0], ss[1], v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
-            g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, g.time + shot_stagger);
+            { let c = g.gd[gd].ch; crate::condition::fold(g, c, shot_stagger); }
             let f = g.gd[gd].weapon;
             g.fa[f].burst = None;
             stunned += 1.0;

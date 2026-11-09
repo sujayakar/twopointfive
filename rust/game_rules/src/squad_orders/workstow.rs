@@ -225,7 +225,7 @@ mod tests {
         assert!(!stow_fight(&mut g, gd, Some(crate::workstow::StowFightA { yield_t: -1.0 }), &mut op));
         assert_eq!(op.stow_off_t, None);
 
-        g.gd[gd].dazzled_until = 101.0;
+        g.ch[g.gd[gd].ch].cond.dazzled_until = 101.0;
         assert_eq!(stow_fight(&mut g, gd, None, &mut op), 0.0 < cap);
         assert_eq!(op.stow_off_t, Some(100.0));
     }

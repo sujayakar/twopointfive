@@ -611,7 +611,7 @@ fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cue
 fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, vars: Option<&JsMap<String, String>>) -> bool {
     let t = g.time;
     let said_t = cues_man(g, gd).said_t;
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || t < g.gd[gd].dazzled_until || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || t < g.ch[g.gd[gd].ch].cond.dazzled_until || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
     let own = g.gd[gd].bubble.as_ref().is_some_and(|b| t >= b.t && t - b.t < 1.5);   // he has just said something of his own: that was his word on it,
     if own && !matches!(kind, CueKind::Help | CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
     if cues_kind_busy(g, kind) { return false; }   // (the floor has just heard this from somebody)
@@ -646,7 +646,7 @@ fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool
 /// Can he speak for his squad?   (cues.ts Cues.fit)
 fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     let t = g.time;
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
+    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.ch[g.gd[gd].ch].cond.dazzled_until && t >= g.ch[g.gd[gd].ch].cond.stagger_until && !crate::runner::runner_mute(g, gd)
 }
 
 /// Who says a squad's word: the man the note names, else one holding, else the first fit.   (cues.ts Cues.squadVoice)

@@ -191,7 +191,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.body_duty.is_none()
         && man.task.is_none()
         && man.awareness < g.k.attention.calm_aw
-        && g.time >= man.dazzled_until
+        && g.time >= g.ch[man.ch].cond.dazzled_until
         && !g.touring
         && !g.quiet_utility;
     if !calm { return false; }

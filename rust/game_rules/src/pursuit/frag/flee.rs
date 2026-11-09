@@ -158,17 +158,17 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             if !g.pl[pl].down { rep.player = Some(BlastResult::Wounded); }
         }
     }
-    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, &crate::condition::Man::Player(pl)); }
+    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, g.pl[pl].ch); }
     if rep.player == Some(BlastResult::Wounded) || rep.player == Some(BlastResult::Stunned) {
         let st = g.k.frag.stagger;
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
-        g.pl[pl].stagger_until = m::max(g.pl[pl].stagger_until, g.time + secs);
+        { let c = g.pl[pl].ch; crate::condition::fold(g, c, secs); }
         let along = away(b.at, g.ch[c].pos);
         crate::character::anim_hit_from(g, c, Some(along));
         g.pl[pl].hit_flash = 1.0;
         g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, secs);
-        g.pl[pl].sup.v = m::max(g.pl[pl].sup.v, 1.0);
-        g.pl[pl].sup.kick = m::max(g.pl[pl].sup.kick, 1.0);
+        g.ch[g.pl[pl].ch].cond.sup.v = m::max(g.ch[g.pl[pl].ch].cond.sup.v, 1.0);
+        g.ch[g.pl[pl].ch].cond.sup.kick = m::max(g.ch[g.pl[pl].ch].cond.sup.kick, 1.0);
         crate::samstun::fold_cancels(g);
         if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
@@ -296,7 +296,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
                 let time = g.time;
                 let w = g.gd[gd].weapon;
                 let man = &mut g.gd[gd];
-                man.stagger_until = m::max(man.stagger_until, time + secs);
+                g.ch[man.ch].cond.stagger_until = m::max(g.ch[man.ch].cond.stagger_until, time + secs);
                 man.react_t = m::max(man.react_t, secs);
                 g.fa[w].burst = None;
                 crate::mind::raise(g, gd, 0.92, "frag");
@@ -305,7 +305,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
                 g.gd[gd].path_goal = None;
                 g.gd[gd].path_goal_orbit = false;
                 g.gd[gd].speed = 0.0;
-                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &crate::condition::Man::Guard(gd)); }
+                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, g.gd[gd].ch); }
             }
             crate::character::anim_hit(g, c);
         }

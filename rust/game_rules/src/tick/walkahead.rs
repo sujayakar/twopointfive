@@ -91,7 +91,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         let ml = m::hyp2(mx, mz);
         if ml > 0.0 { mx /= ml; mz /= ml; }
         if has(&r.pressed, "KeyC") { crate::player::crouch_key(g, m); }
-        let want_sprint = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), Some(now))
+        let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, Some(now))
             && (has(&r.keys, "ShiftLeft") || has(&r.keys, "ShiftRight"))
             && ml > 0.0;
         crate::player::sprint_stance(g, m, want_sprint, false);

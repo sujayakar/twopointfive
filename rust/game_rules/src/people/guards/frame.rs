@@ -231,9 +231,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
     let now = g.time;
     crate::game::guard_track_fix(g, gd, now);
     let dazzled = crate::control::man::blind(g, gd);
-    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].dazzled_until - g.time); }
+    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.ch[g.gd[gd].ch].cond.dazzled_until - g.time); }
     let staggered = crate::control::man::staggered(g, gd);
-    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].stagger_until - g.time); }
+    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.ch[g.gd[gd].ch].cond.stagger_until - g.time); }
     { let st = crate::startle::startle_left(g, gd); if st > 0.0 { g.gd[gd].react_t = m::max(g.gd[gd].react_t, st); } }
     crate::aim::track_guard(g, gd, dt);
     let (p0x, p0z) = (g.ch[c].pos[0], g.ch[c].pos[2]);

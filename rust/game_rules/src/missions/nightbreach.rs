@@ -310,8 +310,8 @@ fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScri
 pub(super) fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::nightbreach::BlindBurst, door: V3) -> bool {
     let bl = crate::nightbreach::blind();
     if g.gd[h].state == crate::game::GuardState::Dead || !crate::control::man::blind(g, h) { return false; }
-    if g.gd[h].dazzled_until > b.until + 1e-6 {
-        b.until = g.gd[h].dazzled_until;
+    if g.ch[g.gd[h].ch].cond.dazzled_until > b.until + 1e-6 {
+        b.until = g.ch[g.gd[h].ch].cond.dazzled_until;
         b.n = 0.0;
         b.next = g.time + bl.after + k * bl.stagger;
     }
@@ -321,7 +321,7 @@ pub(super) fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut 
     b.next = g.time + bl.every;
     let c = g.gd[h].ch;
     if g.gd[h].held.is_some() || crate::control::man::staggered(g, h) || g.ch[c].gun_dir[1] < -bl.low_gun { return false; }
-    if g.tune.suppression && (g.gd[h].sup.v >= g.k.suppression.pinned || g.gd[h].sup.latched || g.gd[h].sup.down_t > 0.0) { return false; }
+    if g.tune.suppression && (g.ch[g.gd[h].ch].cond.sup.v >= g.k.suppression.pinned || g.ch[g.gd[h].ch].cond.sup.latched || g.ch[g.gd[h].ch].cond.sup.down_t > 0.0) { return false; }
     let weapon = g.gd[h].weapon;
     if !crate::weapons::firearm_fire(g, weapon) { return false; }
     let target = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
@@ -772,7 +772,7 @@ mod tests {
         let mut g = Game::blank();
         let bl = crate::nightbreach::blind();
         let mut man = crate::game::Guard::blank();
-        man.dazzled_until = 3.0;
+        g.ch[man.ch].cond.dazzled_until = 3.0;
         man.held = Some(crate::game::GuardHeld::default());   // (cover at :114 is another part's: in Sam's arm it is not asked)
         let h = g.gd.push(man);
         g.time = 1.0;
