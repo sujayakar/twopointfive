@@ -480,10 +480,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             }
             i += 1;
         }
-        g.engine.settings.sky_zenith = d.sky.zenith;
-        g.engine.settings.sky_horizon = d.sky.horizon;
-        g.engine.settings.haze_density = d.haze;
-        g.engine.settings.exposure = d.exposure;
         g.m.lighting.day_states = Some(st);
         crate::host_api::host_api_invalidate_world_cache(g);
     } else {
@@ -498,8 +494,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             g.tab.light[l].enabled = true;
             crate::sim_lightshome::light_home_feed(g, l);
         }
-        let was = g.level.daylight.as_ref().map_or(g.k.env.exposure, |d| d.exposure);
-        crate::hours::night_picture(g, was);
         crate::render_lights::light_set_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {

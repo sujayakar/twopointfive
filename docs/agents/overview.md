@@ -50,6 +50,13 @@ panel's emissive slider moves only the surfaces the shader draws. The marking li
 `MARKING_TEXEL`, and `?nomarkings` is the picture's alone. Marks are always laid; `?nodecals` and the panel's switch stop the upload
 (`src/render/decals.ts`). A wet character's look is the last number of a look (`src/draw/look.ts`). Never seen on a GPU.
 
+**No rule reads a picture's setting: the game tells the picture its sky.** `told` (`rust/game_rules/src/hours/told.rs`) works out the sky, the haze, the
+exposure and the wet gloss from state whenever it is asked, and keeps nothing: the kit stage's own sky if it stands one, else the show's day, else the
+hour under its weather (`sky_dome`), else the level's night. `rust/game_draw/src/sky.rs` reads it. `src/draw/sky.ts` keeps the rule at the page's end: a
+number the game has not moved writes nothing, a hand's turn stands until the game says another, and a turn of the exposure is carried to that as a
+factor. `rust/game_start/tests/told.rs` holds 23 stands against `told_numbers.json`, the numbers the settings held on the last build that wrote them.
+Never seen on a GPU.
+
 ## Where things are
 
 ### `rust/`
