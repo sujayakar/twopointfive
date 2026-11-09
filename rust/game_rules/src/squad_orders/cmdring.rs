@@ -293,67 +293,38 @@ mod tests {
     /// The page's own row of knobs: these tests reach no game.
     fn page() -> crate::knobs::CmdringK { crate::knobs::CmdringK::page() }
 
-    // Every expected value below is what src/game/cmdring.ts printed under bun, with EXACT on.
+    /// A failure means the cursor lights a wedge it is not out toward.
     #[test]
-    fn wedge_at_is_the_typescript_bits() {
-        for &(dx, dy, n, bits) in &[
-            (0.0, -30.0, 5.0, 0x3ff0000000000000u64),
-            (30.0, 0.0, 5.0, 0x4000000000000000),
-            (0.0, 30.0, 5.0, 0x4010000000000000),
-            (-30.0, 0.0, 5.0, 0x4014000000000000),
-            (-30.0, -1.0, 5.0, 0x4014000000000000),
-            (10.0, -29.5, 5.0, 0x3ff0000000000000),
-            (-0.0, 0.0, 5.0, 0x4010000000000000),
-            (0.0, 0.0, 5.0, 0x4010000000000000),
-            (-12.5, 7.25, 5.0, 0x4010000000000000),
-            (28.53, -9.27, 5.0, 0x4000000000000000),
-            (17.63, 24.27, 5.0, 0x4008000000000000),
-            (-17.63, 24.27, 5.0, 0x4010000000000000),
-            (-28.53, -9.28, 5.0, 0x4014000000000000),
-            (3.0, 4.0, 8.0, 0x4010000000000000),
-        ] {
-            assert_eq!(wedge_at(dx, dy, n).to_bits(), bits, "{dx} {dy} {n}");
+    fn a_direction_points_at_its_wedge_the_first_at_the_top_going_clockwise() {
+        for n in [5.0, 8.0] {
+            let mut k = 0.0;
+            while k < n {
+                let a = k * 2.0 * m::PI / n;
+                assert_eq!(wedge_at(30.0 * m::sin(a), -30.0 * m::cos(a), n), k + 1.0, "wedge {k} of {n}");
+                k += 1.0;
+            }
         }
+        assert_eq!(wedge_at(10.0, -29.5, 5.0), 1.0);    // a little off its middle is still that wedge
     }
 
     #[test]
-    fn zoom_open_and_pin_are_the_typescript_bits() {
-        {
-            let c = page();
-            for &(w, h, bits) in &[
-                (1920.0, 1080.0, 0x3ff0000000000000u64),
-                (3840.0, 2160.0, 0x4000000000000000),
-                (1280.0, 720.0, 0x3ff0000000000000),
-                (2560.0, 1080.0, 0x3ff0000000000000),
-                (3000.0, 2000.0, 0x3ff9000000000000),
-            ] {
-                assert_eq!(zoom_of(&c, w, h).to_bits(), bits);
-            }
-            for &(mx, my, w, h, t, lit, ax, ay, z, armed) in &[
-                (960.0, 540.0, 1920.0, 1080.0, 3.5, 1.0, 0x408e000000000000u64, 0x4080e00000000000u64, 0x3ff0000000000000u64, true),
-                (10.0, 10.0, 1920.0, 1080.0, 1.0, 2.0, 0x4062c00000000000, 0x4059000000000000, 0x3ff0000000000000, false),
-                (3800.0, 20.0, 3840.0, 2160.0, 0.0, 1.0, 0x40aba80000000000, 0x4069000000000000, 0x4000000000000000, false),
-                (50.0, 50.0, 0.0, 0.0, 0.0, 1.0, 0x4049000000000000, 0x4049000000000000, 0x3ff0000000000000, true),
-                (100.0, 60.0, 200.0, 100.0, 0.0, 1.0, 0x4059000000000000, 0x404e000000000000, 0x3ff0000000000000, true),
-                (1910.5, 1075.25, 1920.0, 1080.0, 0.1, 3.0, 0x409ba80000000000, 0x408ea00000000000, 0x3ff0000000000000, false),
-            ] {
-                let r = ring_open_at(&c, mx, my, w, h, t, lit);
-                assert_eq!((r.ax.to_bits(), r.ay.to_bits(), r.z.to_bits(), r.armed), (ax, ay, z, armed), "{mx} {my} {w} {h}");
-                assert_eq!((r.t0, r.lit), (t, lit));
-            }
-            for &(sx, sy, w, h, ox, oy, ax, ay) in &[
-                (100.0, 50.0, 1920.0, 1080.0, 3.0, -4.0, 0x406c200000000000u64, 0x4062c00000000000u64),
-                (960.0, 540.0, 1920.0, 1080.0, 0.0, 0.0, 0x408e000000000000, 0x4080e00000000000),
-                (1900.0, 1070.0, 1920.0, 1080.0, 12.5, 9.0, 0x409a7c0000000000, 0x408d100000000000),
-                (10.0, 10.0, 200.0, 100.0, 1.0, 1.0, 0x4026000000000000, 0x4026000000000000),
-            ] {
-                let mut r = base(false);
-                r.ox = Some(ox);
-                r.oy = Some(oy);
-                ring_pin_on(&c, &mut r, sx, sy, w, h);
-                assert_eq!((r.ax.to_bits(), r.ay.to_bits()), (ax, ay));
-            }
-        }
+    fn a_ring_stands_larger_in_a_larger_view_and_opens_whole_inside_it() {
+        let c = page();
+        let (w, h) = (c.ref_[0] * 2.0, c.ref_[1] * 2.0);
+        assert_eq!(zoom_of(&c, w, h), 2.0);
+        assert_eq!(zoom_of(&c, w, c.ref_[1]), 1.0);    // the narrower way decides
+        assert_eq!(zoom_of(&c, 640.0, 360.0), 1.0);    // never under its own size
+
+        // at the middle of the view: at the cursor, and the cursor ready to flick
+        let r = ring_open_at(&c, w / 2.0, h / 2.0, w, h, 3.5, 1.0);
+        assert_eq!((r.ax, r.ay, r.z, r.armed, r.t0, r.lit), (w / 2.0, h / 2.0, 2.0, true, 3.5, 1.0));
+        // in a corner: held in by its edge at its own size, and the cursor, now out of its middle, lights nothing until it has come back
+        let r = ring_open_at(&c, w - 40.0, 20.0, w, h, 0.0, 1.0);
+        assert_eq!((r.ax, r.ay, r.armed), (w - c.edge_x * 2.0, c.edge_y * 2.0, false));
+        // a view too small to hold it leaves it where the cursor is; a view not known yet is its own size
+        let r = ring_open_at(&c, 100.0, 60.0, 200.0, 100.0, 0.0, 1.0);
+        assert_eq!((r.ax, r.ay, r.armed), (100.0, 60.0, true));
+        assert_eq!(ring_open_at(&c, 50.0, 50.0, 0.0, 0.0, 0.0, 1.0).z, 1.0);
     }
 
     fn base(armed: bool) -> RingState {
@@ -361,27 +332,63 @@ mod tests {
     }
 
     #[test]
-    fn want_by_direction_is_the_typescript() {
-        {
-            let c = page();
-            // (mouse x, y, digit, time, armed before) → (answer, armed after, clear after)
-            for &(mx, my, d, t, armed, want, armed2, clear) in &[
-                (500.0, 400.0, 0.0, 10.0, false, 0.0, false, None),
-                (540.0, 400.0, 0.0, 10.05, true, 0.0, false, None),
-                (540.0, 400.0, 0.0, 10.2, false, 0.0, false, None),
-                (540.0, 400.0, 0.0, 10.2, true, 2.0, true, None),
-                (500.0, 300.0, 0.0, 10.2, true, 1.0, true, None),
-                (500.0, 400.0, 0.0, 10.2, false, 0.0, true, None),
-                (510.0, 400.0, 3.0, 10.0, true, 3.0, false, Some(false)),
-                (510.0, 400.0, 7.0, 10.0, true, 0.0, false, Some(false)),
-                (420.0, 470.0, 0.0, 10.149999, true, 0.0, false, None),
-                (420.0, 470.0, 0.0, 10.15, true, 4.0, true, None),
-            ] {
-                let mut r = base(armed);
-                let got: f64 = ring_want_on(&c, &mut r, mx, my, d, t, 0.0, 0.0, false);
-                assert_eq!((got.to_bits(), r.armed, r.clear), ((want as f64).to_bits(), armed2, clear), "{mx} {my} {d} {t}");
-            }
-        }
+    fn a_pinned_ring_stays_over_its_place_and_whole_inside_the_view() {
+        let c = page();
+        let (w, h) = (1920.0, 1080.0);
+        let mut r = base(false);
+        r.ox = Some(3.0);
+        r.oy = Some(-4.0);
+        ring_pin_on(&c, &mut r, 960.0, 540.0, w, h);
+        assert_eq!((r.ax, r.ay), (963.0, 536.0));
+        ring_pin_on(&c, &mut r, 10.0, 10.0, w, h);
+        assert_eq!((r.ax, r.ay), (c.edge_x * r.z, c.edge_y * r.z));
+        ring_pin_on(&c, &mut r, w, h, w, h);
+        assert_eq!((r.ax, r.ay), (w - c.edge_x * r.z, h - c.edge_y * r.z));
+    }
+
+    /// The ring is at (500, 400), opened at time 10, with a middle of 36 px at its size and no wedge drawn. (answer, armed after, clear after)
+    fn want(mx: f64, my: f64, digit: f64, t: f64, armed: bool) -> (f64, bool, Option<bool>) {
+        let mut r = base(armed);
+        let got = ring_want_on(&page(), &mut r, mx, my, digit, t, 0.0, 0.0, false);
+        (got, r.armed, r.clear)
+    }
+
+    /// A failure means a tap of the key gives an order, or a cursor resting out of a new ring's middle gives one.
+    #[test]
+    fn a_flick_out_of_the_middle_picks_a_wedge_once_the_tap_is_over() {
+        assert_eq!(want(540.0, 400.0, 0.0, 10.2, true), (2.0, true, None));
+        assert_eq!(want(500.0, 300.0, 0.0, 10.2, true), (1.0, true, None));
+        // the tap's last moment: nothing, and a cursor out by then is not ready; at its end, the wedge
+        assert_eq!(want(420.0, 470.0, 0.0, 10.149999, true), (0.0, false, None));
+        assert_eq!(want(420.0, 470.0, 0.0, 10.15, true), (4.0, true, None));
+        // not ready: nothing, until it has been back in the middle
+        assert_eq!(want(540.0, 400.0, 0.0, 10.2, false), (0.0, false, None));
+        assert_eq!(want(500.0, 400.0, 0.0, 10.2, false), (0.0, true, None));
+    }
+
+    #[test]
+    fn a_digit_picks_its_wedge_at_once_and_the_cursor_must_come_back() {
+        assert_eq!(want(510.0, 400.0, 3.0, 10.0, true), (3.0, false, Some(false)));
+        assert_eq!(want(510.0, 400.0, 7.0, 10.0, true), (0.0, false, Some(false)));    // there is no seventh wedge
+    }
+
+    /// As `want`, on a ring that draws the wedges of `shapes` (a bit a wedge).
+    fn on_drawn(mx: f64, t: f64, armed: bool, clear: Option<bool>, shapes: f64) -> (f64, bool, Option<bool>) {
+        let mut r = RingState { clear, ..base(armed) };
+        let got = ring_want_on(&page(), &mut r, mx, 400.0, 0.0, t, 0.0, shapes, false);
+        (got, r.armed, r.clear)
+    }
+
+    /// Wedge 2 lies to the right of the middle. A failure means a ring opened under a resting cursor picks what it happens to be on.
+    #[test]
+    fn on_a_drawn_wedge_the_cursor_picks_it_once_it_has_been_off_one() {
+        assert_eq!(on_drawn(540.0, 10.2, false, Some(true), 4.0), (2.0, false, Some(true)));      // been off one: picked, ready or not
+        assert_eq!(on_drawn(540.0, 10.2, false, None, 4.0), (0.0, false, None));                  // never been off one
+        assert_eq!(on_drawn(540.0, 10.2, false, Some(false), 4.0), (0.0, false, Some(false)));    // a digit took that back
+        assert_eq!(on_drawn(540.0, 10.05, true, Some(true), 4.0), (0.0, false, Some(true)));      // not during the tap
+        assert_eq!(on_drawn(510.0, 10.2, false, None, 4.0), (0.0, true, Some(true)));             // in the hole: off every wedge, and ready
+        assert_eq!(on_drawn(900.0, 10.2, false, Some(true), 4.0), (0.0, false, Some(true)));      // past the ring's own box
+        assert_eq!(on_drawn(540.0, 10.2, true, None, 8.0), (2.0, true, Some(true)));              // where nothing is drawn a flick still goes, and that was off one
     }
 
     #[derive(Clone, Default)]
@@ -400,29 +407,24 @@ mod tests {
     fn plain() -> S { S::default() }
     fn posture(key: f64) -> S { S { key: Some(key), free: true, targets: Some("none"), ..S::default() } }
 
+    /// What a player finds on which wedge. `row[d]` is the row on wedge d, -1 none. (rows, a place is pointed at, wedge 1 is the lead's, row, 'more' wedge, what is behind it)
     #[test]
-    fn seats_are_the_typescript() {
-        {
-            let cases: Vec<(Vec<S>, bool, bool, [f64; 6], f64, Vec<f64>)> = vec![
-                (vec![k(1.), k(2.), k(3.)], false, true, [-1., 0., 1., 2., -1., -1.], 0., vec![]),
-                (vec![k(1.), S { hot: Some("F"), ..k(2.) }, plain(), plain(), plain()], false, true, [-1., 0., 2., 3., 4., -1.], 0., vec![]),
-                (vec![k(1.), k(2.), k(3.), k(4.), k(5.), plain(), plain()], false, true, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6.]),
-                (vec![k(1.), k(2.), k(3.), plain(), plain(), plain(), plain()], false, true, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6.]),
-                (vec![plain(), plain(), plain(), plain(), plain(), plain()], false, false, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-                (vec![posture(2.), k(3.), plain(), plain()], true, true, [-1., -1., 2., 1., 3., 0.], 0., vec![]),
-                (vec![S { targets: Some("floor"), listed: Some("none"), ..posture(2.) }, k(3.), plain()], true, true, [-1., -1., 2., 1., 0., -1.], 0., vec![]),
-                (vec![S { hot: Some("G"), ..posture(2.) }, k(3.)], true, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
-                (vec![S { opens: Some("x"), ..posture(2.) }, k(3.)], true, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
-                (vec![posture(2.), k(3.)], false, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
-                (vec![k(2.), k(2.), k(9.), k(0.), k(1.5)], false, true, [-1., -1., 0., 1., 2., -1.], 5., vec![3., 4.]),
-                (vec![k(1.), k(2.), k(3.), k(4.), k(5.), k(5.), posture(0.)], true, false, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-            ];
-            for (n, (rows, place, first, row, more, over)) in cases.iter().enumerate() {
-                let rows: Vec<SeatRow> = rows.iter().map(seat).collect();
-                let got = ring_seats_of(5.0, &rows, *place, "F", *first);
-                assert_eq!(got.row.as_slice(), row.as_slice(), "case {n}");
-                assert_eq!((got.more, &got.over), (*more, over), "case {n}");
-            }
+    fn rows_keep_their_digits_and_the_rest_take_the_spare_wedges_or_go_behind_more() {
+        let cases: Vec<(&str, Vec<S>, bool, bool, [f64; 6], f64, Vec<f64>)> = vec![
+            ("each on its digit", vec![k(1.), k(2.), k(3.)], false, true, [-1., 0., 1., 2., -1., -1.], 0., vec![]),
+            ("the word's key takes no wedge, the rest fill up", vec![k(1.), S { hot: Some("F"), ..k(2.) }, plain(), plain(), plain()], false, true, [-1., 0., 2., 3., 4., -1.], 0., vec![]),
+            ("too many: the last wedge is more", vec![k(1.), k(2.), k(3.), k(4.), k(5.), plain(), plain()], false, true, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6.]),
+            ("wedge 1 is free on the next page", vec![plain(), plain(), plain(), plain(), plain(), plain()], false, false, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
+            ("pointed at a place, a posture goes last", vec![posture(2.), k(3.), plain(), plain()], true, true, [-1., -1., 2., 1., 3., 0.], 0., vec![]),
+            ("a posture keeps its digit otherwise", vec![posture(2.), k(3.)], false, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
+            ("a posture that opens a page stays put", vec![S { opens: Some("x"), ..posture(2.) }, k(3.)], true, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
+            ("a digit taken or no digit of the ring is no seat", vec![k(2.), k(2.), k(9.), k(0.), k(1.5)], false, true, [-1., -1., 0., 1., 2., -1.], 5., vec![3., 4.]),
+        ];
+        for (what, rows, place, first, row, more, over) in &cases {
+            let rows: Vec<SeatRow> = rows.iter().map(seat).collect();
+            let got = ring_seats_of(5.0, &rows, *place, "F", *first);
+            assert_eq!(got.row.as_slice(), row.as_slice(), "{what}");
+            assert_eq!((got.more, &got.over), (*more, over), "{what}");
         }
     }
 
@@ -431,63 +433,33 @@ mod tests {
     fn frs(ids: &[&str]) -> Vec<FlatRow> { ids.iter().map(|id| fr(id)).collect() }
     fn with_p(mut rows: Vec<FlatRow>, p: &str) -> Vec<FlatRow> { rows.push(fp(p)); rows }
 
+    /// On the flat ring a kind of target has rows that hold a place: a player learns where cover is. (rows, target, the lead row, row, 'more' wedge, what is behind it)
     #[test]
-    fn flat_seats_are_the_typescript() {
-        {
-            let opened = FlatRow { opens: Some(String::from("p")), ..fr("a") };
-            let worded = FlatRow { hot_key: Some(String::from("F")), ..fr("b") };
-            let cases: Vec<(Vec<FlatRow>, &str, f64, [f64; 6], f64, Vec<f64>)> = vec![
-                (with_p(frs(&["a", "cover", "fallIn", "hold", "b"]), "silent"), "floor", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-                (frs(&["a", "cover", "openClear", "bangClear", "fallIn", "hold", "b"]), "door", 0., [-1., 0., 1., 2., 3., 6.], 0., vec![]),
-                (frs(&["a", "b"]), "wall", 0., [-1., 0., 1., -1., -1., -1.], 0., vec![]),
-                (frs(&["a", "b", "c", "d", "e"]), "wall", 0., [-1., 0., 1., 2., 3., 4.], 0., vec![]),
-                (with_p(frs(&["a", "b", "c", "d", "e", "f"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6.]),
-                (with_p(frs(&["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6., 7., 8.]),
-                (with_p(frs(&["a", "b", "c", "d", "e", "f", "g", "h", "i"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6., 7., 8.]),
-                (with_p(frs(&["fallIn", "hold"]), "silent"), "none", 0., [-1., 0., -1., 0., 1., 2.], 0., vec![]),
-                (vec![], "floor", -1., [-1., -1., -1., -1., -1., -1.], 0., vec![]),
-                (vec![opened, worded, fr("c"), fr("d")], "foe", 2., [-1., 2., 3., -1., -1., -1.], 0., vec![]),
-                (vec![fr("a"), fp("p1"), fp("p2"), fr("b"), fr("c")], "wall", 0., [-1., 0., 3., 4., 1., 2.], 0., vec![]),
-                (with_p(frs(&["a", "b", "c", "d"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., 4.], 0., vec![]),
-                (with_p(frs(&["a", "b", "c", "d", "e"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-                (frs(&["a", "b", "c", "d", "e", "f"]), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-                (frs(&["cover", "b", "c"]), "floor", 0., [-1., 0., 0., 1., 2., -1.], 0., vec![]),
-            ];
-            for (n, (rows, kind, lead, row, more, over)) in cases.iter().enumerate() {
-                let got = flat_seats_of(5.0, rows, kind, "F", *lead);
-                assert_eq!(got.row.as_slice(), row.as_slice(), "case {n}");
-                assert_eq!((got.more, &got.over), (*more, over), "case {n}");
-            }
+    fn the_flat_ring_keeps_each_target_s_rows_in_their_places() {
+        let opened = FlatRow { opens: Some(String::from("p")), ..fr("a") };
+        let worded = FlatRow { hot_key: Some(String::from("F")), ..fr("b") };
+        let cases: Vec<(&str, Vec<FlatRow>, &str, f64, [f64; 6], f64, Vec<f64>)> = vec![
+            ("the floor's own places, the rest behind more", with_p(frs(&["a", "cover", "fallIn", "hold", "b"]), "silent"), "floor", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
+            ("a door's own places, and fall in and hold are not on its ring", frs(&["a", "cover", "openClear", "bangClear", "fallIn", "hold", "b"]), "door", 0., [-1., 0., 1., 2., 3., 6.], 0., vec![]),
+            ("a target with no places fills from wedge 2", frs(&["a", "b", "c", "d", "e"]), "wall", 0., [-1., 0., 1., 2., 3., 4.], 0., vec![]),
+            ("as many as there are wedges: no more", with_p(frs(&["a", "b", "c", "d"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., 4.], 0., vec![]),
+            ("a place is held whatever the list's order", frs(&["a", "hold", "b", "cover"]), "floor", 0., [-1., 0., 3., 2., 1., -1.], 0., vec![]),
+            ("two over go behind more", frs(&["a", "b", "c", "d", "e", "f"]), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
+            ("behind more is a ring's worth at most, the postures left off first", with_p(frs(&["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6., 7., 8.]),
+            ("postures take the last wedges", vec![fr("a"), fp("p1"), fp("p2"), fr("b"), fr("c")], "wall", 0., [-1., 0., 3., 4., 1., 2.], 0., vec![]),
+            ("no rows, no lead: nothing", vec![], "floor", -1., [-1., -1., -1., -1., -1., -1.], 0., vec![]),
+            ("a row that opens a page and the word's key take no wedge", vec![opened, worded, fr("c"), fr("d")], "foe", 2., [-1., 2., 3., -1., -1., -1.], 0., vec![]),
+        ];
+        for (what, rows, kind, lead, row, more, over) in &cases {
+            let got = flat_seats_of(5.0, rows, kind, "F", *lead);
+            assert_eq!(got.row.as_slice(), row.as_slice(), "{what}");
+            assert_eq!((got.more, &got.over), (*more, over), "{what}");
         }
     }
 
+    /// Down: hold. Up with a wedge lit: give it. Up with nothing lit: the ring stays, free, until the key is hit again.
     #[test]
-    fn want_on_drawn_wedges_is_the_typescript() {
-        let c = page();
-        // (mouse x, y, digit, time, armed before, clear before, shapes) → (answer, armed after, clear after)
-        for &(mx, my, d, t, armed, clear0, shapes, want, armed2, clear) in &[
-            (540.0, 400.0, 0.0, 10.2, true, Some(true), 4.0, 2.0, true, Some(true)),
-            (540.0, 400.0, 0.0, 10.2, true, None, 4.0, 2.0, true, None),
-            (540.0, 400.0, 0.0, 10.2, false, None, 4.0, 0.0, false, None),
-            (540.0, 400.0, 0.0, 10.2, false, Some(true), 4.0, 2.0, false, Some(true)),
-            (540.0, 400.0, 0.0, 10.2, true, None, 8.0, 2.0, true, Some(true)),
-            (510.0, 400.0, 0.0, 10.2, false, Some(true), 4.0, 0.0, true, Some(true)),
-            (500.0, 700.0, 0.0, 10.2, false, Some(true), 16.0, 0.0, false, Some(true)),
-            (900.0, 400.0, 0.0, 10.2, false, Some(true), 4.0, 0.0, false, Some(true)),
-            (540.0, 400.0, 0.0, 10.05, true, Some(true), 4.0, 0.0, false, Some(true)),
-            (540.0, 400.0, 3.0, 10.2, true, Some(true), 4.0, 3.0, false, Some(false)),
-            (540.0, 400.0, 0.0, 10.2, false, Some(false), 4.0, 0.0, false, Some(false)),
-            (420.0, 470.0, 0.0, 10.2, false, Some(true), -1.0, 4.0, false, Some(true)),
-            (540.0, 400.0, 0.0, 10.2, false, Some(true), 4294967300.0, 2.0, false, Some(true)),
-        ] {
-            let mut r = RingState { clear: clear0, ..base(armed) };
-            let got: f64 = ring_want_on(&c, &mut r, mx, my, d, t, 0.0, shapes, false);
-            assert_eq!((got.to_bits(), r.armed, r.clear), ((want as f64).to_bits(), armed2, clear), "{mx} {my} {d} {t} {shapes}");
-        }
-    }
-
-    #[test]
-    fn latch_is_the_typescript() {
+    fn a_ring_that_stays_latches_when_the_key_comes_up_with_nothing_lit() {
         let mut r = base(false);
         assert_eq!((ring_latch(&mut r, true, false, false), r.free), (RingLatch::Hold, None));
         assert_eq!((ring_latch(&mut r, false, false, true), r.free), (RingLatch::Give, None));

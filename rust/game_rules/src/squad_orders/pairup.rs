@@ -32,7 +32,6 @@ fn put_back(name: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// The expected values in these two are what pairUp and pairUpApply gave under bun for the same switches.
     #[test]
     fn a_rule_is_in_force_only_under_the_switch() {
         let g = &mut Game::blank();
