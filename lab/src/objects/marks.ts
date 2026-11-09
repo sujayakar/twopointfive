@@ -8,7 +8,7 @@ export const MARKS: Record<string, Mark> = {
   'look.noon': { most: 9, leaves: 13 }, 'look.dusk': { most: 14, leaves: 14 }, 'look.lamp': { most: 14, leaves: 17 }, 'look.torch': { most: 17, leaves: 17 }, 'look.far': { said: true }, 'look.stops': { most: 0.25 },
   'seen.edge': { least: 50 },
   'swap.outline': { most: 1.1 }, 'swap.cover': { most: 6 }, 'swap.holes': { said: true }, 'swap.bright': { most: 0.12 }, 'swap.color': { most: 1.6, leaves: 2.6 }, 'swap.shine': { most: 0.4 }, 'swap.places': { most: 34 }, 'swap.shadow': { most: 14 }, 'swap.grain': { said: true }, 'wide.grain': { said: true }, 'swap.pop': { most: 12 },
-  'wide.shadow': { most: 10 }, 'wide.bounce': { most: 2 }, 'calm.sparkle': { most: 8 }, 'calm.far': { most: 13 }, 'calm.level': { most: 1.3 }, 'print.kept': { least: 75 }, 'print.seen': { least: 20 },
+  'side.outline': { most: 1.1 }, 'side.cover': { most: 6 }, 'side.bright': { most: 0.12 }, 'side.color': { most: 1.6, leaves: 2.6 }, 'wide.shadow': { most: 10 }, 'wide.bounce': { most: 2 }, 'calm.sparkle': { most: 8 }, 'calm.far': { most: 13 }, 'calm.level': { most: 1.3 }, 'print.kept': { least: 75 }, 'print.seen': { least: 20 },
   'cost.parts': { most: 0.67 }, 'cost.ms': { said: true }, 'cost.boxes': { said: true }, 'cost.gain': { most: 1.02 },
   'live.rests': { most: 1 }, 'live.upright': { most: 2 }, 'live.lands': { most: 0 }, 'live.sinks': { most: 1 }, 'live.repeats': { most: 0 }, 'live.pushed': { least: 2 }, 'live.weight': { said: true }, 'live.floats': { most: 0 }, 'live.walks': { least: 2 }, 'live.feet': { most: 1 }, 'live.together': { most: 6 }, 'live.works': { least: 1 }, 'live.held': { most: 0 }, 'live.sways': { least: 0.5, most: 8 },
 };
