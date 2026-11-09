@@ -49,8 +49,9 @@ A new effect asks whose it is. The place is live: walls, weather, a lamp's glow,
 
 **The pass.** `fog_of_war_pass`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
 teammates not blind, live stuck cameras, then a tutorial step's eye (`rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
-`k.fog.own` a teammate counts only by an ordered lens. Each man off the team is asked of them all (`fog_of_war_sees`, smoke by `smoke_between`) and
-`judge` writes his `Rec`.
+`k.fog.own` a teammate counts only by an ordered lens. Each man off the team, up or down, is asked of them all: a line (`fog_of_war_sees`) through air
+that lets it (`fog_of_war_clear`: `clear_between` at `k.fog.smoke`, as a man's own eyes are held to), and `judge` writes his `Rec`. Places (the lit
+floor, doors, lamps, loose things) are asked of lines alone.
 
 **A man is drawn** (`fog_of_war_drawn`) if seen, seen within `k.fog.linger`, fired on by a teammate (`fog_of_war_fired_on`), shown by a script, or a
 body the team has seen, which stays for good. Otherwise he is in `hidden_chars`, and what he breathes or fires files no air.
