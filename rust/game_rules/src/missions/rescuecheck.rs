@@ -15,9 +15,6 @@ macro_rules! st {
     ($g:ident) => { $g.m.rescuecheck.states.as_mut().unwrap() };
 }
 
-/// The flat distance between two points.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// The fractional part.
 fn frac(x: f64) -> f64 { x - m::floor(x) }
 
@@ -114,7 +111,7 @@ fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option<Goe
     let rank = |c: &CastItem| if c.role == crate::rescue::Role::Roamer { 0.0 } else { 1.0 };
     let read: &Game = &*g;
     let at = |c: &CastItem| read.ch[read.gd[c.gd].ch].pos;
-    js::sort_by(&mut free, |a, b| js::or(rank(&a.0) - rank(&b.0), flat(at(&a.0), post) - flat(at(&b.0), post)));
+    js::sort_by(&mut free, |a, b| js::or(rank(&a.0) - rank(&b.0), v3::dist_xz(at(&a.0), post) - v3::dist_xz(at(&b.0), post)));
     free.first().map(|p| Goer { d: p.1, gd: p.0.gd })
 }
 
@@ -277,7 +274,7 @@ fn step_check(g: &mut Game, _dt: f64) {
     let line = crate::words::wg(g, &format!("nothing from {} — I'm heading over!", place), &format!("nothing from {} — one moving there!", place));
     net(g, go.gd, &line, Some(1.0), None);
     walk(g, go.d, post);
-    let why = format!("walks to where {} was posted ({}), {} m off", g.gd[about].callsign, place, js::to_fixed(flat(g.ch[g.gd[go.gd].ch].pos, post), 0));
+    let why = format!("walks to where {} was posted ({}), {} m off", g.gd[about].callsign, place, js::to_fixed(v3::dist_xz(g.ch[g.gd[go.gd].ch].pos, post), 0));
     event(g, RescueCheckEventWhat::Goes, Some(go.gd), &why);
 }
 
@@ -363,14 +360,14 @@ fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
         crate::guards::reset_chase(g, gd);
         // (the way the rescue lets a roamer go: he stays on the room fight's roster and holds again where he ends up)
         net(g, gd, &format!("man down, {} — they're inside!", place), Some(1.0), None);
-        let why = format!("{} on the floor in his eye, {} m off: roused, and his own from here", g.gd[down].callsign, js::to_fixed(flat(g.ch[g.gd[gd].ch].pos, body), 1));
+        let why = format!("{} on the floor in his eye, {} m off: roused, and his own from here", g.gd[down].callsign, js::to_fixed(v3::dist_xz(g.ch[g.gd[gd].ch].pos, body), 1));
         event(g, RescueCheckEventWhat::Found, Some(gd), &why);
         st!(g).out = None;
         return;
     }
     let goal = if phase == Phase::Back { m_from } else { m_goal };
     let arrived = match &g.gd[gd].script { Some(s) => s.arrived.unwrap_or(false), None => false };
-    let reached = arrived || flat(g.ch[g.gd[gd].ch].pos, goal) < 0.6;
+    let reached = arrived || v3::dist_xz(g.ch[g.gd[gd].ch].pos, goal) < 0.6;
     if phase == Phase::There {
         // (he stands where he was sent: still his leg)
         if let Some(s) = g.gd[gd].script.as_mut() { s.arrived = Some(false); }
@@ -439,10 +436,6 @@ fn let_go(g: &mut Game) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_distance_on_the_floor_ignores_height() {
-        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
-    }
     /// A FAILURE MEANS: a guard's radio check comes outside the seconds the knobs give it, all at one moment, or differently on two runs: where in its band each check falls goes by its key and no die.
     #[test]
     fn a_check_falls_inside_its_band_by_its_key() {
