@@ -231,13 +231,13 @@ One native command, with nothing of TypeScript in it: no page and no module. It 
 stand a game (`dress`, seed 9, the mission's own link).
 
 ```
-cd rust/game_start && cargo build --release --bin gate
-target/release/gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
-target/release/gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
-target/release/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
-target/release/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
-target/release/gate list            # the rows
-target/release/gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
+cd rust/game_start && cargo build --profile gate --bin gate     # its own profile: 245 s from nothing, 7 s after an edit in game_rules, and a run in 76 s; a pin is the same under any profile
+target/gate/gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
+target/gate/gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
+target/gate/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
+target/gate/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
+target/gate/gate list            # the rows
+target/gate/gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
 
 Each row prints one line in the rows' order, and the last line is the count and the wall time, with what each kind cost. A row is a child process, so a game that panics costs its own rows, which then
