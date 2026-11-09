@@ -16,8 +16,8 @@ fn foot(w: f32, s: f32) {
   footW = w; footS = s; leafOnly = false; if (s <= 0.0) { lim = vec4f(1e9); blk = vec4f(1e9); leafTo = 1e9; return; }
   let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xy, 1e9, 1e9); leafTo = select(0.0, t.x, BLK_DICE);     /* (one by one near by cost three to eight milliseconds and gained nothing) */
 }
-/** for a ray whose edges are looked at (a lamp's own shadow): solids as they are (what is small as far as it shows), and only leaves by the cells */
-fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(lim.x, 1e9, 1e9, 1e9); leafTo = 0.0; leafOnly = true; }
+/** for a ray whose edges are looked at (a lamp's own shadow): solids as they are all the way, and only leaves by the cells */
+fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(1e9); leafTo = 0.0; leafOnly = true; }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 /** boxes looked at by the last rays (nothing reads it but the panel) */
 var<private> walked: u32 = 0u;
@@ -122,9 +122,8 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
 }
 
 // ================================================================ the block
-/** a cell's first row: thickness, and share of leaves (6 bits) · tight box · where its light is kept (17 bits, in what the others leave over) */
-fn cellShare(r: vec4u) -> f32 { return f32(r.x >> 26u) / 63.0; }
-fn cellSlot(r: vec4u) -> u32 { return (((r.x >> 24u) & 3u) << 15u) | ((r.y >> 25u) << 8u) | (r.z >> 24u); }
+/** a cell's first row: thickness, and share of leaves · tight box, is it grass · the box's far corner · two of its colors */
+fn cellShare(r: vec4u) -> f32 { return f32(r.x >> 24u) / 255.0; }
 struct Blk { t: f32, cell: u32, tau: f32, L: vec3f };
 fn blkWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)])[i & 3u]; }
 /** how thick a cell's contents stand, a metre, along x y z (within its tight box), and that box */

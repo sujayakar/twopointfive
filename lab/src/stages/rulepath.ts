@@ -1,8 +1,8 @@
 // The path tracer with only the rays after its first hit obeying the rule: what the rule itself costs in truth, with nothing kept and nothing filtered.
 import { pathTracer } from './path';
 import type { Method, Lab } from '../lab';
-/** `s`: how fast a bounce ray widens. `direct`: shadow rays at what the eye sees obey it too */
-export function ruled(s: number, o: { cells?: boolean; only?: string } = {}) {
+/** `s`: how fast a bounce ray widens */
+export function ruled(s: number, o: { cells?: boolean } = {}) {
   return (code: string) => {
     let c = swap(code, 'leafMode = 0u;', `leafMode = 0u; blkOn = ${o.cells !== false}; foot(gW, gS);`);
     c = swap(c, 'let h = nearest(ro, rd, 1e-3, 2000.0, 0u, cut);', 'let h = nearest(ro, rd, 1e-3, 2000.0, 0u, cut); fromCell = NOTHING; gW = select(gW + gS * min(h.t, 200.0), 2.0 * spread0 * h.t, gS <= 0.0);');

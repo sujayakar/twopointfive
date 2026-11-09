@@ -16,10 +16,9 @@
     // the path goes on till it is as wide as what is kept: then that answers
     var d = w.xyz; var o = select(x, p.x - p.ng * 0.02, side) + d * select(0.0, 0.03, p.leaf); var wide = px; var thr = vec3f(1.0); var L = vec3f(0.0);
     for (var v = 0u; v < 4u; v++) {
-      foot(wide, @tune.wide); let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING; let leaf = !miss && (h.piece & LEAF_HIT) != 0u; if (v == 0u) { dist += min(h.t, 12.0); }
+      foot(wide, @tune.wide); let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING; if (v == 0u) { dist += min(h.t, 12.0); }
       let sm = smokeSeen(o, d, min(h.t, 80.0)); let fo = blkSeen(); L += thr * (sm.rgb * fo.T * h.thru + fo.L); thr *= h.thru * fo.T * sm.a;
       if (miss) { L += thr * skyLod(d, 1.0); break; }
-      if (leaf) { L += thr * folBack(o + d * h.t, d); break; }
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
         L += thr * sentBack(q, false, rnd2(), d);
