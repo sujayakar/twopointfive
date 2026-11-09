@@ -151,10 +151,6 @@ fn squads_note(what: &str) -> Option<(&str, SquadSaid, Option<&str>)> {
     if rest.starts_with("quiet:") { return Some((name, SquadSaid::Quiet, None)); }
     None
 }
-/// `+t.toFixed(2)`: the language's text, read back as a number.
-fn fixed2(t: f64) -> f64 {
-    js::to_fixed(t, 2).parse().unwrap_or(t)
-}
 /// A read of the sparse `classT` / `squadT`: past the end or a hole is None.
 fn sparse_get(v: &[Option<f64>], i: usize) -> Option<f64> {
     v.get(i).copied().flatten()
@@ -892,14 +888,6 @@ mod tests {
         assert!(squads_note("[squads]  Bravo quiet:").is_none());
         assert!(squads_note("[squads] Bravo sends a pair").is_none());
         assert!(squads_note("holds where he ended up").is_none());
-    }
-
-    #[test]
-    fn fixed2_is_the_languages() {
-        // (bun: +t.toFixed(2))
-        for (t, want) in [(0.0, 0.0), (0.125, 0.13), (0.375, 0.38), (0.625, 0.63), (0.875, 0.88), (1.125, 1.13), (2.5, 2.5), (1.005, 1.0), (1.015, 1.01), (1.025, 1.02), (8.345, 8.35), (100.125, 100.13), (0.016666666666666666, 0.02), (3.3333333333333335, 3.33), (12.995, 12.99), (12.995, 12.99), (1234.565, 1234.57), (0.005, 0.01), (0.015, 0.01), (7.875, 7.88)] {
-            assert_eq!(fixed2(t).to_bits(), f64::to_bits(want), "{}", t);
-        }
     }
 
     #[test]
