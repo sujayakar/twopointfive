@@ -33,7 +33,7 @@ const LINKS = 31, WIRE = 0.0056, WIDE = 0.0135;
 function links(seed: number): { a: V3; b: V3; u: V3; w: V3 }[] { const q = rng(seed * 19 + 7), l = hang(LINKS); return Array.from({ length: LINKS }, (_, i) => { const a = l[i]!, b = l[i + 1]!, u = norm(sub(b, a)), side: V3 = [0, 0, 1], up = cross(side, u), t = (i % 2 ? 1 : -1) * Math.PI / 4 + (q() - 0.5) * 0.35 + 0.12; return { a, b, u, w: add(mul(side, Math.cos(t)), mul(up, Math.sin(t))) }; }); }
 /** a link: two straights and two half turns. It reaches past the line's places by half its wire, so each goes through the next */
 function link(p: Put, k: { a: V3; b: V3; u: V3; w: V3 }) { const m = mul(add(k.a, k.b), 0.5), reach = Math.hypot(...sub(k.b, k.a)) / 2 + WIRE * 0.98, c = reach - WIDE, pts: V3[] = [], R = WIDE / Math.cos(Math.PI / 8); for (const e of [1, -1]) for (let i = 0; i < 4; i++) { const t = (e > 0 ? 0 : Math.PI) + (1.5 - i) * Math.PI / 4; pts.push(add(m, add(mul(k.u, e * c + R * Math.cos(t)), mul(k.w, R * Math.sin(t))))); } wire(p, pts, WIRE, IRON, M.print!); }
-const plate = (p: Put, k: { a: V3; b: V3; u: V3; w: V3 }) => { const rot: Rot = [k.u, k.w, cross(k.u, k.w)]; p.add({ at: mul(add(k.a, k.b), 0.5), half: [Math.hypot(...sub(k.b, k.a)) / 2 + 0.0045, 0.0155, 0.0070], rot, mat: M.print!, tint: IRON }); };
+const plate = (p: Put, k: { a: V3; b: V3; u: V3; w: V3 }) => { const rot: Rot = [k.u, k.w, cross(k.u, k.w)]; p.add({ at: mul(add(k.a, k.b), 0.5), half: [Math.hypot(...sub(k.b, k.a)) / 2 + 0.0045, 0.0155, 0.0070], rot, mat: M.canvas!, tint: tone(IRON, 1.06) }); };
 const stub = (p: Put, s: number, from = 0.070) => rod(p, [s * (APART - from), EYE[1], 0], [s * END[0], EYE[1] - 0.006, 0], 0.0115, M.paint!, GREEN);
 function bars(p: Put, n: number, r: number, tint: V3 = IRON) { const l = hang(n); for (let i = 0; i < n; i++) { const d = mul(norm(sub(l[i + 1]!, l[i]!)), 0.0015); rod(p, sub(l[i]!, d), add(l[i + 1]!, d), r, M.print!, tint); } }
 export const bollards: ObjectKind = { name: 'bollards', title: 'Bollards and chain', make: (): Made => ({
@@ -45,7 +45,7 @@ export const bollards: ObjectKind = { name: 'bollards', title: 'Bollards and cha
       for (const k of links(p.seed)) plate(p, k);
     } },
     { shape: 'pieces', error: 0.022, less: 'links: a bar for four; mouldings', put(p) { for (const s of [-1, 1]) { const x = s * APART; cone(p, x, 0.002, 0.165, 0.110, 0.094, GREEN); cone(p, x, 0.160, 0.800, 0.0785, 0.0600, GREEN); cone(p, x, 0.562, 0.652, 0.0690, 0.0660, CREAM, M.print!); p.drum([x, 0.755, 0], 0.076, 0.027, M.paint!, [0.31, 0.375, 0.25]); p.ball([x, 0.878, 0], [0.068, 0.090, 0.068], M.paint!, GREEN); stub(p, s); } bars(p, 8, 0.0132); } },
-    { shape: 'pieces', error: 0.040, less: 'all but two posts, their bands and the chain\'s line', put(p) { for (const s of [-1, 1]) { const x = s * APART; cone(p, x, 0.002, 0.800, 0.1000, 0.0610, GREEN); cone(p, x, 0.565, 0.650, 0.0738, 0.0705, CREAM, M.print!); p.ball([x, 0.860, 0], [0.068, 0.107, 0.068], M.paint!, GREEN); stub(p, s); } bars(p, 4, 0.0165, tone(IRON, 1.2)); } },
+    { shape: 'pieces', error: 0.0335, less: 'all but two posts, their bands and the chain\'s line', put(p) { for (const s of [-1, 1]) { const x = s * APART; cone(p, x, 0.002, 0.800, 0.1000, 0.0610, GREEN, M.plastic!); cone(p, x, 0.565, 0.650, 0.0738, 0.0705, CREAM, M.print!); p.ball([x, 0.860, 0], [0.068, 0.107, 0.068], M.plastic!, GREEN); stub(p, s); } bars(p, 4, 0.0180, tone(IRON, 1.5)); } },
   ],
 }) };
 
