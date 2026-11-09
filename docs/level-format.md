@@ -16,7 +16,7 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 | `tools/levels/lib/levelLoad.ts` | `levelToData` writes a file from a generator's `Level`; `loadLevel` reads it back for the tools |
 | `rust/game_start/src/level.rs` | `load`: what was read, laid into the game |
 | `rust/game_start/src/records.rs` | a line for each record the game keeps as its own type (`scenarios`, `surfaces`, `plans`, `devices` and others); `drops` = a member it lets go, held to its type |
-| `rust/game_types/src/scene_level/`, `scene_level_data/`, `scene_scenarios/` | those types |
+| `rust/game_types/src/scene_level/`, `scene_level_data/`, `scene_scenarios.rs` | those types |
 | `rust/game_start/src/kit_plan.rs`, `kit_stage.rs`, `kit_set.rs` | read `scenarios.kitView` straight from the file |
 
 One reader is the judge. Reading says every value that is not what its place wants and every member nobody asked for (`json.rs`), and a start refuses a file with any. `faults.rs` adds the
@@ -45,20 +45,20 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
   - `stuff` word; default plain. What it is drawn as: a word of `BOX_STUFFS`. The picture's alone.
   - `does` word; default the row unnamed. What it is to a round, a charge and a blast: a word of `DoesWord`. The rules read this through `does_of`.
 - `breaker` record: the mains panel of the level.
-  - `pos` V3. Where the panel is, for the men sent to it (`lighting/`).
-  - `panel`, `led` box ids. The panel is what a man works (`handwork/`, `workthings/`); `combat/` takes both as the breaker's boxes, and the LED is the
+  - `pos` V3. Where the panel is, for the men sent to it (`lighting.rs`).
+  - `panel`, `led` box ids. The panel is what a man works (`handwork.rs`, `workthings.rs`); `combat/` takes both as the breaker's boxes, and the LED is the
     box the breaker's light target lights (`game/`).
-  - `fumble` number, over 0 and at most 7; default 2.2 s. How long a man works at a tripped panel before the mains come back (`lighting/`).
+  - `fumble` number, over 0 and at most 7; default 2.2 s. How long a man works at a tripped panel before the mains come back (`lighting.rs`).
 - `beacons` list of records: emergency beacons, a spot light turning at a dome (`game/`).
   - `pos` V3. `box` box id of the dome, and that box must be in a switchable.
-- `mission` record: the plain night's one thread, which every file carries. A quiet mission lays its own dealt spot over it (`quiet/`).
+- `mission` record: the plain night's one thread, which every file carries. A quiet mission lays its own dealt spot over it (`quiet.rs`).
   - `playerSpawn` V3. Where Sam starts on the plain night.
   - `objectives` list holding exactly one of each `kind`:
-    - reach: `area` Rect, the room's floor, and `door`, the door the marker points at. Read by `mission/`, `doorswing/`, `dialogue/`.
+    - reach: `area` Rect, the room's floor, and `door`, the door the marker points at. Read by `mission.rs`, `doorswing.rs`, `dialogue/`.
     - drive: `rackIndex` whole number, which also names the switchables `rack<N>_leds` and `rack<N>_glow` that go dark; `front` V3, the marker on the holder's
       face; `halfW` number at least 0, half its width along the face.
     - exfil: `door`; `x`, `z` numbers; `out` unit pair dx, dz. With `out`, you are out past the point going that way and within 1.8 m of it sideways;
-      without it, past x (`mission/`).
+      without it, past x (`mission.rs`).
 
 A file also says a few things no rule of the game reads, which `levelToData` writes and the reader asks for: `floors` (at least one, with `id`, `y` and `ceiling`;
 `tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list), an `id` on each objective, beacon and plan, an
@@ -66,7 +66,7 @@ A file also says a few things no rule of the game reads, which `levelToData` wri
 
 ### How much a level may hold
 
-`level_caps` has the numbers: `faults.rs` holds a file to them and `levelfit/` refuses at start (`level_over`, `stood_over`).
+`level_caps` has the numbers: `faults.rs` holds a file to them and `levelfit.rs` refuses at start (`level_over`, `stood_over`).
 
 | what | at most | said by |
 |---|---|---|
@@ -87,9 +87,9 @@ switchable whose `id` starts `lived.`. These come last in their lists, so every 
 `boxes` is a list of records, and the box at index i of the file is static box i of the game. Read by `load` into `make_box`.
 
 - `id` text, unique. What every other record names it by.
-- `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it, and `carlamps/`
+- `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it, and `carlamps.rs`
   goes by what the kits write. A door's frame is plain boxes in group `doorframe.<id>`.
-- `name` text; default none. A tag on the box. `wallpen/` takes a name starting `door_` as a door.
+- `name` text; default none. A tag on the box. `wallpen.rs` takes a name starting `door_` as a door.
 - `c` V3, the center. `h` V3, half sizes, each at least 0.
 - `yaw` number; default 0. Turn about +y.
 - `rot` four numbers x, y, z, w, a unit quaternion; default none. For a tilted thing. Takes no `markings` and no `shape`.
@@ -168,7 +168,7 @@ A box with `rot` says no shape. A box with `markings` or the Glass flag may say 
 
 ## Doors
 
-`doors` is a list of records: hinged leaves in a gap whose frame is plain boxes. Read by `load` into `LevelDoorDef`, then `doors/` and `doorswing/`. A set's
+`doors` is a list of records: hinged leaves in a gap whose frame is plain boxes. Read by `load` into `LevelDoorDef`, then `doors/` and `doorswing.rs`. A set's
 `doors` are the same record.
 
 - `id` text, unique. What every door member elsewhere names (`doors_by_name`).
@@ -185,10 +185,10 @@ A box with `rot` says no shape. A box with `markings` or the Glass flag may say 
 
 ## Props
 
-`props` is a list of records: loose furniture. Read by `load` into `PropDef`, then `props/`. `fitPropFootprint` and `fit_prop_footprint` are one rule.
+`props` is a list of records: loose furniture. Read by `load` into `PropDef`, then `props.rs`. `fitPropFootprint` and `fit_prop_footprint` are one rule.
 
 - `id` text, unique. `name` text; default the id.
-- `kind` chair, cardboard, bin or plant. A row of the `kind` table in `props/`.
+- `kind` chair, cardboard, bin or plant. A row of the `kind` table in `props.rs`.
 - `x`, `z` numbers. `yaw` number; default 0. `mass` over 0.
 - `parts` list of at least one record, each a box standing with the prop:
   - `off` V3 from the prop. `h` V3 at least 0. `yaw` number from the prop's heading; default 0.
@@ -233,7 +233,7 @@ stone, tile, asphalt or grass. With no block the game uses the office's own map,
 
 ## Devices and vents
 
-`devices` is a list, may be empty, of three records told by `kind`, read by `records.rs` and run by `devices/`. The game draws each from its record, so none is in `boxes`. A
+`devices` is a list, may be empty, of three records told by `kind`, read by `records.rs` and run by `devices.rs`. The game draws each from its record, so none is in `boxes`. A
 camera and a laser are light targets too: an OCP knocks them out for a spell, a round kills them, and `mains` puts them on the breaker. Each has an `id`, unique.
 
 - camera. The defaults are `device_defaults`.
@@ -248,9 +248,9 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 - laser.
   - `from`, `to` V3, the emitter and the receiver, at least 5 cm apart. Their y is its height.
   - `group`, `mains` as a camera's.
-  - `alarm` suspicion or alarm; default suspicion. What breaking it does (`devices/`).
+  - `alarm` suspicion or alarm; default suspicion. What breaking it does (`devices.rs`).
 
-`vents` is optional and its absence means still indoor air. Read by `wind/`, whose defaults are `vent_defaults`.
+`vents` is optional and its absence means still indoor air. Read by `wind.rs`, whose defaults are `vent_defaults`.
 
 - `id` text, unique. `pos` V3, the face's center. `dir` V3, not zero.
 - `speed` 0 to 12 m/s at the face. `spread` under 89 degrees, the half angle. `reach` over 0 up to 30 m, where the air is at half.
@@ -267,7 +267,7 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 
 ## Glass
 
-Glass has no block of its own: a pane is a box with the Glass flag. Its paint is the tint it lets through. `load` makes the box, `glass/` keeps its state, and the picture tests
+Glass has no block of its own: a pane is a box with the Glass flag. Its paint is the tint it lets through. `load` makes the box, `glass.rs` keeps its state, and the picture tests
 it apart from the world's boxes. Feet and sound take it as a wall, sight passes through it, and a round, a kick or a bang breaks it. It takes no form, so `shape.with` is the only
 shape it says. A sheet is thin: `is_sheet` asks that the thinner of `h[0]` and `h[2]` is at most `THICK_GLASS_HALF`, and a thicker Glass box is solid glass that does not craze.
 The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
@@ -276,7 +276,7 @@ The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
 
 `plans` is a record, `roomClear` a list that may be empty, and `breach` an optional record. These are the scripted door drills.
 
-A room plan, each row of `plans.roomClear`, is read by `squad/`. `doorswing/` and others read its `door`, `room` and `bounds`.
+A room plan, each row of `plans.roomClear`, is read by `squad/`. `doorswing.rs` and others read its `door`, `room` and `bounds`.
 
 - `door` door id. `room` text; default none. `breach` kick or open; default kick.
 - `bounds` Rect; default none. The room's floor.
@@ -290,7 +290,7 @@ A room plan, each row of `plans.roomClear`, is read by `squad/`. `doorswing/` an
 - `formUp` two lists of V3, `formFace` two numbers. Where they form up after.
 - `lines` record of twelve strings, `stack1`, `stack2`, `go2`, `in1`, `side2`, `side1`, `push1`, `under2`, `nothing2`, `corner1`, `empty2`, `radio1`: what they say.
 
-`plans.breach` is every member of a room plan, and the night breach's own. Read by `breach/` and `nightbreach/`, and `roomclear/` takes it as a room plan.
+`plans.breach` is every member of a room plan, and the night breach's own. Read by `breach.rs` and `nightbreach.rs`, and `roomclear.rs` takes it as a room plan.
 
 - `inward` two numbers; default 1, 0. The way into the room on the floor.
 - `hostiles` list of at least one record: `pos` V3, `yaw` number, `aimAt` V3, `crouch` true or false (default false).
@@ -311,12 +311,12 @@ given), `opsYaw` number (default +x).
 
 ### nightBreach
 
-The team's start beside `plans.breach`, which it needs (`nightbreach/`). `team` a team start, of which `sam`, `samYaw` and `opsYaw` count: the first pair stands on the plan's
+The team's start beside `plans.breach`, which it needs (`nightbreach.rs`). `team` a team start, of which `sam`, `samYaw` and `opsYaw` count: the first pair stands on the plan's
 marks. `room` text, default none: what the room behind the door is called.
 
 ### roomClear
 
-The rooms to take (`roomclear/`, `roomfight/`).
+The rooms to take (`roomclear.rs`, `roomfight/`).
 
 - `name` text. The structure's name.
 - `team` team start, two `ops` at least; default the night breach's start, which needs `plans.breach`.
@@ -324,10 +324,10 @@ The rooms to take (`roomclear/`, `roomfight/`).
 - `maxMen` whole number 1 to `SQUAD_MAX_MEN`; default five. The most defenders alive at once.
 - `wayOut` true or false; default false. On Hard, the men a lost room draws hold one of its doors from back off it (`pressure/`).
 - `digIn` true or false; default true. False: this floor's men never brace a door, take cover or set a gun on a door (`roomfight/`).
-- `wallCharges` whole number 1 to 9; default the kit's own. The squad carries at least this many wall charges here (`issue/`).
+- `wallCharges` whole number 1 to 9; default the kit's own. The squad carries at least this many wall charges here (`issue.rs`).
 - `rooms` list of at least one record. `check_structure` asks that some room has more than one way in.
   - `id` text, unique. `name` text, as a line says it, with no article. `bounds` Rect, the floor inside its walls.
-  - `doors` list of `id` (door id) and `from` (what is on its other side; `doornames/` says it).
+  - `doors` list of `id` (door id) and `from` (what is on its other side; `doornames.rs` says it).
   - `garrison` whole number at least 1. How many hold it.
   - `marks` list of `pos` V3, `watch` (one of this room's doors) and `aimAt` V3. Give more than `garrison`, and place the first by hand.
 - `squads` list; default one pool of defenders. With a block, every room is in exactly one squad. Read by `enemysquads/`. It says who and where; what they do is the AI's call.
@@ -335,8 +335,8 @@ The rooms to take (`roomclear/`, `roomfight/`).
   - `rooms` list of room ids. At least one, except for a squad with `arrive`, which holds none.
   - `rally` V3 with y 0; default the AI picks. Inside one of its rooms, except for a late squad.
   - `barricade` list of door ids of its rooms; default every door of its rooms but one two of them share. Empty means never.
-  - `mayLeave` true or false; default true. False: no press, no flank, no going to help (`stayask/`).
-  - `training` green, mixed or trained; default the difficulty's mix (`morale/`).
+  - `mayLeave` true or false; default true. False: no press, no flank, no going to help (`stayask.rs`).
+  - `training` green, mixed or trained; default the difficulty's mix (`morale.rs`).
   - `arrive` record: `door`, `men` (whole number at least 1), `spawn` (list of V3, at least `men`, outside every room). A squad that comes in once the floor is loud and they fit `maxMen`.
 
 ### rescue
@@ -358,7 +358,7 @@ The hostage rescue (`rescue/`).
 - `roamers` list of marks: men elsewhere who come to the noise. `guards` list of marks; default none: more guns who never leave the room.
 - `cast` record of `roamers`, a whole number at most the marks; default `k.rescue.roamers`. How many of those marks are manned, first ones first. At most 11 defenders, and 16 characters
   in all.
-- `flow` record; default none, and then no covers. The corridor the team runs and the openings off it, read by `rescueflow/`. As built it reads a corridor along +x, walked toward +x.
+- `flow` record; default none, and then no covers. The corridor the team runs and the openings off it, read by `rescueflow.rs`. As built it reads a corridor along +x, walked toward +x.
   - `corridor` Rect. `hold` record of `ahead`, `xMax`, `z`: the man left holding watches `ahead` m on from his mark, no further than `xMax`, at this z.
   - `regions` list of `id`, `door` (door id or null, where a door's clear plan gives the room) and `rect` Rect.
   - `route` list of openings: `id`, `name`, `short`, `region` (a region's id), `kind` (glass, doorway or door), `door` (door id or null), `at` V3 (the threshold's middle), `mark` V3
@@ -371,14 +371,14 @@ The hostage rescue (`rescue/`).
 
 ### quiet
 
-The quiet mission, `quiet/`. The run's seed deals one start, one spot and one patrol set; every exit is open.
+The quiet mission, `quiet.rs`. The run's seed deals one start, one spot and one patrol set; every exit is open.
 
 - `thing` text with its article; default the drive.
 - `starts` list of at least one: `sam` V3, `samYaw` number, `mate` V3 (default the free floor a stride behind Sam), `name` text (for the log).
 - `spots` list of at least one:
   - `place` text, as the objective says it. `area` Rect; stepping in is reached. `door` the marker's door. `holder` text, what it is taken from.
   - `rackIndex` whole number; names the switchables that go dark. `front` V3, `halfW` number at least 0: the marker and half the face's width.
-  - `wired` true or false; default false. True: emptying it brings a man to look (`takecheck/`).
+  - `wired` true or false; default false. True: emptying it brings a man to look (`takecheck.rs`).
 - `exits` list of at least one: `name` text, `door`, `x`, `z`, `out` unit pair, `halfW` over 0 (default `EXIT_HALF_W`).
 - `patrols` list of lists of route names; default every route. At most six to a set, and a level with more routes must give sets.
 - `needs` record of `coffee`, `smoke`, `water`, `stretch`, each a stand; a kind left out is not dealt (`need_spot`). `stretch` needs `loop`, its lap.
@@ -388,7 +388,7 @@ The quiet mission, `quiet/`. The run's seed deals one start, one spot and one pa
 
 ### lesson
 
-Steps laid over whichever scenario the row starts. A step's line moves on when its test is true. Read by `lesson/` and, for what a tutorial may do, `rails/`. `title` text. `steps` list of at
+Steps laid over whichever scenario the row starts. A step's line moves on when its test is true. Read by `lesson.rs` and, for what a tutorial may do, `rails.rs`. `title` text. `steps` list of at
 least one. `rails` record; default none.
 
 A step:
@@ -410,7 +410,7 @@ On a level with `rails` only:
 
 `rails`:
 
-- `allow` list of actions (`rails/`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
+- `allow` list of actions (`rails.rs`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
 - `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee.
 - `lasers` false: no teammate shows an aiming laser. `flatRing` true: the squad's ring is one flat ring.
 - `orders` list of order ids; default all: what the squad's menu lists. `rows` list of verbs; default all: what Space offers.
@@ -453,7 +453,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 
 ### par
 
-The room clear against a clock (`par/`), only beside a `roomClear`. `gold`, `silver`, `bronze` seconds, over 0 and in that order. `lossSecs` at least 0: added for each teammate lost.
+The room clear against a clock (`par.rs`), only beside a `roomClear`. `gold`, `silver`, `bronze` seconds, over 0 and in that order. `lossSecs` at least 0: added for each teammate lost.
 
 ### issue
 
@@ -511,7 +511,7 @@ The team from outside (`qrf/`). `tools/qa/level-needs.ts` holds that a level wit
 
 ### doorNames
 
-List of `door` (door id, once) and `name` (1 to 40 letters, no article, no compass word): what a door is called where its id cannot say it (`doornames/`).
+List of `door` (door id, once) and `name` (1 to 40 letters, no article, no compass word): what a door is called where its id cannot say it (`doornames.rs`).
 
 ### walked
 

@@ -29,7 +29,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 FIELDS = ['frame', 'lamp_pick', 'lamp_n', 'lit_stats', 'face_recs', 'full_stats', 'viewer', 'look_frames', 'raw_list', 'raw_at']
 TYPES = os.path.join(ROOT, 'rust/game_types/src/fogofwar/types.rs')
 GAME = os.path.join(ROOT, 'rust/game_types/src/game/types.rs')
-STAND = os.path.join(ROOT, 'rust/game_rules/src/game/p_04.rs')
+STAND = os.path.join(ROOT, 'rust/game_rules/src/tick/game/stand.rs')
 WIRE = os.path.join(ROOT, 'tools/wire/wire.ts')
 LISTS = os.path.join(ROOT, 'tools/wire/fields.json')
 # files a tool writes, and the build's own folders

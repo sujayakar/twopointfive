@@ -1,4 +1,4 @@
-//! The types of `deathrecap`: every death explains itself (rust/game_rules/src/deathrecap).
+//! The types of `deathrecap`: every death explains itself (rust/game_rules/src/speech/deathrecap.rs).
 #![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{collections::VecDeque, string::String, vec::Vec};

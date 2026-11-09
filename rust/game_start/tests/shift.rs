@@ -1,4 +1,4 @@
-//! SHIFT WITH THE SQUAD'S KEY GIVES WHAT THE KEY GIVES (rust/game_rules/src/autopilot `quick`, planmode `plan_goal`; the maintainer, 11-08: "i think shift Q on a
+//! SHIFT WITH THE SQUAD'S KEY GIVES WHAT THE KEY GIVES (rust/game_rules/src/entries/autopilot.rs `quick`, planmode `plan_goal`; the maintainer, 11-08: "i think shift Q on a
 //! point should just move the squad there, should match what regular Q does. you should need to open the radial menu to get covering a point").
 //!
 //! One function answers what the key means: a plain tap gives it to everyone, Shift gives the same to the part `goal_men` picks. Every press here goes through

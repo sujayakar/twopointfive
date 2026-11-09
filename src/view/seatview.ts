@@ -1,4 +1,4 @@
-// THE VIEW: what the HUD is told of the game beside what it draws. It is the Rust game's answer (rust/game_rules/src/view `tick_view`), asked by the host that
+// THE VIEW: what the HUD is told of the game beside what it draws. It is the Rust game's answer (rust/game_rules/src/tick/view `tick_view`), asked by the host that
 // steps the game and read here by name: `game.view.mission.text`. Nothing in this folder works anything out, and nothing of it is kept by the game: a host
 // asks again after a tick (or after anything else that moved the Rust game) and hands over the new record.
 //

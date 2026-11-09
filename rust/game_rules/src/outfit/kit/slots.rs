@@ -1,4 +1,4 @@
-//! WHAT A SEAT'S HUD IS TOLD OF WHAT ITS MAN CARRIES: the kit's column (rust/game_rules/src/view). A read of the game: nothing here is kept.
+//! WHAT A SEAT'S HUD IS TOLD OF WHAT ITS MAN CARRIES: the kit's column (rust/game_rules/src/tick/view). A read of the game: nothing here is kept.
 
 use super::*;
 use crate::game::Game;

@@ -21,7 +21,7 @@ import { SNOW_LOOK } from './look';
 
 const WORDS = [undefined, 'snow', 'packed snow', 'old snow'] as (Box['does'])[];
 const ALIVE = 1, HIDDEN = 2, DEAD = 4;
-/** the wind a snow level's ripples lie along (rust/game_rules/src/weather_kinds WEATHER_PRESETS.snow) */
+/** the wind a snow level's ripples lie along (rust/game_rules/src/air/weather_kinds.rs WEATHER_PRESETS.snow) */
 const RIPPLE: [number, number] = [0.8, 0.3];
 const BLASTS = 4, MARKS = 8, PRINTS = 16;
 

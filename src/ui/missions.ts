@@ -248,11 +248,11 @@ export function missionsReopenAsked(): boolean { let asked = false; try { asked 
 interface Plan { min: [number, number]; max: [number, number];
   /** the same file as the map sheet's model (ui/planArt.ts): its ground, what stands on it back to front, its lamps */ art: PlanArt;
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
-  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — rust/game_rules/src/issue raises the bag to it at staging); 0 = none */ issued: number;
+  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — rust/game_rules/src/outfit/issue.rs raises the bag to it at staging); 0 = none */ issued: number;
   /** the block in which the level's file ISSUES the squad its own kit (scenarios.issue: every staging wears the issue cards with its fields written over them, whatever this machine keeps), as its text; '' = none */ kit: string;
   /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[];
   /** what the place asks of a kit, counted off the file (the Team & kit step's brief — ui/kitBrief.ts): doors found locked · those of them that are steel · the rescue's hostages */ needs: PlaceNeeds;
-  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (rust/game_rules/src/rescue), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
+  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (rust/game_rules/src/missions/rescue), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
 export interface PlaceNeeds { locked: number; steel: number; hostages: number; /** the map marks where the team goes in (a quiet mission's has no mark) */ marked: boolean }
 interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] }; hostages?: unknown; side?: { door?: unknown } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
 const OFFICE = 'office.json';
@@ -302,7 +302,7 @@ export function issuedWalls(file: string): Promise<number> { return planOf(file)
  *  carries what — the same fetch, once per file */
 export function issuedKit(file: string): Promise<string> { return planOf(file).then(P => P?.kit ?? ''); }
 /** what this mission's place asks of a kit, AS THE MISSION IS STAGED (null: the file did not come) — the same fetch, once per file. The hostages are a rescue's, and
- *  a rescue finds its side door unlocked (rust/game_rules/src/rescue); the mark is the one the map sheet draws for this kind of mission */
+ *  a rescue finds its side door unlocked (rust/game_rules/src/missions/rescue); the mark is the one the map sheet draws for this kind of mission */
 export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.kind, rescue = kind === 'rescue';
   return planOf(m.level).then(P => (P ? { locked: P.needs.locked - (rescue && P.sideLocked ? 1 : 0), steel: P.needs.steel - (rescue && P.sideSteel ? 1 : 0), hostages: rescue ? P.needs.hostages : 0, marked: (P.starts[kind] ?? []).length > 0 } : null)); }
 /** which of this level file's ways in have a Team & kit picture staged for them (none: the file has no scenarios.kitView block, or did not come) — the same fetch,

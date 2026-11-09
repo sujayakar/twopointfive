@@ -1,5 +1,5 @@
 // The falling SHEET's dynamics — the CPU reference of what render/shaders/particles.wgsl `sheetAir` integrates for the P_SHEET particle kind (a leaf of
-// office paper knocked off a desk by a burst: rust/game_rules/src/destruction). One model, written twice: the shader flies the thousands you see, this file flies the same
+// office paper knocked off a desk by a burst: rust/game_rules/src/breakage/destruction). One model, written twice: the shader flies the thousands you see, this file flies the same
 // equations and is the place the numbers are argued.
 // Keep the two in step: SHEET below = particles.ts KIND_DEFAULTS.sheet's slots (gravity · drag = KT · restitution = KN_LIN · keep = KN_Q · sleepV · fade · FLUT ·
 // TRANS) + the two constants the kind block has no slot for (ANG_DAMP, SPIN_MAX), which particles_common.wgsl repeats.
@@ -38,7 +38,7 @@ export const SHEET = {
 };
 
 // ================================================================== IMPULSES (render/particles.ts Particles.impulse → particles.wgsl applyImpulses; sites in
-// rust/game_rules/src/destruction): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
+// rust/game_rules/src/breakage/destruction): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
 // pushes every live particle of the kinds it names within its radius, and WAKES the ones lying asleep so paper already on the floor goes up again. One record
 // = { pos, radius, strength = the peak Δv (m/s) a SHEET gets at the centre, up = the upward share added to the radial push (leaves LIFT, then flutter down),
 // bias = a direction folded in (the round's travel along the surface it struck), kinds, seed, an optional occlusion eye }. The push on a particle at distance

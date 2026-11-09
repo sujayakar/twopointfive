@@ -3,7 +3,7 @@
 // eaves, and the rooms' open windows look straight down it at the gate. The floodlights and every bulb in the building hang on the MAINS; the mains breaker
 // is in the generator shed on the OUTSIDE of the west wall, a short walk from the start to a door with a lamp over it. Throw it (Sam's own row, or the squad's 'work' order
 // on the panel) and the yard is black: the defenders carry no lights and no goggles, the team has goggles. NOBODY COMES TO PUT THE LIGHTS BACK ON: a room
-// clear pins its defenders to their marks (rust/game_rules/src/lighting hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
+// clear pins its defenders to their marks (rust/game_rules/src/air/lighting.rs hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
 // the lights ON and 22 of 24 with them out — the dark stopped mattering.
 // What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
@@ -163,7 +163,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallX(k, 15, 0.48, 3.88, EXT, sw, [], {}, WALL_H);
   K.wallX(k, 19.5, 0.48, 3.88, EXT, sw, [K.doorAt(k, 'shed', 'x', 19.5, 2.4, { exterior: true })], {}, WALL_H);
   K.wallZ(k, 0.6, 15.12, 19.38, EXT, sw, [], {}, WALL_H);
-  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/lighting stands its man north of the panel)
+  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/air/lighting.rs stands its man north of the panel)
   K.add(k, { c: [1.6, 0.45, 15.75], h: [0.75, 0.45, 0.4], albedo: [0.5, 0.42, 0.1] });   // the generator set on its skid, against the north wall
   K.add(k, { c: [1.6, 0.94, 15.75], h: [0.5, 0.04, 0.3], albedo: C.black });
   K.add(k, { c: [2.37, 0.6, 15.75], h: [0.015, 0.02, 0.02], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });   // its running lamp
@@ -247,7 +247,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // out there the ground outside the wall had the sky's even fill and nothing else — no pool, no shadow, the men one grey with the wall (the depot and the
     // pass have thin moons too, and lamps outside). The moon stays (it is what keeps the yard black with the mains out); these go out with the floodlights,
     // so the dark is as dark as it was. A bulkhead lamp on the outer face of each gate post, thrown out and along the wall away from the gate, and one over
-    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/nvg NVG.darkAt is 0.5 — at 50
+    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/teammates/nvg.rs NVG.darkAt is 0.5 — at 50
     // the five marks read 0.29‥0.62 and the team stood up half goggled, half bare-eyed), Sam's about 0.3. Nobody in the building has a line to a start mark
     // or to the shed's door. TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
     // sits 2.6 m from the nearest mark and 5 from Sam's, so any strength that lifts Sam's reading (0.25 → 0.39 at 8) takes the near man over the line (0.53).
@@ -281,7 +281,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     sky: { zenith: [0.007, 0.012, 0.024], horizon: [0.018, 0.024, 0.039] },   // (overcast as its moon is: see the head)
     mission: { serverRoom: { ...FLOODLIT_ROOMS.store.bounds }, entryDoor: 'store', rack: { index: 0, front: rackFront, halfW: 0.33 }, exfilDoor: 'foot_gate', exfilX: 3.5, exfilZ: 21.8, exfilOut: [-1, 0] },
   });
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above. `building` is the whole world so the plan is all zones (first match wins). The yard's packed earth, the shed's floor and the ground outside the
   // wall are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab ('stone') with lino laid in the hall.
   const surfaces: SurfacesData = {

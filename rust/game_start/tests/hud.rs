@@ -1,4 +1,4 @@
-//! WHAT A SEAT'S HUD IS TOLD OF ITS OWN KEY AND OF THE FLOOR (`view.interact`, `alarm`, `stage`, `look`; rust/game_rules/src/interact/hud.rs): the overlay draws these and asks nothing of a game.
+//! WHAT A SEAT'S HUD IS TOLD OF ITS OWN KEY AND OF THE FLOOR (`view.interact`, `alarm`, `stage`, `look`; rust/game_rules/src/sam/interact/hud.rs): the overlay draws these and asks nothing of a game.
 use game::game::{Interactable, InteractableKind as K};
 use game::view::{BackKey, ListRow, Stage, ThingKind, TickView};
 use game_start::play::{nudge, Opts, Play};

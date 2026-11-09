@@ -1,8 +1,8 @@
 // THE AIR GRID: the share of the weather's dust / fog standing in the air at each spot of the level's plan — one float a cell of AIR_CELL metres over the whole
 // world rectangle, row-major (index = ix + iz × AIR_W, cell centre = WORLD.min.xz + (i + ½) × AIR_CELL). 1 = the open air's own density, less = thinner (a shut
-// room keeps the weather's `leak`; rust/game_rules/src/air_dust carries it in at open doors and blown walls).
+// room keeps the weather's `leak`; rust/game_rules/src/air/air_dust.rs carries it in at open doors and blown walls).
 //
-// ONE array, two readers: the men's eyes (rust/game_rules/src/weather air_trans, on the CPU) and the picture (common.wgsl wxIndoor — the grid rides in the tail of the boxMat
+// ONE array, two readers: the men's eyes (rust/game_rules/src/air/weather.rs air_trans, on the CPU) and the picture (common.wgsl wxIndoor — the grid rides in the tail of the boxMat
 // buffer after the glass table and before the cut table, AIR_ROWS vec4 rows, written by scene/boxes.ts setAirGrid; the scene prelude's WXD_* consts are these numbers).
 import { WORLD } from './world';
 

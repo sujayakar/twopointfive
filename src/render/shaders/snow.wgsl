@@ -1,4 +1,4 @@
-// THE SNOW'S SURFACE (rust/game_rules/src/weather_kinds SNOW_LOOK.on → the prelude's `const SNOW_SURF`; render/snowField.ts bakes the field). A snow level's lying snow as one
+// THE SNOW'S SURFACE (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.on → the prelude's `const SNOW_SURF`; render/snowField.ts bakes the field). A snow level's lying snow as one
 // surface instead of painted boxes — the maintainer on his first GPU look at the pass: 'it does need to feel more organic. maybe we could do it with a height
 // map or something like that? the rectangles don't seem to work. and i think we can make the material seem much cooler / feel like freshly fallen snow.'
 //   THE FIELD   snowTex, over the world's plan: r = metres of snow STANDING over the ground (the level's drifts and banks as smooth hills), g = snow lies here,

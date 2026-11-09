@@ -55,17 +55,17 @@ const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away w
 /** the action key's row and the whistle's while his own actions are a ring that stays (rust/game_types/src/knobs/handring.rs): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
-/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (rust/game_rules/src/cmdring `wholeSquad`: the key steps
+/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (rust/game_rules/src/squad_orders/cmdring.rs `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. */
 const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => !keysOf('KeyT').length;
-/** THE SQUAD'S KEYS AS THE PAGE HAS THEM (rust/game_rules/src/cmdring `only`: the command key and the word's are the squad's only keys, and the wheel carries every
+/** THE SQUAD'S KEYS AS THE PAGE HAS THEM (rust/game_rules/src/squad_orders/cmdring.rs `only`: the command key and the word's are the squad's only keys, and the wheel carries every
  *  order). The command key's row says both of its presses and the word's row says what the word does.
  *  The sprint key with the command key gives one more thing to a part of the squad (nothing else picks a part of it): that press is a row of its own, both caps following their
  *  keys, and the who key, which then steps nobody anywhere, says so. The codes are written in the words (Shift, B): the list names the keys as they are bound. */
 const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order where your cursor is', CMD_HOLD = 'hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click', CMD_SMALL = `${CMD_TAP}. ${CMD_HOLD}`;
-/** … and with the key tapped twice being 'fall in' (rust/game_rules/src/cmdring `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
+/** … and with the key tapped twice being 'fall in' (rust/game_rules/src/squad_orders/cmdring.rs `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
 const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
 const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
 const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set';
@@ -76,11 +76,11 @@ export function squadRows(rows: KeyRow[], twice = false): KeyRow[] {
     return k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], [['Shift', 'B'], PART_WHAT, PART_SMALL]] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
-/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: rust/game_rules/src/rails `twice`) */
+/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: rust/game_rules/src/missions/rails.rs `twice`) */
 const twiceNow = () => deps?.game.fallIn ?? true;
 const listNow = () => `${whoRowGone()} ${twiceNow()}`;
 const SPRINT_WHAT = 'Sprint';
-/** the sprint's row while Shift in a crouch is a fast crouch walk (rust/game_rules/src/player CROUCHRUN): what the same key does crouched, and that it is heard
+/** the sprint's row while Shift in a crouch is a fast crouch walk (rust/game_rules/src/sam/player CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
 export const sprintSmall = (): string | undefined => "hold it while you're crouched to stay low and move faster, but it's louder than walking";
 export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
@@ -195,7 +195,7 @@ function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallp
 /** a page held silent (`?mute`, or the automation profile's kept flag: host/drawpage.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
 function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.game.hints, ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
-/** the wall taken without Q (rust/game_rules/src/wallsnap `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
+/** the wall taken without Q (rust/game_rules/src/stealth/wallsnap.rs `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
 
 /** the page hands the live objects over (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
@@ -360,7 +360,7 @@ export function walkInNow(): boolean {
  *  dashed — a click puts on a key, and writes the row's words to suit */
 function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
-/** THE GUN'S SETUP (rust/game_rules/src/slotsetup), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
+/** THE GUN'S SETUP (rust/game_rules/src/outfit/slotsetup.rs), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
 const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };
 const SETUP_ROW: Record<string, string> = { Z: 'KeyZ', L: 'KeyL' };
@@ -375,12 +375,12 @@ function controls(body: HTMLElement, host: KeyHost) {
   body.addEventListener?.('mousedown', (e: Event) => { if (keyWaiting() && !(e.target as HTMLElement | null)?.closest?.('.op-key')) { keyStop(); host.paint(); } });
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
-    const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; rust/game_rules/src/backkey: the key Esc gave up)
+    const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; rust/game_rules/src/sam/backkey.rs: the key Esc gave up)
     const low = sprintSmall(), paced = !low ? tabbed : tabbed.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
-      if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: rust/game_rules/src/cmdring wholeSquad)
+      if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: rust/game_rules/src/squad_orders/cmdring.rs wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, wallLine(what), host, seen)); });
       const w = el('div', 'op-what', wallLine(what)), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || SETUP_SMALL[caps[0]] ? el('small', '', wallLine(small())) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)

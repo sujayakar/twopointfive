@@ -24,14 +24,14 @@ export const BoxFlag = {
   // A glass box is authored geometry (levels/*.json flag name 'Glass', albedo = the pane's transmission tint) that no traced ray and no raster triangle ever
   // sees: upload() keeps it out of the trace grid AND the visible list and instead lists it in SceneInfo.glass (≤ MAX_GLASS panes, 3 vec4f each), where
   // composite / fgather / direct test view and shadow segments against it analytically (Fresnel reflection + tint + dust glow; common.wgsl glassTrace).
-  // CPU: movement collision and sound treat it as a wall, sight passes through it (rust/game_rules/src/scene_collision segment_blocked's `through`), a round / kick / bang breaks it.
+  // CPU: movement collision and sound treat it as a wall, sight passes through it (rust/game_rules/src/world/scene_collision.rs segment_blocked's `through`), a round / kick / bang breaks it.
   Glass: 1 << 17,
   // A THIN THING THAT STANDS FREE (as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (rust/game_rules/src/fogofwar: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — rust/game_rules/src/guards eye_through), and
+  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (rust/game_rules/src/stealth/fogofwar: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — rust/game_rules/src/people/guards eye_through), and
   // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
   Thin: 1 << 18,
   // A WINDOW'S BAR (as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
-  // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/winbars; rust/game_rules/src/scene_collision shot_blocked's `firePass`); read by nothing else.
+  // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
@@ -73,7 +73,7 @@ export interface Box {
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
    *  should still hold the heading for CPU code that only cares about that. Absent = yaw about +Y as always. */
   rot?: Quat;
-  /** DRAWN ELSEWHERE (rust/game_rules/src/stature — a man drawn a few per cent taller or shorter takes the kit bolted to him along): the centre and half extents the GPU is handed for this box —
+  /** DRAWN ELSEWHERE (rust/game_rules/src/outfit/stature.rs — a man drawn a few per cent taller or shorter takes the kit bolted to him along): the centre and half extents the GPU is handed for this box —
    *  its geo words and its trace-grid registration — in place of c / h. The simulation's box (CPU ray casts, picking, everything that reads c / h) stays where it is. Dynamics only;
    *  absent = c / h, as ever. */
   dc?: Vec3; dh?: Vec3;
@@ -86,7 +86,7 @@ export interface Box {
   /** WHAT THIS BOX IS MADE OF (scene/stuff.ts): a material of the look, 'waits', 'glass' or 'rubber'; absent = plain. It is SAID, never read off the
    *  colour: by the level file (the box's own `stuff`, else its material row's: levelLoad.ts puts it here when the file is read) or by the code that makes
    *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (render/gbuffer.ts lookWordOf),
-   *  and the PICTURE of a round's hit reads it (rust/game_rules/src/particle_fx HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
+   *  and the PICTURE of a round's hit reads it (rust/game_rules/src/breakage/particle_fx.rs HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
   stuff?: BoxStuff;
@@ -96,17 +96,17 @@ export interface Box {
    *  materials.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is the same thing. */
   does?: DoesWord;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
-   *  (rust/game_rules/src/weather sets it with the rain; runtime only, never authored) */
+   *  (rust/game_rules/src/air/weather.rs sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
   /** MARKINGS (scene/markings.ts): up to MAX_MARKS_PER_BOX pixel-art signifiers ON this box's faces — key caps, packing tape, drawer seams, the vending
    *  window, text bars, LEDs, glyphs — authored in the level file (BoxData.markings / a prop part's) or by the code that makes the box (door leaves). The
    *  upload registers the list in the marking table (the tail of matBuf) and names its first record in the top 14 bits of the GPU flags word; the g-buffer,
    *  composite and the reflection pass evaluate them; the secondary rays get their area average folded into `boxAlbedoSec` (the 4th mat row). */
   marks?: MarkingDef[];
-  /** × the emission of this box's emissive markings (runtime: rust/game_rules/src/lighting writes a switchable's supply factor here — a blackout, the OCP, a flicker —
+  /** × the emission of this box's emissive markings (runtime: rust/game_rules/src/air/lighting.rs writes a switchable's supply factor here — a blackout, the OCP, a flicker —
    *  next to the box's own emissive; absent = 1) */
   markGain?: number;
-  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: rust/game_rules/src/fogofwar FOG.kept — a lamp's face under the fog of war as the team last saw
+  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: rust/game_rules/src/stealth/fogofwar FOG.kept — a lamp's face under the fog of war as the team last saw
    *  it, lit or dark): the upload takes these in place of `emissive` / `markGain`; nothing in the game reads them, and `emissive` itself stays the lamp's real
    *  state. Absent = the box's own. Read only: several boxes may be handed one array */
   fogEmit?: Readonly<Vec3>; fogMark?: number;
@@ -141,7 +141,7 @@ export interface Box {
    *  shows the coping's stuff). Absent = the box's own `stuff`. Picture only, packed with the record on the look page. */
   cutCoreStuff?: BoxStuff;
   /** ROUND (scene/round.ts — read its head): this box is a ROUND THING, the cylinder about its own y of radius h[0] (= h[2]) and half height h[1]. Every CPU ray
-   *  and segment (rayBox, rust/game_rules/src/scene_collision line_box) and what walks against it (collideCircle) meet the cylinder; where cut pieces are on so do the picture (the cut pass)
+   *  and segment (rayBox, rust/game_rules/src/world/scene_collision.rs line_box) and what walks against it (collideCircle) meet the cylinder; where cut pieces are on so do the picture (the cut pass)
    *  and every GPU ray. Said by the level file (BoxData.round); never with a cut record. */
   round?: boolean;
   /** A SHAPE (scene/shapes.ts — read its head): how this box of a level stands when shapes are on, as its level file says it (BoxData.shape) or as the kit
@@ -156,7 +156,7 @@ export interface Box {
   piece?: boolean;
   of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
-   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (rust/game_rules/src/debris, DEBRIS.dress). */
+   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (rust/game_rules/src/breakage/debris, DEBRIS.dress). */
   dress?: boolean;
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
@@ -165,7 +165,7 @@ export interface Box {
  *  maxBoxes ≤ 65534 (the visible word keeps 1 + index in 16 bits, 0xFFFF = new).
  *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
  *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
-export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (rust/game_rules/src/debris), keyed off their serial · look: what a broken wall looks like where it broke (rust/game_rules/src/edge_look: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (rust/game_rules/src/wallskin: the authored static × 16 + piece)
+export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (rust/game_rules/src/breakage/debris), keyed off their serial · look: what a broken wall looks like where it broke (rust/game_rules/src/breakage/edge_look.rs: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (rust/game_rules/src/breakage/wallskin.rs: the authored static × 16 + piece)
 
 /** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
  *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
@@ -201,7 +201,7 @@ export const wordOf = (b: { stuff?: BoxStuff; does?: DoesWord }): { stuff?: BoxS
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
 /** a thing of solid glass: it says 'glass' and is no pane (a pane, BoxFlag.Glass, is the glass engine's whatever it says). The one test: what cracks
- *  as solid glass (rust/game_rules/src/particle_fx solid_glass) and what is drawn as it (below) ask it. */
+ *  as solid glass (rust/game_rules/src/breakage/particle_fx.rs solid_glass) and what is drawn as it (below) ask it. */
 export const solidGlassBox = (b: { stuff?: BoxStuff; flags: number }): boolean => b.stuff === 'glass' && (b.flags & BoxFlag.Glass) === 0;
 /** the neutral dark a thing of solid glass is sent as in place of its own colour (scene/stuff.ts SOLIDGLASS), or −1 where it is sent as it is: the rule
  *  down, no solid glass, a face that carries markings, a colour that dark already */
@@ -220,9 +220,9 @@ export function matWord(b: Box): number {
 }
 
 export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
-/** GLASS BREAKING (rust/game_rules/src/glassbreak): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
  *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/glassbreak fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
+ *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
  *  const GLASS_BREAK (render/frame.ts glassBreakConfig; common.wgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
  *  is not a different frame. */
 export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
@@ -250,7 +250,7 @@ export class BoxWorld {
   /** PICTURE ONLY, the renderer's own: dynamic boxes left out of the RASTER this frame (still packed, still what every reader of the list sees, never written) — the squad's
    *  weapon lasers while composite draws them as light in the air (engine.ts ← passes.setBeams, settings.beamAir). null = none, the list drawn as ever. */
   hidePrimary: Set<Box> | null = null;
-  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (rust/game_rules/src/wallskin: the paint on a holed wall, drawn as its standing pieces instead): a static
+  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (rust/game_rules/src/breakage/wallskin.rs: the paint on a holed wall, drawn as its standing pieces instead): a static
    *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
    *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
   undrawn: { has(i: number): boolean } | null = null;
@@ -305,7 +305,7 @@ export class BoxWorld {
   /** static box indices carrying BoxFlag.Glass (intact or broken), rebuilt when statics change — the game's shatter / restore / 'break all' walk this */
   glassStatics: number[] = [];
   private glassScratch: { i: number; d: number }[] = []; private glassStaticsN = -1;
-  /** GLASS BREAKING (rust/game_rules/src/glassbreak): fills slot k's GB_STRIDE rows for static `staticIndex` into `dst` at float offset `off` (returns false = the pane is whole: zeros);
+  /** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): fills slot k's GB_STRIDE rows for static `staticIndex` into `dst` at float offset `off` (returns false = the pane is whole: zeros);
    *  null = no such system attached. Consulted by packGlass every frame in SceneInfo order; the table is uploaded only while any pane has something to say (and once more
    *  when the last goes whole so the rows read zero again). */
   glassCellFill: ((staticIndex: number, dst: Float32Array, off: number) => boolean) | null = null;
@@ -355,7 +355,7 @@ export class BoxWorld {
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
-  /** bumped by rust/game_rules/src/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
+  /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;
   // ---- THE STATIC SLICE, PACKED ONCE: the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
@@ -470,7 +470,7 @@ export class BoxWorld {
   /** FORGET WHAT WAS SENT. The next upload packs and writes every static, the visible list, the
    *  glass table, the marking table and both grids whole. Reads nothing of the simulation and changes none of it. */
   forgetSent() { this.packEpoch++; this.visibleSent.fill(0xffffffff); this.gbSent.fill(0xffffffff); this.gbLive = true; this.markDirty = true; this.gridLiveN = -1; this.rowsStatN = -1; }
-  /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (rust/game_rules/src/game registers the lights after the first upload) */
+  /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (rust/game_rules/src/tick/game registers the lights after the first upload) */
   repackMarkings(texel = this.markingTexel) { this.markingTexel = texel; for (const ent of this.markByKey.values()) if (ent.slot) this.packList(ent); this.packEpoch++; }   // (every static repacks: the secondary albedos may have moved)
 
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each via addCharacterCapsules(). */
@@ -764,10 +764,10 @@ export class BoxWorld {
     const m = i * MAT_STRIDE;
     mf[m] = a0; mf[m + 1] = a1; mf[m + 2] = a2; mf[m + 3] = b.cutHeight;
     mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit && !(b.mkey !== undefined && b.mkey >>> 24 === MKEY.skin >>> 24)) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
-      // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — rust/game_rules/src/wallskin)
+      // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — rust/game_rules/src/breakage/wallskin.rs)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
-    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (rust/game_rules/src/lighting drives it with the switchable's supply)
+    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (rust/game_rules/src/air/lighting.rs drives it with the switchable's supply)
     return marked;
   }
 
@@ -991,8 +991,8 @@ function rayBoxOwn(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Ve
   { let ta = (-h[2] - lz) * iz, tb = (h[2] - lz) * iz; let s = -1; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; s = 1; } if (ta > t0) { t0 = ta; axis = 2; sgn = s; } if (tb < t1) t1 = tb; if (t0 > t1) return null; }
   // Origin INSIDE the box (no face entered ahead of it — an origin exactly ON a face heading in counts as inside too): no hit, deliberately. Callers lean on it: the
   // cursor's pick and a round's static hit start rays at muzzles and lenses that may sit in their own housing, an item or a spark born inside a static leaves it
-  // freely, an eye momentarily inside a swinging leaf still sees (rust/game_rules/src/scene_collision segment_blocked_dynamic). What must NOT lean on it is a blocked-or-not question about a
-  // segment born on a wall's face — rust/game_rules/src/scene_collision segment_blocked judges statics by the full slab interval (lineBox) for exactly that reason. Same rule in rayBoxRot.
+  // freely, an eye momentarily inside a swinging leaf still sees (rust/game_rules/src/world/scene_collision.rs segment_blocked_dynamic). What must NOT lean on it is a blocked-or-not question about a
+  // segment born on a wall's face — rust/game_rules/src/world/scene_collision.rs segment_blocked judges statics by the full slab interval (lineBox) for exactly that reason. Same rule in rayBoxRot.
   if (axis < 0) return null;
   const ln0 = axis === 0 ? sgn : 0, ln1 = axis === 1 ? sgn : 0, ln2 = axis === 2 ? sgn : 0;   // the local face normal (the other two components the literal 0 they always were)
   const n: Vec3 = [cs * ln0 + sn * ln2, ln1, -sn * ln0 + cs * ln2];

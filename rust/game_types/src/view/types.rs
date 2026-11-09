@@ -1,4 +1,4 @@
-//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/view).
+//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};

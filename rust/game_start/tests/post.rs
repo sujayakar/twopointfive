@@ -1,4 +1,4 @@
-//! A DEFENDER AND HIS POST (rust/game_rules/src/roomfight/post.rs, control/lost.rs, control/rally.rs): how he leaves it and comes back, whoever decides it.
+//! A DEFENDER AND HIS POST (rust/game_rules/src/defenders/roomfight/post.rs, control/lost.rs, control/rally.rs): how he leaves it and comes back, whoever decides it.
 use game::ids::RoomfightDefId;
 use game::owner::{self, by};
 use game::roomfight::{at_post, is_loose, on_leg, on_leg_of, send, Leg};

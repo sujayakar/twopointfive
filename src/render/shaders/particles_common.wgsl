@@ -8,13 +8,13 @@ const P_SPARK: u32 = 0u;    // incandescent: emissive, gravity, bounces low and 
 const P_DEBRIS: u32 = 1u;   // chips knocked out of drywall / wood / concrete: LIT (albedo of what was hit), gravity, bounce, come to rest and stay ~20 s
 const P_DUST: u32 = 2u;     // a puff: LIT soft blob, drag-dominated, grows and fades over ~1.5 s (bullet impacts, the stun charge's ring, a kicked door)
 const P_CASING: u32 = 3u;   // spent brass: LIT + a glint off the strongest light, ejected per shot, bounces, lies on the floor
-const P_SHEET: u32 = 4u;    // a leaf of office paper (rust/game_rules/src/destruction: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
+const P_SHEET: u32 = 4u;    // a leaf of office paper (rust/game_rules/src/breakage/destruction: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
                             // gravity + anisotropic drag + flutter torque (render/sheetModel.ts is the CPU reference of the same equations), slides / settles
                             // flat on what it lands on and sleeps like a chip; casts no shadow (a splat, not a box)
 const P_RAIN: u32 = 5u;     // a rain drop (src/picture/rain.ts): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
                             // field's air, LIT like a chip (the strongest lights shadow-rayed) + refracting / glinting in the splat, dies where it hits and becomes its own
                             // splash crown there (PB_ASLEEP = splashed); its own ring past the two gameplay rings (EmitBlock.rainWin)
-const P_SHARD: u32 = 6u;    // a fragment of a broken glass pane (rust/game_rules/src/shards files them where the fracture model lets a piece go; render/shardModel.ts is the CPU reference of its
+const P_SHARD: u32 = 6u;    // a fragment of a broken glass pane (rust/game_rules/src/breakage/shards files them where the fracture model lets a piece go; render/shardModel.ts is the CPU reference of its
 // the shard branches of the three particle modules exist only in a build compiled with glass breaking (the scene prelude's GLASS_BREAK, raised at boot — render/frame.ts):
 // with it false every `SHARDS_ON && …` test folds away and the kernels are the ones the other kinds always ran (a kind-6 record would then fly and draw as a chip).
 const SHARDS_ON: bool = GLASS_BREAK;
@@ -62,7 +62,7 @@ const SHARD_REACT_REST: f32 = 0.15;   // TAAU reactivity of a resting fragment's
 // … and AT REST (tuning round five: a pane's worth of glass came to rest and nothing of it could be seen — a clear face lying flat adds a tenth of the floor's own light). One
 // resting particle stands for the handful of grains that fell with it, and broken glass in a drift is a FROST: the light goes round between the fracture faces and comes out
 // every way. The small ones take all of it and lie as soft heaps (dice, fines); a finger-wide sliver of float glass takes most of it and keeps its own cut outline and bright edge. Only under em.flags bit 8
-// (render/particles.ts shardRestFrost ← rust/game_rules/src/shards SHARDS.restFrost): off, a resting shard is lit and drawn exactly as it flies.
+// (render/particles.ts shardRestFrost ← rust/game_rules/src/breakage/shards SHARDS.restFrost): off, a resting shard is lit and drawn exactly as it flies.
 const SHARD_REST_SCATTER_LO: f32 = 0.15;  // the diffuse share a resting grain sends on, from … (flying: the kind block's SCATTER, 0.1)
 const SHARD_REST_SCATTER_HI: f32 = 1.15;  // … to this, by the grain's own dice: a drift of broken glass is a mottle of facets that throw the light back and gaps that do not,
                                           // and it is the mottle that shows on ANY floor (one even value came out the lobby stone's own brightness: nothing to see)
@@ -152,7 +152,7 @@ struct EmitRec {
   k: vec4u,                       // x kind | owner << 8 | ring << 16 | the team's own doing << 18 (PB_OURS), y seed, z slot offset within the ring of particle 0, w colour rgba8
 };
 const MAX_EMITS: u32 = 128u;
-// IMPULSES (render/particles.ts Particles.impulse; rust/game_rules/src/destruction is where they come from — a stun charge, a round landing beside settled litter, a body /
+// IMPULSES (render/particles.ts Particles.impulse; rust/game_rules/src/breakage/destruction is where they come from — a stun charge, a round landing beside settled litter, a body /
 // boot / shoved desk thumping the floor; render/sheetModel.ts impulseKick + sheetImpulse are the CPU reference of what particles.wgsl applyImpulses does with one):
 // up to MAX_IMPS a frame, applied in the update kernel to every LIVE particle of the kinds each names within its radius — Δv = strength × gain(kind) ×
 // (1 − d/radius) × (radial with its downward part dropped + up × upK(kind) × ŷ + bias), |v| capped per kind — and WAKING the resting ones it kicks
@@ -162,15 +162,15 @@ const MAX_IMPS: u32 = 16u;
 struct ImpulseRec {
   pos: vec3f, radius: f32,       // centre of the push, its reach (m)
   bias: vec3f, strength: f32,    // a direction folded into the push, |bias| = its weight (the round's travel along the surface it struck; zero for a blast); peak Δv (m/s) a SHEET gets at the centre — the other kinds scale it by their gain
-  eye: vec3f, up: f32,           // where the occlusion ray starts when iflags has bit 0 (a blast's reach judged from just over desk height, as rust/game_rules/src/destruction judges the stacks); the upward share added to the radial direction
+  eye: vec3f, up: f32,           // where the occlusion ray starts when iflags has bit 0 (a blast's reach judged from just over desk height, as rust/game_rules/src/breakage/destruction judges the stacks); the upward share added to the radial direction
   kinds: u32, seed: u32, iflags: u32, spare: u32,   // bit k set = kind k responds; the seed each kicked sheet hashes its tilt / tumble from with its slot; 1 = one any-hit ray + the glass panes eye → particle gate it (a partition or a pane between a charge and the litter behind it stops the push)
 };
-// WIND records (rust/game_rules/src/wind → render/particles.ts setWind): the frame's ≤ 8 wind sources ride in the SAME array right BEHIND the impulses — imps[numImps ‥ numImps +
+// WIND records (rust/game_rules/src/air/wind.rs → render/particles.ts setWind): the frame's ≤ 8 wind sources ride in the SAME array right BEHIND the impulses — imps[numImps ‥ numImps +
 // numWinds) — as ImpulseRec read another way (render/shaders/wind_field.wgsl is the field; particles.wgsl windAir sums it): a JET (iflags bits 2‥3 = 0): pos = the
 // diffuser's face centre, radius = reach (where it has halved), bias = unit axis, strength = m/s at the face this frame, eye = (tanSpread, r0, dMax), up = the
 // floor a down-jet turns along (≤ −100 = none); the STORM (bits 2‥3 = 1): pos.xyz + radius = the interior footprint x0 z0 x1 z1 it does not blow inside, eye + up
 // = the annex's, bias × strength = the wind; iflags bit 6 = a fire's hot air, read by the falling snow alone (particles.wgsl heatAir) and skipped by the wind's own sum; iflags bit 4 = the wisps read the field, bit 5 = ROOF BY ROOF: the two rectangles are the level's first two roofs and
-// its third / fourth are the Frame's (frame.cardCfg.y / .z — particles.wgsl windStormOf; rust/game_rules/src/wind WX_OWN.wind). kinds = which kinds answer to it. Every wind record also carries the four live wind knobs (the same on each; read off
+// its third / fourth are the Frame's (frame.cardCfg.y / .z — particles.wgsl windStormOf; rust/game_rules/src/air/wind.rs WX_OWN.wind). kinds = which kinds answer to it. Every wind record also carries the four live wind knobs (the same on each; read off
 // the first): seed = pack2x16float(sheet wake speed m/s, sheet kick ×), spare = pack2x16float(debris coupling 0‥1, spare). No wind record ever wakes,
 // gates or kicks by itself: the update kernel takes the summed AIR VELOCITY as what drag is measured against (dust follows it, chips a share of it, a sheet's
 // aerodynamics take the relative wind — the impulse gust's 'co-moving air' generalised to 'the air moves at v_air'), trembles a resting leaf and now and then wakes one.
@@ -221,7 +221,7 @@ fn rainOverWall(P: vec3f) -> bool {
   let p = P.xz;
   return !wxUnderRoof(p) && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
 }
-/** SNOW PAST THE LEVEL'S RIM (rust/game_rules/src/weather_kinds SNOW_LOOK.past; the maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image"). A flake
+/** SNOW PAST THE LEVEL'S RIM (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.past; the maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image"). A flake
  *  high in the air is drawn well off its own ground, toward the camera's foot: with the rim on the camera's side, the flakes that would show over the near part of
  *  the picture are in the air PAST the rim, and none was ever there (births, the step and the splat all kept to the world's rectangle). snowPast() = how many metres
  *  past the rim the snow goes on falling: src/picture/snow/fx.ts hands it over as frame.weatherE.w NEGATIVE (that slot is the lattice rain's share, asked `> 0.0` by its
@@ -257,7 +257,7 @@ fn rainRoofed(P: vec3f) -> bool {
  *  The rooms stay dry to the eye as before; the world's rim as before. src/picture/snow/fx.ts flakeHidden is this function on the CPU. */
 const FLAKE_WALL_IN: f32 = 0.2;   // m (src/picture/snow/fx.ts FLAKE_WALL_IN: the same number)
 fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN && p.y >= R.y + FLAKE_WALL_IN && p.x <= R.z - FLAKE_WALL_IN && p.y <= R.w - FLAKE_WALL_IN; }
-/** UNDER THE ROOFS, WHICHEVER SLAB (the prelude's SNOW_UNDER, rust/game_rules/src/weather_kinds SNOW_LOOK.under). flakeRectIn draws each roof's rectangle in by itself, so on the
+/** UNDER THE ROOFS, WHICHEVER SLAB (the prelude's SNOW_UNDER, rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.under). flakeRectIn draws each roof's rectangle in by itself, so on the
  *  line where two slabs of one building meet neither's holds and a strip two insets wide was open to snow: the floor along that wall's foot, the floor of a doorway in
  *  it; and flakeHidden opened EVERY top
  *  at the ceiling, the partitions' deep inside a building as the outer walls'. Is ground point p under the roofs by d: roofed, and the four corners of a square 2 d
@@ -316,8 +316,8 @@ const RAIN_SPLASH_DROPLETS: u32 = 4u; // secondary droplets a landing throws out
 
 fn unpackRgb8(c: u32) -> vec3f { return vec3f(f32(c & 255u), f32((c >> 8u) & 255u), f32((c >> 16u) & 255u)) / 255.0; }
 
-// the spark's colour ramp (rust/game_rules/src/sparks boxes(): white-hot → orange → red as it cools; e is meant to clip — the bloom is the glow)
-const SPARK_EMISSIVE: f32 = 25.0;   // rust/game_rules/src/effects sparks.emissive: HDR radiance at f = 1 before brightness
+// the spark's colour ramp (rust/game_rules/src/breakage/sparks.rs boxes(): white-hot → orange → red as it cools; e is meant to clip — the bloom is the glow)
+const SPARK_EMISSIVE: f32 = 25.0;   // rust/game_rules/src/tick/effects.rs sparks.emissive: HDR radiance at f = 1 before brightness
 fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
   let f = select(max(0.0, 1.0 - (u - hold) / max(1e-3, 1.0 - hold)), 1.0, u < hold);
   let e = f * f * brightness * SPARK_EMISSIVE;
@@ -328,7 +328,7 @@ fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
 // peak opacity, and it rises where a puff of dust settles. Every other record carries 255 there: 1 from this, and nothing of theirs is changed.
 fn steamIs(color: u32) -> bool { return (color >> 24u) != 255u; }
 fn steamOf(color: u32) -> f32 { return select(1.0, f32(color >> 24u) * (1.0 / 254.0), steamIs(color)); }
-// EMBER (rust/game_rules/src/fire; render/particles.ts EmitOpts.ember): a SPARK whose colour word's top byte is under 255 is an ember off an open fire — that byte ÷ 254 is ×
+// EMBER (rust/game_rules/src/air/fire.rs; render/particles.ts EmitOpts.ember): a SPARK whose colour word's top byte is under 255 is an ember off an open fire — that byte ÷ 254 is ×
 // its light. It rides the fire's hot air up (EMBER_LIFT over its own weight, against the kind's drag: about two metres a second at most), wanders as it goes
 // (EMBER_SWIRL) and goes with the wind, where a spark flies and falls; and it cools slowly, yellow off the fire, then orange, then a red that dies. Every other
 // spark carries 255 there and is as it was.

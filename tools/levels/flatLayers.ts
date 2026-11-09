@@ -8,7 +8,7 @@
 //
 // The rule: where two flat decals of DIFFERENT paint overlap on the plan, the upper one's top face is at least `FLAT_STEP` above the lower one's — about
 // ten depth steps at 21 m seen from the camera's pitch, three at 40 (and small enough that no decal's centre crosses a centimetre: a checkpoint's level
-// fingerprint, rust/game_rules/src/savestate, is the same before and after). Which is the upper one is what the skin wrote (the higher top; the later one where they tie). Two of the SAME paint are left
+// fingerprint, rust/game_rules/src/tick/savestate, is the same before and after). Which is the upper one is what the skin wrote (the higher top; the later one where they tie). Two of the SAME paint are left
 // alone: whichever wins a pixel, it is the same pixel — so a path's joints and a ring's corners do not climb a step each. Nothing is moved that did not have
 // to be, and nothing is moved down.
 import type { Vec3 } from '../../src/math/vec';

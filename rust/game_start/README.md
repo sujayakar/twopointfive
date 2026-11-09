@@ -73,7 +73,7 @@ Meters, in the world a level must fit (40 by 28; x east, z south). The pieces ar
 A scene is one of two kinds, never both: a NIGHT (Sam and guards on routes, as a level's file has them) or a ROOM CLEAR (a team and posted
 defenders, started by the game's own `start_scenario`). The room clear's staging takes every man who is not its own off the floor, so the builder
 refuses a scene that says both. A scene has at least one door (a level's mission names one). A ROOM CLEAR IS REFUSED BY THE GAME (the start stops
-with the staging's own words, `roomclear/p_01.rs`) unless some room has more than one way in and every room has a defender: two rooms side by side
+with the staging's own words, `roomclear.rs`) unless some room has more than one way in and every room has a defender: two rooms side by side
 with a door between them and a door each to the yard, a defender in each, is the smallest that stands (`yard` in `tests/orders.rs`).
 
 `scene.level_text()` is the level file, ready to be saved under `levels/`.
@@ -144,7 +144,7 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
 7. The die, seeded before the men are made (the game's `sim_dice_new`).
 8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
-   constructor, `game_new`** (`rust/game_rules/src/game/p_04.rs`).
+   constructor, `game_new`** (`rust/game_rules/src/tick/game/stand.rs`).
 9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
 10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).
@@ -205,7 +205,7 @@ cargo run --release --bin hold -- check /tmp/held --but PART,PART   # … with t
 cargo run --release --bin hold -- draw /tmp/drawn       # play, draw every frame, and say what it cost and whether it changed anything
 ```
 
-`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands/`, and writes, for every frame, the state's words
+`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands.rs`, and writes, for every frame, the state's words
 (`game::state_words`: a hash of every part of the game that a host does not hand in, with `rust/sim`'s block a part at a time) folded to one number
 and one byte of each part. `check` reads the folder's own list of runs and its copies of the hands, plays them on the build it is, and says of each run
 `the same after every frame`, or the first frame that differs and the names of the parts that differ in it (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in

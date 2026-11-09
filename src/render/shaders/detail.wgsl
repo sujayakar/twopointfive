@@ -26,7 +26,7 @@ fn detailNoise(p: vec2f) -> f32 {
   return mix(mix(detailHash(ip), detailHash(ip + vec2i(1, 0)), w.x), mix(detailHash(ip + vec2i(0, 1)), detailHash(ip + vec2i(1, 1)), w.x), w.y);
 }
 
-// ---- WET GROUND (the storm's wet lot: rust/game_rules/src/weather gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
+// ---- WET GROUND (the storm's wet lot: rust/game_rules/src/air/weather.rs gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
 // settings.wetBreakup > 0, whatever the detail layer's amount). Ground is never flat: the water STANDS in its low spots and only darkens the aggregate between
 // them. One smooth height field off the world position (the same value noise the wear uses, never under half a metre a cell: unevenness, not texture) — below
 // the water line the film stays nearly as smooth as it was (a little rain-stippled), above it the finish climbs toward the reflection pass's roughness

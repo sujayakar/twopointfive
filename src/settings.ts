@@ -94,7 +94,7 @@ export interface RenderSettings {
    *  smoke on the solver, which then need not stay awake for it (and under auto the first rung up from the floor keeps that). false = every preset keeps the fire's
    *  smoke, as it was. Read when a preset is applied. */
   fireSmokeShed: boolean;
-  /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; rust/game_rules/src/fire reads it beside the solver's `drawing`): false = this
+  /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; rust/game_rules/src/air/fire.rs reads it beside the solver's `drawing`): false = this
    *  preset draws the fire without its smoke. Picture only, and never the game's own table. */
   fireSmoke: boolean;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
@@ -194,11 +194,11 @@ export interface RenderSettings {
   motionIds: boolean;          // MOTION IDENTITY (image-quality program E1; scene/boxes.ts Box.mkey / BoxWorld.motionIds): keyed dynamic boxes — leaves, furniture, items, hand props, devices — reproject through the
                                // transform the SAME part had last frame wherever it sat in the dynamic list (a spawn / despawn no longer hands everything after it a wrong or zero motion vector for a
                                // frame); off = the g-buffer index-matches by size + owner exactly as before. Default on
-  charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + rust/game_rules/src/char_look + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
+  charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + rust/game_rules/src/outfit/char_look.rs + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
                                // metal, rubber, lens, a marking — each with its own colour and highlight out of a table per side (operators / defenders / civilians), creases and ridges from the mesh's own
                                // curvature, the ground's dust up from the sole, and one colour per shadow proxy for bounce rays and reflections. Off (the default with the shipped mannequin, which carries
                                // no slots: it is dressed by joint as a stand-in) = his two tints, the frame as it was. host/drawpage.ts raises it when the loaded mesh has slot-named materials
-  wetChars: boolean;           // wet characters (rust/game_rules/src/wet + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
+  wetChars: boolean;           // wet characters (rust/game_rules/src/air/wet.rs + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
   // ---- PARTICLE RAIN (src/picture/rain.ts + the 'rain' particle kind): a NEAR-FIELD layer of real GPU rain drops over the lattice rain
   // volumetrics.wgsl draws — recycled over the outdoor ground within a disc round the view, falling at terminal speed with the wind field's air, killed where they hit (roof, bonnet,
   // pallet, a shoulder) and turned into a splash crown there, lit as WATER (a phase function + the strand glint off the strongest shadow-tested lights) and refracting what is behind
@@ -245,7 +245,7 @@ export interface RenderSettings {
   markings: boolean;           // the switch (frame.markCfg.x carries the texel while on, 0 while off: nothing evaluated anywhere, the box lists upload slot 0 and the plain albedo — the frame as it was; ?nomarkings)
   markingTexel: number;        // the base world-space texel (m): 0.025; `fine` markings use half, `coarse` double (repacked on change)
   markingContrast: number;     // 0‥1: palette colours lerped from the box's own albedo toward their authored value (1 = as authored)
-  markingEmissive: number;     // × the emission of emissive markings (the vending window, UI bars, LEDs); their registered lights follow it too (rust/game_rules/src/lighting)
+  markingEmissive: number;     // × the emission of emissive markings (the vending window, UI bars, LEDs); their registered lights follow it too (rust/game_rules/src/air/lighting.rs)
   markingReflect: boolean;     // markings are evaluated at REFLECTION hits (reflect.wgsl shadeReflHit: the vending window in the lino) — off = the hit's plain secondary albedo / no emission
   markingReflPattern: boolean; // the analytic highlight of a marking's light is textured with the marking's pattern at the mirror point (reflect.wgsl rtGlints → markings.wgsl markPatternAtMirror); off = the uniform rectangle (A/B only: the sign of frame.markCfg.w)
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
