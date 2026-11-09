@@ -96,7 +96,7 @@ export function layLevelFloor<T extends Flat & { albedo: readonly number[]; flag
   return layFloor<T>([boxes.slice(0, lived), boxes.slice(lived, gen), boxes.slice(gen)],
     { paint: b => b.albedo, drawn: b => !((b.flags ?? 0) & (F.NoPrimary | F.Glass)), decal: b => !!((b.flags ?? 0) & F.NoShadow) });
 }
-/** … of a generator's level as `build()` hands it back (no dressing yet): its own boxes, then its lived things — the tail whose group `isLived` (src/scene/lived.ts)
+/** … of a generator's level as `build()` hands it back (no dressing yet): its own boxes, then its lived things — the tail whose group `isLived` (lib/lived.ts)
  *  takes. What tools/qa's 'the file is the generator's level' lines call before they compare: the file was swept when it was written. */
 export function layGeneratedFloor<T extends Flat & { albedo: readonly number[]; flags?: number }>(boxes: T[], groups: readonly (string | undefined)[] | undefined, isLived: (tag: string | undefined) => boolean, F: { NoPrimary: number; Glass: number; NoShadow: number }): number {
   const at = groups ? groups.findIndex(isLived) : -1; return layLevelFloor(boxes, at < 0 ? boxes.length : at, boxes.length, F);

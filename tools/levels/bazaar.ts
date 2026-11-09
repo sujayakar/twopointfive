@@ -36,18 +36,18 @@
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
 // QUIET_VARIANT=spot,set,start exports ONE deal to levels/bazaar.v<spot><set><start>.json for the checks (never committed).
 //
-// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless
+// In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless
 // on every deal; seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '../../src/scene/level';
+import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from './lib/level';
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
-import { carCoat } from '../../src/scene/carShapes';
+import { carCoat } from './lib/carShapes';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
@@ -221,7 +221,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   kiosk(30.1, 31.1, 18.2, P.paintRust);                                                              // a third, hard by the garage's wicket: from the wicket to the east gate nobody up the street sees you
   // THE LORRY, nose east along the south wall: a canvas tilt over the bed, a red cab
   slab(14.2, 0.45, 19.5, 18.6, 2.5, 21.88, P.canvas, { rough: 0.9 });
-  const cabRed = carCoat(P.truckRed);   // (a vehicle's body says it is a car's coat: scene/carShapes.ts)
+  const cabRed = carCoat(P.truckRed);   // (a vehicle's body says it is a car's coat: lib/carShapes.ts)
   slab(18.6, 0.45, 19.7, 20.0, 1.25, 21.7, cabRed, { rough: 0.5 }); slab(18.7, 1.25, 19.78, 19.9, 1.86, 21.62, P.glassDark, { rough: 0.2 }); slab(18.62, 1.86, 19.72, 19.98, 1.9, 21.68, cabRed, { rough: 0.5 });
   for (const x of [15.0, 17.6, 19.4]) for (const z of [19.75, 21.6]) add({ c: [x, 0.3, z], h: [0.36, 0.3, 0.14], ...M.rubber });
   for (const x of [14.9, 15.8, 16.7, 17.6]) slab(x, 2.5, 19.5, x + 0.08, 2.57, 21.88, P.woodGrey, { rough: 0.8 });                // the tilt's hoops
@@ -406,7 +406,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     wayouts: [{ name: 'the street\'s west end', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
-  // ---------------- LIVED-IN ROOMS (src/scene/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
   //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
   //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------

@@ -80,14 +80,14 @@
 // watch's waits; the tripwire retired; the whole post rebuilt in the GWOT look kit on the same wall lines, blockers and lights.
 //
 // LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. rust/game_rules/src/needs NEED_SPOTS and
-// rust/game_rules/src/qrf QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
+// rust/game_rules/src/qrf QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night); nobody has looked at it on a GPU.
 import type { Vec3 } from '../../src/math/vec';
-import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { SurfacesData } from '../../src/scene/levelData';
+import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
-import { officeKit, normalize3, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
+import { officeKit, normalize3, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from './lib/gwotKit';
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -515,7 +515,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('bunk');
   K.monitor(22.95, 18.18, Math.PI, false, 0.4, true, true);
 
-  // ---------------- LIVED-IN ROOMS (src/scene/lived.ts — one switch; off = the post as it was) ----------------
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts — one switch; off = the post as it was) ----------------
   // What makes each room of the post ITS room, as the office's rooms are: a use you can name from above, a thing only that room has, the clutter of that use, its own
   // floor piece, something to shove. Every box below is in group 'lived.<room>' and every prop is named 'lived.<room>.<n>', and they are the LAST boxes / props of the
   // level (tools/levels/export.ts holds it). Nothing above is moved. Rules kept: nothing solid within 1.1 m of a door's line, on an authored point, on a patrol leg or

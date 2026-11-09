@@ -1,15 +1,15 @@
 // The level the game RUNS: the runtime types (Level — Box[] with bit flags and array indices, LightDef[], PropDef[], doors, routes, plans…) every game
-// module imports from here, and buildLevel(), which is now a LOADER: the office is data (levels/office.json, schema in scene/levelData.ts) bundled into
-// the build by this import and turned into a Level by scene/levelLoad.ts loadLevel(). The procedural code that used to BE this file lives on as the legacy
-// generator (scene/officeGen.ts) that tools/level-export.ts regenerates the JSON from. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
-import { Vec3, DEG } from '../math/vec';
-import type { LightDef } from '../render/lights';
-import type { Box } from './boxes';
-import type { MarkingDef } from './markings';
+// module imports from here, and buildLevel(), which is now a LOADER: the office is data (levels/office.json, schema in levelData.ts) bundled into
+// the build by this import and turned into a Level by levelLoad.ts loadLevel(). The procedural code that used to BE this file lives on as the legacy
+// generator (officeGen.ts) that tools/level-export.ts regenerates the JSON from. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
+import { Vec3, DEG } from '../../../src/math/vec';
+import type { LightDef } from '../../../src/render/lights';
+import type { Box } from '../../../src/scene/boxes';
+import type { MarkingDef } from '../../../src/scene/markings';
 import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
-import officeData from '../../levels/office.json' with { type: 'json' };
-import type { LevelScenarios } from './scenarios';
+import officeData from '../../../levels/office.json' with { type: 'json' };
+import type { LevelScenarios } from '../../../src/scene/scenarios';
 import type { WeaponId } from './weaponIds';
 
 export type { LightDef };
@@ -117,7 +117,7 @@ export type DeviceDef =
  *  = slow cycling (s, on-fraction, offset; absent = steady); `mains` (absent = true): the air handler is on the breaker — the vents spin down in a blackout.
  *  ONE field: it moves the GPU particles (paper trembles and slides under a diffuser, dust drifts) and forces the smoke solver's air (a plume under a vent bends),
  *  so the guards' smoke sight lines follow it for free. */
-/** an authored volume at run time (scene/levelData.ts VolumeData: id → name; an oriented box — centre, half-extents, yaw — of a kind) */
+/** an authored volume at run time (levelData.ts VolumeData: id → name; an oriented box — centre, half-extents, yaw — of a kind) */
 export interface VolumeDef { name: string; kind: 'hide' | 'utility' | 'trigger'; c: Vec3; h: Vec3; yaw?: number; }
 /** a named mark at run time (a place + a facing) */
 export interface MarkDef { name: string; pos: Vec3; yaw?: number; }
@@ -125,7 +125,7 @@ export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; sp
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box rust/game_rules/src/props makes of it. */
-export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('./boxes').DoesWord; }
+export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('../../../src/scene/boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('../../../src/scene/boxes').DoesWord; }
 /** Loose furniture handed to the physics layer (rust/game_rules/src/props) instead of `boxes`: a rigid group of parts standing on the floor at (x, z) with
  *  heading `yaw`, its collision footprint (half extents of the local XZ rectangle about the origin), overall height and mass (kg). */
 export interface PropDef { kind: PropKind; name: string; x: number; z: number; yaw: number; parts: PropPart[]; half: [number, number]; height: number; mass: number; }

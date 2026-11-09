@@ -693,7 +693,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are not `live`), only on the office's plain solo night. NOW a level has a team only where its file says so: WHY this place has one (a sentence, refused
   if absent), the radio's words for the place and the team, one to three WAYS (four muster marks out of sight, a four-man fan inside, an optional door
   they throw), `men` and `eta` as ranges, optional outside posts for the second lift, optional `sweep` places. WHICH LEVELS, and why: the office (its
-  block is the old constant, mark for mark: `levels/office.scenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
+  block is the old constant, mark for mark: `tools/levels/lib/officeScenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
   the main gate or the impound gate), `bazaar` (a street under curfew; the patrol comes up the street's open end or by either gate), `crossing` (a
   border company's duty section, by either yard gate on the house's side). LEFT WITHOUT, ON PURPOSE: `quiet-relay` (a hilltop: nobody is within reach,
   and its wired spot already brings its own men), `vault` (private hired guards who call nobody), `lights-out` (its one idea is the mains), `quiet-yard`

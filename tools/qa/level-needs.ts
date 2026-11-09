@@ -47,7 +47,7 @@
 import { resolve } from 'node:path';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { ROOT } from './here.ts';
-import { fitPropFootprint } from '../../src/scene/levelLoad.ts';
+import { fitPropFootprint } from '../levels/lib/levelLoad.ts';
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -151,7 +151,7 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
   const paintOf = (b: Box): number => { const m = b.material ? L.materials?.[b.material] : undefined, a = b.albedo ?? m?.albedo ?? [0.5, 0.5, 0.5], r = b.rough ?? m?.rough ?? 1, key = `${b.material ?? ''}|${a.join(',')}|${r}`;
     let k = ids.get(key); if (k === undefined) { ids.set(key, k = paints.length); paints.push({ name: b.material ?? `a paint of its own (${a.map(n => n.toFixed(2)).join(' ')})`, v: lum(a), r, hue: a.map(n => n / Math.max(a[0] + a[1] + a[2], 1e-6)) }); } return k; };
   const reads = (p: number, q: number) => p !== q && (p < 0 || q < 0 || Math.max(paints[p].v, paints[q].v) >= G.dark) && (p < 0 || q < 0 || Math.abs(paints[p].v - paints[q].v) / Math.max(paints[p].v, paints[q].v, 1e-6) >= G.step - 1e-9 || Math.abs(paints[p].r - paints[q].r) >= G.sheen - 1e-9 || paints[p].hue.some((h, n) => Math.abs(h - paints[q].hue[n]) >= G.hue - 1e-9));
-  /** every square whose middle lies in the box's footprint grown by `pad` (a box turned about the upright axis: scene/levelKit.ts frameAt) */
+  /** every square whose middle lies in the box's footprint grown by `pad` (a box turned about the upright axis: tools/levels/lib/levelKit.ts frameAt) */
   const over = (b: Box, pad: number, f: (k: number) => void) => { const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), hx = b.h[0] + pad, hz = b.h[2] + pad, r = Math.hypot(hx, hz);
     const i0 = Math.max(0, Math.floor((b.c[0] - r - X0) / G.cell)), i1 = Math.min(W - 1, Math.floor((b.c[0] + r - X0) / G.cell)), j0 = Math.max(0, Math.floor((b.c[2] - r - Z0) / G.cell)), j1 = Math.min(H - 1, Math.floor((b.c[2] + r - Z0) / G.cell));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const dx = X0 + (i + 0.5) * G.cell - b.c[0], dz = Z0 + (j + 0.5) * G.cell - b.c[2];
@@ -243,7 +243,7 @@ function planWalls(L: LevelFile) { const K = LEAK;
   for (const d of L.doors) if (!d.angle) doors.push({ x: d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, z: d.hinge[1] + Math.sin(d.closedDir) * d.width / 2, hx: d.width / 2, hz: 0.03, cs: Math.cos(-d.closedDir), sn: Math.sin(-d.closedDir), r: d.width / 2 + 0.03 });
   walls.push(...doors); whole.push(...doors);
   const roofs: Plan[] = L.boxes.filter(b => !b.rot && !has(b, 'Glass') && b.c[1] - b.h[1] >= WORLD.ceilingY - 0.4 && Math.min(b.h[0], b.h[2]) >= 0.45).map(b => plan(b));
-  /** a point in the box's own frame (a box turned about the upright axis: scene/levelKit.ts frameAt) */
+  /** a point in the box's own frame (a box turned about the upright axis: tools/levels/lib/levelKit.ts frameAt) */
   const local = (w: Plan, x: number, z: number): [number, number] => [w.cs * (x - w.x) - w.sn * (z - w.z), w.sn * (x - w.x) + w.cs * (z - w.z)];
   const solid = whole.slice(0, whole.length - doors.length);
   const within = (ws: Plan[], x: number, z: number) => ws.some(w => { const [lx, lz] = local(w, x, z); return Math.abs(lx) <= w.hx && Math.abs(lz) <= w.hz; });

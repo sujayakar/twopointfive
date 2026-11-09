@@ -19,9 +19,9 @@
 // the moment it goes, the nearest has it back in within seconds, and while it is out the emergency beacon on the north wall sweeps the dark north strip.
 // The page is rebuild/missions/new/vault.md in the project files.
 import type { QuietData } from '../../src/scene/scenarios';
-import type { DeviceDef } from '../../src/scene/level';
+import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { livedTail } from './livedKit';
 
@@ -176,7 +176,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The house's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND: from above the yard was one sheet of dirt
 // and the land round the wall one sheet of dust, and at night the ground is where the three lamps' pools and the moon show. So this is what a household
 // leaves on its ground, every piece the kit's own by name: the carts' ruts on the track, the water that runs out under the wall from the

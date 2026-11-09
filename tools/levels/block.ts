@@ -90,11 +90,11 @@
 // one stops at the racks, short of the turn). The mess has none: no cable has business there. Every fifth plate along the floor's length is a lifting plate
 // in the dado's paint. Drum rings in the store. No letters, no numbers, no lines, no bays, no tiles.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { Level, LevelDoorDef } from './lib/level';
 import type { KitViewWay, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
-import * as MD from '../../src/scene/markingDefaults';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
@@ -189,7 +189,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   wallX(4, 3.88, 36.12, 0.24, ext);                                                                              // north: blind
   wallZ(4, 4, 24, 0.24, ext, [{ a: 10.5, b: 11.7, y0: 0, y1: 2.2 }, { a: 16.5, b: 19.5, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }]);
   // the west wall's long window, on the side nobody comes from: its shutters are folded back on the wall and the winter's wood is stacked under the sill
-  // (the library's pieces for a wall's face — src/scene/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
+  // (the library's pieces for a wall's face — lib/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
   // this pane and no mark's line crosses this wall (rust/game_start levels sight), so one leaf was first laid shut; the scripted team
   // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
   // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
@@ -203,7 +203,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- interior partitions (t=0.12), all solid ----------------
   grp('walls.interior');
   const iw = C.wall;
-  // (every doorway is cut 0.2 m before a whole metre and 1.2 m wide: scene/doorSize.ts hangs the real door in it on a walk-grid cell)
+  // (every doorway is cut 0.2 m before a whole metre and 1.2 m wide: lib/doorSize.ts hangs the real door in it on a walk-grid cell)
   // the loading hall | everything else, x=11: the hall's mouth open wall to wall, the tool crib's door (crib_to_loading, z 20.8..22.0)
   wallZ(11, 4.12, 23.88, 0.12, iw, [{ a: 12.06, b: 15.2, y0: 0, y1: 2.6 }, { a: 20.8, b: 22.0 }]);
   // the hall's north wall z=12: the mess (m_s), the kitchen (kitchen_to_hall), the battery room (battery_to_hall), the frame room (frame_to_hall), the comms room (b_s)
@@ -367,13 +367,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in group lived.<room>, every prop lived.<room>.<thing>; nothing above this line changed)
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in group lived.<room>, every prop lived.<room>.<thing>; nothing above this line changed)
   // A district telephone exchange. One family: octagon drums, ladders, grids of cells, coloured cords. Safety yellow is the loading hall's alone.
   {
     const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), A = P.at(0, 0, 0), Q = Math.PI / 4;
-    // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over src/scene/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
+    // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over lib/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
     // (two squares s across; from 0.37 m the kit makes it one round box), `oct8` a larger one, s long across its middle before the kit's radius takes it
-    // (src/scene/gwotKit.ts ROUND_FROM)
+    // (lib/gwotKit.ts ROUND_FROM)
     const oct = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => A.round(x, y0, z, s / 1.86, h, col);
     // (a LOOSE thing's body: a prop's part cannot say it is round, so these two stay parts written by hand — the two squares, the octagon stepped 3 mm)
     const octParts = (y0: number, s: number, h: number, col: Vec3) => [P.part(0, y0, 0, s, h, s, col), P.part(0, y0, 0, s, h - 0.004, s, col, Q)];

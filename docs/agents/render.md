@@ -3196,7 +3196,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
 - **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
-  until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
+  until a level says it. `tools/levels/lib/levelData.ts meta.kept`, `tools/levels/lib/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
   `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
   `lookSurface`'s `left` / `wild`, `lookMarkSoft`, `shaders/markings.wgsl markSoft`, `markTone`; the address's `&kept=<0 to 1>` is the word
   for a visit). Asked by the level pass: an office's half-metre wall numerals drew "blotched and broken, like chipped paint or dirt",
@@ -3852,7 +3852,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just needs a lot of iteration. right
   now it does look a bit procedural"). The answer tried was AUTHORING, not another layer of noise: one wall gone over piece by piece on the look page
   (`src/scene/frontTry.ts`, with `?front=0` and a panel button). On 11-05 the trial went into the kit and the level's file, as its bullet said it
-  should: `src/scene/gwotKit.ts` has the pieces (what is done to a wall's face: `boards`, `shutters`, `windowBlanket`, `wallPatch`, `spout`,
+  should: `tools/levels/lib/gwotKit.ts` has the pieces (what is done to a wall's face: `boards`, `shutters`, `windowBlanket`, `wallPatch`, `spout`,
   `beamEnds`, `splitWood`, `ladder`; and `plankBench`, `pot`, `bricks`), `tools/levels/pass.ts` lays them, and `frontTry.ts`, its address word and its
   button are gone. `docs/agents/levels.md` ("The pass's dressing is the kit's") has the rule that came with it: a window a defender watches through
   keeps its open form. KEPT FROM THE TRIAL: what closes a window is a REAL box, as is what stands on the ground and the beam ends over every head;
@@ -3864,7 +3864,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   drum on its side and the loose tyre are the kit's own `drum`, `drumDown` and `tyres`, `tools/levels/pass.ts` lays them, and `passTry.ts`, its word
   and its button are gone (`docs/agents/levels.md`, "The pass's dressing is the kit's"). A THING LYING ROUND IS ONE BOX THAT SAYS `round: 1`
   (`gwotKit.ts lying`), not a hand-cut prism: with shapes off it is the plain box, and what walks meets the box either way. THE SNOW ALONG IT is laid by
-  the one rule for a bowed top (`scene/carShapes.ts layOn`, which takes a lying round for a bowed top), no longer a hand-fitted arc each time.
+  the one rule for a bowed top (`tools/levels/lib/carShapes.ts layOn`, which takes a lying round for a bowed top), no longer a hand-fitted arc each time.
   TRIED AND TAKEN OUT in the trial, still true: the file's 93 low heaps of snow with their tops cut to arcs (the page's snow surface already draws a
   smooth hill over each), and discs of snow on the drums' lids (a round's own end gets a drum's dark rim and no snow finish).
 - **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
@@ -4042,7 +4042,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   no frame with a word in any level file; no word kept on a box a look's file repainted; the editor's paint drops it. NOT YET: a cut core
   takes its box's word; the lived kit, the compound's stucco and door leaves and frames say theirs; a row on the look panel; the editor
   shows no word. Seen on the software adapter (the showroom and the office); never on a GPU by us: the maintainer has it on the preview.
-- **A THING IS MADE OF WHAT IT SAYS: NOTHING READS A MATERIAL OFF A COLOUR ANY MORE** (11-04; `src/scene/stuff.ts`, `scene/levelLoad.ts`,
+- **A THING IS MADE OF WHAT IT SAYS: NOTHING READS A MATERIAL OFF A COLOUR ANY MORE** (11-04; `src/scene/stuff.ts`, `tools/levels/lib/levelLoad.ts`,
   `render/gbuffer.ts lookWordOf`; the maintainer: "remove as many hacks or special cases as possible"). This ENDS the three bullets above it
   (the name table's first slice, the box's own word, `lookStuff` and the generated `lookClass`): they are the record of how it came about.
   THE RULE, WHOLE: a level file's material ROW says `stuff`; a box or a prop's part is made of its own word, else its row's, else it is plain

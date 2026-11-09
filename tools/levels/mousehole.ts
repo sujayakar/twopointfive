@@ -11,7 +11,7 @@
 //               fire exit on the east side is steel, its lock on the INSIDE face: from the duty room it wants the key, from the east side it opens to a hand
 //               (measured: a door charge is refused on steel, and the squad at the second start shoves it and goes in behind the hatch guns).
 //   corridor    18 × 3.8 m, lit end to end, the front door off the porch at its west end: three room doors on its north side, the post's door and hatch across its east end.
-// Built ONLY from the old demo's kit (scene/levelKit.ts). The building stands inside the rectangle the office's building stood in (x 4‥36, z 4‥24), so the
+// Built ONLY from the old demo's kit (lib/levelKit.ts). The building stands inside the rectangle the office's building stood in (x 4‥36, z 4‥24), so the
 // constants that still assume that footprint (weather's INTERIOR) treat it as indoors; what is underfoot is the file's own `surfaces` block (the end of build()).
 // Plan, +x east, +z south, metres:
 //
@@ -33,11 +33,11 @@
 // a standing square in front of each room's door, and a teal cross on the porch. No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
+import type { Level } from './lib/level';
 import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
-import { gwotKit, gwotOfKit, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { KERB_GREY } from '../../src/scene/stuff';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
@@ -287,10 +287,10 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
   // all out with the switch off, and then this is the clinic above, box for box). The three rooms and the duty room are furnished by the level itself; what
   // had nothing was the ground round the building, which from above is most of the picture. So the lived things are the clinic's OUTSIDE, laid with the look's
-  // own kit (src/scene/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
+  // own kit (lib/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
   // sheets in, the side its generator is fuelled on, the lot the patients wait on.
   // Rules kept: nothing solid within 1.1 m of a door's line, nothing on or 0.45 m beside a start or a mark, and NOTHING BY A WALL A CHARGE IS FOR — every
   // outer wall of the clinic takes one, wherever it is asked, and the man who sets it and the four who stand off along it want the ground at its foot: so

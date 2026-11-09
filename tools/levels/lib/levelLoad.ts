@@ -5,13 +5,13 @@
 // Both preserve ARRAY ORDER exactly — data.boxes[i] ⇄ level.boxes[i] ⇄ world.statics[i] — and resolve every cross reference (a light's fixture, a
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
-import type { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from './boxes';
-import { DOES_DEFAULT, doesSaid } from './materials';
+import type { Vec3 } from '../../../src/math/vec';
+import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
+import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
-import { copyMarkings } from './markings';
-import { formOf, type BoxShape, type ShapePiece } from './shapes';
+import { copyMarkings } from '../../../src/scene/markings';
+import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
 import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
 import { DESTRUCTION, DRESS_GROUP } from './dressing';   // (no imports of its own: the switch + the dressing group's name)
 
@@ -65,7 +65,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const boxIndex = new Map<string, number>();
   // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
   // box keeps its index and the level is the one it was before there was any)
-  // (the LIVED things — what furnishes a room as the office's rooms are furnished, scene/lived.ts: boxes in group 'lived.<room>', props / lights / fixtures whose id
+  // (the LIVED things — what furnishes a room as the office's rooms are furnished, lived.ts: boxes in group 'lived.<room>', props / lights / fixtures whose id
   // starts 'lived.' — are left out the same way with their switch off: nothing else moves, and nothing that is kept may name one)
   const lived = opts.lived ?? LIVED.on, dressed = opts.dressing ?? DESTRUCTION.on;
   const fileBoxes = lived && dressed ? data.boxes : data.boxes.filter(b => (dressed || b.group !== DRESS_GROUP) && (lived || !isLived(b.group)));

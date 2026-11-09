@@ -3,7 +3,7 @@
 // a box: what was curved on the look page was cut by code that went over one level after it loaded. Here the level file says it. A box may carry a SHAPE:
 // how it stands when shapes are on.
 //
-// THE DATA NAMES THE SHAPE, never the engine's record (scene/levelData.ts BoxData.shape, scene/levelLoad.ts reads and writes it). Everything in it is said in
+// THE DATA NAMES THE SHAPE, never the engine's record (tools/levels/lib/levelData.ts BoxData.shape, tools/levels/lib/levelLoad.ts reads and writes it). Everything in it is said in
 // the box's OWN frame (metres from its centre along its own axes), so a box that is moved, turned or copied takes its shape along:
 //   round   1 | 3            the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank): the box is square across that axis, or
 //                            within 15 hundredths of it (the round's radius is then the smaller half, and the longer way keeps the box's own two faces: past that the
@@ -98,7 +98,7 @@ function planesOf(h: Vec3, f: ShapeForm): CutPlane[] {
   return more;
 }
 
-/** what is wrong with a shape said of a box of half size h (the level lint, scene/levelData.ts): nothing = []. `pieceKeys` = the keys a piece may carry
+/** what is wrong with a shape said of a box of half size h (the level lint, tools/levels/lib/levelData.ts): nothing = []. `pieceKeys` = the keys a piece may carry
  *  beside its form (its place, size, turn, paint and finish as a box says them: the lint's own list, so a piece is painted by the one reader a box is).
  *  `piece` = this IS a piece of that box. */
 export function shapeErrors(s: unknown, h: Vec3, pieceKeys: readonly string[], piece = false): string[] {

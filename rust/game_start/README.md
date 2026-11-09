@@ -52,7 +52,7 @@ drawn, so each test moves a mark, a range, a door or a landing point by the seed
 
 ### The scene (`src/scene.rs`)
 
-Metres, in the world a level must fit (40 by 28; x east, z south). The pieces are the level kit's own sizes (`src/scene/levelKit.ts`): a wall
+Metres, in the world a level must fit (40 by 28; x east, z south). The pieces are the level kit's own sizes (`tools/levels/lib/levelKit.ts`): a wall
 12 cm thick and 3 m high, a real door in a 1.2 m slot with its frame, a bare bulb on its flex.
 
 | call | what it says |
@@ -116,7 +116,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | the block of `rust/sim` the game stands in, zeroed under the layout's word | `stand.rs` |
 | the character: skeleton, skin, clips, the cast's meshes and variants | `gltf.rs`: `src/anim/gltf.ts` in Rust, from the `.gltf` files' bytes |
 | the host: an empty box world and light set, the picture's settings | the game's `box_world_new`; `settings.rs` (a copy of `defaultSettings()`) |
-| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `src/scene/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
+| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `tools/levels/lib/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
 | thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set | `passes.rs` (`thin.ts`, `bars.ts`, `shapes.ts`); the game's `cut_record`, `box_world_add_static`, `light_from_def` |
 | the die, seeded before the men are made | the game's `sim_dice_new` |
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |

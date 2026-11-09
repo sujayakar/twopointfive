@@ -20,9 +20,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const { OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
-const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { validateLevelData, canonicalLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { OFFICE_DATA } = await import(`${ROOT}/tools/levels/lib/level.ts`);
+const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
+const { validateLevelData, canonicalLevelData, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { makeBox, matWord, ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { PRESETS, QUALITY_NAMES, rtVeto, Quality } = await import(`${ROOT}/src/ui/quality.ts`);
 const { FrameFlags, FRAME_BYTES, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
@@ -44,7 +44,7 @@ function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look
 export async function materialsFinish() {
   console.log('\n=== materials-finish: the finish through the level file, the loader both ways, the validator, the GPU word ===');
   const D = OFFICE_DATA; const mats = D.materials;
-  // THE FILE CARRIES THE OFFICE'S LIVED TIER (its hand pass's drawn-only things at the tail: scene/lived.ts). This probe holds the FILE against what the loader
+  // THE FILE CARRIES THE OFFICE'S LIVED TIER (its hand pass's drawn-only things at the tail: tools/levels/lib/lived.ts). This probe holds the FILE against what the loader
   // makes of it, so it loads the whole file: loaded without that tier, the round trip below compared 845 boxes with 783
   const load = (d: Parameters<typeof loadLevel>[0]) => loadLevel(d, { lived: true });
   const withRough = Object.entries(mats).filter(([, m]: any) => m.rough !== undefined).length;

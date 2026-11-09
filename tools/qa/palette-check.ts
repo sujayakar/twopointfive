@@ -1,5 +1,5 @@
 // A LEVEL IN OTHER CLOTHES — the check behind the three things that let a level wear a palette that is not the kit's own:
-//   · the kit is handed its paints by its host (src/scene/gwotKit.ts GwotHost.paints; src/scene/gwotPalette.ts paintsOf), so a piece is written once;
+//   · the kit is handed its paints by its host (tools/levels/lib/gwotKit.ts GwotHost.paints; src/scene/gwotPalette.ts paintsOf), so a piece is written once;
 //   · a look file's skin is handed the same (tools/levels/gwotSkin.ts Skin.of);
 //   · a file keeps only the rows of such a palette that something in it wears (tools/levels/export.ts PALETTE; tools/levels/wornRows.ts).
 // No level wears a second palette today and no palette of one is in the build: the check makes a small one of its own, with names nothing else has.
@@ -13,12 +13,12 @@ import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, paintsOf, type GwotMat, type KitPaints } from '../../src/scene/gwotPalette';
 import { sayPaint, type BoxStuff } from '../../src/scene/stuff';
-import { officeKit } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { watchPieces } from '../../src/scene/library';
-import { carLampsIn } from '../../src/scene/carLamps';
-import { parseLevelData, type LevelData } from '../../src/scene/levelData';
-import { loadLevel } from '../../src/scene/levelLoad';
+import { officeKit } from '../levels/lib/officeGen';
+import { gwotKit, gwotOfOffice } from '../levels/lib/gwotKit';
+import { watchPieces } from '../levels/lib/library';
+import { carLampsIn } from '../levels/lib/carLamps';
+import { parseLevelData, type LevelData } from '../levels/lib/levelData';
+import { loadLevel } from '../levels/lib/levelLoad';
 import { skinLevel } from '../levels/gwotSkin';
 import { floorFiles, floorLevels } from '../levels/floors';
 import { dropUnworn } from '../levels/wornRows';

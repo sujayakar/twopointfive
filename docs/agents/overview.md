@@ -285,7 +285,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   `inhand-page.cjs`. With them, code only they called: the rig's "copy constants" (`rigSource`, `assignRig`, `clearAdjs`,
   `RIG_DEFAULTS`, `cloneRig`; `RIG`'s numbers are edited in `rigProps.ts`), the debugger panel's number rows (`Panel.number` /
   `numbers`), `hingeOnCell`, `GLYPH_NAMES`.
-  KEPT, moved: the level lint is `src/scene/lint.ts` (`tools/qa/level-lint.ts`; its check is `level-lint` in the `level` family, with
+  KEPT, moved: the level lint is `tools/levels/lib/lint.ts` (`tools/qa/level-lint.ts`; its check is `level-lint` in the `level` family, with
   `devices-lint` for the devices' findings); the dev server's `/levels/` answers reads only, to whoever the server answers
   (`?levelFile=` fetches through it; check `level-serve`); the page's still helper is `src/ui/domshot.ts`. The rig's node list
   (`rigProps.ts RigNodeMeta`) stays: the Team & kit figure reads it (`ui/kitFigure.ts`).

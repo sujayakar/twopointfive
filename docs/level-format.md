@@ -3,15 +3,15 @@
 The office is **data**: `levels/office.json`. This note is for whoever edits it by hand or from a generator, and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
 
 ```
-levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──▶ levelLoad.ts loadLevel() ──▶ Level ──▶ Game / Engine
+levels/office.json ──import──▶ tools/levels/lib/level.ts buildLevel() ──▶ levelLoad.ts loadLevel() ──▶ Level ──▶ Game / Engine
         ▲                                                                                        │
         └──── tools/level-export.ts ◀── levelLoad.ts levelToData() ◀── officeGen.ts buildOfficeProcedural()  (LEGACY generator)
 ```
 
-* **Schema + validator + serializer**: `src/scene/levelData.ts` (`LevelData`, `validateLevelData`, `serializeLevelData`,
+* **Schema + validator + serializer**: `tools/levels/lib/levelData.ts` (`LevelData`, `validateLevelData`, `serializeLevelData`,
   `parseLevelData`, `canonicalLevelData`, `levelDataDigest`, `structuralDiff`, `indexLevelData`, `freshId`, flag name ⇄ bit helpers).
-* **Conversions**: `src/scene/levelLoad.ts` (`loadLevel(data) → Level`, `levelToData(level, opts) → LevelData`, `fitPropFootprint`).
-* **The game's entry point**: `src/scene/level.ts` `buildLevel()` = `loadLevel(OFFICE_DATA)`; `OFFICE_DATA` is the bundled JSON
+* **Conversions**: `tools/levels/lib/levelLoad.ts` (`loadLevel(data) → Level`, `levelToData(level, opts) → LevelData`, `fitPropFootprint`).
+* **The game's entry point**: `tools/levels/lib/level.ts` `buildLevel()` = `loadLevel(OFFICE_DATA)`; `OFFICE_DATA` is the bundled JSON
   (a plain `import … from '../../levels/office.json'` — Bun inlines it into the JS chunk, so the playable Artifact, the dev server
   and the headless harness all get it with no extra asset and nothing to fetch).
 * **Regenerate**: `bun run tools/level-export.ts` (`--check` = write nothing, exit 1 if the file is stale vs the generator).
@@ -25,7 +25,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 half height `h[1]`. A drum, a tyre, a stove, the oven. It is not a shape: a shape is cut from a box that still walks as the plain box, and a round thing does not.
 
 Refused by the lint: `h[0]` that differs from `h[2]`, and `yaw`, `rot`, `flags` or `shape` on the same box. Marks are drawn as they are written: a band on each side
-face, a disc on the lid. A drawn-only round thing is plain boxes, since nothing meets it (`drawnRoundSlabs`, `src/scene/gwotKit.ts`).
+face, a disc on the lid. A drawn-only round thing is plain boxes, since nothing meets it (`drawnRoundSlabs`, `tools/levels/lib/gwotKit.ts`).
 
 Version 2 is the version that says this. A file of version 1 wrote a round thing as four slabs through one centre, 45 degrees apart, and the loader refuses it by its
 version: `bun run tools/levels/round-convert.ts <file>` rewrites it. Unnamed boxes are named by their place in the file, so a generator that names one (`box_0132`, a kit
@@ -71,7 +71,7 @@ the box world is copied into, and says how near each level is.
 | `chokepoints[]` | `{ id, name?, floor?, pos, yaw }` | lockdown posts |
 | `civilians[]` | `{ id, name, kind cleaner\|worker, floor?, tint, tint2, points[], wait[], tasks[], face[], notes? }` | the civilians on the floor (`rust/game_rules/src/civilians`) — see *Civilians* below; optional block, absent = nobody but the shift |
 | `volumes[]` | `{ id, kind hide\|utility\|trigger, floor?, c, h, yaw?, notes? }` | none yet |
-| `marks[]` | `{ id, pos, yaw? }` | optional: a named place on the floor, where a person stands to use a thing. Read by name only: the end of a `scenarios.walked` way (`rust/game_rules/src/scene_ways`, looked for after a door of the name) and a level script's place (`rust/game_rules/src/director`). No rule of play reads one. Absent = none. The office names 30 (its builder takes them from `levels/office.scenarios.ts OFFICE_MARKS`). A generator returns `marks` on its Level (`{ name, pos, yaw? }`) and the exporter writes them. `walked-check` is red on a mark the walk grid calls shut, `probes.ts ways` on a name that is two things |
+| `marks[]` | `{ id, pos, yaw? }` | optional: a named place on the floor, where a person stands to use a thing. Read by name only: the end of a `scenarios.walked` way (`rust/game_rules/src/scene_ways`, looked for after a door of the name) and a level script's place (`rust/game_rules/src/director`). No rule of play reads one. Absent = none. The office names 30 (its builder takes them from `tools/levels/lib/officeScenarios.ts OFFICE_MARKS`). A generator returns `marks` on its Level (`{ name, pos, yaw? }`) and the exporter writes them. `walked-check` is red on a mark the walk grid calls shut, `probes.ts ways` on a name that is two things |
 | `devices[]` | camera / keypad / laser union | the level-design devices (`rust/game_rules/src/devices`) — see *Devices* below |
 | `vents[]?` | `{ id, floor?, pos, dir, speed, spread, reach, size?, period?, duty?, phase?, mains?, notes? }` | HVAC supply vents (`rust/game_rules/src/wind`) — see *Vents* below; optional block, absent = still air indoors |
 | `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames?, walked? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here |
@@ -80,7 +80,7 @@ the box world is copied into, and says how near each level is.
 | `breaker` | `{ pos, panel, led, fumble? }` | box ids; `fumble` = seconds a man sent to the tripped panel works at it before the mains come back (absent 2.2; 7 at most: a room fight's lever party gives the panel up at 8) |
 | `beacons[]` | `{ id, pos, box }` | `box` = the dome, which MUST be a switchable's box (game.ts slaves the beam to it) |
 | `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the level's daytime variant (`lighting.ts setDaylight`, `__daylight`; the editor's 'day' view) |
-| `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `scene/level.ts`) + `id`; `door` by id |
+| `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `tools/levels/lib/level.ts`) + `id`; `door` by id |
 
 Ids: `box_NNNN` for anonymous boxes, semantic ones where something points at the box (`fix_desk_lamp`, `sw_vending`,
 `sw_rack5_leds_3`, `breaker_panel`, `breaker_led`, `sw_beacon0`); props `chair12`; everything else its old name. New entities:
@@ -182,7 +182,7 @@ strongest, 2.8 m/s) — all mains, all ≥ 1.7 m off any panel or beacon and on 
 
 What the three playtest scenarios need from the level they are played on is DATA that travels with the level: a top-level `scenarios` block (types and field
 comments in `src/scene/scenarios.ts`). `rust/game_rules/src/roomclear`, `nightbreach.ts`, `rescue.ts` and `rescueflow.ts` read `level.scenarios` and nothing else, so a level
-that carries a block is a level they run on. The OFFICE's file carries its block like any other: its data is written in `levels/office.scenarios.ts` (the tables that used to live in the game
+that carries a block is a level they run on. The OFFICE's file carries its block like any other: its data is written in `tools/levels/lib/officeScenarios.ts` (the tables that used to live in the game
 code, number for number), which is the office generator's input, and `tools/level-export.ts` writes it into `office.json` and `office-relief.json`. No
 code attaches anything to a level by its name.
 
@@ -312,7 +312,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   `roomLights` (0‥1 on the level's interior lights; 0 switches their groups off) · `hide [ … ]` (box ids, or box groups whole, out of THIS picture — WRITTEN, it wins outright: those boxes and nothing else, `[]` = nothing; NOT written, what the plan finds in the camera's way goes, and one that is not a thing — a wall, a box carrying a door or a lamp — is a plan problem. A thing's LOOSE PROPS go with it: a name here is also a prop's id, or the group a prop is OF — its id is the group's name and a dotted tail, `lived.forecourt.stool0` of `lived.forecourt` — and with no `hide` a prop of a sunk box's group within 0.8 m of that box goes too; the plan's `hiddenProps`. A name of something the stand left out of the file — a `lived.*` group under `?lived=0` — is no problem there: it names nothing) · `hideMore [ … ]` (ONE THING MORE, the plan's own list kept: the names here go AS WELL — with what the plan finds in the camera's way where no `hide` is written, with the written `hide` where one is; a piece of the building named here is your word that it goes, and is no plan problem. Write this, not `hide`, when all you want is the plan's list and one thing) ·
   `hidePaint [ … ]` (box groups of which only the paint on the ground goes: boxes under 1 cm half-height — a look file's floor decals, the painted
   marks). WHICH LEVELS CARRY A BLOCK is never written down here: `grep -l '"kitView"' levels/*.json` (the bundled office's is
-  `levels/office.scenarios.ts`), or the first line `bun run tools/qa/kitview-plan.ts --quiet` prints, which holds the slots to free floor.
+  `tools/levels/lib/officeScenarios.ts`), or the first line `bun run tools/qa/kitview-plan.ts --quiet` prints, which holds the slots to free floor.
   THE PLAN'S KEYS (`rust/game_start/src/kit_plan.rs`: every value below is MEASURED from the level's own boxes where the way does not write it, and a written one
   is taken as written; the picture is STAGED FROM THE PLAN — `rust/game_rules/src/kitstage/stage.rs` takes the places, the wall's face and top, the lamps, the
   camera, what is sunk out of the picture and the floor behind the anchor from it, on the game's own nav grid). The ANCHOR is `door`, or `span
@@ -401,24 +401,11 @@ The level editor and the page it lived on (the workbench: Level, Materials, Char
 using them: levels are made by the generators under `tools/levels/` and by hand in the JSON. The git history has all of it (`src/editor`,
 `src/viewer`, `src/workbench`, `VIEWER.md`, the `?level=local` boot off the editor's stash). What stayed:
 
-* the level lint: `src/scene/lint.ts`, `bun run tools/qa/level-lint.ts levels/<name>.json` (exit 1 on errors; `levels/<name>.lint.json` =
+* the level lint: `tools/levels/lib/lint.ts`, `bun run tools/qa/level-lint.ts levels/<name>.json` (exit 1 on errors; `levels/<name>.lint.json` =
   allowances), and the check `bun run tools/qa/probes.ts level-lint` (the clean office, planted faults, the command line);
 * the dev server's `/levels/`, read-only: the index and each file, which the game's `?levelFile=<name>.json` fetches (`tools/levels-api.ts`).
 
-## Merging a lane that edited the OLD `src/scene/level.ts`
-
-Lanes started before this landed edit the level where it used to live. Their INTERFACE hunks (top of `level.ts`) merge normally — the
-types are still there. Their hunks in the old `buildLevel()` BODY conflict (that code is `src/scene/officeGen.ts` now, verbatim, ~120
-lines higher up). Resolve by keeping this side's `level.ts`, then:
-
-```bash
-git diff <merge-base> <lane> -- src/scene/level.ts > /tmp/lane-level.diff      # their level.ts changes
-# apply the BODY hunks to the generator (same context lines, only offsets differ; --recount/-C1 if a hunk is stubborn, or by hand):
-sed 's#src/scene/level.ts#src/scene/officeGen.ts#g' /tmp/lane-level.diff | git apply --include=src/scene/officeGen.ts --reject -
-bun run tools/level-export.ts                 # regenerate levels/office.json from the merged generator
-bun run tools/qa/probes.ts level              # identity 0 diffs / validator / round trip — all PASS
-git add src/scene/officeGen.ts levels/office.json
-```
+## A new field
 
 The drill plans (`plans.roomClear[]`, `plans.breach`) are typed BY REFERENCE to `RoomClearPlan` / `BreachPlan` and handled generically
 (canonical order = known keys first, new ones after alphabetically; validation = the RoomClearPlan fields + "every leaf finite"), so a lane

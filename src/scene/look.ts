@@ -1,5 +1,5 @@
 // THE DEFAULT LOOK — 2010s GWOT (the levels goal: "lean into 2010s GWOT for the assets to just have something default"): mud-brick and render, dust and
-// gravel, rugs and cots and oil drums for the places (scene/gwotKit.ts is the kit, tools/levels/gwotSkin.ts dresses the loud levels' files in it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). The men's dress is LOOK ONLY:
+// gravel, rugs and cots and oil drums for the places (tools/levels/lib/gwotKit.ts is the kit, tools/levels/gwotSkin.ts dresses the loud levels' files in it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). The men's dress is LOOK ONLY:
 // no weapon number is touched and no dice are drawn by any of it. A level's paint is that level's file: a wall's colour is in the light that comes round a room, which
 // a man's eye reads (sim/glow.rs), so paint plays.
 // ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module; the PAGE turns it on at boot before the cast is
@@ -34,7 +34,7 @@ export function placeOfQuery(q: URLSearchParams): boolean {
   return false;
 }
 
-/** DOOR LEAVES per level (picture only; scene/leafPaint.ts paintLeaves): the paint of the outside leaves and, where a level has its own, of the inside ones — for
+/** DOOR LEAVES per level (picture only; tools/levels/lib/leafPaint.ts paintLeaves): the paint of the outside leaves and, where a level has its own, of the inside ones — for
  *  the levels whose accent is not one of the three paints paintLeaves counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
  *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here).
  *  `stuff` = WHAT THE LEAVES ARE MADE OF (Box.stuff): one word for every leaf, or one for the outside leaves and one for the inside ones. A row's colours are

@@ -1,11 +1,11 @@
 // The OFFICE's scenario data (src/scene/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
 // tables that lived in rust/game_rules/src/nightbreach, rust/game_rules/src/roomclear, rescue and rescueflow, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
-// else's: scene/officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
+// else's: officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
 // every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
 // Plain literals and type-only imports: nothing here is built from another module's exports.
-import type { Vec3 } from '../src/math/vec';
-import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData, WayHint } from '../src/scene/scenarios';
-import type { MarkDef } from '../src/scene/level';
+import type { Vec3 } from '../../../src/math/vec';
+import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData, WayHint } from '../../../src/scene/scenarios';
+import type { MarkDef } from './level';
 
 /** the night breach: Sam beside the pair on the breach plan's approach marks, in the cubicles' south aisle, facing east down it */
 const NIGHT_BREACH: NightBreachData = {
@@ -129,9 +129,9 @@ const RESPONSE: ResponseData = {
 /** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (rust/game_rules/src/doornames, WORDS.doors): their ids end in a bearing and the HUD has no
  *  compass, so each is named by what it is taken from, as another level's doors are */
 const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door' }, { door: 'breakroom_w', name: 'cubicles-side break room door' }];
-/** WHERE A PERSON STANDS TO USE EACH THING ON THE FLOOR, as named marks (scene/level.ts Level.marks; attached at load beside the scenarios). Nothing in
+/** WHERE A PERSON STANDS TO USE EACH THING ON THE FLOOR, as named marks (level.ts Level.marks; attached at load beside the scenarios). Nothing in
  *  play reads one: a mark is found by name, the Director alone does that, and the office has no script. They are the ends of the ways below. Each is on
- *  free floor a step off the thing it names. The sixteen desks are the four clusters of four (scene/officeGen.ts cubicleCluster: a cluster's middle,
+ *  free floor a step off the thing it names. The sixteen desks are the four clusters of four (officeGen.ts cubicleCluster: a cluster's middle,
  *  the desks 1.2 m either side of it, the chair 1.33 m out from its spine): the mark is the cell's mouth, a stride behind the chair. */
 export const DESK_CLUSTERS: [number, number][] = [[16.5, 15.2], [23.0, 15.2], [16.5, 20.6], [23.0, 20.6]];   // (the one writing of where the clusters stand: the generator builds them from this list)
 const DESKS: MarkDef[] = DESK_CLUSTERS.flatMap(([cx, cz], c) => ([[-1.2, -1], [1.2, -1], [-1.2, 1], [1.2, 1]] as const).map(([dx, out], i): MarkDef => ({ name: `desk ${c * 4 + i + 1}`, pos: [cx + dx, 0, cz + out * 1.95] })));
