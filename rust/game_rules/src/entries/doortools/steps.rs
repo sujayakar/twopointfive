@@ -195,8 +195,6 @@ pub(super) fn door_tools_step(g: &mut crate::game::Game, op: DoorOpId) {
         Phase::Place => step_place(g, op, &cx),
         Phase::Standoff => step_standoff(g, op, &cx),
         Phase::Armed => { if door_tools_charge_on(g, &crate::seats::here(g), d).is_none() { door_tools_charge_gone(g, op, false); } }
-        Phase::Slice => step_slice(g, op, &cx),
-        Phase::Held => keep_open(g, d),
         Phase::Thr => step_thr(g, op, &cx),
         Phase::Pocket => step_pocket(g, op, &cx),
     }
@@ -815,68 +813,6 @@ fn step_standoff(g: &mut Game, op: DoorOpId, cx: &Cx) {
     o!(g, op).t0 = t;
     door_tools_beat(g, op, "armed");
     if o!(g, op).word.is_some() { o!(g, op).hold = 1.0; }
-}
-
-/// the angle worked station by station from outside, then held
-fn step_slice(g: &mut Game, op: DoorOpId, cx: &Cx) {
-    let (d, t, el, lead) = (cx.d, cx.t, cx.el, cx.lead);
-    keep_open(g, d);
-    let mut all = true;
-    let mut w = 0;
-    while w < o!(g, op).men.len() {
-        let gd = o!(g, op).men[w];
-        w += 1;
-        if o!(g, op).slice.get(gd).is_none() { continue; }
-        let a = o!(g, op).mine.get(gd).copied().unwrap();
-        let p = pos_of(g, gd);
-        let (si, sj) = { let s = sl!(g, op, gd); (s.i as usize, s.j as usize) };
-        let spt = sl!(g, op, gd).pts[si];
-        if v3::dist_xz(p, spt) > 0.5 && !asg!(g, a).arrived { sl!(g, op, gd).t = f64::NAN; all = false; continue; }
-        if sl!(g, op, gd).t.is_nan() || crate::roomfight::room_fight_contact(g, gd) || crate::roomfight::room_fight_engaged(g, gd) { sl!(g, op, gd).t = t; }
-        if t - sl!(g, op, gd).t < g.k.doortools.slice_look { all = false; continue; }
-        let looks = sl!(g, op, gd).looks[si].clone();
-        if sj + 1 < looks.len() {
-            let s = sl!(g, op, gd);
-            s.j += 1.0; s.t = t;
-            all = false;
-            let at = looks[sj + 1];
-            asg!(g, a).watch = Some(at);
-            asg!(g, a).face = Some(v3::yaw_to(p, at));
-            continue;
-        }
-        let npts = sl!(g, op, gd).pts.len();
-        if si + 1 >= npts { continue; }
-        let ahead = sl!(g, op, gd).ahead;
-        if let Some(h) = ahead {
-            if o!(g, op).men.contains(&h) {
-                if let Some(up) = o!(g, op).slice.get(h) {
-                    if up.i < m::min(up.pts.len() as f64 - 1.0, si as f64 + 3.0) { all = false; continue; }
-                }
-            }
-        }
-        { let s = sl!(g, op, gd); s.i += 1.0; s.j = 0.0; s.t = f64::NAN; }
-        all = false;
-        let i2 = si + 1;
-        let (post, look0) = { let s = sl!(g, op, gd); (s.pts[i2], s.looks[i2][0]) };
-        let there = if i2 + 1 >= npts { format!("holding outside · {}", cx.name) } else { format!("slicing · {}", cx.name) };
-        let aa = cut_a(g, &crate::seats::here(g), post, v3::yaw_to(post, look0), look0, Some(true), None, None, format!("slicing · {}", cx.name), there);
-        door_tools_assign(g, op, gd, &aa);
-    }
-    if all || el > 40.0 {
-        say(g, lead, "holding on the door.");
-        o!(g, op).phase = Phase::Held;
-        o!(g, op).t0 = t;
-        door_tools_beat(g, op, "held outside");
-        for gd in o!(g, op).men.clone() {
-            let (has, a) = (o!(g, op).slice.get(gd).is_some(), o!(g, op).mine.get(gd).copied());
-            if let (true, Some(a)) = (has, a) {
-                let at = { let s = sl!(g, op, gd); let l = &s.looks[s.i as usize]; l[l.len() >> 1] };
-                let p = pos_of(g, gd);
-                asg!(g, a).watch = Some(at);
-                asg!(g, a).face = Some(v3::yaw_to(p, at));
-            }
-        }
-    }
 }
 
 /// `...(P.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {})`

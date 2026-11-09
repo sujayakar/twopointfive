@@ -10,7 +10,6 @@ pub enum LessonTest {
     Near { at: V3, r: Option<f64> },
     Flag { flag: crate::lesson::LessonFlag, value: Option<bool> },
     Slot { slot: crate::game::SlotKind, drawn: Option<bool> },
-    Pace { below: Option<f64>, above: Option<f64> },
     Meter { which: crate::lesson::LessonMeter, below: Option<f64>, above: Option<f64> },
     Stage { stage: crate::game::MissionStage },
     Door { door: String, state: crate::lesson::LessonDoorState },
