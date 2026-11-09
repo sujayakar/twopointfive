@@ -75,7 +75,7 @@ The clocks, in seconds, each a word of the deployment's environment: `MP_START_S
 
 ```bash
 CONVEX_URL=https://<name>.convex.cloud CONVEX_DEPLOY_KEY=… bun run tools/cloud/pull.ts --out cloud-pull
-bun run tools/qa/replay-dump.ts cloud-pull/*.ndjson.gz --out cloud-pull/replays     # each visit as a replay file; /replay opens them too
+bun run tools/qa/replay-dump.ts cloud-pull --out cloud-pull/replays     # each visit's tape (`?playtape=` plays it), its moments, an index; the folder's telemetry.ndjson gives the page errors
 ```
 
 `bun run tools/cloud/pull.ts --local --out cloud-pull` reads the backend `bun run dev` started. `telemetry.ndjson` and `players.json` land beside it. The dashboard shows the same tables.
