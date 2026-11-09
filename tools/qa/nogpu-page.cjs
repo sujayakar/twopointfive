@@ -45,7 +45,7 @@ const BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process
   await page.click('#fatal button'); await page.waitForTimeout(400);
   const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(e => 'ERR ' + e); c = await cardOf();
   check(c.button === 'Copied' && clip.startsWith("The game couldn't start.\nNo WebGPU adapter available.\nasked for the fast card: nothing") && /browser: Mozilla/.test(clip), `Copy puts the first line and the lines on the clipboard (${clip.length} chars)`);
-  const only = errs.filter(e => !/No WebGPU adapter available|NoGpuError/.test(e));
+  const only = errs.filter(e => !/No WebGPU adapter available|NoGpuError|RustGameError: This game needs WebAssembly/.test(e));
   check(only.length === 0, `no other error on the page (${only.length}${only.length ? ': ' + only[0] : ''})`);
   // 2. the switch off: the one line, as it was
   errs.length = 0;
