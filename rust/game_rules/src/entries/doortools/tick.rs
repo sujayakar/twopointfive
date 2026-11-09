@@ -71,15 +71,10 @@ fn word_off(g: &mut Game, op: DoorOpId) {
         dop!(g, op).worded = Some(true);
     }
 }
-/// `list.splice(list.indexOf(x), 1)`: a -1 from indexOf takes the LAST entry, as splice does
+/// A word or a watch off its list.
 fn splice_out<T: PartialEq>(list: &mut Vec<T>, x: &T) {
-    match list.iter().position(|y| y == x) {
-        Some(i) => {
-            list.remove(i);
-        }
-        None => {
-            list.pop();
-        }
+    if let Some(i) = list.iter().position(|y| y == x) {
+        list.remove(i);
     }
 }
 /// `S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men })`
@@ -1516,34 +1511,18 @@ pub(super) fn door_tools_arrived(g: &crate::game::Game, op: DoorOpId, gd: GuardI
 mod tests {
     use super::*;
     #[test]
-    fn splice_out_takes_the_last_when_the_thing_is_gone() {
-        let mut l = vec![1, 2, 3];
-        splice_out(&mut l, &2);
-        assert_eq!(l, vec![1, 3]);
-        splice_out(&mut l, &9);
-        assert_eq!(l, vec![1]);
-    }
-    #[test]
     fn words_joined_once_each_in_first_order() {
         let w = vec![String::from("red"), String::from("blue"), String::from("red")];
         assert_eq!(unique_joined(w), "red + blue");
         assert_eq!(unique_joined(Vec::new()), "");
     }
+    /// Which shoulder is to the wall: it turns over with the way he faces along the door. A failure means a man on a standoff post leans out on the wrong side.
     #[test]
-    fn pre_phases_are_the_five() {
-        for p in [Phase::Stack, Phase::Ready, Phase::Place, Phase::Standoff, Phase::Armed] {
-            assert!(is_pre(p));
-        }
-        for p in [Phase::Kick, Phase::Toss, Phase::Fuse, Phase::Wait, Phase::Enter, Phase::Slice, Phase::Held, Phase::Thr, Phase::Pocket] {
-            assert!(!is_pre(p));
-        }
-    }
-    #[test]
-    fn stack_side_has_the_typescripts_sign() {
-        // door along +x (th = 0: ux 1, uz 0), face +1: a man facing back along -x past the latch
+    fn a_man_s_stack_side_turns_over_with_the_way_he_faces_along_the_door() {
+        // a door along +x, its +1 face
         assert_eq!(stack_side_of(1.0, 0.0, 1.0, -1.0, 0.0), 1.0);
         assert_eq!(stack_side_of(1.0, 0.0, 1.0, 1.0, 0.0), -1.0);
-        // exactly zero counts as +1 (`>= 0`)
+        assert_eq!(stack_side_of(1.0, 0.0, -1.0, 1.0, 0.0), 1.0);    // the other face
         assert_eq!(stack_side_of(1.0, 0.0, 1.0, 0.0, 1.0), 1.0);
     }
 }

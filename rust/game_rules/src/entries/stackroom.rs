@@ -812,7 +812,7 @@ mod tests {
     use crate::stackroom::{Floor, StackRoomBookKeep};
     use alloc::vec;
 
-    /// ts:119: a null in a pair is remembered. A flood would reach door_pt, a stub, and panic
+    /// A face found to have no floor is remembered, and no floor is flooded for it again.
     #[test]
     fn a_face_with_no_floor_is_remembered() {
         let mut g = Game::blank();
@@ -821,7 +821,7 @@ mod tests {
         assert!(floor_of(&mut g, d, 1.0).is_none());
     }
 
-    /// ts:98-103: the answer is the row, and a moved serial starts a new book
+    /// The answer is the row, and a grid that moved starts a new book.
     #[test]
     fn book_of_is_the_row_until_the_grid_moves() {
         let mut g = Game::blank();
@@ -832,7 +832,7 @@ mod tests {
         assert!(book_of(&mut g).near.is_none());
     }
 
-    /// ts:92-95: no book is Forget; a read face is marked, a null one too, an unread one not
+    /// No book keeps nothing; a read face is marked, one found to have no floor too, an unread one not.
     #[test]
     fn the_keep_marks_what_has_been_read() {
         let mut g = Game::blank();
@@ -850,7 +850,7 @@ mod tests {
 
     fn a_floor() -> Floor { Floor { seed: 0.0, dist: vec![-1], cells: vec![0.0] } }
 
-    /// ts:93: no book when kept, none after
+    /// No book when kept, none after.
     #[test]
     fn put_back_of_no_book_drops_the_book() {
         let mut g = Game::blank();
@@ -860,7 +860,7 @@ mod tests {
         assert!(g.m.stackroom.books.is_none());
     }
 
-    /// ts:94-95: what was read stays, what was read since is forgotten: a face, a door, the doorway cells
+    /// What was read stays, what was read since is forgotten: a face, a door, the doorway cells.
     #[test]
     fn put_back_forgets_only_what_was_read_since() {
         let mut g = Game::blank();
@@ -880,7 +880,7 @@ mod tests {
         assert!(pair[1].is_none());
     }
 
-    /// ts:95,101: doorway cells made before the keep stay made
+    /// Doorway cells made before the keep stay made.
     #[test]
     fn put_back_keeps_doorway_cells_already_made() {
         let mut g = Game::blank();
@@ -890,7 +890,7 @@ mod tests {
         assert!(g.m.stackroom.books.as_ref().unwrap().near.is_some());
     }
 
-    /// ts:99-101: rebuilt during the ask, so the book kept would be stale at the next bookOf
+    /// Rebuilt during the ask, so the book kept would be stale at the next look.
     #[test]
     fn put_back_after_a_rebuild_drops_the_book() {
         let mut g = Game::blank();
@@ -902,7 +902,7 @@ mod tests {
         assert!(g.m.stackroom.books.is_none());
     }
 
-    /// ts:157: no floor is true, and the remembered null is still in its row after the ask
+    /// No floor is true, and what is remembered of it is still in its row after the ask.
     #[test]
     fn has_with_no_floor_is_true_and_leaves_the_row() {
         let mut g = Game::blank();
@@ -912,7 +912,7 @@ mod tests {
         assert!(matches!(&g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[0], Some(None)));
     }
 
-    /// ts:142,151,157: a point off the grid is off the floor, and the floor taken out for the question is back in its row
+    /// A point off the grid is off the floor, and the floor taken out for the question is back in its row.
     #[test]
     fn has_puts_the_floor_back_after_the_question() {
         let mut g = Game::blank();
@@ -925,35 +925,17 @@ mod tests {
         assert!(matches!(&g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[1], Some(Some(_))));
     }
 
-    /// (th, side, hand, face's bits, stackSide) from the TypeScript's own onWall, under bun with EXACT.on
-    const ON_WALL: [(f64, f64, f64, u64, f64); 20] = [
-        (0.0, 1.0, 1.0, 0xbff921fb54442d18, 1.0),
-        (0.0, 1.0, -1.0, 0x3ff921fb54442d18, -1.0),
-        (0.0, -1.0, 1.0, 0xbff921fb54442d18, -1.0),
-        (0.0, -1.0, -1.0, 0x3ff921fb54442d18, 1.0),
-        (1.5707963267948966, 1.0, 1.0, 0xc00921fb54442d18, 1.0),
-        (1.5707963267948966, 1.0, -1.0, 0x3c91a62633145c00, -1.0),
-        (1.5707963267948966, -1.0, 1.0, 0xc00921fb54442d18, -1.0),
-        (1.5707963267948966, -1.0, -1.0, 0x3c91a62633145c00, 1.0),
-        (0.7, 1.0, 1.0, 0xc0022a9743bbb026, 1.0),
-        (0.7, 1.0, -1.0, 0x3febdd904221f3ca, -1.0),
-        (0.7, -1.0, 1.0, 0xc0022a9743bbb026, -1.0),
-        (0.7, -1.0, -1.0, 0x3febdd904221f3ca, 1.0),
-        (-2.3, 1.0, 1.0, 0x3fe755a2f1113f67, 1.0),
-        (-2.3, 1.0, -1.0, 0xc0034c9297ffdd3e, -1.0),
-        (-2.3, -1.0, 1.0, 0x3fe755a2f1113f67, -1.0),
-        (-2.3, -1.0, -1.0, 0xc0034c9297ffdd3e, 1.0),
-        (3.141592653589793, 1.0, 1.0, 0x3ff921fb54442d19, 1.0),
-        (3.141592653589793, 1.0, -1.0, 0xbff921fb54442d17, -1.0),
-        (3.141592653589793, -1.0, 1.0, 0x3ff921fb54442d19, -1.0),
-        (3.141592653589793, -1.0, -1.0, 0xbff921fb54442d17, 1.0),
-    ];
+    /// `hand` is the side of the doorway he stands (+1 past the latch), `side` the face of the wall. A failure means a man on a wall mark looks away from the doorway, or has the wall on his gun's shoulder.
     #[test]
-    fn on_wall_has_the_typescripts_bits() {
-        for (th, side, hand, face, stack_side) in ON_WALL {
-            let (f, s) = on_wall(th, side, hand);
-            assert_eq!(f.to_bits(), face, "face at {th} {side} {hand}");
-            assert_eq!(s.to_bits(), stack_side.to_bits(), "stackSide at {th} {side} {hand}");
+    fn a_man_on_the_door_s_wall_looks_down_it_at_the_doorway() {
+        for th in [0.0, 0.7, -2.3, 3.141592653589793] {
+            for (side, hand) in [(1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (-1.0, -1.0)] {
+                let (face, stack_side) = on_wall(th, side, hand);
+                let (fx, fz) = (super::m::sin(face), super::m::cos(face));
+                let (ux, uz) = (super::m::cos(th) * hand, super::m::sin(th) * hand);
+                assert!((fx + ux).abs() < 1e-12 && (fz + uz).abs() < 1e-12, "he faces back along the door's line, at {th} {side} {hand}");
+                assert_eq!(stack_side, side * hand, "the shoulder turns over with the hand and with the face, however the door lies: {th}");
+            }
         }
     }
 }

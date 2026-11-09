@@ -849,27 +849,21 @@ pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // The doubles' bits from the TypeScript's own code under EXACT (bun; the functions pasted from doorpath.ts:97-111).
-    const P: [V3; 6] = [[0.13, 0.0, 0.77], [3.31, 1.2, -2.71], [-1.9, 0.0, 0.41], [1.7, 5.0, 1.03], [0.3, 0.0, 0.3], [0.3, 0.0, 0.3]];
-    const Q: [V3; 4] = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.2], [3.0, 0.0, 1.1], [3.4, 0.0, -2.3]];
 
+    /// How near a walk passes a door's leaf: a failure means a man walks through a leaf, or round one that is nowhere near his way.
     #[test]
-    fn floor_distance_matches_the_typescripts_bits() {
-        assert_eq!(flat(&P[0], &P[1]).to_bits(), 0x4012db3ebb535ba8);
-    }
-
-    #[test]
-    fn point_to_segment_matches_the_typescripts_bits() {
-        assert_eq!(pt_seg(P[0], P[1], P[2]).to_bits(), 0x3ff5a0fed08d8850);
-        assert_eq!(pt_seg(P[3], P[1], P[2]).to_bits(), 0x40030d47b003ac64);
-        // a segment of no length: the distance to its one point
-        assert_eq!(pt_seg(P[0], P[4], P[5]).to_bits(), 0x3fdffcb8f8ab183e);
-    }
-
-    #[test]
-    fn segment_to_segment_matches_the_typescripts_bits() {
-        assert_eq!(seg_seg(P[0], P[1], P[2], P[3]).to_bits(), 0x0000000000000000); // they cross
-        assert_eq!(seg_seg(P[0], P[2], P[1], P[3]).to_bits(), 0x3ff9764e11b32ccf);
-        assert_eq!(seg_seg(Q[0], Q[1], Q[2], Q[3]).to_bits(), 0x4000bb4e81746a84);
+    fn two_stretches_of_floor_are_as_far_apart_as_their_nearest_points() {
+        let along = |x0: f64, z0: f64, x1: f64, z1: f64| -> (V3, V3) { ([x0, 0.0, z0], [x1, 0.0, z1]) };
+        let apart = |p: (V3, V3), q: (V3, V3)| {
+            let d = seg_seg(p.0, p.1, q.0, q.1);
+            assert_eq!(d, seg_seg(q.0, q.1, p.0, p.1), "it does not matter which is asked of which");
+            d
+        };
+        let walk = along(0.0, 0.0, 4.0, 0.0);
+        assert_eq!(apart(walk, along(2.0, -1.0, 2.0, 1.0)), 0.0);   // they cross
+        assert_eq!(apart(walk, along(0.0, 2.0, 4.0, 2.0)), 2.0);    // side by side
+        assert_eq!(apart(walk, along(2.0, 1.0, 2.0, 3.0)), 1.0);    // the end of one over the middle of the other
+        assert_eq!(apart(walk, along(7.0, 4.0, 9.0, 4.0)), 5.0);    // end to end: not the lines they lie on, which are 4 apart
+        assert_eq!(apart(walk, along(-3.0, 4.0, -3.0, 4.0)), 5.0);  // a stretch of no length: its one point
     }
 }

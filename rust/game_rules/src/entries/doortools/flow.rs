@@ -1018,14 +1018,13 @@ pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own strings: node, `${a[0].toFixed(2)},${a[2].toFixed(2)}>${b[0].toFixed(2)},${b[2].toFixed(2)}`
+
+    /// A deal measures a walk once. A failure means two men on one spot ask the floor twice, or a walk back is answered with the walk there.
     #[test]
-    fn walk_key_is_the_typescripts() {
-        for (a, b, s) in KEYS { assert_eq!(walk_key(a, b), s); }
+    fn a_walk_is_kept_by_its_two_places_to_the_centimetre_and_its_way() {
+        let (a, b): (V3, V3) = ([1.0, 0.0, 2.0], [3.0, 0.0, 4.0]);
+        assert_eq!(walk_key([1.001, 9.0, 2.0], b), walk_key(a, b));   // the same place at any height, to the centimetre
+        assert_ne!(walk_key([1.02, 0.0, 2.0], b), walk_key(a, b));
+        assert_ne!(walk_key(b, a), walk_key(a, b));
     }
-    const KEYS: [(V3, V3, &str); 3] = [
-        ([0.125, 9.0, -0.125], [1.005, 0.0, 2.5], "0.13,-0.13>1.00,2.50"),
-        ([-0.0, 1.0, -0.001], [12.345, 0.0, 7.0625], "0.00,-0.00>12.35,7.06"),
-        ([0.375, 0.0, 1.125], [100.0, 0.0, -3.14159], "0.38,1.13>100.00,-3.14"),
-    ];
 }
