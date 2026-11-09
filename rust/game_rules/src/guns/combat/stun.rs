@@ -63,7 +63,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         serial,
         ..crate::game::GameEvent::default()
     });
-    let entry = crate::roomfight::fight_live(g);
     let side: crate::teams::Team = match g.tab.item[it].side {
         Some(s) => s,
         None => {
@@ -71,121 +70,67 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
             if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Player }
         }
     };
-    let from = v3::add(at, [0.0, 0.3, 0.0]);
-    let over = v3::add(at, [0.0, g.k.flash.lift, 0.0]);
-    let lifted = entry && !seg(g, from, over);
+    let (from, over, entry) = (v3::add(at, [0.0, 0.3, 0.0]), v3::add(at, [0.0, g.k.flash.lift, 0.0]), crate::roomfight::fight_live(g));
+    let flash = Flash { at, from, over, entry, lifted: entry && !seg(g, from, over), radius: b.dazzle_radius, secs: [b.dazzle_seconds, b.dazzle_min] };
+    let squad = |t: crate::teams::Team| t == crate::teams::Team::Player || t == crate::teams::Team::Operative;
     if crate::effects::flags().dazzle {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
-            let c = g.gd[gd].ch;
-            let head = match g.ch[c].bones.get(crate::character::Bone::Head) {
-                Some(h) => *h,
-                None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-            };
-            let d = v3::dist(head, at);
-            if d > b.dazzle_radius { continue; }
-            let secs: f64;
-            if !entry {
-                if seg(g, from, head) { continue; }
-                secs = v3::lerp(b.dazzle_seconds, b.dazzle_min, v3::clamp(d / b.dazzle_radius, 0.0, 1.0));
-            } else {
-                let seen = !seg(g, from, head) || (lifted && !seg(g, over, head));
-                let mut k = 1.0;
-                if !seen {
-                    let pr = crate::scene_collision::sound_paths_propagate(g, at, head, None);
-                    if pr.muffle > 0.6 || pr.path_len > g.k.flash.concuss_m { continue; }
-                    k = g.k.flash.concuss_k;
-                }
-                let u = v3::clamp(d / b.dazzle_radius, 0.0, 1.0);
-                let team = g.gd[gd].team;
-                if team == side
-                    || (side == crate::teams::Team::Player && team == crate::teams::Team::Operative)
-                    || (side == crate::teams::Team::Operative && team == crate::teams::Team::Player)
-                {
-                    if d > g.k.flash.own_m { continue; }
-                    secs = g.k.flash.own_secs * k;
-                } else {
-                    secs = v3::lerp(g.k.flash.secs[0], g.k.flash.secs[1], u) * k;
-                    let drilled = crate::roomfight::drilled_k(g, gd);
-                    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, g.time + v3::lerp(g.k.flash.stagger[0], g.k.flash.stagger[1], u) * k * drilled);
-                    let gun = g.gd[gd].weapon;
-                    g.fa[gun].burst = None;
-                }
+        for gd in g.guards.clone() {
+            let (c, team) = (g.gd[gd].ch, g.gd[gd].team);
+            if crate::condition::down(g, c) { continue; }
+            let Some((secs, fold)) = flash.takes(g, c, team == side || squad(side) && squad(team), false, false) else { continue };
+            if fold > 0.0 {
+                let drilled = crate::roomfight::drilled_k(g, gd);
+                crate::condition::fold(g, c, fold * drilled);
+                let gun = g.gd[gd].weapon;
+                g.fa[gun].burst = None;
             }
-            g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, g.time + secs);
-            g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-            crate::mind::raise(g, gd, 0.6, "combat");
-            if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-            if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-            crate::game::guard_set_path(g, gd, Vec::new());
-            crate::guards::guard_set_path_goal(g, gd, None);
-            g.gd[gd].speed = 0.0;
-            g.gd[gd].dazzled_at = Some(at);
+            crate::condition::dazzled(g, gd, secs, at, Some(at), "combat");
             let along = v3::sub(g.ch[c].pos, at);
             crate::character::anim_hit_from(g, c, Some(along));
         }
     }
     let sam_side: crate::teams::Team = sam.and_then(|s| s.side).unwrap_or(side);
     let spare = sam.and_then(|s| s.spare).unwrap_or(false);
-    let mut told = false;
     crate::seats::each_seat(g, &mut |g: &mut Game| {
-        let mut sam_secs = 0.0;
         let c = g.pl[g.player].ch;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(h) => *h,
-            None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
-        };
-        if !borrowed && crate::effects::flags().dazzle && !g.pl[g.player].down && g.puppet.is_none() {
-            let d = v3::dist(eye, at);
-            if d <= b.dazzle_radius {
-                let u = v3::clamp(d / b.dazzle_radius, 0.0, 1.0);
-                let mut stag = 0.0;
-                let own_seen = g.k.samstun.own_seen;
-                if !entry {
-                    if !(spare && !own_seen) && !seg(g, from, eye) { sam_secs = v3::lerp(b.dazzle_seconds, b.dazzle_min, u); }
-                } else {
-                    let seen = !seg(g, from, eye) || (lifted && !seg(g, over, eye));
-                    let mut k = 1.0;
-                    let mut reach = true;
-                    let own = sam_side == crate::teams::Team::Player || sam_side == crate::teams::Team::Operative;
-                    let full = !own || (seen && own_seen);
-                    if !seen {
-                        if own && spare {
-                            reach = false;
-                        } else {
-                            let pr = crate::scene_collision::sound_paths_propagate(g, at, eye, None);
-                            if pr.muffle > 0.6 || pr.path_len > g.k.flash.concuss_m { reach = false; }
-                            k = g.k.flash.concuss_k;
-                        }
-                    } else if own && spare && !own_seen {
-                        reach = false;
-                    }
-                    if reach {
-                        if !full {
-                            if d <= g.k.flash.own_m { sam_secs = g.k.flash.own_secs * k; }
-                        } else {
-                            sam_secs = v3::lerp(g.k.flash.secs[0], g.k.flash.secs[1], u) * k;
-                            stag = v3::lerp(g.k.flash.stagger[0], g.k.flash.stagger[1], u) * k;
-                        }
-                    }
-                }
-                if sam_secs > 0.0 {
-                    crate::samstun::dazzle_player(g, sam_secs, at);
-                    if stag > 0.0 {
-                        let c = g.pl[g.player].ch;
-                        let dir = v3::sub(g.ch[c].pos, at);
-                        crate::samstun::stagger_player(g, stag, dir);
-                    }
-                }
-            }
-        }
-        if !told {
-            told = true;
+        if borrowed || !crate::effects::flags().dazzle || g.pl[g.player].down || g.puppet.is_some() { return; }
+        let Some((secs, fold)) = flash.takes(g, c, squad(sam_side), spare, g.k.samstun.own_seen) else { return };
+        if !(secs > 0.0) { return; }
+        crate::samstun::dazzle_player(g, secs, at);
+        if fold > 0.0 {
+            let dir = v3::sub(g.ch[c].pos, at);
+            crate::samstun::stagger_player(g, fold, dir);
         }
     });
+}
+
+/// a flash as it goes off: where, the two places its light comes from, in a room fight or not, its reach and its seconds
+struct Flash { at: V3, from: V3, over: V3, entry: bool, lifted: bool, radius: f64, secs: [f64; 2] }
+impl Flash {
+    /// What it does to this man: the seconds blind and the seconds folded. `own`: his own side's; `spare`: thrown for him to come in behind; `own_seen`: his own side's
+    /// takes him as any other does where he looks at it
+    fn takes(&self, g: &mut Game, c: CharId, own: bool, spare: bool, own_seen: bool) -> Option<(f64, f64)> {
+        let bare = if matches!(g.ch[c].who, crate::character::Who::Player(_)) { 1.6 } else { 1.65 };
+        let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, bare, 0.0]));
+        let d = v3::dist(head, self.at);
+        if d > self.radius { return None; }
+        let u = v3::clamp(d / self.radius, 0.0, 1.0);
+        if !self.entry {
+            if spare && !own_seen || seg(g, self.from, head) { return None; }
+            return Some((v3::lerp(self.secs[0], self.secs[1], u), 0.0));
+        }
+        let seen = !seg(g, self.from, head) || (self.lifted && !seg(g, self.over, head));
+        if own && spare && !(seen && own_seen) { return None; }
+        let mut k = 1.0;
+        if !seen {
+            let pr = crate::scene_collision::sound_paths_propagate(g, self.at, head, None);
+            if pr.muffle > 0.6 || pr.path_len > g.k.flash.concuss_m { return None; }
+            k = g.k.flash.concuss_k;
+        }
+        if own && !(seen && own_seen) { return if d <= g.k.flash.own_m { Some((g.k.flash.own_secs * k, 0.0)) } else { None }; }
+        let (secs, fold) = (g.k.flash.secs, g.k.flash.stagger);
+        Some((v3::lerp(secs[0], secs[1], u) * k, v3::lerp(fold[0], fold[1], u) * k))
+    }
 }
 
 /// Sandbox / panel: an armed can dropped at `p` as if just landed, thrown from where the player stands.   (combat.ts dropThrowable)

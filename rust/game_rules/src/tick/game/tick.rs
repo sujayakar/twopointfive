@@ -364,7 +364,6 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         let pellets = weapon_row(g, def).pellets.is_some();
         g.ch[c].anim.reload_mag = !pellets;
         let (dead, now) = (g.gd[gd].state == GuardState::Dead, g.time);
-        g.ch[c].anim.clutch = if !dead && now < g.gd[gd].stagger_until && !(now < g.gd[gd].dazzled_until) { 1.0 } else { 0.0 };
         // (MOVES.on, page 1: the block always runs)
         {
             let w = g.gd[gd].weapon;
@@ -380,14 +379,8 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         let dip = g.k.moves.entry > 0.5 && cb && g.gd[gd].held.is_none() && !dead && team == Team::Operative
             && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
-        if !dead && now < g.gd[gd].dazzled_until {
-            // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)
-            let from = g.gd[gd].dazzled_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
-            let k = m::min(1.0, (g.gd[gd].dazzled_until - now) / 0.5);
-            let an = &mut g.ch[c].anim;
-            let dz = an.dazzle.get_or_insert(crate::character::AnimDazzle { from, k: 0.0 });
-            dz.from = from; dz.k = k;
-        } else { g.ch[c].anim.dazzle = None; }
+        let from = g.gd[gd].last_known.unwrap_or(g.ch[c].pos);
+        crate::condition::stun_pose(g, c, !dead, from);
         {
             let on = g.gd[gd].held.is_none();
             let tk = g.ch[c].anim.trained;

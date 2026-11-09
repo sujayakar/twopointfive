@@ -73,7 +73,7 @@ fn a_man_on_a_cell_no_plan_can_leave_walks_off_it() {
         let mut p = office(seed);
         let men = p.men_on_the_floor();
         let m = men[0];
-        for &o in &men[1..] { p.man_posted(o); p.g.gd[o].dazzled_until = 1e9; }
+        for &o in &men[1..] { p.man_posted(o); p.g.cond[p.g.gd[o].ch].blind_until = 1e9; }
         p.sam_put(FAR);
         p.man_let_off_his_post(m);
         p.man_stands(m, NOOK);
@@ -97,7 +97,7 @@ fn a_man_on_a_cell_no_plan_can_leave_walks_off_it() {
         let mut p = office(seed);
         let men = p.men_on_the_floor();
         let m = men[0];
-        for &o in &men[1..] { p.man_posted(o); p.g.gd[o].dazzled_until = 1e9; }
+        for &o in &men[1..] { p.man_posted(o); p.g.cond[p.g.gd[o].ch].blind_until = 1e9; }
         p.sam_put(FAR);
         p.man_let_off_his_post(m);
         let open = [22.0, 23.0];

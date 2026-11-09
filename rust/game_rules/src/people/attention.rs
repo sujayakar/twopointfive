@@ -191,7 +191,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.body_duty.is_none()
         && man.task.is_none()
         && man.awareness < g.k.attention.calm_aw
-        && g.time >= man.dazzled_until;
+        && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
     if crate::roomfight::fight_live(g) && !g.quiet.active { return false; }
     let team = g.gd[gd].team;
@@ -463,7 +463,7 @@ mod tests {
     /// A blank game with one man on it; leaked, so a test holds it as a plain reference.
     fn game() -> (&'static mut Game, GuardId) {
         let g: &'static mut Game = Box::leak(Box::new(Game::blank()));
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);

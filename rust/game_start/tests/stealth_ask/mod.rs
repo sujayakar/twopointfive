@@ -424,7 +424,7 @@ impl StealthAsk for Play {
         let h = &mut self.g.gd[gd];
         h.hold = true;
         h.pinned = true;
-        h.dazzled_until = 1e9;
+        self.g.cond[h.ch].blind_until = 1e9;
         h.heard_up_to = 1e12;
     }
     fn let_go(&mut self, gd: GuardId) {
@@ -432,7 +432,7 @@ impl StealthAsk for Play {
         let h = &mut self.g.gd[gd];
         h.hold = false;
         h.pinned = false;
-        h.dazzled_until = -1.0;
+        self.g.cond[h.ch].blind_until = -1.0;
         h.heard_up_to = seq;
     }
     fn round_past(&mut self, shooter: game::ids::CharId, man: GuardId, off: f64, from: f64) {
@@ -483,7 +483,7 @@ impl StealthAsk for Play {
     }
     fn run_of(&self, gd: GuardId) -> Option<game::runner::Run> { self.g.m.runner.state_of.get(gd).cloned() }
     fn last_cam(&self) -> ([f64; 3], f64, bool) { let pl = &self.g.pl[self.g.player]; let c = *pl.cams.last().expect("a camera out"); let r = &self.g.tab.stickycam_sticky_cam[c]; (r.pos, r.si, r.vel.is_none()) }
-    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
+    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn loud_report(&mut self) {
         let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::default() });

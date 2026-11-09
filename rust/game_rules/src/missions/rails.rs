@@ -457,7 +457,8 @@ fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if let Some(until) = g.rails.spared.get(id) { if g.time < *until { return true; } }
     let t = g.time + if respawn > 0.0 { respawn } else { g.k.rails.spare_secs };
     g.rails.spared.set(id, t);
-    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, t);
+    let c = g.gd[gd].ch;
+    crate::condition::fold_to(g, c, t);
     g.gd[gd].door_down_until = m::max(g.gd[gd].door_down_until, t);
     g.stats.rails.spared += 1;
     let line = alloc::format!("{} spared a down: up at {}", g.gd[gd].callsign, js::to_fixed(t, 1));

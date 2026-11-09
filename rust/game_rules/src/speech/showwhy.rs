@@ -488,9 +488,9 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
         }
 
         // ---- HURT (a line is spent when it is SAID, never when it is queued)
-        if crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None) {
-            let hurt_at = g.gd[gd].hurt_at;
-            let stagger_until = g.gd[gd].stagger_until;
+        if crate::condition::is_hurt(g, g.gd[gd].ch, None) {
+            let hurt_at = g.cond[g.gd[gd].ch].hurt_at;
+            let stagger_until = g.cond[g.gd[gd].ch].fold_until;
             let (hurt_said, lag_n, lag_t) = {
                 let r = g.m.showwhy.mem.get(gd).unwrap();
                 (r.hurt_said, r.lag_n, r.lag_t)
@@ -539,7 +539,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 }
                 (r.owed[0].text.clone(), r.owed[0].why, r.owed[0].by, r.line_on, r.keep_said, r.door_seen_t)
             };
-            let late = text == LINE_HURT && t - g.gd[gd].hurt_at > k.hurt_late;
+            let late = text == LINE_HURT && t - g.cond[g.gd[gd].ch].hurt_at > k.hurt_late;
             if line_on && !late {
                 let o = &mut g.m.showwhy.mem.get_mut(gd).unwrap().owed[0];
                 o.by = m::max(o.by, t + 1.0);
@@ -548,7 +548,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
             let stands = match why {
                 Why::Keep => crate::rearwatch::room_kept(g, &crate::seats::here(g), gd) && !keep_said,
                 Why::Door => t - door_seen_t <= 0.5 && t >= st_row(g, pl).after_you_t,
-                _ => crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None) && !late,
+                _ => crate::condition::is_hurt(g, g.gd[gd].ch, None) && !late,
             };
             if t > by || !stands {
                 g.m.showwhy.mem.get_mut(gd).unwrap().owed.remove(0);
@@ -567,7 +567,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                     r.keep_said_t = t;
                     r.keep_said = true;
                 } else if text == LINE_HURT {
-                    let hurt_at = g.gd[gd].hurt_at;
+                    let hurt_at = g.cond[g.gd[gd].ch].hurt_at;
                     let r = g.m.showwhy.mem.get_mut(gd).unwrap();
                     r.hurt_said = hurt_at;
                     r.lag_t = t + 3.0;

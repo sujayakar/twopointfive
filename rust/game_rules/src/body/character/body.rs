@@ -66,9 +66,16 @@ fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
 }
 // ---- construction and the plain frames ----
 
+/// A man stands: his body, and a row of each part a man has.
+pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> CharId {
+    let c = g.ch.push(body);
+    g.cond.push(crate::condition::Cond::blank());
+    c
+}
+
 /// A body: his columns, his animator, his skeleton, and the rest pose's frames. `who` stays blank: the owner writes it. (Character.constructor)
 pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::CharacterDesc) -> CharId {
-    let id = g.ch.push(Character::blank());
+    let id = crate::character::man_new(g, Character::blank());
     if d.men.is_some() { crate::sim_men_store::stand_man(g, id); } // standMan(this, d.men ?? loneMen()): a man of no game has no row of the block (ts:4356)
     g.ch[id].rig = ch;
     g.ch[id].id = d.id; g.ch[id].tint = d.tint; g.ch[id].tint2 = d.tint2; g.ch[id].pos = v3::copy(d.pos); g.ch[id].body_yaw = d.yaw; g.ch[id].aim_yaw = d.yaw;

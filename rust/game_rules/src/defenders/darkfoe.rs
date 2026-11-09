@@ -161,8 +161,8 @@ fn in_room(g: &mut crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
 fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     let gd = g.tab.roomfight_def[d].gd;
     if g.time - g.gd[gd].sight_t < 6.0 { return g.gd[gd].sight_pos; }
-    if let Some(src) = g.gd[gd].sup.src {
-        if g.time - g.gd[gd].sup.src_t < 6.0 { return src; }
+    if let Some(src) = g.cond[g.gd[gd].ch].sup.src {
+        if g.time - g.cond[g.gd[gd].ch].sup.src_t < 6.0 { return src; }
     }
     let row = &g.tab.roomfight_def[d];
     let mut bi: Option<usize> = None;
@@ -303,7 +303,7 @@ fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefI
     if g.gd[gd].state != crate::game::GuardState::Alert { return Some(String::from("not alert")); }
     if g.time - g.gd[gd].last_seen_t < g.k.darkfoe.quiet_secs
         || g.time - g.gd[gd].witness.heard.last_shot_t < g.k.darkfoe.calm_secs
-        || g.gd[gd].sup.v > 0.05
+        || g.cond[g.gd[gd].ch].sup.v > 0.05
     {
         return Some(String::from("in a fight"));
     }

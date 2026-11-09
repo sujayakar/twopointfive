@@ -25,7 +25,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     }
     // (a man of your own bent away with a forearm over his eyes says it himself)
     let posed = own && g.k.moves.on > 0.5 && g.k.moves.dazzle > 0.5;
-    if m.state != GuardState::Dead && g.time < m.dazzled_until && !posed {
+    if m.state != GuardState::Dead && crate::condition::is_blind(g, m.ch) && !posed {
         if text.is_empty() && own { tone = HeadTone::Sus; }
         text.insert(0, '✹');
     }
@@ -36,7 +36,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
 fn guard_debug(g: &Game, gd: GuardId) -> String {
     let m = &g.gd[gd];
     let mut s = format!("{} {}%", m.state.as_str(), js::to_i32(m.awareness * 100.0));
-    if g.time < m.dazzled_until { s += &format!(" dazzled {:.1}s", m.dazzled_until - g.time); }
+    if crate::condition::is_blind(g, m.ch) { s += &format!(" dazzled {:.1}s", g.cond[m.ch].blind_until - g.time); }
     if let Some(t) = g.m.needs.mem_of.get(gd).and_then(|r| r.trip.as_ref()) {
         use crate::needs::TripPhase as P;
         s += &format!(" {}:{}", t.kind.as_str(), t.phase.as_str());

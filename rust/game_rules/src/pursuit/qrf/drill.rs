@@ -747,7 +747,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
             }
             let eyes = perceive_scripted(g, gd, dt);
             let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
-            if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.gd[gd].sup.v < 0.3 {
+            if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.cond[g.gd[gd].ch].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");
                 g.qrf.fix = Some(v3::copy(him));

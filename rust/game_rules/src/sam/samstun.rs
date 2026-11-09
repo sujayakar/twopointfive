@@ -12,17 +12,15 @@ fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
     !g.pl[p].down && g.puppet.is_none()
 }
 
-/// Fold the player for `secs`; `dir` = the way the blow came from → him.   (samstun.ts staggerPlayer)
+/// Fold the player for `secs`; `dir` = the way the blow came from → him.
 pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
-    let p = g.player;
+    let (p, c) = (g.player, g.pl[g.player].ch);
     if !(secs > 0.0) || g.pl[p].down { return; }
-    g.pl[p].stagger_until = m::max(g.pl[p].stagger_until, g.time + secs);
-    let c = g.pl[p].ch;
+    crate::condition::fold(g, c, secs);
+    crate::condition::rattle(g, c);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[p].hit_flash = 1.0;
     g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, secs);
-    g.pl[p].sup.v = m::max(g.pl[p].sup.v, 1.0);
-    g.pl[p].sup.kick = m::max(g.pl[p].sup.kick, 1.0);
     fold_cancels(g);
     g.stats.samstun.staggered += 1;
 }
@@ -44,16 +42,14 @@ pub fn fold_cancels(g: &mut crate::game::Game) {
     while i < 6 && crate::interact::cancel_sustained(g) { i += 1; } // one verb a call
 }
 
-/// Blind the player for `secs` by a flash at `at`.   (samstun.ts dazzlePlayer)
+/// Blind the player for `secs` by a flash at `at`.
 pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
-    let p = g.player;
+    let (p, c) = (g.player, g.pl[g.player].ch);
     if !(secs > 0.0) || g.pl[p].down { return; }
-    g.pl[p].dazzled_until = m::max(g.pl[p].dazzled_until, g.time + secs);
-    g.pl[p].dazzled_at = Some(v3::copy(at));
-    let c = g.pl[p].ch;
+    crate::condition::blind(g, c, secs, Some(at));
     let along = v3::sub(g.ch[c].pos, at);
     crate::character::anim_hit_from(g, c, Some(along));
-    g.pl[p].sup.v = m::max(g.pl[p].sup.v, 1.0);
+    g.cond[c].sup.v = m::max(g.cond[c].sup.v, 1.0);
     g.stats.samstun.dazzled += 1;
 }
 
@@ -62,7 +58,7 @@ pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: O
     let now = now.unwrap_or(g.time);
     if !live(g, &crate::seats::here(g)) { return false; }
     let p = seat.player;
-    now < g.pl[p].stagger_until
+    now < g.cond[g.pl[p].ch].fold_until
 }
 
 /// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
@@ -71,7 +67,7 @@ pub(super) fn sam_blind(g: &crate::game::Game, seat: &crate::seats::SeatRef, now
 pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
     if !live_of(g, p) { return 0.0; }
-    let left = g.pl[p].dazzled_until - now;
+    let left = g.cond[g.pl[p].ch].blind_until - now;
     if left <= 0.0 { 0.0 } else { v3::clamp(left / m::max(0.05, g.k.samstun.fade), 0.0, 1.0) }
 }
 
@@ -80,26 +76,14 @@ pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Opti
     sam_staggered(g, seat, now)
 }
 
-/// Once a frame right after the down test: what the two states show on him and keep true while they run.   (samstun.ts samStunPose)
+/// Once a frame right after the down test: what the two states show on him and keep true while they run.
 pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
-    let p = g.player;
-    let c = g.pl[p].ch;
-    let blind = sam_blind(g, &crate::seats::here(g), None);
-    let stag = sam_staggered(g, &crate::seats::here(g), None);
-    g.pl[p].stun_posed = stag || blind > 0.0;
-    g.ch[c].anim.clutch = if stag && blind <= 0.0 { 1.0 } else { 0.0 };
-    if blind > 0.0 {
-        // every field is written here each frame, so a new row and the kept one read the same
-        let from = match g.pl[p].dazzled_at { Some(at) => at, None => g.ch[c].pos };
-        let k = m::min(1.0, (g.pl[p].dazzled_until - g.time) / 0.5);
-        g.ch[c].anim.dazzle = Some(crate::character::AnimDazzle { from, k });
-        g.pl[p].sup.v = m::max(g.pl[p].sup.v, blind);
-    } else {
-        g.ch[c].anim.dazzle = None;
-    }
-    if stag {
-        g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.pl[p].stagger_until - g.time);
-    }
+    let (p, c) = (g.player, g.pl[g.player].ch);
+    let (live, at) = (live_of(g, p), g.ch[c].pos);
+    let (blind, folded) = crate::condition::stun_pose(g, c, live, at);
+    g.pl[p].stun_posed = folded || blind;
+    if blind { g.cond[c].sup.v = m::max(g.cond[c].sup.v, man_blind(g, p, None)); }
+    if folded { g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.cond[c].fold_until - g.time); }
 }
 
 #[cfg(test)]
@@ -110,7 +94,7 @@ mod tests {
     fn game() -> Game {
         let mut g = Game::blank();
         g.time = 11.0;
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut pl = crate::game::Player::blank();
         pl.ch = c;
         g.player = g.pl.push(pl);
@@ -121,7 +105,7 @@ mod tests {
     fn the_fade_keeps_the_typescripts_bits() {
         let mut g = game();
         let p = g.player;
-        g.pl[p].dazzled_until = 11.0;
+        g.cond[g.pl[p].ch].blind_until = 11.0;
         // bun, EXACT on: clamp((11 - 10.7) / Math.max(0.05, 0.6), 0, 1)
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(10.7)).to_bits(), 0x3fe000000000000b);
         // (11 - 10.97) / Math.max(0.05, 0.6)
@@ -134,8 +118,8 @@ mod tests {
     fn a_stun_shows_only_on_a_man_who_is_live() {
         let mut g = game();
         let p = g.player;
-        g.pl[p].stagger_until = 12.0;
-        g.pl[p].dazzled_until = 12.0;
+        g.cond[g.pl[p].ch].fold_until = 12.0;
+        g.cond[g.pl[p].ch].blind_until = 12.0;
         assert!(sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
         assert!(!sam_staggered(&g, &crate::seats::here(&g), Some(12.0)));   // the clock asked of, not the game's
@@ -148,10 +132,10 @@ mod tests {
     fn a_dazzle_does_not_root_him() {
         let mut g = game();
         let p = g.player;
-        g.pl[p].dazzled_until = 12.0;
+        g.cond[g.pl[p].ch].blind_until = 12.0;
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
         assert!(!sam_rooted(&g, &crate::seats::here(&g), None));
-        g.pl[p].stagger_until = 12.0;
+        g.cond[g.pl[p].ch].fold_until = 12.0;
         assert!(sam_rooted(&g, &crate::seats::here(&g), None));
     }
 
@@ -162,11 +146,11 @@ mod tests {
         let p = g.player;
         stagger_player(&mut g, 0.0, [1.0, 0.0, 0.0]);
         dazzle_player(&mut g, f64::NAN, [1.0, 0.0, 0.0]);
-        assert_eq!((g.pl[p].stagger_until, g.pl[p].dazzled_until), (-1.0, -1.0));
+        assert_eq!((g.cond[g.pl[p].ch].fold_until, g.cond[g.pl[p].ch].blind_until), (-1.0, -1.0));
         g.pl[p].down = true;
         stagger_player(&mut g, 2.0, [1.0, 0.0, 0.0]);
         dazzle_player(&mut g, 2.0, [1.0, 0.0, 0.0]);
-        assert_eq!((g.pl[p].stagger_until, g.pl[p].dazzled_until), (-1.0, -1.0));
+        assert_eq!((g.cond[g.pl[p].ch].fold_until, g.cond[g.pl[p].ch].blind_until), (-1.0, -1.0));
         assert_eq!((g.stats.samstun.staggered, g.stats.samstun.dazzled), (0, 0));
     }
 
@@ -175,7 +159,7 @@ mod tests {
         let mut g = game();
         let (p, c) = (g.player, g.pl[g.player].ch);
         // folded, not blind: the clutch, the gun kept down
-        g.pl[p].stagger_until = 12.5;
+        g.cond[g.pl[p].ch].fold_until = 12.5;
         sam_stun_pose(&mut g);
         assert!(g.pl[p].stun_posed);
         assert_eq!(g.ch[c].anim.clutch, 1.0);
@@ -183,14 +167,14 @@ mod tests {
         assert_eq!(g.pl[p].fire_cd, 1.5);
         // blind as well: no clutch, turned away from the flash; bun, EXACT on: (11 - 10.7) / 0.5, and the fade above
         g.time = 10.7;
-        g.pl[p].dazzled_until = 11.0;
-        g.pl[p].dazzled_at = Some([1.0, 2.0, 3.0]);
+        g.cond[g.pl[p].ch].blind_until = 11.0;
+        g.cond[g.pl[p].ch].blind_from = Some([1.0, 2.0, 3.0]);
         sam_stun_pose(&mut g);
         assert_eq!(g.ch[c].anim.clutch, 0.0);
         let dz = g.ch[c].anim.dazzle.expect("a dazzle");
         assert_eq!(dz.from, [1.0, 2.0, 3.0]);
         assert_eq!(dz.k.to_bits(), 0x3fe3333333333340);
-        assert_eq!(g.pl[p].sup.v.to_bits(), 0x3fe000000000000b);
+        assert_eq!(g.cond[g.pl[p].ch].sup.v.to_bits(), 0x3fe000000000000b);
         // both run out: all of it comes off
         g.time = 20.0;
         sam_stun_pose(&mut g);

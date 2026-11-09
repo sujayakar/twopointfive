@@ -524,7 +524,7 @@ pub(super) fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crat
 /// Side-step along the current nav path, the body not turned to it. True once the path is consumed. (guards.ts stepAlongPath)
 pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
-    let paced = crate::condition::condition_pace(g, gd, speed);
+    let paced = crate::condition::condition_pace(g, g.gd[gd].ch, speed);
     let speed = team_legs(g, &crate::seats::here(g), gd, paced);
     if unstick_first(g, gd, dt) {
         return false;

@@ -396,7 +396,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     nv_key(g, Some(input), dt);
     let keys_on = down(g, input, "KeyW") || down(g, input, "KeyA") || down(g, input, "KeyS") || down(g, input, "KeyD");
-    let sprint_key = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), None) && shift_down(g, input) && keys_on;
+    let sprint_key = !crate::condition::is_hurt(g, g.pl[pl].ch, None) && shift_down(g, input) && keys_on;
     if hit(g, input, "KeyR") || (crate::game::player_pistol_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, gun)) || (crate::game::player_rifle_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, rifle)) {
         let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch && g.puppet.is_none());
         reload_in_hand(g, Some(sprinting), None);
@@ -439,7 +439,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let ml = m::hyp2(mx, mz);
     if ml > 0.0 { mx /= ml; mz /= ml; }
     if hit(g, input, "KeyC") && g.pl[pl].dragging.is_none() { own_legs(g, pl, |g, m| crouch_key(g, m)); }
-    let want_sprint = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), None) && shift_down(g, input)
+    let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, None) && shift_down(g, input)
         && (if g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() { own_move } else { ml > 0.0 && stalk.is_none() });
     // back to the wall (Q)
     if rooted { /* folded: no reaching for a wall, no pushing off one */ }

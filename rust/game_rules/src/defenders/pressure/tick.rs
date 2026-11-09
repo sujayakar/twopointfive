@@ -890,7 +890,7 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
                 let x = &g.tab.pressure_man[i];
                 let o = gd_of(g, x.d);
                 let de = df(g, x.d);
-                x.set && now - g.gd[o].last_seen_t > 3.0 && now >= g.gd[o].dazzled_until && de.noise_at.is_some() && now - de.noise_t < 2.0 && de.noise_t > de.moved_at + 0.5
+                x.set && now - g.gd[o].last_seen_t > 3.0 && !crate::condition::is_blind(g, g.gd[o].ch) && de.noise_at.is_some() && now - de.noise_t < 2.0 && de.noise_t > de.moved_at + 0.5
             }).collect();
             if !go.is_empty() {
                 p.phase = PressPhase::Go; p.go_at = now; p.n0 = up.len() as f64;

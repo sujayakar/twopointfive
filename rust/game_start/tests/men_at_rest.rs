@@ -19,7 +19,7 @@ fn sleeper(seed: u32) -> (Play, GuardId) {
     p.g.player_invisible = true;
     let m = p.until(120.0, |p| p.g.guards.iter().copied().find(|&m| p.asleep(m) && p.g.gd[m].wait > 30.0).is_some()).map(|_| p.g.guards.iter().copied().find(|&m| p.asleep(m)).unwrap());
     let m = m.unwrap_or_else(|| panic!("seed {seed}: two minutes and nobody slept"));
-    for o in p.g.guards.clone() { if o != m { p.g.gd[o].dazzled_until = 1e9; } }
+    for o in p.g.guards.clone() { if o != m { p.g.cond[p.g.gd[o].ch].blind_until = 1e9; } }
     p.run(1.0);
     (p, m)
 }

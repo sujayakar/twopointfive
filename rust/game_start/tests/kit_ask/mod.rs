@@ -403,7 +403,7 @@ impl KitAsk for Play {
         let sam = self.sam_at();
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, m.dazzled_until, m.pinned, m.hold, m.foe) =
+        (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
             (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(Foe::Player));
         m.path.clear();
         m.path_goal = None;
@@ -423,7 +423,7 @@ impl KitAsk for Play {
         self.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([aim[0], 1.2, aim[1]]), ..game::game::GamePuppet::default() });
     }
     fn all_but_held(&mut self, gd: GuardId) {
-        for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.hold, m.pinned, m.dazzled_until) = (true, true, 1e9); } }
+        for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.hold, m.pinned, self.g.cond[m.ch].blind_until) = (true, true, 1e9); } }
     }
     fn aim_model(&mut self, on: bool) { self.g.tune.aim_model = on; }
     fn sam_round_at(&mut self, at: [f64; 3]) {
@@ -554,7 +554,7 @@ impl KitAsk for Play {
         (along > 0.14 && along < w, perp.signum(), BODY + 0.02 - (px - ux * t).hypot(pz - uz * t))
     }
     fn frame_mid(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
-    fn folded(&self, gd: GuardId) -> f64 { let m = &self.g.gd[gd]; (m.stagger_until.min(m.dazzled_until) - self.g.time).max(0.0) }
+    fn folded(&self, gd: GuardId) -> f64 { let m = &self.g.gd[gd]; (self.g.cond[m.ch].fold_until.min(self.g.cond[m.ch].blind_until) - self.g.time).max(0.0) }
     fn door_on_men(&self) -> (i32, i32, i32) { let t = &self.g.stats.doorthrow; (t.startled, t.carried, t.pushed + t.kicked) }
     fn cans(&self) -> Vec<[f64; 3]> { self.g.items.items.iter().filter(|&&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Flash).map(|&i| game::throwables::item_pos(&self.g, i)).collect() }
     fn last_bang(&self) -> Option<[f64; 3]> { self.g.events.iter().rev().find(|e| e.kind == game::director::EventKind::Bang).map(|e| e.pos) }
@@ -671,7 +671,7 @@ impl KitAsk for Play {
         use game::director::EventKind as K;
         (self.g.events.iter().filter(|e| e.kind == K::Shot || e.kind == K::GuardShot).count(), self.g.events.iter().filter(|e| e.kind == K::Bang).count())
     }
-    fn folded_by_a_blow(&self, gd: GuardId) -> bool { self.g.gd[gd].stagger_until > self.g.time }
+    fn folded_by_a_blow(&self, gd: GuardId) -> bool { self.g.cond[self.g.gd[gd].ch].fold_until > self.g.time }
     fn sam_issued_the_forty(&mut self) { let r = self.g.pl[self.g.player].rifle; self.g.fa[r].shells = 3.0; }
     fn sprint_door_counts(&self) -> (i32, i32, i32) { let t = &self.g.stats.sprintdoor; (t.bashes, t.rips, t.kicks) }
     fn sprint_pace(&self) -> f64 { self.g.tune.player_sprint }

@@ -370,7 +370,7 @@ mod tests {
         ch.muzzle_ahead = ahead;
         ch.anim.long_gun = long;
         if let Some(y) = arm { ch.bones.set(crate::character::Bone::UpperArmR, [0.0, y, 0.0]); }
-        let c = g.ch.push(ch);
+        let c = crate::character::man_new(&mut g, ch);
         (g, c)
     }
     fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }

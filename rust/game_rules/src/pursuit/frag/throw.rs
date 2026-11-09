@@ -243,7 +243,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
         return;
     }
     let run = crate::teampace::team_blast_pace(g, gd, g.k.frag.run_speed);
-    let speed = crate::condition::condition_pace(g, gd, run);
+    let speed = crate::condition::condition_pace(g, g.gd[gd].ch, run);
     let acc = if team == crate::teams::Team::Operative && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
     let keep_goal = keep.as_ref().and_then(|k| k.goal);
     let apart = taken_by(g, Some(i), gd, dz);

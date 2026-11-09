@@ -23,7 +23,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     for j in 0..men.len() {
         if js::rem(frame + (j as f64) * 3.0, EVERY) != 0.0 { continue; }
         let gd = men[j];
-        if g.gd[gd].state == crate::game::GuardState::Dead || t < g.gd[gd].dazzled_until { continue; }
+        if g.gd[gd].state == crate::game::GuardState::Dead || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
         {
             let s = g.door_tools.seen.as_mut().unwrap();
             if !s.at.has(gd) || !s.asked.has(gd) {

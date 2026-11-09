@@ -315,7 +315,7 @@ fn heard(g: &mut Game, src: V3) -> bool {
 /// did this player's man see him go down: a line, and where the fog is a cone (hard) inside the wedge he looks down or at his shoulder
 fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
     let c = g.pl[pl].ch;
-    if g.pl[pl].down || g.time < g.pl[pl].dazzled_until || !line_to(g, c, at) { return false; }
+    if g.pl[pl].down || crate::condition::is_blind(g, g.pl[pl].ch) || !line_to(g, c, at) { return false; }
     if !g.k.fog.cone { return true; }
     let p = g.ch[c].pos;
     let (dx, dz) = (at[0] - p[0], at[1] - p[2]);
@@ -352,7 +352,7 @@ fn witness(g: &mut Game) {
             if g.recap.lost[i].saw.is_none() {
                 for j in 0..g.guards.len() {
                     let gd = g.guards[j];
-                    if !squad_up(g, gd) || now < g.gd[gd].dazzled_until { continue; }
+                    if !squad_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let c = g.gd[gd].ch;
                     if line_to(g, c, at) { g.recap.lost[i].saw = Some(gd); break; }
                 }

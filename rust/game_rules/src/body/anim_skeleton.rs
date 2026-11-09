@@ -1467,7 +1467,7 @@ mod tests {
         ch.anim.poses = set;
         ch.anim.p_a = a;
         ch.anim.p_b = b;
-        let c = g.ch.push(ch);
+        let c = crate::character::man_new(g, ch);
         let mut gd = crate::game::Guard::blank();
         gd.ch = c;
         let id = g.gd.push(gd);

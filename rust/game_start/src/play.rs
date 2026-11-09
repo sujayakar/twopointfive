@@ -499,7 +499,7 @@ impl Play {
     /// Sam is PUT at `at` (the sandbox's own call, `Game.teleportPlayer`): for a test whose staging is a place and not the walk to it.
     pub fn sam_put(&mut self, at: [f64; 2]) { game::game::game_teleport_player(&mut self.g, [at[0], 0.0, at[1]]); }
     /// Can Sam not see: a flash or a blast has his eyes for now.
-    pub fn sam_blind(&self) -> bool { self.g.time < self.g.pl[self.g.player].dazzled_until }
+    pub fn sam_blind(&self) -> bool { self.g.time < self.g.cond[self.g.pl[self.g.player].ch].blind_until }
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
@@ -530,7 +530,7 @@ impl Play {
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
     /// Can he not see: a flash or a blast has his eyes for now.
-    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
+    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].blind_until }
 
     /// are his hands changing magazine, and how much of it is left, in seconds
     pub fn reloading(&self, gd: GuardId) -> Option<f64> { if game::control::man::changing_magazine(&self.g, gd) { Some(self.g.gd[gd].reload_t) } else { None } }
@@ -540,7 +540,7 @@ impl Play {
     pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; let chamber = rounds.min(1.0); self.g.fa[w].chamber = chamber; self.g.fa[w].mag = Some(rounds - chamber); }
 
     /// Staging: he cannot see for that many seconds.
-    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     /// Staging: the gun in his hands is the only one he has.
     pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
     /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
@@ -565,7 +565,7 @@ impl Play {
     pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
-    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
+    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }
 
     /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }

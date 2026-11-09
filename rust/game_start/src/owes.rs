@@ -132,7 +132,7 @@ impl Owes {
         let Some(a) = game::orders::squad_orders_of(g, &seat, gd).map(|a| &g.tab.orders_assignment[a]) else { return (false, false); };
         let h = &g.gd[gd];
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
-        let blind = h.dazzled_until > t || h.stagger_until > t;
+        let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
         let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
         (h.state != GuardState::Dead && off_it && !fighting && !blind, a.there == "stopped short")
     }
