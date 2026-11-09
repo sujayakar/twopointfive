@@ -65,9 +65,9 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "work", Some(&t), None, None), None, "the order was refused");
     let lines0 = p.said.len();
-    p.until(40.0, |p| game::sim_lightshome::mains_active(&p.g)).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
+    p.until(40.0, |p| p.g.light_home.mains.active).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
     let mut thrown = 1;
-    for _ in 0..300 { let was = game::sim_lightshome::mains_active(&p.g); p.frame(); if !was && game::sim_lightshome::mains_active(&p.g) { thrown += 1; } }
+    for _ in 0..300 { let was = p.g.light_home.mains.active; p.frame(); if !was && p.g.light_home.mains.active { thrown += 1; } }
     assert_eq!(thrown, 1, "the mains go once");
     assert_eq!(p.said[lines0..].iter().filter(|l| l.text == "lights out.").count(), 1, "his own line, once");
 }

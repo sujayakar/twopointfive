@@ -222,11 +222,11 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
 
 /// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.
 pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
-    use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
-    !fixture_broken(g, t)
-        && g.tab.sim_lightshome_fixture[t].interactive
-        && (g.tab.sim_lightshome_fixture[t].kind == FixtureKind::Emissive || g.tab.sim_lightshome_fixture[t].kind == FixtureKind::Analytic)
-        && (fixture_on(g, t) || fixture_factor(g, t) > 0.0 || crate::carlamps::lamp_glass(g, t))
+    use crate::fixtures::FixtureKind;
+    !g.tab.fixture[t].broken
+        && g.tab.fixture[t].interactive
+        && (g.tab.fixture[t].kind == FixtureKind::Emissive || g.tab.fixture[t].kind == FixtureKind::Analytic)
+        && (g.tab.fixture[t].on || g.tab.fixture[t].factor > 0.0 || crate::carlamps::lamp_glass(g, t))
         && !crate::fire::fire_holds(g, t)
 }
 
@@ -238,11 +238,11 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
         return false;
     }
     if !destruction_break_target(g, t) {
-        if crate::carlamps::lamp_glass(g, t) && crate::sim_lightshome::fixture_broken(g, t) {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
-            let pos = g.tab.sim_lightshome_fixture[t].pos;
+        if crate::carlamps::lamp_glass(g, t) && g.tab.fixture[t].broken {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
+            let pos = g.tab.fixture[t].pos;
             crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
             lens_shatter(g, t, from);
-            let name = g.tab.sim_lightshome_fixture[t].name.clone();
+            let name = g.tab.fixture[t].name.clone();
             dlog(g, &format!("lens {} broken ({})", name, why));
         }
         return false;
@@ -250,9 +250,9 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     g.destr.fixture_count += 1.0;
     g.destr.last_fixture_t = g.time;
     g.stats.destruction.destr_fixtures += 1;
-    let name = g.tab.sim_lightshome_fixture[t].name.clone();
+    let name = g.tab.fixture[t].name.clone();
     dlog(g, &format!("fixture {} out ({})", name, why));
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    let pos = g.tab.fixture[t].pos;
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
@@ -260,8 +260,8 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     } else {
         let shard = crate::particle_fx::FixtureShatterFxT {
             pos,
-            kind: String::from(g.tab.sim_lightshome_fixture[t].kind.as_str()),
-            boxes: g.tab.sim_lightshome_fixture[t].boxes.clone(),
+            kind: String::from(g.tab.fixture[t].kind.as_str()),
+            boxes: g.tab.fixture[t].boxes.clone(),
         };
         crate::particle_fx::fixture_shatter_fx(g, &shard, from);
     }
@@ -296,7 +296,7 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
         let t = g.targets[k];
         k += 1;
         if !destruction_fixture_live(g, t) { continue; }
-        let to_t = v3::sub(g.tab.sim_lightshome_fixture[t].pos, muzzle);
+        let to_t = v3::sub(g.tab.fixture[t].pos, muzzle);
         let depth = v3::dot(to_t, dir);
         if depth < 0.0 || depth > t_hit + r { continue; }
         let along = m::min(depth, t_hit);
@@ -319,7 +319,7 @@ fn tile_key(tx: f64, tz: f64) -> String {
 
 /// A vehicle lamp's glass, from the fixture's row.
 fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
-    let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.sim_lightshome_fixture[t].pos, lens: g.tab.sim_lightshome_fixture[t].lens };
+    let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.fixture[t].pos, lens: g.tab.fixture[t].lens };
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 

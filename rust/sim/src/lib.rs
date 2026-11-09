@@ -147,11 +147,6 @@ pub fn state_part(i: usize, what: u32) -> usize {
     }
 }
 
-// ---- the level's lights (lights.rs: fixtures, the mains, the lamps they feed, a camera's and a tripwire's machine, in the game's block)
-/// how many a part holds, how long it is, where a column is (lights.rs cap)
-pub fn lights_cap(table: u32) -> usize {
-    lights::cap(table)
-}
 
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// how many rows a table holds (5: the columns of the doors' part of a block)

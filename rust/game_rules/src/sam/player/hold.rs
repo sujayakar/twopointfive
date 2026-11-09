@@ -341,7 +341,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                     _ => None,
                 };
                 let tgt: V3 = if let Some(t) = g.aim_target {
-                    v3::copy(g.tab.sim_lightshome_fixture[t].pos)
+                    v3::copy(g.tab.fixture[t].pos)
                 } else if let Some(a) = ag {
                     man_aim(g, &crate::seats::here(g), a, 1.25)
                 } else {
@@ -368,7 +368,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         if gun {
             let ty = if let Some(t) = g.aim_target {
-                v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95)
+                v3::clamp(g.tab.fixture[t].pos[1], 0.3, 2.95)
             } else {
                 match g.aim_guard {
                     Some(a) if a != gd => man_aim(g, &crate::seats::here(g), a, 1.2)[1],

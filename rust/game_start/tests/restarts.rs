@@ -72,10 +72,10 @@ fn a_load_is_not_a_restart() {
     let kept = p.keep();
     let at = p.sam_at();
     restart(&mut p);
-    assert!(!game::sim_lightshome::mains_active(&p.g), "a restart left the mains down");
+    assert!(!p.g.light_home.mains.active, "a restart left the mains down");
     p.put_back(&kept);
     p.frame();
-    assert!(game::sim_lightshome::mains_active(&p.g) && game_start::play::dist(p.sam_at(), at) < 0.05, "the load: the mains down {}, Sam {:?} kept at {at:?}", game::sim_lightshome::mains_active(&p.g), p.sam_at());
+    assert!(p.g.light_home.mains.active && game_start::play::dist(p.sam_at(), at) < 0.05, "the load: the mains down {}, Sam {:?} kept at {at:?}", p.g.light_home.mains.active, p.sam_at());
     restart(&mut p);
     let again = the_floor(&mut p);
     for ((name, a), (_, b)) in fresh.iter().zip(&again) { assert!(a == b, "the {name} after a restart after a load are not as a fresh staging has them:\n fresh {a}\n here  {b}"); }

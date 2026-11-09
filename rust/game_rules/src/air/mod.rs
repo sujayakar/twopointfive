@@ -10,7 +10,7 @@ pub mod render_lights;
 pub mod render_particles;
 pub mod render_reach;
 pub mod render_snow_field;
-pub mod sim_lightshome;
+pub mod fixtures;
 pub mod sim_weatherhome;
 pub mod smoke_types;
 pub mod snow_blast;
