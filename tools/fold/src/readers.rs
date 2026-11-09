@@ -1156,7 +1156,7 @@ mod tests {
     fn tree(name: &str, files: &[(&str, &str)]) -> PathBuf {
         let root = std::env::temp_dir().join(format!("fold-readers-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
-        let stand = [("rust/game/Cargo.toml", "[dependencies]\nsim = { path = \"../sim\" }\n"), ("rust/game/src/knobs/mod.rs", "pub struct Knobs {}"), ("rust/sim/Cargo.toml", "")];
+        let stand = [("rust/game_types/Cargo.toml", ""), ("rust/game_types/src/knobs/mod.rs", "pub struct Knobs {}"), ("rust/game/Cargo.toml", "[dependencies]\nsim = { path = \"../sim\" }\ngame_types = { path = \"../game_types\" }\n"), ("rust/sim/Cargo.toml", "")];
         for (p, t) in files.iter().chain(stand.iter()) {
             let f = root.join(p);
             std::fs::create_dir_all(f.parent().unwrap()).unwrap();
