@@ -1,11 +1,10 @@
 // A JOINTED DESK LAMP: a heavy foot, two arms with springs, a shade that is truly hollow (a ring of staves cut from one cone). It looks about: it turns on its foot, its arms bow and rise, its head nods.
 // Coarser: fewer staves, then a full cone; the springs' coils become the bar they are as thick as; each pair of rods one.
-import { type V3, type Rot, ID, add, sub, mul, norm, along, rotX, rotY, compose } from '../math';
+import { type V3, type Rot, add, sub, mul, norm, along, rotX, rotY, compose } from '../math';
 import { type Piece, taper } from '../scene/world';
 import { M } from '../scene/materials';
-import { facets } from './bicycle';
 import type { Live, Made, ObjectKind, Put } from './object';
-const HUE: V3[] = [[0.93, 0.62, 0.10], [0.93, 0.62, 0.10], [0.925, 0.62, 0.115], [0.90, 0.63, 0.245]], ONE: V3 = [1, 1, 1], STEEL: V3 = [0.93, 0.93, 0.94], DARK: V3 = [0.24, 0.24, 0.25], COIL: V3 = [0.76, 0.76, 0.78], WHITE: V3 = [0.97, 0.96, 0.93];
+const HUE: V3[] = [[0.93, 0.62, 0.10], [0.93, 0.62, 0.10], [0.925, 0.62, 0.115], [0.92, 0.622, 0.135]], ONE: V3 = [1, 1, 1], STEEL: V3 = [0.93, 0.93, 0.94], DARK: V3 = [0.24, 0.24, 0.25], COIL: V3 = [0.76, 0.76, 0.78], WHITE: V3 = [0.97, 0.96, 0.93];
 // ---- where its joints are at rest; its foot's middle is a little behind the origin
 const Z = -0.06, NECK: V3 = [0, 0.062, Z], HIP: V3 = [0, 0.104, Z], LOW = 0.34, ELBOW: V3 = add(HIP, mul([0, Math.cos(0.40), -Math.sin(0.40)], LOW)), UP = 0.33, HEAD: V3 = add(ELBOW, mul([0, Math.sin(0.30), Math.cos(0.30)], UP));
 /** the way the shade looks, at rest */
@@ -72,9 +71,8 @@ function head(p: Put, lv: number) { const G = M.paint!, PAINT = HUE[lv]!, C = M.
   if (lv < 2) { drum(0.040, 0.0150, 0.0180, M.plastic!, [0.9, 0.88, 0.82]); p.add({ at: at(0.076), half: [0.0245, 0.0270, 0.0245], mat: M.film!, tint: WHITE, rot: R, quad: [1 / 0.0245 ** 2, 1 / 0.027 ** 2, 1 / 0.0245 ** 2, 0] }); }
 }
 function put(p: Put, lv: number): Live {
-  let n = 0; const add = p.add.bind(p); p.add = q => add(facets({ rot: ID, flags: 0, ...q }, 0.0166, lv ? 0.955 : 0.977, !lv, n++));
   foot(p, lv); let hip!: ReturnType<Put['joint']>, elbow!: ReturnType<Put['joint']>, nod!: ReturnType<Put['joint']>;
-  const neck = p.joint(NECK, () => { turret(p, lv); hip = p.joint(HIP, () => { lowArm(p, lv); elbow = p.joint(ELBOW, () => { upArm(p, lv); nod = p.joint(HEAD, () => head(p, lv)); }); }); }); p.add = add;
+  const neck = p.joint(NECK, () => { turret(p, lv); hip = p.joint(HIP, () => { lowArm(p, lv); elbow = p.joint(ELBOW, () => { upArm(p, lv); nod = p.joint(HEAD, () => head(p, lv)); }); }); });
   /** it looks about, slowly, and rests between */
   return { step(_, t) { const a = t * 0.9, bow = 0.16 * Math.sin(a) - 0.05 * Math.sin(2 * a), lift = 0.20 * Math.sin(a * 0.75) ; neck.rot = rotY(0.55 * Math.sin(a * 0.5)); hip.rot = rotX(bow); elbow.rot = rotX(-bow - lift); nod.rot = compose(rotX(lift * 0.7 + 0.12 * Math.sin(1.7 * a)), rotY(0)); p.pose(); } };
 }
