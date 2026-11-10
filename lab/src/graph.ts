@@ -29,6 +29,8 @@ export interface Stage {
   alone?: boolean;
   /** its rays stop at one cell of the block, drawn (else what cells send is summed) */
   dice?: boolean;
+  /** it asks less of what is shared: the shared text, as it wants it */
+  before?: (shared: string) => string;
   /** dice that fill in evenly (the stage sets qSeed and qIndex) */
   quasi?: boolean;
   /** a stage that rasterizes does it itself; made once by `make`, then called each frame */
@@ -83,7 +85,7 @@ export class Graph {
 
   /** the whole text of a stage's shader: the shared prelude, its bindings, its code */
   source(s: Stage): string {
-    let k = 0; const out: string[] = [this.guard === 'off' ? this.prelude().replace('const GUARD = true;', 'const GUARD = false;') : this.prelude()];
+    let k = 0; const before = s.before ? s.before(this.prelude()) : this.prelude(), out: string[] = [this.guard === 'off' ? before.replace('const GUARD = true;', 'const GUARD = false;') : before];
     for (const [c, v] of Object.entries(s.consts ?? {})) out.push(`const ${c} = ${Number.isInteger(v) ? v : v.toFixed(8)};`);
     for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: ${f.startsWith('depth') ? 'texture_depth_2d' : `texture_${this.signals.get(ref.split('@')[0]!)!.solid ? 3 : 2}d<${SCALAR[f] ?? 'f32'}>`};`); }
     for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)?.format; if (!f) throw new Error(`${s.name} writes ${n}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: texture_storage_${this.signals.get(n)!.solid ? 3 : 2}d<${f}, write>;`); }
