@@ -72,8 +72,8 @@ pub(super) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
     let lit = if r.whistle.unwrap_or(false) { n }
         else if seat.hover.as_ref().is_some_and(crate::interact::wedged) && (seat.hand.near_sel as f64) < n { seat.hand.near_sel as f64 + 1.0 }
         else { 0.0 };
-    let pin = r.at.map(|at| RingPin { at, ox: r.ox.unwrap_or(0.0), oy: r.oy.unwrap_or(0.0), edge_x: g.k.cmdring.edge_x * r.z, edge_y: g.k.cmdring.edge_y * r.z });
-    Some(HandRingView { x: r.ax, y: r.ay, zoom: r.z, lit, wedges, pin })
+    let pin = r.state.at.map(|at| RingPin { at, ox: r.state.ox.unwrap_or(0.0), oy: r.state.oy.unwrap_or(0.0), edge_x: g.k.cmdring.edge_x * r.state.z, edge_y: g.k.cmdring.edge_y * r.state.z });
+    Some(HandRingView { x: r.state.ax, y: r.state.ay, zoom: r.state.z, lit, wedges, pin })
 }
 
 /// why a press did nothing, for as long as it is up. An empty tap's word goes sooner, when it is no longer what a tap would say: a step into reach, or away, takes it down

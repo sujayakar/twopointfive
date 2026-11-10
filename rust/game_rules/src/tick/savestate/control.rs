@@ -97,7 +97,7 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if a.big_tool.is_some() { return Some("putting his tool back"); }
     if crate::character::anim_kit_busy(g, p.ch) { return Some("changing what is in his hands"); }
     if p.taking().is_some() { return Some("taking something"); }
-    if (seat.hand.sel.open && !seat.hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true))) || seat.hand.sel.down_t >= 0.0 { return Some("choosing an action"); }
+    if (seat.hand.sel.open && !seat.hand.sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true))) || seat.hand.sel.down_t >= 0.0 { return Some("choosing an action"); }
     None
 }
 
@@ -522,7 +522,7 @@ fn gone(g: &mut Game, key: &str) -> String {
 /// The game kept under `key` stands again: the lines that follow a load, and what the player is told of it.   (Checkpoints.loadMem, after the snapshot is restored)
 pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     // (a ring that merely stood at the save, and a gun's setup that was up, are nothing of the saved moment)
-    if g.sets[g.seat].hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
+    if g.sets[g.seat].hand.sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true)) {
         let s = &mut g.sets[g.seat].hand.sel;
         s.open = false;
         s.ring = None;
