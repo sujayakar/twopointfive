@@ -263,29 +263,16 @@ fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
 }
 
 /// The interaction row of the nearest stuck camera.
-pub fn sticky_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::stickycam::StickyRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn sticky_rows(g: &crate::game::Game, pl: PlayerId, busy: bool, o: &mut crate::player::Offers) {
     if !can_take(g, pl) { return; }
     let Some(c) = cam_near(g, pl, crate::player::NEARBY_M) else { return };
     let ch = g.pl[pl].ch;
     let near = v3::dist_xz(g.tab.stickycam_sticky_cam[c].pos, g.ch[ch].pos) < g.k.sticky.take_reach;
     let reach = near && hands_free(g, pl);
     let pos = cam_lens(g, c);
-    let it = crate::game::Interactable {
-        kind: crate::game::InteractableKind::Cam,
-        pos,
-        line1: String::from("sticky camera"),
-        line2: String::from(if reach { "" } else if near { "hands full" } else { "step closer" }),
-        in_reach: reach,
-        off: false,
-        ..crate::game::Interactable::default()
-    };
-    // (row spreads `it` into a new object and offer keeps `it` itself: the clone is the spread)
-    let verbs = if reach && !busy {
-        vec![row(g, it.clone(), crate::game::Verb::TakeCam, String::from("take it back"), None, None)]
-    } else {
-        Vec::new()
-    };
-    offer(g, it, verbs);
+    let it = crate::player::mark(crate::game::InteractableKind::Cam, pos, "sticky camera", if reach { "" } else if near { "hands full" } else { "step closer" }, reach);
+    let take = if reach && !busy { Some(crate::player::row(&it, crate::game::Verb::TakeCam, "take it back", "")) } else { None };
+    o.add(it, take.into_iter().collect());
 }
 
 /// Space on that row: the camera comes off its wall and is one more on his launcher. False = nothing to take.

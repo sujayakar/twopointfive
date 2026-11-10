@@ -387,7 +387,7 @@ pub fn interact_priority() -> JsMap<String, f64> { { let mut t = JsMap::new(); t
 
 pub const NEARBY_M: f64 = 3.0;
 
-pub const MAX_NEAR: f64 = 3.0;
+pub const MAX_NEAR: usize = 3;
 
 pub const EASE_RATE: f64 = 0.55;
 

@@ -1,6 +1,7 @@
 //! HIS THROWS: the arc while a can is in his hand, the throw, and the can leaving his fist.
 use super::*;
 use crate::game::{Game, SlotKind, ThrowKind};
+use crate::ids::*;
 use crate::m;
 
 /// His cans this tick. `arc`: the launcher's, shown when no can's is.
@@ -53,4 +54,36 @@ fn can_leaves(g: &mut Game, t: Tick) {
     if g.infinite_ammo { can_back(g, pl, p.kind); }
     let out = crate::game::player_canister_sel(g, pl).is_some_and(|kind| throw_count(g, &crate::seats::here(g), kind) == 0.0);
     if out { g.pl[pl].slot = SlotKind::Pistol; }
+}
+
+/// how many of a kind are on the belt
+pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: crate::game::ThrowKind) -> f64 {
+    let pl = seat.player;
+    match kind {
+        crate::game::ThrowKind::Frag => g.pl[pl].frags,
+        crate::game::ThrowKind::Flash => g.pl[pl].flashbangs,
+        _ => g.pl[pl].canisters,
+    }
+}
+
+/// the can he has in his hand
+pub fn can_in_hand(g: &crate::game::Game, pl: PlayerId) -> Option<crate::game::ThrowKind> {
+    if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) }
+}
+
+/// a thrown thing not yet out of the hand goes back on the belt
+pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
+    match kind {
+        crate::game::ThrowKind::Frag => g.pl[pl].frags += 1.0,
+        crate::game::ThrowKind::Flash => g.pl[pl].flashbangs += 1.0,
+        _ => g.pl[pl].canisters += 1.0,
+    }
+}
+
+/// a wind-up called off with the can still in his fist: back on the belt
+pub(in crate::sam) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
+    if let Some(kind) = g.pl[pl].pending_throw.as_ref().map(|t| t.kind) {
+        can_back(g, pl, kind);
+        g.pl[pl].pending_throw = None;
+    }
 }
