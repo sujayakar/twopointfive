@@ -616,14 +616,14 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         let late = crate::shotgun::ShellLate::ManDown { hit_guard: hg, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p };
         match &mut pel {
             None => run_shell_late(g, &late),
-            Some(p) => { if crate::shotgun::pellet_drops(g, p, Some(hg), t_hit, dir) { p.late.push(late); } }
+            Some(p) => { if crate::shotgun::pellet_drops(g, p, g.gd[hg].ch, t_hit, dir) { p.late.push(late); } }
         }
     }
     if player_hit {
         let late = crate::shotgun::ShellLate::SamHit { hit_view, sg, dir, hit_p };
         match &mut pel {
             None => run_shell_late(g, &late),
-            Some(p) => { if crate::shotgun::pellet_drops(g, p, None, t_hit, dir) { p.late.push(late); } }
+            Some(p) => { if crate::shotgun::pellet_drops(g, p, g.pl[hit_view].ch, t_hit, dir) { p.late.push(late); } }
         }
     }
     // lights: a shot that meets a fixture breaks it

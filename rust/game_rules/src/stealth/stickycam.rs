@@ -151,9 +151,8 @@ pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
             g.tab.stickycam_sticky_cam[cam].age += h;
             let pos = g.tab.stickycam_sticky_cam[cam].pos;
             let mut vel = g.tab.stickycam_sticky_cam[cam].vel.unwrap();
-            let mut bodies = crate::flight::bodies(g, by);
-            bodies.retain(|&c| !crate::character::is_player(g, c));
-            let leg = crate::flight::leg(g, &fly, h, pos, &mut vel, &bodies, crate::combat::BodyHitContact::Entering);
+            let bodies = crate::flight::bodies(g, by);
+            let leg = crate::flight::leg(g, &fly, h, pos, &mut vel, &bodies);
             g.tab.stickycam_sticky_cam[cam].vel = Some(vel);
             let Some(leg) = leg else { continue };
             let Some(met) = leg.met else { g.tab.stickycam_sticky_cam[cam].pos = leg.to; continue };
@@ -161,16 +160,7 @@ pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
             match met {
                 Met::Man(c, t) => {
                     let at = v3::mad(pos, leg.dir, m::max(0.0, t - 0.1));
-                    let gd = crate::character::guard_of(g, c).unwrap();
-                    if g.gd[gd].civ.is_some() {
-                        crate::character::anim_hit(g, c);
-                        if g.gd[gd].held.is_none() {
-                            let p = g.ch[c].pos;
-                            crate::civilians::to_alarmed(g, gd, crate::civilians::CivCause::Noise, [p[0] - leg.dir[0] * 4.0, 0.0, p[2] - leg.dir[2] * 4.0], false);
-                        }
-                    } else {
-                        crate::launcher::stagger_guard(g, gd, leg.dir, by);
-                    }
+                    crate::flight::struck(g, c, leg.dir, by);
                     settle(g, pl, cam, at, up, -1.0);
                 }
                 Met::Prop(ph) => settle(g, pl, cam, v3::mad(pos, leg.dir, m::max(0.0, ph.t - 0.1)), up, -1.0),
