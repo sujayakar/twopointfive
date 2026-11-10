@@ -39,7 +39,8 @@ switching off is exact and immediate. Only the ratio `S / U` is noisy, and only 
 (`restirRays`). A frame takes:
 
 - a **fresh** candidate drawn by its unshadowed weight, with a shadow ray;
-- the **temporal** reservoir at the reprojected pixel, re-traced from here, its confidence cut by how far its target moved and by a per-tile gradient;
+- the **temporal** reservoir at the reprojected pixel, re-traced from here, its confidence cut by how far its target moved and by a per-tile gradient
+  (a lamp whose record is last frame's word for word gives what it gave and is not worked out twice: `SLOT_SAME`);
 - **spatial** taps of neighbors' last reservoirs (`restirSpatial`; `restirSpatialAll` runs them everywhere);
 - **beliefs** per 8×8 tile: a light every ray of the tile found dark leaves the fresh draw and is audited now and then, because a lamp behind the wall
   otherwise turns the floor into coin flips (`restirKnownDark`, `restirAudit`);
@@ -146,7 +147,7 @@ the beliefs. `restartHistories` clears every screen history for when they are wr
 
 Checks (`bun run tools/qa/checks.ts <name>`): `splitrays-check.ts` (the gather's two programs and buffer), `steadybounce-check.ts` (the dice ring),
 `bouncewalls-check.ts` (reads stay on their side), `portal-check.ts` (daylight counted once), `huesplit-check.ts`, `highlights-check.ts`,
-`reflup-check.ts`, `sunglint-check.ts` (reflections and highlights), `perf-probes.ts` (the bounce card's geometry and energy), `sdfrig-probes.ts` (the
+`reflup-check.ts`, `sunglint-check.ts` (reflections and highlights), `lightsame-check.ts` (a lamp as it was), `perf-probes.ts` (the bounce card's geometry and energy), `sdfrig-probes.ts` (the
 round cones), `sweep-ir-check.ts`.
 
 Page script: `wgsl-compile.cjs` (every text compiles); `kernel-stack.cjs` as a tool. There is no native test here: Rust neither draws nor reads this
