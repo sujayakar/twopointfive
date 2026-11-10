@@ -30,7 +30,7 @@ pub struct StackPost {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadOrders {
-    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
+    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
     /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
     pub made: JsMap<String, OrdersOrderDefId>,
@@ -103,12 +103,10 @@ pub struct Menu {
     pub rows: Vec<OrdersOrderDefId>,
     pub why: Vec<Option<String>>,
     pub sel: f64,
-    pub wheel_acc: f64,
     pub read_t: f64,
     pub part: Option<Vec<GuardId>>,
     pub page: Option<String>,
     pub word_row: bool,
-    pub on_word: bool,
     pub men_side: Option<f64>,
     pub side_key: String,
     pub flat: Option<bool>,
@@ -125,12 +123,10 @@ impl Default for Menu {
             rows: Vec::new(),
             why: Vec::new(),
             sel: 0.0,
-            wheel_acc: 0.0,
             read_t: 0.0,
             part: None,
             page: None,
             word_row: false,
-            on_word: false,
             men_side: None,
             side_key: String::new(),
             flat: None,
@@ -659,8 +655,6 @@ pub const IN_WAY_WORDS: &str = "you're in the way.";
 pub const FUR_M: f64 = 0.12;
 
 pub const BACK_TRIES: f64 = 2.0;
-
-pub const WHEEL_STEP: f64 = 60.0;
 
 pub const ORDER_DIGITS: f64 = 5.0;
 

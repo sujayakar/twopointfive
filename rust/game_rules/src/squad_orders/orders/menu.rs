@@ -6,28 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A row's digit off its key code: `Digit1` to `Digit9`, else 0.
-pub(super) fn digit_of(code: &str) -> f64 {
-    match code.strip_prefix("Digit").map(str::as_bytes) {
-        Some(&[d @ b'1'..=b'9']) => (d - b'0') as f64,
-        _ => 0.0,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A row's digit off its key code: `wait_key` is either a digit of the ring or a key of its own.
-    #[test]
-    fn a_digit_is_one_to_nine_and_nothing_else_is_one() {
-        for (code, want) in [("Digit1", 1.0), ("Digit5", 5.0), ("Digit9", 9.0), ("Digit0", 0.0), ("Digit10", 0.0), ("Digit", 0.0), ("KeyX", 0.0), ("xDigit1", 0.0), ("", 0.0)] {
-            assert_eq!(digit_of(code), want, "{code:?}");
-        }
-    }
-
-}
-
 // ------------------------------------------------------------ small words
 
 /// `a === b` of two `Who`s (ring.indexOf)

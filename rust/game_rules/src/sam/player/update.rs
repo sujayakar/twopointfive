@@ -757,7 +757,6 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         g.pl[pl].launch_held = held;
     }
     // throwables: preview while a canister slot is up; throw on LMB (QUICKTHROW is off on the page: no G gesture)
-    if g.sets[g.seat].hand.throw_eaten && !down(g, input, "KeyG") && !hit(g, input, "KeyG") { g.sets[g.seat].hand.throw_eaten = false; }
     let prev_preview = g.sets[g.seat].hand.throw_preview.take();
     {
         let tk = g.pl[pl].throw_kind;

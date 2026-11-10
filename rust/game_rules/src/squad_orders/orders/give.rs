@@ -42,11 +42,6 @@ fn press_delete(g: &mut Game, input: InputId, code: &str) -> bool {
 fn press_has(g: &Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
-/// `input.clicked &= ~bit`
-fn unclick(g: &mut Game, input: InputId, bit: i32) {
-    let c = g.tab.input[input].clicked;
-    g.tab.input[input].clicked = (js::to_i32(c) & !bit) as f64;
-}
 /// a row of the list by a number, as `rows[i]`
 fn row_at(rows: &[OrdersOrderDefId], i: f64) -> Option<OrdersOrderDefId> {
     if i >= 0.0 && i == m::floor(i) && (i as usize) < rows.len() { Some(rows[i as usize]) } else { None }
@@ -282,25 +277,6 @@ pub(super) fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId
 /// Is the 'wait for my word' row offered under these rows
 fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
     matches!(t, OrderTarget::Door(_)) && squad_orders_big(g, &crate::seats::here(g)) && rows.iter().any(|&d| on(g.tab.orders_order_def[d].on_word))
-}
-
-/// The open menu's page that has the 'wait for my word' row
-fn squad_orders_word_page(g: &crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
-    if m.page.is_some() { return None; }
-    for &d in &m.rows {
-        let opens = g.tab.orders_order_def[d].opens.clone();
-        if let Some(p) = opens.filter(|p| !p.is_empty()) {
-            let rows = squad_orders_rows_for(g, &crate::seats::here(g), &m.target, Some(&p), Some(&m.men));
-            if squad_orders_word_row_of(g, &m.target, &rows) { return Some(p); }
-        }
-    }
-    None
-}
-
-/// The digit the open menu's 'wait for my word' row is on
-fn squad_orders_wait_digit(g: &crate::game::Game, m: &crate::orders::Menu) -> f64 {
-    let k = crate::orders::digit_of(&g.k.orders.wait_key);
-    if m.word_row && k <= crate::orders::ORDER_DIGITS && !m.rows.iter().any(|&d| g.tab.orders_order_def[d].key == Some(k)) { k } else { 0.0 }
 }
 
 /// Why these men cannot carry that order out on that target
@@ -570,15 +546,11 @@ pub fn squad_orders_loaded(g: &mut crate::game::Game) {
     g.sets[g.seat].orders.tap_was = None;
 }
 
-/// Esc: the menu steps back a page, or is dismissed
+/// Esc: the ring is dismissed
 pub fn squad_orders_escape(g: &mut crate::game::Game) -> bool {
     if g.sets[g.seat].orders.menu.is_none() { return false; }
-    if g.sets[g.seat].orders.cmd_ring.is_some() {
-        g.sets[g.seat].orders.menu = None;
-        g.sets[g.seat].orders.cmd_ring = None;
-    } else if !squad_orders_page_back(g) {
-        g.sets[g.seat].orders.menu = None;
-    }
+    g.sets[g.seat].orders.menu = None;
+    g.sets[g.seat].orders.cmd_ring = None;
     g.sets[g.seat].orders.esc_used = true;
     true
 }
@@ -601,12 +573,10 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
         rows,
         why: Vec::new(),
         sel: 0.0,
-        wheel_acc: 0.0,
         read_t: -1.0,
         part: part.map(|x| x.to_vec()),
         page: None,
         word_row,
-        on_word: false,
         men_side: None,
         side_key: String::new(),
         flat: if flat { Some(true) } else { None },
@@ -622,8 +592,7 @@ pub fn squad_orders_close(g: &mut crate::game::Game) {
 }
 
 /// The open menu turned to a page of it
-pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>, on_word: Option<bool>) {
-    let on_word = on_word.unwrap_or(false);
+pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>) {
     let Some(mut m) = g.sets[g.seat].orders.menu.clone() else { return };
     let from = m.page.clone();
     m.page = page.map(String::from);
@@ -641,9 +610,7 @@ pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>, on_word:
     if let Some(up) = g.sets[g.seat].orders.menu.as_mut() {
         up.rows = rows;
         up.word_row = word_row;
-        up.on_word = up.on_word || (word_row && on_word);
         up.sel = sel.map_or(0.0, |i| i as f64);
-        up.wheel_acc = 0.0;
     }
     if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() { r.lit = 0.0; r.armed = false; r.more = Some(false); }
     squad_orders_refresh(g);
@@ -653,22 +620,18 @@ pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>, on_word:
 pub(super) fn squad_orders_page_back(g: &mut crate::game::Game) -> bool {
     let Some(page) = g.sets[g.seat].orders.menu.as_ref().and_then(|m| m.page.clone()) else { return false };
     let back = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].opens.as_ref() == Some(&page)).and_then(|d| g.tab.orders_order_def[d].page.clone());
-    squad_orders_turn(g, back.as_deref(), None);
+    squad_orders_turn(g, back.as_deref());
     true
 }
 
 /// Give the open menu's row `i` and take the menu down
 pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<String> {
     let i = match i { Some(x) => x, None => g.sets[g.seat].orders.menu.as_ref().map_or(-1.0, |m| m.sel) };
-    let Some(m) = g.sets[g.seat].orders.menu.as_mut() else { return Some(String::from("no menu")); };
-    if m.word_row && i == m.rows.len() as f64 {
-        m.on_word = !m.on_word;
-        return Some(String::from(if m.on_word { "on the word" } else { "at once" }));
-    }
+    let Some(m) = g.sets[g.seat].orders.menu.as_ref() else { return Some(String::from("no menu")); };
     let row = row_at(&m.rows, i);
     let page = row.and_then(|d| g.tab.orders_order_def[d].opens.clone()).filter(|p| !p.is_empty());
     if let Some(p) = page {
-        squad_orders_turn(g, Some(&p), None);
+        squad_orders_turn(g, Some(&p));
         return Some(String::from(if g.sets[g.seat].orders.menu.is_some() { "opened" } else { "nobody to take it" }));
     }
     let there = squad_orders_reread(g);
@@ -678,16 +641,13 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
     if i < 0.0 || i >= m.rows.len() as f64 { return Some(String::from("cancelled")); }
     let d = m.rows[i as usize];
     let id = g.tab.orders_order_def[d].id.clone();
-    let on_word = on(g.tab.orders_order_def[d].on_word) && m.on_word;
     if m.part.is_some() {
-        let opts = GiveOpts { men: Some(m.men.clone()), on_word: if on_word { Some(true) } else { None }, ack: None };
+        let opts = GiveOpts { men: Some(m.men.clone()), on_word: None, ack: None };
         let target = m.target.clone();
         let mut give = |g: &mut Game| squad_orders_give(g, &id, Some(&target), None, Some(&opts));
         return squad_orders_part_give(g, &mut give);
     }
-    let opts = GiveOpts { ack: None, on_word: Some(true), men: None };
-    let no = squad_orders_give(g, &id, Some(&m.target), None, if on_word { Some(&opts) } else { None });
-    no
+    squad_orders_give(g, &id, Some(&m.target), None, None)
 }
 
 /// An order of the ring that adds a goal, given by hand to its men alone
@@ -838,7 +798,7 @@ pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId) {
     if g.sets[g.seat].orders.view.input.is_some() { set_view(g, input); }
 }
 
-/// Once a frame right after the aim is known: T, the press that opens or closes the menu, and the open menu's keys, each taken out of the frame's input
+/// Once a frame right after the aim is known: T, the ring and its keys, and the quick key, each taken out of the frame's input
 pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     squad_orders_sync(g);
     if g.sets[g.seat].orders.esc_used { g.sets[g.seat].orders.esc_used = false; press_delete(g, input, "Escape"); }
@@ -863,72 +823,11 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
     }
     crate::planmode::goal_input(g, input, cam, canvas);
     if squad_orders_ring_input(g, input, cam, canvas) { return; }
-    let Some(m) = g.sets[g.seat].orders.menu.clone() else {
-        let quick = g.k.orders.quick_key.clone();
-        if crate::input::input_hit(g, input, &quick) {
-            let t = squad_orders_target_under(g, input, cam, canvas);
-            squad_orders_tap_give(g, &t, input, None);
-        }
-        return;
-    };
-    let esc = crate::backkey::back_take(g, input);
-    let blur = press_has(g, input, "Blur");
-    let space = press_delete(g, input, crate::consts::INTERACT_KEY);
-    let rmb = crate::input::input_rmb_hit(g, input);
-    if rmb { unclick(g, input, 4); }
-    let lmb = crate::input::input_lmb_hit(g, input);
-    if g.time - m.read_t >= g.k.orders.refresh_secs || squad_orders_due(g, &m) {
-        squad_orders_refresh(g);
-        if g.sets[g.seat].orders.menu.is_none() { return; }
+    let quick = g.k.orders.quick_key.clone();
+    if crate::input::input_hit(g, input, &quick) {
+        let t = squad_orders_target_under(g, input, cam, canvas);
+        squad_orders_tap_give(g, &t, input, None);
     }
-    let Some(m) = g.sets[g.seat].orders.menu.clone() else { return };
-    let wait_d = squad_orders_wait_digit(g, &m);
-    let word_page = squad_orders_word_page(g, &m);
-    let (mut digit, mut wait) = (0.0, false);
-    for d in 1..=9 {
-        if press_delete(g, input, &format!("Digit{}", d)) {
-            let d = d as f64;
-            if d == wait_d { wait = true; } else if digit == 0.0 { digit = d; }
-        }
-    }
-    let wait_key = g.k.orders.wait_key.clone();
-    if !js::truthy(crate::orders::digit_of(&wait_key)) && press_delete(g, input, &wait_key) && m.word_row { wait = true; }
-    let wait_alt = g.k.orders.wait_alt.clone();
-    let alt = (m.word_row || word_page.is_some()) && !wait_alt.is_empty() && press_delete(g, input, &wait_alt);
-    let mut d_sel = 0.0;
-    if press_delete(g, input, "ArrowDown") { d_sel += 1.0; }
-    if press_delete(g, input, "ArrowUp") { d_sel -= 1.0; }
-    let mut wheel = 0.0;
-    let turned = g.tab.input[input].wheel;
-    if js::truthy(turned) {
-        let mut acc = m::max(-2.0 * WHEEL_STEP, m::min(2.0 * WHEEL_STEP, m.wheel_acc + turned));
-        g.tab.input[input].wheel = 0.0;
-        if m::abs(acc) >= WHEEL_STEP {
-            wheel = m::sign(acc);
-            acc -= wheel * WHEEL_STEP;
-        }
-        if let Some(up) = g.sets[g.seat].orders.menu.as_mut() { up.wheel_acc = acc; }
-    }
-    if lmb && matches!(g.pl[g.player].holding.as_ref().map(|h| h.variant), Some(crate::character::HoldVariant::Arm)) { unclick(g, input, 1); }
-    if blur || lmb { g.sets[g.seat].orders.menu = None; return; }
-    if esc || rmb {
-        if !squad_orders_page_back(g) { g.sets[g.seat].orders.menu = None; }
-        return;
-    }
-    if alt {
-        if let Some(p) = &word_page { squad_orders_turn(g, Some(p), Some(true)); return; }
-    }
-    if wait || alt { squad_orders_pick(g, Some(m.rows.len() as f64)); }
-    if digit != 0.0 {
-        let found = m.rows.iter().position(|&r| g.tab.orders_order_def[r].key == Some(digit));
-        if let Some(i) = found { squad_orders_pick(g, Some(i as f64)); return; }
-    }
-    d_sel += wheel;
-    let Some(up) = g.sets[g.seat].orders.menu.as_mut() else { return };
-    let n = up.rows.len() as f64 + if up.word_row { 1.0 } else { 0.0 };
-    if js::truthy(d_sel) { up.sel = js::rem(js::rem(up.sel + d_sel, n + 1.0) + (n + 1.0), n + 1.0); }
-    let sel = up.sel;
-    if space { squad_orders_pick(g, Some(sel)); }
 }
 
 #[cfg(test)]
