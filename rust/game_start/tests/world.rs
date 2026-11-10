@@ -59,7 +59,7 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: 3, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.2);
-    for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+    for d in p.g.doors.list.clone() { p.g.dr[d].leaf.locked = false; }
     p.run(0.3);
     let th = game::workthings::work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);

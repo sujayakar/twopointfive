@@ -49,8 +49,8 @@ fn floor_behind_a_shut_door_is_no_cover() {
     let threat = [28.0, 0.0, 9.2];
     let shut = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(shut.map_or(true, |s| s[0] < 33.0), "the door shut: cover at {shut:?}, past it");
-    game::doors::door_set_locked(&mut p.g, door, false);
-    game::doors::door_set_latched(&mut p.g, door, false);
+    p.g.dr[door].leaf.locked = false;
+    p.g.dr[door].leaf.latched = false;
     let open = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(open.map_or(false, |s| s[0] > 33.0), "the staging is wrong: the door off its latch and still no cover past it: {open:?}");
     p.g.gd[man].stays_in_rooms = true;

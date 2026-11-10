@@ -66,7 +66,7 @@ fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWo
 pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Pick {
     let crate::orders::OrderTarget::Door(t) = t else { return Pick::Text(String::from("not a door.")) };
     let d = t.door;
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return Pick::Text(String::from("no door left."));
     }
     if g.dr[d].def.steel.unwrap_or(false) {

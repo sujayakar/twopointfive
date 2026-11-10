@@ -404,7 +404,7 @@ fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTo
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
 fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return None;
     }
     let f = crate::doors::doors_frame_coords(g, d, from);
@@ -468,10 +468,10 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let home = !run || crate::doors::doors_boot_holds(g, d, pos);
     let who = g.ch[c].id;
     let kick_k = g.k.sprintdoor.kick_k;
-    if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
+    if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
         g.stats.sprintdoor.kicks += 1;
         crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
-    } else if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && home {
+    } else if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && home {
         let pos = g.ch[c].pos;
         let gave = crate::doors::doors_kick_in(g, d, pos, who, None);
         let pos = g.ch[c].pos;

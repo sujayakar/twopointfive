@@ -372,19 +372,19 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     // the hostage room's door shut on its latch (the night leaves it ajar)
     let Some(d) = crate::doors::doors_by_name(g, &s.room.door) else { return Err(String::from("Cannot read properties of undefined (reading 'reset')")); };
     crate::doors::door_reset(g, d);
-    crate::doors::door_set_angle(g, d, 0.0);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_latched(g, d, true);
-    crate::doors::door_set_closing(g, d, false);
+    g.dr[d].leaf.angle = 0.0;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.latched = true;
+    g.dr[d].leaf.closing = false;
     // the side door from the server room: shut, and for the scenario not locked
     let side = match &s.side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
     if let Some(sd) = side {
         crate::doors::door_reset(g, sd);
-        crate::doors::door_set_angle(g, sd, 0.0);
-        crate::doors::door_set_vel(g, sd, 0.0);
-        crate::doors::door_set_latched(g, sd, true);
-        crate::doors::door_set_closing(g, sd, false);
-        crate::doors::door_set_locked(g, sd, false);
+        g.dr[sd].leaf.angle = 0.0;
+        g.dr[sd].leaf.vel = 0.0;
+        g.dr[sd].leaf.latched = true;
+        g.dr[sd].leaf.closing = false;
+        g.dr[sd].leaf.locked = false;
     }
     // the opposition: captor, door man, roamers
     let mut cast: Vec<CastRow> = vec![CastRow { role: Role::Captor, in_room: true, mark: s.captor, name: String::from("Captor") }];

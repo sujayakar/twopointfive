@@ -18,10 +18,10 @@ fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        doors.push_str(&js::num_str(crate::doors::door_angle(g, d)));
-        if crate::doors::door_latched(g, d) { doors.push('l'); }
-        if crate::doors::door_locked(g, d) { doors.push('k'); }
-        if crate::doors::door_off(g, d) { doors.push('o'); }
+        doors.push_str(&js::num_str(g.dr[d].leaf.angle));
+        if g.dr[d].leaf.latched { doors.push('l'); }
+        if g.dr[d].leaf.locked { doors.push('k'); }
+        if g.dr[d].leaf.off { doors.push('o'); }
         doors.push(',');
         i += 1;
     }

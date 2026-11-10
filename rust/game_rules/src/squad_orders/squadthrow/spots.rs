@@ -183,9 +183,9 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
     }
     for di in 0..g.doors.list.len() {   // (a door's leaf where it stands, shut or open: the cells under it are not walked)
         let d = g.doors.list[di];
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let (hx, hz, closed, width) = { let def = &g.dr[d].def; (def.hinge[0], def.hinge[1], def.closed_dir, def.width) };
-        let th = closed + crate::doors::door_angle(g, d);
+        let th = closed + g.dr[d].leaf.angle;
         let (ux, uz) = (m::cos(th), m::sin(th));
         let mut u = 0.2;
         while u <= width {

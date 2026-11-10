@@ -456,10 +456,10 @@ pub(super) fn room_clear_scenario_on_staged(g: &mut crate::game::Game) {
     for id in ways.keys() {
         if let Some(d) = crate::doors::doors_by_name(g, &id) {
             crate::doors::door_reset(g, d);
-            crate::doors::door_set_angle(g, d, 0.0);
-            crate::doors::door_set_vel(g, d, 0.0);
-            crate::doors::door_set_latched(g, d, true);
-            crate::doors::door_set_closing(g, d, false);
+            g.dr[d].leaf.angle = 0.0;
+            g.dr[d].leaf.vel = 0.0;
+            g.dr[d].leaf.latched = true;
+            g.dr[d].leaf.closing = false;
         }
     }
     let dealt = core::mem::take(&mut g.room_clear.placement);

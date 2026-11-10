@@ -35,7 +35,7 @@ fn a_move_tries_a_door_nobody_tried_and_stops_there() {
         let s = 5u32;
         let mut p = floor(s);
         let d = game::doors::doors_by_name(&p.g, "manager").expect("the manager's door");
-        assert!(game::doors::door_locked(&p.g, d), "seed {s}: the staging: the door is not locked");
+        assert!(p.g.dr[d].leaf.locked, "seed {s}: the staging: the door is not locked");
         assert_eq!(give(&mut p, "move", INSIDE), None, "seed {s}: nobody has tried it and the move was refused");
         let n = p.said.len();
         p.until(30.0, |p| p.said[n..].iter().any(|l| l.text.contains(SHUT))).unwrap_or_else(|| panic!("seed {s}: 30 s and nobody has said it is shut: {}", p.roll()));
@@ -45,7 +45,7 @@ fn a_move_tries_a_door_nobody_tried_and_stops_there() {
         for m in p.mates() { assert!(p.at(m)[1] > 9.8, "seed {s}: a man is inside the room: {:?}", p.at(m)); }
         let again = give(&mut p, "move", INSIDE);
         assert!(again.is_some(), "seed {s}: tried and found shut, and the same move is taken");
-        assert!(game::doors::door_locked(&p.g, d), "seed {s}: the door gave");
+        assert!(p.g.dr[d].leaf.locked, "seed {s}: the door gave");
     }
 }
 
@@ -84,12 +84,12 @@ fn a_lock_on_the_face_it_opens_toward_is_picked_and_not_booted() {
     {
         let s = 7u32;
         let (mut p, d, c) = lock_toward_us(s);
-        assert!(game::doors::door_locked(&p.g, d), "seed {s}: the staging: not locked");
+        assert!(p.g.dr[d].leaf.locked, "seed {s}: the staging: not locked");
         assert_eq!(give(&mut p, "openClear", c), None, "seed {s}: refused");
         let mut kicks = 0;
-        p.until(50.0, |p| { kicks += p.g.events.iter().filter(|e| e.kind == game::director::EventKind::Kick && e.time == p.g.time).count(); !game::doors::door_locked(&p.g, d) && p.g.sets[p.g.seat].door_tools.stats.picks >= 1.0 }).unwrap_or_else(|| panic!("seed {s}: 50 s and it is not picked: {:?}", p.lines(p.mates()[0])));
+        p.until(50.0, |p| { kicks += p.g.events.iter().filter(|e| e.kind == game::director::EventKind::Kick && e.time == p.g.time).count(); !p.g.dr[d].leaf.locked && p.g.sets[p.g.seat].door_tools.stats.picks >= 1.0 }).unwrap_or_else(|| panic!("seed {s}: 50 s and it is not picked: {:?}", p.lines(p.mates()[0])));
         assert_eq!(kicks, 0, "seed {s}: boots");
-        assert!(!game::doors::door_lock_broken(&p.g, d) && p.said.iter().any(|l| l.text.contains("opens toward us. picking it")), "seed {s}: keep broken {}, said {:?}", game::doors::door_lock_broken(&p.g, d), p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>());
+        assert!(!p.g.dr[d].leaf.lock_broken && p.said.iter().any(|l| l.text.contains("opens toward us. picking it")), "seed {s}: keep broken {}, said {:?}", p.g.dr[d].leaf.lock_broken, p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>());
     }
 }
 
@@ -99,13 +99,13 @@ fn a_lock_no_pick_opens_ends_the_order_at_the_door() {
     {
         let s = 7u32;
         let (mut p, d, c) = lock_toward_us(s);
-        game::doors::door_set_locked(&mut p.g, d, false);
+        p.g.dr[d].leaf.locked = false;
         assert_eq!(give(&mut p, "openClear", c), None, "seed {s}: refused");
         p.run(0.33);
-        game::doors::door_set_locked(&mut p.g, d, true);
+        p.g.dr[d].leaf.locked = true;
         p.g.dr[d].lock_id = format!("wedge:{}", p.g.dr[d].def.name);
         p.until(40.0, |p| p.said.iter().any(|l| l.text.contains("opens toward us. no boot"))).unwrap_or_else(|| panic!("seed {s}: 40 s and the lead has not said it: {:?}", p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>()));
         p.run(0.5);
-        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty() && !game::doors::door_lock_broken(&p.g, d) && game::doors::door_locked(&p.g, d), "seed {s}: ops {}, the door gave", p.g.sets[p.g.seat].door_tools.ops.len());
+        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty() && !p.g.dr[d].leaf.lock_broken && p.g.dr[d].leaf.locked, "seed {s}: ops {}, the door gave", p.g.sets[p.g.seat].door_tools.ops.len());
     }
 }

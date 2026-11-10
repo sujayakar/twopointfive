@@ -142,7 +142,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             None => crate::cleared::cleared_rooms_room_at(g, beyond),
         };
         let shut = match d {
-            Some(d) => !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.2),
+            Some(d) => !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.2),
             None => false,
         };
         let far_known = match d {
@@ -150,7 +150,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             None => crate::cleared::cleared_rooms_known_at(g, beyond),
         };
         let locked = match d {
-            Some(d) => shut && crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) && crate::doors::doors_locked_out(g, d, [ex, 0.0, ez], Some(ring)),
+            Some(d) => shut && g.dr[d].leaf.locked && g.dr[d].leaf.latched && crate::doors::doors_locked_out(g, d, [ex, 0.0, ez], Some(ring)),
             None => false,
         };
         ways.push(RoomWay { o, in_n, beyond, far_known, shut, locked, dist: flat(o_at, p) });

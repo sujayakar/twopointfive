@@ -768,16 +768,16 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
     let name = crate::orders::door_words(g, d);
     if is_open(g, d) {
         door_tools_beat(g, op, "open already");
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         if m::abs(angle) < 1.2 {
-            crate::doors::door_set_closing(g, d, false);
-            let vel = crate::doors::door_vel(g, d);
+            g.dr[d].leaf.closing = false;
+            let vel = g.dr[d].leaf.vel;
             let v = js::or(m::sign(angle), 1.0) * m::max(m::abs(vel), g.k.doortools.shove);
-            crate::doors::door_set_vel(g, d, v);
-            crate::doors::door_set_quiet_t(g, d, -1.0);
+            g.dr[d].leaf.vel = v;
+            g.dr[d].leaf.quiet_t = -1.0;
             let body = g.gd[lead].ch;
             let who = g.ch[body].id;
-            crate::doors::door_set_last_who(g, d, who);
+            g.dr[d].leaf.last_who = who;
         }
         door_tools_opened(g, op);
         return;
@@ -1432,8 +1432,8 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
         door_tools_new_lead(g, op);
     }
     let open_t = dop!(g, op).open_t;
-    if !open_t.is_nan() && g.time - open_t < g.k.doortools.hold_open && crate::doors::door_quiet_t(g, door) > -1.0 && is_open(g, door) {
-        crate::doors::door_set_quiet_t(g, door, -1.0);
+    if !open_t.is_nan() && g.time - open_t < g.k.doortools.hold_open && g.dr[door].leaf.quiet_t > -1.0 && is_open(g, door) {
+        g.dr[door].leaf.quiet_t = -1.0;
     }
     door_tools_threat_note(g, op);
     if is_pre(dop!(g, op).phase) {

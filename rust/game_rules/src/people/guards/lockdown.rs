@@ -241,16 +241,16 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
         let d = g.doors.list[di];
         di += 1;
         let (def_locked, def_exterior, def_closer) = { let def = &g.dr[d].def; (def.locked.unwrap_or(false), def.exterior.unwrap_or(false), def.closer) };
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let barred = if calm {
             !(def_locked || def_exterior) || def_closer == Some(false)
         } else {
             def_exterior && !(def_closer != Some(false))
         };
-        if barred || g.time - crate::doors::door_guard_t(g, d) < 12.0 || crate::doors::door_quiet_t(g, d) < 0.6 { continue; }
-        let angle = crate::doors::door_angle(g, d);
-        let open = !crate::doors::door_latched(g, d) && (calm || m::abs(angle) > 0.03);
-        let relock = !calm && def_locked && !crate::doors::door_locked(g, d) && !crate::doors::door_lock_broken(g, d);
+        if barred || g.time - g.dr[d].leaf.guard_t < 12.0 || g.dr[d].leaf.quiet_t < 0.6 { continue; }
+        let angle = g.dr[d].leaf.angle;
+        let open = !g.dr[d].leaf.latched && (calm || m::abs(angle) > 0.03);
+        let relock = !calm && def_locked && !g.dr[d].leaf.locked && !g.dr[d].leaf.lock_broken;
         if !open && !relock { continue; }
         let fc = g.dr[d].frame_centre;
         let p = g.ch[c].pos;
@@ -272,15 +272,15 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
         }
         if busy { continue; }
         let now = g.time;
-        crate::doors::door_set_guard_t(g, d, now);
+        g.dr[d].leaf.guard_t = now;
         if open { let who = g.ch[c].id; crate::doors::doors_pull_to(g, d, who); }
         if relock {
-            let line = if crate::doors::door_noticed(g, d) { "locking this back up" } else if open { "shutting this — and it stays locked" } else { "someone left this unlocked — locking it" };
+            let line = if g.dr[d].leaf.noticed { "locking this back up" } else if open { "shutting this — and it stays locked" } else { "someone left this unlocked — locking it" };
             crate::game::game_say(g, gd, line, None, None);
-            crate::doors::door_set_locked(g, d, true);
-            crate::doors::door_set_noticed(g, d, true);
+            g.dr[d].leaf.locked = true;
+            g.dr[d].leaf.noticed = true;
             let now = g.time;
-            crate::doors::door_set_noticed_t(g, d, now);
+            g.dr[d].leaf.noticed_t = now;
             let at = crate::doors::door_pos(g, d);
             crate::audio_iface::game_audio_like_play(g, "lockOpen", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
         }

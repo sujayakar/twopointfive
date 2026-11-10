@@ -559,7 +559,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let yaw = d.yaw;
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::default() }).into());
-        let locked = crate::doors::door_locked(g, k.door) && crate::doors::door_latched(g, k.door);
+        let locked = g.dr[k.door].leaf.locked && g.dr[k.door].leaf.latched;
         let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::default() }).into());

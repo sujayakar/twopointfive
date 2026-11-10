@@ -259,8 +259,8 @@ impl Bot {
     // ---- doors, things
     pub fn door(&self, name: &str) -> DoorId { self.ask(|g| g.doors.list.iter().copied().find(|&d| g.dr[d].def.name == name)).unwrap_or_else(|| panic!("the script names a door '{}' the level does not have", name)) }
     pub fn closed(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_is_closed(g, d)) }
-    pub fn locked_door(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_locked(g, d)) }
-    pub fn angle(&self, d: DoorId) -> f64 { self.ask(|g| game::doors::door_angle(g, d)) }
+    pub fn locked_door(&self, d: DoorId) -> bool { self.ask(|g| g.dr[d].leaf.locked) }
+    pub fn angle(&self, d: DoorId) -> f64 { self.ask(|g| g.dr[d].leaf.angle) }
     pub fn thrown(&self, kind: ItemKind) -> bool { self.ask(|g| g.items.items.iter().any(|&i| g.tab.item[i].kind == kind && !g.tab.item[i].fired)) }
     /// the can in the air, until it has gone off (or `secs`)
     pub async fn landed(&self, kind: ItemKind, secs: f64) {

@@ -5,7 +5,6 @@ use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::plan::KIT_PLAN;
 use super::types::*;
 use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
-use crate::doors::door_off;
 use crate::game::{Game, SlotKind};
 use crate::ids::*;
 use crate::m;
@@ -228,7 +227,7 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
 }
 pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage) {
     life_off(g, st, true);
-    let hinge = st.door.filter(|&d| !door_off(g, d)).map(|d| g.dr[d].def.hinge);
+    let hinge = st.door.filter(|&d| !g.dr[d].leaf.off).map(|d| g.dr[d].def.hinge);
     let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
@@ -253,8 +252,8 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
     if st.a.asked.is_none() && !a.done {
         g.pl[pl].crouch = false;
         if a.open {
-            if let Some(d) = st.door.filter(|&d| !door_off(g, d)) {
-                crate::doors::door_set_locked(g, d, false);
+            if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) {
+                g.dr[d].leaf.locked = false;
                 let f = at(st, [0.0, 1.0, 0.0]);
                 let id = g.ch[g.pl[pl].ch].id;
                 crate::doors::doors_crack(g, d, f, id, st.a.step_dt, None, Some(c.swing), Some(c.wide_deg * R));
@@ -270,7 +269,7 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
             }
             last.up = true;
         }
-        if let Some(d) = st.door.filter(|&d| !door_off(g, d)) { last.leaf = m::max(last.leaf, m::abs(crate::doors::door_angle(g, d) - st.leaf_shut)); }
+        if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) { last.leaf = m::max(last.leaf, m::abs(g.dr[d].leaf.angle - st.leaf_shut)); }
         st.a.cost_last = Some(last);
         return true;
     }
@@ -330,7 +329,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
     let a = idle_at(now - st.a.life_t);
     let Some(l) = st.a.life_lamp.filter(|_| !a.done) else { life_off(g, st, false); return };
     let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
-    let way = if st.door.map_or(false, |d| !door_off(g, d)) { st.latch } else { -sg };
+    let way = if st.door.map_or(false, |d| !g.dr[d].leaf.off) { st.latch } else { -sg };
     let h = st.a.life_home;
     let i = (if st.a.life_hung { QK.own.intensity * QK.idle.gain * a.env } else { QK.own.intensity * st.a.blade }) * a.lit;
     let r = &mut g.tab.light[l];

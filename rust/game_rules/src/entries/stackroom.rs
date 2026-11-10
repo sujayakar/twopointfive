@@ -464,9 +464,9 @@ fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
 
 /// the leaf stands open: off its hinges, or unlatched and swung
 pub fn stack_view_open(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) { return true; }
-    if crate::doors::door_latched(g, d) { return false; }
-    m::abs(crate::doors::door_angle(g, d)) >= g.k.stackroom.view_ajar
+    if g.dr[d].leaf.off { return true; }
+    if g.dr[d].leaf.latched { return false; }
+    m::abs(g.dr[d].leaf.angle) >= g.k.stackroom.view_ajar
 }
 
 /// how far from the frame's centre a plain stack's mark on this door can be
@@ -736,7 +736,7 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
             if room < 0.0 { continue; }
             let unheld = if js::truthy(room) { !crate::cleared::cleared_rooms_is_known(g, room) } else { !ours.iter().any(|p| on_floor(g, &other, *p)) };   // (held: one of ours has stood in it)
             if unheld { continue; }
-            let latched = crate::doors::door_latched(g, o);
+            let latched = g.dr[o].leaf.latched;
             if latched {
                 let width = g.dr[o].def.width;
                 let at = crate::doortools::door_pt(g, o, width / 2.0, 0.6, s_o, None);

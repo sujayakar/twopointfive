@@ -71,10 +71,10 @@ fn gunfire_splinters_a_wooden_leaf_at_its_toll() {
     let (a, b) = ([16.0, 1.6, z], [20.0, 1.6, z]);
     assert!(segment_blocked(&mut p.g, a, b, None, None, None), "the shut leaf stops no eye");
     let toll = p.g.k.doorshot.toll as usize;
-    let n = shoot_until(&mut p, [18.0, z], wall * toll - 1, &|p: &Play| game::doors::door_off(&p.g, d));
-    assert!(!game::doors::door_off(&p.g, d), "off its hinges after {n} rounds, the yardstick is {wall}");
-    let more = shoot_until(&mut p, [18.0, z], 8, &|p: &Play| game::doors::door_off(&p.g, d));
-    assert!(game::doors::door_off(&p.g, d), "{} rounds and it hangs", n + more);
+    let n = shoot_until(&mut p, [18.0, z], wall * toll - 1, &|p: &Play| p.g.dr[d].leaf.off);
+    assert!(!p.g.dr[d].leaf.off, "off its hinges after {n} rounds, the yardstick is {wall}");
+    let more = shoot_until(&mut p, [18.0, z], 8, &|p: &Play| p.g.dr[d].leaf.off);
+    assert!(p.g.dr[d].leaf.off, "{} rounds and it hangs", n + more);
     assert_eq!(n + more, wall * toll, "rounds to take the leaf, with the yardstick at {wall}");
     p.run(0.2);
     assert!(!segment_blocked(&mut p.g, a, b, None, None, None), "off its hinges and it stops the eye");

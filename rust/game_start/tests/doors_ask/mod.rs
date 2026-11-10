@@ -418,8 +418,8 @@ pub trait DoorsAsk {
 
 impl DoorsAsk for Play {
     fn door(&self, name: &str) -> DoorId { game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")) }
-    fn door_shut(&self, d: DoorId) -> bool { !game::doors::door_off(&self.g, d) && game::doors::door_latched(&self.g, d) && game::doors::door_angle(&self.g, d).abs() < 0.05 }
-    fn door_gone(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) }
+    fn door_shut(&self, d: DoorId) -> bool { !self.g.dr[d].leaf.off && self.g.dr[d].leaf.latched && self.g.dr[d].leaf.angle.abs() < 0.05 }
+    fn door_gone(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off }
     fn tool_stats(&self) -> DoorToolsStats { self.g.sets[self.g.seat].door_tools.stats }
     fn ops_on(&self, d: DoorId) -> Vec<DoorOpId> { self.g.sets[self.g.seat].door_tools.ops.iter().copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).collect() }
     fn op_phase(&self, op: DoorOpId) -> Phase { self.g.tab.doortools_door_op[op].phase }
@@ -439,8 +439,8 @@ impl DoorsAsk for Play {
         let side = self.face(d, from);
         self.g.dr[d].key_side = side;
         self.g.dr[d].lock_id = format!("wedge:{}", self.g.dr[d].def.name);
-        game::doors::door_set_locked(&mut self.g, d, true);
-        game::doors::door_set_pick(&mut self.g, d, 0.0);
+        self.g.dr[d].leaf.locked = true;
+        self.g.dr[d].leaf.pick = 0.0;
     }
     fn row(&mut self, id: &str, at: [f64; 2]) -> (String, Option<String>) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
@@ -463,18 +463,18 @@ impl DoorsAsk for Play {
     fn struck(&self, gd: GuardId) -> bool { self.g.gd[gd].down_kind == Some(game::game::DownKind::Struck) }
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn frame_at(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
-    fn keep_broken(&self, d: DoorId) -> bool { game::doors::door_lock_broken(&self.g, d) }
+    fn keep_broken(&self, d: DoorId) -> bool { self.g.dr[d].leaf.lock_broken }
     fn leaf_put_shut(&mut self, d: DoorId) {
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_vel(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
-        game::doors::door_set_closing(&mut self.g, d, false);
-        game::doors::door_set_pull_t(&mut self.g, d, 0.0);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.vel = 0.0;
+        self.g.dr[d].leaf.latched = true;
+        self.g.dr[d].leaf.closing = false;
+        self.g.dr[d].leaf.pull_t = 0.0;
     }
     fn leaf_put_open(&mut self, d: DoorId, rad: f64) {
         let s = game::doors::door_swing(&self.g, d);
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, s * rad);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = s * rad;
     }
     fn hung_toward(&mut self, d: DoorId, toward: [f64; 2]) {
         if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None, None); }
@@ -483,10 +483,10 @@ impl DoorsAsk for Play {
     fn there_of(&self, gd: GuardId) -> String { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map_or(String::new(), |a| self.g.tab.orders_assignment[a].there.clone()) }
     fn arrived(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].arrived) }
     fn tools_k(&self) -> game::knobs::DoortoolsK { self.g.k.doortools.clone() }
-    fn latched(&self, d: DoorId) -> bool { game::doors::door_latched(&self.g, d) }
-    fn leaf_angle(&self, d: DoorId) -> f64 { game::doors::door_angle(&self.g, d) }
-    fn leaf_vel(&self, d: DoorId) -> f64 { game::doors::door_vel(&self.g, d) }
-    fn leaf_stays(&mut self, d: DoorId) { game::doors::door_set_quiet_t(&mut self.g, d, -3600.0); }
+    fn latched(&self, d: DoorId) -> bool { self.g.dr[d].leaf.latched }
+    fn leaf_angle(&self, d: DoorId) -> f64 { self.g.dr[d].leaf.angle }
+    fn leaf_vel(&self, d: DoorId) -> f64 { self.g.dr[d].leaf.vel }
+    fn leaf_stays(&mut self, d: DoorId) { self.g.dr[d].leaf.quiet_t = -3600.0; }
     fn restarted(&mut self) { game::savestate::control::restart(&mut self.g); }
     fn any_op(&self) -> bool { !self.g.sets[self.g.seat].door_tools.ops.is_empty() }
     fn fire_lasts(&self) -> f64 { self.g.k.fireline.fire_s }
@@ -559,7 +559,7 @@ impl DoorsAsk for Play {
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at: [at[0], 0.0, at[1]], ..game::orders::OrderTargetFloor::default() });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None) { panic!("'{id}' on the floor at {at:?} was refused: {why}"); }
     }
-    fn leaf_tip(&self, d: DoorId) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); let (c, a) = (self.g.dr[d].def.closed_dir, game::doors::door_angle(&self.g, d)); [f.hx + (c + a).cos() * f.w, f.hz + (c + a).sin() * f.w] }
+    fn leaf_tip(&self, d: DoorId) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); let (c, a) = (self.g.dr[d].def.closed_dir, self.g.dr[d].leaf.angle); [f.hx + (c + a).cos() * f.w, f.hz + (c + a).sin() * f.w] }
     fn hinge(&self, d: DoorId) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); [f.hx, f.hz] }
     fn op_front_men(&self, op: DoorOpId) -> Vec<GuardId> { let o = &self.g.tab.doortools_door_op[op]; o.men.iter().copied().filter(|&m| self.state(m) != GuardState::Dead && !o.rear.has(m)).collect() }
     fn boot_spots(&mut self, d: DoorId, side: f64) -> ([f64; 2], [f64; 2], [f64; 2]) {
@@ -652,11 +652,11 @@ impl DoorsAsk for Play {
         let who = self.g.ch[self.g.pl[self.g.player].ch].id;
         game::doors::doors_use(&mut self.g, d, [from[0], 0.0, from[1]], who, Some(&keys));
     }
-    fn lock_on(&self, d: DoorId) -> bool { game::doors::door_locked(&self.g, d) }
+    fn lock_on(&self, d: DoorId) -> bool { self.g.dr[d].leaf.locked }
     fn key_face(&self, d: DoorId) -> f64 { self.g.dr[d].key_side }
     fn team_pace(&self) -> f64 { self.g.k.pace.max }
     fn sam_hurtable(&mut self) { self.g.god_mode = false; }
-    fn door_locked_now(&self, d: DoorId) -> bool { game::doors::door_locked(&self.g, d) }
+    fn door_locked_now(&self, d: DoorId) -> bool { self.g.dr[d].leaf.locked }
     fn hands_on_lock(&self) -> Option<GuardId> { self.men().into_iter().find(|&m| self.g.ch[self.g.gd[m].ch].anim.lockpick) }
     fn said_count(&self, words: &str) -> (usize, bool) { let l: Vec<_> = self.said.iter().filter(|l| l.text.contains(words)).collect(); (l.len(), l.iter().all(|x| x.radio)) }
     fn compromised(&self) -> bool { game::silent::silent_compromised(&self.g, &game::seats::here(&self.g)) }

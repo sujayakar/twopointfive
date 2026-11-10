@@ -20,7 +20,7 @@ pub use sam::{aim, aimcost, aimweight, backkey, gunwall, hands, handwork, intera
 pub mod stealth;
 pub use stealth::{close, devices, disarm, fogofwar, lightswitch, peeksight, stalk, stickycam, takedown, wallsnap, whistle};
 pub mod fittings;
-pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, sim_doorshome, slab, sprintdoor};
+pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, slab, sprintdoor};
 pub mod breakage;
 pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, falls, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shards, sheet_model, sparks, wallbreak, wallskin, wallwear, winbars};
 pub mod missions;

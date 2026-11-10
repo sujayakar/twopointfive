@@ -96,8 +96,8 @@ impl WorldAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
 }
 
@@ -369,9 +369,9 @@ impl YardAsk for Play {
     }
     fn door_shut_locked(&mut self, name: &str, locked: bool) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
-        game::doors::door_set_locked(&mut self.g, d, locked);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
+        self.g.dr[d].leaf.locked = locked;
     }
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64) {
         let high = |p: &mut Play, y: f64| { let q = [at[0], y, at[1]]; (game::guards::light_estimate_at(&mut p.g, q, Some(&mut |_g, _o| true), None, None), game::nvg::nvg_place_light(&mut p.g, q)) };
@@ -580,7 +580,7 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let [statics, props, nav] = p.level_as_it_stands();
     let g = &p.g;
     let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
-    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
+    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", g.dr[d].leaf.angle, g.dr[d].leaf.latched, g.dr[d].leaf.locked)).collect();
     let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
     vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
         ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.sets[g.seat].wall_charge.set.len())), ("glass hits", format!("{hits}"))]

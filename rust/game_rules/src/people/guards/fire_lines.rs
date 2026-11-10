@@ -132,8 +132,8 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
 /// What a keyed door gives away: its keep kicked out, or standing unlocked.
 pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
-    if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
-    if !crate::doors::door_locked(g, d) { return Some(crate::guards::DoorTamper::Picked); }
+    if g.dr[d].leaf.lock_broken { return Some(crate::guards::DoorTamper::Forced); }
+    if !g.dr[d].leaf.locked { return Some(crate::guards::DoorTamper::Picked); }
     None
 }
 
@@ -365,7 +365,7 @@ pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     let mut shut: Vec<BoxId> = Vec::new();
     let list = g.doors.list.clone();
     for d in list {
-        if crate::doors::door_latched(g, d) { shut.push(g.dr[d].box_); }
+        if g.dr[d].leaf.latched { shut.push(g.dr[d].box_); }
     }
     let rd: V3 = [vx / sp, 0.0, vz / sp];
     let mut fix = p;

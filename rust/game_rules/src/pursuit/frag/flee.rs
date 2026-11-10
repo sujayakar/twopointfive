@@ -198,7 +198,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     crate::glassbreak::glass_break_bang(g, [from[0], m::max(0.3, from[1]), from[2]], spec.who);
     let list = g.doors.list.clone();
     let mut hung: Vec<DoorId> = Vec::new();
-    for d in list { if !crate::doors::door_off(g, d) { hung.push(d); } }
+    for d in list { if !g.dr[d].leaf.off { hung.push(d); } }
     // what the burst had a line to before it broke anything
     let mut before: Option<JsMap<crate::Num, f64>> = None;
     if crate::destruction::chaos_of(g) > 0.0 {
@@ -233,14 +233,14 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     let fresh_book = match &g.m.frag.torn { Some(t) => t.time != g.time, None => true };
     if fresh_book { g.m.frag.torn = Some(FragModTORNValue { time: g.time, doors: Vec::new() }); }
     for d in hung {
-        if crate::doors::door_off(g, d) {
+        if g.dr[d].leaf.off {
             let t = g.m.frag.torn.as_mut().unwrap();
             if !t.doors.contains(&d) { t.doors.push(d); }
         }
     }
     let rows: Vec<DoorId> = g.m.frag.torn.as_ref().unwrap().doors.clone();
     let mut torn: Vec<BoxId> = Vec::new();
-    for d in rows { if crate::doors::door_off(g, d) { torn.push(g.dr[d].box_); } }
+    for d in rows { if g.dr[d].leaf.off { torn.push(g.dr[d].box_); } }
     let ev_serial = g.serial();
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: v3::copy(from), time: g.time, loud: true, level: Some(2.0), who: Some(spec.who), frag: Some(true), serial: ev_serial, ..Default::default() });
     let b = Burst { at, from, lethal, wound, serial, who: spec.who, side, mine, name, before, torn };
@@ -524,7 +524,7 @@ fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
 fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
     let mut out: Vec<Vec<f64>> = Vec::new();
     for x in g.doors.list.clone() {
-        if !crate::doors::door_off(g, x) && m::abs(crate::doors::door_angle(g, x)) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
+        if !g.dr[x].leaf.off && m::abs(g.dr[x].leaf.angle) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
             let u = crate::doors::door_dir(g, x);
             let (h, w) = (g.dr[x].def.hinge, g.dr[x].def.width);
             out.push(vec![h[0], h[1], h[0] + u[0] * w, h[1] + u[1] * w]);
@@ -707,7 +707,7 @@ pub(super) fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSp
 
 /// A doorway a man can leave by as it stands.
 fn open_way(g: &crate::game::Game, d: DoorId) -> bool {
-    crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && !crate::doors::door_closing(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.frag.flee_door_open)
+    g.dr[d].leaf.off || (!g.dr[d].leaf.latched && !g.dr[d].leaf.closing && m::abs(g.dr[d].leaf.angle) >= g.k.frag.flee_door_open)
 }
 
 /// His spot is in the mouth of an open doorway.
@@ -843,7 +843,7 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
             ways += 1.0;
             door_take(g, &mut k, p, p, len, false);
         }
-        if got || !leafed || crate::doors::door_off(g, d) { continue; }
+        if got || !leafed || g.dr[d].leaf.off { continue; }
         // behind its own open leaf: round the leaf's end first, to the floor in front of the doorway, then out
         let u = crate::doors::door_dir(g, d);
         let h = g.dr[d].def.hinge;

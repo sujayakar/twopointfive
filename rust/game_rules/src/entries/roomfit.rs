@@ -106,7 +106,7 @@ fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
     let k = if door.is_some() { m::max(0.0, 1.0 - 0.7 / d) } else { m::max(0.0, 1.0 - 0.3 / d) };
     if crate::scene_collision::segment_blocked(g, eye, [q[0] + (t.at[0] - q[0]) * k, CHEST, q[2] + (t.at[2] - q[2]) * k], None, None, None) { return false; }
     let Some(door) = door else { return true; };
-    !(!crate::doors::door_off(g, door) && m::abs(crate::doors::door_angle(g, door)) >= 0.5 && crate::scene_collision::segment_blocked(g, eye, t.at, None, None, None))
+    !(!g.dr[door].leaf.off && m::abs(g.dr[door].leaf.angle) >= 0.5 && crate::scene_collision::segment_blocked(g, eye, t.at, None, None, None))
 }
 
 /// What a man stood at `p` with his eyes spare could watch, heaviest first.
@@ -419,12 +419,12 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let mut sig = alloc::format!("{}|{}|{}|", js::num_str(g.cleared.known), g.cover.openings.len(), keys.join(","));
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_off(g, d) {
+        if g.dr[d].leaf.off {
             sig.push('x');
-        } else if crate::doors::door_latched(g, d) {
-            sig.push(if crate::doors::door_locked(g, d) { 'l' } else { 's' });
+        } else if g.dr[d].leaf.latched {
+            sig.push(if g.dr[d].leaf.locked { 'l' } else { 's' });
         } else {
-            sig.push_str(&js::num_str(m::round(crate::doors::door_angle(g, d) * 4.0)));
+            sig.push_str(&js::num_str(m::round(g.dr[d].leaf.angle * 4.0)));
         }
     }
     {
