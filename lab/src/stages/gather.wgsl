@@ -16,10 +16,9 @@
     // the path goes on till it is as wide as what is kept: then that answers
     var d = w.xyz; var o = select(x, p.x - p.ng * 0.02, side) + d * select(0.0, 0.03, p.leaf); var wide = px; var thr = vec3f(1.0); var L = vec3f(0.0);
     for (var v = 0u; v < 4u; v++) {
-      footSolid(wide, @tune.wide); /* (leaf by leaf near by cost five milliseconds in the garden and gained nothing to speak of) */ let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING; let leaf = !miss && (h.piece & LEAF_HIT) != 0u; let lt = min(leafTo, h.t); if (v == 0u) { dist += min(h.t, 12.0); }
-      let sm = smokeSeen(o, d, min(h.t, 80.0)); let fo = folWalk(o + d * lt, d, min(h.t, 120.0) - lt, true); L += thr * (sm.rgb * fo.T * h.thru + fo.L); thr *= h.thru * fo.T * sm.a;
+      foot(wide, @tune.wide); let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING; if (v == 0u) { dist += min(h.t, 12.0); }
+      let sm = smokeSeen(o, d, min(h.t, 80.0)); let fo = blkSeen(); L += thr * (sm.rgb * fo.T * h.thru + fo.L); thr *= h.thru * fo.T * sm.a;
       if (miss) { L += thr * skyLod(d, 1.0); break; }
-      if (leaf) { L += thr * folBack(o + d * h.t, d); break; }
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
         L += thr * sentBack(q, false, rnd2(), d);
@@ -28,8 +27,8 @@
       }
       let a = returns(q); let y = q.x + q.ng * 0.004;
       for (var m = 0u; m < 2u; m++) {
-        var e = vec3f(0.0); var dl = vec3f(0.0); var far = 400.0; if (m == 0u) { let c = dot(q.ng, frame.sunDir.xyz); if (c <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } dl = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz * c; }
-        else { let l = drawLamp(y, q.ng); if (l.x < 0.0) { continue; } let g = aimLamp(u32(l.x), y, rnd2()); dl = g.dir; far = g.dist - 0.02; e = g.E * l.y * max(dot(q.ng, dl), 0.0); if (max3(e) <= 0.0) { continue; } }
+        var e = vec3f(0.0); var dl = vec3f(0.0); var far = 400.0; if (m == 0u) { let c = dot(q.ng, frame.sunDir.xyz); if (c <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } dl = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz * c; footLight(2.0 * frame.sunDir.w, 1.0); }
+        else { let l = drawLamp(y, q.ng); if (l.x < 0.0) { continue; } let g = aimLamp(u32(l.x), y, rnd2()); dl = g.dir; far = g.dist - 0.02; footLight(lampSize(u32(l.x)), far); e = g.E * l.y * max(dot(q.ng, dl), 0.0); if (max3(e) <= 0.0) { continue; } }
         L += thr * a / PI * min(e, vec3f(300.0)) * visible(y, dl, 1e-3, far); }
       thr *= a; o = y; d = cosineDir(q.ng, rnd2());
     }

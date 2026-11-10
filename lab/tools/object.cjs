@@ -5,7 +5,7 @@
 //   node lab/tools/object.cjs chair --fault "shut back"  one with a fault planted: exit 0 when the mark meant for it is missed
 //   node lab/tools/object.cjs --faults [name,name]      every planted fault; exit 1 when one is not caught
 //   node lab/tools/object.cjs ficus~0.08,0.16 ficus@0.08,0.16   its coarser levels as blocks of cells of those sizes (~), or its coarsest hand made one where those take over (@)
-//   --quick: small and noisy, for a machine without a GPU. --parts look,seen,swap,calm,alive,print,crowd: only these. --tune small=1: a knob of the real-time picture (src/tune.ts) set otherwise
+//   --quick: small and noisy, for a machine without a GPU. --parts look,seen,swap,calm,alive,print,crowd: only these. --tune wide=0.25: a knob of the real-time picture (src/tune.ts) set otherwise
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
 let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
 const LAB = path.resolve(__dirname, '..'), OUT = path.resolve(process.env.OUT || 'out'), SITE = (fs.mkdirSync(OUT, { recursive: true }), fs.mkdtempSync(path.join(OUT, 'site-')));

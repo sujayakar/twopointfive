@@ -27,6 +27,8 @@ export interface Stage {
   when?: () => boolean;
   /** it reads nothing of the scene (and so may write what the scene's rays read) */
   alone?: boolean;
+  /** its rays stop at one cell of the block, drawn (else what cells send is summed) */
+  dice?: boolean;
   /** dice that fill in evenly (the stage sets qSeed and qIndex) */
   quasi?: boolean;
   /** a stage that rasterizes does it itself; made once by `make`, then called each frame */
@@ -95,7 +97,7 @@ export class Graph {
       let c = 'c'; if (spoilt) c = `select(c, vec4f(bitcast<f32>(0x7fc00000u | (p.x & 0u))), frame.counts.z == ${this.spoil!.frame}u && all(p / 8u == vec2u(4u)))`; if (guarded) c = `finite4(${c}, ${most})`; if (round) c = `round16(${c}, vec4u(a, a >> 13u, b, b >> 13u))`;
       out.push(`fn put_${v}(p: vec2u, c: vec4f) { ${round ? `let a = pcg(p.x + pcg(p.y + pcg(frame.counts.z + ${31 + 7 * salt++}u))); let b = pcg(a); ` : ''}textureStore(${v}, p, ${c}); }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`);
     }
-    out.push(code); const whole = tuned(out.join('\n')); return s.quasi ? whole.replace('const QUASI = false;', 'const QUASI = true;') : whole;
+    out.push(code); const all = tuned(out.join('\n')), whole = s.dice ? all.replace('const BLK_DICE = false;', 'const BLK_DICE = true;') : all; return s.quasi ? whole.replace('const QUASI = false;', 'const QUASI = true;') : whole;
   }
   async build(stages: Stage[]) {
     const d = this.g.device;

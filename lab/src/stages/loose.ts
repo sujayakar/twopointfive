@@ -9,7 +9,7 @@ fn qmul(a: vec4f, b: vec4f) -> vec4f { return vec4f(a.w * b.xyz + b.w * a.xyz + 
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 fn qfrom(a: vec3f, b: vec3f) -> vec4f { let d = dot(a, b); if (d < -0.999) { return vec4f(1.0, 0.0, 0.0, 0.0); } return normalize(vec4f(cross(a, b), 1.0 + d)); }
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let i = id.x; if (i >= ${LOOSE}u) { return; } var p = pool[i]; let was = p; let n = u32(looseK.x); leafMode = 1u;
+  let i = id.x; if (i >= ${LOOSE}u) { return; } var p = pool[i]; let was = p; let n = u32(looseK.x); leafMode = 2u;
   for (var step = 0u; step < n; step++) {
     let tick = u32(looseK.y) - (n - 1u - step); rngState = pcg(i * 747796405u + pcg(tick + 13u)); let t = f32(tick) / 60.0; let dt = 1.0 / 60.0;
     if (p.info.x == 0u) {
