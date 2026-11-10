@@ -190,8 +190,8 @@ fn a_charge_set(seed: u32) -> (Play, game::ids::WallChargeId) {
     p.sam_put([14.6, 15.2]);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, [12.06, 0.0, 13.78], None) { panic!("the wall charge was refused: {why}"); }
-    assert!(p.until(60.0, |p| !p.g.wall_charge.set.is_empty()).is_some(), "no charge is on the wall");
-    let c = p.g.wall_charge.set[0];
+    assert!(p.until(60.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).is_some(), "no charge is on the wall");
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     p.sam_put([20.0, 15.2]);
     p.frame();
     (p, c)

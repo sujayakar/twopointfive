@@ -35,7 +35,7 @@ rule here: the ring and its marks come through `view/`, and `door_tools_draw_cha
 
 ## How it works
 
-**An order** is a `DoorOp` row in `g.tab.doortools_door_op`, listed in `g.door_tools.ops`; each seat has its own `door_tools`. It holds the door, the face, its men, a
+**An order** is a `DoorOp` row in `g.tab.doortools_door_op`, listed in the seat's `door_tools.ops`; each seat has its own `door_tools`. It holds the door, the face, its men, a
 lead, each man's mark (`post`) and his current assignment (`mine`). `tick_op` drops any man whose assignment is no longer the one the order gave him, so any
 other order takes a man off by being given. It moves its men with `door_tools_assign`. Each step logs a beat (`door_tools_beat`), which tests read.
 

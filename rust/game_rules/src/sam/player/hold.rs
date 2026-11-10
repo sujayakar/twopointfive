@@ -197,7 +197,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         }
         let swapping = hold!(g, p).swap_t < k.swap;
         // ---- his rows, performed this frame
-        let act = match &g.act {
+        let act = match &g.sets[g.seat].act {
             Some(a) if a.kind == crate::game::InteractableKind::Held => a.verb,
             _ => None,
         };
@@ -311,8 +311,8 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                     crate::audio_iface::game_audio_like_play(g, "dryFire", Some(muzzle), Some(0.7), None);
                 }
             }
-            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
-                let target = g.aim_target;
+            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.sets[g.seat].aim_target.is_none() && g.sets[g.seat].aim_guard.is_none())) {
+                let target = g.sets[g.seat].aim_target;
                 crate::game::game_ocp(g, target);
             }
             let time = g.time;
@@ -336,11 +336,11 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 g.arms[g.pl[p].ch].fire_cd = HOLD_FIRE_CD;
                 g.pl[p].last_fire_t = time;
                 hold!(g, p).shot_t = time;
-                let ag = match g.aim_guard {
+                let ag = match g.sets[g.seat].aim_guard {
                     Some(a) if a != gd && !crate::condition::down(g, g.gd[a].ch) => Some(a),
                     _ => None,
                 };
-                let tgt: V3 = if let Some(t) = g.aim_target {
+                let tgt: V3 = if let Some(t) = g.sets[g.seat].aim_target {
                     v3::copy(g.tab.fixture[t].pos)
                 } else if let Some(a) = ag {
                     man_aim(g, &crate::seats::here(g), a, 1.25)
@@ -353,7 +353,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             }
         }
         // ---- turning: the pair comes round toward the cursor, rate-limited
-        let ap = g.aim_point;
+        let ap = g.sets[g.seat].aim_point;
         let tx = ap[0] - g.ch[c].pos[0];
         let tz = ap[2] - g.ch[c].pos[2];
         let ad = m::hyp2(tx, tz);
@@ -367,10 +367,10 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         }
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         if gun {
-            let ty = if let Some(t) = g.aim_target {
+            let ty = if let Some(t) = g.sets[g.seat].aim_target {
                 v3::clamp(g.tab.fixture[t].pos[1], 0.3, 2.95)
             } else {
-                match g.aim_guard {
+                match g.sets[g.seat].aim_guard {
                     Some(a) if a != gd => man_aim(g, &crate::seats::here(g), a, 1.2)[1],
                     _ => {
                         if level_on(g) {

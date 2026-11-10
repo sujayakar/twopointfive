@@ -246,7 +246,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.lesson = crate::lesson::lesson_new();
     g.night_breach = crate::nightbreach::night_breach_new();
     g.room_clear = crate::roomclear::room_clear_scenario_new();
-    stand_each_seat(g, &mut |v: &mut Game| { v.orders = crate::orders::squad_orders_new(v, None); });
+    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].orders = crate::orders::squad_orders_new(v, None); });
     g.fight = crate::roomfight::room_fight_new();
     g.cues = crate::cues::cues_new();
     g.squad_net = crate::squadnet::squad_net_new();
@@ -254,11 +254,11 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.entry = crate::entrypoints::entry_points_new();
     g.cleared = crate::cleared::cleared_rooms_new();
     g.rescue = crate::rescue::rescue_new();
-    stand_each_seat(g, &mut |v: &mut Game| { v.door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
+    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
     stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)
-    stand_each_seat(g, &mut |v: &mut Game| { v.work = crate::workthings::work_things_new(v); });
-    stand_each_seat(g, &mut |v: &mut Game| { v.wall_charge = crate::wallcharge::wall_charge_new(v); });   // after the door tools: it spends their charges
+    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].work = crate::workthings::work_things_new(v); });
+    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].wall_charge = crate::wallcharge::wall_charge_new(v); });   // after the door tools: it spends their charges
     stand_each_seat(g, &mut |v: &mut Game| { crate::shutdoor::register_shut_door(v); });
     crate::seats::stand_men(g);   // a second seat's man and his light, made last
     g.director = crate::director::director_new(g, level.script.clone());   // the level's script: its define pass run and linted here, programs start on demand
@@ -357,7 +357,7 @@ fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::
     }
 }
 
-/// `for (const s of this.seats) s.view.x = ...`: each seat's set on Game for the call.
+/// `for (const s of this.seats) s.view.x = ...`: a pass about each seat.
 fn stand_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
     for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut *f); }
 }

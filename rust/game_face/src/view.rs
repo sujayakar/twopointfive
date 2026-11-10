@@ -4,7 +4,7 @@ use game::bytes::{ToBytes, W};
 
 fn told(v: &dyn ToBytes) -> Vec<u8> { let mut o = W::new(); v.w(&mut o); o.b }
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
-/// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is
+/// by the host with the table's own reader. A read: no word of the game's state is written and no pass about a seat is opened; where a writer put the copy of the boxes down it is
 /// stood first, as for every question of it.
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {

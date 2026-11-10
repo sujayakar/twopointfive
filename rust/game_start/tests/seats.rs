@@ -1,8 +1,7 @@
 //! A SEAT IS A VALUE (rust/game_types/src/seats/seat_ref.rs). A function that holds the game shared and depends on the seat takes a `SeatRef`,
 //! so it can be asked about ANY seat of a game nobody may write to: not only the one that happens to stand on it.
 //!
-//! Before readers took a seat, the only way to ask about the second player's seat was to stand it on the game (`with_seat`, which writes
-//! nineteen fields over and back); asked on the game as it stood, a reader silently answered for the first seat.
+//! A reader asked about the second player's seat takes that seat; a reader that asks `here` answers for the seat the pass is about, in a tick the first.
 use game::game::Game;
 use game::orders::Who;
 use game::seats::{self, SeatRef};
@@ -17,7 +16,7 @@ fn answers(g: &Game, seat: &SeatRef) -> Answers {
     (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(seat))
 }
 
-/// THE RULE: in a game of two players, the readers asked about the second seat while the FIRST stands on the game answer as they do with the
+/// THE RULE: in a game of two players, the readers asked about the second seat while `g.seat` is the FIRST answer as they do with the
 /// second seat stood on it; and the two seats' answers are not the same answers (each has his own man and his own pair).
 /// A FAILURE MEANS: a reader has gone back to reading the game's own fields of a seat's name (it answers for whichever seat stands), or
 /// `seats::seat` no longer finds a kept seat's things.
@@ -28,7 +27,7 @@ fn a_reader_asked_about_the_seat_that_does_not_stand_answers_for_that_seat() {
         p.run(1.0);
         let g = &mut *p.g;
         let (first, second) = (g.seats[0], g.seats[1]);
-        assert_eq!(g.seat, first, "seed {s}: between ticks the first seat stands on the game");
+        assert_eq!(g.seat, first, "seed {s}: between ticks `g.seat` is the first seat");
         let stood = seats::with_seat(g, second, &mut |g| answers(g, &seats::here(g)));
         let asked = answers(g, &seats::seat(g, second));
         assert_eq!(asked, stood, "seed {s}: asked about the second seat with the first standing, the readers do not answer as with the second stood");
@@ -59,7 +58,7 @@ fn a_row_of_the_menu_is_one_seats() {
         assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
         // the second seat's fall in is given a target and a digit of its own: the first seat's menu is as it was
         seats::with_seat(&mut p.g, second, &mut |g| {
-            let d = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
+            let d = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
             g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
             g.tab.orders_order_def[d].key = None;
             game::orders::squad_orders_register(g, d, None);

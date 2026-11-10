@@ -50,7 +50,7 @@ fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear();  }
         return;
     }
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_look.state.has(key) {
         if set.is_empty() { return; }
         g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false });
@@ -272,7 +272,7 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;
     for x in seen.iter() {
         if set.contains(&x.c) { continue; }

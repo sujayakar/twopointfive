@@ -374,7 +374,7 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.guards.remove(i);
     let at = i as f64;
     if g.spectate == at { g.spectate = -1.0; } else if g.spectate > at { g.spectate -= 1.0; }
-    crate::seats::each_seat(g, &mut |g| if g.aim_guard == Some(gd) { g.aim_guard = None; });
+    crate::seats::each_seat(g, &mut |g| if g.sets[g.seat].aim_guard == Some(gd) { g.sets[g.seat].aim_guard = None; });
     let mut k = 0;
     while k < g.guards.len() {
         let o = g.guards[k];

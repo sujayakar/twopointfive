@@ -712,7 +712,7 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     in_game_view(&crate::seats::here(g), p)
 }
 
-/// inView of the view on Game: of the seat this pass is about.
+/// inView: of the seat this pass is about.
 fn in_game_view(seat: &crate::seats::SeatRef, p: V3) -> bool {
     match seat.view_proj {
         None => false,

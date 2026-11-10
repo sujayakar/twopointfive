@@ -265,7 +265,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.sets[g.seat].orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }

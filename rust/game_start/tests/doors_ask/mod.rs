@@ -422,8 +422,8 @@ impl DoorsAsk for Play {
     fn door(&self, name: &str) -> DoorId { game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")) }
     fn door_shut(&self, d: DoorId) -> bool { !game::doors::door_off(&self.g, d) && game::doors::door_latched(&self.g, d) && game::doors::door_angle(&self.g, d).abs() < 0.05 }
     fn door_gone(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) }
-    fn tool_stats(&self) -> DoorToolsStats { self.g.door_tools.stats }
-    fn ops_on(&self, d: DoorId) -> Vec<DoorOpId> { self.g.door_tools.ops.iter().copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).collect() }
+    fn tool_stats(&self) -> DoorToolsStats { self.g.sets[self.g.seat].door_tools.stats }
+    fn ops_on(&self, d: DoorId) -> Vec<DoorOpId> { self.g.sets[self.g.seat].door_tools.ops.iter().copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).collect() }
     fn op_phase(&self, op: DoorOpId) -> Phase { self.g.tab.doortools_door_op[op].phase }
     fn op_lead(&self, op: DoorOpId) -> GuardId { self.g.tab.doortools_door_op[op].lead }
     fn op_beats(&self, op: DoorOpId) -> Vec<String> { self.g.tab.doortools_door_op[op].beats.iter().map(|b| b.what.clone()).collect() }
@@ -457,11 +457,11 @@ impl DoorsAsk for Play {
     fn beat_t(&self, op: DoorOpId, starts: &str) -> Option<f64> { self.g.tab.doortools_door_op[op].beats.iter().find(|b| b.what.starts_with(starts)).map(|b| b.t) }
     fn crossed_t(&self, op: DoorOpId) -> Vec<f64> { self.g.tab.doortools_door_op[op].crossed.values().copied().collect() }
     fn op_ended(&self, op: DoorOpId) -> Option<String> { self.g.tab.doortools_door_op[op].ended.clone() }
-    fn last_op(&self, d: DoorId) -> Option<DoorOpId> { self.g.door_tools.ops.iter().chain(self.g.door_tools.done.iter()).copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).max_by(|a, b| self.g.tab.doortools_door_op[*a].t0.partial_cmp(&self.g.tab.doortools_door_op[*b].t0).unwrap()) }
+    fn last_op(&self, d: DoorId) -> Option<DoorOpId> { self.g.sets[self.g.seat].door_tools.ops.iter().chain(self.g.sets[self.g.seat].door_tools.done.iter()).copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).max_by(|a, b| self.g.tab.doortools_door_op[*a].t0.partial_cmp(&self.g.tab.doortools_door_op[*b].t0).unwrap()) }
     fn op_men(&self, op: DoorOpId) -> Vec<GuardId> { self.g.tab.doortools_door_op[op].men.clone() }
     fn op_bang_at(&self, op: DoorOpId) -> Option<[f64; 2]> { self.g.tab.doortools_door_op[op].bang_at.map(|p| [p[0], p[2]]) }
-    fn left(&self) -> (f64, f64, f64) { (self.g.door_tools.charges, self.g.door_tools.bangs, self.g.door_tools.frags) }
-    fn carries(&mut self, charges: f64, bangs: f64) { self.g.door_tools.charges = charges; self.g.door_tools.bangs = bangs; }
+    fn left(&self) -> (f64, f64, f64) { (self.g.sets[self.g.seat].door_tools.charges, self.g.sets[self.g.seat].door_tools.bangs, self.g.sets[self.g.seat].door_tools.frags) }
+    fn carries(&mut self, charges: f64, bangs: f64) { self.g.sets[self.g.seat].door_tools.charges = charges; self.g.sets[self.g.seat].door_tools.bangs = bangs; }
     fn struck(&self, gd: GuardId) -> bool { self.g.gd[gd].down_kind == Some(game::game::DownKind::Struck) }
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn frame_at(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
@@ -490,7 +490,7 @@ impl DoorsAsk for Play {
     fn leaf_vel(&self, d: DoorId) -> f64 { game::doors::door_vel(&self.g, d) }
     fn leaf_stays(&mut self, d: DoorId) { game::doors::door_set_quiet_t(&mut self.g, d, -3600.0); }
     fn restarted(&mut self) { game::savestate::control::restart(&mut self.g); }
-    fn any_op(&self) -> bool { !self.g.door_tools.ops.is_empty() }
+    fn any_op(&self) -> bool { !self.g.sets[self.g.seat].door_tools.ops.is_empty() }
     fn fire_lasts(&self) -> f64 { self.g.k.fireline.fire_s }
     fn doors(&self) -> Vec<DoorId> { self.g.doors.list.clone() }
     fn door_name(&self, d: DoorId) -> String { self.g.dr[d].def.name.clone() }
@@ -501,14 +501,14 @@ impl DoorsAsk for Play {
     fn gun_yaw(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].aim_yaw }
     fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].watch).map(|p| [p[0], p[2]]) }
     fn floor_free(&self, at: [f64; 2]) -> bool { !game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
-    fn orders_given(&self) -> usize { self.g.orders.log.len() }
-    fn menu_up(&self) -> Option<(Option<String>, usize)> { self.g.orders.menu.as_ref().map(|m| (m.page.clone(), m.rows.len())) }
+    fn orders_given(&self) -> usize { self.g.sets[self.g.seat].orders.log.len() }
+    fn menu_up(&self) -> Option<(Option<String>, usize)> { self.g.sets[self.g.seat].orders.menu.as_ref().map(|m| (m.page.clone(), m.rows.len())) }
     fn menu_opens(&mut self, at: [f64; 2], page: Option<&str>) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         assert!(game::orders::squad_orders_open(&mut self.g, Some(&t), None, None), "the menu did not open on {at:?}");
         if page.is_some() { game::orders::squad_orders_turn(&mut self.g, page, None); }
     }
-    fn row_key(&self, id: &str) -> Option<f64> { self.g.orders.menu.as_ref()?.rows.iter().map(|&d| &self.g.tab.orders_order_def[d]).find(|r| r.id == id)?.key }
+    fn row_key(&self, id: &str) -> Option<f64> { self.g.sets[self.g.seat].orders.menu.as_ref()?.rows.iter().map(|&d| &self.g.tab.orders_order_def[d]).find(|r| r.id == id)?.key }
     fn sam_slot(&self) -> game::game::SlotKind { self.g.pl[self.g.player].slot }
     fn tap(&mut self, code: &str) { self.key_down(code); self.frame(); self.key_up(code); self.frame(); }
     fn on_face(&self, d: DoorId, along: f64, off: f64) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); [f.hx + f.ux * along + f.nx * off, f.hz + f.uz * along + f.nz * off] }
@@ -585,7 +585,7 @@ impl DoorsAsk for Play {
     fn picture_shows_open(&self, d: DoorId) -> bool { !game::fogofwar::fog_of_war_door_held(&self.g, d) }
     fn fog_on(&mut self) { self.g.fog_of_war.on = true; }
     fn fog_off(&mut self) { self.g.fog_of_war.on = false; }
-    fn last_order(&self) -> Option<(String, Vec<String>)> { self.g.orders.log.last().map(|r| (r.order.clone(), r.who.clone())) }
+    fn last_order(&self) -> Option<(String, Vec<String>)> { self.g.sets[self.g.seat].orders.log.last().map(|r| (r.order.clone(), r.who.clone())) }
     fn key_tapped_on(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
@@ -595,7 +595,7 @@ impl DoorsAsk for Play {
         self.key_up(&key);
         self.run(6.0 / 60.0);
     }
-    fn choice_on(&mut self, who: game::orders::Who) { self.g.orders.who = who; }
+    fn choice_on(&mut self, who: game::orders::Who) { self.g.sets[self.g.seat].orders.who = who; }
     fn corner_in_his_way(&mut self, gd: GuardId, at: [f64; 2]) {
         let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd).expect("his order");
         let c = [at[0], 0.0, at[1]];
@@ -781,8 +781,8 @@ impl DoorsAsk for Play {
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
     fn rescue_jobs(&self) -> usize { self.g.rescue.flow.jobs.len() }
-    fn cans_left(&self) -> f64 { self.g.door_tools.bangs }
-    fn frags_left(&self) -> f64 { self.g.door_tools.frags }
+    fn cans_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.bangs }
+    fn frags_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.frags }
     fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool { game::squadthrow::squad_thrower(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag).is_some() }
     fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])> {
         let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag, Some(true), None)?;
@@ -814,8 +814,8 @@ impl DoorsAsk for Play {
         !game::scene_collision::segment_blocked(&mut self.g, [p[0], 1.55, p[1]], at, None, None, None)
     }
     fn op_ended_on(&self, d: DoorId) -> bool { self.ops_on(d).is_empty() && self.last_op(d).is_some() }
-    fn ring_up(&self) -> bool { self.g.orders.cmd_ring.is_some() }
-    fn ring_part(&self) -> Vec<GuardId> { self.g.orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
+    fn ring_up(&self) -> bool { self.g.sets[self.g.seat].orders.cmd_ring.is_some() }
+    fn ring_part(&self) -> Vec<GuardId> { self.g.sets[self.g.seat].orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
     fn ring_caption(&mut self) -> String { self.view().ring.map_or(String::new(), |r| r.caption) }
     fn ring_wedges(&mut self) -> Vec<(f64, String)> { self.view().ring.map_or(Vec::new(), |r| r.wedges.iter().map(|w| (w.key, w.text.clone())).collect()) }
     fn goal_half_off(&mut self) { self.g.k.cmdring.goal_half = false; }
@@ -856,7 +856,7 @@ impl DoorsAsk for Play {
     fn in_doorway(&self, d: DoorId, at: [f64; 2]) -> bool { let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); a > -0.05 && a < self.door_w(d) + 0.05 && o.abs() < 0.3 }
     fn in_sweep(&self, d: DoorId, at: [f64; 2]) -> bool { game::doors::door_swing_sweeps(&game::doors::doors_swing_of(&self.g, d), at[0], at[1], Some(BODY_R)) }
     fn from_handle(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); ((a - (f.w - HANDLE_IN)).powi(2) + o * o).sqrt() }
-    fn door_rows(&self, d: DoorId) -> usize { self.g.nearby.iter().filter(|r| r.door == Some(d)).count() }
+    fn door_rows(&self, d: DoorId) -> usize { self.g.sets[self.g.seat].nearby.iter().filter(|r| r.door == Some(d)).count() }
     fn slab_rest(&mut self, d: DoorId, side: f64) -> Option<(bool, f64)> { let s = self.g.dr[d].slab?; let at = [s.p[0], s.p[2]]; Some((s.rest, self.off(d, at, side))) }
     fn clear_line(&mut self, a: [f64; 2], b: [f64; 2]) -> bool { !game::scene_collision::segment_blocked(&mut self.g, [a[0], 1.1, a[1]], [b[0], 1.1, b[1]], None, None, None) }
     fn first_over(&self, op: DoorOpId) -> Option<GuardId> { let c = &self.g.tab.doortools_door_op[op].crossed; c.keys().into_iter().min_by(|a, b| c.get(*a).unwrap().partial_cmp(c.get(*b).unwrap()).unwrap()) }

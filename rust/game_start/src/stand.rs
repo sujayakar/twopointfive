@@ -165,7 +165,7 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
 pub fn step(g: &mut Game, h: &Host, dt: f64) {
     game::game::game_update(g, dt, h.input, h.cam, h.canvas);
     let me = game::game::game_host_seat(g);
-    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     game::input::input_end_frame(g, h.input);

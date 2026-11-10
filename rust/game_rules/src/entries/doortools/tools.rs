@@ -160,7 +160,7 @@ pub fn door_tools_start_charge(g: &mut crate::game::Game, men: &[GuardId], t: &c
 /// A charge has been ordered: the men standing off from another, where that leaves them at its door or in its blast, are dealt their marks again.
 fn door_tools_out_of_blast(g: &mut Game, op: DoorOpId) {
     let d = g.tab.doortools_door_op[op].door;
-    for o in g.door_tools.ops.clone() {
+    for o in g.sets[g.seat].door_tools.ops.clone() {
         let x = &g.tab.doortools_door_op[o];
         if o == op || x.kind != DoorToolKind::Charge || !matches!(x.phase, Phase::Place | Phase::Standoff | Phase::Armed) { continue; }
         let (door, side, lead, men, placing) = (x.door, x.side, x.lead, x.men.clone(), x.phase == Phase::Place);
@@ -268,7 +268,7 @@ fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
     if g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || crate::doors::door_off(g, d) || g.dr[d].def.steel == Some(true)
         || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() || charge_order_on(g, &crate::seats::here(g), d) { return None; }
     door_tools_sync(g);
-    if g.door_tools.charges <= 0.0 { return None; }
+    if g.sets[g.seat].door_tools.charges <= 0.0 { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     Some(if off_of(g, d, p, 1.0) >= 0.0 { 1.0 } else { -1.0 })
 }
@@ -287,7 +287,7 @@ pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Inte
         return;
     }
     if !free || door_tools_sam_face(g, d).is_none() { return; }
-    let text = alloc::format!("set a charge · {} left", g.door_tools.charges);
+    let text = alloc::format!("set a charge · {} left", g.sets[g.seat].door_tools.charges);
     let r = row(g, it.clone(), crate::game::Verb::Charge, text, Some(alloc::format!("{}  blows it once set", f)));
     verbs.push(r);
 }
@@ -343,7 +343,7 @@ pub fn door_tools_cancel_sam(g: &mut crate::game::Game) -> bool {
 pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let pl = g.player;
     let set_secs = g.k.doortools.set_secs;
-    let (act_some, act_door, mine) = match &g.act {
+    let (act_some, act_door, mine) = match &g.sets[g.seat].act {
         Some(a) => (true, a.door, a.kind == crate::game::InteractableKind::Door && a.verb == Some(crate::game::Verb::Charge) && a.door.is_some()),
         None => (false, None, false),
     };
@@ -381,23 +381,23 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     if g.time - s.t0 < set_secs { return; }
     g.pl[pl].charging = None;
     if !door_tools_take(g, DoorToolsTakeWhat::Charge) { return; }
-    g.door_tools.sam_spent += 1.0;
+    g.sets[g.seat].door_tools.sam_spent += 1.0;
     let row = SetCharge { door: d, side: s.side, by: String::from(crate::ownblow::SAM_BY) };
     let id = g.tab.doortools_set_charge.push(row);
-    g.door_tools.set.push(id);
+    g.sets[g.seat].door_tools.set.push(id);
     let at = crate::doors::door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
 }
 
 /// The charges that stand set: drawn; one whose door has come open or off its hinges is off it, back in the count.
 pub(super) fn door_tools_tick_set(g: &mut crate::game::Game) {
-    for c in g.door_tools.set.clone() {
+    for c in g.sets[g.seat].door_tools.set.clone() {
         let d = g.tab.doortools_set_charge[c].door;
         let gone = crate::doors::door_off(g, d);
         if gone || is_open(g, d) {
-            if let Some(i) = g.door_tools.set.iter().position(|x| *x == c) { g.door_tools.set.remove(i); }
+            if let Some(i) = g.sets[g.seat].door_tools.set.iter().position(|x| *x == c) { g.sets[g.seat].door_tools.set.remove(i); }
             door_tools_refund(g, DoorToolsRefundWhat::Charge);
-            if by_sam(g, c) { g.door_tools.sam_spent = m::max(0.0, g.door_tools.sam_spent - 1.0); }
+            if by_sam(g, c) { g.sets[g.seat].door_tools.sam_spent = m::max(0.0, g.sets[g.seat].door_tools.sam_spent - 1.0); }
             let setter = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().find(|&m| g.gd[m].callsign == g.tab.doortools_set_charge[c].by);
             crate::squadnet::team_says(g, setter, if gone { "that door's off its hinges. charge is off." } else { "that door came open. charge is off." });
             continue;
@@ -531,7 +531,7 @@ pub(super) fn door_tools_pick_step(g: &mut crate::game::Game, op: DoorOpId) {
     let who = g.ch[c].id;
     if !crate::doors::doors_pick(g, d, who, dt) { return; }
     let _ = crate::silent::silent_pick(g);
-    g.door_tools.stats.picks += 1.0;
+    g.sets[g.seat].door_tools.stats.picks += 1.0;
     door_tools_beat(g, op, "picked");
     door_tools_off_lock(g, op);
     door_tools_back_to_jamb(g, op, lead);
@@ -778,7 +778,7 @@ pub(super) fn door_tools_sling_tick(g: &mut crate::game::Game) {
         if !g.gd[gd].slung.as_ref().map_or(false, |s| s.out) { continue; }
         // (only this book's own men are judged by this book's jobs: another seat's man on HIS seat's lock is not ours to put the gun away for)
         if !crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) { continue; }
-        let on_lock = g.door_tools.ops.iter().any(|o| {
+        let on_lock = g.sets[g.seat].door_tools.ops.iter().any(|o| {
             let x = &g.tab.doortools_door_op[*o];
             x.phase == Phase::Kick && x.kick.and_then(|k| k.gun).map_or(false, |u| u.by == gd && u.hammer != Some(true))
         });
@@ -931,7 +931,7 @@ pub(super) fn door_tools_step_backs(g: &mut crate::game::Game, d: DoorId, side: 
     let must = must.unwrap_or(false);
     let width = g.dr[d].def.width;
     let fc = g.dr[d].frame_centre;
-    let (off, jamb_past) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past);
+    let (off, jamb_past) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past);
     let room_back = g.k.doortools.room_back.clone();
     let backblast_m = g.k.doortools.backblast_m;
     let mut out: JsMap<GuardId, crate::orders::StackPost> = JsMap::new();

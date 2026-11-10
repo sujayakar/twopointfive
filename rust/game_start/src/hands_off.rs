@@ -70,7 +70,7 @@ impl Me {
     fn counted(&self, n: usize) -> bool { let given = self.orders() > n; if given { self.given.set(self.given.get() + 1); } given }
     fn ops_on(&self, d: DoorId) -> bool { self.seen(|g, s| s.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].door == d)) }
 
-    async fn quick(&self) { let k = self.ask(|g| g.orders.knobs.quick_key.clone()); self.key(&k).await }
+    async fn quick(&self) { let k = self.ask(|g| g.sets[g.seat].orders.knobs.quick_key.clone()); self.key(&k).await }
 
     async fn go(&self, p: V3, max: f64, stop: impl FnMut() -> bool) -> bool { self.p.go(p, max, stop, Walk::default()).await }
 
@@ -143,7 +143,7 @@ impl Me {
     async fn enter(&self, d: DoorId, why: &str) -> bool {
         let set = self.cursor_on(d).await && { let t = self.under(); self.seen(|g, s| game::autopilot::auto_pick(g, s, &t, Some(false), None).why == game::autopilot::AutoPickWhy::Set) };
         if !set { return self.quick_on(d, why).await; }
-        let (n, word) = (self.orders(), self.ask(|g| g.orders.knobs.wait_alt.clone()));
+        let (n, word) = (self.orders(), self.ask(|g| g.sets[g.seat].orders.knobs.wait_alt.clone()));
         self.key(&word).await;
         self.say(format!("word · {} ({}) → {}", self.name(d), why, self.order_given(n)));
         self.aim_off();

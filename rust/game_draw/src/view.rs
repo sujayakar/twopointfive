@@ -105,7 +105,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         man: g.ch[ch].id as u32,
         at: f3(at),
         follow: f3(spectated.unwrap_or(at)),
-        aim: f3(g.aim_point),
+        aim: f3(g.sets[g.seat].aim_point),
         spectating: (g.spectate >= 0.0) as u32,
         peek: cam.peek_offset.map_or([0.0; 3], f3),
         kick: cam.kick.map_or([0.0; 3], f3),

@@ -224,7 +224,7 @@ fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     use crate::handwork::SamWorkKind;
     let Some(at) = w.at else { return };
     match w.kind {
-        SamWorkKind::Wall => if let Some(s) = g.wall_charge.sam.as_mut() { s.at = at; },
+        SamWorkKind::Wall => if let Some(s) = g.sets[g.seat].wall_charge.sam.as_mut() { s.at = at; },
         SamWorkKind::Door => if let Some(s) = g.pl[pl].charging.as_mut() { s.at = at; },
         SamWorkKind::Breaker | SamWorkKind::Drive | SamWorkKind::Switch => {}
     }
@@ -461,7 +461,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let speed = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);
     // aim
-    let ap = match stalk { Some(s) => s.at, None => g.aim_point };
+    let ap = match stalk { Some(s) => s.at, None => g.sets[g.seat].aim_point };
     let to_aim: V3 = [ap[0] - g.ch[c].pos[0], 0.0, ap[2] - g.ch[c].pos[2]];
     let aim_dist = m::hyp2(to_aim[0], to_aim[2]);
     g.pl[pl].aim_held = false;
@@ -661,8 +661,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             }
         }
         // right click with the pistol out: the OCP zaps the light the reticle has snapped to
-        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
-            let t = g.aim_target;
+        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.sets[g.seat].aim_target.is_none() && g.sets[g.seat].aim_guard.is_none())) {
+            let t = g.sets[g.seat].aim_target;
             crate::game::game_ocp(g, t);
         }
     }
@@ -695,7 +695,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let owed = walled && !stunned && launch_was.is_some() && crate::aimweight::aim_weigh_launch_keep(g, pl, dt);
         let mut held = None;
         if let Some(l) = load {
-            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
+            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.sets[g.seat].orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
                 if !crate::backkey::back_hit(g, input) && !hit(g, input, "Blur") && !hit(g, input, "Paused") { held = Some(l); }
             }
         }

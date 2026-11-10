@@ -201,7 +201,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             || g.time - s.seen > STALE
             || crate::handwork::sam_work(g).is_some()
             || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
-            || g.orders.menu.is_some()
+            || g.sets[g.seat].orders.menu.is_some()
             || crate::interact::backable_interact(g, &crate::seats::here(g));
         if shut {
             up = None;

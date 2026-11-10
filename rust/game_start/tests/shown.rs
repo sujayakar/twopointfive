@@ -113,7 +113,7 @@ fn every_action_runs_and_does_what_it_says() {
         act(&mut p.g, "mains", 0.0, "");
         assert_eq!(p.g.light_home.mains.active, up, "seed {seed}: and restores them");
         // the player goes to the cursor
-        p.g.aim_point = [15.0, 0.0, 14.0];
+        p.g.sets[p.g.seat].aim_point = [15.0, 0.0, 14.0];
         act(&mut p.g, "teleport", 0.0, "");
         let at = p.g.ch[p.g.pl[p.g.player].ch].pos;
         assert_eq!((at[0], at[2]), (15.0, 14.0), "seed {seed}");

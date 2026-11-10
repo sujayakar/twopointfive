@@ -53,7 +53,7 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
 
 /// put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list; false if none is on offer
 pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::InteractableKind, verb: Option<crate::game::Verb>) -> bool {
-    let at = g.nearby.iter().position(|r| r.kind == kind && (verb.is_none() || r.verb == verb));
+    let at = g.sets[g.seat].nearby.iter().position(|r| r.kind == kind && (verb.is_none() || r.verb == verb));
     let Some(i) = at else { return false; };
     let pl = g.player; g.pl[pl].near_sel = i as i32;
     crate::player::pick_hover(g);
@@ -231,7 +231,7 @@ fn holds(g: &Game, pl: PlayerId, gd: GuardId) -> bool {
 fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
-    let act: Option<Interactable> = if crate::condition::down(g, g.pl[pl].ch) { None } else { g.act.clone() };
+    let act: Option<Interactable> = if crate::condition::down(g, g.pl[pl].ch) { None } else { g.sets[g.seat].act.clone() };
     let verb: Option<Verb> = act.as_ref().and_then(|a| a.verb);
     let kind: Option<InteractableKind> = act.as_ref().map(|a| a.kind);
     let act_guard: Option<GuardId> = act.as_ref().and_then(|a| a.guard);

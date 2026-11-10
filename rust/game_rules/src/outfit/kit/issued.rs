@@ -418,9 +418,9 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     if js::truthy(n) && (pool.bangs != g.k.doortools.bangs || pool.charges != g.k.doortools.charges || pool.frags != g.k.frag.squad) {
         crate::seats::each_seat(g, &mut |v| {
             crate::doortools::door_tools_sync(v);
-            v.door_tools.bangs = crate::seats::seat_share(v, pool.bangs);
-            v.door_tools.charges = crate::seats::seat_share(v, pool.charges);
-            v.door_tools.frags = crate::seats::seat_share(v, pool.frags);
+            v.sets[v.seat].door_tools.bangs = crate::seats::seat_share(v, pool.bangs);
+            v.sets[v.seat].door_tools.charges = crate::seats::seat_share(v, pool.charges);
+            v.sets[v.seat].door_tools.frags = crate::seats::seat_share(v, pool.frags);
         });
     }
     if js::truthy(n) && g.k.slots.on {

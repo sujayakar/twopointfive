@@ -22,7 +22,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.g.god_mode = true;
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
-    if let Some(n) = charges { p.g.door_tools.charges = n; }
+    if let Some(n) = charges { p.g.sets[p.g.seat].door_tools.charges = n; }
     for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
@@ -55,7 +55,7 @@ fn a_keypad_door_is_tried_then_greyed_in_the_words_it_was_refused_in() {
         assert_eq!(squad_orders_give(&mut p.g, "openClear", Some(&t), None, None), None, "a live row was refused");
         p.until(60.0, |p| p.said.iter().any(|l| l.text == words)).unwrap_or_else(|| panic!("a minute and the lead has not said {words:?}: {}", p.roll()));
         p.run(0.5);
-        assert!(p.g.door_tools.ops.is_empty(), "he said it and the order goes on");
+        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty(), "he said it and the order goes on");
         assert!(game::doors::door_locked(&mut p.g, d), "the door gave");
         let t = squad_orders_target_at(&mut p.g, [c[0], 0.0, c[2]]);
         for id in ["openClear", "bangClear"] { assert_eq!(row(&mut p, id, &t).as_deref(), Some(words), "{id}: known shut now, and the row is not grey in his words"); }
@@ -145,9 +145,9 @@ fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
         p.sam_put([spot[0], spot[2]]);
         let top = if along_x { [u, c[1] + h[1], c[2]] } else { [c[0], c[1] + h[1], u] };
         for _ in 0..90 { p.cursor_on(top); p.frame(); }
-        let rows: Vec<String> = p.g.nearby.iter().map(|r| format!("{:?}:{:?}", r.kind, r.verb)).collect();
-        assert!(rows.iter().any(|r| r == "Wall:Some(Charge)"), "{level} static {index} u {u}: no row for the charge, with Sam at {:?} and the cursor at {:?}: {rows:?}", p.sam_at(), p.g.aim_point);
-        let o = p.g.wall_charge.offered.clone().unwrap();
+        let rows: Vec<String> = p.g.sets[p.g.seat].nearby.iter().map(|r| format!("{:?}:{:?}", r.kind, r.verb)).collect();
+        assert!(rows.iter().any(|r| r == "Wall:Some(Charge)"), "{level} static {index} u {u}: no row for the charge, with Sam at {:?} and the cursor at {:?}: {rows:?}", p.sam_at(), p.g.sets[p.g.seat].aim_point);
+        let o = p.g.sets[p.g.seat].wall_charge.offered.clone().unwrap();
         assert!(o.index == index as f64 && (o.u - u).abs() < 0.02, "{level} static {index} u {u}: the row is for wall {} u {}", o.index, o.u);
     }
 }
@@ -174,7 +174,7 @@ fn a_can_up_behind_a_man_offers_the_grab() {
         p.g.pl[me].slot = game::game::SlotKind::Smoke;
         p.pin_man(a, at, east, state, aware);
         p.frame();
-        let row = p.g.nearby.iter().find(|r| r.guard == Some(a)).map(|r| r.line2.clone()).unwrap_or_default();
+        let row = p.g.sets[p.g.seat].nearby.iter().find(|r| r.guard == Some(a)).map(|r| r.line2.clone()).unwrap_or_default();
         assert!(row.contains("grab him") && row.contains("holster for the knockout") && !row.contains("from behind"), "{state:?}: the row is '{row}'");
     }
 }

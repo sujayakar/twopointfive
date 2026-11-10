@@ -230,7 +230,7 @@ impl StealthAsk for Play {
     fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.g) }
     fn out_cold(&self, gd: GuardId) -> bool { self.state(gd) == game::game::GuardState::Dead && game::game::is_breathing(&self.g, gd) }
     fn down_kind(&self, gd: GuardId) -> Option<game::game::DownKind> { self.g.gd[gd].down_kind }
-    fn grab_row(&self, gd: GuardId) -> bool { self.g.nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
+    fn grab_row(&self, gd: GuardId) -> bool { self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
     fn choke_secs(&self) -> f64 { self.g.k.hold.secs.choke }
     fn grab_secs(&self) -> f64 { self.g.k.hold.secs.grab }
     fn sam_takes(&mut self, gd: GuardId) -> bool {

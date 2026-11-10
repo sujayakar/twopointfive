@@ -244,7 +244,7 @@ fn an_order_its_row_refuses_is_said_by_a_man_asked() {
         let mut p = yard_two(s);
         let (sam, men2) = (p.sam_at(), p.men());
         let _ = men;
-        let def = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "hold").expect("the row");
+        let def = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "hold").expect("the row");
         let row = game::orders::Row { issue: no_room_for_it, ..*p.g.tab.orders_order_def[def].row };
         p.g.tab.orders_order_def[def].row = Box::leak(Box::new(row));
         assert_eq!(p.try_order("hold", sam, Who::All).as_deref(), Some("can't hold it here."), "seed {s}");
@@ -367,7 +367,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = rescue(s, 2, 30.0);
         let men = p.men();
-        p.g.door_tools.bangs = 0.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 0.0;
         p.tap("KeyF");
         p.frame();
         assert!(said_by_one_of(&p, &men, none), "seed {s}: the rescue: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
@@ -375,7 +375,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = rescue(s, 2, 30.0);
         let men = p.men();
-        p.g.door_tools.bangs = 1.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 1.0;
         let b = game::rescue::rescue_from_bounds(&p.g).expect("the staging: the side door's room");   // (Sam in the side door's room: one man goes round by it)
         let mid = [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0];
         p.sam_put(mid);
@@ -388,7 +388,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = night(s, "2");
         let men = p.men();
-        p.g.door_tools.bangs = 0.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 0.0;
         sends_in(&mut p, s);
         p.frame();
         assert!(said_by_one_of(&p, &men, none), "seed {s}: the breach: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
@@ -462,7 +462,7 @@ fn a_charge_off_its_door_is_said_by_who_set_it() {
         p.run(0.2);
         let d = p.door("west-yard");
         let c = p.g.tab.doortools_set_charge.push(game::doortools::SetCharge { door: d, side: 1.0, by: String::from(game::ownblow::SAM_BY) });
-        p.g.door_tools.set.push(c);
+        p.g.sets[p.g.seat].door_tools.set.push(c);
         p.run(0.1);
         let men = p.men();
         let at = p.sam_at();
@@ -478,7 +478,7 @@ fn a_charge_off_its_door_is_said_by_who_set_it() {
         p.run(0.2);
         let d = p.door("west-yard");
         let c = p.g.tab.doortools_set_charge.push(game::doortools::SetCharge { door: d, side: 1.0, by: String::from(game::ownblow::SAM_BY) });
-        p.g.door_tools.set.push(c);
+        p.g.sets[p.g.seat].door_tools.set.push(c);
         for m in p.men() { p.falls(m, DownBy::Guard); }
         p.frame();
         p.leaf_put_open(d, 1.2);

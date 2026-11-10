@@ -8,7 +8,7 @@ use alloc::{boxed::Box, string::String};
 
 // ------------------------------------------------------------ the state
 
-/// `g = viewOf(g, gd)`: run `f` in the game as this teammate's seat has it. The seat already on Game is that view: re-entrant by this test
+/// `g = viewOf(g, gd)`: run `f` in the game as this teammate's seat has it. The seat the pass is about is that view: re-entrant by this test
 fn in_view<R>(g: &mut Game, gd: GuardId, f: &mut dyn FnMut(&mut Game) -> R) -> R {
     let seat = crate::seats::view_of(g, gd);
     if seat == g.seat { f(g) } else { crate::seats::with_seat(g, seat, f) }

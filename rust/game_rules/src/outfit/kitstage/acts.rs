@@ -174,9 +174,9 @@ pub(super) fn pools(g: &mut Game, st: &KitStage, f: Option<&str>) {
     let cards = &st.a.cards;
     let sum = |k: &str, from: usize| -> f64 { let mut s = 0.0; for i in from..=n { if let Some(c) = cards.get(i) { s += count(c, k); } } m::max(s, if Some(k) == f { 1.0 } else { 0.0 }) };
     crate::doortools::door_tools_sync(g);
-    g.door_tools.bangs = sum("bangs", 1);
-    g.door_tools.charges = sum("charges", 1);
-    g.door_tools.frags = sum("frags", 1);
+    g.sets[g.seat].door_tools.bangs = sum("bangs", 1);
+    g.sets[g.seat].door_tools.charges = sum("charges", 1);
+    g.sets[g.seat].door_tools.frags = sum("frags", 1);
     let smoke = sum("smoke", 1);
     crate::squadsmoke::squad_smoke_stage(g, smoke);
     let walls = sum("walls", 0);
@@ -489,7 +489,7 @@ fn thrown_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Str
     };
     let Some(spot) = spot.filter(|_| free(g, p)) else { return Err(String::from("no room at the door")) };
     b.post = Some(p); b.spot = Some(spot);
-    b.base = if frag { g.door_tools.stats.frags } else { cans(g) };
+    b.base = if frag { g.sets[g.seat].door_tools.stats.frags } else { cans(g) };
     to(g, b, "open");
     unlock(g, st);
     match b.man {
@@ -602,11 +602,11 @@ fn stand_off(g: &mut Game, st: &mut KitStage, b: &mut Beat) {
 }
 fn charge_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let d = the_door(st);
-    if b.mark_t.is_nan() && g.door_tools.stats.blown > b.base { mark(g, b, "blow"); }
+    if b.mark_t.is_nan() && g.sets[g.seat].door_tools.stats.blown > b.base { mark(g, b, "blow"); }
     if !b.mark_t.is_nan() { return if g.time - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
     if let Some(c) = door_charge(g, &crate::seats::here(g), d) {
         if b.phase != "set" { to(g, b, "set"); b.marks.push("set"); }
-        let armed = g.door_tools.ops.iter().any(|&o| { let r = &g.tab.doortools_door_op[o]; r.kind == crate::doortools::DoorToolKind::Charge && r.door == d && r.phase == crate::doortools::Phase::Armed });
+        let armed = g.sets[g.seat].door_tools.ops.iter().any(|&o| { let r = &g.tab.doortools_door_op[o]; r.kind == crate::doortools::DoorToolKind::Charge && r.door == d && r.phase == crate::doortools::Phase::Armed });
         if g.time - b.pt >= K.clear_secs || armed { crate::doortools::door_tools_trigger(g, Some(c)); }
     }
     Step::On
@@ -617,7 +617,7 @@ fn charge_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: a charge will not cut it")); }
     if door_off(g, d) { return Err(String::from("no leaf to set it on")); }
-    b.base = g.door_tools.stats.blown;
+    b.base = g.sets[g.seat].door_tools.stats.blown;
     b.post = Some(v2(q));
     to(g, b, "go");
     sam_goes(st, v2(q));
@@ -629,7 +629,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let el = now - b.pt;
     let d = the_door(st);
     let c = door_charge(g, &crate::seats::here(g), d);
-    if b.mark_t.is_nan() && g.door_tools.stats.blown > b.base { mark(g, b, "blow"); }
+    if b.mark_t.is_nan() && g.sets[g.seat].door_tools.stats.blown > b.base { mark(g, b, "blow"); }
     if !b.mark_t.is_nan() { return if now - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
     let ajar = !door_off(g, d) && m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03;
     let id = ch_id(g, b);
@@ -932,7 +932,7 @@ fn wall_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
         let no = if said.is_empty() { String::from("no wall by the stack to set it on") } else { said.join(" / ") };
         return keep(st, b, no);
     };
-    b.base = g.wall_charge.stats.blown;
+    b.base = g.sets[g.seat].wall_charge.stats.blown;
     st.a.wall_ask = Some((t.clone(), men.clone()));
     // (THE BLAST TOUCHES NOBODY: where the charge will sit is asked first; off the span, one that is to open it is refused and remembered; where Sam stands inside its reach he is walked out of it BEFORE the order is given)
     let w = crate::wallcharge::wall_charge_spot(g, &t);
@@ -983,8 +983,8 @@ fn wall_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
 }
 fn wall_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let now = g.time;
-    let c = g.wall_charge.set.first().copied();
-    let op = g.wall_charge.ops.first().copied();
+    let c = g.sets[g.seat].wall_charge.set.first().copied();
+    let op = g.sets[g.seat].wall_charge.ops.first().copied();
     if b.phase == "clear" {
         if flat(sam_pos(g, &crate::seats::here(g)), b.post.unwrap()) > K.way_m && now - b.pt < 8.0 { return Step::On; }
         st.a.led = None;
@@ -1196,7 +1196,7 @@ pub(super) fn start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
         Act::BangOrder | Act::FragOrder => order_start(g, st, b),
         Act::ThrowSmoke | Act::ThrowFlash | Act::ThrowFrag => thrown_start(g, st, b),
         Act::ChargeMate => {
-            b.base = g.door_tools.stats.blown;
+            b.base = g.sets[g.seat].door_tools.stats.blown;
             let t = on_door(st);
             let who = roster(g, b.man.unwrap());
             match crate::orders::squad_orders_give(g, "charge", Some(&t), Some(who), None) { Some(w) => Err(w), None => Ok(()) }
@@ -1402,7 +1402,7 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
             else { let r = st.a.refused.clone().unwrap_or_default(); let r = r.split_once(": ").map_or(r.clone(), |x| String::from(x.1)); if r.is_empty() { String::from("the wall charge came down unblown") } else { r } };
         wall_kept(st, &b, &no);
         if st.a.refused.is_none() { st.a.refused = Some(format!("walls: {}", no)); }
-        if !g.wall_charge.set.is_empty() || !g.wall_charge.ops.is_empty() || b.marks.contains(&"down") || far { st.a.dirty = true; st.a.apart = st.a.apart || far; st.a.rest_until = now; }
+        if !g.sets[g.seat].wall_charge.set.is_empty() || !g.sets[g.seat].wall_charge.ops.is_empty() || b.marks.contains(&"down") || far { st.a.dirty = true; st.a.apart = st.a.apart || far; st.a.rest_until = now; }
     }
     // A LEAF SHOT TO PIECES under a row that says it leaves nothing
     if door_gone && !st.a.dirty { st.a.dirty = true; }
@@ -1420,12 +1420,12 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     if b.man.is_none() && g.pl[pl].charging.is_some() { crate::doortools::door_tools_cancel_sam(g); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
-    if b.field == "frags" && b.mark_t.is_nan() && (g.door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
+    if b.field == "frags" && b.mark_t.is_nan() && (g.sets[g.seat].door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
     let mut i = g.items.items.len();
     while i > 0 { i -= 1; let it = g.items.items[i]; if g.tab.item[it].kind == th::ItemKind::Frag && !g.tab.item[it].fired { th::throwables_remove_at(g, i as f64); } }
     if b.man.is_none() { g.pl[pl].launch_held = None; if b.row == Act::Cam { g.pl[pl].cams.clear(); } }
     let info = row(b.row);
-    let on_wall = info.team && !g.wall_charge.set.is_empty();
+    let on_wall = info.team && !g.sets[g.seat].wall_charge.set.is_empty();
     if info.team && !on_wall { crate::wallcharge::wall_charge_reset(g); }
     if b.row == Act::BigSam { g.pl[pl].kick = None; }
     if info.door == Leaf::None || b.given { crate::doortools::door_tools_reset(g); pools(g, st, None); }
@@ -1529,8 +1529,8 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
         if flat(p, st.sam) > K.on_slot + slack && !men_first { { let home = st.sam; sam_goes(st, home) }; }
         else { st.a.led = None; }
     }
-    if !b_some && (!g.door_tools.ops.is_empty() || !g.door_tools.set.is_empty()) { crate::doortools::door_tools_reset(g); pools(g, st, None); }
-    if !b_some && !st.a.dirty && (!g.wall_charge.ops.is_empty() || !g.wall_charge.set.is_empty()) { crate::wallcharge::wall_charge_reset(g); pools(g, st, None); }
+    if !b_some && (!g.sets[g.seat].door_tools.ops.is_empty() || !g.sets[g.seat].door_tools.set.is_empty()) { crate::doortools::door_tools_reset(g); pools(g, st, None); }
+    if !b_some && !st.a.dirty && (!g.sets[g.seat].wall_charge.ops.is_empty() || !g.sets[g.seat].wall_charge.set.is_empty()) { crate::wallcharge::wall_charge_reset(g); pools(g, st, None); }
     if !b_some && st.a.shot && now - st.a.shot_at >= K.hold { mend(g, st); }
 }
 /// THE WAIT: no row is begun into a refusal that is about to clear. `wait` seconds at most, then begun as it stands

@@ -277,7 +277,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let t = match t {
         Some(t) => t,
         None => {
-            if let Some(gd) = g.aim_guard {
+            if let Some(gd) = g.sets[g.seat].aim_guard {
                 if !crate::condition::down(g, g.gd[gd].ch) {
                     if !ocpable(g, &crate::seats::here(g)) {
                         return;

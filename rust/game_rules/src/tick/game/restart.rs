@@ -342,7 +342,7 @@ fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId) {
     g.tab.camera[cam].kick = kick;
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
-    crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::seats::with_seat(g, me, &mut |g| g.sets[g.seat].view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
     crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input));
 }
 
