@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// a gun's row of WEAPONS (TypeScript: `gun.def`, the object itself)
-fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
+pub(super) fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(def).unwrap()
 }
 
@@ -164,18 +164,18 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
     if g.pl[pl].holstered == on { return; }
     g.pl[pl].holstered = on;
     let (c, pistol, rifle) = (g.pl[pl].ch, g.pl[pl].pistol, g.pl[pl].rifle);
-    if on && crate::weapons::firearm_reloading(g, pistol) {
-        crate::weapons::firearm_cancel_reload(g, pistol);
-        crate::character::anim_cancel_reload(g, c);
-    }
-    if on && crate::weapons::firearm_reloading(g, rifle) {
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
-    }
+    if on { reload_dropped(g, c, pistol); reload_dropped(g, c, rifle); }
     if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].equip_t = RIFLE_EQUIP_SECS; }
     if !quiet {
         crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
     }
+}
+
+/// a gun's reload given up half way, if it is in one
+pub(super) fn reload_dropped(g: &mut crate::game::Game, c: CharId, gun: FirearmId) {
+    if !crate::weapons::firearm_reloading(g, gun) { return; }
+    crate::weapons::firearm_cancel_reload(g, gun);
+    crate::character::anim_cancel_reload(g, c);
 }
 
 /// the stow's way to his holster: quiet
@@ -316,10 +316,9 @@ pub(super) fn shell_break(g: &mut crate::game::Game) -> Option<crate::player::Sh
     if reload_in_hand(g, Some(false), Some(true)) { Some(crate::player::ShellBreak::Bolt) } else { None }
 }
 
-/// `pl.wall && pl.wall.kind !== 'stack'`
-fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool {
-    match &g.pl[pl].wall { Some(w) => w.kind != Some(crate::player::WallHoldKind::Stack), None => false }
-}
+/// stacked on a wall with the rifle; and with his back to one
+pub(super) fn on_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some_and(|w| w.kind == Some(crate::player::WallHoldKind::Stack)) }
+pub(super) fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some() && !on_stack(g, pl) }
 
 /// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })
 fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {

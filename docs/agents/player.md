@@ -148,8 +148,8 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 - **A thing done by hand:** a kind of `Deed` with what it keeps, begun by `deed::begin`, which puts down the one before, after `hands_free` if it wants
   both hands. Ask `planted` (his feet are in it too) or `hands_full` (a deed, or a body in `Player.tow`), never a list of kinds.
 - **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads the seat's `act`. A job that plants him is an arm of `sam_work`. A key: its code in
-  `update_player`, its row in `KEY_ACTS`.
-- **A new reason his gun cannot fire:** a term of `walled` in `update_player` with its line on a click, and `gun_shut` so that the ring shows the bar.
+  the stage of `update_player` it belongs to (`kit_keys` for what he carries), its row in `KEY_ACTS`.
+- **A new reason his gun cannot fire:** a term of `gun_blocked` with its line on a click, and `gun_shut` so that the ring shows the bar.
 - **New state:** nothing to do: a restart throws the whole game away. What must outlive a try goes in `Survivors`.
 
 ## What holds it
