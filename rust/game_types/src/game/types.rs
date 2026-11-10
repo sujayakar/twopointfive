@@ -707,7 +707,6 @@ pub struct Player {
     pub nv: bool,
     pub nv_amount: f64,
     #[is(LightId(0))] pub light: LightId,
-    #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
     /// he is low because his hands' work put him there, not by his own key
     pub knee: Option<crate::player::Knee>,

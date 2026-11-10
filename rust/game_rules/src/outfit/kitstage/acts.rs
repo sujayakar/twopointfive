@@ -1415,7 +1415,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     let Some(mut b) = st.a.beat.take() else { return };
     let pl = g.player;
     st.a.cuts += 1;
-    if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.sets[g.seat].hand.throw_held = false; }
+    if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; }
     if b.man.is_none() { g.pl[pl].charging_over(); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)

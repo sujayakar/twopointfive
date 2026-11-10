@@ -110,7 +110,7 @@ impl FromJson for game::lesson::LessonTest {
             "reload" => T::Reload,
             "launcher" => T::Launcher { on: if j.peek("on").and_then(Json::str) == Some("none") { field::<String>(j, "on", at); None } else { Some(field(j, "on", at)) }, fired: said(j, "fired", at) },
             "burst" => T::Burst { n: field(j, "n", at) },
-            "threw" => T::Threw { kind: field(j, "kind", at), quick: said(j, "quick", at), area: field(j, "area", at) },
+            "threw" => T::Threw { kind: field(j, "kind", at), area: field(j, "area", at) },
             "orderTo" => T::OrderTo { who: field(j, "who", at) },
             "stackOn" => T::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: said(j, "set", at) },
             "pairsOn" => T::PairsOn { doors: field(j, "doors", at) },
