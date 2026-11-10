@@ -660,7 +660,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         crate::takedown::take_fall(g, gd, td.kind, yes(td.lethal), None);
         let way: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
         if yes(td.lethal) {
-            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"));
+            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), crate::game::With::Knife);
             let now = g.time;
             let victim = g.gd[gd].callsign.clone();
             for i in 0..g.guards.len() {
@@ -672,7 +672,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
                 }
             }
         } else {
-            crate::combat::kill_guard(g, gd, way, Some(true), None, None, None);
+            crate::combat::kill_guard(g, gd, way, Some(true), None, None, crate::game::With::Hand);
         }
         crate::close::close_blow(g, yes(td.lethal));
         let ev = crate::game::GameEvent {

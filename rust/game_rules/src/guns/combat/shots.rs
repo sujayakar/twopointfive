@@ -210,10 +210,8 @@ fn man_down(g: &mut Game, gd: GuardId, r: &crate::shotgun::RoundIn) {
     let was_up = !crate::condition::down(g, r.c);
     let by_player = crate::character::is_player(g, r.shooter);
     let sg = if by_player { None } else { guard_of_char(g, r.shooter) };
-    let line = sg.filter(|&s| crate::teams::hostile_to(g, s, g.gd[gd].team) || (r.ours && crate::friendlyfire::on_our_side(g, r.c)))
-        .map(|s| alloc::format!("{} down — {}'s round", g.gd[gd].callsign, g.gd[s].callsign));
     let by_who = if by_player { DownBy::Player } else { DownBy::Guard };
-    kill_guard(g, gd, r.dir, Some(false), Some(DownKind::Shot), Some(by_who), line.as_deref());
+    kill_guard(g, gd, r.dir, Some(false), Some(DownKind::Shot), Some(by_who), crate::game::With::Hand);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.8), None);
     if was_up { g.gd[gd].killer_id = g.ch[r.shooter].id; }
     if let Some(s) = sg.filter(|_| r.shield) {
@@ -549,7 +547,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     crate::deathrecap::recap_round(g, hit, was_down, shooter, muzzle, hit_p, &def, o.blind);
     if let Some(c) = hit {
         let shield = Some(c) == shield_of(g);
-        let r = crate::shotgun::RoundIn { c, shooter, ours: ff_ours, shield, dir, hit_p };
+        let r = crate::shotgun::RoundIn { c, shooter, shield, dir, hit_p };
         match &mut pel {
             None => round_in(g, &r),
             Some(p) => { if crate::shotgun::pellet_drops(g, p, c, t_hit, dir) { p.late.push(r); } }

@@ -93,8 +93,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
         if operative(g, gd) && crate::orders::squad_orders_big(g, &crate::seats::here(g)) { door_tools_dazzle(g, gd, bb, inn); backblast += 1.0; continue; }
         if dist < g.k.doortools.knock_m {
             let dir = v3::normalize([p[0] - fc[0], 0.15, p[2] - fc[2]]);
-            let line = format!("{} down — behind the door when it went", callsign_or(g, gd));
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line));
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Hand);
             knocked += 1.0;
         } else {
             let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);

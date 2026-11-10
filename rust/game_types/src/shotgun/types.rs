@@ -8,8 +8,6 @@ use alloc::{string::String, vec::Vec};
 pub struct RoundIn {
     pub c: CharId,
     pub shooter: CharId,
-    /// the shooter is on the players' side
-    pub ours: bool,
     /// he was the man in a player's arm
     pub shield: bool,
     pub dir: V3,
