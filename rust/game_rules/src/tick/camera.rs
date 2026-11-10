@@ -85,7 +85,7 @@ fn frame(c: &mut FollowCamera) {
 pub fn follow_camera_rebuild(g: &mut Game, id: CameraId) {
     rebuild(&mut g.tab.camera[id])
 }
-fn rebuild(c: &mut FollowCamera) {
+pub(super) fn rebuild(c: &mut FollowCamera) {
     let (cp, sp, cy, sy) = (m::cos(c.pitch), m::sin(c.pitch), m::cos(c.yaw), m::sin(c.yaw));
     c.forward = [-sy * cp, -sp, -cy * cp];
     c.pos = v3::mad(c.target, c.forward, -c.distance);
