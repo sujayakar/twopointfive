@@ -174,7 +174,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
             // …moved a step all the same onto floor a gun of the lane has, or left in a doorway: out of it again. Never a man set on the lane's other side: his place a step short of their line is the errand's own
             if fit(g, gd) && !close_fight(g, gd) && !pushing(g, gd) && !flanking(g, gd) && !s(g).flank_of.has(gd) && !s(g).peek.has(gd) && g.time - g.gd[gd].last_seen_t > 1.0 && g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) > 6.0 {
                 if let Some(l) = lane_by_id(g, h.lane) {
-                    if knows(g, l, gd) && (crate::doorway::doorway_in_way(g, pos) || gun_on(g, l, pos, Some(k.shift_m))) && !back_out(g, gd, l) {
+                    if knows(g, l, gd) && (crate::doorway::doorway_stand(g, pos) || gun_on(g, l, pos, Some(k.shift_m))) && !back_out(g, gd, l) {
                         let now = g.time;
                         s(g).back_t.set(gd, now);   // (no cover found: asked again in six seconds, not every tick)
                     }
@@ -300,7 +300,7 @@ fn back_cover(g: &Game, b: &mut BackOut, i: usize) -> bool {
     let c: V3 = [((i % b.w) as f64 + 0.5) * cell, 0.0, ((i / b.w) as f64 + 0.5) * cell];
     let on_mask = b.m.as_ref().and_then(|m| m.get(i).copied()).unwrap_or(0) != 0;   // (a mask of nothing reads undefined: not on it)
     let shift = g.k.lanes.shift_m;
-    let v = !on_mask && !gun_on(g, b.l, c, Some(shift)) && !crate::doorway::doorway_in_way(g, c);
+    let v = !on_mask && !gun_on(g, b.l, c, Some(shift)) && !crate::doorway::doorway_stand(g, c);
     b.memo.set(i, v);
     v
 }

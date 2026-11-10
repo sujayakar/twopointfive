@@ -298,7 +298,7 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     } else {
         let p = pos_of(g, gd);
         let shift = g.k.lanes.shift_m;
-        if (gun_on(g, l, p, Some(shift)) || crate::doorway::doorway_in_way(g, p)) && back_out(g, gd, l) { return true; }
+        if (gun_on(g, l, p, Some(shift)) || crate::doorway::doorway_stand(g, p)) && back_out(g, gd, l) { return true; }
     }
     if def_of(g, gd).is_none() { return false; }
     if !s(g).due.iter().any(|d| d.gd == gd) {

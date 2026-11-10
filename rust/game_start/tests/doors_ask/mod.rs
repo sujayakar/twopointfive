@@ -697,7 +697,7 @@ impl DoorsAsk for Play {
         let front = if game_start::play::dist(from, at) > 0.3 { yaw_to(from, at) } else { 0.0 };
         game::orders::squad_orders_spots_at(&mut self.g, [at[0], 0.0, at[1]], front, n).iter().map(|p| [p[0], p[2]]).collect()
     }
-    fn no_place_to_stand(&mut self, at: [f64; 2]) -> bool { game::doorway::doorway_in_way(&self.g, [at[0], 0.0, at[1]]) || game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
+    fn no_place_to_stand(&mut self, at: [f64; 2]) -> bool { game::doorway::doorway_stand(&self.g, [at[0], 0.0, at[1]]) || game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
     fn run_along(&mut self, at: [f64; 2], yaw: f64, most: f64) -> f64 { game::scene_collision::raycast(&mut self.g, [at[0], 1.55, at[1]], [yaw.sin(), 0.0, yaw.cos()], most).map_or(most, |h| h.t) }
     fn standoff_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> {
         game::doortools::door_tools_standoff_posts(&mut self.g, d, side, men.len() as f64, Some(men)).unwrap_or_default().iter().map(|p| [p.pos[0], p.pos[2]]).collect()

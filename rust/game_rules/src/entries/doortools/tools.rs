@@ -85,7 +85,7 @@ pub(super) fn door_tools_lane_cover(g: &mut crate::game::Game, op: DoorOpId) {
     let (ux, uz) = ((sx / n - c[0]) / l, (sz / n - c[2]) / l);
     let q: V3 = [c[0] + ux * cover_m, 0.0, c[2] + uz * cover_m];
     let w: V3 = [c[0] - ux * cover_deep, 1.05, c[2] - uz * cover_deep];
-    if nav_blocked(g, q[0], q[2]) || crate::doorway::doorway_in_way(g, q) || flat(q, fc) < width / 2.0 + 1.0
+    if nav_blocked(g, q[0], q[2]) || crate::doorway::doorway_stand(g, q) || flat(q, fc) < width / 2.0 + 1.0
         || crate::scene_collision::solid_blocked(g, [q[0], 0.45, q[2]], [c[0], 0.45, c[2]], None)
         || crate::scene_collision::solid_blocked(g, [q[0], 0.45, q[2]], [a_post[0], 0.45, a_post[2]], None)
         || men.iter().any(|m| *m != gd && flat(post_or_pos(g, op, *m), q) < 0.9) { return; }
@@ -846,7 +846,7 @@ pub fn door_tools_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, m
 fn tucked_in(g: &Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3) -> bool {
     let mine = |x: V3| own.iter().any(|o| flat(*o, x) < crate::orders::OWN_EPS);
     (mine(p.pos) && flat(sam, q) < 0.7 && !mine(q))
-        || (!p.lead && crate::doorway::doorway_in_way(g, q) && !crate::doorway::doorway_in_way(g, p.pos))
+        || (!p.lead && crate::doorway::doorway_stand(g, q) && !crate::doorway::doorway_stand(g, p.pos))
 }
 
 /// orders.ts's marks with the tuck applied: three or more tuck as files, the far man first.
