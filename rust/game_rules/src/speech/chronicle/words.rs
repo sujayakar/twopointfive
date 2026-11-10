@@ -90,177 +90,107 @@ pub fn alarm_down(e: &crate::chronicle::ChronEvent) -> bool { e.kind == ChronKin
 /// A row's words: the debrief card's timeline.
 pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;
-    let n = js::or(number(d, "n"), 1.0);
     let s = |k: &str| text(d, k);
     let when = |k: &str, then: String| if on(d, k) { then } else { String::new() };
+    let sent = || when("sent", format!(" — {} sent", s("sent")));
+    let gun = || crate::gear::gear_text(&s("weapon"));
     match e.kind {
         ChronKind::Objective => s("text"),
         ChronKind::Spotted => format!("SPOTTED by {}{}", s("by"), if number(d, "lvl") >= 1.0 { " — and the floor was already up" } else { "" }),
         ChronKind::Contact => format!("{}: CONTACT — {}", s("who"), word_or_own(&cause(), d, "cause")),
-        ChronKind::Heard => {
-            let k = js::or(number(d, "k"), 1.0);
-            let react = s("react");
-            let verb = if k > 1.0 {
-                String::from(if react == "alerted" { "alerted" } else if react == "investigates" { "investigate" } else { "prick up their ears" })
-            } else if react == "pricks up" {
-                String::from("pricks up his ears")
-            } else {
-                react
-            };
-            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
-            let more = if k > 3.0 { format!(" +{}", js::num_str(k - 3.0)) } else { String::new() };
-            format!("heard: {}{} · {}{} {}", s("what"), times, s("by"), more, verb)
-        }
+        ChronKind::Heard => heard_text(d),
         ChronKind::Lost => format!("{} lost you — searching", s("who")),
         ChronKind::Calm => format!("{} gives up the search", s("who")),
-        ChronKind::Alarm => {
-            if on(d, "up") {
-                let why = when("cause", format!(" — {}", word_or_own(&cause(), d, "cause")));
-                format!("ALARM ▲ {}{}", stage_words(d), why)
-            } else {
-                format!("alarm ▼ {}", stage_words(d))
-            }
-        }
+        ChronKind::Alarm if on(d, "up") => format!("ALARM ▲ {}{}", stage_words(d), when("cause", format!(" — {}", word_or_own(&cause(), d, "cause")))),
+        ChronKind::Alarm => format!("alarm ▼ {}", stage_words(d)),
         ChronKind::Radio => format!("{} (radio): “{}”", s("who"), s("text")),
-        ChronKind::Shot => {
-            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
-            let weapon = crate::gear::gear_text(&s("weapon"));
-            let into = if is(d, "into", "geometry") {
-                String::from("into the scenery")
-            } else if s("into").starts_with("past ") {
-                s("into")
-            } else {
-                format!("into {}", s("into"))
-            };
-            format!("fired{} ({}) — {}", times, weapon, into)
-        }
+        ChronKind::Shot => format!("fired{} ({}) — {}", times(d), gun(), shot_into(&s("into"))),
         ChronKind::LightShot => format!("shot out {}", s("name")),
         ChronKind::Ocp => format!("OCP → {}", s("what")),
-        ChronKind::Blackout => String::from(
-            if is(d, "cause", "shot") { "shot the breaker — mains gone for good" }
-            else if is(d, "cause", "hand") { "threw the breaker by hand" }
-            else { "OCP → the breaker: mains tripped" },
-        ),
-        ChronKind::Thrown => {
-            if is(d, "kind", "cam") { String::from("placed a sticky camera") }
-            else if is(d, "kind", "he40") { String::from("fired a 40 mm grenade") }
-            else if is(d, "kind", "frag") { String::from("threw a frag grenade") }
-            else { format!("threw a {} canister", if is(d, "kind", "flash") { "stun" } else { "smoke" }) }
-        }
+        ChronKind::Blackout => String::from(match s("cause").as_str() { "shot" => "shot the breaker — mains gone for good", "hand" => "threw the breaker by hand", _ => "OCP → the breaker: mains tripped" }),
+        ChronKind::Thrown => String::from(match s("kind").as_str() {
+            "cam" => "placed a sticky camera",
+            "he40" => "fired a 40 mm grenade",
+            "frag" => "threw a frag grenade",
+            "flash" => "threw a stun canister",
+            _ => "threw a smoke canister",
+        }),
         ChronKind::Grab => format!("grabbed {} from behind", s("who")),
-        ChronKind::Interrogated => {
-            let gave = word_or_own(&intel(), d, "gave");
-            if on(d, "civilian") {
-                let rest = if on(d, "gave") {
-                    format!("{} gave up {}", if field(d, "she").is_some() { s("she") } else { String::from("she") }, gave)
-                } else {
-                    format!("nothing more in {}", if field(d, "her").is_some() { s("her") } else { String::from("her") })
-                };
-                format!("questioned {} — {}", s("who"), rest)
-            } else {
-                let rest = if on(d, "gave") {
-                    format!("he gave up {}", gave)
-                } else {
-                    String::from(if number(d, "stage") >= 4.0 { "nothing left in him" } else { "nothing useful yet" })
-                };
-                format!("questioned {} — {}", s("who"), rest)
-            }
-        }
+        ChronKind::Interrogated => format!("questioned {} — {}", s("who"), if on(d, "civilian") { civilian_gave(d) } else { man_gave(d) }),
         ChronKind::KeyTaken => format!("took {}'s key", s("who")),
         ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(d)),
-        ChronKind::Kill => {
-            if is(d, "weapon", "knife") {
-                format!("{} killed — the knife", s("who"))
-            } else if on(d, "blast") {
-                format!("{} killed — {}", s("who"), crate::gear::gear_text(&s("weapon")))
-            } else {
-                format!("{} shot dead ({})", s("who"), crate::gear::gear_text(&s("weapon")))
-            }
-        }
-        ChronKind::BodyFound => {
-            let how = if on(d, "breathing") { "out cold" } else { "dead" };
-            format!("{} found {} {}{}", s("by"), s("who"), how, if on(d, "civilian") { " — the floor goes up hard" } else { "" })
-        }
-        ChronKind::DoorKicked => match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-            Some(w) => format!("kicked in the {}", w),
-            None => format!("kicked in the {} door", s("door")),
-        },
-        ChronKind::LockPicked => match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-            Some(w) => format!("picked the lock on the {}", w),
-            None => format!("picked the {} door's lock", s("door")),
-        },
+        ChronKind::Kill if is(d, "weapon", "knife") => format!("{} killed — the knife", s("who")),
+        ChronKind::Kill if on(d, "blast") => format!("{} killed — {}", s("who"), gun()),
+        ChronKind::Kill => format!("{} shot dead ({})", s("who"), gun()),
+        ChronKind::BodyFound => format!("{} found {} {}{}", s("by"), s("who"), if on(d, "breathing") { "out cold" } else { "dead" }, if on(d, "civilian") { " — the floor goes up hard" } else { "" }),
+        ChronKind::DoorKicked => door_named(g, d).map_or_else(|| format!("kicked in the {} door", s("door")), |w| format!("kicked in the {w}")),
+        ChronKind::LockPicked => door_named(g, d).map_or_else(|| format!("picked the {} door's lock", s("door")), |w| format!("picked the lock on the {w}")),
         ChronKind::Hit => format!("hit{}", when("by", format!(" — {}'s round", s("by")))),
-        ChronKind::Down => {
-            let by = s("by");
-            let whose = if by.ends_with("charge") { by } else { format!("{}'s round", by) };
-            format!("DOWN{}", when("by", format!(" — {}", whose)))
-        }
-        ChronKind::NeedBreak => {
-            if is(d, "what", "left") {
-                let to = if on(d, "own") {
-                    format!("{} ({})", word_or_own(&need_short(), d, "kind"), s("to"))
-                } else {
-                    word_or_own(&need_words(), d, "kind")
-                };
-                format!("{} left his route — {}", s("who"), to)
-            } else if is(d, "what", "back") {
-                format!("{} back on his route ({} s away)", s("who"), s("away"))
-            } else {
-                format!("{}'s {} break broken off ({})", s("who"), s("kind"), s("why"))
-            }
-        }
-        ChronKind::CivilianSpotted => {
-            let what = match civ_cause().get(s("cause")) {
-                Some(w) => w.clone(),
-                None => String::from("saw you"),
-            };
-            format!("{} {}", s("who"), what)
-        }
-        ChronKind::CivilianReported => {
-            if is(d, "how", "phone") {
-                format!("{} rang it in — {}{}", s("who"), word_or_own(&civ_cause(), d, "cause"), when("sent", format!(" — {} sent", s("sent"))))
-            } else if is(d, "how", "outside") {
-                format!("{} got out and control rang the floor{}", s("who"), when("sent", format!(" — {} sent", s("sent"))))
-            } else {
-                format!("{} told {} — {}{}", s("who"), s("to"), word_or_own(&civ_cause(), d, "cause"), if is(d, "how", "found") { " (he found her hiding)" } else { "" })
-            }
-        }
+        ChronKind::Down => format!("DOWN{}", when("by", format!(" — {}{}", s("by"), if s("by").ends_with("charge") { "" } else { "'s round" }))),
+        ChronKind::NeedBreak => need_text(d),
+        ChronKind::CivilianSpotted => format!("{} {}", s("who"), civ_cause().get(s("cause")).map_or("saw you", |w| w)),
+        ChronKind::CivilianReported => match s("how").as_str() {
+            "phone" => format!("{} rang it in — {}{}", s("who"), word_or_own(&civ_cause(), d, "cause"), sent()),
+            "outside" => format!("{} got out and control rang the floor{}", s("who"), sent()),
+            how => format!("{} told {} — {}{}", s("who"), s("to"), word_or_own(&civ_cause(), d, "cause"), if how == "found" { " (he found her hiding)" } else { "" }),
+        },
         ChronKind::CivilianComplied => format!("told {} to stay down — and let her go", s("who")),
         ChronKind::CivilianKO => format!("{} (the {}) out cold — {} — a CIVILIAN", s("who"), s("label"), put_out_how(d)),
-        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), crate::gear::gear_text(&s("weapon"))),
+        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), gun()),
         ChronKind::CameraSpotted => format!("camera {} called you in{}", s("n"), when("sent", format!(" — {} sent to look", s("sent")))),
         ChronKind::CameraAlarm => format!("camera {} had you long enough — the floor goes up", s("n")),
-        ChronKind::LaserTripped => {
-            let by = if is(d, "by", "player") {
-                String::from("broke")
-            } else if is(d, "by", "body") {
-                String::from("the body you hauled broke")
-            } else {
-                format!("a thrown {} broke", if is(d, "by", "flash") { String::from("stun") } else { s("by") })
-            };
-            format!("{} the {} beam{}", by, e.room, when("sent", format!(" — {} sent", s("sent"))))
-        }
+        ChronKind::LaserTripped => format!("{} the {} beam{}", beam_broken_by(&s("by")), e.room, sent()),
         ChronKind::DeviceDown => format!("{} shot dead{}", s("device").replace('_', " "), when("sent", format!(" — {} sent to it", s("sent")))),
-        ChronKind::CodeLearned => {
-            let code = match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-                Some(w) => format!("code to the {}", w),
-                None => format!("{} code", s("door").replace('_', " ")),
-            };
-            if is(d, "how", "told") {
-                format!("{} gave up the {}", s("from"), code)
-            } else {
-                format!("overheard the {}{}", code, when("from", format!(" ({})", s("from"))))
-            }
-        }
-        ChronKind::CodeEntered => {
-            let name = match door_written(g, &s("door")) {
-                Some(w) => w,
-                None => format!("{} door", s("door").replace('_', " ")),
-            };
-            format!("keyed the code — the {}", name)
-        }
+        ChronKind::CodeLearned if is(d, "how", "told") => format!("{} gave up the {}", s("from"), code_of(g, d)),
+        ChronKind::CodeLearned => format!("overheard the {}{}", code_of(g, d), when("from", format!(" ({})", s("from")))),
+        ChronKind::CodeEntered => format!("keyed the code — the {}", door_written(g, &s("door")).unwrap_or_else(|| format!("{} door", s("door").replace('_', " ")))),
         ChronKind::Checkpoint => format!("checkpoint {}{}", if is(d, "what", "load") { "loaded" } else { "saved" }, when("label", format!(" ({})", s("label")))),
     }
+}
+/// " ×3" of what came three times
+fn times(d: &Data) -> String {
+    let n = js::or(number(d, "n"), 1.0);
+    if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() }
+}
+/// the door's written name, where it has one
+fn door_named(g: &crate::game::Game, d: &Data) -> Option<String> { door_written(g, &text(d, "door")).filter(|w| !w.is_empty()) }
+fn code_of(g: &crate::game::Game, d: &Data) -> String {
+    door_named(g, d).map_or_else(|| format!("{} code", text(d, "door").replace('_', " ")), |w| format!("code to the {w}"))
+}
+fn heard_text(d: &Data) -> String {
+    let (k, react) = (js::or(number(d, "k"), 1.0), text(d, "react"));
+    let verb = match react.as_str() {
+        "alerted" if k > 1.0 => "alerted",
+        "investigates" if k > 1.0 => "investigate",
+        _ if k > 1.0 => "prick up their ears",
+        "pricks up" => "pricks up his ears",
+        own => own,
+    };
+    let more = if k > 3.0 { format!(" +{}", js::num_str(k - 3.0)) } else { String::new() };
+    format!("heard: {}{} · {}{} {}", text(d, "what"), times(d), text(d, "by"), more, verb)
+}
+fn shot_into(into: &str) -> String {
+    if into == "geometry" { String::from("into the scenery") } else if into.starts_with("past ") { String::from(into) } else { format!("into {into}") }
+}
+fn civilian_gave(d: &Data) -> String {
+    let word = |k: &str| if field(d, k).is_some() { text(d, k) } else { String::from(k) };
+    if on(d, "gave") { format!("{} gave up {}", word("she"), word_or_own(&intel(), d, "gave")) } else { format!("nothing more in {}", word("her")) }
+}
+fn man_gave(d: &Data) -> String {
+    if on(d, "gave") { format!("he gave up {}", word_or_own(&intel(), d, "gave")) }
+    else { String::from(if number(d, "stage") >= 4.0 { "nothing left in him" } else { "nothing useful yet" }) }
+}
+fn need_text(d: &Data) -> String {
+    let s = |k: &str| text(d, k);
+    match s("what").as_str() {
+        "left" if on(d, "own") => format!("{} left his route — {} ({})", s("who"), word_or_own(&need_short(), d, "kind"), s("to")),
+        "left" => format!("{} left his route — {}", s("who"), word_or_own(&need_words(), d, "kind")),
+        "back" => format!("{} back on his route ({} s away)", s("who"), s("away")),
+        _ => format!("{}'s {} break broken off ({})", s("who"), s("kind"), s("why")),
+    }
+}
+fn beam_broken_by(by: &str) -> String {
+    match by { "player" => String::from("broke"), "body" => String::from("the body you hauled broke"), _ => format!("a thrown {} broke", if by == "flash" { "stun" } else { by }) }
 }
 
 #[cfg(test)]
