@@ -253,11 +253,60 @@ fn cause_of(c: crate::wallbreak::LevelChangeCause) -> crate::wallbreak::LevelCha
     c
 }
 
+/// How a wall lies, and the stretch of it a change opened.
+#[derive(Clone, Copy)]
+struct WallStretch {
+    u: [f64; 2],
+    n: [f64; 2],
+    c0: [f64; 2],
+    lo: f64,
+    hi: f64,
+}
+
 /// the breach a wall's row belongs to: a new one, or the one on that wall it widens
 fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {
-    use crate::wallbreak::{LevelChangeCause, LevelChangeKind};
     let w = crate::wallbreak::wall_break_all(g).into_iter().find(|x| x.id == row.id)?;
-    let (c, h, yaw) = { let x = &g.tab.boxes[w.box_]; (x.c, x.h, x.yaw) };
+    let st = stretch_opened(g, w.box_, row)?;
+    let found = breaches_of(g).into_iter().find(|x| {
+        let x = &g.tab.wallreact_breach[*x];
+        x.wall == row.id && st.lo <= x.hi + 0.3 && st.hi >= x.lo - 0.3
+    });
+    let b = match found {
+        Some(b) => {
+            widen_breach(g, b, row, st);
+            b
+        }
+        None => new_breach(g, row, st),
+    };
+    // (two breaches of one wall grown into each other: one)
+    let mut i = g.m.wallreact.wall_react.breaches.len();
+    while i > 0 {
+        i -= 1;
+        let o = g.m.wallreact.wall_react.breaches[i];
+        if o == b { continue; }
+        let (ow, x) = (&g.tab.wallreact_breach[o], &g.tab.wallreact_breach[b]);
+        if ow.wall != x.wall || ow.lo > x.hi + 0.3 || ow.hi < x.lo - 0.3 { continue; }
+        fold_breach_into(g, o, b);
+        g.m.wallreact.wall_react.breaches.remove(i);
+    }
+    let x = &mut g.tab.wallreact_breach[b];
+    let mid = (x.lo + x.hi) / 2.0;
+    x.at[0] = st.c0[0] + st.u[0] * mid;
+    x.at[2] = st.c0[1] + st.u[1] * mid;
+    x.half = (x.hi - x.lo) / 2.0;
+    let (at, half, opening) = (x.at, x.half, x.opening);
+    if let Some(op) = opening {
+        let o = &mut g.tab.cover_opening[op];
+        o.at[0] = at[0];
+        o.at[2] = at[2];
+        o.half = half;
+    }
+    Some(b)
+}
+
+/// The stretch of its wall a change's rectangle covers, kept to the wall's length. None = none of it.
+fn stretch_opened(g: &Game, wall_box: BoxId, row: &crate::wallbreak::LevelChange) -> Option<WallStretch> {
+    let (c, h, yaw) = { let x = &g.tab.boxes[wall_box]; (x.c, x.h, x.yaw) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let along_x = h[0] >= h[2];
     let u: [f64; 2] = if along_x { [cs, -sn] } else { [sn, cs] };
@@ -274,89 +323,72 @@ fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Optio
     lo = m::max(-l, lo);
     hi = m::min(l, hi);
     if !(hi > lo) { return None; }
-    let found = breaches_of(g).into_iter().find(|x| {
-        let x = &g.tab.wallreact_breach[*x];
-        x.wall == row.id && lo <= x.hi + 0.3 && hi >= x.lo - 0.3
-    });
-    let walk = row.kind == LevelChangeKind::Hole && row.walkable;
-    let b = match found {
-        Some(b) => {
-            let x = &mut g.tab.wallreact_breach[b];
-            x.lo = m::min(x.lo, lo);
-            x.hi = m::max(x.hi, hi);
-            if row.cause == LevelChangeCause::Blast { x.cause = crate::wallbreak::LevelChangeCause::Blast; x.blast_by = Some(row.who); }
-            if walk && !x.walk {
-                x.walk = true;
-                x.ops = -1.0;
-                x.men.clear();
-                x.said.clear();
-                x.tell.clear();
-            }
-            b
-        }
-        None => {
-            let b = g.tab.wallreact_breach.push(Breach {
-                key: format!("breach:{}:{}", row.id, row.serial), wall: row.id, u, n, lo, hi, at: [0.0, CHEST, 0.0], half: 0.0, into: None, walk,
-                cause: cause_of(row.cause), who: row.who, blast_by: None, ops: -1.0, men: JsMap::new(), said: JsSet::new(), tell: Vec::new(), opening: None,
-            });
-            g.m.wallreact.wall_react.breaches.push(b);
-            b
-        }
-    };
-    // (two breaches of one wall grown into each other: one)
-    let mut i = g.m.wallreact.wall_react.breaches.len();
-    while i > 0 {
-        i -= 1;
-        let o = g.m.wallreact.wall_react.breaches[i];
-        if o == b { continue; }
-        {
-            let (ow, x) = (&g.tab.wallreact_breach[o], &g.tab.wallreact_breach[b]);
-            if ow.wall != x.wall || ow.lo > x.hi + 0.3 || ow.hi < x.lo - 0.3 { continue; }
-        }
-        let other = g.tab.wallreact_breach[o].clone();
-        let x = &mut g.tab.wallreact_breach[b];
-        x.lo = m::min(x.lo, other.lo);
-        x.hi = m::max(x.hi, other.hi);
-        x.walk = x.walk || other.walk;
-        if other.ops >= 0.0 && x.ops < 0.0 { x.ops = other.ops; }
-        for (man, t) in other.men.iter() {
-            if !x.men.has(man) { x.men.set(man, *t); }
-        }
-        for (_, mind) in g.m.wallreact.wall_react.minds.iter_mut() {
-            if let Some(e) = mind.get(o).copied() {
-                mind.delete(o);
-                match mind.get_mut(b) {
-                    Some(k) => k.ev = m::max(k.ev, e.ev),
-                    None => { mind.set(b, e); }
-                }
-            }
-        }
-        // (a set of a key already there: the walk is not disturbed)
-        for man in g.m.wallreact.wall_react.watching.keys() {
-            if g.m.wallreact.wall_react.watching.get(man).copied() == Some(o) { g.m.wallreact.wall_react.watching.set(man, b); }
-        }
-        g.tab.wallreact_breach[o].into = Some(b);
-        for p in g.m.wallreact.wall_react.pend.iter_mut() {
-            if let Some(also) = p.also.as_mut() {
-                for x in also.iter_mut() { if x.b == Some(o) { x.b = Some(b); } }
-            }
-        }
-        if let Some(op) = other.opening { wall_react_drop_opening(g, op); }
-        g.m.wallreact.wall_react.breaches.remove(i);
-    }
+    Some(WallStretch { u, n, c0, lo, hi })
+}
+
+/// True of a change that leaves a hole a man can walk through.
+fn walkable_hole(row: &crate::wallbreak::LevelChange) -> bool {
+    row.kind == crate::wallbreak::LevelChangeKind::Hole && row.walkable
+}
+
+/// The breach grows; a blast makes it a blast's; a hole now walkable is new to everybody.
+fn widen_breach(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::LevelChange, st: WallStretch) {
+    let walk = walkable_hole(row);
     let x = &mut g.tab.wallreact_breach[b];
-    let mid = (x.lo + x.hi) / 2.0;
-    x.at[0] = c0[0] + u[0] * mid;
-    x.at[2] = c0[1] + u[1] * mid;
-    x.half = (x.hi - x.lo) / 2.0;
-    let (at, half, opening) = (x.at, x.half, x.opening);
-    if let Some(op) = opening {
-        let o = &mut g.tab.cover_opening[op];
-        o.at[0] = at[0];
-        o.at[2] = at[2];
-        o.half = half;
+    x.lo = m::min(x.lo, st.lo);
+    x.hi = m::max(x.hi, st.hi);
+    if row.cause == crate::wallbreak::LevelChangeCause::Blast { x.cause = crate::wallbreak::LevelChangeCause::Blast; x.blast_by = Some(row.who); }
+    if walk && !x.walk {
+        x.walk = true;
+        x.ops = -1.0;
+        x.men.clear();
+        x.said.clear();
+        x.tell.clear();
     }
-    Some(b)
+}
+
+/// A breach where there was none.
+fn new_breach(g: &mut Game, row: &crate::wallbreak::LevelChange, st: WallStretch) -> WallreactBreachId {
+    let WallStretch { u, n, lo, hi, .. } = st;
+    let b = g.tab.wallreact_breach.push(Breach {
+        key: format!("breach:{}:{}", row.id, row.serial), wall: row.id, u, n, lo, hi, at: [0.0, CHEST, 0.0], half: 0.0, into: None, walk: walkable_hole(row),
+        cause: cause_of(row.cause), who: row.who, blast_by: None, ops: -1.0, men: JsMap::new(), said: JsSet::new(), tell: Vec::new(), opening: None,
+    });
+    g.m.wallreact.wall_react.breaches.push(b);
+    b
+}
+
+/// Breach `o` becomes part of `b`: its stretch, its men, what minds and watchers and pending looks had of it. Taking it off the list is the caller's.
+fn fold_breach_into(g: &mut Game, o: WallreactBreachId, b: WallreactBreachId) {
+    let other = g.tab.wallreact_breach[o].clone();
+    let x = &mut g.tab.wallreact_breach[b];
+    x.lo = m::min(x.lo, other.lo);
+    x.hi = m::max(x.hi, other.hi);
+    x.walk = x.walk || other.walk;
+    if other.ops >= 0.0 && x.ops < 0.0 { x.ops = other.ops; }
+    for (man, t) in other.men.iter() {
+        if !x.men.has(man) { x.men.set(man, *t); }
+    }
+    for (_, mind) in g.m.wallreact.wall_react.minds.iter_mut() {
+        if let Some(e) = mind.get(o).copied() {
+            mind.delete(o);
+            match mind.get_mut(b) {
+                Some(k) => k.ev = m::max(k.ev, e.ev),
+                None => { mind.set(b, e); }
+            }
+        }
+    }
+    // (a set of a key already there: the walk is not disturbed)
+    for man in g.m.wallreact.wall_react.watching.keys() {
+        if g.m.wallreact.wall_react.watching.get(man).copied() == Some(o) { g.m.wallreact.wall_react.watching.set(man, b); }
+    }
+    g.tab.wallreact_breach[o].into = Some(b);
+    for p in g.m.wallreact.wall_react.pend.iter_mut() {
+        if let Some(also) = p.also.as_mut() {
+            for x in also.iter_mut() { if x.b == Some(o) { x.b = Some(b); } }
+        }
+    }
+    if let Some(op) = other.opening { wall_react_drop_opening(g, op); }
 }
 
 // ================================================================ (c) the room fight's rooms

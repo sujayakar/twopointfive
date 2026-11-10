@@ -478,7 +478,6 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
 /// one frame at the frame: is the wait over, else his feet. `seen` = a foe in his eyes: the wait's clock stands.
 fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool) -> Option<f64> {
     let k = g.k.darkdoor;
-    let c = g.gd[gd].ch;
     let (door, side) = { let s = fear(g, gd); (s.door, s.side) };
     let Some(d) = door_at(g, door) else { return Some(speed) };
     let Some(x) = door_ahead(g, gd, k.stop_m + 4.0) else { return Some(speed) };
@@ -495,36 +494,7 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
             end(g, gd, None);
             return Some(speed);
         }
-        let other = fear(g, gd).other;
-        let mut fit = |g: &mut Game, o: GuardId| Some(o) == other || can_come(g, o);
-        let mate = mate_by(g, gd, Some(&mut fit));
-        if let Some(mt) = mate {
-            mind(g, mt);
-            if let Some(o) = other {
-                if o != mt {
-                    let hit = match g.m.darkdoor.state_of.get(o) { Some(so) => so.other == Some(gd), None => false };
-                    if hit { drop(g, o); }
-                }
-            }
-            let at = v3::copy(pos_of(g, mt));
-            let row = fear(g, mt);
-            row.act = DarkDoorAct::With;
-            row.t = 0.0;
-            row.other = Some(gd);
-            row.spot = Some(at);
-            row.lag = 0.0;
-            bark(g, mt, LineKind::With, false);
-            pass(g, gd, door);
-            let s = fear(g, gd);
-            s.act = DarkDoorAct::None;
-            s.t = 0.0;
-            s.spot = None;
-            s.at = false;
-            s.other = Some(mt);
-            s.called = false;
-            s.tried = Vec::new();
-            return Some(speed);
-        }
+        if a_mate_goes_with_him(g, gd, door) { return Some(speed); }
     }
     let s = fear(g, gd);
     if s.other.is_none() && s.call_t >= k.call_secs && s.t < k.wait_secs {
@@ -532,29 +502,7 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
         if let Some(f) = free_mate(g, gd) { call(g, gd, f); }
     }
     if fear(g, gd).t >= k.wait_secs {
-        bark(g, gd, LineKind::Nobody, false);
-        let now = g.time;
-        fear(g, gd).quits.push(crate::darkdoor::FearQuitsItem { room, t: now });
-        end(g, gd, None);
-        let id = g.ch[c].id;
-        let n = match &g.gd[gd].search_plan { Some(p) => p.spots.len(), None => 0 };
-        for i in 0..n {
-            let at = g.gd[gd].search_plan.as_ref().unwrap().spots[i].pos;
-            if crate::cleared::cleared_rooms_room_at(g, at) == room {
-                let spot = &mut g.gd[gd].search_plan.as_mut().unwrap().spots[i];
-                spot.unreachable = true;
-                spot.by = id;
-            }
-        }
-        if g.gd[gd].state == crate::game::GuardState::Alert {
-            crate::guards::drop_to_search(g, gd, None);
-            { let at = Some(v3::copy(g.ch[c].pos)); crate::mind::fix(g, gd, at, "darkdoor"); }
-        } else {
-            g.gd[gd].stall_ref = Some(v3::copy(g.ch[c].pos));
-            g.gd[gd].stall_t = 1e3;
-        }
-        g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
-        g.ch[c].vel = [0.0, 0.0, 0.0];
+        nobody_came(g, gd, room, dt);
         return None;
     }
     g.gd[gd].stall_ref = None;
@@ -565,6 +513,74 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
     } else if g.gd[gd].state == crate::game::GuardState::Search {
         g.gd[gd].search_t = m::max(0.0, g.gd[gd].search_t - dt);
     }
+    waits_on_his_spot(g, gd, d, dt, speed);
+    None
+}
+
+/// A mate by him who is his other or can come goes with him: the pair walks in, and any other he had asked is let off.
+fn a_mate_goes_with_him(g: &mut Game, gd: GuardId, door: f64) -> bool {
+    let other = fear(g, gd).other;
+    let mut fit = |g: &mut Game, o: GuardId| Some(o) == other || can_come(g, o);
+    let Some(mt) = mate_by(g, gd, Some(&mut fit)) else { return false };
+    mind(g, mt);
+    if let Some(o) = other {
+        if o != mt {
+            let hit = match g.m.darkdoor.state_of.get(o) { Some(so) => so.other == Some(gd), None => false };
+            if hit { drop(g, o); }
+        }
+    }
+    let at = v3::copy(pos_of(g, mt));
+    let row = fear(g, mt);
+    row.act = DarkDoorAct::With;
+    row.t = 0.0;
+    row.other = Some(gd);
+    row.spot = Some(at);
+    row.lag = 0.0;
+    bark(g, mt, LineKind::With, false);
+    pass(g, gd, door);
+    let s = fear(g, gd);
+    s.act = DarkDoorAct::None;
+    s.t = 0.0;
+    s.spot = None;
+    s.at = false;
+    s.other = Some(mt);
+    s.called = false;
+    s.tried = Vec::new();
+    true
+}
+
+/// The wait is over and nobody came: he says so, that room is off his search, and he stops looking this way.
+fn nobody_came(g: &mut Game, gd: GuardId, room: f64, dt: f64) {
+    let c = g.gd[gd].ch;
+    bark(g, gd, LineKind::Nobody, false);
+    let now = g.time;
+    fear(g, gd).quits.push(crate::darkdoor::FearQuitsItem { room, t: now });
+    end(g, gd, None);
+    let id = g.ch[c].id;
+    let n = match &g.gd[gd].search_plan { Some(p) => p.spots.len(), None => 0 };
+    for i in 0..n {
+        let at = g.gd[gd].search_plan.as_ref().unwrap().spots[i].pos;
+        if crate::cleared::cleared_rooms_room_at(g, at) == room {
+            let spot = &mut g.gd[gd].search_plan.as_mut().unwrap().spots[i];
+            spot.unreachable = true;
+            spot.by = id;
+        }
+    }
+    if g.gd[gd].state == crate::game::GuardState::Alert {
+        crate::guards::drop_to_search(g, gd, None);
+        let at = Some(v3::copy(g.ch[c].pos));
+        crate::mind::fix(g, gd, at, "darkdoor");
+    } else {
+        g.gd[gd].stall_ref = Some(v3::copy(g.ch[c].pos));
+        g.gd[gd].stall_t = 1e3;
+    }
+    g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
+    g.ch[c].vel = [0.0, 0.0, 0.0];
+}
+
+/// A short step to his spot beside the frame if he is not on it, facing the door or backing up to it; on it he turns to the door and stands.
+fn waits_on_his_spot(g: &mut Game, gd: GuardId, d: DoorId, dt: f64, speed: f64) {
+    let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let (spot, at, t) = { let s = fear(g, gd); (s.spot, s.at, s.t) };
     let d_s = match spot { Some(to) => flat(p, to), None => 0.0 };
@@ -578,14 +594,14 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, want, 4.0, dt);
         let sp = g.gd[gd].speed;
         g.ch[c].vel = [m::sin(yaw) * sp, 0.0, m::cos(yaw) * sp];
-        { let to = v3::mad(g.ch[c].pos, g.ch[c].vel, dt); crate::character::pos_replace(g, c, to); }
+        let to = v3::mad(g.ch[c].pos, g.ch[c].vel, dt);
+        crate::character::pos_replace(g, c, to);
     } else {
         fear(g, gd).at = true;
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, face, 3.0 * dt);
     }
-    None
 }
 
 /// the eyes' seam: where his aim goes this frame, None = his own.
