@@ -527,8 +527,8 @@ pub fn squad_orders_spare_rear(g: &mut crate::game::Game, men: &[GuardId], door:
     rear
 }
 
-/// A memory save put back: a ring and a press half made are the hand's, not the saved moment's
-pub fn squad_orders_loaded(g: &mut crate::game::Game) {
+/// The ring and a press half made are put away, with nothing sent: a card came up over them, or a save went back that stood at one
+pub fn squad_orders_let_go(g: &mut crate::game::Game) {
     if g.sets[g.seat].orders.cmd_ring.is_some() { g.sets[g.seat].orders.menu = None; g.sets[g.seat].orders.cmd_ring = None; }
     g.sets[g.seat].orders.cmd_press = None;
     g.sets[g.seat].orders.tap_was = None;
