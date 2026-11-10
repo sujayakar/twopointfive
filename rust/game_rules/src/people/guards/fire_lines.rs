@@ -198,10 +198,7 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
             if paths > 12 { return None; }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) { Some(path) if !path.is_empty() => path, _ => continue };
             if v3::dist_xz(path[path.len() - 1], bp) < 4.0 { continue; }
-            let mut l = 0.0;
-            let mut q: V3 = from;
-            for w in path.iter() { l += v3::dist_xz(q, *w); q = *w; }
-            if l < 16.0 { return Some(p); }
+            if crate::places::walk_len(from, &path) < 16.0 { return Some(p); }
         }
     }
     None

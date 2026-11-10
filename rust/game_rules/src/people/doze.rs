@@ -129,14 +129,7 @@ fn blank(phase: crate::doze::Phase, wp: f64, t: f64) -> crate::doze::Doze {
 
 /// the length of his walk on the grid, infinite with no path
 fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
-    let Some(path) = crate::scene_collision::nav_grid_find_path(g, [from[0], from[1], from[2]], to, None, None) else { return f64::INFINITY };
-    let mut len = 0.0;
-    let mut prev: V3 = [from[0], from[1], from[2]];
-    for q in path.iter() {
-        len += flat(&prev, q[0], q[2]);
-        prev = *q;
-    }
-    len
+    crate::places::on_foot(g, [from[0], from[1], from[2]], to)
 }
 /// in the chair
 fn seated(d: crate::doze::Doze) -> bool { d.phase == Phase::Down || d.phase == Phase::Asleep || d.phase == Phase::Work }
