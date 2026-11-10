@@ -114,7 +114,7 @@ fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
             None => beat.sam.clone(),
         };
         let tokens = tokens_map(&ctx.tokens);
-        if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
+        if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js::utf16_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
             let id = alloc::format!("S:{}:{}{}", sc.id, stage_word(s), if asks { "?" } else { "" });
             if let Some(m) = mem.as_deref_mut() { m.said.set(id.clone(), ctx.time); m.last = Some(id.clone()); }
             return SamPick { text };
@@ -262,11 +262,6 @@ fn stage_word(s: crate::dialogue::StageKey) -> String {
     }
 }
 
-/// A string's `.length` in JavaScript: UTF-16 units, not bytes (the lines hold "…" and "—").
-fn js_len(s: &str) -> f64 {
-    s.encode_utf16().count() as f64
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,7 +376,7 @@ mod tests {
     /// A FAILURE MEANS: a line under the cap is thrown out because a dash is three bytes.
     #[test]
     fn a_lines_length_is_its_characters_not_its_bytes() {
-        assert_eq!(js_len("Lights die — what's next…"), 25.0);
+        assert_eq!(js::utf16_len("Lights die — what's next…"), 25.0);
     }
 
     /// A FAILURE MEANS: Sam's {sawWhere} finds nothing, so a line that names it is never said.

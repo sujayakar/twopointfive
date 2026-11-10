@@ -44,7 +44,7 @@ fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentI
     let mut lit = !place_dark(g, pos[0], pos[2]);
     if lit {
         if let Some(t) = tgt {
-            let p = g.ch[g.gd[t].ch].pos;
+            let p = g.pos_of(t);
             lit = !place_dark(g, p[0], p[2]);
         }
     }
@@ -139,7 +139,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
         if x == gd || crate::condition::down(g, g.gd[x].ch) || g.team(x).ours() {
             return false;
         }
-        let at = g.ch[g.gd[x].ch].pos;
+        let at = g.pos_of(x);
         let vx = at[0] - o[0];
         let vz = at[2] - o[2];
         let l = m::hyp2(vx, vz);
@@ -177,7 +177,7 @@ pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>
 pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let t = g.time;
-    let Some(hand) = g.ch[c].bones.get(crate::character::Bone::HandR).copied() else { return false };
+    let Some(hand) = g.ch[c].bone(crate::character::Bone::HandR) else { return false };
     let d = crate::rig_props::torch_carry_want(g, c, None);
     let low0 = match g.m.guards.torch_low_seen.get(gd) {
         Some(was) => t >= was.t && t - was.t <= 0.25 && was.low,
@@ -211,9 +211,9 @@ fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> bool
             return was.v;
         }
     }
-    let tgt_pos = g.ch[g.gd[tgt].ch].pos;
+    let tgt_pos = g.pos_of(tgt);
     let v = place_lit_steady(g, tgt_pos) && {
-        let own_pos = g.ch[g.gd[gd].ch].pos;
+        let own_pos = g.pos_of(gd);
         !place_lit_steady(g, own_pos)
     };
     let t = g.time;
@@ -273,7 +273,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         || matches!(o_row, Some(op) if t - op.step_t < k.step_secs)
         || matches!(a_row, Some(r) if match r.post {
             Some(post) => v3::dist_xz(pos, post) > k.on_m,
-            None => v3::dist_xz(pos, g.ch[g.pl[g.player].ch].pos) > k.alone_m,
+            None => v3::dist_xz(pos, g.player_pos(g.player)) > k.alone_m,
         });
     let tgt = o_row.and_then(|op| op.tgt);
     let pt = o_row.and_then(|op| op.turn.as_ref()).and_then(|turn| turn.pt);
@@ -362,7 +362,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     }
     let pos = g.ch[c].pos;
     let last = g.gd[gd].last_pos;
-    let moved = m::hyp2(pos[0] - last[0], pos[2] - last[2]);
+    let moved = v3::dist_xz(pos, last);
     g.gd[gd].last_pos = v3::copy(pos);
     let was_speed = g.gd[gd].speed;
     if was_speed > 0.3 && moved < was_speed * dt * 0.25 {
@@ -385,8 +385,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
         if !crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) {
             g.gd[gd].path.insert(path_i, cand);   // (in place: the same path to anyone holding it, so path_serial stays)
         } else if let Some(goal) = g.gd[gd].path_goal {
-            g.gd[gd].path_goal = None;
-            g.gd[gd].path_goal_orbit = false;   // (the back-off's own point is gone: goTo lays a copy)
+            g.gd[gd].set_path_goal(None);   // (the back-off's own point is gone: goTo lays a copy)
             go_to(g, gd, goal, Some(true));
         }
         g.gd[gd].stuck_t = 0.0;
@@ -396,7 +395,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
         let path_len = g.gd[gd].path.len();
         let wp = g.gd[gd].path[path_i];
         let pos = g.ch[c].pos;
-        let d = m::hyp2(wp[0] - pos[0], wp[2] - pos[2]);
+        let d = v3::dist_xz(wp, pos);
         if d < (if path_i == path_len - 1 { 0.25 } else { 0.45 }) {
             g.gd[gd].path_i += 1;
             continue;

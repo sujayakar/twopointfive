@@ -49,8 +49,8 @@ fn nothing_from_the_third(g: &Game, cmd: &mut PlayerCmd) {
 /// the middle of the wall nearest a man and more than a jump from him, a metre or more in from its face along its length
 fn into_a_wall(g: &mut Game) {
     let man = g.guards.iter().copied().find(|&x| g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).expect("a man of the team");
-    let at = g.ch[g.gd[man].ch].pos;
-    let far = |q: [f64; 3]| game::m::hyp2(q[0] - at[0], q[2] - at[2]);
+    let at = g.pos_of(man);
+    let far = |q: [f64; 3]| game::v3::dist_xz(q, at);
     let walls = g.col.boxes.iter().map(|&b| &g.tab.boxes[b]).filter(|b| b.h[1] > 0.8 && b.c[1] < 1.5 && far(b.c) > 2.0).map(|b| b.c);
     let c = walls.min_by(|a, b| far(*a).total_cmp(&far(*b))).expect("a wall");
     let body = g.gd[man].ch;

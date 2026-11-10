@@ -13,11 +13,6 @@ fn ballistics_of(k: &crate::knobs::RingK) -> Ballistics {
     Ballistics { speed: k.speed, gravity: k.gravity, drag: k.drag, radius: k.radius, life: k.life, substeps: k.substeps, solve_iters: k.solve_iters }
 }
 
-/// g.audio.play(name, at, gain, { rate }).
-fn play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-}
-
 /// The launch velocity to pass through `target`: dead at it, raised by however far a simulated flight falls short, solveIters times.
 pub fn launch_vel(from: V3, target: V3, r: crate::launcher::Ballistics) -> V3 {
     let d = v3::sub(target, from);
@@ -38,8 +33,8 @@ pub fn launch_vel(from: V3, target: V3, r: crate::launcher::Ballistics) -> V3 {
             let k = m::exp(-r.drag * h);
             v = [v[0] * k, v[1] * k - r.gravity * h, v[2] * k];
             let np: V3 = v3::mad(p, v, h);
-            let a = m::hyp2(p[0] - from[0], p[2] - from[2]);
-            let b = m::hyp2(np[0] - from[0], np[2] - from[2]);
+            let a = v3::dist_xz(p, from);
+            let b = v3::dist_xz(np, from);
             if b >= hd {
                 let u = if b > a { (hd - a) / (b - a) } else { 1.0 };
                 y_at = p[1] + (np[1] - p[1]) * u;
@@ -104,7 +99,7 @@ pub fn arc_solve(g: &crate::game::Game, from: V3, target: V3, r: crate::launcher
 pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
     if let Some(gd) = seat.aim_guard {
         let c = g.gd[gd].ch;
-        let head_bone = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+        let head_bone = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
         let head = v3::add(head_bone, [0.0, 0.04, 0.0]);
         let tof = v3::dist(from, head) / (g.k.ring.speed * 0.9);
         let vel = g.ch[c].vel;
@@ -190,7 +185,7 @@ fn spend(g: &mut crate::game::Game, r: crate::launcher::Ring, at: V3, vel: V3) {
 /// The ring meeting something hard: a clack, sparks, and a noise the room goes to look at.
 pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    play_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
+    crate::audio_iface::play_at_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.ring.clack_noise * k;
     crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
@@ -198,11 +193,11 @@ pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
 
 /// A ring has found a man at `at`: high is out cold, low is struck; the ring drops at his feet.
 fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c: CharId, dir: V3, at: V3) {
-    let neck = match g.ch[c].bones.get(crate::character::Bone::Neck) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.42, 0.0]) };
+    let neck = g.ch[c].bone_or(crate::character::Bone::Neck, 1.42);
     let high = at[1] >= neck[1] - g.k.ring.ko_below_neck;
     match crate::character::guard_of(g, c) {
         Some(gd) if high => {
-            play_rate(g, "bodyHit", at, 0.6, 0.75);
+            crate::audio_iface::play_at_rate(g, "bodyHit", at, 0.6, 0.75);
             let by = if crate::character::is_player(g, r.shooter) { crate::game::DownBy::Player } else { crate::game::DownBy::Guard };
             crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(by), crate::game::With::Ring);
             let level = g.k.ring.ko_noise;
@@ -249,7 +244,7 @@ mod tests {
             let k = m::exp(-r.drag * h);
             v = [v[0] * k, v[1] * k - r.gravity * h, v[2] * k];
             let np = v3::mad(p, v, h);
-            if m::hyp2(np[0] - from[0], np[2] - from[2]) >= range { return Some(np[1]); }
+            if v3::dist_xz(np, from) >= range { return Some(np[1]); }
             p = np;
             t += h;
         }
@@ -265,7 +260,7 @@ mod tests {
             ([0.5, 1.4, 0.25], [20.0, 3.0, -15.0], Ballistics { speed: 76.0, drag: 0.12, solve_iters: 3.0, ..R }),
         ] {
             let v = launch_vel(from, target, r);
-            let range = m::hyp2(target[0] - from[0], target[2] - from[2]);
+            let range = v3::dist_xz(target, from);
             assert!((v3::len(v) - r.speed).abs() < 1e-9, "speed {}", v3::len(v));
             assert!((v[0] * (target[2] - from[2]) - v[2] * (target[0] - from[0])).abs() < 1e-6 && v[0] * (target[0] - from[0]) + v[2] * (target[2] - from[2]) > 0.0, "off its bearing: {:?}", v);
             let there = height_at(from, v, range, r).unwrap();

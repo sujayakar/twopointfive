@@ -14,11 +14,6 @@ macro_rules! hold {
     };
 }
 
-/// JavaScript's `s.length`: UTF-16 units, not bytes (Sam's lines hold dashes and arrows)
-fn js_len(s: &str) -> f64 {
-    s.encode_utf16().count() as f64
-}
-
 /// `g.events.push({ kind: 'prop', pos, time, loud: false, level, who: <Sam's body> })`, and `pl.noise` raised to it: what the room hears of a hold's beat
 pub(super) fn prop_noise(g: &mut Game, pos: V3, level: f64) {
     let p = g.player;
@@ -162,7 +157,7 @@ fn catch_step(g: &mut Game, t: Tick, gd: GuardId, from: V3, want: V3) -> (f64, f
     if hold!(g, pl).step_m.is_none() {
         let yaw0 = g.ch[c].body_yaw;
         let h = hold!(g, pl);
-        h.step_m = Some(m::hyp2(want[0] - from[0], want[2] - from[2]));
+        h.step_m = Some(v3::dist_xz(want, from));
         h.yaw0 = Some(yaw0);
     }
     let k = &g.k.stalk;
@@ -178,7 +173,7 @@ fn catch_step(g: &mut Game, t: Tick, gd: GuardId, from: V3, want: V3) -> (f64, f
     let at = g.ch[c].pos;
     let next = if u >= 1.0 { v3::lerp3(at, to, 1.0 - m::exp(-14.0 * dt)) } else { [at[0] + d[0], at[1], at[2] + d[2]] };
     crate::character::pos_replace(g, c, next);
-    let own = if u >= 1.0 { 0.0 } else { m::min(catch_stride, m::hyp2(next[0] - was[0], next[2] - was[2]) / m::max(dt, 1e-4)) };
+    let own = if u >= 1.0 { 0.0 } else { m::min(catch_stride, v3::dist_xz(next, was) / m::max(dt, 1e-4)) };
     (own, u)
 }
 /// The step has landed: he pulls the man back off his feet as far as there is room, and goes back WITH him. Returns where he is to stand.
@@ -306,7 +301,7 @@ fn beat_done(g: &mut Game, t: Tick, gd: GuardId) -> bool {
     let h = hold!(g, t.pl);
     let (phase, at) = (h.phase, h.t);
     if phase == HoldPhase::Choke && at < k.choke - 0.3 && m::floor(at / CHOKE_GRAIN) > m::floor((at - t.dt) / CHOKE_GRAIN) {
-        let from = v3::add(g.ch[g.gd[gd].ch].pos, [0.0, 1.5, 0.0]);
+        let from = v3::add(g.pos_of(gd), [0.0, 1.5, 0.0]);
         crate::audio_iface::game_audio_like_play(g, "chokeStrain", Some(from), Some(0.25), None);
     }
     match phase {
@@ -400,7 +395,7 @@ fn pair_walks(g: &mut Game, t: Tick, gd: GuardId, free: bool) -> f64 {
     place_held(g);
     let (at, vel) = (g.ch[c].pos, g.ch[c].vel);
     let going = m::hyp2(vel[0], vel[2]);
-    let speed = m::min(m::hyp2(at[0] - was[0], at[2] - was[2]) / m::max(dt, 1e-4), going);
+    let speed = m::min(v3::dist_xz(at, was) / m::max(dt, 1e-4), going);
     let backpedal = speed > 0.2 && (vel[0] * f[0] + vel[2] * f[2]) / m::max(1e-4, going) < -0.3;
     g.pl[pl].backpedal = backpedal;
     g.ch[c].anim.reverse = backpedal;
@@ -581,7 +576,7 @@ fn say_after(g: &mut crate::game::Game) {
 pub fn say_over_sam(g: &mut Game, text: &str, time: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
-    g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js_len(text)), radio: false });
+    g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js::utf16_len(text)), radio: false });
     let at = v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
 }
@@ -767,7 +762,7 @@ fn ask_held(g: &mut crate::game::Game) {
     } else {
         crate::dialogue::sam_line_for(g, gd, h.variant, None).text
     };
-    let dur = sam_beat(js_len(&text));
+    let dur = sam_beat(js::utf16_len(&text));
     let time = g.time;
     g.pl[p].bubble = Some(crate::game::PlayerBubble { text: text.clone(), t: time, dur, radio: false });
     {
@@ -876,10 +871,7 @@ fn whip_out(g: &mut crate::game::Game) {
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
     let dir = v3::normalize([f[0] + f[2] * 0.45, 0.0, f[2] - f[0] * 0.45]);
-    let head = match g.ch[hc].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(g.ch[hc].pos, [0.0, 1.6, 0.0]),
-    };
+    let head = g.ch[hc].bone_or(crate::character::Bone::Head, 1.6);
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
     crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Whip);
@@ -897,7 +889,7 @@ pub(super) fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     unhook(g, gd);
     g.gd[gd].speed = 0.0;
     g.ch[hc].vel = [0.0, 0.0, 0.0];
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     g.ch[hc].aim_pitch = 0.0;
@@ -939,7 +931,7 @@ mod tests {
     /// How long Sam's line hangs goes by its letters: a dash or an arrow in it is one, not its bytes.
     #[test]
     fn a_line_is_counted_in_letters_not_bytes() {
-        assert_eq!(js_len("you ▸ — é"), 9.0);
+        assert_eq!(js::utf16_len("you ▸ — é"), 9.0);
     }
 
 }

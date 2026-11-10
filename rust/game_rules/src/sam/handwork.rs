@@ -7,15 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- private helpers
-
-/// `BoxFlag.a | BoxFlag.b`: the skeleton's flags are numbers.
-fn flag_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
-/// `c.id & 0xff`: a box's owner off the man's id.
-fn owner_of(g: &Game, c: CharId) -> f64 { (js::to_i32(g.ch[c].id) & 0xff) as f64 }
-
-// ---------------------------------------------------------------- the switch
-
 // ---------------------------------------------------------------- the work pose
 
 /// Feed one man's work pose for this frame.
@@ -111,7 +102,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
                 yaw: Some(pad.def.yaw),
                 albedo: Some([0.2, 0.16, 0.05]),
                 emissive: Some([2.4, 1.5, 0.3]),
-                flags: Some(flag_or(bf.dynamic, bf.no_shadow)),
+                flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
                 ..Default::default()
             });
             g.fx.push(crate::game::GameFxItem { box_, ttl: 0.11 });
@@ -127,7 +118,7 @@ pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64
     let more = WorkAtMore { hand, ..Default::default() };
     work_at(g, c_2, crate::character::WorkKind::Charge, p, n, t, dur, Some(&more));
     if t > 0.35 && crate::character::anim_work_info(g, c_2).w > 0.5 {
-        let owner = owner_of(g, c_2);
+        let owner = crate::rig_props::owner_of(g, c_2);
         let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(p, n, 0.02),
             h: [0.07, 0.11, 0.02],
@@ -298,13 +289,13 @@ pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
     if u < 0.5 || l.t > l.dur + g.k.handwork.stow_secs * 0.8 { return; }
     let right = js::truthy(i.hand);
     let bone = if right { crate::character::Bone::HandR } else { crate::character::Bone::HandL };
-    let Some(h) = g.ch[c_2].bones.get(bone).copied() else { return };
+    let Some(h) = g.ch[c_2].bone(bone) else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
     let s = if i.two { if right { 0.045 } else { -0.045 } } else { 0.0 };
     let done = l.t > l.dur;
     let bf = crate::scene_boxes::box_flag();
-    let owner = owner_of(g, c_2);
+    let owner = crate::rig_props::owner_of(g, c_2);
     out.put(&crate::scene_boxes::MakeBoxP {
         c: if done { [h[0], h[1] - 0.07, h[2]] } else { [h[0] + f[0] * 0.09 - r[0] * s, h[1], h[2] + f[2] * 0.09 - r[2] * s] },
         h: [0.05, 0.013, 0.07],
@@ -312,7 +303,7 @@ pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
         albedo: Some([0.13, 0.14, 0.15]),
         rough: Some(0.4),
         metal: Some(true),
-        flags: Some(flag_or(bf.dynamic, bf.no_shadow)),
+        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
         owner: Some(owner),
         ..Default::default()
     });
@@ -347,20 +338,20 @@ pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::guards:
 
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark.
 pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props::Carried) {
-    let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };
+    let Some(hp) = g.ch[c_2].bone(crate::character::Bone::Hips) else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
     let spot = crate::inhand::belt_torch().at;
     let (o, a) = (spot[0], spot[1]);
     let at: V3 = [hp[0] + r[0] * o + f[0] * a, hp[1] - 0.045, hp[2] + r[2] * o + f[2] * a];
     let bf = crate::scene_boxes::box_flag();
-    let owner = owner_of(g, c_2);
+    let owner = crate::rig_props::owner_of(g, c_2);
     out.put(&crate::scene_boxes::MakeBoxP {
         c: at,
         h: [0.017, 0.062, 0.017],
         yaw: Some(m::atan2(f[0], f[2])),
         albedo: Some([0.05, 0.05, 0.055]),
-        flags: Some(flag_or(bf.dynamic, bf.no_shadow)),
+        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
         owner: Some(owner),
         ..Default::default()
     });
@@ -370,7 +361,7 @@ pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
         yaw: Some(m::atan2(f[0], f[2])),
         albedo: Some([0.07, 0.07, 0.075]),
         stuff: Some(crate::scene_stuff::BoxStuff::Metal),
-        flags: Some(flag_or(bf.dynamic, bf.no_shadow)),
+        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
         owner: Some(owner),
         ..Default::default()
     });

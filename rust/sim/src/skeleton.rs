@@ -221,8 +221,9 @@ pub fn two_bone_ik(
     let far = v3::len(to);
     let reach = v3::clamp(far, m::abs(la - lb) + 0.01, (la + lb) * 0.998);
     rotate_model(d, b, &bend(pa, pb, pc, la, lb, reach, pole), &rot_of(rot, a));
+    // (between its turns only the limb's own bones are read: what hangs off them is run forward once, at the end)
     if fresh {
-        fk_run_from(rig, d, rot, pos, b);
+        fk_run_limb(rig, d, rot, pos, b, c);
     } else {
         fk_run(rig, d, rot, pos);
     }
@@ -232,18 +233,42 @@ pub fn two_bone_ik(
     let line = v3::normalize(to);
     let end = v3::normalize(v3::sub(at3(pos, c), at3(pos, a)));
     rotate_model(d, a, &quat::from_to(end, line), &p_rot_a);
-    fk_run_from(rig, d, rot, pos, a);
+    fk_run_limb(rig, d, rot, pos, a, c);
     // swivel the bend plane toward the pole about the a→target axis
     if let Some(q) = pole.filter(|_| pole_w > 0.0).and_then(|pole| swivel(v3::sub(at3(pos, b), at3(pos, a)), *pole, line, pole_w)) {
         rotate_model(d, a, &q, &p_rot_a);
-        fk_run_from(rig, d, rot, pos, a);
+        fk_run_limb(rig, d, rot, pos, a, c);
     }
     // the end's own rotation
     if let Some(er) = end_rot {
         set_model_rot(d, c, er, &rot_of(rot, b));
-        fk_run_from(rig, d, rot, pos, c);
+    }
+    fk_run_from(rig, d, rot, pos, a);
+}
+
+/// The nodes from `root` down to `end` alone, run forward (`root` first, whatever stands between).
+fn fk_run_limb(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: usize, end: usize) {
+    let n = d.len() / NODE;
+    let mut way = [0u32; LIMB];
+    let (mut k, mut i) = (0, end);
+    while i != root && k < LIMB {
+        way[k] = i as u32;
+        k += 1;
+        match rig.parent[i] {
+            p if p >= 0 => i = p as usize,
+            _ => break,
+        }
+    }
+    if i != root {
+        return fk_run_from(rig, d, rot, pos, root);   // (a limb that is no limb: its end does not hang under its root, or is too far under it)
+    }
+    fk_node(d, n, rot, pos, root, rig.parent[root]);
+    for &i in way[..k].iter().rev() {
+        fk_node(d, n, rot, pos, i as usize, rig.parent[i as usize]);
     }
 }
+/// nodes a limb can have between its root and its end
+const LIMB: usize = 12;
 
 /// a bone's place in a pose run forward
 #[inline(always)]

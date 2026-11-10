@@ -63,7 +63,7 @@ pub fn find_car_lamps(g: &crate::game::Game, boxes: &[BoxId]) -> Vec<crate::carl
             b.i != a.i && b.s == a.s
                 && m::abs(other.c[1] - ca[1]) <= twin_k
                 && m::abs(other.yaw - yaw_a) <= 1e-3
-                && m::abs(m::hyp2(other.c[0] - ca[0], other.c[2] - ca[2]) - s.gap) <= twin_k
+                && m::abs(v3::dist_xz(other.c, ca) - s.gap) <= twin_k
         });
         if twin {
             let what = s.what;

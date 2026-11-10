@@ -900,38 +900,30 @@ pub(super) fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::
     }
 }
 
-/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.
+/// A body posed: run forward, and skinned where it stands.
 pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+    skeleton_instance_forward(g, this, pose, twists, overrides);
+    skeleton_instance_skin(g, this, world);
+}
+
+/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides.
+pub(super) fn skeleton_instance_forward(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let d = cols_of_read(g, pose);
     let rig = &g.art.rig[this.rig];
     let n_ = rows_of(pose);
     // several layers may push a twist for the same node: they accumulate
-    let mut twist_map: Option<JsMap<usize, TwistSpec>> = None;
-    if let Some(ts) = twists {
-        if !ts.is_empty() {
-            let mut map: JsMap<usize, TwistSpec> = JsMap::new();
-            for t in ts {
-                let k = t.node as usize;
-                let e = map.get(k).copied();
-                match e {
-                    Some(e) => {
-                        map.set(k, TwistSpec { node: t.node, yaw: e.yaw + t.yaw, pitch: e.pitch + t.pitch });
-                    }
-                    None => {
-                        map.set(k, *t);
-                    }
-                }
-            }
-            twist_map = Some(map);
-        }
-    }
+    let twists = twists.unwrap_or(&[]);
+    let turned = twists.iter().fold(0u128, |w, t| w | 1 << (t.node as u32 & 127));
+    let twist_of = |i: usize| -> Option<TwistSpec> {
+        if turned >> (i & 127) & 1 == 0 { return None; }
+        twists.iter().filter(|t| t.node as usize == i).copied().reduce(|e, t| TwistSpec { node: t.node, yaw: e.yaw + t.yaw, pitch: e.pitch + t.pitch })
+    };
     for &oi in &rig.order {
         let i = oi as usize;
         let parent = rig.nodes[i].parent;
         let (rx, ry, rz, rw) = (d[3 * n_ + i] as f64, d[4 * n_ + i] as f64, d[5 * n_ + i] as f64, d[6 * n_ + i] as f64);
         let (tx, ty, tz, sx, sy, sz) = (d[i] as f64, d[n_ + i] as f64, d[2 * n_ + i] as f64, d[7 * n_ + i] as f64, d[8 * n_ + i] as f64, d[9 * n_ + i] as f64);
-        let ov = overrides.and_then(|o| o.get(i).copied().flatten());
-        if let Some(ov) = ov {
+        if let Some(Some(ov)) = overrides.and_then(|o| o.get(i)) {
             // driven from outside: global rotation as given, origin as given or where the parent puts it
             let t: V3 = [tx, ty, tz];
             let p = match ov.pos {
@@ -950,7 +942,7 @@ pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::
         }
         let parent_rot = if parent >= 0.0 { this.global_rot[parent as usize] } else { ident() };
         let (ax, ay, az, aw) = (parent_rot[0], parent_rot[1], parent_rot[2], parent_rot[3]);
-        let tw = twist_map.as_ref().and_then(|m| m.get(i).copied());
+        let tw = twist_of(i);
         let mut gr: Quat = [aw * rx + ax * rw + ay * rz - az * ry, aw * ry - ax * rz + ay * rw + az * rx, aw * rz + ax * ry - ay * rx + az * rw, aw * rw - ax * rx - ay * ry - az * rz];
         let mut r: Option<Quat> = None;
         if let Some(tw) = tw {
@@ -971,14 +963,15 @@ pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::
         };
         this.globals[i] = if parent >= 0.0 { v3::m4::mul(&this.globals[parent as usize], &local) } else { v3::m4::copy(&local) };
     }
-    // skinning matrices (world · global · inverse bind, written straight into the joint's slice of joint_data)
-    let joints = &rig.skin.joints;
-    for j in 0..joints.len() {
-        let mut ibm: v3::m4::Mat4 = [0.0; 16];
-        ibm.copy_from_slice(&rig.skin.inverse_bind[j * 16..j * 16 + 16]);
-        let tmp = v3::m4::mul(&this.globals[joints[j] as usize], &ibm);
-        let out = v3::m4::mul(world, &tmp);
-        this.joint_data[j * 16..j * 16 + 16].copy_from_slice(&out);
+}
+
+/// The skinning matrices of a body run forward (world · global · inverse bind, straight into the joint's slice of joint_data): what is drawn of it, and no part of the run.
+pub(super) fn skeleton_instance_skin(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, world: &crate::v3::m4::Mat4) {
+    let rig = &g.art.rig[this.rig];
+    let world = v3::m4::wide(world);
+    for ((&node, ibm), out) in rig.skin.joints.iter().zip(rig.skin.inverse_bind.chunks_exact(16)).zip(this.joint_data.chunks_exact_mut(16)) {
+        let bound = v3::m4::mul(&this.globals[node as usize], ibm.first_chunk().unwrap());
+        out.copy_from_slice(&v3::m4::mul_wide(&world, &bound));
     }
 }
 

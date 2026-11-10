@@ -30,11 +30,11 @@ pub fn squad_net_line(g: &mut crate::game::Game) {
 pub fn team_says(g: &mut crate::game::Game, about: Option<GuardId>, text: &str) -> bool {
     let can = |g: &Game, gd: GuardId| !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::runner::runner_mute(g, gd);
     let by = about.filter(|&gd| can(g, gd)).or_else(|| {
-        let at = g.ch[g.pl[g.player].ch].pos;
+        let at = g.player_pos(g.player);
         let mut best: Option<(GuardId, f64)> = None;
         for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
             if !can(g, gd) { continue; }
-            let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
+            let d = v3::dist_xz(g.pos_of(gd), at);
             if best.map_or(true, |b| d < b.1) { best = Some((gd, d)); }
         }
         best.map(|b| b.0)
@@ -61,7 +61,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
         let callsign = g.gd[gd].callsign.clone();
         g.squad_net.down.push(callsign.clone());
         if !g.squad_net.seeded { continue; }
-        let p = g.ch[g.gd[gd].ch].pos;
+        let p = g.pos_of(gd);
         let dur = g.k.squadnet.down_secs;
         g.squad_net.rows.push(crate::squadnet::NetRow { text: alloc::format!("{callsign} is down."), at: [p[0], p[1], p[2]], t, dur });
         g.squad_net.down_due = true;

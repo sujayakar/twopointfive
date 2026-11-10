@@ -15,7 +15,7 @@ pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId) -> FirearmId {
     }
     if let Some(x) = guard_of_char(g, shooter) { return g.gd[x].weapon; }
     if let Some(f) = g.m.combat.stray_gun { return f; }
-    let row = weapon_row(g, crate::weapons::WeaponId::Guard9mm);
+    let row = g.weapon(crate::weapons::WeaponId::Guard9mm).clone();
     let f = crate::weapons::firearm_new(g, &row);
     g.m.combat.stray_gun = Some(f);
     f
@@ -24,11 +24,6 @@ pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId) -> FirearmId {
 /// a thing run in the game as this seat has it: with_seat, or as it stands when the pass is already about that seat
 fn in_seat(g: &mut Game, seat: SeatId, run: &mut dyn FnMut(&mut Game)) {
     if seat == g.seat { run(g); } else { crate::seats::with_seat(g, seat, run); }
-}
-
-/// the weapon's row by its key (a Firearm holds the key; WEAPONS the row)
-fn weapon_row(g: &Game, id: crate::weapons::WeaponId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(id).unwrap().clone()
 }
 
 /// g.guards.find(x => x.char === c)
@@ -132,7 +127,7 @@ fn fire_weapon_raw(g: &mut Game, shooter: CharId, target: V3, o: &FireOpts, shel
     let by_player = crate::character::is_player(g, shooter);
     let sg = if by_player { None } else { guard_of_char(g, shooter) };
     hands_free(g, shooter, sg);
-    let def = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter); weapon_row(g, g.fa[f].def) } };
+    let def = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter); g.weapon(g.fa[f].def).clone() } };
     let ours = by_player || crate::friendlyfire::ff_side(g, sg);
     if shell.is_none() {
         if ours && !by_player && mate_in_the_way(g, sg, shooter, target, o, &def) { return; }

@@ -30,12 +30,11 @@ pub(super) fn wall_charge_enter(g: &mut Game, op: WallOpId) {
 }
 /// The order's men, the nearest the hole first and the man on the big gun last.
 fn by_nearest(g: &Game, op: WallOpId, mouth: V3) -> Vec<GuardId> {
-    let mut men: Vec<(GuardId, f64)> = o!(g, op).men.iter().map(|&m| (m, v3::dist_xz(pos_of(g, m), mouth))).collect();
+    let mut men: Vec<(GuardId, f64)> = o!(g, op).men.iter().map(|&m| (m, v3::dist_xz(g.pos_of(m), mouth))).collect();
     js::sort_by(&mut men, |a, b| a.1 - b.1);
     let men: Vec<GuardId> = men.into_iter().map(|r| r.0).collect();
     crate::gunroles::gun_last(g, &men)
 }
-fn nav_free(g: &Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
 
 /// A point inside for each, as the table has them past the hole or as near to that as the floor allows.
 fn points_inside(g: &Game, x: &Way, n: usize) -> Vec<Pod> {
@@ -56,7 +55,7 @@ fn point_inside(g: &Game, x: &Way, [lat, deep]: [f64; 2], pods: &[Pod]) -> Optio
         for k in [1.0, 0.6, 0.3, -1.0, -0.6, 0.0] {
             for dd in [0.0, 0.6, -0.5, 1.2] {
                 let q = wall_pt(g, &x.w, x.du + lat * k, -(x.tk + m::max(0.8, deep + dd)), None);
-                if nav_free(g, q) && !crate::scene_collision::solid_blocked(g, [mouth[0], 0.45, mouth[2]], [q[0], 0.45, q[2]], None)
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mouth, q)
                     && !(strict && wall_charge_in_frame(g, q, Some(off_frame))) && !pods.iter().any(|p| v3::dist_xz(p.pos, q) < 0.7) { return Some(q); }
             }
         }
@@ -97,7 +96,7 @@ fn lined_up(g: &Game, x: &Way, men: &[GuardId], pods: &[Pod]) -> Vec<WallChargeD
         let pod = deal.get(gd).unwrap_or(&pods[0]).clone();
         let hand = js::or(m::sign(wall_along(&x.w, pod.pos) - x.du), if i % 2 != 0 { 1.0 } else { -1.0 });
         let lane = wall_pt(g, &x.w, x.du + hand * half, -(x.tk + mouth_in), None);
-        let lane = if nav_free(g, lane) { lane } else if nav_free(g, x.mouth) { x.mouth } else { pod.pos };
+        let lane = if !crate::scene_collision::nav_grid_is_blocked(g, lane[0], lane[2]) { lane } else if !crate::scene_collision::nav_grid_is_blocked(g, x.mouth[0], x.mouth[2]) { x.mouth } else { pod.pos };
         WallChargeDoneItemQueueItem { gd, at: t + i as f64 * second, lane, pod }
     }).collect()
 }

@@ -16,11 +16,6 @@ fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&Game, f64) -> bool + 'b)>)
     }
 }
 
-/// A gun's row, as a copy: a call on it lends g beside it. Nothing here writes a row.
-fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
-}
-
 // ------------------------------------------------------------ the guards' collision
 
 /// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place.
@@ -188,8 +183,8 @@ fn lamps_on(g: &Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bo
 /// The light on one body, the brighter of his chest and his head: what stands on him, and what eyes used to the place see him by.
 pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let pos = g.ch[c].pos;
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(pos, [0.0, 1.2, 0.0]) };
-    let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(pos, [0.0, 1.6, 0.0]) };
+    let chest = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.2, 0.0]));
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.6, 0.0]));
     let (a, pa) = light_at(g, chest, None, None, None);
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
@@ -239,11 +234,11 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     };
     if let Some(cur) = cur_man {
         if crate::condition::down(g, g.gd[cur].ch) || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
-            let cur_pos = g.ch[g.gd[cur].ch].pos;
+            let cur_pos = g.pos_of(cur);
             if let Some(lk) = g.gd[gd].last_known {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
-            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
+            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.char_id(gd) && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
             crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             lost_man = true;
@@ -288,8 +283,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].drop_path();
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
         let left = enemy_up_on_floor(g, &crate::seats::here(g), team);
@@ -334,7 +328,7 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::rig_props::RigWeapon {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
-    let rig = g.m.weapons.weapons.get(def).unwrap().rig;
+    let rig = g.weapon(def).rig;
     if g.gd[gd].carbine || rig == WeaponDefRig::Carbine {
         crate::rig_props::RigWeapon::Carbine
     } else if rig == WeaponDefRig::Sc20k {
@@ -402,7 +396,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     crate::character::anim_reload(g, c, None, None);
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
-    let def = def_row(g, w);
+    let def = g.weapon(g.fa[w].def).clone();
     if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
@@ -415,7 +409,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     let rr = crate::weapons::firearm_reload_row(g, w);
     let before = rr.dur - g.gd[gd].reload_t;
     g.gd[gd].reload_t -= dt;
-    let def = def_row(g, w);
+    let def = g.weapon(g.fa[w].def).clone();
     let drop = crate::gunreload::feed_drop(&def);
     let c = g.gd[gd].ch;
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
@@ -425,7 +419,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     if let Some(out) = rr.out {
         if drop != Some(None) && before < out && rr.dur - g.gd[gd].reload_t >= out {
             let pos = g.ch[c].pos;
-            let h = match g.ch[c].bones.get(crate::character::Bone::HandR) { Some(b) => *b, None => v3::add(pos, [0.0, 1.1, 0.0]) };
+            let h = g.ch[c].bone(crate::character::Bone::HandR).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
             let d = g.ch[c].gun_dir;
             let vel = g.ch[c].vel;
             let (id, yaw) = (g.ch[c].id, g.ch[c].aim_yaw);
@@ -472,7 +466,7 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
 pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3, start_ok: bool, round_ok: bool, except: Option<GuardId>) {
     let w = g.gd[gd].weapon;
     let def = g.fa[w].def;
-    let spec = match g.m.weapons.weapons.get(def).unwrap().burst {
+    let spec = match g.weapon(def).burst {
         Some(s) => s,
         None => return,
     };
@@ -613,9 +607,9 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     g.tab.light[fl].dir = dir;
     if g.gd[gd].fled {
         g.tab.light[fl].enabled = false;
-        return g.ch[c].bones.get(Bone::UpperArmR).copied();
+        return g.ch[c].bone(Bone::UpperArmR);
     }
-    let mut held: Option<V3> = g.ch[c].bones.get(Bone::UpperArmR).copied();
+    let mut held: Option<V3> = g.ch[c].bone(Bone::UpperArmR);
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
     if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {

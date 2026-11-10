@@ -250,7 +250,7 @@ fn cam_near(g: &crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> 
 }
 
 /// Nothing in his hands that takes them.
-fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
+pub(super) fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
 
 /// The camera he could take back this frame.
 fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
@@ -365,7 +365,7 @@ mod tests {
         let from = [0.3, 1.2, -0.4];
         g.sets[g.seat].aim_point = [1.1, 0.0, 0.7];
         let p = cam_aim_point(&g, &crate::seats::here(&g), from);
-        assert!((m::hyp2(p[0] - from[0], p[2] - from[2]) - 1.5).abs() < 1e-12, "{:?}", p);
+        assert!((v3::dist_xz(p, from) - 1.5).abs() < 1e-12, "{:?}", p);
         assert!(((p[2] - from[2]) * (1.1 - from[0]) - (p[0] - from[0]) * (0.7 - from[2])).abs() < 1e-12, "on the cursor's bearing");
         assert_eq!(p[1], g.k.sticky.aim_y);
         g.sets[g.seat].aim_point = [10.25, 0.0, -3.5];

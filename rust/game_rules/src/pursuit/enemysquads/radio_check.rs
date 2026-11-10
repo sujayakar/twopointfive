@@ -39,7 +39,7 @@ macro_rules! wd {
 }
 
 /// `COUNT[n] ?? n`
-fn count_word(n: usize) -> String {
+pub(super) fn count_word(n: usize) -> String {
     match count().get(n) {
         Some(w) => w.clone(),
         None => format!("{}", n),
@@ -894,7 +894,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, gd: GuardI
         }
         return true;
     }
-    let eyes = g.time - g.gd[gd].last_seen_t < 1.0 && noticed(g, gd);
+    let eyes = g.time - g.gd[gd].last_seen_t < 1.0 && roused(g, gd);
     let how = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG);
     if eyes { saw_them(g, q, gd); }
     if eyes || matches!(how, Some(LegEnd::Contact | LegEnd::Taken)) { return true; }
@@ -999,7 +999,7 @@ fn nothing_there(g: &mut Game, q: EnemysquadsSquadId, l: &Looker, reached: bool)
 }
 
 /// He has noticed the team by his own bar: 'alert' or 'search', not 'suspicious'.
-pub(super) fn noticed(g: &crate::game::Game, m: GuardId) -> bool {
+pub(crate) fn roused(g: &crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Alert || g.gd[m].state == crate::game::GuardState::Search
 }
 /// The trace's row for a sighting the squad does not call. Always false: nothing is called.

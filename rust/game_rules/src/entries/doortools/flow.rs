@@ -7,19 +7,17 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 use super::flow_in::door_tools_flow_in;
-use crate::v3::dist_xz as flat;
+use crate::v3::dist_xz;
 
 // ---- small reads
 
 /// a point as this file deals one: `{ pos, face }`
 pub(super) fn pod_at(pos: V3, face: f64) -> crate::entrypoints::Pod { crate::entrypoints::Pod { pos, face, watch: None } }
 
-pub(super) fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-pub(super) fn has_over(g: &Game, gd: GuardId) -> bool { g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some()) }
 /// where his order has him, or where he stands
 pub(super) fn where_of(g: &Game, m: GuardId) -> V3 {
     let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
-    post.unwrap_or_else(|| pos_of(g, m))
+    post.unwrap_or_else(|| g.pos_of(m))
 }
 /// where every order has `m` going, in the orders' order
 pub(super) fn pods_of(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, out: &mut Vec<V3>) {
@@ -33,12 +31,12 @@ fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: 
     let i = i as usize;
     let c = g.gd[gd].ch;
     let leans = g.gd[gd].script.as_ref().and_then(|s| s.lean).map_or(false, js::truthy);
-    let hd: Option<V3> = if leans { g.ch[c].bones.get(crate::character::Bone::Head).copied() } else { None };
+    let hd: Option<V3> = if leans { g.ch[c].bone(crate::character::Bone::Head) } else { None };
     let p = hd.unwrap_or(g.ch[c].pos);
     let s = &mut g.tab.doortools_room_search[sr];
     let stale = match s.los.get(gd) {
         None => true,
-        Some(l) => flat(l.at, p) > 0.35 || match hd { Some(h) => m::abs(l.at[1] - h[1]) > 0.2, None => l.at[1] != p[1] },
+        Some(l) => dist_xz(l.at, p) > 0.35 || match hd { Some(h) => m::abs(l.at[1] - h[1]) > 0.2, None => l.at[1] != p[1] },
     };
     if stale {
         let n = s.pts.len();
@@ -102,7 +100,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
         if turn < bd { bd = turn; best = i as i64; by = y; }
     }
     if best < 0 { g.tab.doortools_room_search[sr].yaw.delete(gd); return false; }
-    if has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
+    if crate::roomfight::has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
     let yaw = y0 + v3::clamp(v3::wrap_angle(by - y0), -scan_rate * dt, scan_rate * dt);
     g.tab.doortools_room_search[sr].yaw.set(gd, yaw);
     let row = &mut g.tab.orders_assignment[a];
@@ -114,11 +112,11 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
 
 /// how far it is from `a` to `b` on foot; Infinity past `lim` or with no way
 fn door_tools_walk_len(g: &crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
-    let d = flat(a, b);
+    let d = dist_xz(a, b);
     if d > lim { return f64::INFINITY; }
-    if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
+    if !crate::scene_collision::low_blocked(g, a, b) { return d; }
     let path = match crate::scene_collision::nav_grid_find_path(g, a, b, Some(3000.0), None) { Some(p) => p, None => return f64::INFINITY };
-    let l = crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b);
+    let l = crate::places::walk_len(a, &path) + dist_xz(path.last().copied().unwrap_or(a), b);
     if l > lim { f64::INFINITY } else { l }
 }
 
@@ -163,7 +161,7 @@ fn strands(g: &Game, squad: &[GuardId], sam: &[V3], gd: GuardId, p: V3, go: &[Gu
         let mut stay: Vec<V3> = squad.iter().filter(|&&m| m != c && !go.contains(&m)).map(|&m| where_of(g, m)).collect();
         stay.extend_from_slice(sam);
         if stay.iter().any(|&q| walks.len(g, q, at) <= left) || walks.len(g, p, at) <= left { continue; }
-        let from = pos_of(g, gd);
+        let from = g.pos_of(gd);
         if walks.len(g, from, at) <= left { return true; }
         for &m in go {
             let q = if m == gd { from } else { where_of(g, m) };
@@ -176,13 +174,13 @@ fn strands(g: &Game, squad: &[GuardId], sam: &[V3], gd: GuardId, p: V3, go: &[Gu
 /// his own partner has a door of the order's room to hold, so he is spare
 fn lent(g: &Game, squad: &[GuardId], gd: GuardId, free: &[GuardId], m: GuardId, op: Option<DoorOpId>) -> bool {
     let (Some(o), Some(op)) = (mate_of(g, squad, gd, m), op) else { return false };
-    !free.contains(&o) && !crate::condition::down(g, g.gd[o].ch) && g.tab.doortools_door_op[op].men.contains(&o) && !has_over(g, o) && door_tools_on_other(g, op, o)
+    !free.contains(&o) && !crate::condition::down(g, g.gd[o].ch) && g.tab.doortools_door_op[op].men.contains(&o) && !crate::roomfight::has_over(g, o) && door_tools_on_other(g, op, o)
 }
 
 /// the nearest of `list` to `gd`, the first on a tie
 fn nearest_of(g: &Game, list: &[GuardId], gd: GuardId) -> Option<GuardId> {
-    let at = pos_of(g, gd);
-    let mut l: Vec<(GuardId, f64)> = list.iter().map(|&m| (m, flat(pos_of(g, m), at))).collect();
+    let at = g.pos_of(gd);
+    let mut l: Vec<(GuardId, f64)> = list.iter().map(|&m| (m, dist_xz(g.pos_of(m), at))).collect();
     js::sort_by(&mut l, |a, b| a.1 - b.1);
     l.first().map(|x| x.0)
 }
@@ -234,18 +232,18 @@ fn partner_for(g: &Game, squad: &[GuardId], gd: GuardId, own: Option<GuardId>, p
 /// the partner's point beside P, and the longest look he has there off his partner's sector
 pub(super) fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: GuardId, taken: &[V3], in_room: &dyn Fn(&crate::game::Game, V3) -> bool) -> Option<crate::entrypoints::Pod> {
     let apart = m::max(1.0, g.k.doortools.pod_apart);
-    let mate_at = pos_of(g, mate);
+    let mate_at = g.pos_of(mate);
     let (mut best, mut bc): (Option<V3>, f64) = (None, f64::INFINITY);
     for r in [1.5, 2.0, 2.5] {
         for k in 0..12 {
             let a = k as f64 * m::PI / 6.0;
             let q: V3 = [p[0] + m::sin(a) * r, 0.0, p[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || !in_room(g, q)
-                || crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None)
-                || taken.iter().any(|&t| flat(t, q) < apart)
-                || flat(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g)), q) < 1.0 { continue; }
+                || crate::scene_collision::low_blocked(g, p, q)
+                || taken.iter().any(|&t| dist_xz(t, q) < apart)
+                || dist_xz(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g)), q) < 1.0 { continue; }
             if crate::entrypoints::entry_points_risk_at(g, q, None, None).is_some() { continue; }
-            let c = flat(mate_at, q) + (r - 1.5) * 0.5;
+            let c = dist_xz(mate_at, q) + (r - 1.5) * 0.5;
             if c < bc { bc = c; best = Some(q); }
         }
     }
@@ -342,7 +340,7 @@ impl Dead {
     fn shown(&mut self, g: &Game, i: usize) -> f64 {
         if let Some(&s) = self.seen.get(i) { return s; }
         let (p, far) = (self.pts[i], g.k.doortools.look_m * 0.8);
-        let s = self.dead.iter().step_by(self.step()).filter(|&&q| flat(p, q) <= far && !crate::scene_collision::segment_blocked(g, [p[0], 1.55, p[2]], q, None, None, None)).count() as f64;
+        let s = self.dead.iter().step_by(self.step()).filter(|&&q| dist_xz(p, q) <= far && !crate::scene_collision::segment_blocked(g, [p[0], 1.55, p[2]], q, None, None, None)).count() as f64;
         self.seen.set(i, s);
         s
     }
@@ -357,7 +355,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
     let mut dead = Dead::of(g, sr);
     let mut by: Vec<(GuardId, f64)> = Vec::new();
     for mm in g.tab.doortools_door_op[op].men.clone() {
-        if !door_tools_in_at(g, op, mm).is_nan() && !crate::control::man::blind(g, mm) && !has_over(g, mm) && !door_tools_on_other(g, op, mm) { by.push((mm, flat(pos_of(g, mm), dead.mid))); }
+        if !door_tools_in_at(g, op, mm).is_nan() && !crate::control::man::blind(g, mm) && !crate::roomfight::has_over(g, mm) && !door_tools_on_other(g, op, mm) { by.push((mm, dist_xz(g.pos_of(mm), dead.mid))); }
     }
     if by.is_empty() { return false; }
     js::sort_by(&mut by, |a, b| a.1 - b.1);
@@ -382,18 +380,18 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
 /// Every point that shows him enough of the unseen floor, the best first: what it shows, less the walk.
 fn points_for(g: &Game, dead: &mut Dead, gd: GuardId) -> Vec<MoveCand> {
     let (apart, least) = (m::max(1.0, g.k.doortools.pod_apart), g.k.doortools.dead_cells / 2.0);
-    let from = pos_of(g, gd);
+    let from = g.pos_of(gd);
     let mut others: Vec<V3> = Vec::new();
     for who in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
-        if who != gd { others.push(pos_of(g, who)); pods_of(g, &crate::seats::here(g), who, &mut others); }
+        if who != gd { others.push(g.pos_of(who)); pods_of(g, &crate::seats::here(g), who, &mut others); }
     }
     let of = dead.step() as f64;
     let mut out: Vec<MoveCand> = Vec::new();
     for i in (0..dead.pts.len()).step_by(core::cmp::max(1, dead.pts.len() / 80)) {
         let p = dead.pts[i];
-        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || flat(from, p) < 1.5 || others.iter().any(|&q| flat(q, p) < apart) { continue; }
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || dist_xz(from, p) < 1.5 || others.iter().any(|&q| dist_xz(q, p) < apart) { continue; }
         let shown = dead.shown(g, i) * of;
-        let sc = shown - 0.8 * flat(from, p);
+        let sc = shown - 0.8 * dist_xz(from, p);
         if shown >= least && sc > 0.0 { out.push(MoveCand { i, p, sc }); }
     }
     js::sort_by(&mut out, |a, b| b.sc - a.sc);
@@ -490,7 +488,7 @@ pub fn door_tools_pods_as_were(g: &crate::game::Game, d: DoorId, side: f64, n: O
 fn pods_fit(g: &Game, d: DoorId, mid: V3, p: V3, out: &[crate::entrypoints::Pod]) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
         && !crate::scene_collision::solid_blocked(g, mid, [p[0], 0.45, p[2]], None)
-        && !out.iter().any(|o| flat(o.pos, p) < 0.9)
+        && !out.iter().any(|o| dist_xz(o.pos, p) < 0.9)
         && !door_tools_in_frame(g, d, mid, p)
 }
 
@@ -551,7 +549,7 @@ fn door_tools_pods2(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<crate::e
         let q = door_pt(g, d, w / 2.0, b, into, None);
         let f = if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, q[0], q[2]) } else { Some(q) };
         if let Some(f) = f {
-            if !out.iter().any(|o| flat(o.pos, f) < 0.6) { out.push(pod_at([f[0], 0.0, f[2]], inward)); }
+            if !out.iter().any(|o| dist_xz(o.pos, f) < 0.6) { out.push(pod_at([f[0], 0.0, f[2]], inward)); }
         }
     }
     out
@@ -608,8 +606,8 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
         let centre = g.dr[door].frame_centre;
         let mut files: Vec<(GuardId, bool, f64)> = Vec::with_capacity(men.len());
         for &m in &men {
-            let at = g.tab.doortools_door_op[op].post.get(m).map(|p| p.pos).unwrap_or_else(|| pos_of(g, m));
-            files.push((m, along_of(g, door, at) > w / 2.0, flat(at, centre)));
+            let at = g.tab.doortools_door_op[op].post.get(m).map(|p| p.pos).unwrap_or_else(|| g.pos_of(m));
+            files.push((m, along_of(g, door, at) > w / 2.0, dist_xz(at, centre)));
         }
         let hi_first = files[0].1;
         let mut mine: Vec<(GuardId, bool, f64)> = files.iter().copied().filter(|f| f.1 == hi_first).collect();
@@ -674,7 +672,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
         }
     }
     // (by index: the TypeScript tells a point from another by the object)
-    let clear: Vec<usize> = (0..pods.len()).filter(|&i| !taken.iter().any(|&q| flat(q, pods[i].pos) < pod_apart)).collect();
+    let clear: Vec<usize> = (0..pods.len()).filter(|&i| !taken.iter().any(|&q| dist_xz(q, pods[i].pos) < pod_apart)).collect();
     if clear.len() as f64 >= n { return clear.iter().map(|&i| pods[i]).collect(); }
     let mut out: Vec<crate::entrypoints::Pod> = clear.iter().map(|&i| pods[i]).collect();
     for i in 0..pods.len() { if !clear.contains(&i) { out.push(pods[i]); } }
@@ -684,7 +682,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
 /// Sam's trigger: the set charge nearest him (or the one given) goes; what it did, null with none set
 pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) {
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
 }
 

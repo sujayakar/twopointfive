@@ -146,26 +146,26 @@ fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
 
 /// The corners of the walk he is on to `goal`: the runner's own path while it is for that goal, else the straight leg if short, else None.
 fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     if let Some(pg) = g.gd[gd].path_goal {
-        if m::hyp2(pg[0] - goal[0], pg[2] - goal[2]) < 0.75 && g.gd[gd].path.len() > g.gd[gd].path_i {
+        if v3::dist_xz(pg, goal) < 0.75 && g.gd[gd].path.len() > g.gd[gd].path_i {
             let mut walk = g.gd[gd].path[g.gd[gd].path_i..].to_vec();
             walk.push(goal);
             return Some(walk);
         }
     }
-    if m::hyp2(goal[0] - p[0], goal[2] - p[2]) <= 2.0 { Some(vec![goal]) } else { None }
+    if v3::dist_xz(goal, p) <= 2.0 { Some(vec![goal]) } else { None }
 }
 
 /// Would waiting leave him standing in an enemy's line, as far as he knows.
 fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
 /// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None.
 fn way_round(g: &crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let berth_m = g.k.fireline.berth_m;
     let mut penalty = |g: &Game, ix: f64, iz: f64| -> f64 {
         if in_shape(g, l, (ix + 0.5) * cs, (iz + 0.5) * cs, Some(berth_m)) { 40.0 } else { 1.0 }
@@ -248,7 +248,7 @@ fn lapses(g: &mut Game, gd: GuardId) {
 
 /// His feet by the lane: None lets go of him, and his wait is forgotten.
 fn by_lane(g: &mut Game, gd: GuardId, l: Lane, goal: V3, speed: f64) -> Option<FireLineFeet> {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     if at_work(g, gd, p) {
         return None;
     }
@@ -283,7 +283,7 @@ fn at_work(g: &Game, gd: GuardId, p: V3) -> bool {
 /// His way round was to a place the order no longer sends him: asked afresh, of the new one.
 fn way_elsewhere(g: &Game, gd: GuardId, goal: V3) -> bool {
     let last = g.m.fireline.states.get(gd).and_then(|s| s.way.as_ref()).and_then(|way| way.last());
-    last.is_some_and(|last| m::hyp2(last[0] - goal[0], last[2] - goal[2]) > 0.75)
+    last.is_some_and(|last| v3::dist_xz(*last, goal) > 0.75)
 }
 
 /// Already in the lane: not moved by this rule, but for a man WAITING whom the gun swings onto, who stands as he stood to the wait's ceiling.
@@ -298,7 +298,7 @@ fn next_corner(g: &mut Game, gd: GuardId, l: Lane, p: V3) -> Option<V3> {
     let (t, short_m, clear_m) = (g.time, g.k.fireline.short_m, g.k.fireline.clear_m);
     let s = g.m.fireline.states.get_mut(gd).unwrap();
     let way = s.way.as_mut().unwrap();   // (he is on one)
-    while way.len() > 1 && m::hyp2(way[0][0] - p[0], way[0][2] - p[2]) < 0.6 {
+    while way.len() > 1 && v3::dist_xz(way[0], p) < 0.6 {
         way.remove(0);
     }
     s.t = t;

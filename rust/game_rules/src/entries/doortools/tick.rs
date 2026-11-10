@@ -28,40 +28,12 @@ pub use standoff::door_tools_standoff_posts;
 
 // ------------------------------------------------------------ small reads
 
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    let c = g.gd[gd].ch;
-    g.ch[c].pos
-}
-fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    let c = g.pl[seat.player].ch;
-    g.ch[c].pos
-}
 fn callsigns(g: &Game, men: &[GuardId]) -> String {
     let names: Vec<String> = men.iter().map(|&m| g.gd[m].callsign.clone()).collect();
     names.join(", ")
 }
-fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
-    men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect()
-}
 fn any_shared(a: &[GuardId], b: &[GuardId]) -> bool {
     a.iter().any(|m| b.contains(m))
-}
-/// `[...new Set(words)].join(' + ')`
-fn unique_joined(words: Vec<String>) -> String {
-    let mut seen: Vec<String> = Vec::new();
-    for w in words {
-        if !seen.contains(&w) {
-            seen.push(w);
-        }
-    }
-    seen.join(" + ")
-}
-fn say(g: &mut Game, gd: GuardId, text: &str) {
-    crate::game::game_say(g, gd, text, None, None);
-}
-/// `const PRE`: the phases before the door goes
-fn is_pre(ph: Phase) -> bool {
-    matches!(ph, Phase::Stack | Phase::Ready | Phase::Place | Phase::Standoff | Phase::Armed)
 }
 /// `if (op.word) { op.word = null; op.worded = true; }`
 fn word_off(g: &mut Game, op: DoorOpId) {
@@ -97,7 +69,7 @@ pub(super) fn door_tools_sam_behind(g: &crate::game::Game, d: DoorId, side: f64)
     if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
         return false;
     }
-    let p = sam_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     door_tools_can_reach(g, d, side, p)
 }
 /// is `x` part of this entry, for the can
@@ -113,7 +85,7 @@ fn entry_own(g: &Game, op: DoorOpId, x: GuardId) -> bool {
             && dop!(g, o).men.contains(&x)
         {
             let (door, side) = (dop!(g, o).door, dop!(g, o).side);
-            let p = pos_of(g, x);
+            let p = g.pos_of(x);
             if off_of(g, door, p, side) >= 0.0 {
                 return true;
             }
@@ -130,7 +102,7 @@ pub(super) fn door_tools_mate_behind(g: &crate::game::Game, op: DoorOpId) -> Opt
     let side = dop!(g, op).side;
     for x in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if !entry_own(g, op, x) {
-            let p = pos_of(g, x);
+            let p = g.pos_of(x);
             if door_tools_can_reach(g, d, side, p) {
                 return Some(x);
             }
@@ -183,7 +155,7 @@ pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::S
         if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.at == crate::orders::At::Stacked) {
             continue;
         }
-        let sam = sam_pos(g, seat);
+        let sam = g.seat_pos(seat);
         let i = if crate::orders::side_of(g, door, post) == crate::orders::side_of(g, door, sam) { 0 } else { 1 };
         by.get_or_insert_with(door, || [Vec::new(), Vec::new()])[i].push(gd);
     }
@@ -212,7 +184,7 @@ pub fn door_tools_stack_words(g: &crate::game::Game, seat: &crate::seats::SeatRe
     for x in door_tools_stack_waits(g, seat, men) {
         words.push(crate::orders::squad_orders_who_words(g, seat, Some(&x.men)));
     }
-    unique_joined(words)
+    super::pockets::uniq_plus(words)
 }
 /// the men of a waiting thing (`x.men`)
 fn item_men(g: &Game, x: &DoorToolsWaitingAnyItem) -> Vec<GuardId> {
@@ -293,7 +265,7 @@ pub(in crate::entries) fn door_tools_waits_on(g: &crate::game::Game, men: &[Guar
             DoorToolsWaitingAnyItem::DoorOp(op) => {
                 if dop!(g, op).door == d {
                     let of = dop!(g, op).men.clone();
-                    return Some(DoorToolsWaitsOn { kind: DoorToolsWaitsOnKind::Word, men: alive(g, &of), set: true });
+                    return Some(DoorToolsWaitsOn { kind: DoorToolsWaitsOnKind::Word, men: super::pockets::alive(g, &of), set: true });
                 }
             }
         }
@@ -305,7 +277,7 @@ pub(in crate::entries) fn door_tools_waits_on(g: &crate::game::Game, men: &[Guar
             Some(a) => match g.tab.orders_assignment[a].post {
                 Some(post) => {
                     let arrived = g.tab.orders_assignment[a].arrived;
-                    arrived || v3::dist_xz(pos_of(g, m), post) < 0.6
+                    arrived || v3::dist_xz(g.pos_of(m), post) < 0.6
                 }
                 None => false,
             },
@@ -326,10 +298,10 @@ pub fn door_tools_waiting_words(g: &crate::game::Game, seat: &crate::seats::Seat
     let mut words = Vec::new();
     for x in door_tools_waiting_any(g, seat, men) {
         let of = item_men(g, &x);
-        let living = alive(g, &of);
+        let living = super::pockets::alive(g, &of);
         words.push(crate::orders::squad_orders_who_words(g, seat, Some(&living)));
     }
-    unique_joined(words)
+    super::pockets::uniq_plus(words)
 }
 /// THE WORD: everything waiting on it among `who` goes together. None when something went; else why not
 pub(in crate::entries) fn door_tools_go(g: &mut crate::game::Game, who: Option<crate::orders::Who>) -> Option<String> {
@@ -378,7 +350,7 @@ fn door_tools_word_step_in(g: &mut crate::game::Game, op: DoorOpId) {
         word_off(g, op);
         door_tools_beat(g, op, "the word waits for the cuts");
         let lead = dop!(g, op).lead;
-        say(g, lead, "checking the doorway first.");
+        crate::game::game_say(g, lead, "checking the doorway first.", None, None);
         return;
     }
     if !thr!(g, op).step_owed.unwrap_or(false) && door_tools_thr_frag_wait(g, op) {
@@ -449,7 +421,7 @@ pub fn door_tools_word_owed(g: &mut crate::game::Game, op: DoorOpId) -> bool {
         let names = callsigns(g, &fled);
         door_tools_beat(g, op, &format!("the door waits: {} not back", names));
         let who = dop!(g, op).men.iter().copied().find(|m| !fled.contains(m)).unwrap_or(dop!(g, op).lead);
-        say(g, who, "hold — back on the door.");
+        crate::game::game_say(g, who, "hold — back on the door.", None, None);
     }
     true
 }
@@ -734,7 +706,7 @@ fn word_opens_now(g: &mut Game, op: DoorOpId, door: DoorId, side: f64) -> bool {
         }
     }
     let lead = dop!(g, op).lead;
-    let at = pos_of(g, lead);
+    let at = g.pos_of(lead);
     crate::handleside::tool_spot(g, door, side, at, Some(true)).is_some()
 }
 /// on his door, ready: the leaf is opened, by the shove or the boot from the kick spot when it is locked
@@ -765,13 +737,13 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
             return;
         }
         if g.dr[d].def.steel.unwrap_or(false) {
-            say(g, lead, "it's steel. no way through.");
+            crate::game::game_say(g, lead, "it's steel. no way through.", None, None);
             door_tools_end(g, op, crate::doortools::Ended::SteelAndLocked);
             return;
         }
         if crate::silent::silent_pick(g) && door_tools_pickable(g, d) {
             door_tools_to_pick(g, op);
-            say(g, lead, "locked. picking.");
+            crate::game::game_say(g, lead, "locked. picking.", None, None);
             return;
         }
         if door_tools_frame_held(g, d, side) && door_tools_big_opens(g, d, &men) && door_tools_to_gun(g, op) {
@@ -793,7 +765,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
                 Some(s) => format!("{}. no quiet way in. go loud and we boot it.", s),
                 None => String::from("locked. can't kick it while we're silent."),
             };
-            say(g, lead, &text);
+            crate::game::game_say(g, lead, &text, None, None);
             door_tools_end(g, op, crate::doortools::Ended::SilentNoBoot);
             return;
         }
@@ -816,11 +788,11 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
         };
         door_tools_assign(g, op, lead, &a);
         match boot {
-            None => say(g, lead, "locked. kicking it."),
+            None => crate::game::game_say(g, lead, "locked. kicking it.", None, None),
             Some(b) => {
                 door_tools_beat(g, op, "silent boot");
                 if b == crate::silent::SilentBoot::First {
-                    say(g, lead, &format!("{}. booting it.", stuck.unwrap_or("")));
+                    crate::game::game_say(g, lead, &format!("{}. booting it.", stuck.unwrap_or("")), None, None);
                 }
             }
         }
@@ -837,7 +809,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
 /// the lead of an unlocked door sent to its handle; false: he is at it, or it cannot be walked to
 pub(super) fn door_tools_to_handle(g: &mut crate::game::Game, op: DoorOpId, gate: bool) -> bool {
     let (d, lead, side) = (dop!(g, op).door, dop!(g, op).lead, dop!(g, op).side);
-    let at = pos_of(g, lead);
+    let at = g.pos_of(lead);
     let Some(hs) = crate::handleside::tool_spot(g, d, side, at, Some(true)) else { return false };
     dop!(g, op).kick = Some(DoorToolsDoneItemKick { pos: hs.pos, yaw: hs.yaw, t: f64::NAN, hand: Some(true), gate: Some(gate), ..Default::default() });
     dop!(g, op).phase = Phase::Kick;
@@ -961,7 +933,7 @@ pub fn door_tools_trigger(g: &mut crate::game::Game, c_2: Option<ChargeId>) {
 }
 pub(super) fn door_tools_nearest(g: &mut crate::game::Game, of: Option<&mut dyn FnMut(&mut crate::game::Game, ChargeId) -> bool>) -> Option<ChargeId> {
     let mut of = of;
-    let p = sam_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     let set = g.sets[g.seat].door_tools.set.clone();
     let mut list = Vec::new();
     for c in set {
@@ -1049,7 +1021,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
         if dop!(g, op).crossed.has(gd) {
             continue;
         }
-        let p = pos_of(g, gd);
+        let p = g.pos_of(gd);
         if off_of(g, door, p, side) < -0.15 && along_of(g, door, p) > -0.6 && along_of(g, door, p) < width + 0.6 {
             let t = g.time;
             dop!(g, op).crossed.set(gd, t);
@@ -1070,7 +1042,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
                 for &a in &men {
                     let at = match dop!(g, op).post.get(a) {
                         Some(P) => P.pos,
-                        None => pos_of(g, a),
+                        None => g.pos_of(a),
                     };
                     by.push((a, v3::dist_xz(at, L.pos)));
                 }
@@ -1087,7 +1059,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
         g.dr[door].leaf.quiet_t = -1.0;
     }
     door_tools_threat_note(g, op);
-    if is_pre(dop!(g, op).phase) {
+    if super::steps::is_pre(dop!(g, op).phase) {
         door_tools_spare_rear(g, op);
     } else {
         for gd in dop!(g, op).men.clone() {
@@ -1103,7 +1075,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
         }
     }
     door_tools_step(g, op);
-    if g.sets[g.seat].door_tools.ops.contains(&op) && is_pre(dop!(g, op).phase) {
+    if g.sets[g.seat].door_tools.ops.contains(&op) && super::steps::is_pre(dop!(g, op).phase) {
         door_tools_spare_rear(g, op);
     }
 }
@@ -1120,7 +1092,7 @@ mod tests {
     #[test]
     fn words_joined_once_each_in_first_order() {
         let w = vec![String::from("red"), String::from("blue"), String::from("red")];
-        assert_eq!(unique_joined(w), "red + blue");
-        assert_eq!(unique_joined(Vec::new()), "");
+        assert_eq!(super::pockets::uniq_plus(w), "red + blue");
+        assert_eq!(super::pockets::uniq_plus(Vec::new()), "");
     }
 }

@@ -275,10 +275,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     let to = d.to;
     crate::guards::go_to(g, gd, to, None);
     if crate::guards::follow_path(g, gd, dt, walk) || { let c = g.gd[gd].ch; flat(&g.ch[c].pos, to[0], to[2]) < 0.3 } {
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         if !crate::close::close_seat(g, gd, Some(&d.at[..]), Some(d.face)) {
             let wp = d.wp;
             drop(g, gd);
@@ -527,7 +524,7 @@ fn asleep(g: &mut Game, gd: GuardId, mut d: Doze, c: CharId, dt: f64) {
     d.ask += dt;
     flush(g, gd, d);
     if d.ask >= g.k.doze.ask_secs {
-        let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.15, 0.0]) };
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.15);
         let l = face_light(g, gd, head);
         d.lit = if l < g.k.doze.light_at { -1.0 } else if d.lit < 0.0 { 0.0 } else { d.lit + d.ask };
         d.ask = 0.0;
@@ -541,7 +538,7 @@ fn asleep(g: &mut Game, gd: GuardId, mut d: Doze, c: CharId, dt: f64) {
 /// where the man who shoved the chair stands: a player, else a guard, else the sleeper himself
 fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
     let who = g.tab.props_prop[ch].who;
-    if let Some(pl) = crate::seats::man_by_id(g, who) { return g.ch[g.pl[pl].ch].pos; }
+    if let Some(pl) = crate::seats::man_by_id(g, who) { return g.player_pos(pl); }
     for &x in g.guards.iter() {
         let xc = g.gd[x].ch;
         if g.ch[xc].id == who { return g.ch[xc].pos; }
@@ -551,7 +548,7 @@ fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
 
 /// the light on a sleeper's face that is news to him: everything but his own side's lamps and the room's screens
 fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
-    let me = g.ch[g.gd[gd].ch].id;
+    let me = g.char_id(gd);
     let team = g.team(gd);
     let mut skip = move |g: &Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
     let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
@@ -559,13 +556,13 @@ fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
 }
 /// a man of this team carries the lamp with this owner
 fn own_side_owns(g: &Game, owner: f64, team: crate::teams::Team) -> bool {
-    g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.team(x) == team)
+    g.guards.iter().any(|&x| g.char_id(x) == owner && g.team(x) == team)
 }
 /// where the light on his face comes from: the nearest carried lamp of another side through clear air, else his own spot
 fn lamp_on(g: &crate::game::Game, gd: GuardId, head: V3) -> V3 {
     let mut best: Option<V3> = None;
     let mut bd = 14.0;
-    let me = g.ch[g.gd[gd].ch].id;
+    let me = g.char_id(gd);
     let team = g.team(gd);
     let mut i = 0usize;
     while i < g.engine.lights.lights.len() {
@@ -580,7 +577,7 @@ fn lamp_on(g: &crate::game::Game, gd: GuardId, head: V3) -> V3 {
         best = Some([pos[0], 0.0, pos[2]]);
         bd = d;
     }
-    match best { Some(b) => b, None => g.ch[g.gd[gd].ch].pos }
+    match best { Some(b) => b, None => g.pos_of(gd) }
 }
 
 /// a man on his way down into, in, or just up out of his chair is no contact for the furniture
@@ -589,7 +586,7 @@ pub fn doze_in_chair(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(ch) = d.chair else { return false };
     if seated(d) || d.phase == Phase::Up { return true; }
     if d.phase != Phase::Going { return false; }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let (x, z) = (g.tab.props_prop[ch].x, g.tab.props_prop[ch].z);
     flat(&pos, x, z) < 1.2
 }

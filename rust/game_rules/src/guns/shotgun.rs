@@ -87,7 +87,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
 pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let def = g.fa[g.gd[gd].weapon].def;
-    let breach = match g.m.weapons.weapons.get(def).unwrap().pellets { Some(p) => p.breach.is_some(), None => false };
+    let breach = match g.weapon(def).pellets { Some(p) => p.breach.is_some(), None => false };
     breach || crate::kit::kit_big(g, gd) == crate::kit::BigKit::Shotgun
 }
 
@@ -224,7 +224,7 @@ mod tests {
     use super::*;
 
     fn m870_shell(g: &Game) -> crate::shotgun::Shell {
-        let def = g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap().clone();
+        let def = g.weapon(crate::weapons::WeaponId::M870).clone();
         crate::shotgun::Shell { def, i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() }
     }
 

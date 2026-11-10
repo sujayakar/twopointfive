@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 /// The way in a strike or a grab is made by: the one asked, else what he could do from where he stands.
 fn way_in(g: &Game, gd: GuardId, way: Option<CloseKind>) -> CloseKind {
     if let Some(way) = way { return way; }
-    let pos = g.ch[g.pl[g.player].ch].pos;
+    let pos = g.player_pos(g.player);
     let o = crate::close::close_at(g, gd, &pos[..]);
     crate::close::close_kind_of(Some(&o))
 }
@@ -24,7 +24,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseK
     let kind = way_in(g, gd, way);
     let side_on = kind != CloseKind::Behind;
     let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
-    let from = if side_on { v3::wrap_angle(m::atan2(a[0] - b[0], a[2] - b[2]) - g.ch[gc].body_yaw) } else { 0.0 };
+    let from = if side_on { v3::wrap_angle(v3::yaw_to(b, a) - g.ch[gc].body_yaw) } else { 0.0 };
     hands_to_man(g, p);
     let mut td = crate::game::PlayerTakedown { g: gd, t: 0.0, kind: None, from: None, alert: None, yaw: None, at: None, lethal: None, loud: None };
     if side_on {
@@ -44,7 +44,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseK
     man.speed = 0.0;
     man.react_t = m::max(man.react_t, 1.0);
     g.ch[gc].vel = [0.0, 0.0, 0.0];
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     let at = v3::add(g.ch[gc].pos, [0.0, 1.3, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
@@ -89,7 +89,7 @@ fn take_station(g: &mut Game, p: PlayerId, td: &crate::game::PlayerTakedown, dt:
     collide_player(g, if g.pl[p].crouch { 1.0 } else { 1.7 });
     if !side_on { return his; }
     let (a, b) = (g.ch[gc].pos, g.ch[c].pos);
-    let yaw = m::atan2(a[0] - b[0], a[2] - b[2]);
+    let yaw = v3::yaw_to(b, a);
     if let Some(t) = g.pl[p].takedown_mut() { t.yaw = Some(yaw); }
     yaw
 }
@@ -108,7 +108,7 @@ fn blow_lands(g: &mut Game, td: &crate::game::PlayerTakedown, yaw: f64) {
     } else {
         crate::combat::kill_guard(g, gd, way, Some(true), None, None, crate::game::With::Hand);
     }
-    prop_noise(g, g.ch[g.gd[gd].ch].pos, level);
+    prop_noise(g, g.pos_of(gd), level);
 }
 /// A man killed by hand this moment was seen struck, not shot.
 fn seen_struck(g: &mut Game, gd: GuardId) {
@@ -171,7 +171,7 @@ fn cut_off(g: &mut Game, gd: GuardId) {
         let after = match g.gd[gd].state { s @ (GuardState::Patrol | GuardState::Search) => s, _ => GuardState::Suspicious };
         crate::squad::end_guard_script(g, gd, Some(after));
     }
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     let gc = g.gd[gd].ch;
     g.ch[gc].vel = [0.0, 0.0, 0.0];
     g.ch[gc].anim.look_yaw_extra = 0.0;
@@ -200,20 +200,11 @@ fn leaves_clearing(g: &mut Game, gd: GuardId) {
     if crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() { return; }
     crate::mind::set_state(g, o, GuardState::Suspicious, "player");
     crate::mind::raise(g, o, 0.6, "player");
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     crate::belief::word(g, o, at);
     g.gd[o].react_t = 0.7;
     g.gd[o].search_t = 0.0;
-    lose_path(g, o);
+    g.gd[o].drop_path();
     g.gd[o].search_plan = None;
     g.gd[o].pieing = None;
-}
-
-/// He has nowhere to go: a whole new path, so its serial moves, and the goal is no longer the standoff's own point.
-pub(super) fn lose_path(g: &mut Game, gd: GuardId) {
-    let m_ = &mut g.gd[gd];
-    m_.path = Vec::new();
-    m_.path_serial = m_.path_serial.wrapping_add(1);
-    m_.path_goal = None;
-    m_.path_goal_orbit = false;
 }

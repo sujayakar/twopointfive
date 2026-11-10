@@ -24,8 +24,8 @@ pub enum Do {
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
-fn here(g: &Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
-fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
+fn here(g: &Game) -> String { let p = g.player_pos(g.player); crate::chronicle::room_of(g, p) }
+pub fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
@@ -210,7 +210,7 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
     }
     // a body hidden: hauled some way from where it was taken hold of, and let go
     let drags = g.pl[g.player].dragging();
-    let body_at = |g: &Game, gd: GuardId| -> V3 { match g.ch[g.gd[gd].ch].ragdoll { Some(r) => { let x = &g.tab.ragdoll[r].x; [x[0], 0.0, x[2]] } None => g.ch[g.pl[g.player].ch].pos } };
+    let body_at = |g: &Game, gd: GuardId| -> V3 { match g.ch[g.gd[gd].ch].ragdoll { Some(r) => { let x = &g.tab.ragdoll[r].x; [x[0], 0.0, x[2]] } None => g.player_pos(g.player) } };
     if let Some(b) = drags { if g.saves.drag_ref != Some(b) { g.saves.drag_ref = Some(b); g.saves.body_from = Some(body_at(g, b)); } }
     else if let Some(b) = g.saves.drag_ref.take() {
         let at = body_at(g, b);

@@ -162,22 +162,22 @@ pub(super) fn follow_leader(g: &mut crate::game::Game, gd: GuardId, dt: f64, wal
         }
         g.gd[gd].follow_goal = goal;
         let p = g.ch[c].pos;
-        let off = m::hyp2(goal[0] - p[0], goal[2] - p[2]);
+        let off = v3::dist_xz(goal, p);
         let stale = match g.gd[gd].path_goal {
             None => true,
-            Some(pg) => m::hyp2(pg[0] - goal[0], pg[2] - goal[2]) > 0.5 || (g.gd[gd].path_i >= g.gd[gd].path.len() && off > 0.7),
+            Some(pg) => v3::dist_xz(pg, goal) > 0.5 || (g.gd[gd].path_i >= g.gd[gd].path.len() && off > 0.7),
         };
         if stale && off > 0.35 { go_to(g, gd, goal, Some(true)); }
     }
     let p = g.ch[c].pos;
-    let gap = m::hyp2(lp[0] - p[0], lp[2] - p[2]);
+    let gap = v3::dist_xz(lp, p);
     let speed = if gap > 4.5 { m::max(walk, g.tune.guard_investigate * 1.1) } else if gap > 2.0 { walk * 1.3 } else { walk };
     let arrived = follow_path(g, gd, dt, speed);
     if arrived {
         let look_at = g.gd[gd].leader_still_t > 6.0 && gap < 2.2;
         let lp = if fresh { g.ch[lc].pos } else { lp };
         let p = g.ch[c].pos;
-        let want = if look_at { m::atan2(lp[0] - p[0], lp[2] - p[2]) } else { g.ch[lc].body_yaw + 0.45 };
+        let want = if look_at { v3::yaw_to(p, lp) } else { g.ch[lc].body_yaw + 0.45 };
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, want, 3.0 * dt);
         let phase = g.gd[gd].look_phase;
         g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(phase * 0.6) * (if look_at { 0.25 } else { 0.6 }), 2.0, dt);
@@ -196,17 +196,17 @@ pub(super) fn hold_post(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f
     g.gd[gd].follow_t -= dt;
     let p = g.ch[c].pos;
     let replan = g.gd[gd].follow_t <= 0.0
-        && m::hyp2(ppos[0] - p[0], ppos[2] - p[2]) > 0.45
+        && v3::dist_xz(ppos, p) > 0.45
         && match g.gd[gd].path_goal {
             None => true,
-            Some(pg) => g.gd[gd].path_i >= g.gd[gd].path.len() || m::hyp2(pg[0] - ppos[0], pg[2] - ppos[2]) > 0.5,
+            Some(pg) => g.gd[gd].path_i >= g.gd[gd].path.len() || v3::dist_xz(pg, ppos) > 0.5,
         };
     if replan {
         g.gd[gd].follow_t = 0.5;
         go_to(g, gd, ppos, Some(true));
         let push = match g.gd[gd].path.last() {
             None => true,
-            Some(last) => m::hyp2(last[0] - ppos[0], last[2] - ppos[2]) > 0.02,
+            Some(last) => v3::dist_xz(*last, ppos) > 0.02,
         };
         if push { g.gd[gd].path.push(v3::copy(ppos)); }
     }
@@ -259,7 +259,7 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
             if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
             let oc = g.gd[o].ch;
             let op = g.ch[oc].pos;
-            if m::hyp2(op[0] - fc[0], op[2] - fc[2]) < 2.0 { busy = true; break; }
+            if v3::dist_xz(op, fc) < 2.0 { busy = true; break; }
         }
         if busy { continue; }
         let now = g.time;

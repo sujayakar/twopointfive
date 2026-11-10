@@ -63,14 +63,7 @@ fn fresh_rec() -> crate::fogofwar::Rec {
     crate::fogofwar::Rec { seen: false, framed: None, t: -1e9, at: None, wand_t: None, body: false}
 }
 
-fn bone_or(g: &crate::game::Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
-    match g.ch[c].bones.get(b) {
-        Some(v) => *v,
-        None => v3::add(g.ch[c].pos, [0.0, y, 0.0]),
-    }
-}
-
-fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { bone_or(g, c, crate::character::Bone::Chest, 1.1) }
+fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { g.ch[c].bone_or(crate::character::Bone::Chest, 1.1) }
 
 /// `men as players`
 fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
@@ -256,7 +249,7 @@ fn fog_of_war_team(g: &mut crate::game::Game) {
     g.engine.lights.fog_team.owners.clear();
     g.engine.lights.fog_team.lights.clear();
     for pl in crate::seats::men(g) {
-        let id = g.ch[g.pl[pl].ch].id;
+        let id = g.player_id(pl);
         let light = g.pl[pl].light;
         g.engine.lights.fog_team.owners.add(crate::Num(id));
         g.engine.lights.fog_team.lights.add(light);
@@ -266,7 +259,7 @@ fn fog_of_war_team(g: &mut crate::game::Game) {
         let gd = g.guards[i];
         i += 1;
         if g.team(gd).ours() {
-            let id = g.ch[g.gd[gd].ch].id;
+            let id = g.char_id(gd);
             let light = g.gd[gd].flashlight;
             g.engine.lights.fog_team.owners.add(crate::Num(id));
             g.engine.lights.fog_team.lights.add(light);
@@ -304,7 +297,7 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
             }
         }
     }
-    let (now, linger, p) = (g.time, g.k.fog.linger, g.ch[g.gd[gd].ch].pos);
+    let (now, linger, p) = (g.time, g.k.fog.linger, g.pos_of(gd));
     let r = g.fog_of_war.recs.get_mut(gd).unwrap();
     r.framed = Some(framed);
     if dead && (seen || fired || framed || (since >= 0.0 && since < m::max(linger, 0.5))) { r.body = true; }
@@ -322,7 +315,7 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
 
 /// A man as an eye: off his head, looking where he looks (`gaze_of`). (FogOfWar.eyeOf)
 fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
-    let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
+    let pos = g.ch[c_2].bone_or(crate::character::Bone::Head, 1.65);
     let look = gaze_of(g, c_2);
     let p = g.ch[c_2].pos;
     let y = if g.ch[c_2].alive { EYE_STAND + (EYE_CROUCH - EYE_STAND) * m::min(1.0, m::max(0.0, g.ch[c_2].anim.crouch)) } else { EYE_CROUCH };
@@ -359,7 +352,7 @@ fn fog_of_war_call_words(g: &crate::game::Game, kind: crate::fogofwar::FogOfWarC
     let side = fog_of_war_side_of(g, p);
     let there = crate::dialogue::place_name(g, p);
     let me = fog_of_war_caller(g);
-    let here_at = g.ch[g.pl[me].ch].pos;
+    let here_at = g.player_pos(me);
     let here = crate::dialogue::place_name(g, here_at);
     let odd = js::to_i32(g.fog_of_war.call_n) & 1 != 0;
     let contact = kind == crate::fogofwar::FogOfWarCallWordsKind::Contact;
@@ -492,7 +485,7 @@ fn fog_of_war_line_to_man(g: &crate::game::Game, e: crate::fogofwar::FogEye, gd:
     if l <= 1e-3 { return true; }
     if !g.ch[pc].alive { return false; }
     if !fog_of_war_sight_blocked(g, e.pos, chest) { return true; }
-    let head = bone_or(g, pc, crate::character::Bone::Head, 1.6);
+    let head = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
     !fog_of_war_sight_blocked(g, e.pos, head)
 }
 
@@ -509,7 +502,7 @@ fn fog_of_war_eye_on_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, 
 /// Where a body is looked for: a hand's height over where it lies.
 fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]]
 }
 
@@ -517,7 +510,7 @@ fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
 fn fog_of_war_sees(g: &crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
     let pc = g.gd[gd].ch;
     let (a, b, kind): (V3, V3, f64) = match chest {
-        Some(c) => (c, bone_or(g, pc, crate::character::Bone::Head, 1.6), if g.ch[pc].alive { 3.0 } else { 1.0 }),
+        Some(c) => (c, g.ch[pc].bone_or(crate::character::Bone::Head, 1.6), if g.ch[pc].alive { 3.0 } else { 1.0 }),
         None => {
             let at = body_at(g, gd);
             (at, at, 0.0)
@@ -571,7 +564,7 @@ fn fog_of_war_door_seen(g: &crate::game::Game, d: DoorId, shown: f64) -> bool {
                     let at = g.ch[c].pos;
                     let (dx, dz) = (at[0] - p[0], at[2] - p[2]);
                     if dx * dx + dz * dz > reach { continue; }
-                    let from = bone_or(g, c, crate::character::Bone::Head, 1.6);
+                    let from = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
                     let l = v3::dist(from, p);
                     if l < 0.3 { return true; }
                     if !fog_of_war_sight_blocked(g, from, v3::lerp3(from, p, 1.0 - 0.12 / l)) { return true; }

@@ -17,10 +17,6 @@ fn task_pos(t: &crate::game::GuardTask) -> V3 {
         crate::game::GuardTask::CheckOn(x) => x.pos,
     }
 }
-/// a man's head, or `pos` when no pose has written it (`c.bones.head ?? …`)
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(bone) { Some(p) => *p, None => or }
-}
 /// Clearing.name's body, with no `g`: a plan is often borrowed out of `g` when it is named
 fn plan_name(p: Option<&crate::scene_level::RoomClearPlan>) -> String {
     match p {
@@ -41,8 +37,8 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<c
 fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<crate::squad::Perceive> {
     let pc = g.pl[g.player].ch;
     let pp = g.ch[pc].pos;
-    let gp = g.ch[g.gd[gd].ch].pos;
-    if !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
+    let gp = g.pos_of(gd);
+    if !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && v3::dist_xz(pp, gp) < 0.62 {
         crate::mind::set(g, gd, 1.0, "squad");
         crate::mind::fix(g, gd, Some(v3::copy(pp)), "squad");
         g.gd[gd].last_seen_t = g.time;
@@ -52,7 +48,7 @@ fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<
         if let Some(o) = crate::guards::body_in_view(g, gd) {
             crate::mind::raise(g, gd, 0.5, "squad");
             let oc = g.gd[o].ch;
-            let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+            let h = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
             crate::mind::fix(g, gd, Some([h[0], 0.0, h[2]]), "squad");
             return Some(Perceive::Body);
         }
@@ -161,7 +157,7 @@ fn mate_finds_him_down(g: &mut Game, a: GuardId, b: Option<GuardId>) {
     if crate::condition::down(g, g.gd[left].ch) { return; }
     end_guard_script(g, left, Some(crate::game::GuardState::Suspicious));
     crate::mind::raise(g, left, 0.6, "squad");
-    let at = g.ch[g.gd[dead].ch].pos;
+    let at = g.pos_of(dead);
     crate::belief::word(g, left, at);
     g.gd[left].react_t = 0.7;
     g.gd[left].search_t = 0.0;
@@ -263,7 +259,7 @@ fn on_the_approach(g: &mut Game, men: &[GuardId]) -> bool {
 /// Intermediate waypoints are passed on the fly; each new one is his goal.
 fn passes_his_waypoints(g: &mut Game, i: usize, gd: GuardId) {
     loop {
-        let pos = g.ch[g.gd[gd].ch].pos;
+        let pos = g.pos_of(gd);
         let w = &mut cl!(g).wps[i];
         if !(w.len() > 1 && dist_xz(pos, w[0]) < SETTLE + 0.5) { return; }
         w.remove(0);
@@ -274,8 +270,8 @@ fn passes_his_waypoints(g: &mut Game, i: usize, gd: GuardId) {
 
 fn how_the_pair_stands(g: &mut Game) -> OnTheWalk {
     let (a, b) = { let c = cl!(g); (c.a, c.b) };
-    let apos = g.ch[g.gd[a].ch].pos;
-    let bpos = b.map(|b| g.ch[g.gd[b].ch].pos);
+    let apos = g.pos_of(a);
+    let bpos = b.map(|b| g.pos_of(b));
     let (wa_len, wb_len, wa_end, wb_end) = {
         let c = cl!(g);
         (c.wps[0].len(), c.wps[1].len(), c.wps[0].last().copied(), c.wps[1].last().copied())
@@ -359,7 +355,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
             if dist_xz(pos, g.dr[d].frame_centre) > (if forced { 3.0 } else { 1.5 }) { continue; }
             let along = g.dr[d].def.width * 0.5;
             let spot = crate::doors::doors_work_spot(g, d, pos, Some(0.45), Some(along)).pos;
-            let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+            let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.65, 0.0]));
             if !crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { by = Some(gd); break; }
         }
         let by = match by { Some(by) => by, None => continue };
@@ -399,7 +395,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         }
         crate::game::game_say(g, by, &line, None, None);
         let c = g.gd[by].ch;
-        let at_ear = bone_or(g, c, crate::character::Bone::Head, g.ch[c].pos);
+        let at_ear = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
         return replanned;
     }
@@ -424,7 +420,7 @@ fn to_stack(p: &crate::scene_level::RoomClearPlan) -> V3 { p.stack[0] }
 /// The walk to a room's stack: the nearest variant, out through the room they stand in first, each to his own mark.
 fn clearing_approach(g: &mut crate::game::Game) {
     let a = cl!(g).a;
-    let from = g.ch[g.gd[a].ch].pos;
+    let from = g.pos_of(a);
     let variants = { let c = cl!(g); c.rooms[c.room_i].clone() };
     let here: Vec<crate::scene_level::RoomClearPlan> = match &g.level.clear_plans {
         Some(plans) => plans.iter().filter(|p| p.bounds.is_some() && in_bounds(from, p.bounds, None)).cloned().collect(),
@@ -473,7 +469,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
         'pick: for &side in sides {
             for &k in &[1.6, 1.1, 0.6] {
                 let q: V3 = [mark[0] + u[0] * k + n[0] * side, 0.0, mark[2] + u[2] * k + n[2] * side];
-                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mark[0], 0.45, mark[2]], [q[0], 0.45, q[2]], None) {
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mark, q) {
                     end = q;
                     break 'pick;
                 }

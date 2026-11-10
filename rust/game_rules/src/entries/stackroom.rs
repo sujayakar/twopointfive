@@ -9,9 +9,6 @@ use alloc::{string::String, vec, vec::Vec};
 
 use crate::ask::Over;
 
-#[inline]
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
 // ---------------------------------------------------------------- the book
 
 /// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at
@@ -65,7 +62,7 @@ fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];
         let width = g.dr[o].def.width;
-        if flat(a, g.dr[o].frame_centre) > width + 1.5 { continue; }
+        if v3::dist_xz(a, g.dr[o].frame_centre) > width + 1.5 { continue; }
         let pa = crate::doortools::off_of(g, o, a, 1.0);
         let pb = crate::doortools::off_of(g, o, b, 1.0);
         if (pa > ON_LINE && pb > ON_LINE) || (pa < -ON_LINE && pb < -ON_LINE) { continue; }
@@ -79,9 +76,6 @@ fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
 /// nav.idx(x, z)
 #[inline]
 fn nav_idx(g: &Game, x: f64, z: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, x, z) }
-/// nav.isBlocked(x, z)
-#[inline]
-fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// a cell on the grid and not blocked
 fn cell_free(g: &Game, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
@@ -146,7 +140,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
             let b = crate::doortools::off_of(g, d, c, side);
             let a = crate::doortools::along_of(g, d, c);
             if b < 0.05 || b > 1.8 || a < -0.3 || a > w + 0.3 { continue; }
-            let s = flat(c, front) + (if crate::scene_collision::solid_blocked(g, [front[0], 0.45, front[2]], [c[0], 0.45, c[2]], None) { 10.0 } else { 0.0 });
+            let s = v3::dist_xz(c, front) + (if crate::scene_collision::low_blocked(g, front, c) { 10.0 } else { 0.0 });
             if s < best { best = s; seed = i; }
         }
     }
@@ -214,7 +208,7 @@ fn on_floor_over(g: &Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> b
     let s = steps_to(g, over, f, p);
     if !(s >= 0.0) { return false; }
     let mid = centre(g, f.seed);
-    s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * flat(mid, p)
+    s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * v3::dist_xz(mid, p)
 }
 
 /// is `p` on the floor of that face of `d`: true for a face with no floor at all
@@ -244,7 +238,7 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
         if crate::condition::down(g, g.gd[man].ch) { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if flat(post, q) < SAME_M && flat(g.ch[g.gd[man].ch].pos, post) < 0.6 { return true; }
+        if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.pos_of(man), post) < 0.6 { return true; }
     }
     false
 }
@@ -262,8 +256,6 @@ mod view;
 pub use view::{stack_view_fix, stack_view_open};
 pub(super) use view::stack_view_reach;
 
-/// nothing solid between two places, at knee height
-fn sees(g: &Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
 /// off the opening's own lane
 fn off_lane(g: &Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
 /// the hand of the opening a place is on
@@ -306,7 +298,7 @@ mod tests {
         book_of(&mut g).near = Some(vec![1]);
         assert!(g.m.stackroom.books.as_ref().unwrap().near.is_some());
         assert!(book_of(&mut g).near.is_some());
-        g.engine.world.geom_serial += 1.0;
+        g.boxes_changed();
         assert!(book_of(&mut g).near.is_none());
     }
 
@@ -374,7 +366,7 @@ mod tests {
         let mut g = Game::blank();
         book_of(&mut g);
         let keep = stack_room_book_keep(&mut g);
-        g.engine.world.geom_serial += 1.0;
+        g.boxes_changed();
         book_of(&mut g);
         stack_room_book_put_back(&mut g, keep);
         assert!(g.m.stackroom.books.is_none());

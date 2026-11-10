@@ -2,7 +2,7 @@
 //! tick toward what the game wrote. A teammate's yaws have the game's own turn weight, at the picture's numbers. And idle life: a man in no row lets his gun wander.
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::types::*;
-use super::walk::{home_of, flat, yaw_to};
+use super::walk::{home_of, flat};
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
@@ -59,7 +59,7 @@ pub(super) fn aim_legs(g: &Game, st: &mut KitStage, b: &mut Beat) -> bool {
 }
 /// his rest direction where he stands: a teammate's place's yaw, Sam's the foot of the door
 pub(super) fn rest_yaw(g: &Game, st: &KitStage, b: &Beat) -> f64 {
-    match b.man { Some(x) => home_of(g, st, x).1, None => yaw_to(g.ch[b.ch_id].pos, st.foot) }
+    match b.man { Some(x) => home_of(g, st, x).1, None => crate::v3::yaw_to(g.ch[b.ch_id].pos, st.foot) }
 }
 /// no quiet row asks more than `max_off` off his rest direction
 pub(super) fn lim(rest: f64, y: f64) -> f64 { rest + clamp(wrap(y - rest), -K.max_off * R, K.max_off * R) }
@@ -99,7 +99,7 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
     if b.man.is_none() && !b.quiet {
         if let Some(sp) = b.spot {
             let from = match b.post { Some(q) => [q[0], 0.0, q[1]], None => p };
-            own(now, &mut st.a.sam_ch, yaw_to(from, sp), K.gun_rate * R, -1.0);
+            own(now, &mut st.a.sam_ch, crate::v3::yaw_to(from, sp), K.gun_rate * R, -1.0);
         }
     }
     let cap = (if b.turn { K.body_rate } else { K.gun_rate }) * R;
@@ -149,7 +149,7 @@ pub(super) fn yaws(g: &mut Game, st: &mut KitStage, dt: f64) {
     if !st.a.sam_at.is_nan() { st.a.aim.want = st.a.sam_at; }
     // (under a loud row's cost ALL of him comes round to the door, at the cost's own rate)
     let t = if !st.a.cost_t.is_nan() { QK.cost.turn } else { 0.0 };
-    if t > 0.0 { st.a.body.want = yaw_to(g.ch[c].pos, st.foot); }
+    if t > 0.0 { st.a.body.want = crate::v3::yaw_to(g.ch[c].pos, st.foot); }
     chan_tick(now, &mut st.a.body, m::max(K.body_rate, t) * R, dt);
     chan_tick(now, &mut st.a.aim, m::max(K.gun_rate, t) * R, dt);
     g.ch[c].body_yaw = st.a.body.v;
@@ -214,7 +214,7 @@ pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
     let rest = !(busy && b_sam && !b_team);
     let ok = free && !(busy && b_sam) && flat(p, st.sam) <= K.on_slot;
     let v = scan(g, st, None, 0, ok, 0.0);
-    let y = yaw_to(p, st.foot) + v;
+    let y = crate::v3::yaw_to(p, st.foot) + v;
     let d = flat(st.foot, [p[0], p[2]]);
     st.a.sam_at = if rest { y } else { f64::NAN };
     if !rest { return; }

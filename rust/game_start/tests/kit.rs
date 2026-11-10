@@ -45,7 +45,7 @@ fn one_down(seed: u32, by: DownBy) -> (Play, GuardId) {
 }
 /// a burst a little off him, by the man with that id
 fn burst_beside(p: &mut Play, man: GuardId, who: f64, name: Option<&str>, seed: u32) {
-    let at = p.g.ch[p.g.gd[man].ch].pos;
+    let at = p.g.pos_of(man);
     let spec = game::frag::BlastSpec { who, name: name.map(String::from), fx: Some(false), ..Default::default() };
     game::frag::blast(&mut p.g, [at[0] + 0.6 + 0.2 * nudge(seed, 1), 0.05, at[2] + 0.2 * nudge(seed, 2)], &spec);
 }
@@ -67,7 +67,7 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
-        let who = if sams { p.g.ch[p.g.pl[p.g.player].ch].id } else { p.id_of(p.g.staged.team[0]) };
+        let who = if sams { p.g.player_id(p.g.player) } else { p.id_of(p.g.staged.team[0]) };
         burst_beside(&mut p, man, who, name, seed);
         p.run(0.5);
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");

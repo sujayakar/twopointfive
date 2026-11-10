@@ -40,7 +40,7 @@ fn mid(a: V3, b: V3) -> V3 { [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, (a[2] + 
 fn end_dist(g: &crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f64 {
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let mp = if end == crate::hands::HaulEnd::Feet {
         let (a, b) = (pt(g, rc, rag.ank_l), pt(g, rc, rag.ank_r));
         mid(a, b)
@@ -56,7 +56,7 @@ pub(super) fn body_grip_dist(g: &crate::game::Game, gd: GuardId, within: f64) ->
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
     let (a, b) = (pt(g, rc, rag.sho_l), pt(g, rc, rag.sho_r));
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     if v3::dist_xz(mid(a, b), p) >= within { return m::INF; }
     end_dist(g, gd, crate::hands::HaulEnd::Head)
 }
@@ -153,7 +153,7 @@ fn unit(v: V3, or: V3) -> V3 {
 fn stand_room(g: &crate::game::Game, p: V3) -> bool {
     let mut q: V3 = [p[0], p[1], p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.42, 1.0, 1.7, Some(2.0));
-    m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.01
+    v3::dist_xz(q, p) < 0.01
 }
 
 /// The unit direction a turned toward b by s of the angle between them.
@@ -502,7 +502,7 @@ pub(super) fn haul_set_done(g: &crate::game::Game) -> bool {
     let (a, b) = (pt(g, rc, rag.hip_l), pt(g, rc, rag.hip_r));
     let at = mid(a, b);
     let lower = g.k.hands.lower_secs;
-    h.t >= lower && (h.t >= lower + 0.5 || (m::hyp2(at[0] - to.p[0], at[2] - to.p[2]) < 0.06 && at[1] < to.p[1] + 0.12))
+    h.t >= lower && (h.t >= lower + 0.5 || (v3::dist_xz(at, to.p) < 0.06 && at[1] < to.p[1] + 0.12))
 }
 
 /// How fast his feet may go with a body, as a share of the crouch.
@@ -585,7 +585,7 @@ fn open_side(g: &crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
 /// Where to stand for the leaf to go from a0 to a1 without meeting him: Some(None) = where he is (`null`); Some(Some(spot)) = the nearest standing room the sweep
 /// misses, on his side of the wall; None = there is none within a step (`undefined`).
 fn clear_spot(g: &crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> {
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let need = body_r(g, d);
     let clear = sweep_dist(g, d, a0, a1, p) >= need;
     let wall = leaf_perp(g, d, 0.0, p);   // his side of the wall the door is in; in the threshold itself either side will do
@@ -633,7 +633,7 @@ fn find_spot(g: &Game, d: DoorId, a0: f64, a1: f64, p: V3, need: f64, wall: f64,
 pub fn door_move_begin(g: &mut crate::game::Game, d: DoorId) -> bool {
     use crate::doors::{door_is_closed, door_max_a, door_min_a, door_swing};
     let pl = g.player;
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     if g.dr[d].leaf.off || hands_busy(g, &crate::seats::here(g)) { return false; }
     let keys = g.pl[pl].keys.clone();
     if crate::doors::doors_locked_out(g, d, p, Some(&keys)) { return false; }
@@ -909,7 +909,7 @@ fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) 
         let Some(k) = row.kick.as_ref() else { continue };
         if k.hand != Some(true) { continue; }
         let (door, kp) = (row.door, k.pos);
-        if !g.dr[door].leaf.off && m::hyp2(pos[0] - kp[0], pos[2] - kp[2]) < g.k.hands.team_pre_m { return Some(door); }
+        if !g.dr[door].leaf.off && v3::dist_xz(pos, kp) < g.k.hands.team_pre_m { return Some(door); }
     }
     None
 }

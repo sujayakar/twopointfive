@@ -24,11 +24,6 @@ fn un(x: Option<f64>) -> f64 {
 fn truthy_opt(x: Option<f64>) -> bool {
     x.map_or(false, js::truthy)
 }
-/// `!!x` of an optional boolean.
-#[inline]
-fn yes(x: Option<bool>) -> bool {
-    x == Some(true)
-}
 /// `(w.owed ?? 0) | (input.clicked & 5)`: the buttons kept are a word of bits in a number's clothes.
 #[inline]
 fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
@@ -62,7 +57,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::gunwall::gun_wall_is(g, c) { return true; }
     if let Some(w) = g.pl[p].wall {
         if w.kind == Some(WallHoldKind::Stack) {
-            if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
+            if w.lean_want == Some(true) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
             } else if w.settle >= 1.0 && stack_in_way(g, p, seat.aim_point) {
                 return true;
@@ -72,10 +67,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let raised = g.ch[c].anim.upper == crate::character::UpperMode::Aim
         || (crate::game::player_rifle_up(g, p) && g.ch[c].anim.long_stance == Some(crate::character::LongStance::Shoulder));
     if !raised { return false; }
-    let a = match g.ch[c].bones.get(crate::character::Bone::UpperArmR) {
-        Some(a) => *a,
-        None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
-    };
+    let a = crate::combat::shoulder(g, c);
     let muzzle = g.ch[c].muzzle;
     crate::gunwall::wood_between(g, a, muzzle)
 }
@@ -127,7 +119,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
     }
     let w0 = g.pl[p].wall.unwrap();
     let was = un(w0.up) > 0.0;
-    let up = if pull || (yes(w0.lean_want) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
+    let up = if pull || (w0.lean_want == Some(true) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
     w!(g, p).up = Some(up);
     if up <= 0.0 {
         let w = w!(g, p);
@@ -160,11 +152,11 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, p: PlayerId, di
     let past = |w: &crate::player::WallHold| { let l = un(w.lean); un(w.lean_dir) * (ws.lean_along + w.lean_more.unwrap_or(0.0)) * l * l * (3.0 - 2.0 * l) };
     if crate::samstun::sam_rooted(g, &crate::seats::here(g), None) { return past(&w); }
     let able = w.kind == Some(WallHoldKind::Stack) && dir != -w.at_edge && !crate::weapons::firearm_reloading(g, g.pl[p].rifle);
-    let still = yes(w.lean_want) || m::abs(w.v) < 0.05;
+    let still = w.lean_want == Some(true) || m::abs(w.v) < 0.05;
     let want = able && still && w.settle >= 1.0 && w.at_edge != 0.0 && steps_out(g, p, &w, lean_aim(g, cam), dt);
     minds_lean(g, p, want, able, dt);
     let w = w!(g, p);
-    let out = yes(w.lean_want);
+    let out = w.lean_want == Some(true);
     w.lean_out_t = Some(if out { un(w.lean_out_t) + dt } else { 0.0 });
     let l = v3::clamp(un(w.lean) + (if out { dt / ws.lean_out } else { -dt / ws.lean_back }), 0.0, 1.0);
     w.lean = Some(l);
@@ -187,7 +179,7 @@ fn lean_aim(g: &Game, cam: CameraId) -> V3 {
 /// keeps out a little longer. Going out, he goes as much further as his gun needs to be clear of the corner.
 fn steps_out(g: &mut Game, p: PlayerId, w: &crate::player::WallHold, at: V3, dt: f64) -> bool {
     let ws = g.k.wallsnap;
-    let (t, n, edge, out) = (w.along, w.n, w.at_edge, yes(w.lean_want));
+    let (t, n, edge, out) = (w.along, w.n, w.at_edge, w.lean_want == Some(true));
     let end = if edge > 0.0 { w.hi } else { w.lo };
     let corner = crate::wallsnap::ws_corner_angle((at[0] * t[0] + at[2] * t[2] - end) * edge, at[0] * n[0] + at[2] * n[2] - w.d);
     let worth = corner.dist >= ws.lean_min_dist - (if out { ws.lean_keep_dist } else { 0.0 })
@@ -205,9 +197,9 @@ fn steps_out(g: &mut Game, p: PlayerId, w: &crate::player::WallHold, at: V3, dt:
 /// From past the end, the start of the way to it is open.
 fn buys_line(g: &Game, p: PlayerId, w: &crate::player::WallHold, at: V3, there: f64) -> bool {
     let h = if g.pl[p].crouch { 0.85 } else { 1.3 };
-    let pos = g.ch[g.pl[p].ch].pos;
+    let pos = g.player_pos(p);
     let a: V3 = [pos[0] + w.along[0] * there, h, pos[2] + w.along[2] * there];
-    let d = m::hyp2(at[0] - a[0], at[2] - a[2]);
+    let d = v3::dist_xz(at, a);
     let r = m::min(1.0, g.k.wallsnap.lean_clear_m / m::max(d, 1e-3));
     d >= 0.2 && !crate::scene_collision::shot_blocked(g, a, [a[0] + (at[0] - a[0]) * r, h + (at[1] - h) * r, a[2] + (at[2] - a[2]) * r], None, None)
 }
@@ -276,7 +268,7 @@ fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let ws = g.k.wallsnap;
     let (n, t) = (w0.n, w0.along);
     let po = g.tab.camera[cam].peek_offset.unwrap_or([0.0, 0.0, 0.0]);
-    let out = truthy_opt(w0.lean) || yes(w0.lean_want) || truthy_opt(w0.lean_off);
+    let out = truthy_opt(w0.lean) || w0.lean_want == Some(true) || truthy_opt(w0.lean_off);
     if !out || w0.cam_along.is_none() {
         w!(g, p).cam_along = Some(w0.side * ws.cam_side * (1.0 - w0.peek));
     }
@@ -303,7 +295,7 @@ impl Face {
 /// Where he actually is, read back into the hold; shoved off the face or past its end he lets go (false). `firm`: what stopped him stops his pace too.
 fn wall_take_back(g: &mut Game, p: PlayerId, f: Face, firm: bool, dir: f64) -> bool {
     let w0 = g.pl[p].wall.unwrap();
-    let pos = g.ch[g.pl[p].ch].pos;
+    let pos = g.player_pos(p);
     let u = f.along(pos) - w0.lean_off.unwrap_or(0.0);
     let off = f.out(pos) - f.base;
     if u < f.lo - 0.25 || u > f.hi + 0.25 || off > WALL_SHOVE_OFF {
@@ -342,7 +334,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     collide_player(g, f.y1);
     keep_off_guards(g, dt, f.y1, None);
     if lean != 0.0 || truthy_opt(g.pl[p].wall.unwrap().lean_off) {
-        let got = f.along(g.ch[g.pl[p].ch].pos) - w!(g, p).u;
+        let got = f.along(g.player_pos(p)) - w!(g, p).u;
         w!(g, p).lean_off = Some(if lean > 0.0 { v3::clamp(got, 0.0, lean) } else if lean < 0.0 { v3::clamp(got, lean, 0.0) } else { 0.0 });
     }
     if g.pl[p].wall.unwrap().settle >= 1.0 && !wall_take_back(g, p, f, true, dir) { return false; }
@@ -460,7 +452,7 @@ fn onto_face(g: &mut Game, p: PlayerId, f: Face, u: f64, u_was: f64, to: V3, e_p
     let pos = g.ch[c].pos;
     let (mut x, mut z) = ((to[0] - pos[0]) * k, (to[2] - pos[2]) * k);
     let l = m::hyp2(x, z);
-    let most = m::hyp2(to[0] - w.from[0], to[2] - w.from[2]) * (e - e_prev) + 0.02;
+    let most = v3::dist_xz(to, w.from) * (e - e_prev) + 0.02;
     if l > most { x *= most / l; z *= most / l; }
     crate::character::pos_replace(g, c, [pos[0] + x, pos[1], pos[2] + z]);
 }

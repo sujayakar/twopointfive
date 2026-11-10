@@ -10,9 +10,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small reads
 fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
-/// where a man with no foe named looks: the player nearest him
-fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
-fn say(g: &mut Game, m: GuardId, text: &str) { crate::game::game_say(g, m, text, None, None) }
 /// `Q.target!.plan!`
 fn target_plan(g: &Game) -> crate::scene_level::RoomClearPlan { g.qrf.target.as_ref().unwrap().plan.clone().unwrap() }
 /// `Q.target!.room`
@@ -29,7 +26,7 @@ fn in_cast<R>(g: &mut Game, mut f: impl FnMut(&mut Game) -> R) -> R {
     r
 }
 /// `g.audio.play('radio', man.char.bones.head ?? man.char.pos, vol)`'s place
-fn head_or_pos(g: &Game, m: GuardId) -> V3 { let c = g.gd[m].ch; g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos) }
+fn head_or_pos(g: &Game, m: GuardId) -> V3 { let c = g.gd[m].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) }
 
 /// The point on the trail `s` metres back from the head, walking the crumbs backwards; the oldest crumb if the trail is shorter.
 pub(super) fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
@@ -160,11 +157,11 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
                 g.dr[d].leaf.vel = v;
                 g.dr[d].leaf.quiet_t = -1.0;
                 g.dr[d].leaf.creak_armed = false;
-                let who = g.ch[g.gd[lead].ch].id;
+                let who = g.char_id(lead);
                 g.dr[d].leaf.last_who = who;
                 let at = crate::doors::door_pos(g, d);
                 crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
-                say(g, lead, "door!");
+                crate::game::game_say(g, lead, "door!", None, None);
             }
         }
         g.qrf.shoved_at = g.time;
@@ -206,7 +203,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             crate::character::anim_toss_item(g, lead_c, Some(crate::character::TOSS_QUICK));
             g.qrf.bangs -= 1.0;
             g.qrf.can_land_t = f64::NAN;
-            say(g, lead, "bang out!");
+            crate::game::game_say(g, lead, "bang out!", None, None);
             note(g, "bang-out");
             // everybody's head off the doorway while it cooks
             for (i, &man) in el.iter().enumerate() {
@@ -219,7 +216,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             g.qrf.phase_t = 0.0;
         }
         _ => {
-            say(g, lead, "no bang — going dry. go!");
+            crate::game::game_say(g, lead, "no bang — going dry. go!", None, None);
             start_flow(g, el);
         }
     }
@@ -233,7 +230,7 @@ fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
         let e = g.events[i];
         if e.kind == crate::director::EventKind::Bang && e.time == g.time && dist_xz(e.pos, at) < 1.0 { g.events.remove(i); break; }
     }
-    let id = g.ch[g.gd[who].ch].id;
+    let id = g.char_id(who);
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent {
         kind: crate::director::EventKind::Door, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(id), serial, ..Default::default()
@@ -264,7 +261,7 @@ fn start_flow(g: &mut crate::game::Game, el: &[GuardId]) {
     g.qrf.phase_t = 0.0;
     g.qrf.flowed = 0.0;
     g.qrf.can = None;
-    say(g, el[0], "go! go! go!");
+    crate::game::game_say(g, el[0], "go! go! go!", None, None);
     note(g, "flow");
 }
 
@@ -299,10 +296,10 @@ pub(super) fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let said = g.qrf.log.iter().any(|l| l.what == what);
         if !said && man_arrived(g, el[0]) {
             let side1: &str = if p.lines.side1.is_empty() { "my side clear." } else { &p.lines.side1 };
-            say(g, el[0], side1);
+            crate::game::game_say(g, el[0], side1, None, None);
             if let Some(&two) = el.get(1) {
                 let side2: &str = if p.lines.side2.is_empty() { "door side clear." } else { &p.lines.side2 };
-                say(g, two, side2);
+                crate::game::game_say(g, two, side2, None, None);
             }
             note(g, &what);
         }
@@ -314,8 +311,8 @@ pub(super) fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let t = g.time;
         g.qrf.cleared.set(room.clone(), t);
         g.cleared_at.set(room.clone(), t);   // (the shift's pair reads the same ledger)
-        if let Some(&three) = el.get(2) { say(g, three, "deep — clear."); }
-        if let Some(&four) = el.get(3) { say(g, four, "door — clear."); }
+        if let Some(&three) = el.get(2) { crate::game::game_say(g, three, "deep — clear.", None, None); }
+        if let Some(&four) = el.get(3) { crate::game::game_say(g, four, "door — clear.", None, None); }
         let rest = if g.qrf.bangs > 0.0 { "moving on" } else { "no bangs left, moving on" };
         radio(g, Some(el[0]), &format!("{} clear — negative contact. {}", room, rest));
         note(g, &format!("clear:{}", room));
@@ -465,7 +462,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 
 /// Contact: every man off his script and onto the AI, on the seer's fix; the entry let go of.
 pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
-    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(near_man_pos(g, seer)) };
+    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(super::move_in::near_man_pos(g, seer)) };
     for &man in el {
         if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::game::GuardState::Alert)); }
         let is_seer = man == seer;
@@ -491,7 +488,7 @@ pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId)
     g.qrf.phase = Phase::Fight;
     g.qrf.phase_t = 0.0;
     g.qrf.can = None;
-    say(g, seer, "CONTACT!");
+    crate::game::game_say(g, seer, "CONTACT!", None, None);
     let voice = el.iter().copied().find(|&man| man != seer).unwrap_or(seer);
     let tag = match marks_of(g) { Some(mk) => mk.tag, None => String::from("QRF") };
     let room = crate::dialogue::room_name(g, fix);
@@ -741,7 +738,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].script.as_mut().unwrap().aim_at = Some([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
             }
             let eyes = perceive_scripted(g, gd, dt);
-            let him = match g.gd[gd].foe { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
+            let him = match g.gd[gd].foe { Some(c) => g.ch[c].pos, None => super::move_in::near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
             if eyes && arrived_at < 0.0 && dist_xz(g.pos_of(gd), him) > WALKOUT_ENGAGE_M && g.cond[g.gd[gd].ch].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");
@@ -758,7 +755,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 crate::guards::reset_chase(g, gd);
                 g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Sight);
                 g.gd[gd].witness.alert_t = g.time;
-                say(g, gd, "CONTACT — outside!");
+                crate::game::game_say(g, gd, "CONTACT — outside!", None, None);
                 radio(g, Some(gd), &format!("contact outside — {}, he's coming out!", post.name));
                 if g.time - g.last_sting_t > 8.0 {
                     audio(g, "alertSting", None, 0.75);

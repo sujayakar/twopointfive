@@ -47,7 +47,7 @@ fn say_line(g: &mut Game, gd: GuardId) {
 }
 /// hit: is this body in the lane
 fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f64, l: f64) -> bool {
-    let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[ch].pos };
+    let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(g.ch[ch].pos);
     let t = v3::clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2, 0.0, t_max);
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < g.k.coverfire.lane + g.k.coverfire.cone_k * t * l
 }
@@ -56,8 +56,6 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     let row = g.m.coverfire.states.as_mut().and_then(|s| s.men.get_mut(gd)).and_then(|m| m.chew.as_mut());
     if let Some(cw) = row { f(cw); }
 }
-/// is he up
-fn up_now(g: &Game, who: CharId) -> bool { !crate::condition::down(g, who) && g.ch[who].alive }
 
 // ---------------------------------------------------------------- the module's own
 
@@ -89,16 +87,6 @@ fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
     };
     *a += 1.0;
     *b += 1;
-}
-
-/// the engine's half: walls and cover give under rounds
-fn chew_live(g: &crate::game::Game) -> bool {
-    crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
-}
-
-/// is the rule running this frame
-fn live(g: &crate::game::Game) -> bool {
-    g.ai_enabled
 }
 
 /// the state: a clock gone back forgets every man; none yet makes one
@@ -145,7 +133,7 @@ fn log(g: &mut crate::game::Game, s: &str) {
 
 /// this gun's round in the engine's units
 fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
-    let cls = g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().cls;
+    let cls = g.weapon(g.fa[g.gd[gd].weapon].def).cls;
     let k = if cls == crate::weapons::WeaponClass::Pistol { g.k.walls.pistol_k } else { 1.0 };
     k * crate::destruction::chaos_of(g) * 2.0
 }
@@ -156,10 +144,7 @@ fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 fn see(g: &mut crate::game::Game, gd: GuardId, who: CharId, low: bool) {
     let c = who;
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
-    let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
-        Some(t) => *t,
-        None => match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(t) => *t, None => pos },
-    };
+    let trunk = g.ch[c].bone(crate::character::Bone::Spine2).or(g.ch[c].bone(crate::character::Bone::Hips)).unwrap_or(pos);
     let at: V3 = [trunk[0], pos[1] + (if low { 0.8 } else { 1.25 }), trunk[2]];
     let t = g.time;
     let m = man_of(g, gd);
@@ -200,12 +185,12 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
     let mut out: Vec<KnownItem> = Vec::new();
     if let Some(own) = s.men.get(gd) {
         for k in own.know.iter() {
-            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, k.who) {
+            if who_passes(who, k.who) && time - k.t <= stale_secs && crate::picture::up(g, k.who) {
                 out.push(KnownItem { k: *k, call: k.call.unwrap_or(false) });
             }
         }
     }
-    let (team, my_pos) = (g.team(gd), g.ch[g.gd[gd].ch].pos);
+    let (team, my_pos) = (g.team(gd), g.pos_of(gd));
     for (mate, row) in s.men.iter() {
         if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
@@ -214,7 +199,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
                 && time - k.t <= call_secs
-                && up_now(g, k.who)
+                && crate::picture::up(g, k.who)
                 && !out.iter().any(|o| o.k.who == k.who && o.k.t >= k.t)
             {
                 out.push(KnownItem { k: *k, call: true });
@@ -261,7 +246,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
             }
         }
     }
-    if !chew_live(g) { no(g, "solid"); return None; }
+    if !crate::wallcharge::wall_charge_on(g) { no(g, "solid"); return None; }
     if st.index >= 1e6 { no(g, "door"); return None; }
     let b = match crate::wallbreak::wall_break_breakable_at(g, st.index) {
         Some(b) => b,
@@ -355,7 +340,7 @@ pub fn cover_lane(g: &crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool 
 
 /// a free man's sum: is shooting through quicker than walking round
 fn worth(g: &crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
     let len = crate::places::walk_len(pos, &path) + dist_xz(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
@@ -566,7 +551,7 @@ fn keep_the_chews_books(g: &mut Game, w: Weighing, a: &Ask, to: V3, budget: f64)
 
 /// EYES ON, NO LINE: may the round go at `to` anyway, because what blocks it is breakable and worth the rounds
 pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>, to: V3) -> bool {
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let who = match who {
         None => return false,
         Some(who) => who,
@@ -588,7 +573,7 @@ pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>, t
 
 /// NO EYES ON HIM: the fight AI's man lays on the place he knows and fires through what hides it; returns the point his gun is on
 pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
-    if !live(g) { return None; }
+    if !g.ai_enabled { return None; }
     let c = g.gd[gd].ch;
     let foe = g.gd[gd].foe?;
     if crate::teams::foe_down(g, gd)
@@ -620,7 +605,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
             return None;
         }
     }
-    let facing_err = m::abs(v3::wrap_angle(m::atan2(to[0] - pos[0], to[2] - pos[2]) - g.ch[c].aim_yaw));
+    let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(pos, to) - g.ch[c].aim_yaw));
     let on = facing_err < 0.25 && !g.gd[gd].muzzle_down;
     let settle_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.settle_k);
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * settle_k;
@@ -637,7 +622,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let ok = on && lay >= p.acquire_min - 1e-9;
     let fa = g.gd[gd].weapon;
     let def = g.fa[fa].def;
-    if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
+    if g.weapon(def).burst.is_some() {
         let tr = g.arms[g.gd[gd].ch].aim.track;
         g.arms[g.gd[gd].ch].aim.track = lay;
         crate::guards::burst_trigger(g, gd, dt, to, ok, ok, None);
@@ -648,7 +633,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         && crate::weapons::firearm_fire(g, fa)
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
-        let w = g.m.weapons.weapons.get(def).unwrap();
+        let w = g.weapon(def);
         let (r, cd, cd_jitter) = (w.ai_spread, w.cd, w.cd_jitter);
         g.arms[g.gd[gd].ch].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
@@ -668,7 +653,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
 
 /// NOBODY IN HIS SIGHT: the same choice with the room fight's own trigger; true = his gun is on a piece this frame
 pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     state_of(g);
@@ -737,7 +722,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
         crate::game::game_say(g, gd, "reloading.", None, None);
         return true;
     }
-    let r = g.m.weapons.weapons.get(g.fa[fa].def).unwrap().ai_spread;
+    let r = g.weapon(g.fa[fa].def).ai_spread;
     let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * sk.spread_k;
     let sup_v = g.cond[g.gd[gd].ch].sup.v;
     let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
@@ -768,7 +753,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
 
 /// this frame's sightings copied into what each man knows · the change feed read · this frame's rounds counted on the chews
 pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
-    if !live(g) { return; }
+    if !g.ai_enabled { return; }
     let time = g.time;
     state_of(g).last_t = time;
     what_gave_under_fire(g, time);
@@ -868,7 +853,7 @@ fn the_operatives_see(g: &mut Game, dt: f64) {
 fn count_the_round_on_his_chew(g: &mut Game, e_to: V3, e_who: Option<f64>, time: f64) {
     let mut at = 0;
     while let Some(gd) = state_of(g).men.next_key(&mut at) {
-        let char_id = g.ch[g.gd[gd].ch].id;
+        let char_id = g.char_id(gd);
         let cw = match state_of(g).men.get(gd).and_then(|row| row.chew.as_ref()) {
             Some(cw) if Some(char_id) == e_who && cw.t == time => cw.clone(),
             _ => continue,

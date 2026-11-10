@@ -54,8 +54,7 @@ fn on_floor(g: &Game) -> Vec<OnFloor> {
 }
 
 fn xz(p: V3) -> [f64; 2] { [p[0], p[2]] }
-fn head_of(g: &Game, c: CharId) -> V3 { match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) } }
-fn squad_up(g: &Game, gd: GuardId) -> bool { g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) }
+fn head_of(g: &Game, c: CharId) -> V3 { g.ch[c].bone_or(Bone::Head, 1.65) }
 
 /// the man, as a take names him
 fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
@@ -288,11 +287,11 @@ fn ear(g: &Game, c: CharId, a: V3) -> bool {
     let (mut len, mut door, mut pa) = (0.0, false, [b[0], 1.0, b[2]]);
     for q in path {
         let pb = [q[0], 1.0, q[2]];
-        len += m::hyp2(pb[0] - pa[0], pb[2] - pa[2]);
+        len += v3::dist_xz(pb, pa);
         if !door && crate::scene_collision::segment_blocked_dynamic(g, pa, pb, Some(seal)) { door = true; }
         pa = pb;
     }
-    let path_len = m::max(len + m::hyp2(a[0] - pa[0], a[2] - pa[2]), straight);
+    let path_len = m::max(len + v3::dist_xz(a, pa), straight);
     path_len <= reach * (if door { 0.32 } else { 0.72 })
 }
 
@@ -301,7 +300,7 @@ fn heard(g: &mut Game, src: V3) -> bool {
     let a = [src[0], m::max(src[1], 0.9), src[2]];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if squad_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
+        if crate::lesson::operative_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
     }
     for pl in crate::seats::men_up(g) { let c = g.pl[pl].ch; if ear(g, c, a) { return true; } }
     false
@@ -323,7 +322,7 @@ fn player_sees(g: &Game, pl: PlayerId, at: [f64; 2]) -> bool {
 /// the side of the player's man a way lies on, in the words of the fog's own calls (asked of a point a long way off along it)
 fn side_word(g: &Game, pl: PlayerId, u: [f64; 2]) -> String {
     use crate::close::CloseId;
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     match crate::fogofwar::fog_of_war_side_of(g, [p[0] + u[0] * 50.0, 0.0, p[2] + u[1] * 50.0]) {
         CloseId::Front => String::from("from the front"),
         CloseId::Behind => String::from("from behind us"),
@@ -347,7 +346,7 @@ fn witness(g: &mut Game) {
             if g.recap.lost[i].saw.is_none() {
                 for j in 0..g.guards.len() {
                     let gd = g.guards[j];
-                    if !squad_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
+                    if !crate::lesson::operative_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let c = g.gd[gd].ch;
                     if line_to(g, c, at) { g.recap.lost[i].saw = Some(gd); break; }
                 }
@@ -355,7 +354,7 @@ fn witness(g: &mut Game) {
             for &p in &men { if !g.recap.lost[i].players_saw.contains(&p) && player_sees(g, p, at) { g.recap.lost[i].players_saw.push(p); } }
         }
         if age < k.live_beat { continue; }
-        let by = g.recap.lost[i].saw.filter(|&gd| squad_up(g, gd));   // (a witness who has gone down himself since tells nobody)
+        let by = g.recap.lost[i].saw.filter(|&gd| crate::lesson::operative_up(g, gd));   // (a witness who has gone down himself since tells nobody)
         let pl_down = crate::condition::down(g, g.pl[pl].ch);
         let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !crate::condition::down(g, g.pl[p].ch));   // (…and a player who has gone down since tells nobody either)
         if by.is_none() && !player_saw && !g.recap.lost[i].heard {
@@ -368,7 +367,7 @@ fn witness(g: &mut Game) {
         g.recap.lost_live[i].from = src;
         let (Some(u), Some(by)) = (src, by) else { continue; };
         if player_saw || pl_down { continue; }
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         if m::hyp2(p[0] - at[0], p[2] - at[1]) > k.live_side_m { continue; }
         // (no cue of the cues' own is up over him: a contact call outranks this; his own 'man down.' is followed by it)
         let shown = crate::cues::cues_bubble_of(g, by);

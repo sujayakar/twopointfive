@@ -17,7 +17,6 @@ fn in_rect(p: V3, r: Option<crate::scene_scenarios::Rect>) -> bool {
 /// g.orders.log's last row, as `lastOrder` holds it: its serial
 fn last_log_order(seat: &crate::seats::SeatRef) -> Option<u32> { seat.orders.log.last().map(|l| l.serial) }
 fn hot(g: &Game) -> bool { g.k.rescue.start == crate::knobs::RescueKStart::Hot }
-fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 
 /// A line in the scenario's log, cut when it grows long.
 pub(in crate::missions) fn rescue_note(g: &mut crate::game::Game, what: &str) {
@@ -251,8 +250,8 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
 
 /// This frame's loud things: the last one the team did is where a roamer goes.
 fn rescue_hear(g: &mut crate::game::Game) {
-    let mut mine: Vec<f64> = vec![g.ch[g.pl[g.player].ch].id];
-    for &o in &g.staged.team { mine.push(g.ch[g.gd[o].ch].id); }
+    let mut mine: Vec<f64> = vec![g.player_id(g.player)];
+    for &o in &g.staged.team { mine.push(g.char_id(o)); }
     let mut i = 0;
     while i < g.events.len() {
         let e = g.events[i];
@@ -415,7 +414,7 @@ fn rescue_crew_call(g: &mut crate::game::Game) {
     g.rescue.alarm_at = g.time;
     rescue_note(g, "crew:call");
     let line = if crate::dialogue::is_office(g) { "they're here! get off the corridor — guns on my door!" } else { "they're here! get out of the open — guns on my door!" };
-    say_radio(g, cap, line);
+    crate::game::game_say(g, cap, line, Some(true), None);
 }
 
 /// One of the captor's two men on the word: true = a roamer who is the crew's this frame. `d` is the caller's copy of his row: it is read as it stands on the way in and put right on the way out.
@@ -500,7 +499,7 @@ fn take_the_cross(g: &mut Game, man: &CrewMan, x: V3) {
     } else {
         "I can see your door from here — let them stack on it."
     };
-    say_radio(g, man.h, line);
+    crate::game::game_say(g, man.h, line, Some(true), None);
 }
 
 /// The door man with no such place goes inside to his mark, if there is a way to it. False if not: he is out of it.
@@ -522,7 +521,7 @@ fn come_in_to_the_room(g: &mut Game, man: &CrewMan) -> bool {
     let row = g.rescue.defs.get_mut(h).unwrap();
     row.crew = DefCrew::Going; row.spot = Some(v3::copy(spot));
     rescue_note(g, &format!("crew:in:{}", man.name));
-    say_radio(g, h, "coming in — I've got the door.");
+    crate::game::game_say(g, h, "coming in — I've got the door.", Some(true), None);
     true
 }
 
@@ -538,7 +537,7 @@ fn stay_dark(g: &mut Game, man: &CrewMan) {
     let row = g.rescue.defs.get_mut(man.h).unwrap();
     row.crew = DefCrew::Wait; row.spot = y; row.noise0 = noise;
     rescue_note(g, &format!("crew:wait:{}", man.name));
-    say_radio(g, man.h, "staying dark — I'll come up behind them.");
+    crate::game::game_say(g, man.h, "staying dark — I'll come up behind them.", Some(true), None);
 }
 
 /// On his way in he pulls the door to behind him; at the end of the leg he is inside, or came up short.
@@ -550,7 +549,7 @@ fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene
         if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(g.pos_of(h), bounds) {
             let (at, fc) = (g.pos_of(h), g.dr[dr].frame_centre);
             if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
-                let who = g.ch[g.gd[h].ch].id;
+                let who = g.char_id(h);
                 crate::doors::doors_pull_to(g, dr, who);
             }
         }
@@ -585,7 +584,7 @@ fn move_up_behind(g: &mut Game, man: &CrewMan) {
     turn_him_loose(g, man.h, man.pt);
     rescue_note(g, &format!("crew:behind:{}", man.name));
     rescue_note(g, &format!("released:{}", man.name));
-    say_radio(g, man.h, "they're on the door — moving up behind!");
+    crate::game::game_say(g, man.h, "they're on the door — moving up behind!", Some(true), None);
 }
 
 /// Off the mission's lead and loose in the room fight; unless he already has them in his sights he goes for `to`, at full alert.

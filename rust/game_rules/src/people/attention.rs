@@ -38,9 +38,6 @@ pub fn attention_lines() -> Vec<String> {
     all
 }
 
-/// `g.say(gd, text)` with the rest of its arguments left out.
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
-
 /// A line from a pool, never the one he used last. One die.
 fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let last = mem(g, gd).line;
@@ -48,7 +45,7 @@ fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let mut i = js::rem(m::floor(crate::dice::draw_of(g, "attention::line#1", gd) * n), n) as i32;
     if pool.len() > 1 && i == last { i = (i + 1) % pool.len() as i32; }
     mem(g, gd).line = i;
-    say(g, gd, &pool[i as usize]);
+    crate::game::game_say(g, gd, &pool[i as usize], None, None);
 }
 
 /// Write a changed hold back to his row (`H` is the row's own object in the TypeScript).
@@ -64,7 +61,7 @@ pub fn attention_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::attenti
 /// The cosine of the angle at his eye between the thing that holds him and a man at `p`.
 fn off_cos(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> f64 {
     let c = g.gd[gd].ch;
-    let e = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
+    let e = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     let mut ax = h.at[0] - e[0];
     let mut az = h.at[2] - e[2];
     let al = m::hyp2(ax, az);
@@ -140,9 +137,7 @@ pub(super) fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
             crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
         }
         let man = &mut g.gd[gd];
-        man.path = Vec::new();
-        man.path_serial = man.path_serial.wrapping_add(1);
-        man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        man.drop_path();
     }
 }
 
@@ -250,7 +245,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
         h = None;
     }
     if !free {
-        if f.owed { say(g, gd, "huh?"); }
+        if f.owed { crate::game::game_say(g, gd, "huh?", None, None); }
         return;
     }
     if let Some(hh) = h { h = hold_as_it_stands(g, gd, hh, f, now); }
@@ -264,7 +259,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
             }
         }
     }
-    if f.owed && !spoke { say(g, gd, "huh?"); }
+    if f.owed && !spoke { crate::game::game_say(g, gd, "huh?", None, None); }
     if h.is_none() {
         if let Some(l) = f.lent { take_up_what_is_lent(g, gd, l, now); }
     }
@@ -415,9 +410,7 @@ fn spent_on_it(g: &mut Game, gd: GuardId, foe_lines: bool) {
     g.gd[gd].search_plan = None;
     g.gd[gd].pieing = None;
     g.gd[gd].react_t = 0.0;
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-    g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     log(g, "spent", LogH { secs: 0.0 });
     line(g, gd, &if foe_lines { spent_foe() } else { spent() });
@@ -448,7 +441,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     h.told = true;
     if let Some(on_row) = mem(g, gd).hold.as_mut() { on_row.told = true; }
     let now = g.time;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if crate::guards::near_known_body(g, pos, Some(4.0)).is_some()
         || g.gd[gd].bubble.as_ref().map_or(false, |b| b.radio && now - b.t < 4.0)
         || (crate::teams::foe_is_player(g, gd) && crate::condition::down(g, g.pl[g.player].ch))
@@ -458,7 +451,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     mem(g, gd).told_at = now;
     if g.team(gd) == crate::teams::Team::Guard {
         let text = if g.escalation >= 1.0 { "clear here — staying on it" } else { "must have been nothing" };
-        say(g, gd, text);
+        crate::game::game_say(g, gd, text, None, None);
     } else {
         line(g, gd, &done_foe());
     }

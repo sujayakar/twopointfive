@@ -46,7 +46,7 @@ A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g
 ## How it works
 
 **Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
-most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on`, `glass_break_live` and `chew_live` all ask it.
+most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
 thresholds read (`t_decal` up to `t_tile`). One round marks a wall; a beaten spot loses its papers, its clutter, then a tile. Each kind has a rate cap
@@ -168,7 +168,7 @@ Native tests in `rust/game_start/tests/`:
 | `wall_breaks.rs`, `blast_holes.rs` | a hole agrees for feet, eyes and rounds; chewed cover; a restart; asking first; a man walks the hole |
 | `wallcharge.rs`, `wall_kills.rs` | it catches whom the warning named; at it he dies, past it he is blind; men step back out of known fire |
 | `held_charges.rs`, `guns_and_debris.rs` | both hands, the count, whose key; a piece is heard where it lands, a boot files nothing |
-| `rounds_and_saves.rs` | what a round goes through; hits by `does`; a save carries the broken level; one flood for two walls |
+| `rounds_and_saves.rs` | what a round goes through; hits by `does`, wet or dry; a save carries the broken level; one flood for two walls |
 | `breaks.rs`, `debris_pool.rs`, `furniture.rs` | pieces of the thing, off a man down; a full pool; a wall shields furniture, a restart mends it |
 | `glass.rs`, `glass_open.rs`, `burst_panes.rs` | a pane broken early; what is open to feet, rays and sound; a burst and the glass between |
 | `held_frag.rs`, `held_forty.rs`, `marks.rs`, `restarts.rs` | whom a burst takes; the 40 mm's arming; marks put back; a restart is a fresh staging |

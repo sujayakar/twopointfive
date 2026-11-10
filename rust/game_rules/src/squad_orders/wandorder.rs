@@ -87,7 +87,7 @@ pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         if crate::orders::squad_orders_reach(g, gd, spot.pos).is_some() {
             continue;
         }
-        let k = dist_xz(g.ch[g.gd[gd].ch].pos, spot.pos);
+        let k = dist_xz(g.pos_of(gd), spot.pos);
         if k < bd {
             bd = k;
             best = Some(gd);
@@ -400,7 +400,7 @@ fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     let ph = js::rem((now - j.live_t) / m::max(0.5, g.k.wand.sweep_secs) + 0.25, 1.0);
     let a = l.yaw + crate::wand::wand_pan_max(g) * (1.0 - 4.0 * m::abs(ph - 0.5));
     let fov = crate::wand::wand_fov(g);
-    let id = g.ch[g.gd[gd].ch].id;
+    let id = g.char_id(gd);
     Some(crate::fogofwar::FogEye {
         id,
         pos: l.pos,

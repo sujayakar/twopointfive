@@ -1,7 +1,8 @@
 //! The tutorial's quiet mission for two: what each line asks, through the input only: walks to the marks the level shows, the cursor on a man, on the ground or on the fuse box, one-frame presses of the
 //! squad's key and the word, a tap of the interaction key, the right button. Game state is read to time a press (the partner set, a man down).
 use super::{Bot, Ended, Tutorial};
-use crate::player::{at, flat, Walk, RIGHT, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Walk, RIGHT, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -79,12 +80,12 @@ async fn watch_line(b: &Bot, when: &str) {
 }
 async fn together(b: &Bot, by: f64, secs: f64, what: &str) {
     let m = mate(b);
-    if !b.until(|| flat(b.man_at(m), b.pos()) < by, secs).await { b.fail(format!("the partner did not {} ({}, {:.1} m off)", what, doing(b, m), flat(b.man_at(m), b.pos()))).await; }
+    if !b.until(|| dist_xz(b.man_at(m), b.pos()) < by, secs).await { b.fail(format!("the partner did not {} ({}, {:.1} m off)", what, doing(b, m), dist_xz(b.man_at(m), b.pos()))).await; }
 }
 async fn wait_set(b: &Bot, x: GuardId) {
     let (m, n0, t0) = (mate(b), b.sightings(), b.t());
     if !b.until(|| b.ask(|g| game::pairorders::pair_orders_job_of(g, m).is_some_and(|j| j.set)) || !b.up(x), 70.0).await { b.fail(format!("the partner never got set behind {} ({}, at {})", b.called(x), doing(b, m), at(b.man_at(m)))).await; }
-    b.say(format!("  \"set\" {:.1} s on: the partner at {}, {:.2} m from {}", b.t() - t0, at(b.man_at(m)), flat(b.man_at(m), b.man_at(x)), b.called(x)));
+    b.say(format!("  \"set\" {:.1} s on: the partner at {}, {:.2} m from {}", b.t() - t0, at(b.man_at(m)), dist_xz(b.man_at(m), b.man_at(x)), b.called(x)));
     calm(b, n0, "while the partner worked round to his man").await;
 }
 /// the word's key as the floor plan marks it by a man of the pair who waits on it
@@ -92,7 +93,7 @@ fn pair_key(b: &Bot) -> alloc::vec::Vec<(KeyCap, bool)> { b.seen(|g, s| game::vi
 
 async fn deed(b: &Bot, id: &str) {
     match id {
-        "crouch" => { b.say(format!("  at the start: lit {:.2}; the partner {:.1} m off", b.lit(), flat(b.man_at(mate(b)), b.pos()))); b.crouch(true).await; }
+        "crouch" => { b.say(format!("  at the start: lit {:.2}; the partner {:.1} m off", b.lit(), dist_xz(b.man_at(mate(b)), b.pos()))); b.crouch(true).await; }
         // a few strides in, the partner behind
         "lead" => {
             let n0 = b.sightings();
@@ -137,7 +138,7 @@ async fn deed(b: &Bot, id: &str) {
         "near" => {
             let n0 = b.sightings();
             b.to_near(BEHIND_B, 15.0, 0.2).await;
-            b.say(format!("  behind the near man: lit {:.2}, {:.2} m off", b.lit(), flat(b.pos(), b.man_at(man(b, "near")))));
+            b.say(format!("  behind the near man: lit {:.2}, {:.2} m off", b.lit(), dist_xz(b.pos(), b.man_at(man(b, "near")))));
             wait_set(b, man(b, "far")).await;
             calm(b, n0, "behind the near man").await;
         }
@@ -145,7 +146,7 @@ async fn deed(b: &Bot, id: &str) {
         "hands" => {
             let (n, f) = (man(b, "near"), man(b, "far"));
             b.wait(REACT).await;
-            if !b.close_in(n, None).await { b.fail(format!("could not get behind the near man ({:.2} m off, {:?})", flat(b.pos(), b.man_at(n)), b.state(n))).await; }
+            if !b.close_in(n, None).await { b.fail(format!("could not get behind the near man ({:.2} m off, {:?})", dist_xz(b.pos(), b.man_at(n)), b.state(n))).await; }
             let q = b.man_at(n);
             if !b.tap(InteractableKind::Guard, Verb::Grab, Some([q[0], 1.35, q[2]])).await { b.fail(String::from("no grab row behind the near man")).await; }
             let t0 = b.t();
@@ -170,7 +171,7 @@ async fn deed(b: &Bot, id: &str) {
         }
         "hold" => {
             let (d, n0) = (man(b, "gate"), b.sightings());
-            if !b.close_in(d, None).await { b.fail(format!("could not get behind the man at the far gate ({:.2} m off, he stands at {}, {:?})", flat(b.pos(), b.man_at(d)), at(b.man_at(d)), b.state(d))).await; }
+            if !b.close_in(d, None).await { b.fail(format!("could not get behind the man at the far gate ({:.2} m off, he stands at {}, {:?})", dist_xz(b.pos(), b.man_at(d)), at(b.man_at(d)), b.state(d))).await; }
             calm(b, n0, "coming up behind the man at the far gate").await;
             let q = b.man_at(d);
             if !b.tap(InteractableKind::Guard, Verb::Grab, Some([q[0], 1.35, q[2]])).await { b.fail(String::from("no grab row behind the man at the far gate")).await; }

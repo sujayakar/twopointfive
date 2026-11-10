@@ -23,7 +23,7 @@ fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
 /// A round just cycled out of `w`: is it a tracer? Every `every`-th out of the box, or fewer than `lastN` left.
 fn is_tracer_round(g: &crate::game::Game, w: FirearmId) -> bool {
     let def = g.fa[w].def;
-    let Some(t) = g.m.weapons.weapons.get(def).unwrap().tracer else { return false; };
+    let Some(t) = g.weapon(def).tracer else { return false; };
     let k = if g.fa[w].infinite { g.fa[w].shots_fired } else { crate::weapons::firearm_spent(g, w) };
     (t.every > 0.0 && k > 0.0 && js::rem(k, t.every) == 0.0) || crate::weapons::firearm_rounds_ready(g, w) < t.last_n
 }
@@ -346,7 +346,7 @@ mod tests {
     fn a_streak_is_a_thin_lit_box_behind_the_head() { on_a_big_stack(|| {
         let mut g = game(1);
         let p = g.tracers.params;
-        let mut def = g.m.weapons.weapons.get(crate::weapons::WeaponId::Fiveseven).unwrap().clone();
+        let mut def = g.weapon(crate::weapons::WeaponId::Fiveseven).clone();
         def.tracer = Some(crate::weapons::TracerSpec { every: 3.0, last_n: 3.0, color: [1.0, 0.6, 0.25] });
         let (from, dir, l): (V3, V3, f64) = ([1.25, 1.5, -3.75], [0.6, 0.0, 0.8], 7.3);
         assert!(tracers_round(&mut g, None, &def, from, [1.2, 0.0, 1.6], l, TracerImpact::None, 0x1ff as f64, Some(true)));
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn a_round_goes_by_force_or_not_at_all() { on_a_big_stack(|| {
         let mut g = game(1);
-        let pistol = g.m.weapons.weapons.get(crate::weapons::WeaponId::Fiveseven).unwrap().clone();
+        let pistol = g.weapon(crate::weapons::WeaponId::Fiveseven).clone();
         let d = [0.0, 0.0, 1.0];
         assert!(!tracers_round(&mut g, None, &pistol, [0.0; 3], d, 10.0, TracerImpact::None, 0.0, None));
         assert!(!tracers_round(&mut g, None, &pistol, [0.0; 3], d, 0.1, TracerImpact::None, 0.0, Some(true)));

@@ -130,9 +130,9 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         g.gd[gd].last_pos = v3::copy(at.pos);
         g.gd[gd].wp = at.wp as usize;
         g.gd[gd].wait = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
+        g.gd[gd].set_path(Vec::new());
         g.gd[gd].path_i = 0;
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].set_path_goal(None);
         crate::character::character_update(g, c, 0.0); // bones where he now stands, before anything reads them this frame
         moved += 1.0;
     }

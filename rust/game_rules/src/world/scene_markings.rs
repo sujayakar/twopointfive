@@ -18,7 +18,7 @@ fn texel_for(res: Option<MarkRes>, base: f64) -> f64 {
 }
 
 /// MARK_FACES.indexOf(f).
-fn face_at(f: MarkFace) -> usize {
+pub fn face_at(f: MarkFace) -> usize {
     match f { MarkFace::X => 0, MarkFace::X2 => 1, MarkFace::Y => 2, MarkFace::Y2 => 3, MarkFace::Z => 4, MarkFace::Z2 => 5 }
 }
 

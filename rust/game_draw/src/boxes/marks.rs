@@ -5,7 +5,7 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use game::js::JsSet;
 use game::m;
-use game::scene_markings::{mark_key, mark_stats, MarkFace, MarkRes, MarkingDef};
+use game::scene_markings::{mark_key, mark_stats, MarkRes, MarkingDef};
 
 const PER_BOX: usize = 4;
 const TABLE: usize = 6144;
@@ -24,7 +24,6 @@ pub struct Marks {
     area_lit: Vec<u32>,
 }
 
-fn face(f: MarkFace) -> usize { match f { MarkFace::X => 0, MarkFace::X2 => 1, MarkFace::Y => 2, MarkFace::Y2 => 3, MarkFace::Z => 4, MarkFace::Z2 => 5 } }
 fn res(r: Option<MarkRes>) -> usize { match r.unwrap_or(MarkRes::Base) { MarkRes::Fine => 0, MarkRes::Base => 1, MarkRes::Coarse => 2 } }
 fn rows_of(mk: &MarkingDef) -> usize { HEAD + (mk.size[0] as usize * mk.size[1] as usize).div_ceil(PER_ROW) }
 
@@ -85,7 +84,7 @@ impl Marks {
             let mut says = 0u32;
             for k in 0..3 { if let Some(p) = mk.pal.get(k) { if p.albedo.is_some() || p.mul.map_or(false, |x| x != 1.0) { says |= 1 << k; } if p.rough.is_some() { says |= 8 << k; } } }
             let lit = self.area_lit.contains(&mark_key(mk));
-            let meta = face(mk.face) as u32 + 8 * res(mk.res) as u32 + 32 * (i + 1 == list.len()) as u32 + 64 * any as u32 + 128 * lit as u32 + 256 * st.emask as u32 + 2048 * says;
+            let meta = game::scene_markings::face_at(mk.face) as u32 + 8 * res(mk.res) as u32 + 32 * (i + 1 == list.len()) as u32 + 64 * any as u32 + 128 * lit as u32 + 256 * st.emask as u32 + 2048 * says;
             rows[0].w = [mk.at[0] as f32, mk.at[1] as f32, mk.size[0] as f32, mk.size[1] as f32];
             rows[1].w = [meta as f32, st.f[0] as f32, st.f[1] as f32, st.f[2] as f32];
             for k in 0..3 {

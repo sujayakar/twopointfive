@@ -188,7 +188,7 @@ impl World {
         rows[o..o + REC].copy_from_slice(&r);
         match list {
             0 => {
-                let back = (crate::v3::clamp(lum(b.albedo), 0.0, 1.0) * 255.0) as u8;
+                let back = (crate::v3::clamp(crate::v3::lum(b.albedo), 0.0, 1.0) * 255.0) as u8;
                 moved |= self.flags[at as usize] != flags || self.back[at as usize] != back;
                 (self.flags[at as usize], self.back[at as usize]) = (flags, back);
                 if moved { self.wrote = next(); }
@@ -464,6 +464,3 @@ pub fn rows_of<'a>(boxes: impl ExactSizeIterator<Item = &'a SBox>) -> (Vec<f64>,
     for (i, b) in boxes.enumerate() { w.put(Of::Part(i as u32), b); }
     (w.part, w.cut)
 }
-
-/// how far a colour sends light back
-fn lum(c: V3) -> f64 { 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] }

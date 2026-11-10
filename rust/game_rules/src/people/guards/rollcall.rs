@@ -12,14 +12,6 @@ use crate::teams::Team;
 
 // ---- small readers
 
-/// `g.audio.play(name, at, vol)`
-fn play(g: &mut Game, name: &str, at: V3, vol: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), None);
-}
-/// `g.audio.play(name, at, vol, { rate })`
-fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-}
 /// `ordersOf(g, gd)`'s `sams && mine(gd)`: the first seat's book with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
@@ -29,7 +21,7 @@ fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => g.ch[c].pos }
+    g.ch[c].bone(Bone::Head).unwrap_or(g.ch[c].pos)
 }
 /// `g.level.routes[gd.routeI]`'s points, if that route exists
 fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
@@ -37,13 +29,13 @@ fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
 }
 /// `g.level.routes[M.routeI]?.points[0] ?? M.char.pos`
 fn post_of(g: &Game, m: GuardId) -> V3 {
-    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.ch[g.gd[m].ch].pos }
+    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.pos_of(m) }
 }
 
 /// His head, or where it would be.
 fn head_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
+    g.ch[c].bone_or(Bone::Head, 1.7)
 }
 
 /// A man says something: a bubble over his head, and a log row if it went over the radio or is out of sight.
@@ -110,7 +102,7 @@ fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) ->
                 || g.team(gd) != Team::Guard
                 || g.gd[gd].unit.is_some()
             { continue; }
-            let d = match pos { Some(p) => v3::dist(g.ch[g.gd[gd].ch].pos, p), None => 0.0 };
+            let d = match pos { Some(p) => v3::dist(g.pos_of(gd), p), None => 0.0 };
             if d < bd { bd = d; best = Some(gd); }
         }
         pass += 1;
@@ -167,7 +159,7 @@ pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<Guard
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, &line, Some(true), None);
         let at = head_or_pos(g, sp);
-        play(g, "radio", at, 0.7);
+        crate::audio_iface::play_at(g, "radio", at, 0.7);
     }
     if lvl >= 2.0 {
         assign_lockdown(g, prev >= 2.0, except);
@@ -231,14 +223,14 @@ fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
-    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.ch[g.gd[m].ch].pos] };
+    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.pos_of(m)] };
     if let Some(p) = prefer { if checker_free(g, p, m) { return Some(p); } }
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
     for &x in &g.guards {
         if !checker_free(g, x, m) { continue; }
         let mut d = f64::INFINITY;
-        let at = g.ch[g.gd[x].ch].pos;
+        let at = g.pos_of(x);
         for &p in &pts { d = m::min(d, v3::dist_xz(p, at)); }
         if d < bd { bd = d; best = Some(x); }
     }
@@ -249,7 +241,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     let pts = route_points(g, m).unwrap_or_default();
     let mut i0 = 0usize;
     let mut bd = f64::INFINITY;
-    let me = g.ch[g.gd[gd].ch].pos;
+    let me = g.pos_of(gd);
     for (i, &p) in pts.iter().enumerate() {
         let d = v3::dist_xz(p, me);
         if d < bd { bd = d; i0 = i; }
@@ -266,7 +258,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     g.gd[gd].stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None);
     let at = head_or_pos(g, gd);
-    play_rate(g, "radio", at, 0.5, 1.05);
+    crate::audio_iface::play_at_rate(g, "radio", at, 0.5, 1.05);
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.
 pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
@@ -313,7 +305,7 @@ pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);
         crate::game::game_say(g, gd, &line, Some(true), None);
         let at = head_or_pos(g, gd);
-        play_rate(g, "radio", at, 0.4, 1.05);
+        crate::audio_iface::play_at_rate(g, "radio", at, 0.4, 1.05);
     }
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.
@@ -328,7 +320,7 @@ fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: boo
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    play(g, "radio", at, 0.7);
+    crate::audio_iface::play_at(g, "radio", at, 0.7);
     if !g.gd[m].missing_raised {
         g.gd[m].missing_raised = true;
         let post = post_of(g, m);
@@ -388,7 +380,7 @@ fn next_check_soon(g: &mut Game) {
 fn on_the_radio(g: &mut Game, c: GuardId, line: &str, vol: f64) {
     crate::game::game_say(g, c, line, Some(true), None);
     let at = head_or_pos(g, c);
-    play(g, "radio", at, vol);
+    crate::audio_iface::play_at(g, "radio", at, vol);
 }
 /// Nobody calls the check while a fight or a clearing is on, or just after an alarm.
 fn net_too_busy(g: &Game, living: &[GuardId]) -> bool {
@@ -508,9 +500,9 @@ pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
     let l = match g.gd[gd].leader { Some(l) => l, None => return };
     let c = g.gd[gd].ch;
     let lc = g.gd[l].ch;
-    let eye = match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+    let eye = g.ch[c].bone_or(Bone::Head, 1.65);
     let at = if !crate::condition::down(g, g.gd[l].ch) {
-        match g.ch[lc].bones.get(Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[lc].pos, [0.0, 1.1, 0.0]) }
+        g.ch[lc].bone_or(Bone::Chest, 1.1)
     } else {
         v3::add(body_pos(g, l), [0.0, 0.4, 0.0])
     };
@@ -530,13 +522,13 @@ pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
         crate::game::game_say(g, gd, &ask, Some(true), None);
         let answer = format!("{} — on me, close up", me);
         crate::game::game_say(g, l, &answer, Some(true), None);
-        play(g, "radio", eye, 0.5);
+        crate::audio_iface::play_at(g, "radio", eye, 0.5);
         return;
     }
     if rollcall_state(g).stage != RollcallStage::Idle || g.gd[l].found || checker_for(g, l).is_some() { return; }
     let line = format!("{}? …I've lost {} — he was just ahead of me. {}, sound off", him, him, him);
     crate::game::game_say(g, gd, &line, Some(true), None);
-    play(g, "radio", eye, 0.6);
+    crate::audio_iface::play_at(g, "radio", eye, 0.6);
     if g.gd[l].missed_at < 0.0 { g.gd[l].missed_at = g.time; }
     let now = g.time;
     let r = rollcall_state(g);
@@ -586,7 +578,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
             alive[0]
         }
     };
-    let at = if g.alarm.placed { g.alarm.pos } else { g.ch[g.gd[a].ch].pos };
+    let at = if g.alarm.placed { g.alarm.pos } else { g.pos_of(a) };
     let mut by_room: JsMap<String, RoomRow> = JsMap::default();
     for p in g.level.clear_plans.clone().unwrap_or_default() {
         let d = match crate::doors::doors_by_name(g, &p.door) { Some(d) => d, None => continue };
@@ -621,7 +613,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
 
 /// Panel: 'clear nearest room now': the fix where the player stands, the floor locked down if it was not.
 pub fn force_clear(g: &mut crate::game::Game) {
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     g.alarm.pos[0] = p[0];
     g.alarm.pos[1] = 0.0;
     g.alarm.pos[2] = p[2];
@@ -646,7 +638,7 @@ fn step_down_escalation(g: &mut crate::game::Game) {
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, if lvl >= 1.0 { "ease off — singles, back on your routes; weapons stay out" } else { "stand down, back to normal" }, Some(true), None);
         let at = head_or_pos(g, sp);
-        play_rate(g, "radio", at, 0.6, 0.95);
+        crate::audio_iface::play_at_rate(g, "radio", at, 0.6, 0.95);
     }
 }
 

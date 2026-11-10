@@ -102,7 +102,7 @@ fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
 /// JavaScript's truth of an optional string
 fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.is_empty()) }
 /// where this man's body stands
-fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.ch[g.gd[gd].ch].pos }
+fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.pos_of(gd) }
 /// (:230) the place as this man says it, asked now
 fn man_spoken(g: &Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
 /// the defenders who are `alive`, in the list's order

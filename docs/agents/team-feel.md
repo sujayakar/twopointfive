@@ -118,7 +118,7 @@ when its own men are down.
 and his mark's, and `seen_way` in `rust/game_rules/src/squad_orders/orders/routes.rs` adds `seen_price`.
 
 **Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. A
-piece is chewed only where cover breaks (`chew_live`).
+piece is chewed only where cover breaks (`wall_charge_on`).
 
 **Why** (`show_why_tick`): masked by Sam, a wave and "you're in my line." (`masked`, one voice: `line_said_by`); a stack waiting, squeezes up the file
 then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "I've got this door.".

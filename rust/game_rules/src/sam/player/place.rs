@@ -70,7 +70,7 @@ pub(super) fn collide_man(g: &crate::game::Game, pl: &mut crate::player::Collide
 
 /// may he stand up here
 pub fn can_stand(g: &crate::game::Game) -> bool {
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     can_stand_at(g, p)
 }
 
@@ -79,13 +79,13 @@ pub(super) fn can_stand_at(g: &crate::game::Game, p: V3) -> bool {
     let mut q: V3 = [p[0], p[1], p[2]];
     let r = body_r(g, p);
     crate::scene_collision::collide_circle(g, &mut q, r, 1.0, 1.7, Some(2.0));
-    m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.01
+    v3::dist_xz(q, p) < 0.01
 }
 
 /// settle the player against the statics now, swept from where he last stood clear
 pub fn settle_player(g: &mut crate::game::Game) {
     let pl = g.player;
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let still = match g.pl[pl].safe { Some(s) => s[0] == p[0] && s[2] == p[2], None => false };
     if crate::condition::down(g, g.pl[pl].ch) || still { return; }
     let y1 = if g.pl[pl].crouch { 1.0 } else { 1.7 };

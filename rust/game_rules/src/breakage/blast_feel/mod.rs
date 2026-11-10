@@ -44,13 +44,12 @@ fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial +=
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0
 fn live(g: &crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
-fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
-fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
+pub(crate) fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands.
-fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
+pub(crate) fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
 /// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height.
-fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let (h, th) = (g.k.wallcharge.height, thick(g, w));
+pub(crate) fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+    let (h, th) = (g.k.wallcharge.height, crate::wallcharge::thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
@@ -87,7 +86,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
 /// game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
 /// later stage of its blast are the team's doing: the fog's begin / done round it.
 pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_feel_tick_raw(g, cam);
     crate::fogofwar::fog_of_war_done(g, was);
@@ -146,7 +145,7 @@ fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3>
 fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;
-    let ear = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+    let ear = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let d = v3::dist(ear, at);
     let _late = m::min(k.late_max, d / k.c);   // (STAND-IN, the head of this file: the report is played at once, not `late` seconds on)
     let dull = 1.0 / (1.0 + (d / k.dull_m) * (d / k.dull_m));

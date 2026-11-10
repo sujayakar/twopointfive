@@ -318,15 +318,10 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   let zNow = (frame.viewProj * vec4f(P, 1.0)).w;
   let nrm = normalize(textureLoad(gNormal, pc, 0).xyz * 2.0 - 1.0);
   let cap = min(dn.sh.y * dn.sh2.z, 31.0);
+  let sA = stats5Sh(lp, 0u); let sB = stats5Sh(lp, 1u);   // (unlit texels of a class left out under the occluded-light reading; flag off = stats5 over each class's apron)
   let l0 = luminance(c0.xyz); let l1 = luminance(c1.xyz);
   let hs = textureLoad(stShared, pc, 0); let lu0 = hs.z; let lu1 = hs.w;   // (hint0, hint1, lumU0, lumU1): the classes' EXACT unshadowed luminance here this frame — HV.a keeps it for next frame's comparison
-  if (depth >= 1.0) {   // sky: this frame's ratio as it is, no history kept (nobody asks for its variance: an à-trous tap on sky is passed over, and no history footprint takes a sky texel in)
-    textureStore(stHv0Out, pc, vec4f(c0.xyz, lu0)); textureStore(stHv1Out, pc, vec4f(c1.xyz, lu1));
-    textureStore(stHmOut, pc, vec4f(l0, 0.0, l1, 0.0)); textureStore(stHgOut, pc, vec4u(packHG(zNow, 0.0, 0.0, nrm), 0u, 0u, 0u));
-    return;
-  }
-  let sA = stats5Sh(lp, 0u); let sB = stats5Sh(lp, 1u);   // (unlit texels of a class left out under the occluded-light reading; flag off = stats5 over each class's apron)
-  if (cap < 1.0 || (dn.flags.x & DNF_SH_TEMPORAL) == 0u) {   // temporal reuse off: this frame's ratio as it is, its variance the neighbourhood's, no history kept
+  if (depth >= 1.0 || cap < 1.0 || (dn.flags.x & DNF_SH_TEMPORAL) == 0u) {   // sky / temporal reuse off: this frame's ratio as it is, its variance the neighbourhood's, no history kept
     textureStore(stHv0Out, pc, vec4f(c0.xyz, lu0)); textureStore(stHv1Out, pc, vec4f(c1.xyz, lu1));
     textureStore(stHmOut, pc, vec4f(l0, sA.lsig * sA.lsig, l1, sB.lsig * sB.lsig)); textureStore(stHgOut, pc, vec4u(packHG(zNow, 0.0, 0.0, nrm), 0u, 0u, 0u));
     return;
@@ -604,13 +599,8 @@ fn radTemporalCore(gid: vec3u, haveFastTex: bool, cur4: vec4f, sc: vec2i) -> Rad
   var prm = dn.gi; var prm2 = dn.gi2; if (SPEC) { prm = dn.sp; prm2 = dn.sp2; }
   let cap = prm.y;
   var l = luminance(cur);
-  if (depth >= 1.0) {   // sky: the raw estimate and no history (its variance is nobody's: see shTemporal)
-    o.hist = vec4f(cur, zNow); o.mom = vec4f(l, 0.0, 0.0, 0.0); o.fast = vec4f(cur, 0.0);
-    if (perPixelSpec()) { o.fast = vec4f(max(cur4.a, 0.0), 0.0, 0.0, 0.0); o.mom.z = 1.0; }
-    return o;
-  }
   let s = stats5(sc);
-  if (cap < 1.0 || (dn.flags.x & DNF_TEMPORAL) == 0u) {   // FLAG_TEMPORAL off: the raw estimate, spatial variance, no history
+  if (depth >= 1.0 || cap < 1.0 || (dn.flags.x & DNF_TEMPORAL) == 0u) {   // sky / FLAG_TEMPORAL off: the raw estimate, spatial variance, no history
     o.hist = vec4f(cur, zNow); o.mom = vec4f(l, s.lsig * s.lsig, 0.0, s.lsig * s.lsig); o.fast = vec4f(cur, 0.0);
     if (perPixelSpec()) { o.fast = vec4f(max(cur4.a, 0.0), 0.0, 0.0, 0.0); o.mom.z = 1.0; }
     return o;

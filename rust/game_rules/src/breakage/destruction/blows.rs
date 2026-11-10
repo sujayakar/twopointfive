@@ -13,13 +13,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ small helpers of this part
 
-/// `a | b` of two box flag words, as the language does it
-fn or_bits(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
-
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
     let f = crate::scene_boxes::box_flag();
-    or_bits(f.no_primary, f.no_shadow)
+    js::or_bits(f.no_primary, f.no_shadow)
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range
@@ -49,8 +46,6 @@ fn chunk_of(kind: DKind) -> crate::debris::ChunkKind {
         _ => crate::debris::ChunkKind::Housing,
     }
 }
-
-fn item_at(g: &Game, i: f64) -> Option<Destructible> { g.destr.items.get(crate::Num(i)).cloned() }
 
 /// the word pallHash hands to hash01
 fn pall_hash_word(at: V3, time: f64, k: f64) -> u32 {
@@ -138,7 +133,7 @@ fn struck(g: &Game, hit: &RoundMet) -> Struck {
         Some(b) => crate::particle_fx::surf_at(g, b),
         None => Surf::Concrete,
     };
-    of(surf, box_, if index >= 0.0 { item_at(g, index) } else { None })
+    of(surf, box_, if index >= 0.0 { super::index::destruction_item_of(g, index) } else { None })
 }
 
 /// Damage decals by material.
@@ -178,7 +173,7 @@ fn knocks(g: &mut Game, b: &Blow) {
     if let Some(it) = &b.struck.item {
         match it.kind {
             DKind::Housing => { off(g, it, ChunkKind::Housing); }
-            DKind::Screen => { if let Some(housing) = it.mate.and_then(|mate| item_at(g, mate)) { off(g, &housing, ChunkKind::Housing); } }
+            DKind::Screen => { if let Some(housing) = it.mate.and_then(|mate| super::index::destruction_item_of(g, mate)) { off(g, &housing, ChunkKind::Housing); } }
             DKind::Clutter | DKind::Binder => { off(g, it, chunk_of(it.kind)); }
             _ => {}
         }
@@ -269,7 +264,7 @@ pub(in crate::breakage) fn destruction_on_blast(g: &mut crate::game::Game, fn_: 
 pub(in crate::breakage) fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let quiet = quiet.unwrap_or(false);
-    let Some(d) = item_at(g, i) else { return false; };
+    let Some(d) = super::index::destruction_item_of(g, i) else { return false; };
     if g.destr.hidden.has(crate::Num(i)) { return true; }
     if quiet {
         if let Some(t) = d.target { destruction_break_target(g, t); }
@@ -503,7 +498,7 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
             let along = -v3::dot(to, dir);
             if along > 0.0 && along < seg_len {
                 let q = v3::mad(hit_p, dir, -along);
-                if m::hyp2(q[0] - c[0], q[2] - c[2]) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
+                if v3::dist_xz(q, c) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
             }
         }
         if !hit_it { continue; }
@@ -534,13 +529,13 @@ pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction
     let b = g.col.boxes[d.i as usize];
     let f = g.tab.boxes[b].flags;
     g.destr.hidden.set(crate::Num(d.i), f);
-    g.tab.boxes.edit(b).flags = or_bits(f, bits);
+    g.tab.boxes.edit(b).flags = js::or_bits(f, bits);
     if let (Some(mate), DKind::Housing) = (d.mate, d.kind) {
         let s = g.col.boxes[mate as usize];
         if !g.destr.hidden.has(crate::Num(mate)) {
             let sf = g.tab.boxes[s].flags;
             g.destr.hidden.set(crate::Num(mate), sf);
-            g.tab.boxes.edit(s).flags = or_bits(sf, bits);
+            g.tab.boxes.edit(s).flags = js::or_bits(sf, bits);
         }
     }
 }

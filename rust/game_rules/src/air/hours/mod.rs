@@ -96,7 +96,7 @@ fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
         i += 1;
         let row = &g.tab.light[l];
         if row.kind != 2.0 || !row.enabled || row.ttl >= 0.0 || row.transient.unwrap_or(false) || !(row.dir[1] < 0.0) { continue; }
-        let intensity = lum(row.color) * row.intensity;
+        let intensity = v3::lum(row.color) * row.intensity;
         if intensity > best { best = intensity; moon = Some(l); }
     }
     moon
@@ -133,7 +133,7 @@ fn cloud_soft(c_2: f64) -> f64 {
 /// Colour c drained toward a deck's grey by w and scaled by k, its luminance otherwise kept.
 fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
     let k = k.unwrap_or(1.0);
-    let l = lum(c_2) / GREY_LUM;
+    let l = v3::lum(c_2) / GREY_LUM;
     let grey = grey();
     [
         (c_2[0] + (l * grey[0] - c_2[0]) * w) * k,
@@ -145,11 +145,11 @@ fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
 /// The sky's share of the light on open ground at an hour as authored.
 fn sky_share(d: &crate::hours::HourDef) -> f64 {
     let rays = sky();
-    let zen = lum(d.sky.zenith);
-    let hor = lum(d.sky.horizon);
+    let zen = v3::lum(d.sky.zenith);
+    let hor = v3::lum(d.sky.horizon);
     let mut k = 0.0;
     for q in rays.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
-    let s = lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
+    let s = v3::lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
     if k + s > 0.0 { k / (k + s) } else { 1.0 }
 }
 
@@ -217,10 +217,6 @@ fn sun_to_cloud(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_mut() else { return };
     st.given = false;
     under_weather(g);
-}
-
-pub fn lum(c_2: V3) -> f64 {
-    0.2126 * c_2[0] + 0.7152 * c_2[1] + 0.0722 * c_2[2]
 }
 
 /// Where the hour's sun stands, as a unit vector.
@@ -333,7 +329,7 @@ fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
 /// The sky's luminance at height y, off the game's sky now or the dome given.
 fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
     let d = match sky { Some(d) => d, None => sky_dome(g) };
-    let (zen, hor) = (lum(d.zenith), lum(d.horizon));
+    let (zen, hor) = (v3::lum(d.zenith), v3::lum(d.horizon));
     let t = v3::clamp(y * 2.5, 0.0, 1.0);
     let below = v3::clamp(-y * 8.0, 0.0, 1.0);
     (hor + (zen - hor) * t) * (1.0 - below) + hor * 0.15 * below
@@ -370,11 +366,6 @@ fn reach_of(b: crate::hours::SkyStateBox, p: V3, d: V3) -> f64 {
     m::max(t, 0.0)
 }
 
-/// The statics alone between a and b: no door leaf is in the way.
-fn static_blocked(g: &crate::game::Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
-}
-
 /// The one directional light of the sky in force and its dome (None: the picture's own), by the hour laid over the level or by the level's night.
 #[derive(Clone, Copy)]
 struct Sky { sun: Option<LightId>, to_sun: V3, dome: Option<SkyStateDome> }
@@ -394,36 +385,36 @@ fn reach_fresh(g: &mut Game, to_sun: V3) {
     let wrote = g.tab.boxes.world().wrote;
     if g.m.hours.reach.wrote == wrote && g.m.hours.reach.to_sun == to_sun { return; }
     let box_ = box_of(g);
-    g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_, cells: JsMap::new(), fine: JsMap::new() };
+    let reach = &mut g.m.hours.reach;
+    (reach.wrote, reach.to_sun, reach.box_, reach.cells, reach.fine) = (wrote, to_sun, box_, JsMap::new(), JsMap::new());
 }
 
-/// The rays kept for a cell, asked once from `at`. A copy: the list is read across calls that take `g`, and nothing writes a kept list once it is set.
-fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) -> Vec<Open> {
-    let kept = if fine { g.m.hours.reach.fine.get(key) } else { g.m.hours.reach.cells.get(key) };
-    if let Some(o) = kept { return o.clone(); }
+/// The rays kept for a cell, asked once from `at`.
+fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) {
+    let kept = if fine { &g.m.hours.reach.fine } else { &g.m.hours.reach.cells };
+    if kept.has(key) { return; }
     let o = open_rays(g, at);
     let keep = if fine { &mut g.m.hours.reach.fine } else { &mut g.m.hours.reach.cells };
-    keep.set(key, o.clone());
-    o
+    keep.set(key, o);
 }
 
 /// The ambient's rays that leave point C unblocked by the statics.
 fn open_rays(g: &crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
     let to_sun = g.m.hours.reach.to_sun;
-    let (sky_rays, gnd_rays) = (sky(), gnd());
+    let (sky_rays, gnd_rays) = g.m.hours.reach.rays.split_at(crate::hours::SKY_RAYS);
     let mut out: Vec<Open> = Vec::new();
     let b = g.m.hours.reach.box_;
     for (i, r) in sky_rays.iter().enumerate() {
         let len = reach_of(b, c_2, r.d);
-        if len > 0.05 && !static_blocked(g, c_2, v3::mad(c_2, r.d, len)) { out.push(Open { ray: i, len, sun_k: 0.0, sky_k: 0.0 }); }
+        if len > 0.05 && !crate::scene_collision::wall_between(g, c_2, v3::mad(c_2, r.d, len)) { out.push(Open { ray: i, len, sun_k: 0.0, sky_k: 0.0 }); }
     }
     for (i, r) in gnd_rays.iter().enumerate() {
         let len = m::min((c_2[1] - 0.03) / -r.d[1], reach_of(b, c_2, r.d));
         if len < 0.3 { continue; }
         let g_pt = v3::mad(c_2, r.d, len);
-        if g_pt[1] > 0.2 || static_blocked(g, c_2, g_pt) { continue; }
-        let sun_k = if to_sun[1] > 0.0 && !static_blocked(g, g_pt, v3::mad(g_pt, to_sun, reach_of(b, g_pt, to_sun))) { to_sun[1] } else { 0.0 };
-        let sky_k = if static_blocked(g, g_pt, [g_pt[0], b.top, g_pt[2]]) { 0.0 } else { 1.0 };
+        if g_pt[1] > 0.2 || crate::scene_collision::wall_between(g, c_2, g_pt) { continue; }
+        let sun_k = if to_sun[1] > 0.0 && !crate::scene_collision::wall_between(g, g_pt, v3::mad(g_pt, to_sun, reach_of(b, g_pt, to_sun))) { to_sun[1] } else { 0.0 };
+        let sky_k = if crate::scene_collision::wall_between(g, g_pt, [g_pt[0], b.top, g_pt[2]]) { 0.0 } else { 1.0 };
         if sun_k > 0.0 || sky_k > 0.0 { out.push(Open { ray: sky_rays.len() + i, len, sun_k, sky_k }); }
     }
     out
@@ -432,7 +423,7 @@ fn open_rays(g: &crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
 /// What the sky's one directional light puts on a face turned to it.
 fn sun_of(g: &Game, st: &Sky) -> f64 {
     match st.sun {
-        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
+        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => v3::lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
         _ => 0.0,
     }
 }
@@ -459,9 +450,8 @@ pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     reach_fresh(g, st.to_sun);
     let t = reach_of(g.m.hours.reach.box_, p, st.to_sun);
     if t <= 0.05 || !crate::scene_collision::segment_blocked(g, p, v3::mad(p, st.to_sun, t), None, None, None) {
-        let n6 = n6();
         for k in 0..6 {
-            let cs = v3::dot(n6[k], st.to_sun);
+            let cs = v3::dot(N6[k], st.to_sun);
             if cs > 0.0 { acc[k] += i_sun * cs; }
         }
     }
@@ -478,18 +468,24 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let i_sun = sun_of(g, &st);
     // the cell's rays stand for P while nothing is between P and the point they were asked from: else the quarter-cell's, else P's own, unkept
     let mut from = c;
-    let open: Vec<Open> = if !cut_off {
-        kept_rays(g, false, crate::Num((iz + 2048.0) * 4096.0 + (ix + 2048.0)), c)
+    let own: Vec<Open>;
+    let open: &[Open] = if !cut_off {
+        let key = crate::Num((iz + 2048.0) * 4096.0 + (ix + 2048.0));
+        kept_rays(g, false, key, c);
+        g.m.hours.reach.cells.get(key).unwrap()
     } else {
         let jx = m::floor(p[0] / (CELL / 2.0));
         let jz = m::floor(p[2] / (CELL / 2.0));
         let c2: V3 = [(jx + 0.5) * CELL / 2.0, CELL_Y, (jz + 0.5) * CELL / 2.0];
         if !crate::scene_collision::segment_blocked(g, p, c2, None, None, None) {
             from = c2;
-            kept_rays(g, true, crate::Num((jz + 4096.0) * 8192.0 + (jx + 4096.0)), c2)
+            let key = crate::Num((jz + 4096.0) * 8192.0 + (jx + 4096.0));
+            kept_rays(g, true, key, c2);
+            g.m.hours.reach.fine.get(key).unwrap()
         } else {
             from = p;
-            open_rays(g, p)
+            own = open_rays(g, p);
+            &own
         }
     };
     if open.is_empty() { return; }
@@ -499,9 +495,9 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         let db = g.col.dynamic_boxes[i];
         i += 1;
         let dc = g.tab.boxes[db].c;
-        if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
+        if v3::dist_xz(dc, p) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
     }
-    let (sky_rays, gnd_rays) = (sky(), gnd());
+    let (sky_rays, gnd_rays) = g.m.hours.reach.rays.split_at(crate::hours::SKY_RAYS);
     let dome = st.dome;
     let mut e_up = -1.0;   // the sky's irradiance on open ground: asked only when a ground ray is open
     for o in open.iter() {

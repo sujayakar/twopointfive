@@ -69,7 +69,6 @@ pub(super) fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &O
 }
 fn bounds_of(b: Grown) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
 fn rect_bounds(b: crate::scene_scenarios::Rect) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
-fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
 fn nav_idx(g: &Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, ix, iz) }
 /// wayRound's and wayRound2's `cell`: no check of the grid's edges, as there
@@ -651,7 +650,7 @@ pub(in crate::pursuit) fn mate(g: &crate::game::Game, m: GuardId) -> String {
     }
     cs.clone()
 }
-pub(super) fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
+pub(super) fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.char_id(gd), room.name) }
 /// × a squad's beats on the net: a drilled garrison's `netK`, read off the map's own rows
 pub(super) fn net_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
 /// × the beat of a hit squad's own men in its other rooms
@@ -726,7 +725,6 @@ fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, 
     }
 }
 fn squad_name(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[q].name.clone() }
-fn count_word(n: usize) -> String { match crate::enemysquads::count().get(n) { Some(w) => w.clone(), None => format!("{}", n) } }
 
 /// a squad's word: which of the three, by the situation, never a die
 pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
@@ -759,7 +757,7 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     }
     if choice == SquadChoice::Barricade {
         let line = doors_line(g, q, &sit, word.stood_to);
-        say_radio(g, sit.lead, &line);
+        crate::game::game_say(g, sit.lead, &line, Some(true), None);
     }
     let what = match choice { SquadChoice::Barricade => SquadEventWhat::Barricade, SquadChoice::Flank => SquadEventWhat::Flank, SquadChoice::Help => SquadEventWhat::Help };
     event(g, q, what, Some(sit.lead));
@@ -896,11 +894,11 @@ fn set_off(g: &mut Game, q: EnemysquadsSquadId, sit: &Situation, word: &Answer) 
         }
         SquadChoice::Flank => {
             for (i, d) in word.go.iter().enumerate() { send(g, q, *d, SentRole::Flank, Some(&word.ways[i]), sit); }
-            format!("{}: {} going around — {}!", squad_name(g, q), count_word(word.go.len()), if sit.lost { "cut them off" } else { "keep them there" })
+            format!("{}: {} going around — {}!", squad_name(g, q), super::radio_check::count_word(word.go.len()), if sit.lost { "cut them off" } else { "keep them there" })
         }
     };
     let gd0 = g.tab.roomfight_def[word.go[0]].gd;
-    say_radio(g, gd0, &line);
+    crate::game::game_say(g, gd0, &line, Some(true), None);
 }
 
 /// What a squad holding its rooms says: called to its doors, its ally gone quiet, or holding.
@@ -946,7 +944,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         net.push(StateNetItem { t: now, squad: q, at: v3::copy(at), door });
         if net.len() > 40 { net.drain(0..20); }
         let line = match words { Some(w) => String::from(w), None => format!("{}: contact — {}!", q_name, room.map_or("here", |r| r.name.as_str())) };
-        say_radio(g, caller, &line);
+        crate::game::game_say(g, caller, &line, Some(true), None);
         event(g, q, SquadEventWhat::Contact, Some(caller));
     } else if caller.is_some() && !by_drop {   // (its call went out before anybody had seen by which door: the men who see it now say so to whoever asks next)
         let last = g.m.enemysquads.states.as_ref().unwrap().net.iter().rfind(|c| c.squad == q).map(|c| (c.door.is_none(), c.t));

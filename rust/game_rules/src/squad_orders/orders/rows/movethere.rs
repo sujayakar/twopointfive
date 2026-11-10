@@ -42,7 +42,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);
         let post = of.and_then(|a| g.tab.orders_assignment[a].post);
-        bodies.push(match post { Some(p) => p, None => g.ch[g.gd[m].ch].pos });
+        bodies.push(match post { Some(p) => p, None => g.pos_of(m) });
     }
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);

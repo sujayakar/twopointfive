@@ -27,10 +27,7 @@ fn aim_at_fix(out: &mut TacMove, fix: V3) {
 
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(p) => *p,
-        None => g.ch[c].pos,
-    }
+    g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos)
 }
 
 /// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts:361 tacticsPenalty, the closure it returns)
@@ -175,7 +172,7 @@ fn kneel_toward(g: &mut crate::game::Game, gd: GuardId, dt: f64, at: V3, out: &m
     out.crouch = crouch;
     out.aim = Some([at[0], 1.05, at[2]]);
     let p = g.ch[c].pos;
-    g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(at[0] - p[0], at[2] - p[2]), 4.0 * dt);
+    g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, v3::yaw_to(p, at), 4.0 * dt);
 }
 
 /// the flankers of a plan are all set (or there are none), or somebody has eyes on the man
@@ -671,12 +668,6 @@ pub fn tactics_tick(g: &mut crate::game::Game) {
     tick_plans(g);
 }
 
-/// which face of d the point is on (+1 = the +n side of the closed frame line)
-pub(super) fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
-    let f = crate::guards::frame_of(g, d);
-    if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
-}
-
 /// how far along hinge → latch
 pub(super) fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
@@ -701,7 +692,7 @@ pub(super) fn plan_for(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -
         if !same_door {
             continue;
         }
-        if side_of(g, d, stack0) != sg {
+        if crate::handleside::side_at(g, d, stack0) != sg {
             continue;
         }
         let a = along_of(g, d, stack0);
@@ -717,7 +708,7 @@ pub(super) fn plan_for(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -
 fn stack_spot(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> crate::tactics::StackSpot {
     let out = if near_a <= 0.0 { -1.0 } else { 1.0 }; // which way along the frame line the wall runs from the near jamb
     let jamb = door_pt(g, d, near_a, STACK_OFF_M, sg, None);
-    let face_of = |p: V3| m::atan2(jamb[0] - p[0], jamb[2] - p[2]);
+    let face_of = |p: V3| v3::yaw_to(p, jamb);
     if let Some(plan) = plan {
         let p = plan.stack[k as usize];
         if !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) {
@@ -960,10 +951,7 @@ fn comes_to(g: &mut Game, o: GuardId, spot: V3) {
     crate::mind::raise(g, o, 0.5, "tactics");
     let man = &mut g.gd[o];
     man.search_t = 0.0;
-    man.path = Vec::new();
-    man.path_serial = man.path_serial.wrapping_add(1);
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.drop_path();
     man.stall_ref = None;
     man.body_duty = None;
     man.search_plan = None;
@@ -1020,7 +1008,7 @@ fn nears(g: &Game, gd: GuardId, rec: TacticsDangerRecId) -> Option<Nears> {
     let to_it = g.gd[gd].path_goal.is_some_and(|goal| dist_xz(goal, centre) < GATE_GOAL_M && dist_xz(here, goal) < GATE_DETECT_M + 1.0 && dist_xz(here, centre) < GATE_DETECT_M + GATE_GOAL_M);
     let fetched = g.tab.tactics_danger_rec[rec].summoned == Some(gd) && dist_xz(here, centre) < GATE_DETECT_M + 2.5;
     if !to_it && !fetched { return None; }
-    Some(Nears { side: side_of(g, d, here), goal_near: true })
+    Some(Nears { side: crate::handleside::side_at(g, d, here), goal_near: true })
 }
 /// His gate there: behind the man of his side who leads on his side of it, or the lead. (None: lanes.rs stops him short, that jamb or the floor beyond the doorway being in the line of guns his side knows of)
 fn gate_at(g: &mut Game, gd: GuardId, rec: TacticsDangerRecId, n: Nears) -> Option<Gate> {
@@ -1047,7 +1035,7 @@ fn gate_at(g: &mut Game, gd: GuardId, rec: TacticsDangerRecId, n: Nears) -> Opti
 /// The man of his side who leads at that doorway, on the side of it he is on himself, and has not gone in. (A lead on the FAR side of it is no man to stack behind: this man leads his own side)
 fn lead_there(g: &Game, gd: GuardId, d: DoorId) -> Option<(GuardId, f64, f64)> {
     let at = g.pos_of(gd);
-    let (team, here) = (g.team(gd), side_of(g, d, at));
+    let (team, here) = (g.team(gd), crate::handleside::side_at(g, d, at));
     let st = g.m.tactics.states.as_ref().unwrap();
     let found = st.gates.iter().find(|(o, h)| {
         *o != gd && h.door == d && g.tab.tactics_danger_rec[h.rec].team == team && h.role == GateRole::Lead && !crate::condition::down(g, g.gd[*o].ch) && h.phase != GatePhase::Cross

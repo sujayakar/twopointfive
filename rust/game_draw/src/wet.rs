@@ -17,7 +17,6 @@ const FLAT_TOP: f64 = 0.06;
 
 type Rect = [f64; 4];
 fn top(b: &Box) -> f64 { b.c[1] + b.h[1] }
-fn flags(b: &Box) -> u32 { b.flags as i64 as u32 }
 fn in_rect(r: &Rect, x: f64, z: f64) -> bool { x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3] }
 /// of 25 spots over its rectangle (turned with it), how many have no roof over them, counted no further than `enough`
 fn sky_spots(b: &Box, roofs: &[Rect], enough: u32, step: f64) -> u32 {
@@ -34,14 +33,14 @@ fn sky_over_most(b: &Box, roofs: &[Rect]) -> bool { sky_spots(b, roofs, 13, 0.4)
 /// a ground slab a picked rain wets
 fn open_ground(b: &Box, roofs: &[Rect]) -> bool {
     let (t, k) = (top(b), box_flag());
-    if !(t > -0.011 && t < 0.003) || b.h[0] * b.h[2] < 4.0 || flags(b) & (k.no_primary as u32 | k.glass as u32 | k.dynamic as u32) != 0 { return false; }
+    if !(t > -0.011 && t < 0.003) || b.h[0] * b.h[2] < 4.0 || crate::boxes::pack::flags(b) & (k.no_primary as u32 | k.glass as u32 | k.dynamic as u32) != 0 { return false; }
     sky_spots(b, roofs, 1, 0.45) >= 1
 }
 fn sheet_mask() -> u32 { game::scene_boxes::SHEET_MASK as u32 }
 /// a sheet lying on the ground: drawn only, thin, low, not under the ground
-fn ground_sheet(b: &Box) -> bool { flags(b) & sheet_mask() == box_flag().no_shadow as u32 && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0.0 }
+fn ground_sheet(b: &Box) -> bool { crate::boxes::pack::flags(b) & sheet_mask() == box_flag().no_shadow as u32 && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0.0 }
 /// a flat a sheet may lie on: solid, square to the world, low, broader than a kerb
-fn ground_flat(b: &Box) -> bool { flags(b) & sheet_mask() == 0 && b.yaw == 0.0 && top(b) <= FLAT_TOP && b.h[0] > 0.4 && b.h[2] > 0.4 }
+fn ground_flat(b: &Box) -> bool { crate::boxes::pack::flags(b) & sheet_mask() == 0 && b.yaw == 0.0 && top(b) <= FLAT_TOP && b.h[0] > 0.4 && b.h[2] > 0.4 }
 
 /// THE GROUND THAT IS WET while the weather's ground is, of these statics, as their places in the list
 fn wet_ground_of(g: &Game, statics: &[BoxId], roofs: &[Rect], lot: Option<BoxId>, picked: bool) -> Vec<u32> {
@@ -53,7 +52,7 @@ fn wet_ground_of(g: &Game, statics: &[BoxId], roofs: &[Rect], lot: Option<BoxId>
         let on = |b: &Box, s: &Box| { let up = top(b) - top(s); up > 0.0 && up <= WET_OVER && m::abs(b.c[0] - s.c[0]) <= s.h[0] && m::abs(b.c[2] - s.c[2]) <= s.h[2] };
         for (i, &id) in statics.iter().enumerate() {
             let b = &all[id];
-            if Some(id) != lot && !wet[i] && flags(b) & sheet_mask() == 0 && bases.iter().any(|s| on(b, s)) && sky_over_most(b, roofs) { wet[i] = true; }
+            if Some(id) != lot && !wet[i] && crate::boxes::pack::flags(b) & sheet_mask() == 0 && bases.iter().any(|s| on(b, s)) && sky_over_most(b, roofs) { wet[i] = true; }
         }
     }
     let grounds: Vec<usize> = (0..statics.len()).filter(|&i| ground_flat(&all[statics[i]])).collect();
@@ -79,7 +78,7 @@ fn standing(g: &Game, statics: &[BoxId], lot: Option<BoxId>) -> u32 {
     for (i, &id) in statics.iter().enumerate() {
         let b = &g.tab.boxes[id];
         if top(b) > hi { continue; }
-        w = eat(w, i as u32); w = eat(w, flags(b) & sheet_mask()); w = eat(w, q(b.yaw));
+        w = eat(w, i as u32); w = eat(w, crate::boxes::pack::flags(b) & sheet_mask()); w = eat(w, q(b.yaw));
         for k in 0..3 { w = eat(w, q(b.c[k])); w = eat(w, q(b.h[k])); }
     }
     w
@@ -117,7 +116,7 @@ impl Wet {
             let mut o = b.clone();
             if o.wet_k.is_none() {
                 o.wet_k = Some(if b.metal == Some(true) { 1.0 } else { WET_ALBEDO });
-                if !soaks(g, b) { o.flags = (flags(b) | box_flag().gloss as u32) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
+                if !soaks(g, b) { o.flags = (crate::boxes::pack::flags(b) | box_flag().gloss as u32) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
             }
             self.dressed[at] = Some((was, o));
         }

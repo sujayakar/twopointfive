@@ -110,11 +110,11 @@ fn lamps(g: &Game, f: &mut Fog) {
     f.lit_cut = m::max(0.0, k.lit_cut) as f32;
     f.lit_ao = m::min(1.0, m::max(0.0, k.lit_ao)) as f32;
     f.lit_ao_m = m::max(0.0, k.lit_ao_m) as f32;
-    let me = g.ch[g.pl[seats::host_man(g)].ch].pos;
+    let me = g.player_pos(seats::host_man(g));
     let mut pick: Vec<(LightId, f64, f64)> = Vec::with_capacity(LIGHTS);
     let mut take = |l: LightId, strength: f64, far: bool| if strength > 0.0 {
         let row = &g.tab.light[l];
-        pick.push((l, strength, if far { -1.0 } else { m::max(0.0, m::hyp2(row.pos[0] - me[0], row.pos[2] - me[2]) - row.range) }));
+        pick.push((l, strength, if far { -1.0 } else { m::max(0.0, game::v3::dist_xz(row.pos, me) - row.range) }));
     };
     for &l in &g.engine.lights.lights {
         let row = &g.tab.light[l];

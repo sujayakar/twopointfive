@@ -69,7 +69,7 @@ fn a_frame_between_two_ticks_stands_between_them() {
     let mut d = Drawn::default();
     p.key_down("KeyW");
     p.run(0.5);
-    let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
+    let id = p.g.player_id(p.g.player) as u32;
     let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     d.frame(&p.g, 1.0, focus);
@@ -91,7 +91,7 @@ fn nothing_is_drawn_through_a_cut() {
     let mut d = Drawn::default();
     p.key_down("KeyW");
     p.run(0.5);
-    let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
+    let id = p.g.player_id(p.g.player) as u32;
     let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     p.frame_shown(|p| { d.cut(); d.take(&p.g, ALL); d.frame(&p.g, 1.0, focus); });

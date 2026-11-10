@@ -12,8 +12,6 @@ macro_rules! job { ($g:expr, $gd:expr) => { $g.pair.jobs.get_mut($gd).unwrap() }
 /// the assignment under a man, by its ID
 macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 
-fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
-
 /// a man's name in a line, or 'that man'
 pub(super) fn name_of(g: &Game, h: GuardId) -> String {
     if g.gd[h].callsign.is_empty() { String::from("that man") } else { g.gd[h].callsign.clone() }
@@ -194,7 +192,7 @@ pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
         let words = format!("watching {}", name_of(g, foe));
         g.pair.jobs.delete(gd);
         crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from(crate::orders::rows::pairwatch::ORDER.id), post: Some(floor_of(p)), face: Some(v3::yaw_to(p, c)), watch: Some([c[0], 1.1, c[2]]), foe: Some(foe),
+            order: String::from(crate::orders::rows::pairwatch::ORDER.id), post: Some(crate::v3::on_floor(p)), face: Some(v3::yaw_to(p, c)), watch: Some([c[0], 1.1, c[2]]), foe: Some(foe),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), going: words.clone().into(), there: words.into(), ..Default::default()
         });
     }
@@ -203,12 +201,7 @@ pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
 
 /// `issue` of 'hold in the dark'
 pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = match t {
-        crate::orders::OrderTarget::Floor(f) => f.at,
-        crate::orders::OrderTarget::Door(f) => f.at,
-        crate::orders::OrderTarget::None(f) => f.at,
-        crate::orders::OrderTarget::Foe(f) => f.at,
-    };
+    let at = t.at();
     let sc = g.pl[g.player].ch;
     let sam = g.ch[sc].pos;
     let face = if v3::dist_xz(sam, at) > 0.3 { v3::yaw_to(sam, at) } else { g.ch[sc].body_yaw };
@@ -219,7 +212,7 @@ pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Order
         g.pair.jobs.delete(gd);
         g.pair.dark.set(gd, crate::pairorders::PairOrdersDarkValue { check_t: -1.0, lit_t: -1.0, said_t: -1e9 });
         crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from(crate::orders::rows::pairdark::ORDER.id), post: Some(floor_of(p)), face: Some(face), crouch: Some(true),
+            order: String::from(crate::orders::rows::pairdark::ORDER.id), post: Some(crate::v3::on_floor(p)), face: Some(face), crouch: Some(true),
             stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
             going: "moving · to the dark".into(), there: "holding in the dark".into(), set_line: Some(String::from("set.")), ..Default::default()
         });
@@ -249,9 +242,9 @@ pub fn row_take_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarg
     let to = crate::pairorders::pair_orders_stage(g, x.foe);
     let mut out: Vec<GuardId> = Vec::new();
     for &gd in men { if crate::orders::squad_orders_reach(g, gd, to).is_none() { out.push(gd); } }
-    let there = g.ch[g.gd[x.foe].ch].pos;
+    let there = g.pos_of(x.foe);
     let rows: &Game = &*g;
-    js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.ch[rows.gd[a].ch].pos, there) - v3::dist_xz(rows.ch[rows.gd[b].ch].pos, there));
+    js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.pos_of(a), there) - v3::dist_xz(rows.pos_of(b), there));
     out.truncate(1);
     out
 }
@@ -483,7 +476,7 @@ pub fn pair_orders_mark(g: &mut Game, by: Option<crate::pairorders::PairOrdersMa
 /// WHO WOULD SEE IT: the first other defender with eyes on `gd` and light enough, or the floor the man will lie on in his open view   (PairOrders.watcher)
 fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardId> {
     let fc = g.gd[foe].ch;
-    let hp = g.ch[fc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[fc].pos);
+    let hp = g.ch[fc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[fc].pos);
     let at: V3 = [hp[0], 0.35, hp[2]];
     let gc = g.gd[gd].ch;
     let mut i = 0;
@@ -504,7 +497,7 @@ fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardI
 fn eye_of(g: &Game, o: GuardId) -> V3 {
     let c = g.gd[o].ch;
     let p = g.ch[c].pos;
-    g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or([p[0], p[1] + 1.65, p[2]])
+    g.ch[c].bone(crate::character::Bone::Head).unwrap_or([p[0], p[1] + 1.65, p[2]])
 }
 
 /// the bodies-by-light bar from `o`'s eye, met by the light now on the man   (PairOrders.bodyLit)
@@ -535,7 +528,7 @@ fn pair_orders_looks_back(g: &mut Game, w: GuardId, foe: GuardId, gd: GuardId) -
     let eye = eye_of(g, w);
     let half = g.k.guard_eye.half_deg * m::PI / 180.0 + g.pair.swept.get(w).copied().unwrap_or(0.0);
     let fc = g.gd[foe].ch;
-    let hp = g.ch[fc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[fc].pos);
+    let hp = g.ch[fc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[fc].pos);
     let at: V3 = [hp[0], 0.35, hp[2]];
     if g.team(w) == g.team(foe) && swept_d(g, eye, hb, l, half, at[0], at[1], at[2]) >= 0.0 && pair_orders_body_lit(g, w, foe, at) { return true; }
     let c = g.pos_of(gd);
@@ -554,7 +547,7 @@ fn pair_orders_held(g: &mut Game, j: crate::pairorders::Job, gd: GuardId) -> boo
 /// off the job, onto a plain hold where he stands, with his gun on `aim` when the job ended in the man being roused   (PairOrders.stand)
 pub(super) fn pair_orders_stand(g: &mut Game, gd: GuardId, words: &str, aim: Option<GuardId>) {
     let p = g.pos_of(gd);
-    let here = floor_of(p);
+    let here = crate::v3::on_floor(p);
     g.pair.jobs.delete(gd);
     let a = match aim {
         Some(aim) => {
@@ -677,7 +670,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let foe = j0.foe;
     let (gc, fc) = (g.gd[gd].ch, g.gd[foe].ch);
     let p = g.ch[gc].pos;
-    let me = Take { gd, a, foe, was_following: j0.was_following, gc, fc, p, here: floor_of(p), name: name_of(g, foe), on: j0.t0 >= 0.0 };
+    let me = Take { gd, a, foe, was_following: j0.was_following, gc, fc, p, here: crate::v3::on_floor(p), name: name_of(g, foe), on: j0.t0 >= 0.0 };
     if crate::condition::down(g, g.gd[foe].ch) || !g.guards.contains(&foe) { his_man_is_down(g, &me); return; }
     if g.gd[foe].held.is_some() { take_off(g, &me, "held", Some("he's yours."), false); return; }
     if !me.on && (j0.handed == Some(true) || pair_orders_noticed(g, foe)) { blown(g, &me); return; }
@@ -702,7 +695,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     job!(g, gd).check_t = t;
     let want = if staging { pair_orders_stage(g, foe) } else { pair_orders_behind(g, foe) };
     let spot = crate::orders::squad_orders_free_spot(g, &crate::seats::here(g), want).unwrap_or(want);
-    if staging && job!(g, gd).set && behind_him && v3::dist_xz(p, spot) < 0.7 && pair_orders_clear_of(g, me.here, spot) { park_on(g, &me); return; }
+    if staging && job!(g, gd).set && behind_him && v3::dist_xz(p, spot) < 0.7 && !crate::scene_collision::low_blocked(g, me.here, spot) { park_on(g, &me); return; }
     // the way to his back: he WAITS where he is while the only way lies across somebody's eyes, goes when it is clear, and says so if it never is
     let pace = if job!(g, gd).going { g.k.pair.go_pace } else { g.k.pair.pace };
     let way = pair_orders_stalk(g, gd, spot, Some(pace));
@@ -973,11 +966,6 @@ fn walks_on(g: &mut Game, me: &Take, spot: V3, way: &crate::pairorders::PairOrde
     r.new_leg = true;
 }
 
-/// nothing solid between two points a pace apart, at knee height   (PairOrders.clearOf)
-fn pair_orders_clear_of(g: &Game, a: V3, b: V3) -> bool {
-    !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
-}
-
 /// the sweep's ring: is this floor watched by a standing man whose look swings (rows: x, z, hx, hz, half)
 fn ring_at(g: &Game, ring: &[[f64; 5]], x: f64, z: f64) -> bool {
     for r in ring.iter() {
@@ -1017,7 +1005,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
         if l > 0.3 { Some([hb[0] / l, hb[1] / l]) } else { None }
     };
     let mut w = crate::sneak::sneak_walk(g, gd, true, Some(&mut habit));
-    let from = floor_of(g.pos_of(gd));
+    let from = crate::v3::on_floor(g.pos_of(gd));
     let mut ring: Vec<[f64; 5]> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
@@ -1050,7 +1038,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
             let tries: &[usize] = if past { &[i + 1, i] } else { &[i] };
             for k in tries.iter().copied() {
                 let mut r: Vec<V3> = if k <= n { was.path[k..].to_vec() } else { Vec::new() };
-                if !r.is_empty() { let last = r.len() - 1; r[last] = floor_of(to); }
+                if !r.is_empty() { let last = r.len() - 1; r[last] = crate::v3::on_floor(to); }
                 if r.is_empty() { continue; }
                 let first = r[0];
                 if !crate::scene_collision::nav_grid_walkable(g, from, first) { continue; }
@@ -1083,7 +1071,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
         let keep_rest = !ok || len_of(&from_on(from, path.as_ref().unwrap())) > 0.8 * len_of(&from_on(from, &rest));
         if keep_rest {
             let t = g.time;
-            g.pair.ways.set(gd, crate::pairorders::PairOrdersWaysValue { to: floor_of(to), path: rest.clone(), t });
+            g.pair.ways.set(gd, crate::pairorders::PairOrdersWaysValue { to: crate::v3::on_floor(to), path: rest.clone(), t });
             return crate::pairorders::PairOrdersStalk { path: rest, exposed: false, by: None };
         }
     }
@@ -1093,7 +1081,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
     };
     let pts = from_on(from, &path);
     let exposed = crate::sneak::sneak_walk_cost(g, &mut w, &pts, pace, Some(to), None) > budget;
-    if exposed { g.pair.ways.delete(gd); } else { let t = g.time; g.pair.ways.set(gd, crate::pairorders::PairOrdersWaysValue { to: floor_of(to), path: path.clone(), t }); }
+    if exposed { g.pair.ways.delete(gd); } else { let t = g.time; g.pair.ways.set(gd, crate::pairorders::PairOrdersWaysValue { to: crate::v3::on_floor(to), path: path.clone(), t }); }
     return crate::pairorders::PairOrdersStalk { path, exposed, by: w.by };
 }
 
@@ -1108,7 +1096,7 @@ fn pair_orders_lit_at(g: &mut Game, p: V3) -> f64 {
 
 /// the search behind darkSpot
 fn dark_find(g: &mut Game, at: V3) -> Option<V3> {
-    if pair_orders_lit_at(g, at) <= g.k.pair.dark_vis { return Some(floor_of(at)); }
+    if pair_orders_lit_at(g, at) <= g.k.pair.dark_vis { return Some(crate::v3::on_floor(at)); }
     let mut r = 0.5;
     while r <= g.k.pair.dark_m + 1e-6 {
         let mut best: Option<V3> = None;
@@ -1118,7 +1106,7 @@ fn dark_find(g: &mut Game, at: V3) -> Option<V3> {
             let a = (k as f64) * m::PI / 4.0;
             k += 1;
             let q: V3 = [at[0] + m::sin(a) * r, 0.0, at[2] + m::cos(a) * r];
-            if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || !pair_orders_clear_of(g, at, q) { continue; }
+            if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, at, q) { continue; }
             let v = pair_orders_lit_at(g, q);
             if v < bv || (v <= bv && best.is_none()) { bv = v; best = Some(q); }
         }

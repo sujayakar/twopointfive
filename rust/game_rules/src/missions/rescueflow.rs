@@ -10,11 +10,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// `inBounds(p, r)` of a scenario's rectangle.
-fn in_rect(p: V3, r: &crate::scene_scenarios::Rect) -> bool {
-    crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
-}
-
 /// The door of an opening, if it names one and the level has it.
 fn door_of(g: &Game, o: &crate::scene_scenarios::RouteOpening) -> Option<DoorId> {
     match &o.door {
@@ -161,12 +156,12 @@ fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     let mut out: Vec<V3> = Vec::new();
     let pl = seat.player;
     if !crate::condition::down(g, g.pl[pl].ch) {
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         out.push([p[0], EYE, p[2]]);
     }
     for &op in g.staged.team.iter() {
         if !crate::condition::down(g, g.gd[op].ch) && !crate::control::man::blind(g, op) {
-            let p = g.ch[g.gd[op].ch].pos;
+            let p = g.pos_of(op);
             out.push([p[0], EYE, p[2]]);
         }
     }
@@ -182,10 +177,7 @@ fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
         return crate::fogofwar::fog_of_war_seen(g, h);
     }
     let ch = g.gd[h].ch;
-    let c = match g.ch[ch].bones.get(crate::character::Bone::Chest) {
-        Some(&c) => c,
-        None => v3::add(g.ch[ch].pos, [0.0, 1.1, 0.0]),
-    };
+    let c = g.ch[ch].bone_or(crate::character::Bone::Chest, 1.1);
     for &e in eyes {
         if dist_xz(e, c) < 30.0 && !crate::scene_collision::segment_blocked(g, e, c, None, None, None) {
             return true;
@@ -195,7 +187,7 @@ fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
 }
 
 fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
-    g.rescue.flow.regions.values().copied().find(|&r| in_rect(p, &g.tab.rescueflow_region[r].rect))
+    g.rescue.flow.regions.values().copied().find(|&r| super::roomclear::in_rect(p, g.tab.rescueflow_region[r].rect))
 }
 
 /// What the stages of a sensing share: the moment, the knobs, the team's eyes and every room.
@@ -213,7 +205,7 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
     look_over_a_room(g, &s);
     for &r in s.rooms.iter() {
         let rect = g.tab.rescueflow_region[r].rect;
-        if s.eyes.iter().any(|&e| in_rect(e, &rect)) {
+        if s.eyes.iter().any(|&e| super::roomclear::in_rect(e, rect)) {
             g.tab.rescueflow_region[r].was_in = s.t;
         }
     }
@@ -271,7 +263,7 @@ fn place_him(g: &mut Game, h: GuardId, s: &Sensing) {
     if !rescue_flow_sees(g, &s.eyes, h) {
         return;
     }
-    let pos = g.ch[g.gd[h].ch].pos;
+    let pos = g.pos_of(h);
     let at = rescue_flow_region_at(g, pos);
     for &r in s.rooms.iter() {
         if at == Some(r) {
@@ -294,7 +286,7 @@ fn hear_their_shots(g: &mut Game, s: &Sensing) {
             continue;
         }
         let (who, pos) = (g.events[at].who, g.events[at].pos);
-        let Some(h) = g.staged.foes.iter().copied().find(|&x| Some(g.ch[g.gd[x].ch].id) == who) else { continue };
+        let Some(h) = g.staged.foes.iter().copied().find(|&x| Some(g.char_id(x)) == who) else { continue };
         if crate::condition::down(g, g.gd[h].ch) {
             continue;
         }
@@ -393,7 +385,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
         }
         let Some(a) = crate::orders::squad_orders_of(seat, op) else { continue };
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if dist_xz(g.ch[g.gd[op].ch].pos, post) > 1.2 {
+        if dist_xz(g.pos_of(op), post) > 1.2 {
             continue;
         }
         if let Some(j) = g.rescue.flow.jobs.get(op) {
@@ -508,11 +500,11 @@ fn send_everyone_back(g: &mut Game) {
 /// Where Sam stands this frame, read once.
 fn flow_now(g: &Game, f: &crate::scene_scenarios::RescueFlowData, k: RescueFlowKnobs) -> FlowNow {
     let pl = g.player;
-    let sam = g.ch[g.pl[pl].ch].pos;
+    let sam = g.player_pos(pl);
     let dynamic = crate::rescue::rescue_dynamic(g);
     let live = dynamic && g.rescue.result.is_none() && !crate::condition::down(g, g.pl[pl].ch);
-    let in_corr = in_rect(sam, &f.corridor);
-    let on_route = in_corr || in_rect(sam, &g.rescue.flow.room);
+    let in_corr = super::roomclear::in_rect(sam, f.corridor);
+    let on_route = in_corr || super::roomclear::in_rect(sam, g.rescue.flow.room);
     let sam_in = if on_route { None } else { rescue_flow_region_at(g, sam).map(|r| g.tab.rescueflow_region[r].id.clone()) };
     FlowNow { k, t: g.time, sam, in_corr, on_route, sam_in, live, dynamic }
 }
@@ -591,7 +583,7 @@ fn job_turn(g: &mut Game, gd: GuardId, now: &FlowNow) {
         corridor_man_turn(g, gd, now);
         return;
     }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let on_t = on_his_mark_since(g, gd, &job, pos, t);
     if holds_on_a_contact(g, gd, job.said_hot, now) {
         return;

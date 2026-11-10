@@ -27,7 +27,7 @@ fn turn_of(l: crate::squadthrow::Lent, at: V3, t0: f64, fired_t: f64, shot: Shot
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
 fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;
-    let r = g.m.weapons.weapons.get(d).unwrap();
+    let r = g.weapon(d);
     r.cls != crate::weapons::WeaponClass::Pistol && r.pellets.is_none() && r.launcher != Some(false)
 }
 
@@ -130,7 +130,7 @@ fn shot_of(g: &crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40
     let d = v3::dist_xz(p, at);
     if d < 1e-3 { return Some(ShotOf::Close); }
     let (muzzle_up, head_drop, muzzle_ahead, near_m, arm_slack) = (g.k.squad40.muzzle_up, g.k.squad40.head_drop, g.k.squad40.muzzle_ahead, g.k.squad40.near_m, g.k.squad40.arm_slack);
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied();
+    let head = g.ch[c].bone(crate::character::Bone::Head);
     let up = m::max(0.6, m::min(muzzle_up, match head { Some(h) => h[1] - p[1] - head_drop, None => muzzle_up }));
     let k = muzzle_ahead / d;
     let from: V3 = [p[0] + (at[0] - p[0]) * k, p[1] + up, p[2] + (at[2] - p[2]) * k];
@@ -184,7 +184,7 @@ pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate:
     js::sort_by(&mut order, |x, y| {
         let (x, y) = (*x, *y);
         let by_gun = (if gun_on(g, &crate::seats::here(g), y, at) { 1.0 } else { 0.0 }) - (if gun_on(g, &crate::seats::here(g), x, at) { 1.0 } else { 0.0 });
-        js::or(by_gun, v3::dist_xz(g.ch[g.gd[x].ch].pos, at) - v3::dist_xz(g.ch[g.gd[y].ch].pos, at))
+        js::or(by_gun, v3::dist_xz(g.pos_of(x), at) - v3::dist_xz(g.pos_of(y), at))
     });
     for gd in order {
         let has = g.m.squad40.states.get(row).and_then(|s| s.rounds.get(gd).copied()).map_or(false, |k| k > 0.0);

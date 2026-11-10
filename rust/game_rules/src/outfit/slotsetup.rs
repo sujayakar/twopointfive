@@ -49,7 +49,7 @@ pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::Se
     let mut rows: Vec<SetupRow> = Vec::new();
     let f = gun_of(g, pl, gun);
     let def = g.fa[f].def;
-    let modes = g.m.weapons.weapons.get(def).unwrap().modes.clone();
+    let modes = g.weapon(def).modes.clone();
     if modes.len() > 1 {
         let mode = g.fa[f].mode;
         let opts = modes

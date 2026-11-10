@@ -92,8 +92,6 @@ fn seat_at(g: &Game, i: Option<f64>) -> SeatId {
 fn unit_seat(g: &Game, gd: GuardId) -> f64 {
     g.gd[gd].unit.as_ref().and_then(|u| u.seat).unwrap_or(0.0)
 }
-/// the character id a player's man carries
-fn man_char_id(g: &Game, p: PlayerId) -> f64 { g.ch[g.pl[p].ch].id }
 
 /// a seat's part of the squad's `n`: dealt in roster order so the shares add up to the count
 fn share_of(n: f64, lo: f64, mine: f64, all: f64) -> f64 {
@@ -254,7 +252,7 @@ pub fn seat_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     for i in 0..g.seats.len() {
         let s = g.seats[i];
         let p = crate::cmd::seat_man(g, s);
-        if man_char_id(g, p) == id_2 { return Some(s); }
+        if g.player_id(p) == id_2 { return Some(s); }
     }
     None
 }
@@ -262,7 +260,7 @@ pub fn seat_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
 /// the man who carries character id `id`
 pub fn man_by_id(g: &crate::game::Game, id_2: f64) -> Option<PlayerId> {
     if g.seats.len() == 1 {
-        return if man_char_id(g, g.player) == id_2 { Some(g.player) } else { None };
+        return if g.player_id(g.player) == id_2 { Some(g.player) } else { None };
     }
     let s = seat_of_id(g, id_2)?;
     Some(crate::cmd::seat_man(g, s))
@@ -271,7 +269,7 @@ pub fn man_by_id(g: &crate::game::Game, id_2: f64) -> Option<PlayerId> {
 /// the game as the player with this id sees it, None for no player's id
 pub fn view_of_id(g: &crate::game::Game, id_2: f64) -> Option<SeatId> {
     if g.seats.len() == 1 {
-        return if man_char_id(g, g.player) == id_2 { Some(g.seat) } else { None };
+        return if g.player_id(g.player) == id_2 { Some(g.seat) } else { None };
     }
     seat_of_id(g, id_2)
 }
@@ -298,7 +296,7 @@ pub fn nearest_man(g: &crate::game::Game, at: &[f64]) -> Option<PlayerId> {
     for i in 0..g.seats.len() {
         let p = crate::cmd::seat_man(g, g.seats[i]);
         if crate::condition::down(g, g.pl[p].ch) { continue; }
-        let pos = g.ch[g.pl[p].ch].pos;
+        let pos = g.player_pos(p);
         let d = m::hyp2(pos[0] - at[0], pos[2] - at[2]);
         if d < bd { bd = d; best = Some(p); }
     }
@@ -317,7 +315,7 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
         let (men, rig) = (g.men, g.rig);
         let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
-        let (owner, intensity) = (man_char_id(g, p), g.tune.player_light);
+        let (owner, intensity) = (g.player_id(p), g.tune.player_light);
         let def = crate::rig_props::rail_light_def(g, owner, intensity);
         g.pl[p].light = crate::render_lights::light_set_add(g, def);
     }
@@ -332,9 +330,9 @@ pub(super) fn spot_beside(g: &crate::game::Game, at: V3, i: f64) -> V3 {
         let p: V3 = [at[0] + m::cos(a) * apart * i, at[1], at[2] + m::sin(a) * apart * i];
         let mut q = v3::copy(p);
         crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, Some(1.0));
-        if m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.02
+        if v3::dist_xz(q, p) < 0.02
             && !crate::scene_collision::clamp_to_world(&mut q, 0.3)
-            && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [p[0], 0.45, p[2]], None) { return p; }
+            && !crate::scene_collision::low_blocked(g, at, p) { return p; }
     }
     v3::copy(at)
 }
@@ -346,7 +344,7 @@ pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut 
     let mut taken: Vec<V3> = vec![at];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if !crate::condition::down(g, g.gd[gd].ch) { taken.push(g.ch[g.gd[gd].ch].pos); }
+        if !crate::condition::down(g, g.gd[gd].ch) { taken.push(g.pos_of(gd)); }
     }
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -405,7 +403,7 @@ fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
         let p = crate::cmd::seat_man(g, s);
         if crate::condition::down(g, g.pl[p].ch) { continue; }
         let keep = if s == cur { g.k.seats.keep } else { 0.0 };
-        let d = v3::dist_xz(g.ch[g.pl[p].ch].pos, g.ch[g.gd[gd].ch].pos) - keep;
+        let d = v3::dist_xz(g.player_pos(p), g.pos_of(gd)) - keep;
         if d < bd { bd = d; best = s; }
     }
     if best != cur { g.gd[gd].faces = Some(g.tab.cmd_seat[best].index); }
@@ -440,7 +438,7 @@ pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> Se
     let mut found = None;
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.ch[g.gd[x].ch].id == c_2.id { found = Some(x); break; }
+        if g.char_id(x) == c_2.id { found = Some(x); break; }
     }
     match found {
         None => g.seats[0],

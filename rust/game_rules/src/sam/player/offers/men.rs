@@ -9,7 +9,7 @@ pub(super) fn held(g: &mut Game, o: &mut Offers, h: Him) -> Vec<Interactable> {
     let gd = hold.g;
     let gun = hold.variant == HoldVariant::Gun;
     let c = g.gd[gd].ch;
-    let head = g.ch[c].bones.get(Bone::Head).copied().unwrap_or(v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
+    let head = g.ch[c].bone(Bone::Head).unwrap_or(v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
     let name = &g.gd[gd].callsign;
     let line1 = match g.gd[gd].civ {
         Some(cv) if gun => format!("{name} · the {} · your pistol at {} head", g.cv[cv].label, head_of(g, cv)),
@@ -102,7 +102,7 @@ pub(super) fn staff(g: &mut Game, o: &mut Offers, h: Him, gd: GuardId) {
 /// A civilian near, seen, who is no captive of the mission's: whether he can be taken hold of, and why not.
 pub(super) fn civilian(g: &mut Game, o: &mut Offers, h: Him, gd: GuardId) {
     if crate::fogofwar::fog_of_war_hidden(g, gd) || g.staged.captives.contains(&gd) { return; }
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     if v3::dist_xz(h.p, at) >= 2.4 { return; }
     let cv = g.gd[gd].civ.unwrap();
     let gate = crate::close::close_civ_gate(g, gd, &h.p);
@@ -141,7 +141,7 @@ pub(super) fn bodies(g: &Game, o: &mut Offers, h: Him) {
 }
 fn body(g: &Game, o: &mut Offers, h: Him, gd: GuardId) {
     let c = g.gd[gd].ch;
-    let hips = g.ch[c].bones.get(Bone::Hips).copied().unwrap_or(g.ch[c].pos);
+    let hips = g.ch[c].bone(Bone::Hips).unwrap_or(g.ch[c].pos);
     let his = g.pl[h.pl].dragging() == Some(gd);
     let reach = his || body_dist(g, gd, Some(1.3)) < 1.3;
     let callsign = &g.gd[gd].callsign;

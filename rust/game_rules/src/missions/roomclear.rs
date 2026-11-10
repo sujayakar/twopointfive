@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes
-fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
+pub(super) fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
 }
 /// `h.state !== 'dead' && !h.fled`
@@ -488,7 +488,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     let mut i = 0;
     while i < g.staged.rooms.len() {
         let bounds = g.staged.rooms[i].def.bounds;
-        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.ch[g.gd[*h].ch].pos, bounds));
+        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.pos_of(*h), bounds));
         if c == g.staged.rooms[i].cleared {
             i += 1;
             continue;
