@@ -9,7 +9,7 @@ const CHUNK = 64, ROUNDS = 16, AT_ONCE = 4, N = 68;
 /** `tau`, `rays`: as the picture is drawn with them */
 export async function measureLost(lab: Lab, tau: number, rays: number): Promise<{ table: Float32Array; ms: number }> {
   const m = lab.building.world.meshes!, d = lab.gpu.device, kinds = m.classes.flatMap((c, i) => Array.from({ length: c.levels }, (_, l) => ({ kind: i * 2 + l, cls: i, level: l, ...c }))), configs = kinds.length * PX * UPS, t0 = performance.now(), was = lab.knobs[1]!;
-  lab.buffer('lost', configs * AT_ONCE * CHUNK * N * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); const k = new Float32Array(8 + 8 * 8), ku = new Uint32Array(k.buffer); k[0] = tau; k[1] = rays; ku[2] = kinds.length; kinds.forEach((q, i) => { k.set(q.lo, 8 + i * 8); ku[8 + i * 8 + 3] = q.level + 1; k.set(q.hi, 8 + i * 8 + 4); ku[8 + i * 8 + 7] = q.cls; });
+  lab.buffer('lost', configs * AT_ONCE * CHUNK * N * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); const k = new Float32Array(8 + 20 * 8), ku = new Uint32Array(k.buffer); k[0] = tau; k[1] = rays; ku[2] = kinds.length; kinds.forEach((q, i) => { k.set(q.lo, 8 + i * 8); ku[8 + i * 8 + 3] = q.level + 1; k.set(q.hi, 8 + i * 8 + 4); ku[8 + i * 8 + 7] = q.cls; });
   const stage: Stage = { name: 'lost', over: { groups: () => [configs, AT_ONCE, 1] }, buffers: { sums: ['lost', 'array<vec4f>', 'read_write'], lostK: ['lostK', 'LostK', 'uniform'] }, code };
   lab.uniform('lostK', k); lab.knobs[1] = 0; await lab.graph.build([stage]); const table = new Float32Array(LOST_ROWS * 4), keep = () => lab.scene.writeExtra(lab.scene.meshRow + m.lost, new Uint8Array(table.buffer)); table.fill(1); keep();
   for (const pass of [0, 1]) {

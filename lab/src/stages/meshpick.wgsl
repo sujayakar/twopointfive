@@ -33,6 +33,7 @@ fn slotOut(l: Local, cluster: u32) {
 /** a child of every placed object, its mesh's top put on the list */
 @compute @workgroup_size(64) fn seed(@builtin(global_invocation_id) id: vec3u) {
   if (id.y >= meshK.pieces) { return; } let k = placed[id.y]; let p = &pieces[k]; let oh = (*p).planes; let head = mrowU(oh); let ball = mrow(oh + 1u); let sc = (*p).quad.x; let at = vec3f(-(*p).r0.w, -(*p).r1.w, -(*p).r2.w) + ball.xyz * sc; let x = (*p).r0.xyz * at.x + (*p).r1.xyz * at.y + (*p).r2.xyz * at.z; let r = ball.w * sc; if (!inside(x, r)) { return; }
+  if ((((*p).flags) & CUT) != 0u && x.y - r > frame.misc.y) { return; }      /* (the section hides it) */
   // which level of the object: its coarsest that is not seen to be one
   let d = max(distance(frame.camPos.xyz, x) - r, 0.02); var may = tauNow() * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / sc; if (meshK.fixed > 0.0) { may = meshK.fixed / sc; } var li = head.x - 1u; loop { if (li == 0u || mrow(oh + 3u + li).x <= may) { break; } li -= 1u; }
   let lv = mrowU(oh + 3u + li); if (id.x >= lv.w) { return; } let child = lv.z + id.x; let l = localOf(k, child); let b = mrow(l.mesh + 3u); let cx = outward(l, b.xyz); let cr = b.w * l.scale; if (!inside(cx, cr)) { return; }

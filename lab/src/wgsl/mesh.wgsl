@@ -30,10 +30,10 @@ fn meshVertex(row: u32, mn: vec3f, st: vec3f) -> vec3f { let v = mrowU(row); ret
 /** which level of a mesh stands within `e` of its finest */
 fn meshPick(h: u32, n: u32, e: f32) -> u32 { if (meshLevel > 0u) { return min(meshLevel - 1u, n - 1u); } var l = n - 1u; loop { let v = mrow(h + 4u + l); if (l == 0u || select(v.x, v.z, meshDrawn) <= e) { break; } l -= 1u; } return min(l + meshMore, n - 1u); }
 fn boxSpan(a: vec3f, b: vec3f, o: vec3f, inv: vec3f) -> vec2f { let p = (a - o) * inv; let q = (b - o) * inv; return vec2f(max3(min(p, q)), min3(max(p, q))); }
-fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
+fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
   let p = &pieces[k]; let sc = (*p).quad.x; let oo = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w) / sc; let od = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)) / sc;
   let oh = (*p).planes; let head = mrowU(oh); let hull = boxSpan(-(*p).half / sc, (*p).half / sc, oo, safeInv(od)); if (max(hull.x, tmin) > min(hull.y, tmax)) { return false; }
-  var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; } if (meshObject > 0u) { li = min(meshObject, head.x) - 1u; }
+  var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; let gone = mrow(oh + 2u).x; if (gone > 0.0 && may > gone && meshObject == 0u) { return false; }      /* (a skin: what it lies on is met in its place) */ loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; } if (meshObject > 0u) { li = min(meshObject, head.x) - 1u; }
   var stack: array<u32, 48>; var stackT: array<f32, 48>; var sp = 0; var at = mrowU(oh + 3u + li).y; var atT = max(hull.x, tmin);
   var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var recs = 0u; var tris = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var backTo = meshBack;
   loop {
@@ -51,7 +51,7 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
       for (var t = first; t < first + (at & 15u); t++) {
         let ix = mrowU(tris + (t >> 2u))[t & 3u]; let a = meshVertex(vb + (ix & 255u), mn, st); let e1 = meshVertex(vb + ((ix >> 8u) & 255u), mn, st) - a; let e2 = meshVertex(vb + ((ix >> 16u) & 255u), mn, st) - a;
         let q = cross(d, e2); let det = dot(e1, q); if (det == 0.0) { continue; } let iv = 1.0 / det; let s = o - a; let u = dot(s, q) * iv; if (u < 0.0 || u > 1.0) { continue; } let r = cross(s, e1); let v = dot(d, r) * iv; if (v < 0.0 || u + v > 1.0) { continue; }
-        let h = dot(e2, r) * iv; if (h <= tmin || h >= best || (det < 0.0 && h < backTo)) { continue; }
+        let h = dot(e2, r) * iv; if (h <= tmin || h >= best || (det < 0.0 && h < backTo) || ro.y + rd.y * h > cut) { continue; }
         best = h; found = true; hCode = MESH_HIT | (child << head.y) | t; if (meshAny) { hT = best; return true; }
       }
     }
@@ -60,7 +60,7 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   }
   if (found) { hT = best; } return found;
 }
-fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { if ((pieces[k].flags & MESH) != 0u) { return meetMesh(k, ro, rd, tmin, tmax); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
+fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { if ((pieces[k].flags & MESH) != 0u) { return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f { meshAny = true; let T = visiblePieces(ro, rd, tmin, tmax); meshAny = false; return T; }
 
 // ---- what is there
@@ -88,7 +88,7 @@ fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
 }
 // ---- WHAT A LEVEL LOST OF ITS SHAPE, as light (stages/lost.wgsl measures it, against the finest): how much of the sun, by its height and its way round the view, and of what comes from all round, it would
 // still send. A table a kind (a class of objects at a level of theirs): nine pixels' widths from a quarter of a millimetre, each twice the last; three heights of the view; sixteen numbers.
-const LOST_PX = 9u; const LOST_UP = 3u;
+const LOST_PX = 9u; const LOST_UP = 3u; const LOST_KINDS = 20u;
 /** off while it is measured */
 var<private> meshLostOn = true;
 /** whose table: 0 = nobody's */
@@ -97,7 +97,7 @@ fn meshKind(h: Hit) -> u32 { if ((h.piece & LEAF_HIT) != 0u || (pieces[h.piece].
 fn lostAt(x: f32, n: array<f32, 5>, many: u32) -> vec2f { var i = 0u; for (var k = 1u; k + 1u < many; k++) { if (x >= n[k]) { i = k; } } return vec2f(f32(i), clamp((x - n[i]) / (n[i + 1u] - n[i]), 0.0, 1.0)); }
 /** how much of the sun (x), and of what comes from all round (y), a pixel so wide of this kind should send, seen along V */
 fn meshLost(kind: u32, px: f32, V: vec3f) -> vec2f {
-  if (kind == 0u || kind > 8u) { return vec2f(1.0); } let L = frame.sunDir.xyz; let u = clamp(log2(max(px, 1e-6) / 0.00025), 0.0, f32(LOST_PX) - 1.001); let up = lostAt(V.y, array<f32, 5>(0.342, 0.707, 0.966, 2.0, 3.0), 3u); let el = lostAt(L.y, array<f32, 5>(0.07, 0.208, 0.423, 0.707, 0.966), 5u);
+  if (kind == 0u || kind > LOST_KINDS) { return vec2f(1.0); } let L = frame.sunDir.xyz; let u = clamp(log2(max(px, 1e-6) / 0.00025), 0.0, f32(LOST_PX) - 1.001); let up = lostAt(V.y, array<f32, 5>(0.342, 0.707, 0.966, 2.0, 3.0), 3u); let el = lostAt(L.y, array<f32, 5>(0.07, 0.208, 0.423, 0.707, 0.966), 5u);
   let a = dot(normalize(V.xz + vec2f(1e-5, 0.0)), normalize(L.xz + vec2f(0.0, 1e-5))); let az = select(vec2f(0.0, 1.0 - a), vec2f(1.0, -a), a < 0.0); var out = vec2f(0.0);      /* (0: the sun behind whoever looks; 2: in front) */
   for (var i = 0u; i < 4u; i++) { let pi = u32(u) + (i & 1u); let ui = u32(up.x) + (i >> 1u); let w = select(1.0 - fract(u), fract(u), (i & 1u) == 1u) * select(1.0 - up.y, up.y, (i >> 1u) == 1u); if (w <= 0.0) { continue; } let r = MESH_LOST + ((kind - 1u) * LOST_PX * LOST_UP + pi * LOST_UP + ui) * 4u; var sun = 0.0;
     for (var j = 0u; j < 4u; j++) { let e = u32(el.x) + (j & 1u); let z = u32(az.x) + (j >> 1u); let q = e * 3u + z; sun += mrow(r + (q >> 2u))[q & 3u] * select(1.0 - el.y, el.y, (j & 1u) == 1u) * select(1.0 - az.y, az.y, (j >> 1u) == 1u); }

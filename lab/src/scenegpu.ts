@@ -30,7 +30,7 @@ export class SceneGpu {
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture, airRowsN = 0, heights: Float32Array | null = null, ripN = 1) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
     // ---- what stands: pieces in the tree's order
-    const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8, s.map(classOf))), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
+    const sets = [world.pieces.filter(p => !p.ghost && p.flags & F.CUT), world.pieces.filter(p => !p.ghost && !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8, s.map(classOf))), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
     // ---- leaves, planes, marks share one buffer
     if (!world.clusters.some(c => c.leaves.length === 1)) world.clusters.push({ leaves: [{ at: [0, 0, 0], n: [0, 1, 0], t: [1, 0, 0], size: 1, tone: 0.55 }], kind: 0 });
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;

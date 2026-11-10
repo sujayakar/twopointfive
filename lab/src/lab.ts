@@ -11,6 +11,7 @@ import { makeStreet } from './scene/street';
 import { makeForest } from './scene/forest';
 import { makePass } from './scene/pass';
 import { makeMeshes } from './scene/meshes';
+import { makeCorner } from './scene/corner';
 import { meshed } from './mesh/code';
 import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
@@ -39,7 +40,7 @@ import { Body } from './scene/rigid';
 export const TICK = 1 / 60;
 export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest, pass: makePass };
 /** scenes for a study, which the page does not list */
-export const STUDIES: Record<string, () => Building> = { meshes: makeMeshes };
+export const STUDIES: Record<string, () => Building> = { meshes: makeMeshes, corner: makeCorner };
 export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void> }
 
 export class Lab {
