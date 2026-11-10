@@ -113,16 +113,7 @@ pub(super) fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
         };
         crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
     }).collect();
-    Some(crate::view::KitSetup { rows, back: String::from("TAB") })
-}
-
-/// Esc with the back key's rule off: shut it, and say whether there was one to shut
-pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
-    if !slot_setup_open(g, &crate::seats::here(g)) {
-        return false;
-    }
-    g.sets[g.seat].hand.setup = None;
-    true
+    Some(crate::view::KitSetup { rows, back: crate::backkey::BACK_KEY.to_uppercase() })
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up

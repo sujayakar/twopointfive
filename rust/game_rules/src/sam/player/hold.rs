@@ -580,7 +580,7 @@ fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     cancel_ask(g);
 }
 
-/// Stop the choke / the whip under way (a Space tap, a step, Esc): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
+/// Stop the choke / the whip under way (a Space tap, a step, the back key): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
 pub(in crate::sam) fn ease_off_hold(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;

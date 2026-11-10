@@ -59,9 +59,7 @@ commands! {
     9 Autosave { on: u32 } = |g, on| g.saves.enabled = on != 0;
     /// the pause or the end card came up: what the hands were lining up and the rings they held are let go, and nothing is sent
     10 LetGo {} = |g| game::game::game_let_go(g);
-    /// whatever is up is backed out of
-    11 Escape {} = |g| { let _ = game::game::game_escape(g); };
-    // (12 to 16, 18 to 20 and 36 said what a host sets before a game is made: that is one record now, `kept::Kept`, and no number is used again for another)
+    // (11 was Esc's when it backed out of things; 12 to 16, 18 to 20 and 36 said what a host sets before a game is made: that is one record now, `kept::Kept`, and no number is used again for another)
     /// one knob, by its name (knobs.rs); a name no knob has is nothing
     17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = super::knobs::set(g, name, value); };
     /// nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and nothing is the mission's, the log's or the alarm's (`aside`); 0 puts a fresh
