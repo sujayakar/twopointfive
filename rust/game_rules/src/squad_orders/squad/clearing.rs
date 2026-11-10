@@ -72,16 +72,6 @@ pub fn in_bounds(p: V3, b: Option<crate::scene_level::BreachPlanBounds>, pad: Op
         None => false,
     }
 }
-
-/// Metres of nav path from a to b, Infinity if there is none.
-fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
-    let mut l = 0.0;
-    let mut q = a;
-    for r in p { l += flat(q, r); q = r; }
-    l
-}
-
 /// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there.
 pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
     let mut c = Clearing::blank();
@@ -377,7 +367,7 @@ fn nearest(g: &mut Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: f
     let mut bl = f64::INFINITY;
     if ps.len() > 1 {
         for (i, p) in ps.iter().enumerate() {
-            let l = path_len(g, at, to(p));
+            let l = crate::places::on_foot(g, at, to(p));
             if l < bl { bl = l; best = i; }
         }
     }
@@ -467,7 +457,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
     let mut l = 0.0;
     let mut q = from;
     for w in walk {
-        l += m::min(path_len(g, q, w), flat(q, w) * 3.0);
+        l += m::min(crate::places::on_foot(g, q, w), flat(q, w) * 3.0);
         q = w;
     }
     cl!(g).eta = l / APPROACH_SPEED + 8.0;

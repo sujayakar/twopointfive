@@ -2,6 +2,7 @@
 pub mod ask;
 pub mod floor;
 pub mod levelfit;
+pub mod places;
 pub mod scene_box_mirror;
 pub mod scene_boxes;
 pub mod scene_collision;

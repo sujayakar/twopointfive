@@ -952,13 +952,7 @@ fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
         Some(p) => p,
         None => return d + 20.0,
     };
-    let mut l = 0.0;
-    let mut q = a;
-    for r in path {
-        l += flat(q, r);
-        q = r;
-    }
-    l + flat(q, b)
+    crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b)
 }
 
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book.

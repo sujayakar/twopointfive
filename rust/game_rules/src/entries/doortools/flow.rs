@@ -119,9 +119,7 @@ fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64
     if d > lim { return f64::INFINITY; }
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
     let path = match crate::scene_collision::nav_grid_find_path(g, a, b, Some(3000.0), None) { Some(p) => p, None => return f64::INFINITY };
-    let (mut l, mut q) = (0.0, a);
-    for r in path { l += flat(q, r); q = r; }
-    l += flat(q, b);
+    let l = crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b);
     if l > lim { f64::INFINITY } else { l }
 }
 

@@ -355,18 +355,6 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     o.line_side = 0.0;
     p.map_or(false, |p| !p.is_empty())
 }
-
-/// a path's length on the floor
-fn path_len(from: V3, path: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut a = from;
-    for b in path {
-        l += flat(a, *b);
-        a = *b;
-    }
-    l
-}
-
 /// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air
 fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -388,7 +376,7 @@ fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
         if d >= bl { break; }
         let op = g.ch[g.gd[o].ch].pos;
         let p = match crate::scene_collision::nav_grid_find_path(g, pos, op, None, None) { Some(p) if !p.is_empty() => p, _ => continue };
-        let l = path_len(pos, &p);
+        let l = crate::places::walk_len(pos, &p);
         if l <= bl && (best.is_none() || l < bl) {
             best = Some(o);
             bl = l;
@@ -826,7 +814,7 @@ mod tests {
     fn flat_and_path_len_have_the_typescripts_bits() {
         assert_eq!(flat([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         let path = [[1.7, 0.0, 3.9], [-2.3, 0.0, 4.1], [-2.3, 0.0, 4.1], [5.5, 1.0, -0.7]];
-        assert_eq!(path_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);
+        assert_eq!(crate::places::walk_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);
     }
 
 }

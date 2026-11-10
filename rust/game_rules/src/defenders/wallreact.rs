@@ -872,13 +872,6 @@ fn wall_react_open_gone(g: &mut Game, threat: V3, at: V3, h: f64, x: Gone) -> bo
     seg_rect(threat, at, x.rect, 0.45) && !crate::scene_collision::segment_blocked(g, [threat[0], 1.15, threat[2]], [at[0], h, at[2]], None, None, None)
 }
 
-/// length of a path from `from`, and where it ends
-fn walk_len(from: V3, path: &[V3]) -> (f64, V3) {
-    let (mut l, mut q) = (0.0, from);
-    for x in path { l += flat(q, *x); q = *x; }
-    (l, q)
-}
-
 /// `dc.has(nav.idx(floor(x / cell), floor(z / cell)))`, or a blocked cell: no floor
 fn no_floor(g: &Game, dc: &JsMap<crate::Num, DoorId>, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return true; }
@@ -941,10 +934,8 @@ fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, 
         }
         if loose && (!loosely || best.is_some() || cost >= ac) { continue; }
         if !crate::scene_collision::nav_grid_walkable(g, from, p) {
-            let path = crate::scene_collision::nav_grid_find_path(g, from, p, None, None);
-            let (l, q) = walk_len(from, path.as_deref().unwrap_or(&[]));
             plans += 1;
-            if plans > 8 || path.as_ref().map_or(true, |x| x.is_empty()) || l > 1.5 * r + 1.0 || flat(q, p) > 0.5 { continue; }
+            if plans > 8 || !crate::places::walk(g, from, p, 0.5).is_some_and(|w| w.l <= 1.5 * r + 1.0) { continue; }
         }
         if taken.iter().any(|q| flat(*q, p) < 0.9) { continue; }
         if loose { alt = Some(p); ac = cost; continue; }
@@ -1029,9 +1020,8 @@ fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken: &[
             if flat(p, threat) < flat(from, threat) * 0.6 { continue; }
             plans += 1;
             if plans > 10 { return best; }
-            let path = crate::scene_collision::nav_grid_find_path(g, from, p, None, None);
-            let (l, q) = walk_len(from, path.as_deref().unwrap_or(&[]));
-            if path.as_ref().map_or(true, |x| x.is_empty()) || l > 1.6 * r + 2.0 || flat(q, p) > 0.5 || l >= bl { continue; }
+            let Some(crate::places::Walk { l, .. }) = crate::places::walk(g, from, p, 0.5) else { continue };
+            if l > 1.6 * r + 2.0 || l >= bl { continue; }
             let mut open = false;
             for &o in kn {
                 if wall_react_beyond(g, gd, o, p).is_some() && wall_react_open_through(g, o, p, 0.9) { open = true; break; }
