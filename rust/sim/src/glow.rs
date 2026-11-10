@@ -52,7 +52,7 @@ pub const HEIGHT: f64 = 1.4;
 pub const METRE: f64 = 1.0;
 const PER: usize = (SIDE / METRE) as usize;
 /// the plan's half metres, for the roofs
-const MAX_HALF: usize = MAX_GLOW * 4;
+pub const MAX_HALF: usize = MAX_GLOW * 4;
 
 const PI: f64 = 3.141592653589793;
 /// lines a metre sends out
@@ -115,13 +115,10 @@ const LAMPS: usize = light::MOST.div_ceil(64);
 /// A WORLD'S TABLE, made from its statics
 struct Cast {
     rays: [[Ray; RAYS]; MAX_GLOW],
-    /// how many times the statics were found changed, and the last of those that a metre's lines are of (0 = they were never followed)
-    now: u32,
+    marks: Marks,
+    /// the change of the statics a metre's lines are of (0 = they were never followed)
     traced: [u32; MAX_GLOW],
-    /// the last change that touched a half metre of the plan (a path that passes it), the last that did and stood under the lines' start all of it (a line that rises
-    /// never meets it), and one near a metre's middle (where a line may end)
-    half: [u32; MAX_HALF],
-    low: [u32; MAX_HALF],
+    /// the last change near a metre's middle (where a line may end)
     near: [u32; MAX_GLOW],
     /// the change every metre under a roof is made for
     made: u32,
@@ -135,9 +132,7 @@ struct Cast {
     roof: [u8; MAX_HALF],
     /// is a metre one place with the next along x (1) and the next along z (2) · 4 = it was asked
     joined: [u8; MAX_GLOW],
-    /// whose it is: the plan in metres, the sun's place, the world's count of writes when the rows were last compared
-    nx: usize,
-    nz: usize,
+    /// whose it is: the sun's place, with the marks' plan
     to_sun: [f64; 3],
     /// the statics it was made from, and what each takes of the plan
     seen: Seen,
@@ -146,10 +141,8 @@ struct Cast {
 const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0, way: 0 };
 const NO_CAST: Cast = Cast {
     rays: [[NO_RAY; RAYS]; MAX_GLOW],
-    now: 0,
+    marks: Marks { stood: 0, now: 0, nx: 0, nz: 0, half: [0; MAX_HALF], low: [0; MAX_HALF] },
     traced: [0; MAX_GLOW],
-    half: [0; MAX_HALF],
-    low: [0; MAX_HALF],
     near: [0; MAX_GLOW],
     made: 0,
     asked: [[0; LAMPS]; MAX_GLOW],
@@ -158,8 +151,6 @@ const NO_CAST: Cast = Cast {
     stood: [0; light::MOST],
     roof: [0; MAX_HALF],
     joined: [0; MAX_GLOW],
-    nx: 0,
-    nz: 0,
     to_sun: [0.0; 3],
     seen: Seen::NONE,
 };
@@ -241,28 +232,29 @@ fn round_of(r: &[f64]) -> [f64; 5] {
 fn fresh(g: usize, w: &World, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) -> &'static mut Cast {
     let c = cast_of(g);
     // (a world emptied and filled again is another, for what was asked of it while it was empty)
-    if c.nx != nx || c.nz != nz || c.seen.empty_of(w) {
-        c.nx = nx;
-        c.nz = nz;
+    if c.marks.nx != nx || c.marks.nz != nz || c.seen.empty_of(w) {
+        c.marks.nx = nx;
+        c.marks.nz = nz;
         c.roof = [0; MAX_HALF];
         c.joined = [0; MAX_GLOW];
         c.traced = [0; MAX_GLOW];
-        c.now += 1;
+        c.marks.now += 1;
+        c.marks.stood += 1;
         c.seen.forget();
     }
     if let Some(s) = to_sun {
         if c.to_sun != s {
             c.to_sun = s;
             c.traced = [0; MAX_GLOW];
-            c.now += 1;
+            c.marks.now += 1;
         }
     }
-    let Cast { seen, joined, roof, half, low, near, now, nx, nz, .. } = c;
+    let Cast { seen, joined, roof, marks: Marks { half, low, now, nx, nz, .. }, near, .. } = c;
     let mut first = true;
     seen.look(w, round_of, |r| {
         *now += first as u32;
         first = false;
-        let touched = if r[4] < HEIGHT - 0.01 { &mut *low } else { &mut *half };
+        let touched = if r[4] < LOW { &mut *low } else { &mut *half };
         stale(joined, roof, touched, near, *now, *nx, *nz, &[r[0] as f32, r[1] as f32, r[2] as f32, r[3] as f32]);
     });
     c
@@ -312,10 +304,10 @@ fn first(w: &World, at: [f64; 3], d: [f64; 3], tmax: f64, tune: &Knobs) -> Optio
 }
 fn roof(c: &mut Cast, w: &World, x: f64, z: f64, tune: &Knobs) -> bool {
     let (jx, jz) = (floor(x * 2.0), floor(z * 2.0));
-    if !(jx >= 0.0 && jz >= 0.0 && jx < c.nx as f64 * 2.0 && jz < c.nz as f64 * 2.0) {
+    if !(jx >= 0.0 && jz >= 0.0 && jx < c.marks.nx as f64 * 2.0 && jz < c.marks.nz as f64 * 2.0) {
         return false;
     }
-    let i = jz as usize * c.nx * 2 + jx as usize;
+    let i = jz as usize * c.marks.nx * 2 + jx as usize;
     if c.roof[i] == 0 {
         c.roof[i] = if first(w, [jx * 0.5 + 0.25, 30.0, jz * 0.5 + 0.25], [0.0, -1.0, 0.0], 30.0 - ROOF, tune).is_some() { 2 } else { 1 };
     }
@@ -345,6 +337,53 @@ fn metre_of(w: &World, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(u
     None
 }
 
+/// what stands no higher than this is met by no way that rises from a man's height (the lines', and the sky's ways: dome.rs)
+const LOW: f64 = 1.29;
+const _: () = assert!(LOW < HEIGHT && LOW < crate::dome::HEIGHT);
+/// WHERE THE STATICS HAVE CHANGED, on a game's plan (in metres): how many times they were found changed; the last of those that touched a half metre, and the last that
+/// did by what stands no higher than LOW
+pub struct Marks {
+    /// how often other statics altogether stood up
+    pub stood: u32,
+    pub now: u32,
+    pub nx: usize,
+    pub nz: usize,
+    half: [u32; MAX_HALF],
+    low: [u32; MAX_HALF],
+}
+/// those of the game in slot `g` (None: no plan stands yet, or its level has none)
+pub fn marks(g: usize, w: &World) -> Option<&'static Marks> {
+    let (nx, nz) = (cast_of(g).marks.nx, cast_of(g).marks.nz);
+    if nx * nz == 0 {
+        return None;
+    }
+    Some(&fresh(g, w, nx, nz, None).marks)
+}
+/// the metre, or the half of one, a place along an axis of `n` metres is in (the nearest, past the plan)
+fn metre(v: f64, n: usize) -> usize {
+    js_min(js_max(floor(v), 0.0), n as f64 - 1.0) as usize
+}
+impl Marks {
+    /// is a half metre on the plan
+    pub fn on(&self, x: i32, z: i32) -> bool {
+        x >= 0 && z >= 0 && (x as usize) < self.nx * 2 && (z as usize) < self.nz * 2
+    }
+    /// has anything changed since on a way from `a` along `d`; `low`: things no higher than LOW too
+    pub fn passed(&self, a: [f64; 3], d: [f64; 3], far: f64, low: bool, since: u32) -> bool {
+        let at = |t: f64| {
+            let k = metre((a[2] + d[2] * t) * 2.0, self.nz * 2) * self.nx * 2 + metre((a[0] + d[0] * t) * 2.0, self.nx * 2);
+            self.half[k] > since || (low && self.low[k] > since)
+        };
+        let mut t = 0.0;
+        while t < far {
+            if at(t) {
+                return true;
+            }
+            t += PACE;
+        }
+        at(far)
+    }
+}
 /// nothing stands higher over a level than this: a line or the sun's way is followed on the plan to there
 fn to_top(y: f64, up: f64) -> f64 {
     if up > 0.05 { js_min(FAR, js_max(0.0, TOP - y) / up) } else { FAR }
@@ -352,36 +391,22 @@ fn to_top(y: f64, up: f64) -> f64 {
 /// A METRE'S LINES OF THE STATICS AS THEY STAND: all of them the first time, then those that pass something that has changed since. → how many were followed
 fn cast(c: &mut Cast, w: &World, m: usize, tune: &Knobs) -> usize {
     let (since, mut n) = (c.traced[m], 0);
-    if since != c.now {
+    if since != c.marks.now {
         for i in 0..RAYS {
             if since == 0 || changed(c, m, i, since) {
                 c.rays[m][i] = trace(c, w, m, i, tune);
                 n += 1;
             }
         }
-        c.traced[m] = c.now;
+        c.traced[m] = c.marks.now;
     }
     n
 }
 /// whether anything line `i` of metre `m` hangs on has changed since: the way it went, what stands round its end, and the sun's way from there
 fn changed(c: &Cast, m: usize, i: usize, since: u32) -> bool {
     let (r, d) = (&c.rays[m][i], ways().d[i]);
-    let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
-    let cell = |v: f64, per: f64, n: usize| js_min(js_max(floor(v * per), 0.0), n as f64 * per - 1.0) as usize;
-    let passed = |x: f64, z: f64| {
-        let k = cell(z, 2.0, c.nz) * c.nx * 2 + cell(x, 2.0, c.nx);
-        c.half[k] > since || (d[1] < 0.0 && c.low[k] > since)
-    };
-    let along = |x: f64, z: f64, dx: f64, dz: f64, far: f64| {
-        let mut t = 0.0;
-        while t < far {
-            if passed(x + dx * t, z + dz * t) {
-                return true;
-            }
-            t += PACE;
-        }
-        passed(x + dx * far, z + dz * far)
-    };
+    let a = [(m % c.marks.nx) as f64 + 0.5, HEIGHT, (m / c.marks.nx) as f64 + 0.5];
+    let along = |a: [f64; 3], way: [f64; 3], far: f64| c.marks.passed(a, way, far, d[1] < 0.0, since);
     // (a length is kept in whole centimetres, rounded down)
     let end = r.cm as f64 / 100.0 + 0.01;
     // (one that went out and met something is followed again whatever it was: where it ended out there is not kept)
@@ -389,7 +414,7 @@ fn changed(c: &Cast, m: usize, i: usize, since: u32) -> bool {
         return true;
     }
     let far = if r.to >= TO_OUTSIDE && d[1] > 0.0 { js_max(end, to_top(a[1], d[1])) } else { end };
-    if along(a[0], a[2], d[0], d[2], far) {
+    if along(a, d, far) {
         return true;
     }
     if r.to == TO_SKY || r.to == TO_GROUND {
@@ -399,18 +424,18 @@ fn changed(c: &Cast, m: usize, i: usize, since: u32) -> bool {
     // (the metre it reads, and the way there: its own, or any of those round it)
     if r.way & OWN != 0 {
         let (k, way) = (r.to as usize, |v: f64, at: usize| at as f64 + 0.5 - v);
-        if along(h[0], h[2], way(h[0], k % c.nx), way(h[2], k / c.nx), 1.0) {
+        if along(h, [way(h[0], k % c.marks.nx), 0.0, way(h[2], k / c.marks.nx)], 1.0) {
             return true;
         }
-    } else if c.near[cell(h[2], 1.0, c.nz) * c.nx + cell(h[0], 1.0, c.nx)] > since {
+    } else if c.near[metre(h[2], c.marks.nz) * c.marks.nx + metre(h[0], c.marks.nx)] > since {
         return true;
     }
     let sun = r.way & WHOLE;
-    sun > 0 && along(h[0], h[2], c.to_sun[0], c.to_sun[2], if sun == WHOLE { to_top(h[1], c.to_sun[1]) } else { sun as f64 * 0.5 })
+    sun > 0 && along(h, c.to_sun, if sun == WHOLE { to_top(h[1], c.to_sun[1]) } else { sun as f64 * 0.5 })
 }
 /// one line of a metre's, followed among the statics
 fn trace(c: &mut Cast, w: &World, m: usize, i: usize, tune: &Knobs) -> Ray {
-    let (nx, nz) = (c.nx, c.nz);
+    let (nx, nz) = (c.marks.nx, c.marks.nz);
     let a = [(m % nx) as f64 + 0.5, HEIGHT, (m / nx) as f64 + 0.5];
     let to_sun = c.to_sun;
     let d = ways().d[i];
@@ -492,13 +517,13 @@ fn joined(w: &World, x: f64, z: f64, along_x: bool, tune: &Knobs) -> bool {
 }
 fn join(c: &mut Cast, w: &World, m: usize, tune: &Knobs) {
     if c.joined[m] == 0 {
-        let (x, z) = ((m % c.nx) as f64 + 0.5, (m / c.nx) as f64 + 0.5);
-        c.joined[m] = 4 | if m % c.nx + 1 < c.nx && joined(w, x, z, true, tune) { 1 } else { 0 } | if m / c.nx + 1 < c.nz && joined(w, x, z, false, tune) { 2 } else { 0 };
+        let (x, z) = ((m % c.marks.nx) as f64 + 0.5, (m / c.marks.nx) as f64 + 0.5);
+        c.joined[m] = 4 | if m % c.marks.nx + 1 < c.marks.nx && joined(w, x, z, true, tune) { 1 } else { 0 } | if m / c.marks.nx + 1 < c.marks.nz && joined(w, x, z, false, tune) { 2 } else { 0 };
     }
 }
 /// THE LEVEL OF EVERY PLACE, some rounds of it: each metre under a roof is pulled to its own reading and, hard, to the metres it is one place with. `open` = the open air's
 fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize, open: f64, tune: &Knobs) {
-    let (nx, nz) = (c.nx, c.nz);
+    let (nx, nz) = (c.marks.nx, c.marks.nz);
     for m in 0..nx * nz {
         join(c, w, m, tune);
     }
@@ -550,7 +575,7 @@ fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize
 
 /// a word of what stands between a lamp and a metre: the statics and the leaves (none is 0)
 fn between(c: &Cast, w: &World) -> u64 {
-    let mut h = (c.now as u64).wrapping_mul(0x9e3779b97f4a7c15);
+    let mut h = (c.marks.now as u64).wrapping_mul(0x9e3779b97f4a7c15);
     for v in w.leaf.iter().map(|v| v.to_bits()).chain(w.leaf_flags.iter().map(|f| *f as u64)) {
         h = (h ^ v).wrapping_mul(0x9e3779b97f4a7c15);
         h ^= h >> 29;
@@ -603,7 +628,7 @@ fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, set: &lig
     if cast(c, w, m, tune) > 0 {
         unsafe { SWEPT[1] += 1 };
     }
-    let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
+    let a = [(m % c.marks.nx) as f64 + 0.5, HEIGHT, (m / c.marks.nx) as f64 + 0.5];
     let (mut near, mut n) = ([Leaf { at: 0, from: [0.0; 3], ball: 0.0 }; MOST], 0);
     for (i, r) in w.leaf.chunks_exact(REC).enumerate() {
         let (dx, dz) = (r[R_C] - a[0], r[R_C + 2] - a[2]);
@@ -720,20 +745,20 @@ pub fn ahead(g: usize, w: &World, st: &[f64; LEN], nbx: usize, nbz: usize, tune:
         return;
     }
     let c = fresh(g, w, nx, nz, None);
-    if c.made == c.now {
+    if c.made == c.marks.now {
         return;
     }
     let (at, mut done) = (if st[O_GLOW_AT] >= 0.0 && st[O_GLOW_AT] < n as f64 { st[O_GLOW_AT] as usize } else { 0 }, 0);
     for k in 0..n {
         let m = (at + k) % n;
-        if c.traced[m] != c.now && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
+        if c.traced[m] != c.marks.now && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
             done += LOOK + cast(c, w, m, tune);
             if done >= AHEAD {
                 return;
             }
         }
     }
-    c.made = c.now;
+    c.made = c.marks.now;
 }
 /// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands: the lines of every metre under a roof and which metres are one place. No state is in it: a step that finds it
 /// wanting makes what it wants.

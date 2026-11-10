@@ -42,21 +42,7 @@ pub struct HourDefSky {
     pub horizon: V3,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct Ray {
-    pub d: V3,
-    pub c6: Vec<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Open {
-    pub ray: usize,
-    pub len: f64,
-    pub sun_k: f64,
-    pub sky_k: f64,
-}
-
-/// WHAT OF THE SKY REACHES THE LEVEL'S CELLS, asked of a cell when a point in it is first asked about and kept until a static is written or the sun (or the
+/// WHERE THE SKY'S LIGHT ON THE LEVEL IS ASKED OF (sim/dome.rs): the box its statics stand in, kept until one is written or the sun (or the
 /// moon) stands elsewhere. Made again from the world, so it is no state: it is on no wire and in no word
 #[derive(Clone, Debug)]
 pub struct SkyReach {
@@ -64,12 +50,10 @@ pub struct SkyReach {
     pub wrote: u64,
     pub to_sun: V3,
     pub box_: crate::hours::SkyStateBox,
-    pub cells: JsMap<crate::Num, Vec<crate::hours::Open>>,
-    pub fine: JsMap<crate::Num, Vec<crate::hours::Open>>,
 }
 impl SkyReach {
     /// of no world yet
-    pub fn blank() -> Self { SkyReach { wrote: 0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::default(), cells: JsMap::new(), fine: JsMap::new() } }
+    pub fn blank() -> Self { SkyReach { wrote: 0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::default() } }
 }
 impl Default for SkyReach { fn default() -> Self { Self::blank() } }
 
@@ -140,16 +124,6 @@ pub const GREY_LUM: f64 = 0.9951539999999999;
 pub const DEG: f64 = 0.017453292519943295;
 
 pub fn n6() -> Vec<V3> { alloc::vec![[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]] }
-
-pub fn sky() -> Vec<crate::hours::Ray> { { fn add(to: &mut Vec<crate::hours::Ray>, n6: &[V3], elev: f64, n: usize, w: f64, turn: f64) { for i in 0..n { let a = (i as f64 + turn) / n as f64 * 2.0 * crate::m::PI; let d: V3 = [crate::m::cos(a) * crate::m::cos(elev), crate::m::sin(elev), crate::m::sin(a) * crate::m::cos(elev)]; let mut c6 = Vec::with_capacity(6); for nn in n6.iter() { c6.push(crate::m::max(0.0, crate::v3::dot(*nn, d)) * w); } to.push(crate::hours::Ray { d, c6 }); } } fn s(deg: f64) -> f64 { crate::m::sin(deg * crate::hours::DEG) } let n6 = crate::hours::n6(); let mut sky = Vec::with_capacity(15); add(&mut sky, &n6, 90.0 * crate::hours::DEG, 1, 2.0 * crate::m::PI * (1.0 - s(70.0)), 0.0); add(&mut sky, &n6, 50.0 * crate::hours::DEG, 6, 2.0 * crate::m::PI * (s(70.0) - s(32.0)) / 6.0, 0.0); add(&mut sky, &n6, 16.0 * crate::hours::DEG, 8, 2.0 * crate::m::PI * s(32.0) / 8.0, 0.5); sky } }
-
-pub fn gnd() -> Vec<crate::hours::Ray> { { let n6 = crate::hours::n6(); let elev = crate::hours::GND_ELEV; let w = 2.0 * crate::m::PI * crate::m::sin(25.0 * crate::hours::DEG) / 8.0; let n = 8usize; let mut gnd = Vec::with_capacity(8); for i in 0..n { let a = (i as f64 + 0.25) / n as f64 * 2.0 * crate::m::PI; let d: V3 = [crate::m::cos(a) * crate::m::cos(elev), crate::m::sin(elev), crate::m::sin(a) * crate::m::cos(elev)]; let mut c6 = Vec::with_capacity(6); for nn in n6.iter() { c6.push(crate::m::max(0.0, crate::v3::dot(*nn, d)) * w); } gnd.push(crate::hours::Ray { d, c6 }); } gnd } }
-
-pub const GND_ELEV: f64 = -0.20943951023931956;
-
-pub const CELL: f64 = 0.5;
-
-pub const CELL_Y: f64 = 1.3;
 
 pub const DOOR_M: f64 = 7.0;
 
