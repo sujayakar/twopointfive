@@ -571,11 +571,8 @@ pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crat
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
 
-/// Esc with the launcher's button down: the gesture is let go of, nothing sent.
-pub fn launch_cancel(g: &mut crate::game::Game) -> bool {
+/// The launcher's arc is let go of, nothing sent.
+pub fn launch_let_go(g: &mut crate::game::Game) {
     let pl = g.player;
-    if g.pl[pl].launch_held.is_none() { return false; }
-    g.pl[pl].launch_held = None;
-    g.sets[g.seat].hand.throw_preview = None;
-    true
+    if g.pl[pl].launch_held.take().is_some() { g.sets[g.seat].hand.throw_preview = None; }
 }

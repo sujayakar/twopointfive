@@ -36,9 +36,6 @@ fn word(s: &Option<String>) -> bool {
 fn player_ch(g: &Game, seat: &crate::seats::SeatRef) -> CharId {
     g.pl[seat.player].ch
 }
-fn press_delete(g: &mut Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.delete(String::from(code))
-}
 fn press_has(g: &Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
@@ -534,15 +531,6 @@ pub fn squad_orders_let_go(g: &mut crate::game::Game) {
     g.sets[g.seat].orders.tap_was = None;
 }
 
-/// Esc: the ring is dismissed
-pub fn squad_orders_escape(g: &mut crate::game::Game) -> bool {
-    if g.sets[g.seat].orders.menu.is_none() { return false; }
-    g.sets[g.seat].orders.menu = None;
-    g.sets[g.seat].orders.cmd_ring = None;
-    g.sets[g.seat].orders.esc_used = true;
-    true
-}
-
 /// Open the menu on a target
 pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::orders::OrderTarget>, part: Option<&[GuardId]>) -> bool {
     let target: OrderTarget = match target { Some(x) => x.clone(), None => { let a = g.sets[g.seat].aim_point; squad_orders_target_at(g, a) } };
@@ -734,7 +722,6 @@ pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId) {
 /// Once a frame right after the aim is known: T, the ring and its keys, and the quick key, each taken out of the frame's input
 pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     squad_orders_sync(g);
-    if g.sets[g.seat].orders.esc_used { g.sets[g.seat].orders.esc_used = false; press_delete(g, input, "Escape"); }
     if !squad_orders_active(g, &crate::seats::here(g)) || crate::condition::down(g, g.pl[g.player].ch) {
         g.sets[g.seat].orders.menu = None;
         g.sets[g.seat].orders.cmd_ring = None;

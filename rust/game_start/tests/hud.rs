@@ -1,6 +1,6 @@
 //! WHAT A SEAT'S HUD IS TOLD OF ITS OWN KEY AND OF THE FLOOR (`view.interact`, `alarm`, `stage`, `look`; rust/game_rules/src/sam/interact/hud.rs): the overlay draws these and asks nothing of a game.
 use game::game::{Interactable, InteractableKind as K};
-use game::view::{BackKey, Stage, ThingKind, TickView};
+use game::view::{Stage, ThingKind, TickView};
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
@@ -218,8 +218,6 @@ fn the_look_is_the_tables_as_they_stand() {
         assert_eq!(look.mark_clear, !was.mark_clear, "seed {seed}");
         assert_eq!(look.ring.places, 6.0, "seed {seed}");
         assert_eq!(look.plan.sector_m, was.plan.sector_m, "seed {seed}: CONTROL");
-        p.g.k.backkey.tab = true; assert_eq!(p.view().look.back, BackKey::Tab, "seed {seed}");
-        p.g.k.backkey.tab = false; assert_eq!(p.view().look.back, BackKey::Esc, "seed {seed}");
     }
 }
 

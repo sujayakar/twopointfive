@@ -159,7 +159,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
         }
     }
     pressed_delete(g, input, crate::consts::INTERACT_KEY);
-    let esc = if key != "Tab" { crate::backkey::back_take(g, input) } else { pressed_delete(g, input, "Escape") };
+    let back = crate::backkey::back_take(g, input);
     let blur = pressed_has(g, input, "Blur") || pressed_has(g, input, "Paused");
     let rmb = crate::input::input_rmb_hit(g, input);
     if rmb { clicked_off(g, input, 4); }
@@ -186,7 +186,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
         // a row came or went under the ring: the wedges are other rows now, none is lit until the hand lights one
         if seats_now(g, r).row != was { unlight(g, None); }
     }
-    if blur || esc { away(g);  return true; }
+    if blur || back { away(g); return true; }
     if ring_more(g.sets[g.seat].orders.cmd_ring) && seats_now(g, None).over.is_empty() { unlight(g, Some(false)); }
     if rmb {
         if ring_more(g.sets[g.seat].orders.cmd_ring) { unlight(g, Some(false)); }

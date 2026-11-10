@@ -64,16 +64,11 @@ pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::Interactab
 pub fn game_let_go(g: &mut crate::game::Game) {
     let host = game_host_seat(g);
     crate::seats::with_seat(g, host, &mut |g| {
-        crate::player::launch_cancel(g);
+        crate::player::launch_let_go(g);
         crate::orders::squad_orders_let_go(g);
         crate::interact::interact_let_go(g);
         g.sets[g.seat].hand.setup = None;
     });
-}
-
-/// Esc, before the pause menu gets it: true = used here
-pub fn game_escape(g: &mut crate::game::Game) -> bool {
-    crate::orders::squad_orders_escape(g) || crate::player::launch_cancel(g) || crate::interact::escape_interact(g) || crate::slotsetup::slot_setup_shut(g)
 }
 
 /// the light meter's mapping, irradiance → 0‥1 visibility

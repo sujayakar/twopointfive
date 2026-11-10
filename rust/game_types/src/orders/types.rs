@@ -49,7 +49,6 @@ pub struct SquadOrders {
     pub trail: Vec<V3>,
     #[is([0.0, 0.0, -1.0])] pub back: V3,
     #[is(crate::orders::SquadOrdersView { input: None })] pub view: crate::orders::SquadOrdersView,
-    pub esc_used: bool,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
     pub group: f64,
