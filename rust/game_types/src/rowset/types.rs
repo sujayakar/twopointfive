@@ -7,5 +7,3 @@ use alloc::{string::String, vec::Vec};
 pub struct RowSettings {
     pub weather: Option<crate::weather_kinds::WeatherKind>,
 }
-
-pub const BREAK: bool = false;

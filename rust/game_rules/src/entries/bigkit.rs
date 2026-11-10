@@ -39,11 +39,6 @@ fn rebound_kind(k: crate::game::PlayerKickToolKind) -> crate::character::BigRebo
     }
 }
 
-/// `BIGKIT_BREAK=1`, the check's: never on in the game
-pub(super) fn big_broken() -> bool {
-    BREAK
-}
-
 /// The big slot's tool that opens this door from where you stand.
 pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::bigkit::SamBig> {
     let pid = seat.player;
