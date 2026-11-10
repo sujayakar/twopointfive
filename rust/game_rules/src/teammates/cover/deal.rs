@@ -141,7 +141,7 @@ fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
     if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
-    if crate::roomfight::room_fight_engaged(g, gd) { return None; }
+    if crate::roomfight::room_fight_engaged(g, gd) || crate::cleared::walks_in(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
         for (h, mt) in g.tab.roomfight_op[op].meters.iter() {
             if !crate::condition::down(g, g.gd[h].ch) && g.time - mt.seen_t < g.k.cover.contact_secs { return None; }
