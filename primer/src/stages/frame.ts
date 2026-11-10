@@ -1,0 +1,36 @@
+// What every shader may know about this frame.
+
+import { f32, struct, u32, vec2f, vec2u, vec3f } from '../gpu/layout';
+
+export const Frame = struct('Frame', {
+  eye: vec3f('', { unit: 'm' }),
+  number: u32('counts frames; the dice go by it'),
+  forward: vec3f(''),
+  tick: u32('the world’s clock, 60 a second'),
+  right: vec3f('half the picture’s width, one meter off'),
+  seconds: f32('the world’s time', { unit: 's' }),
+  up: vec3f('half its height'),
+  truth_number: u32('paths the truth has'),
+  eye_before: vec3f('last frame', { unit: 'm' }),
+  pinned_on: u32('is a pixel pinned?'),
+  forward_before: vec3f(''),
+  spare0: u32(''),
+  right_before: vec3f(''),
+  spare1: u32(''),
+  up_before: vec3f(''),
+  spare2: u32(''),
+  ghost_eye: vec3f('the other camera, that flies through a frozen frame', { unit: 'm' }),
+  ghost_on: u32(''),
+  ghost_forward: vec3f(''),
+  spare3: u32(''),
+  ghost_right: vec3f(''),
+  spare4: u32(''),
+  ghost_up: vec3f(''),
+  spare5: u32(''),
+  render_size: vec2u(''),
+  half_size: vec2u(''),
+  output_size: vec2u(''),
+  pinned: vec2u('the pinned pixel, at render size'),
+  jitter: vec2f('where in its pixel this frame’s ray goes, from its middle'),
+  jitter_before: vec2f(''),
+});
