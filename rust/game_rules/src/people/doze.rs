@@ -59,7 +59,7 @@ fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
 fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces
 fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
-    let y = crate::props::prop_yaw(g, p);
+    let y = g.tab.props_prop[p].yaw;
     m::atan2(-m::sin(y), -m::cos(y))
 }
 /// the mark over a man at rest ('': none): a 'z' that grows with each breath asleep; at his screen, a note until something has reached him.
@@ -146,7 +146,7 @@ fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 {
 }
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye
 fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
-    let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+    let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
     let (screen_m, pull_m, chair_m) = (g.k.doze.screen_m, g.k.doze.pull_m, g.k.doze.chair_m);
     let mut out = touch();
     let targets = g.targets.len();
@@ -198,8 +198,8 @@ fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Sea
     while pi < g.props.props.len() {
         let p = g.props.props[pi];
         pi += 1;
-        if g.tab.props_prop[p].def.kind != crate::scene_level_data::PropKindName::Chair || !crate::props::prop_asleep(g, p) { continue; }
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        if g.tab.props_prop[p].def.kind != crate::scene_level_data::PropKindName::Chair || !g.tab.props_prop[p].asleep { continue; }
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let d = flat(&wp, px, pz);
         if d >= bd && d >= sd { continue; }
         let mut taken = g.m.doze.rec.values().any(|r| r.chair == Some(p) && is_held_seat(r.phase));
@@ -262,8 +262,8 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
             d.chair = Some(c.chair);
             d.face = c.face;
             d.at = c.at;
-            d.cx = crate::props::prop_x(g, c.chair);
-            d.cz = crate::props::prop_z(g, c.chair);
+            d.cx = g.tab.props_prop[c.chair].x;
+            d.cz = g.tab.props_prop[c.chair].z;
             d.mon = c.mon;
             d.to = c.to;
             put(g, gd, d);
@@ -281,7 +281,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     flush(g, gd, d);
     if !live(g) || !calm(g, gd) || g.gd[gd].hold
         || g.gd[gd].wait < g.k.doze.rise_secs + g.k.doze.nod_secs + 4.0
-        || (!crate::props::prop_asleep(g, ch) && m::hyp2(crate::props::prop_x(g, ch) - d.cx, crate::props::prop_z(g, ch) - d.cz) > 0.15)
+        || (!g.tab.props_prop[ch].asleep && m::hyp2(g.tab.props_prop[ch].x - d.cx, g.tab.props_prop[ch].z - d.cz) > 0.15)
         || crate::guards::not_getting_anywhere(g, gd, dt, 6.0)
     {
         let wp = d.wp;
@@ -306,10 +306,10 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
         }
         d.phase = Phase::Down;
         d.t = 0.0;
-        d.cx = crate::props::prop_x(g, ch);
-        d.cz = crate::props::prop_z(g, ch);
+        d.cx = g.tab.props_prop[ch].x;
+        d.cz = g.tab.props_prop[ch].z;
         d.cyaw = m::atan2(-m::sin(d.face), -m::cos(d.face));
-        d.push = crate::props::prop_push_t(g, ch);
+        d.push = g.tab.props_prop[ch].push_t;
         flush(g, gd, d);
         g.stats.doze.sat += 1;
     }
@@ -389,7 +389,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
         if d.phase == Phase::Up {
             if g.time >= d.until
                 && (d.chair.is_none() || g.gd[gd].state != crate::game::GuardState::Patrol
-                    || { let ch = d.chair.unwrap(); let pos = g.ch[c].pos; let (x, z) = (crate::props::prop_x(g, ch), crate::props::prop_z(g, ch)); flat(&pos, x, z) > 0.75 }
+                    || { let ch = d.chair.unwrap(); let pos = g.ch[c].pos; let (x, z) = (g.tab.props_prop[ch].x, g.tab.props_prop[ch].z); flat(&pos, x, z) > 0.75 }
                     || g.time >= d.until + 30.0)
             { drop(g, gd); }
             continue;
@@ -407,7 +407,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             g.stats.doze.woke[WakeWhy::Taken as usize] += 1;
             continue;
         }
-        if crate::props::prop_push_t(g, ch) > d.push + 1e-6 {
+        if g.tab.props_prop[ch].push_t > d.push + 1e-6 {
             let who = shover_at(g, ch, c);
             wake(g, gd, WakeWhy::Bump, Some(&who[..]));
             continue;
@@ -426,19 +426,18 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.cz += (d.at[2] - d.cz) * k;
             flush(g, gd, d);
         }
-        crate::props::prop_set_x(g, ch, d.cx);
-        crate::props::prop_set_z(g, ch, d.cz);
-        crate::props::prop_set_w(g, ch, 0.0);
-        crate::props::prop_set_vz(g, ch, 0.0);
-        crate::props::prop_set_vx(g, ch, 0.0);
-        let yaw = crate::props::prop_yaw(g, ch);
+        crate::props::prop_move_to(g, ch, d.cx, d.cz);
+        g.tab.props_prop[ch].w = 0.0;
+        g.tab.props_prop[ch].vz = 0.0;
+        g.tab.props_prop[ch].vx = 0.0;
+        let yaw = g.tab.props_prop[ch].yaw;
         if yaw != d.cyaw {
             let mut dy = d.cyaw - yaw;
             dy = m::atan2(m::sin(dy), m::cos(dy));
             let turned = if m::abs(dy) < 0.02 { d.cyaw } else { yaw + dy * m::min(1.0, 6.0 * dt) };
-            crate::props::prop_set_yaw(g, ch, turned);
+            crate::props::prop_turn_to(g, ch, turned);
         }
-        crate::props::prop_set_dirty(g, ch, true);
+        g.tab.props_prop[ch].dirty = true;
         crate::props::prop_place(g, ch);
         if g.gd[gd].wait - dt <= g.k.doze.rise_secs {
             if d.phase == Phase::Work && !d.mon_was {
@@ -533,7 +532,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
 }
 /// where the man who shoved the chair stands: a player, else a guard, else the sleeper himself
 fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
-    let who = crate::props::prop_last_who(g, ch);
+    let who = g.tab.props_prop[ch].who;
     if let Some(pl) = crate::seats::man_by_id(g, who) { return g.ch[g.pl[pl].ch].pos; }
     for &x in g.guards.iter() {
         let xc = g.gd[x].ch;
@@ -583,7 +582,7 @@ pub fn doze_in_chair(g: &crate::game::Game, gd: GuardId) -> bool {
     if seated(d) || d.phase == Phase::Up { return true; }
     if d.phase != Phase::Going { return false; }
     let pos = g.ch[g.gd[gd].ch].pos;
-    let (x, z) = (crate::props::prop_x(g, ch), crate::props::prop_z(g, ch));
+    let (x, z) = (g.tab.props_prop[ch].x, g.tab.props_prop[ch].z);
     flat(&pos, x, z) < 1.2
 }
 /// is he asleep this frame

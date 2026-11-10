@@ -464,7 +464,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
     let mut bd = m::INF;
     for p in g.props.props.clone() {
         if state_of(g).used.has(p) || skip.map_or(false, |s| s.has(p)) { continue; }
-        let pp: V3 = [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)];
+        let pp: V3 = [g.tab.props_prop[p].x, 0.0, g.tab.props_prop[p].z];
         if !crate::roomfight::room_fight_in_room(g, room, pp) {
             let inside = match crate::roomfight::room_fight_free_near(g, pp) {
                 Some(q) => crate::roomfight::room_fight_in_room(g, room, q),
@@ -487,7 +487,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
 pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut crate::digin::RoomSt>, thud: Option<bool>) {
     let thud = thud.unwrap_or(false);
     let p = m.prop.unwrap();
-    let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+    let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
     let pos: V3 = [px, 0.3, pz];
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };

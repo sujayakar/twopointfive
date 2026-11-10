@@ -1402,9 +1402,6 @@ pub struct Mods {
     pub sim_sim: crate::sim_sim::SimSimMod,
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
-    pub sim_propshome: crate::sim_propshome::SimPropshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
     pub scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod,
     /// (counts of what was asked: in no bytes)
     #[bytes(skip)]

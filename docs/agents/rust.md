@@ -52,8 +52,8 @@ Each crate is its own cargo workspace and target folder.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
 - **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: doors, props, slabs, men, lights, weather, smoke, poses, panes. A number a hot loop keeps from tick to tick
-  must be here; all else is on `Game`. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
+  of what `rust/sim` steps: doors, slabs, men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
+  its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
   `sim::state::state_read(g.sim)` and `sim::state::state`, mostly through home modules (`sim_doorshome.rs`).
 - **Copies.** The box world (`rust/sim/src/world.rs`) and the smoke's and air's tables are outside the block, made from the game: never state.
 - **A moment** (`Moment`) is `g.clone()` and the block's bytes: a save, a walk of a tape, a recovery. So `Game` clones whole and a block stands in any
@@ -105,11 +105,10 @@ next tick opens and panics on a write nobody declared.
 
 ### Performance
 
-- **A loop over every man, box, leaf or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
-  layout to be more cache and simd friendly". The head of `rust/sim/src/props.rs` says how: rows dense, a column a number, hot columns together, flags
-  as bits of one `u32`.
-- **`rust/sim` allocates nothing.** Every table has a fixed size (`MAX_BOXES`, a part's `CAP`), and `door_store_new` refuses a level past its cap by
-  name.
+- **A loop over every box, ray or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
+  layout to be more cache and simd friendly". `rust/sim/src/world.rs` is the shape: a row a box, the hot numbers together. A thing with rules of its
+  own is one record with its rules beside it (`props.rs`, `guns/throwables/pool.rs`, `rust/sim/src/falls.rs`): the tick was no slower for it.
+- **A part of a game's block has a fixed size** (`MAX_BOXES`, a part's `CAP`), and `door_store_new` refuses a level past its cap by name.
 - **Too many arguments for a call** go through a scratch `static mut` (`IO` in `doors.rs`). Nothing in scratch outlives the call.
 - **Ask in a batch.** A sight pass hands its eyes over once (`sight_open`, `sight_eye`, `eyes_see`).
 

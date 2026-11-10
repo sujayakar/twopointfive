@@ -162,9 +162,9 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
         destruction_clutter_near(g, hit_p, dir, chaos, who);
         if let Some(prop) = hit.prop {
             if g.tab.props_prop[prop].def.kind == crate::scene_level_data::PropKindName::Chair {
-                let w = crate::props::prop_w(g, prop);
+                let w = g.tab.props_prop[prop].w;
                 let sign = if destruction_hash(g) < 0.5 { -1.0 } else { 1.0 };
-                crate::props::prop_set_w(g, prop, w + sign * (4.0 + 5.0 * chaos));
+                g.tab.props_prop[prop].w = w + sign * (4.0 + 5.0 * chaos);
                 crate::props::prop_wake(g, prop);
                 g.stats.destruction.destr_chair_spins += 1;
             }

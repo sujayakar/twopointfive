@@ -69,7 +69,7 @@ fn seam_box(g: &mut crate::game::Game, b: impl Into<AnyBoxId>) -> &mut crate::sc
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).
 pub(super) fn pose_key(g: &crate::game::Game, p: PropId) -> f64 {
-    crate::props::prop_x(g, p) * 7919.0 + crate::props::prop_z(g, p) * 104729.0 + crate::props::prop_yaw(g, p)
+    g.tab.props_prop[p].x * 7919.0 + g.tab.props_prop[p].z * 104729.0 + g.tab.props_prop[p].yaw
 }
 
 #[cfg(test)]

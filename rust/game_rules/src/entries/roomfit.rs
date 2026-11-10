@@ -172,9 +172,9 @@ fn held_has(held: &[String], key: &str) -> bool {
 fn clear(g: &mut Game, q: V3) -> bool {
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
-        let dx = q[0] - crate::props::prop_x(g, pr);
-        let dz = q[2] - crate::props::prop_z(g, pr);
-        let yaw = crate::props::prop_yaw(g, pr);
+        let dx = q[0] - g.tab.props_prop[pr].x;
+        let dz = q[2] - g.tab.props_prop[pr].z;
+        let yaw = g.tab.props_prop[pr].yaw;
         let c = m::cos(yaw);
         let sn = m::sin(yaw);
         let (hx, hz) = { let row = &g.tab.props_prop[pr]; (row.hx, row.hz) };

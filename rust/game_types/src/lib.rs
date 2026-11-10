@@ -243,7 +243,6 @@ pub mod silent { pub mod types; pub use types::*; }
 pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod falls { pub mod types; pub use types::*; }
 pub mod fixtures { pub mod types; pub use types::*; }
-pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod sim_slabshome { pub mod types; pub use types::*; }
 pub mod sim_state { pub mod types; pub use types::*; }

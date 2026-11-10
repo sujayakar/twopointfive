@@ -23,7 +23,7 @@ pub const SNOW_BANK: u8 = 4;
 pub const MAX_LEAVES: usize = 512;
 pub const LEAF_SETS: usize = 3;
 pub const THING_SET: usize = 2;
-/// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
+/// things of furniture a world can hold (a level of more is refused: PROP_CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
 /// cylinder that holds it), and the words of each IN THE LEVEL NOW, in the furniture's order (its id, where its parts start in list THING_SET, how many)
 pub const MAX_THINGS: usize = 128;
 pub const TH: usize = 4;
