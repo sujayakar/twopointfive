@@ -45,7 +45,7 @@ The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `
 
 ## How it works
 
-**Order in the tick** (`step_seats_on_first`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
+**Order in the tick** (`STEPS`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
 `nvg_tick`, `coverfire_tick`, `ir_light_tick`. The posture stands before the orders pose the men.
 
 **The fight runs on top of the order.** `room_fight_tick` gives each teammate an `Op` and calls `room_fight_tick_op`. An order owns his legs and the

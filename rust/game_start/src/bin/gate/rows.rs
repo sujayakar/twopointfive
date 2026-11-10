@@ -43,6 +43,10 @@ const NAMED: usize = 12;
 pub const RUNS: [(&str, &str); 10] = [("night-breach", "doors"), ("depot-four", "bangs"), ("compound-four", "doors"), ("mousehole-four", "kit"), ("glasshouse-four", "push"), ("killhouse-four", "push"), ("bazaar-quiet", "fires"), ("rescue-registry", "push"), ("pass-four", "bangs"), ("tut-pair", "pair")];
 /// a game of two is held on these
 const SEATS: [&str; 3] = ["room-clear-four", "compound-four", "depot-four"];
+/// the runs the tick's steps are held on, their seconds, and how often a step is asked what it wrote
+const STEPS: [usize; 4] = [0, 1, 2, 7];
+const STEPS_SECS: usize = 16;
+const STEPS_ASK: usize = 10;
 /// THE PARTS THAT ARE THE CLOCK'S OWN: a level with a par block and the same level without it may differ here, and nowhere else
 const CLOCK_ONLY: [(&str, &str); 2] = [
     ("par", "the clock's own record, which runs from the squad's first order"),
@@ -57,10 +61,10 @@ impl Flags {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Job { Start(String, u32, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64), Level(&'static str) }
+pub enum Job { Start(String, u32, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64), Level(&'static str), Steps(usize) }
 impl Job {
     /// which is started first, the longest kinds before the others: the lower, the sooner
-    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) | Job::Level(_) => 2, Job::Start(..) => 3 } }
+    pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) | Job::Level(_) | Job::Steps(_) => 2, Job::Start(..) => 3 } }
 }
 
 #[derive(Clone)]
@@ -94,6 +98,7 @@ pub fn all() -> Vec<Row> {
     for kind in ["play", "again", "save", "load", "draw"] { for k in 0..RUNS.len() { out.push(Row { name: format!("{} {}", kind, run_name(k)), job: Job::Run(k) }); } }
     for id in SEATS { out.push(Row { name: format!("seats {}", id), job: Job::Seats(id.to_string()) }); }
     for e in list.iter().filter(|e| has_par(e)) { out.push(Row { name: format!("par {}", e.id), job: Job::Par(e.id.clone()) }); }
+    for k in STEPS { out.push(Row { name: format!("steps {}", run_name(k)), job: Job::Steps(k) }); }
     out.push(level("file"));
     out
 }
@@ -139,6 +144,7 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (format!("played {}", SEATS[0]), "deaf", "moved from second"), (format!("played {}", SEATS[0]), "wall", "inside a static box"),
         (String::from("lesson tut-road"), "third", "steps went by on their deeds"),
         (String::from("level file"), "spoiled", "reads a member of this name"),
+        (format!("steps {}", run_name(STEPS[1])), "said", "'player' wrote pl"),
     ]
 }
 
@@ -155,6 +161,7 @@ pub fn one(names: &[String], f: Flags) {
         Job::Played(id) => played::played_row(&mine[0].name, id, &pins, f),
         Job::Lesson(id, pace) => played::lesson_row(&mine[0].name, id, *pace, f),
         Job::Level(q) => level_row(&mine[0].name, q, f),
+        Job::Steps(k) => steps_row(&mine[0].name, *k, f),
     }
 }
 
@@ -228,6 +235,26 @@ fn level_row(name: &str, question: &str, f: Flags) {
     let v = levels::ask(question, &[], &[]);
     let fail: Vec<String> = v.fails().iter().map(|(what, detail)| format!("{what}: {}", detail.split_whitespace().collect::<Vec<_>>().join(" "))).collect();
     say(name, t.elapsed().as_secs_f64(), &fail, &format!("{} lines", v.checks()));
+}
+
+// ---- steps
+
+/// A STEP OF THE TICK WRITES WHAT `steps.txt` SAYS IT WRITES, and no other part of the game.
+/// BREAK: `said` the file forgets that the player's step writes the player.
+fn steps_row(name: &str, k: usize, f: Flags) {
+    let t = Instant::now();
+    let (mut p, hand) = stand_run(k, SEED);
+    let mut steps = game_start::steps::Steps::new();
+    let mut next = 0;
+    for k in 0..STEPS_SECS * 60 {
+        while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
+        steps.frame(&mut p, k % STEPS_ASK == 0);
+    }
+    let mut said = game_start::steps::read_file();
+    if f.breaks("said") { said.entry(String::from("player")).or_default().retain(|x| x != "pl"); }
+    let mut fail = steps.unsaid(&said);
+    if !fail.is_empty() { fail.insert(0, String::from("steps.txt does not say it")); }
+    say(name, t.elapsed().as_secs_f64(), &fail, &format!("{} steps", steps.steps.len()));
 }
 
 // ---- start

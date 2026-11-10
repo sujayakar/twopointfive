@@ -293,6 +293,11 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 
 /// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.
 pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    game_update_watched(g, dt, input, cam, canvas, &mut |_, _| ())
+}
+
+/// The same tick with `after` told each step as it ends.
+pub fn game_update_watched(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View, after: Watch) {
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
@@ -310,14 +315,14 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
-        game_step(g, dt, &c);
+        game_step_watched(g, dt, &[c], after);
     } else {
         let seats = g.seats.clone();
         let mut cmds = Vec::with_capacity(seats.len());
         for s in seats {
             if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
         }
-        game_step_seats(g, dt, &cmds);
+        game_step_watched(g, dt, &cmds, after);
     }
     game_host_after(g, input, cam);
 }
