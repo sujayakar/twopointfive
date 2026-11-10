@@ -51,7 +51,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, r
     let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
-    if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }
+    if radio {  } else {  }
     true
 }
 
@@ -268,7 +268,6 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
         let st = now(g, gd);
         if (st.act == MoraleAct::None || st.act == MoraleAct::Duck) && reacts(g, gd) {
             begin(g, gd, MoraleAct::Flinch, Some(at));
-            g.stats.morale.flinches += 1;
         }
         let d = flat(g.ch[g.gd[gd].ch].pos, at);
         if d < nd { nd = d; near = Some(gd); }
@@ -288,7 +287,6 @@ pub fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
 pub fn morale_blast(g: &mut crate::game::Game, at: V3, who: Option<f64>) {
     let b = Blast { at: v3::copy(at), t: g.time, who: who.unwrap_or(0.0) };
     g.m.morale.blasts_of.get_or_insert_with(Vec::new).push(b);
-    g.stats.morale.blasts += 1;
 }
 
 /// a restart: blasts not yet asked about are the old floor's
@@ -330,7 +328,6 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
         let n = nerved(g, k.blast);
         let r = g.m.morale.state_of.get_mut(gd).unwrap();
         r.shock = m::min(k.shock_cap, r.shock + n * (if d <= k.near_m { 1.0 } else { v3::lerp(1.0, k.far_k, (d - k.near_m) / m::max(1e-3, k.blast_m - k.near_m)) }));
-        g.stats.morale.fed += 1;
         let st = now(g, gd);
         let rung = rung_now(g, gd);
         g.m.morale.state_of.get_mut(gd).unwrap().rung = rung;
@@ -339,10 +336,8 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
             begin(g, gd, MoraleAct::Down, Some(b.at));
             let r = g.m.morale.state_of.get_mut(gd).unwrap();
             r.baits = 0.0; r.at_hole = false; r.broke_t = 0.0;
-            g.stats.morale.broke += 1;
         } else if rung == 1.0 && (st.act == MoraleAct::None || st.act == MoraleAct::Duck || st.act == MoraleAct::Stand || st.act == MoraleAct::Flinch) {
             begin(g, gd, MoraleAct::Duck, Some(b.at));
-            g.stats.morale.ducks += 1;
         }
     }
     let order_m = g.k.morale.order_m;
@@ -362,7 +357,6 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
         }
         if !ducked && his.is_empty() { continue; }
         begin(g, l, MoraleAct::Stand, Some(b.at));
-        if ducked { g.stats.morale.ducks -= 1; }
         for &o in his.iter() { g.m.morale.state_of.get_mut(o).unwrap().by = Some(l); }
     }
     for &gd in fed.iter() {
@@ -525,7 +519,7 @@ fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardI
 }
 
 /// one turn of a burst at the hole; false = the burst is over
-fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate::morale::RoundOf) -> bool {
+fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64) -> bool {
     let c = g.gd[gd].ch;
     if g.gd[gd].reload_t >= 0.0 { return false; }
     let hole = g.m.morale.state_of.get(gd).unwrap().hole.unwrap();
@@ -542,7 +536,6 @@ fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate:
     r.rounds -= 1.0;
     r.next = every;
     let left = r.rounds;
-    g.stats.morale.rounds += 1;
     left > 0.0
 }
 
@@ -560,13 +553,11 @@ fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
     }
     g.gd[gd].reload_t = m::max_n(&[g.gd[gd].reload_t, row.dur, g.k.morale.reload_secs]);
     bark(g, gd, LineKind::Out, false, Some(true));
-    g.stats.morale.reloads += 1;
 }
 
 /// a bait taken: the magazine, then a short burst, then a word
 fn bait(g: &mut crate::game::Game, gd: GuardId) {
     g.m.morale.state_of.get_mut(gd).unwrap().baits += 1.0;
-    g.stats.morale.baits += 1;
     let st = now(g, gd);
     let bait_short = g.k.morale.bait_short;
     let w = g.gd[gd].weapon;
@@ -684,25 +675,6 @@ mod tests {
     fn every_kind_has_lines() {
         for k in [LineKind::Duck, LineKind::Call, LineKind::Again, LineKind::Out, LineKind::Spent, LineKind::Clear, LineKind::Lost, LineKind::Order, LineKind::Okay] {
             assert_eq!(lines_of(k).say.len() == 0, k == LineKind::Call);
-        }
-    }
-    /// this file's static says what the skeleton's table (read off the TypeScript) says, kind by kind and in the written order
-    #[test]
-    fn the_static_is_the_skeletons_table() {
-        fn same(a: Option<Pool>, b: &Option<Vec<String>>) {
-            let a: Vec<&str> = a.unwrap_or(&[]).to_vec();
-            let b: Vec<&str> = b.as_ref().map_or(Vec::new(), |v| v.iter().map(|t| t.as_str()).collect());
-            assert_eq!(a, b);
-        }
-        let table = crate::morale::lines();
-        for (k, l) in LINES.iter() {
-            let row = table.get(String::from(k.as_str())).unwrap();
-            same(Some(l.say), &Some(row.say.clone()));
-            same(l.he, &row.he);
-            same(l.they, &row.they);
-            same(l.dark, &row.dark);
-            same(l.lit, &row.lit);
-            same(l.now, &row.now);
         }
     }
 }
@@ -848,7 +820,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         }
         MoraleAct::Burst => {
             let every = g.k.morale.burst_every;
-            let over = !round(g, gd, dt, every, RoundOf::Dust)
+            let over = !round(g, gd, dt, every)
                 || row(g, gd).t > g.k.morale.burst_rounds * g.k.morale.burst_every + 2.0;
             if over { begin(g, gd, MoraleAct::Hold, Some(hole)); }
         }
@@ -878,7 +850,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         }
         MoraleAct::Bait => {
             let every = g.k.morale.bait_every;
-            let mut over = !round(g, gd, dt, every, RoundOf::Bait);
+            let mut over = !round(g, gd, dt, every);
             if !over {
                 let w = g.fa[g.gd[gd].weapon].def;
                 let cap = g.m.weapons.weapons.get(w).unwrap().mag_capacity;

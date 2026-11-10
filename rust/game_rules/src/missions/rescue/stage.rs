@@ -123,11 +123,11 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
 }
 
 /// A new one: the field initialisers, and its three helpers.
-pub fn rescue_new(g: &crate::game::Game) -> crate::rescue::Rescue {
+pub fn rescue_new() -> crate::rescue::Rescue {
     let mut r = Rescue::blank();
-    r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
-    r.ending = crate::rescueend::rescue_end_new(g);
-    r.flush = crate::rescueflush::rescue_flush_new(g);
+    r.flow = Box::new(crate::rescueflow::rescue_flow_new());
+    r.ending = crate::rescueend::rescue_end_new();
+    r.flush = crate::rescueflush::rescue_flush_new();
     r
 }
 
@@ -415,7 +415,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         crate::control::set_pinned(g, gd, true, "rescue");
         g.staged.foes.push(gd);
         g.rescue.defs.set(gd, Def {
-            role: c.role, in_room: c.in_room, mark: DefMark { pos: c.mark.pos, aim_at: c.mark.aim_at },
+            role: c.role, in_room: c.in_room, mark: DefMark { aim_at: c.mark.aim_at },
             learned: f64::NAN, set: false, saw_foe: false, released: false,
             burst: crate::nightbreach::BlindBurst { until: -1.0, n: 0.0, next: 0.0 },
             k: k as f64, crew: DefCrew::Empty, look: None, spot: None, noise0: None,
@@ -504,7 +504,6 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.resolve = 0.0;
     g.rescue.resolve_secs = m::max(5.0, g.k.rescue.resolve_secs);
     g.rescue.t0 = f64::NAN;
-    g.rescue.door_orders = 0.0;
     g.rescue.blind_rounds = 0.0;
     g.rescue.result = None;
     (g.staged.over, g.staged.saved) = (false, None);

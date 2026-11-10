@@ -279,7 +279,7 @@ fn team_known(g: &crate::game::Game) -> Vec<V3> {
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(seen); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd) { out.push(seen); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at { if g.time - g.tab.roomfight_def[d].noise_t < 4.0 { out.push(n); } }
     }
     out
@@ -386,7 +386,7 @@ fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Known> {
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(Known { p: seen, firm: true }); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd) { out.push(Known { p: seen, firm: true }); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at {
             if g.time - g.tab.roomfight_def[d].noise_t < 4.0 {
                 let c = pos_of(g, gd);
@@ -522,7 +522,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
 }
 
 /// wayRound with goRound on: the net's door, no wall between a known place and a spot, every spot tried, a way walked mark by mark
-fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>, says: Option<&mut crate::enemysquads::WayRound2Says>) -> Option<crate::enemysquads::Way> {
+fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
     let pos = pos_of(g, gd);
@@ -608,7 +608,6 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
     }
     js::sort_by(&mut ways, |a, b| a.l - b.l);
     let limit = flank_limit(g, l0);
-    if let Some(s) = says { s.limit = Some(limit); s.best = ways.first().map(|w| w.l); }
     pick_way(ways, taken, limit)
 }
 /// wayRound2's `ok`: a place short of the lane to hold the door from
@@ -697,7 +696,7 @@ fn pair(g: &mut Game, net: &[StateNetItem], h: &[RoomfightDefId], fix_at: V3, ro
     let back = if lost { g.k.squads.hold_back_m } else { 0.0 };
     let mut ways: Vec<Option<Way>> = Vec::new();
     for d in &go {
-        let w = way_round2(g, *d, round_to, &how, &named, &taken, &used, Some(back), None);
+        let w = way_round2(g, *d, round_to, &how, &named, &taken, &used, Some(back));
         if let Some(w) = &w { used.push(w.spot); if let Some(x) = w.door { taken.push(x); } }
         ways.push(w);
     }

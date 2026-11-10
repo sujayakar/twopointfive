@@ -21,13 +21,11 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stalk::St {
 }
 
 /// The stalk is over, for `why` if one was on.
-fn end(g: &mut crate::game::Game, pl: PlayerId, why: crate::stalk::Why) {
+fn end(g: &mut crate::game::Game, pl: PlayerId) {
     let r = g.m.stalk.state.get_mut(pl).unwrap();
     if r.on.is_some() {
         r.armed = Some(false);
         r.on = None;
-        g.stats.stalk.out[why as usize] += 1;
-        g.stats.stalk.last = String::from(why.as_str());
     }
     let r = g.m.stalk.state.get_mut(pl).unwrap();
     r.orbit_r = None;
@@ -245,15 +243,12 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     r.wait = Some(false);
     broke_duck(g, me);
     if !free(g) {
-        end(g, me, Why::Hands);
+        end(g, me);
         if lmb || lmb_hit {
             let wait = corner_gate(g);
             g.m.stalk.state.get_mut(me).unwrap().wait = Some(wait);
             if let Some(gd) = corner_man(g) {
                 g.m.stalk.state.get_mut(me).unwrap().grab = Some(gd);
-                g.stats.stalk.grabs += 1;
-                g.stats.stalk.corner += 1;
-                g.stats.stalk.last = String::from("corner");
             }
         }
         return None;
@@ -270,17 +265,16 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
             let r = g.m.stalk.state.get_mut(me).unwrap();
             r.on = Some(gd);
             r.armed = Some(false);
-            g.stats.stalk.begun += 1;
         }
     }
     let gd = g.m.stalk.state.get(me).unwrap().on?;
     if !lmb && !lmb_hit {
-        end(g, me, Why::Let);
+        end(g, me);
         return None;
     }
     let round = own_keys && keys.is_some();
     if own_keys && !round {
-        end(g, me, Why::Keys);
+        end(g, me);
         return None;
     }
     let p = g.ch[g.pl[me].ch].pos;
@@ -294,7 +288,7 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
                 g.m.stalk.state.get_mut(me).unwrap().broke = Some(StBroke { gd, t, at: [p[0], p[1], p[2]] });
             }
         }
-        end(g, me, why);
+        end(g, me);
         broke_duck(g, me);
         return None;
     }
@@ -514,8 +508,6 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
     let r = state_of(g);
     r.on = None;
     r.armed = Some(false);
-    g.stats.stalk.grabs += 1;
-    g.stats.stalk.last = String::from("grab");
 }
 
 /// The man being stalked right now.

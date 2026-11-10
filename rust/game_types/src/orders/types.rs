@@ -36,7 +36,6 @@ pub struct SquadOrders {
     pub made: JsMap<String, OrdersOrderDefId>,
     /// what the squad's panel says of this seat, as its last tick left it (orders/shown.rs; Rust's own: not on the wire, so blank after a load until the next tick)
     pub shown: crate::orders::Shown,
-    pub owners: Vec<crate::orders::SquadOwner>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
     #[is(crate::orders::Who::All)] pub who: crate::orders::Who,
@@ -49,7 +48,7 @@ pub struct SquadOrders {
     pub asg: JsMap<GuardId, OrdersAssignmentId>,
     pub trail: Vec<V3>,
     #[is([0.0, 0.0, -1.0])] pub back: V3,
-    #[is(crate::orders::SquadOrdersView { input: None, cam: None, canvas: None })] pub view: crate::orders::SquadOrdersView,
+    #[is(crate::orders::SquadOrdersView { input: None })] pub view: crate::orders::SquadOrdersView,
     pub esc_used: bool,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
@@ -77,13 +76,9 @@ pub struct SquadOrders {
     pub glass_sig: f64,
     pub fur_in: bool,
     pub worked: JsMap<DoorId, Vec<Option<crate::orders::SquadOrdersWorkedValueItem>>>,
-    pub face_flip: bool,
     pub reached: JsMap<String, crate::orders::SquadOrdersReachedValue>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SquadOwner {
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadOrdersPosture {
@@ -111,7 +106,6 @@ pub struct Menu {
     pub wheel_acc: f64,
     pub read_t: f64,
     pub part: Option<Vec<GuardId>>,
-    pub split: Option<bool>,
     pub page: Option<String>,
     pub word_row: bool,
     pub on_word: bool,
@@ -134,7 +128,6 @@ impl Default for Menu {
             wheel_acc: 0.0,
             read_t: 0.0,
             part: None,
-            split: None,
             page: None,
             word_row: false,
             on_word: false,
@@ -237,8 +230,6 @@ pub struct SquadOrdersShowsItem {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadOrdersView {
     pub input: Option<InputId>,
-    pub cam: Option<CameraId>,
-    pub canvas: Option<crate::host_hud::View>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -548,13 +539,11 @@ pub struct SquadOrdersAssignA {
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersRingUpG {
     pub men: Vec<GuardId>,
-    pub split: bool,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersGoalPart {
     pub men: Vec<GuardId>,
-    pub split: bool,
 }
 
 #[derive(Clone, Debug, Default)]

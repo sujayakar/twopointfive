@@ -24,22 +24,8 @@ pub struct Engagement {
     pub t0: f64,
     pub timeout: f64,
     pub done: bool,
-    pub result: Option<crate::guards::EngageResult>,
-    pub kills: Vec<crate::guards::EngageResultKillsItem>,
     pub rounds: crate::guards::EngagementRounds,
     pub alive: JsSet<GuardId>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct EngageResult {
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct EngageResultKillsItem {
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct EngageResultRounds {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -62,8 +48,6 @@ pub struct Standoff {
     pub seen_t: f64,
     pub last_bark_t: f64,
     pub line_open: bool,
-    pub shots: f64,
-    pub orbit_m: f64,
     pub stalls: f64,
     pub cornered: bool,
     pub backing: bool,
@@ -153,7 +137,6 @@ pub struct SearchPlan {
     pub current: f64,
     pub phase: crate::guards::SearchPlanPhase,
     pub phase_t: f64,
-    pub visits: f64,
     pub rr: f64,
     pub said: bool,
 }
@@ -245,25 +228,8 @@ pub struct GuardsModHeldMetersValue {
     pub at: V3,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct STANDOFFLINESValue {
-    pub steady: Option<Vec<String>>,
-    pub nervy: Option<Vec<String>>,
-    pub hard: Option<Vec<String>>,
-    pub under: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct STANDOFFNAMELESS {
-    pub dropped: Option<String>,
-    pub freed: Option<String>,
-    pub hit_him: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModUNSTICK {
-    pub legs: f64,
-    pub snaps: f64,
     pub last_snap_t: f64,
     pub last_snap_who: Option<GuardId>,
 }
@@ -281,7 +247,6 @@ pub struct GuardsModWallSeenValue {
     pub t: f64,
     pub since: f64,
     pub dark: bool,
-    pub out: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -504,15 +469,6 @@ pub enum PlanClearsCause {
     Panel,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EndEngagementOutcome {
-    Wiped,
-    Reset,
-    Cleared,
-    Timeout,
-    Superseded,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GuardsMod {
@@ -525,7 +481,7 @@ pub struct GuardsMod {
     pub unstick_legs: JsMap<GuardId, crate::guards::UnstickLeg>,
     pub unstick_retry_at: JsMap<GuardId, f64>,
     pub held_last_frame: JsSet<GuardId>,
-    #[is(crate::guards::GuardsModUNSTICK { legs: 0.0, snaps: 0.0, last_snap_t: -1.0, last_snap_who: None })] pub unstick: crate::guards::GuardsModUNSTICK,
+    #[is(crate::guards::GuardsModUNSTICK { last_snap_t: -1.0, last_snap_who: None })] pub unstick: crate::guards::GuardsModUNSTICK,
     pub lit_seen: JsMap<GuardId, crate::guards::GuardsModLitSeenValue>,
     pub lit_until: JsMap<GuardId, f64>,
     pub wall_seen: JsMap<GuardId, crate::guards::GuardsModWallSeenValue>,
@@ -634,12 +590,6 @@ pub const SHIELD_RELEASE_BEAT_JITTER: f64 = 0.3;
 pub const PAIR_LEGIBLE: f64 = 3.0;
 
 pub fn held_meter() -> crate::guards::HELDMETER { crate::guards::HELDMETER { gap_secs: 0.5, moved_m: 1.0 } }
-
-pub fn standoff_lines() -> JsMap<String, crate::guards::STANDOFFLINESValue> { { let mut t = JsMap::new(); t.set(String::from("enter"), crate::guards::STANDOFFLINESValue { steady: Some(alloc::vec![String::from("{held}, hold still — we've got you"), String::from("easy. easy. nobody has to get hurt here")]), nervy: Some(alloc::vec![String::from("{held}! —jesus— okay, okay, nobody shoot!"), String::from("oh god— he's got {held}—")]), hard: Some(alloc::vec![String::from("let {him} go. now."), String::from("you. hands off {him}.")]), under: None }); t.set(String::from("noShot"), crate::guards::STANDOFFLINESValue { steady: Some(alloc::vec![String::from("let {him} go and we talk about it"), String::from("{held}, stay loose — I'm coming round")]), nervy: Some(alloc::vec![String::from("{held}! —I can't— I haven't got a line—"), String::from("don't you hurt {him}— don't—")]), hard: Some(alloc::vec![String::from("you've got nowhere to take {him}"), String::from("the second {he} slips, you're done")]), under: Some(alloc::vec![String::from("let {him} go!"), String::from("drop {him} — NOW"), String::from("{held}, don't move"), String::from("I don't have a shot"), String::from("no shot — {held}'s square in front of him")]) }); t.set(String::from("line"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("I— I think I have him—")]), hard: Some(alloc::vec![String::from("there you are.")]), under: Some(alloc::vec![String::from("I have him."), String::from("got a line —")]) }); t.set(String::from("cornered"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("just— just let {him} go, please—")]), hard: Some(alloc::vec![String::from("one way out of this for you. through us.")]), under: Some(alloc::vec![String::from("can't get round him — hold what you've got"), String::from("no way round. {held}, hang on"), String::from("nowhere for either of us to go — let {him} walk and this ends quiet")]) }); t.set(String::from("dropped"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("{held}! —he's— shoot, SHOOT—")]), hard: None, under: Some(alloc::vec![String::from("he's dropped {held} — TAKE HIM"), String::from("{held}'s down — light him up!")]) }); t.set(String::from("freed"), crate::guards::STANDOFFLINESValue { steady: None, nervy: None, hard: None, under: Some(alloc::vec![String::from("{held}, DOWN — get clear!"), String::from("he's loose — {held}, out of the way!")]) }); t.set(String::from("lost"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("where— where did they go—")]), hard: None, under: Some(alloc::vec![String::from("lost them — where'd he take {him}?"), String::from("I've lost sight — moving up")]) }); t.set(String::from("hitHim"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("no— no no no— {held}—")]), hard: Some(alloc::vec![String::from("…{held}'s hit. that's on him. keep on him—")]), under: Some(alloc::vec![String::from("…christ— I hit {him}. I hit {held}—")]) }); t } }
-
-pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I'm coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can't— I haven't got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can't get round him — hold what you've got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
-
-pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
 
 pub const UNSTICK_REACH_M: f64 = 2.4;
 

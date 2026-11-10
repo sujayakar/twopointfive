@@ -36,16 +36,6 @@ pub struct Watchable {
     pub way: bool,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct RoomfitStats {
-    pub deals: i32,
-    pub way: i32,
-    pub sector: i32,
-    pub plain: i32,
-    pub moved: i32,
-}
-
 pub const EYE: f64 = 1.55;
 
 pub const CHEST: f64 = 1.1;

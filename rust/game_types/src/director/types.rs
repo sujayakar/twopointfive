@@ -105,9 +105,7 @@ pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
     pub armed: bool,
-    pub log: Vec<crate::director::LogRow>,
     pub run: Option<DirectorRunId>,
-    pub last_run: Option<crate::director::DirectorLastRun>,
     pub serial: f64,
     pub seen: JsSet<u32>,
     pub exiting: bool,
@@ -174,7 +172,6 @@ pub struct TriggerDef {
     pub name: Option<String>,
     pub volume: Option<String>,
     pub who: Option<crate::director::TriggerDefWho>,
-    pub label: Option<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -226,10 +223,6 @@ pub enum LintProblemLevel {
     Warn,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct LogRow {
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub enum Json {
     Text(String),
@@ -237,10 +230,6 @@ pub enum Json {
     Bool(bool),
     Array(Vec<Option<crate::director::Json>>),
     Arm4(JsMap<String, Option<crate::director::Json>>),
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DirectorLastRun {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -323,7 +312,6 @@ pub enum Cond {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm0 {
     pub until: f64,
-    pub label: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -334,13 +322,11 @@ pub struct CondArm1 {
 #[derive(Clone, Debug, ToBytes)]
 pub struct CondArm2 {
     pub test: crate::director::CondTest,
-    pub label: String,
 }
 impl Default for CondArm2 {
     fn default() -> Self {
         CondArm2 {
             test: crate::director::CondTest::Script { id: 0 },
-            label: String::new(),
         }
     }
 }
@@ -413,8 +399,6 @@ pub struct LiveBeat {
     pub it: crate::director::BeatFrame,
     pub waiting: Option<crate::director::Cond>,
     pub result: crate::director::CondResult,
-    pub t0: f64,
-    pub step: f64,
     pub state: crate::director::BeatState,
     pub touched: JsSet<crate::Num>,
     pub flow: crate::director::LiveBeatFlow,
@@ -432,11 +416,9 @@ pub struct UnitRec {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Run {
-    pub serial: f64,
     pub name: String,
     pub def: crate::director::ProgramDef,
     pub t: f64,
-    pub dt: f64,
     pub tick_n: f64,
     pub dice: crate::dice::Die,
     pub beats: Vec<DirectorLiveBeatId>,
@@ -468,7 +450,6 @@ pub struct RunBurstsItem {
     pub cadence: f64,
     pub spread: f64,
     pub next: f64,
-    pub fired: f64,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
@@ -481,7 +462,6 @@ impl Default for RunBurstsItem {
             cadence: 0.0,
             spread: 0.0,
             next: 0.0,
-            fired: 0.0,
             serial: 0,
         }
     }
@@ -498,8 +478,6 @@ pub enum RunBurstsItemAt {
 pub struct RunKicksItem {
     pub door: DoorId,
     pub gd: GuardId,
-    pub by: String,
-    pub beat: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -526,35 +504,6 @@ pub struct DirectorObjective {
     pub pos: Option<V3>,
 }
 
-#[derive(Clone, Debug)]
-pub enum DirectorSignalData {
-    Text(String),
-    Num(f64),
-    Bool(bool),
-    Array(Vec<Option<crate::director::Json>>),
-    Arm4(JsMap<String, Option<crate::director::Json>>),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DirectorPushRow {
-    pub t: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum DirectorPushRowKind {
-    #[default] Camera,
-    Radio,
-    Error,
-    Spawn,
-    Drill,
-    Note,
-    Program,
-    Beat,
-    Trigger,
-    Yield,
-    Stimulus,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DirectorStartOpts {
     pub seed: Option<f64>,
@@ -576,8 +525,6 @@ pub struct SignalViewS {
 pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile")] }
 
 pub const MAX_RESUMES: f64 = 64.0;
-
-pub const LOG_CAP: f64 = 2500.0;
 
 pub const MAX_WHEN: f64 = 32.0;
 

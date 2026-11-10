@@ -25,10 +25,6 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     };
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
 }
-/// The record's copy of the rounds: a side that fired none stays absent.
-fn rounds_copy(r: &crate::guards::EngagementRounds) -> crate::guards::EngageResultRounds {
-    crate::guards::EngageResultRounds {  }
-}
 
 /// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.
 fn same_post(a: &crate::scene_level::Chokepoint, b: &crate::scene_level::Chokepoint) -> bool {
@@ -402,40 +398,9 @@ pub(in crate::people) fn engagement_of(g: &crate::game::Game) -> Option<crate::g
     g.m.guards.engagements.clone()
 }
 
-/// Name of the character with this id, for the record.
-fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
-    if let Some(pl) = crate::seats::man_by_id(g, id_2) { return crate::seats::player_name(g, pl); }
-    for &x in g.guards.iter() {
-        let c = g.gd[x].ch;
-        if g.ch[c].id == id_2 { return g.gd[x].callsign.clone(); }
-    }
-    if id_2 < 0.0 { String::from("—") } else { format!("#{}", id_2) }
-}
-
-/// A list's men still in the fight: alive, on the list, not fled.
-fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
-    let mut n = 0.0;
-    for &x in xs {
-        if !crate::condition::down(g, g.gd[x].ch) && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
-    }
-    n
-}
-
 /// Close the running engagement with `outcome`.
-pub(super) fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEngagementOutcome) {
-    let (ops, hos, t0, kills, rounds) = match g.m.guards.engagements.as_mut() {
-        None => return,
-        Some(e) if e.done => return,
-        Some(e) => {
-            e.done = true;
-            (e.operatives.clone(), e.hostiles.clone(), e.t0, e.kills.clone(), rounds_copy(&e.rounds))
-        }
-    };
-    let operatives_left = living_count(g, &ops);
-    let hostiles_left = living_count(g, &hos);
-    if let Some(e) = g.m.guards.engagements.as_mut() {
-        e.result = Some(crate::guards::EngageResult {  });
-    }
+pub(super) fn end_engagement(g: &mut crate::game::Game) {
+    if let Some(e) = g.m.guards.engagements.as_mut() { e.done = true; }
 }
 
 /// Is anybody of this list still in the fight?
@@ -471,19 +436,10 @@ pub(super) fn tick_engagement(g: &mut crate::game::Game) {
         }
         if crate::condition::down(g, g.gd[x].ch) {
             if let Some(e) = g.m.guards.engagements.as_mut() { e.alive.delete(x); }
-            let (victim, team, killer, down_by) = { let m_ = &g.gd[x]; (m_.callsign.clone(), m_.team, m_.killer_id, m_.down_by) };
-            let by = if killer >= 0.0 {
-                name_of_id(g, killer)
-            } else {
-                match down_by { Some(d) => String::from(d.as_str()), None => String::from("—") }
-            };
-            if let Some(e) = g.m.guards.engagements.as_mut() {
-                e.kills.push(crate::guards::EngageResultKillsItem {  });
-            }
         }
     }
-    if gone { end_engagement(g, crate::guards::EndEngagementOutcome::Reset); }
-    else if !living_any(g, &hos) { end_engagement(g, crate::guards::EndEngagementOutcome::Cleared); }
-    else if !living_any(g, &ops) { end_engagement(g, crate::guards::EndEngagementOutcome::Wiped); }
-    else if g.time - t0 > timeout { end_engagement(g, crate::guards::EndEngagementOutcome::Timeout); }
+    if gone { end_engagement(g); }
+    else if !living_any(g, &hos) { end_engagement(g); }
+    else if !living_any(g, &ops) { end_engagement(g); }
+    else if g.time - t0 > timeout { end_engagement(g); }
 }

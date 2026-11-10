@@ -36,21 +36,6 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
     g.guards.iter().copied().find(|&x| g.gd[x].ch == c)
 }
 
-/// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks.
-fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
-    use crate::fixtures::FixtureKind;
-    let kind = g.tab.fixture[t].kind;
-    let pos = g.tab.fixture[t].pos;
-    let rad = if kind == FixtureKind::Emissive { 0.45 } else if kind == FixtureKind::Breaker { 0.4 } else { 0.3 };
-    for s in legs {
-        let to_t = v3::sub(pos, s.o);
-        let depth = v3::dot(to_t, s.d);
-        if depth > s.end + slack { continue; }
-        if v3::len(v3::sub(to_t, v3::scale(s.d, v3::clamp(depth, 0.0, s.end)))) < rad { return true; }
-    }
-    false
-}
-
 /// A guard's own hands: the row's spread off the man he is firing at.
 fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
     let foe = match sg { Some(s) => g.gd[s].foe, None => None };
@@ -248,7 +233,6 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
         return;
     }
-    if crate::carlamps::lamp_glass(g, t) { g.stats.carlamps.shot += 1; }
     let lens = g.tab.fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
         g.tab.fixture[t].broken = true;
@@ -442,7 +426,6 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     // (st, stopped there: the round's end is in that static, not a man, not the panel at the muzzle)
     let st_stop = st.filter(|s| m::abs(t_hit - s.t) < 1e-6);
     let bare_stop = hit.is_none() && !through;
-    if bare_stop { if let Some(s) = st_stop { crate::wallpen::spent_in_wall(g, s.index); } }
     if bare_stop {
         if let Some(s) = st_stop {
             if s.index < 1e6 {
@@ -593,10 +576,9 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
                 let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };
                 let tight = m::min(slack, g.k.aimcost.slack);
                 if crate::aimcost::lamp_struck(g, pos, &boxes, false, &legs, Some(bare), Some(tight)) { got = Some(t); break; }
-                if near_lamp(g, t, &legs, slack) { g.stats.aimcost.lamp_near += 1; }
             }
         }
-        if let Some(t) = got { g.stats.aimcost.lamp_hits += 1; shoot_out(g, t, muzzle); }
+        if let Some(t) = got {  shoot_out(g, t, muzzle); }
     } else if !through {
         let ix = st_stop.map(|s| s.index);
         match &pen {

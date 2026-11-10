@@ -433,13 +433,13 @@ impl Sitting {
                 Some(vec![text(KEPT_LEVEL, difficulty::level_text(g)), text(KEPT_LEVERS, String::new())])
             }
             "fog" if m.quiet_row() => {
-                quietfog::set_quiet_fog(g, [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| r.as_str() == to)?, Some(true));
+                quietfog::set_quiet_fog(g, [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| r.as_str() == to)?);
                 Some(vec![text(KEPT_FOG, quietfog::quiet_fog_text(g))])
             }
             "cams" => {
                 let on = to == "1";
                 let lever_was = quietfog::quiet_fog(g);
-                quietfog::set_quiet_cams(g, on, Some(true));
+                quietfog::set_quiet_cams(g, on);
                 let mut kept = vec![text(KEPT_CAMS, quietfog::quiet_cams_text(g, on))];
                 if quietfog::quiet_fog(g) != lever_was { kept.push(text(KEPT_FOG, quietfog::quiet_fog_text(g))); }
                 Some(kept)

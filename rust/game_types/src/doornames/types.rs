@@ -6,7 +6,6 @@ use alloc::{string::String, vec::Vec};
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoornamesMod {
-    pub said: JsMap<DoorId, String>,
     pub written: JsMap<DoorId, String>,
     pub said_up: JsMap<DoorId, String>,
 }

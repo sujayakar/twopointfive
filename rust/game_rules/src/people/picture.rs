@@ -118,7 +118,6 @@ fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: CharId, at: V3, t: 
 /// one man's look about him, on his row of the table: every enemy his eye has, the place his senses work from, the believed places he sees empty, the men he knows are down
 fn look(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
-    g.stats.picture.looks += 1;
     if g.gd[gd].held.is_some() {
         return;
     }
@@ -149,7 +148,6 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
         if rate > g.k.picture.glimpse {
             let at = g.ch[who].pos;
             learn(g, Some(gd), who, at, now, IdeaHow::Seen, None);
-            g.stats.picture.seen += 1;
         }
     }
     let forget_secs = g.k.picture.forget_secs;
@@ -168,7 +166,6 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
             };
             if take {
                 learn(g, Some(gd), f, known, m::min(now, fix_t), IdeaHow::Fix, None);
-                g.stats.picture.fixes += 1;
             }
         }
     }
@@ -178,7 +175,6 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
         let i = *pic!(g, gd).ideas.get(who).unwrap();
         if now - i.t > forget_secs || gone(g, who) {
             pic!(g, gd).ideas.delete(who);
-            g.stats.picture.forgot += 1;
             continue;
         }
         if !up(g, who) {
@@ -194,7 +190,6 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
                 let p = pic!(g, gd);
                 p.ideas.delete(who);
                 p.downs.set(who, now);
-                g.stats.picture.downs += 1;
             }
             continue;
         }
@@ -207,7 +202,6 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
             && made_out(g, gd, i.at)
         {
             pic!(g, gd).ideas.get_mut(who).unwrap().lost = true;
-            g.stats.picture.lost += 1;
         }
     }
 }
@@ -225,7 +219,7 @@ fn look_sam(g: &mut crate::game::Game) {
         None => v3::add(cpos, [0.0, 1.65, 0.0]),
     };
     let fwd = crate::character::character_forward(g, c);
-    let thr = crate::guards::team_through(g);
+    let thr = crate::guards::team_through();
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -343,7 +337,6 @@ fn hear(g: &mut crate::game::Game) {
                 }
             }
             learn_now(now, pic_of(g, gd, now), who, at, now, IdeaHow::Heard, None);
-            g.stats.picture.heard += 1;
         }
     }
 }
@@ -432,7 +425,6 @@ fn tell(g: &mut crate::game::Game) {
                     }
                 }
                 learn_now(now, bp, who, i.at, i.t, IdeaHow::Told, a);
-                g.stats.picture.told += 1;
             }
             for &(who, t) in a_downs.iter() {
                 let bp: &mut Pic = row!(g, b);
@@ -1028,7 +1020,6 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
     let low = !(best.stand <= 0.0 && step_holds(g, gd, best.at, false));
     let at = floor(best.at);
     pic!(g, gd).step = Some(Step { key: Some(key), mark: floor(mark), at, low, look_t: now + 0.5, t0: now });
-    g.stats.picture.stepped += 1;
     Some(PictureStep { at, low })
 }
 

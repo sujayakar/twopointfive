@@ -73,7 +73,6 @@ pub fn fire_cam(g: &mut crate::game::Game, pl: PlayerId, from: V3, target: V3) -
     let vel = cam_vel(g, from, target);
     let cam = g.tab.stickycam_sticky_cam.push(StickyCam { pos: v3::copy(from), n: [0.0, 1.0, 0.0], vel: Some(vel), age: 0.0, si: -1.0, id });
     g.pl[pl].cams.push(cam);
-    g.stats.stickycam.fired += 1;
     let (level, c) = (g.k.sticky.launch_noise, g.pl[pl].ch);
     crate::flight::launched(g, c, from, 0.5, Some(1.25), level);
     cam
@@ -94,12 +93,10 @@ fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3, n: 
         let row = &mut g.tab.stickycam_sticky_cam[cam];
         row.pos = [at[0], if t.is_finite() { m::max(0.0, o[1] - t) } else { 0.0 }, at[2]];
         row.n = [0.0, 1.0, 0.0];
-        g.stats.stickycam.dropped += 1;
     } else {
         let row = &mut g.tab.stickycam_sticky_cam[cam];
         row.pos = v3::copy(at);
         row.n = v3::normalize(n);
-        g.stats.stickycam.stuck += 1;
     }
     let pos = g.tab.stickycam_sticky_cam[cam].pos;
     crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
@@ -120,7 +117,6 @@ fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3, n: 
         let Some(k) = k else { break };
         g.pl[pl].cams.remove(k);
         out -= 1.0;
-        g.stats.stickycam.retired += 1;
     }
 }
 
@@ -303,7 +299,6 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     let rf = g.pl[pl].rifle;
     let n = m::min(g.k.sticky.carry, g.fa[rf].cams + 1.0);
     sticky_issue(g, pl, n, Some(true));
-    g.stats.stickycam.taken += 1;
     let pos = g.tab.stickycam_sticky_cam[c].pos;
     crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(0.16), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
     let level = g.k.sticky.take_noise;
@@ -359,16 +354,6 @@ pub fn sticky_marks(g: &crate::game::Game, pl: PlayerId) -> Vec<crate::view::Cam
 pub fn sticky_flying(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     g.pl[pl].cams.iter().any(|c| g.tab.stickycam_sticky_cam[*c].vel.is_some())
-}
-
-/// What a checkpoint writes as left to send: the rifle's count and any still in the air.
-fn sticky_left(g: &crate::game::Game, pl: PlayerId) -> f64 {
-    let rf = g.pl[pl].rifle;
-    let mut n = g.fa[rf].cams;
-    for c in &g.pl[pl].cams {
-        if g.tab.stickycam_sticky_cam[*c].vel.is_some() { n += 1.0; }
-    }
-    m::min(n, g.k.sticky.carry)
 }
 
 #[cfg(test)]
@@ -454,9 +439,7 @@ mod tests {
         assert!(!sticky_flying(&g, &crate::seats::here(&g)));
         cam(&mut g, pl, 2.0, true);
         assert!(sticky_flying(&g, &crate::seats::here(&g)));
-        assert_eq!(sticky_left(&mut g, pl), 2.0);
         g.fa[rf].cams = g.k.sticky.carry;
-        assert_eq!(sticky_left(&mut g, pl), g.k.sticky.carry);
     }
 
     #[test]

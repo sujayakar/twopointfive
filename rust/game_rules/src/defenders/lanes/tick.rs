@@ -144,14 +144,12 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     for l in old {   // (a few rounds past a man and no more: forgotten in ten seconds)
         let (weight, until, last_t, known) = { let x = &g.tab.lanes_lane[l]; (x.weight, x.until, x.last_t, x.known) };
         let keep = if weight >= 1.0 { g.time < until } else { g.time - last_t < 10.0 };
-        if !keep && !known && weight >= 1.0 { s(g).stats.unknown += 1.0; }
         if keep { kept.push(l); }
     }
     let n1 = kept.len();
     s(g).lanes = kept;
     if n1 != n0 {
         lanes_gone(g);
-        s(g).stats.lapsed += (n0 - n1) as f64;
         remask(g);
     }
     if !s(g).peek.is_empty() {
@@ -193,7 +191,6 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         // (backed out to cover and arrived: his gun on the lane's mouth, unless he has a man in his sights, which is the fight's)
         if fit(g, gd) && g.time - g.gd[gd].last_seen_t > 1.0 {
             crate::roomfight::room_fight_lane_stop(g, gd, h.look);
-            s(g).stats.held += 1.0;
         }
     }
     // a lane's floor is kept true to the doors and walls as they stand: one wedge read again each half second, its floor swapped when the last is in
@@ -386,7 +383,6 @@ pub(super) fn back_out(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId) -
     let look = mouth_of(g, l, spot);
     let id = g.tab.lanes_lane[l].id;
     held_on(g, gd, crate::lanes::StateHeldValue { lane: id, t: now, look, aimed: false, at: spot });
-    s(g).stats.backed_out += 1.0;
     clear_path(g, gd);
     crate::roomfight::run(g, d, spot, None, 0.3, crate::owner::by::LANE);
     if now - s(g).said_t > 4.0 { s(g).said_t = now; say_net(g, gd, "get back — out of their line!"); }
@@ -475,13 +471,11 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
             clear_path(g, gd);
             crate::roomfight::run(g, d, stop, None, 0.0, crate::owner::by::LANE);
             crate::belief::word(g, gd, l_from);
-            s(g).stats.round += 1.0;
             if first { round_shout(g, gd); }
             continue;
         }
         crate::roomfight::loose_at(g, d, l_from);   // (his way stays priced, but nothing here stops him short of the guns he was sent at)
         crate::belief::word(g, gd, l_from);
-        s(g).stats.round += 1.0;
         if first { round_shout(g, gd); }
     }
     g.tab.lanes_lane[l].round_at = g.time + g.k.lanes.round_gap;
@@ -530,7 +524,6 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let x = &mut g.tab.lanes_lane[l];
     x.can = Some(crate::lanes::LaneCan { t: now, land: sol.land });
     x.stun_at = now + gap;
-    s(g).stats.stuns += 1.0;
     say_net(g, best, "bang out — on me!");
     s(g).said_t = g.time;
 }
@@ -579,7 +572,6 @@ fn bangs(g: &mut crate::game::Game) {
             x.can = None;
             x.push_until = until;
             x.round_at = m::max(x.round_at, until + 2.0);
-            s(g).stats.pushes += 1.0;
             let to: V3 = [epos[0], 0.0, epos[2]];
             let mut first = true;
             let rows: Vec<(GuardId, f64)> = s(g).held.iter().map(|(gd, h)| (gd, h.lane)).collect();
@@ -771,7 +763,6 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
             let p = pos_of(g, gd);
             f.phase = FlankPhase::Set; f.t = g.time; f.at = p;
             s(g).flank_of.set(gd, f);
-            s(g).stats.sets += 1.0;
             let look = mouth_of(g, l, p);
             clear_path(g, gd);
             if crate::roomfight::room_fight_lane_stop(g, gd, look) {
@@ -837,7 +828,6 @@ fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
         for &x in guns.iter() { let dd = flat(x, pick.to); if dd < md { md = dd; q = x; } }
         aim_at(g, gd, [q[0], 1.2, q[2]]);
     }
-    s(g).stats.pins += 1.0;
     g.tab.lanes_lane[l].pin_by = char_id_of(g, gd);
 }
 
@@ -906,7 +896,6 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
         fr.n -= 1.0;
         let cd = g.m.weapons.weapons.get(g.fa[w].def).unwrap().cd;
         fr.next = g.time + m::max(g.k.lanes.pin_every, cd);
-        s(g).stats.pin_rounds += 1.0;
         put_fire(g, gd, fr);
     }
     if fr.n <= 0.0 { pin_done(g, gd, d); }
@@ -1003,9 +992,8 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
     if let Some(was) = f.at {
         if winding(g, gd, *f) { return; }
         let went = crate::frag::frag_away(g, gd) > f.had;
-        if went { s(g).stats.frags += 1.0; }
-        else {   // (it stayed in his hand: he does not shout that place again; another carrier may)
-            s(g).stats.frag_kept += 1.0;
+        if went {  }
+        else {   
             g.tab.lanes_lane[l].frag_at = g.time + 6.0;
             s(g).frag_no.set(gd, crate::lanes::StateFragNoValue { lane: id, at: was });
         }
@@ -1080,7 +1068,6 @@ fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     clear_path(g, best);
     let fast = g.k.lanes.peek_pace - g.tune.guard_chase;
     crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);
-    s(g).stats.peeks += 1.0;
 }
 
 ///  on his way back to where he stood, for pinStep and fragStep. The row is there at every call: only peekStep and lanesReset delete one

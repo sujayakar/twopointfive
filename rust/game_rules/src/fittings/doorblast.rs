@@ -83,7 +83,6 @@ pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f6
     if !(tear_m > 0.0) {
         return out;
     }
-    g.stats.doorblast.doorblast_blasts += 1;
     for item in door_blast_reach(g, at, tear_m) {
         if tear_off(g, item.d, at, who, Some(item.k)) {
             out.push(item.d);
@@ -255,10 +254,6 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
             wedged: 0.0,
     });
     hands_off(g, d);
-    g.stats.doorblast.doorblast_torn += 1;
-    if back {
-        g.stats.doorblast.doorblast_back += 1;
-    }
     let said = if back { format!("no room ahead ({} m): falls back", js::to_fixed(ahead, 2)) } else { format!("{} m ahead", js::to_fixed(ahead, 2)) };
     let line = format!("{} off its hinges · k {} · {}", g.dr[d].def.name, js::to_fixed(k, 2), said);
     note(g, &line);
@@ -291,7 +286,6 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     let was = crate::doors::door_shot(g, d);
     let chaos = crate::destruction::chaos_of(g);
     crate::doors::door_set_shot(g, d, was + w / (2.0 * m::max(1e-3, chaos)));
-    g.stats.doorblast.doorshot_rounds += 1;
     let share = crate::doors::door_shot(g, d) / leaf_tough(g);
     if share >= 1.0 {
         splinter(g, d, dir, who, Some(hit_p));
@@ -450,7 +444,6 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
                     crate::break_table::breaks_dress(g, c);
                 }
                 None => {
-                    g.stats.doorblast.doorshot_demoted += 1;
                     crate::render_particles::particles_emit(
                         g,
                         crate::render_particles::PKind::Debris,
@@ -556,7 +549,6 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
             wedged: 0.0,
     });
     hands_off(g, d);
-    g.stats.doorblast.doorshot_splintered += 1;
     let line = format!("{} splintered by gunfire · {} pieces so far", g.dr[d].def.name, g.stats.doorblast.doorshot_chunks);
     note(g, &line);
     pose_slab(g, d);
@@ -617,12 +609,7 @@ fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     let s = door.slab.as_mut().expect("a slab in the air");
     let met = crate::slab::step(&flight, s, dt);
     let s = *s;
-    let a = &mut g.stats.doorblast;
-    a.doorblast_nudged += met.nudged as i32;
-    a.doorblast_nudge_max = m::max(a.doorblast_nudge_max, met.nudge_max);
-    a.doorblast_laid += met.laid as i32;
     if met.landed {
-        g.stats.doorblast.doorblast_landed += 1;
         let at: V3 = [met.lx, 0.1, met.lz];
         let level = g.k.doorblast.land_level;
         let who = s.who;

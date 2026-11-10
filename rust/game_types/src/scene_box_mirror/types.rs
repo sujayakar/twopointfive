@@ -19,7 +19,6 @@ pub struct BoxMirror {
     pub live: bool,
     pub lines: bool,
     pub rays: bool,
-    pub circles: bool,
     pub owes: bool,
     pub glass: Option<crate::scene_box_mirror::PaneSource>,
     pub sheets_in: Option<Vec<f64>>,
@@ -32,9 +31,7 @@ pub struct BoxMirror {
     pub glass_bis: Vec<f64>,
     pub row_lines: bool,
     pub row_rays: bool,
-    pub row_circles: bool,
     pub walk: Option<crate::FnField>,
-    pub list_cap: f64,
     pub scratch_len: f64,
     pub lamp_cap: f64,
     pub wind_cap: f64,
@@ -47,7 +44,6 @@ pub struct BoxMirror {
     pub grid_over: bool,
     #[is(true)] pub cells_wrote: bool,
     pub grid_of: Option<crate::scene_box_mirror::BoxMirrorGridOf>,
-    pub used: f64,
     #[is(crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 })] pub caps: crate::scene_box_mirror::BoxMirrorCaps,
     #[is(-1.0)] pub things_at: f64,
     pub things_ok: bool,
@@ -91,11 +87,6 @@ pub struct BoxMirrorCaps {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SceneBoxMirrorModCLOCK {
-    pub n: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneBoxMirrorModCOPIES {
     pub n: f64,
 }
@@ -113,7 +104,6 @@ pub struct SceneBoxMirrorModTHINGS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct SceneBoxMirrorMod {
-    #[is(crate::scene_box_mirror::SceneBoxMirrorModCLOCK { n: 0.0 })] pub clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK,
     #[is(crate::scene_box_mirror::SceneBoxMirrorModCOPIES { n: 0.0 })] pub copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES,
     #[is(crate::scene_box_mirror::SceneBoxMirrorModLEAVES { n: 0.0 })] pub leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES,
     #[is(crate::scene_box_mirror::SceneBoxMirrorModTHINGS { n: 0.0 })] pub things: crate::scene_box_mirror::SceneBoxMirrorModTHINGS,
@@ -158,8 +148,6 @@ pub const T_START: f64 = 6.0;
 pub const T_ITEMS: f64 = 7.0;
 
 pub const T_TILTED: f64 = 8.0;
-
-pub const T_LIST: f64 = 13.0;
 
 pub const T_THING: f64 = 14.0;
 

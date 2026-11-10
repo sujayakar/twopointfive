@@ -43,7 +43,6 @@ pub struct GlassShards {
     pub deferred: Vec<crate::shards::GlassShardsDeferredItem>,
     pub deferred_n: f64,
     pub crunch_n: f64,
-    pub log: Vec<String>,
     pub serial: f64,
 }
 
@@ -91,7 +90,6 @@ pub struct GlassShardsCutPlatesFr {
 #[derive(Clone, Debug, Default)]
 pub struct GlassShardsPlateCut {
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
-    pub dropped: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -116,33 +114,7 @@ pub struct GlassShardsLandingFall {
 pub struct CutPlateBox {
     pub box_: BoxId,
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
-    pub dropped: f64,
     pub poly: Vec<[f64; 2]>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct ShardsStats {
-    pub fragments: i32,
-    pub crossings: i32,
-    pub plates: i32,
-    pub plates_refused: i32,
-    pub cut_plates: i32,
-    pub cut_split: i32,
-    pub cut_dropped: i32,
-    pub crumbled: i32,
-    pub breaks: i32,
-    pub emits: i32,
-    pub born: i32,
-    pub trimmed: i32,
-    pub recs_deferred: i32,
-    pub sounds: i32,
-    pub sounds_merged: i32,
-    pub spalls: i32,
-    pub events: i32,
-    pub crunches: i32,
-    pub peak_live: i32,
-    pub peak_plates: i32,
 }
 
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

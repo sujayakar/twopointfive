@@ -12,9 +12,6 @@ pub struct HostApi {
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub host_books: Option<crate::host_api::HostBooks>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub device: crate::Opaque,
 }
 
 #[derive(Clone, Debug, Default)]

@@ -6,10 +6,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WhistleMem {
     pub responded_at: f64,
-    pub responses: f64,
-    pub searches: f64,
     pub cues: f64,
-    pub glances: f64,
     pub glance_until: f64,
     pub glance_at: Option<V3>,
     pub soft: bool,
@@ -21,8 +18,6 @@ pub struct WhistleMem {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Blower {
     pub ready_at: f64,
-    pub blown: f64,
-    pub last_at: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -34,15 +29,6 @@ pub struct Heard {
 pub struct Resolution {
     pub hearers: JsMap<GuardId, crate::whistle::Heard>,
     pub responder: Option<GuardId>,
-    pub answered_by: Option<GuardId>,
-    pub t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct WhistleModWHISTLELOGItem {
-    pub t: f64,
-    pub answered: Option<String>,
-    pub search: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -57,7 +43,6 @@ pub struct WhistleMod {
     pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,
     pub blower_of: JsMap<PlayerId, crate::whistle::Blower>,
     pub res_of: JsMap<u32, crate::whistle::Resolution>,
-    pub whistle_log: Vec<crate::whistle::WhistleModWHISTLELOGItem>,
 }
 
 /// the counters this module keeps for the checks
@@ -65,12 +50,7 @@ pub struct WhistleMod {
 pub struct WhistleStats {
     pub blown: i32,
     pub resolved: i32,
-    pub heard_by: i32,
     pub answered: i32,
-    pub searched: i32,
-    pub cued: i32,
-    pub glanced: i32,
-    pub unanswered: i32,
 }
 
 pub fn look_lines() -> Vec<String> { alloc::vec![String::from("hello?"), String::from("someone there?"), String::from("…what was that?"), String::from("who's that whistling?"), String::from("somebody down there?")] }

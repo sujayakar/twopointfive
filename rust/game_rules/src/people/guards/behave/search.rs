@@ -86,7 +86,6 @@ pub(in crate::people) fn search(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
                 let p = g.gd[gd].search_plan.as_mut().unwrap();
                 p.spots[at].visited = true;
                 p.spots[at].by = by;
-                p.visits += 1.0;
                 pick_next_spot(g, gd);
             }
         }

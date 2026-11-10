@@ -195,15 +195,15 @@ fn entry_bearing(t: V3, from: V3, path: &[V3], r: f64) -> f64 {
 }
 
 /// The line of FIRE from a man stood at p to the fix area at T, chest to chest height.
-pub(super) fn los_open(g: &mut crate::game::Game, p: V3, t: V3, team: crate::teams::Team) -> bool {
+pub(super) fn los_open(g: &mut crate::game::Game, p: V3, t: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, [p[0], 1.15, p[2]], [t[0], 1.0, t[2]], Some(0.02), None)
 }
 
 /// The last point along from → path still COVERED from T before the line opens for good on the way in, at least `min_from_t` off T.
-fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64, team: crate::teams::Team) -> Option<V3> {
+fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64) -> Option<V3> {
     let s = sample_path(from, path, Some(0.3));
     let mut los: Vec<bool> = Vec::with_capacity(s.len());
-    for &p in &s { los.push(los_open(g, p, t, team)); }
+    for &p in &s { los.push(los_open(g, p, t)); }
     let mut i = s.len() as isize - 2;
     while i >= 0 {
         let u = i as usize;
@@ -316,7 +316,6 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
         if r.until <= now {
             r.t0 = now;
             r.banged = false;
-            r.entered = false;
             r.called = false;
             r.summoned = None;
             g.stats.tactics.dangers += 1;
@@ -326,15 +325,10 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
         if let Some(v) = victim { if !v.is_empty() { r.victim = Some(String::from(v)); } }
         return id;
     }
-    let id = g.tab.tactics_danger_rec.push(crate::tactics::DangerRec { door: d, team, until, t0: now, why, victim: victim.map(String::from), banged: false, entered: false, called: false, summoned: None });
+    let id = g.tab.tactics_danger_rec.push(crate::tactics::DangerRec { door: d, team, until, t0: now, why, victim: victim.map(String::from), banged: false, called: false, summoned: None });
     s(g).danger.push(id);
     g.stats.tactics.dangers += 1;
     id
-}
-
-/// A restart's clean slate: everything this game's tactics held goes.
-pub fn tactics_reset(g: &mut crate::game::Game) {
-    g.m.tactics.states = None;
 }
 
 /// Has this man taken this doorway as a drill already inside its current danger.
@@ -344,11 +338,6 @@ pub(super) fn cleared_for(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> 
         Some(&t) => t > now,
         None => false,
     }
-}
-
-/// QA / panel: clearedFor without building the state.
-fn tactics_cleared(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
-    g.m.tactics.states.is_some() && cleared_for(g, gd, d)
 }
 
 /// Note that this man has taken this doorway, until `until`.
@@ -492,20 +481,6 @@ pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Opti
     Some(crate::tactics::TacticsPenalty::Cells { w, door_idx, door_mult, avoid })
 }
 
-/// The roster's role of a man, if any, for the panel / soak / probes.
-fn tactics_role_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
-    let st = g.m.tactics.states.as_ref()?;
-    if let Some(&r) = st.roles.get(gd) { return Some(String::from(g.tab.tactics_role[r].kind.as_str())); }
-    if let Some(x) = st.gates.get(gd) { return Some(format!("door:{}", x.role.as_str())); }
-    if let Some(l) = st.lone.get(gd) { if !l.released { return Some(String::from("lone")); } }
-    None
-}
-
-/// His role.
-fn role_record(g: &crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> {
-    g.m.tactics.states.as_ref()?.roles.get(gd).copied()
-}
-
 /// The live plans.
 pub fn plans_of(g: &crate::game::Game) -> Vec<TacticsPlanId> {
     match g.m.tactics.states.as_ref() { Some(st) => st.plans.clone(), None => Vec::new() }
@@ -534,9 +509,9 @@ fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &st
 }
 
 /// A role as dealt, a new row.
-fn mk(g: &mut Game, plan: TacticsPlanId, kind: crate::tactics::RoleKind, hold_at: Option<V3>, route: Vec<V3>, len: f64, bearing: f64, av: Option<JsSet<crate::Num>>) -> TacticsRoleId {
+fn mk(g: &mut Game, plan: TacticsPlanId, kind: crate::tactics::RoleKind, hold_at: Option<V3>, route: Vec<V3>, bearing: f64, av: Option<JsSet<crate::Num>>) -> TacticsRoleId {
     let t0 = g.time;
-    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, bearing, avoid: av, set: false, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
+    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, bearing, avoid: av, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
 }
 
 /// His side's dangerous doorways priced in, no avoid-set, made once a man; the roster's own delete / set kept as it was (it moves him to the map's end).
@@ -552,7 +527,6 @@ fn danger_only(g: &mut Game, gd: GuardId, t: V3, pens: &mut JsMap<GuardId, Optio
 
 /// Deal roles to `men` over the nav grid toward `target`, register the plan and return it; None if fewer than two have a route.
 pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: V3, why: Option<&str>, prefer: Option<GuardId>) -> Option<TacticsPlanId> {
-    let why = why.unwrap_or("formed");
     s(g);
     let team = g.gd[men[0]].team;
     let t_pt: V3 = [target[0], 0.0, target[2]];
@@ -561,8 +535,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         let Some(r) = s(g).roles.get(m).copied() else { continue; };
         let old = g.tab.tactics_role[r].plan;
         if g.tab.tactics_plan[old].phase != crate::tactics::PlanPhase::Done {
-            let said = format!("re-dealt ({})", why);
-            end_plan(g, old, &said, Some(false));
+            end_plan(g, old, Some(false));
         }
     }
     let mut pens: JsMap<GuardId, Option<crate::tactics::TacticsPenalty>> = JsMap::new();
@@ -601,11 +574,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
     let mut avoid = corridor.clone();
     for c in sector.iter() { avoid.add(c); }
     let now = g.time;
-    let id = {
-        let st = s(g);
-        st.plan_serial += 1.0;
-        st.plan_serial
-    };
+    s(g).plan_serial += 1.0;
     let plan = g.tab.tactics_plan.push(crate::tactics::Plan {
         team,
         target: t_pt,
@@ -614,18 +583,16 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         members: routes.iter().map(|r| r.0).collect(),
         roles: JsMap::new(),
         phase: crate::tactics::PlanPhase::Approach,
-        go_t: -1.0,
         first_arrive_t: -1.0,
         last_radio_t: -100.0,
         contact: false,
     });
     // the presser: up the short route to the last corner that still hides him (else the disc's edge)
-    let p0_team = g.gd[p0_gd].team;
-    let p_hold = match last_cover_point(g, p0_pos, &p0_path, t_pt, 1.0, p0_team) {
+    let p_hold = match last_cover_point(g, p0_pos, &p0_path, t_pt, 1.0) {
         Some(p) => p,
         None => point_short_of_end(p0_pos, &p0_path, DISC_M),
     };
-    let role = mk(g, plan, crate::tactics::RoleKind::Presser, Some(p_hold), p0_path.clone(), p0_len, p_bear, None);
+    let role = mk(g, plan, crate::tactics::RoleKind::Presser, Some(p_hold), p0_path.clone(), p_bear, None);
     g.tab.tactics_plan[plan].roles.set(p0_gd, role);
     // the others: a flank if the dear-corridor search finds a way in from the other side inside the ratio, else a second presser
     let w = g.col.nav.w;
@@ -648,18 +615,15 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
             _ => None,
         };
         if let Some(p) = flank {
-            let r_team = g.gd[r_gd].team;
-            let set_at = match last_cover_point(g, from, &p, t_pt, 1.0, r_team) {
+            let set_at = match last_cover_point(g, from, &p, t_pt, 1.0) {
                 Some(q) => q,
                 None => point_short_of_end(from, &p, DISC_M + 0.5),
             };
-            let role = mk(g, plan, crate::tactics::RoleKind::Flanker, Some(set_at), p, flen, f_bear, Some(avoid.clone()));
+            let role = mk(g, plan, crate::tactics::RoleKind::Flanker, Some(set_at), p, f_bear, Some(avoid.clone()));
             g.tab.tactics_plan[plan].roles.set(r_gd, role);
-            g.stats.tactics.flankers += 1;
         } else {
-            let role = mk(g, plan, crate::tactics::RoleKind::Second, None, r_path.clone(), r_len, p_bear, None);
+            let role = mk(g, plan, crate::tactics::RoleKind::Second, None, r_path.clone(), p_bear, None);
             g.tab.tactics_plan[plan].roles.set(r_gd, role);
-            g.stats.tactics.seconds += 1;
         }
     }
     // a fresh leg for everybody: goTo plans it with the new costs
@@ -672,8 +636,6 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         fresh_leg(g, m);
     }
     s(g).plans.push(plan);
-    g.stats.tactics.plans += 1;
-    if why != "formed" { g.stats.tactics.replans += 1; }
     // the flanker says so (radio: the debrief hears it)
     for &m in &dealt {
         let role = *g.tab.tactics_plan[plan].roles.get(m).unwrap();
@@ -693,7 +655,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
 }
 
 /// Dissolve a plan: its roles come off the roster (the men chase / search as they always did from where they stand).
-pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, why: &str, reset_men: Option<bool>) {
+pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, reset_men: Option<bool>) {
     let reset_men = reset_men.unwrap_or(true);
     s(g);
     if g.tab.tactics_plan[plan].phase == crate::tactics::PlanPhase::Done { return; }
@@ -837,9 +799,9 @@ mod tests {
         let new = g.tab.tactics_plan.push(Plan::default());
         g.tab.tactics_plan[old].phase = PlanPhase::Approach;
         g.tab.tactics_plan[new].phase = PlanPhase::Approach;
-        let ra = mk(&mut g, old, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);
-        let rb_old = mk(&mut g, old, RoleKind::Second, None, Vec::new(), 0.0, 0.0, None);
-        let rb_new = mk(&mut g, new, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);
+        let ra = mk(&mut g, old, RoleKind::Presser, None, Vec::new(), 0.0, None);
+        let rb_old = mk(&mut g, old, RoleKind::Second, None, Vec::new(), 0.0, None);
+        let rb_new = mk(&mut g, new, RoleKind::Presser, None, Vec::new(), 0.0, None);
         g.tab.tactics_plan[old].roles.set(a, ra);
         g.tab.tactics_plan[old].roles.set(b, rb_old);
         g.tab.tactics_plan[new].roles.set(b, rb_new);
@@ -850,16 +812,14 @@ mod tests {
             st.plans.push(old);
             st.plans.push(new);
         }
-        end_plan(&mut g, old, "test", Some(false));
+        end_plan(&mut g, old, Some(false));
         assert_eq!(g.tab.tactics_plan[old].phase, PlanPhase::Done);
         assert_eq!(s(&mut g).roles.get(a).copied(), None);
         assert_eq!(s(&mut g).roles.get(b).copied(), Some(rb_new));
         assert_eq!(plans_of(&mut g), vec![new]);
-        assert_eq!(role_record(&mut g, b), Some(rb_new));
-        assert_eq!(tactics_role_of(&mut g, b).as_deref(), Some("presser"));
         // already done: nothing moves
         s(&mut g).roles.set(a, ra);
-        end_plan(&mut g, old, "again", Some(false));
+        end_plan(&mut g, old, Some(false));
         assert_eq!(s(&mut g).roles.get(a).copied(), Some(ra));
     }
 
@@ -867,10 +827,8 @@ mod tests {
     fn a_doorway_taken_stays_taken_until_its_time() {
         let mut g = Game::blank();
         g.time = 5.0;
-        assert!(!tactics_cleared(&mut g, GuardId(0), DoorId(1)));
         assert!(g.m.tactics.states.is_none());
         set_cleared(&mut g, GuardId(0), DoorId(1), 8.0);
-        assert!(tactics_cleared(&mut g, GuardId(0), DoorId(1)));
         assert!(!cleared_for(&mut g, GuardId(0), DoorId(2)));
         assert!(!cleared_for(&mut g, GuardId(1), DoorId(1)));
         g.time = 8.0;

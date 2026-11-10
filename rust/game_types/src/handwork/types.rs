@@ -89,15 +89,6 @@ pub enum SwapHeld {
     Weapon,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct HandworkStats {
-    pub work: i32,
-    pub radio: i32,
-    pub swaps: i32,
-    pub levers: i32,
-}
-
 pub const WORK_TURN: f64 = 10.0;
 
 pub fn key_at() -> JsMap<String, [f64; 2]> { { let mut m = JsMap::new(); for (r, row) in ["123", "456", "789", "*0#"].iter().enumerate() { for (c, ch) in row.chars().enumerate() { m.set(String::from(ch), [(c as f64 - 1.0) * 0.02, -0.015 + (1.5 - r as f64) * 0.0175]); } } m } }

@@ -30,15 +30,4 @@ pub struct WinbarsMod {
     pub state: Option<crate::winbars::BarState>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WinbarsStats {
-    pub broken: i32,
-    pub by_round: i32,
-    pub by_blast: i32,
-    pub chunks: i32,
-    pub demoted: i32,
-    pub spared: i32,
-}
-
 pub const HIDE: f64 = 3.0;

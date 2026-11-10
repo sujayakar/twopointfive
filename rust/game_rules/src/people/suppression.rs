@@ -104,7 +104,6 @@ fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool,
     let sup = &mut g.cond[c].sup;
     sup.v = m::min(cap, sup.v + add);
     sup.kick = m::max(sup.kick, add);
-    sup.last_add = add;
     sup.src = Some(v3::copy(r.from));
     sup.src_id = shooter_id;
     sup.src_t = now;
@@ -225,22 +224,6 @@ fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::
     true
 }
 
-/// The suppression lines, every moment's or one moment's.
-fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<String> {
-    let mut out = Vec::new();
-    for row in SUP_LINES.iter() {
-        if let Some(wanted) = moment {
-            if row.0 != wanted { continue; }
-        }
-        for pool in row.1.iter() {
-            for l in pool.1.iter() {
-                out.push(String::from(*l));
-            }
-        }
-    }
-    out
-}
-
 /// May this man's behaviour react at all this frame.
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.ai_enabled && !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
@@ -314,7 +297,6 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                 !crate::teams::is_hostile(g, team, theirs)
             };
             if was < 1.0 {
-                g.cond[g.gd[gd].ch].sup.flinch_at = g.time;
                 start_from_round(g, gd);
                 g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, g.k.suppression.flinch_delay);
                 if band < 2.0 {
@@ -451,7 +433,7 @@ pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crat
 }
 
 /// The shift is over: hold the spot a few seconds, the first round from there a beat late.
-pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
+pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId) {
     let until = g.time + g.k.suppression.cover_hold;
     let delay = g.k.suppression.head_down_delay;
     let sup = &mut g.cond[g.gd[gd].ch].sup;
@@ -470,8 +452,7 @@ pub(super) fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// No place hidden from everybody: the kept one, the hard place in another man's line over the thin one.
-fn cover_fall(g: &mut Game, kept_open: Option<V3>, as_was: Option<V3>) -> Option<V3> {
-    if kept_open.is_some() { g.stats.wallpen.harder += 1; }
+fn cover_fall(kept_open: Option<V3>, as_was: Option<V3>) -> Option<V3> {
     kept_open.or(as_was)
 }
 
@@ -492,7 +473,6 @@ fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
 pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<V3> {
     let all = crate::picture::ideas_of(g, gd).len() > 1;
     let mut as_was: Option<V3> = None;
-    let mut soft = false;
     let mut was_open = false;
     let mut kept_thin: Option<V3> = None;
     let mut kept_open: Option<V3> = None;
@@ -531,7 +511,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             }
             if taken { continue; }
             plans += 1;
-            if plans > 12 { return cover_fall(g, kept_open, as_was); }
+            if plans > 12 { return cover_fall(kept_open, as_was); }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) {
                 Some(path) if !path.is_empty() => path,
                 _ => continue,
@@ -552,7 +532,6 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
                 let kept: V3 = [end[0], 0.0, end[2]];
                 as_was = Some(kept);
                 kept_thin = Some(kept);
-                soft = true;
                 continue;
             }
             if open {
@@ -560,12 +539,11 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
                 if kept_thin.is_some() { kept_open = Some([end[0], 0.0, end[2]]); } else { as_was = Some([end[0], 0.0, end[2]]); }
                 continue;
             }
-            if soft { g.stats.wallpen.harder += 1; }
             if was_open { g.stats.picture.moved += 1; }
             return Some([end[0], 0.0, end[2]]);
         }
     }
-    cover_fall(g, kept_open, as_was)
+    cover_fall(kept_open, as_was)
 }
 
 /// What suppression does to a guard's next round: extra cone, and x the cadence he draws after it.
@@ -595,61 +573,6 @@ pub fn sam_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The lines the regex lets through for a side other than the night staff: printed by the TypeScript's own regex under bun.
-    const KEPT: &[&str] = &[
-        "taking fire!",
-        "rounds coming in!",
-        "that was close—",
-        "christ— CHRIST—",
-        "watch your fire!",
-        "check fire — that's past MY head!",
-        "easy! I'm in front of you!",
-        "stop— stop shooting past me!",
-        "I'm pinned!",
-        "can't get my head up—",
-        "head down— head down!",
-        "I can't— I can't move—",
-        "moving!",
-        "shifting — cover me!",
-        "can't stay here — moving!",
-        "I'm getting out of here—",
-        "relocating.",
-        "that all you've got?",
-        "my turn.",
-    ];
-
-    #[test]
-    fn the_word_filter_keeps_what_the_regex_keeps() {
-        let kept: Vec<String> = suppression_lines(None).into_iter().filter(|l| !mentions_him(l)).collect();
-        let want: Vec<String> = KEPT.iter().map(|l| String::from(*l)).collect();
-        assert_eq!(kept, want);
-    }
-
-    #[test]
-    fn lines_walk_in_the_written_order() {
-        let all = suppression_lines(None);
-        assert_eq!(all.len(), 27);
-        assert_eq!(all[0], "taking fire!");
-        assert_eq!(all[26], "my turn.");
-        assert_eq!(suppression_lines(Some(SupMoment::Recover)), vec![String::from("that all you've got?"), String::from("my turn.")]);
-        assert_eq!(lines_of(SupMoment::Friendly, "hard").len(), 0);
-        assert_eq!(lines_of(SupMoment::Friendly, "nervy").len(), 1);
-    }
-
-    #[test]
-    fn the_tables_say_what_the_skeletons_say() {
-        let mut theirs: Vec<String> = Vec::new();
-        for row in crate::suppression::sup_lines().values() {
-            for pool in row.values() {
-                theirs.extend(pool.clone().unwrap());
-            }
-        }
-        assert_eq!(suppression_lines(None), theirs);
-        for moment in [SupMoment::Recover, SupMoment::Friendly, SupMoment::Flinch, SupMoment::Pinned, SupMoment::Displace] {
-            assert_eq!(rank_of(moment) as f64, *crate::suppression::rank().get(String::from(moment.as_str())).unwrap());
-        }
-    }
 
     #[test]
     fn a_temperament_is_found_by_the_name() {

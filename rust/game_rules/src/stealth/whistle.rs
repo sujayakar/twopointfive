@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 
 /// What a new man's memory holds.
 fn fresh_mem() -> WhistleMem {
-    WhistleMem { responded_at: NEVER, responses: 0.0, searches: 0.0, cues: 0.0, glances: 0.0, glance_until: -1.0, glance_at: None, soft: false, soft_at: NEVER, last_look: -1.0, last_twice: -1.0 }
+    WhistleMem { responded_at: NEVER, cues: 0.0, glance_until: -1.0, glance_at: None, soft: false, soft_at: NEVER, last_look: -1.0, last_twice: -1.0 }
 }
 
 /// A man's whistle memory, made on first asking.
@@ -33,7 +33,7 @@ pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle:
 
 /// What a new player's breath holds.
 fn fresh_blower() -> Blower {
-    Blower { ready_at: -1.0, blown: 0.0, last_at: -100.0 }
+    Blower { ready_at: -1.0 }
 }
 
 /// The seat's player's breath, made on first asking.
@@ -66,8 +66,6 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
     let b = blower(g);
     if now < b.ready_at { return false; }
     b.ready_at = now + cooldown;
-    b.blown += 1.0;
-    b.last_at = now;
     g.stats.whistle.blown += 1;
     let c = g.pl[pl].ch;
     let (pos, who) = (g.ch[c].pos, g.ch[c].id);
@@ -115,7 +113,7 @@ fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
 fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f64) -> &'g mut crate::whistle::Resolution {
     let key = e.serial;
     if g.m.whistle.res_of.has(key) { return g.m.whistle.res_of.get_mut(key).unwrap(); }
-    let mut r = Resolution { hearers: JsMap::new(), responder: None, answered_by: None, t: g.time };
+    let mut r = Resolution { hearers: JsMap::new(), responder: None };
     let src = mouth_of(g, e);
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
     let mut best: Option<GuardId> = None;
@@ -140,11 +138,6 @@ fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f6
     }
     r.responder = best;
     g.stats.whistle.resolved += 1;
-    g.stats.whistle.heard_by += r.hearers.len() as i32;
-    if best.is_none() { g.stats.whistle.unanswered += 1; }
-    let hearers: Vec<String> = r.hearers.keys().into_iter().map(|x| g.gd[x].callsign.clone()).collect();
-    g.m.whistle.whistle_log.push(WhistleModWHISTLELOGItem { t: g.time, answered: None, search: false });
-    if g.m.whistle.whistle_log.len() > 32 { g.m.whistle.whistle_log.remove(0); }
     g.m.whistle.res_of.set(key, r);
     g.m.whistle.res_of.get_mut(key).unwrap()
 }
@@ -155,7 +148,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
     if crate::seats::is_man_id(g, who) && g.player_invisible { return; }
     let r = resolve(g, e, keen);
-    let (heard, responder, res_t) = (r.hearers.get(gd).copied(), r.responder, r.t);
+    let (heard, responder) = (r.hearers.get(gd).copied(), r.responder);
     let Some(h) = heard else { return };
     mem(g, gd);
     small(g, h.at);
@@ -171,7 +164,6 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         let row = mem(g, gd);
         row.cues += 1.0;
         row.soft = false;
-        g.stats.whistle.cued += 1;
         return;
     }
     // somebody nearer answers it (or nobody free can): he turns his head that way and carries on
@@ -180,8 +172,6 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         let row = mem(g, gd);
         row.glance_until = until;
         row.glance_at = Some(v3::copy(h.at));
-        row.glances += 1.0;
-        g.stats.whistle.glanced += 1;
         return;
     }
     // he answers it
@@ -190,8 +180,6 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     let row = mem(g, gd);
     let twice = now - row.responded_at <= twice_window;
     row.responded_at = now;
-    row.responses += 1.0;
-    resolve(g, e, keen).answered_by = Some(gd);
     g.stats.whistle.answered += 1;
     if !crate::belief::word_now(g, gd) { crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle"); }
     {
@@ -204,10 +192,6 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         g.gd[gd].search_t = 0.0;
         crate::mind::raise(g, gd, knob_aw, "whistle");
     }
-    let callsign = g.gd[gd].callsign.clone();
-    if let Some(log) = g.m.whistle.whistle_log.last_mut() {
-        if log.t == res_t { log.answered = Some(callsign); }
-    }
     let is_guard = g.gd[gd].team == crate::teams::Team::Guard;
     if twice {
         // the second inside the window: a proper search of the place, gun out, no more 'hello?'
@@ -219,12 +203,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
             g.gd[gd].react_t = 0.0;
         }
         let row = mem(g, gd);
-        row.searches += 1.0;
         row.soft = false;
-        g.stats.whistle.searched += 1;
-        if let Some(log) = g.m.whistle.whistle_log.last_mut() {
-            if log.t == res_t { log.search = true; }
-        }
         let pool = if is_guard { twice_now() } else { twice_foe() };
         let line = pick(g, &pool, gd, PickKey::LastTwice);
         crate::game::game_say(g, gd, &line, None, None);

@@ -311,7 +311,6 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
         d.cyaw = m::atan2(-m::sin(d.face), -m::cos(d.face));
         d.push = g.tab.props_prop[ch].push_t;
         flush(g, gd, d);
-        g.stats.doze.sat += 1;
     }
     g.gd[gd].wait -= dt;
     true
@@ -333,7 +332,6 @@ fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, at: O
     d.phase = Phase::Spent;
     d.chair = None;
     flush(g, gd, d);
-    g.stats.doze.woke[why as usize] += 1;
     if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
         let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
         crate::mind::raise(g, gd, raise, "doze");
@@ -404,7 +402,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.chair = None;
             flush(g, gd, d);
             g.ch[c].anim.slump = 0.0;
-            g.stats.doze.woke[WakeWhy::Taken as usize] += 1;
             continue;
         }
         if g.tab.props_prop[ch].push_t > d.push + 1e-6 {
@@ -448,7 +445,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.phase = Phase::Up;
             d.until = g.time + 1.2;
             flush(g, gd, d);
-            g.stats.doze.rose += 1;
             continue;
         }
         g.gd[gd].wait -= dt;
@@ -470,7 +466,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                     let t = g.time;
                     d.say = t + span(g, crate::dice::Who::Man(gd), &first);
                     flush(g, gd, d);
-                    g.stats.doze.worked += 1;
                 }
             } else if d.t >= g.k.doze.nod_secs {
                 d.phase = Phase::Asleep;
@@ -478,7 +473,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 d.lit = -1.0;
                 d.ask = js::rem(g.ch[c].id, 4.0) / 4.0 * g.k.doze.ask_secs;
                 flush(g, gd, d);
-                g.stats.doze.slept += 1;
             }
             continue;
         }
@@ -509,7 +503,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
                 crate::game::game_say(g, gd, &lines[k], Some(false), Some(false));
-                g.stats.doze.lines += 1;
             }
             continue;
         }

@@ -19,10 +19,3 @@ pub struct WetMod {
     pub drip_n: f64,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WetStats {
-    pub sky_tests: i32,
-    pub drips: i32,
-}
-

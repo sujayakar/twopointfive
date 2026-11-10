@@ -57,7 +57,6 @@ pub struct State {
     pub t: f64,
     pub best: Option<crate::close::CloseOffer>,
     pub mode: Option<GuardId>,
-    pub mode_d: f64,
     pub rmb_t: f64,
 }
 
@@ -68,14 +67,6 @@ pub struct SITCLIP {
     pub rate: f64,
     pub in_: f64,
     pub out: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum NoteWhat {
-    Grab,
-    Seat,
-    Take,
-    Unseat,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -149,19 +140,6 @@ pub enum CloseTookWhat {
 pub struct CloseMod {
     pub state: JsMap<PlayerId, crate::close::State>,
     pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct CloseStats {
-    pub takes: [i32; 4],
-    pub grabs: [i32; 4],
-    pub blows: [i32; 2],
-    pub ready_frames: i32,
-    pub mode_frames: i32,
-    pub dark_passes: i32,
-    pub seats: i32,
-    pub unseats: i32,
 }
 
 pub const DEGR: f64 = 0.017453292519943295;

@@ -28,7 +28,7 @@ fn team_on_floor(g: &Game) -> bool {
 /// `kitIssueWhole(g.level.scenarios?.issue?.members)`
 fn issue_names_you(g: &Game) -> bool {
     let members = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).map(|d| d.members.clone());
-    kit_issue_whole(g, members.as_ref())
+    kit_issue_whole(members.as_ref())
 }
 /// `const { loaded, ...card } = c; Object.assign(m, card)`: the fields a level's block names
 pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
@@ -47,9 +47,6 @@ pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCa
 
 // ------------------------------------------------------------ the page's kind, a mission's issue
 
-/// A page that plays the kit as issued.
-fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
-
 /// The page of a lesson says so: its stagings wear the issue.
 pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_page = on; }
 
@@ -57,7 +54,7 @@ pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_pag
 fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_page }
 
 /// The level's block names a card for you: nothing is handed over it.
-pub(super) fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
+pub(super) fn kit_issue_whole(members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
     members.map_or(false, |m| m.has(String::from("0")))
 }
 
@@ -321,11 +318,6 @@ pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
     if !lesson { kit_solo_if(g, plain); }
 }
 
-/// Every fresh Player of the plain night, while the solo night is up.
-pub fn kit_fresh(g: &mut crate::game::Game) {
-    if g.solo_card { kit_player(g); }
-}
-
 /// The kit picture is about to be staged on this Player: his card comes off.
 pub(in crate::outfit) fn kit_show(g: &mut crate::game::Game) {
     let pl = g.player;
@@ -356,7 +348,6 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     if page_issued(g) && !issuing_on(g) { return as_issued(g, &mut |g| kit_stage(g, ops)); }
     if stealth_on(g) && !issuing_on(g) && !g.m.kit.staged { return for_run(g, &mut |g| kit_stage(g, ops)); }
     let came: Vec<GuardId> = ops.iter().take(CARDS - 1).copied().collect();
-    g.m.kit.kit_staged.n += 1.0;
     g.m.kit.kit_staged.ops = came.clone();
     if !g.m.kit.kit.on {
         crate::seats::each_seat(g, &mut |v| {
@@ -494,19 +485,6 @@ pub(super) fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// kitIssuedPage and kitLessonPage decide what every staging wears.
-    #[test]
-    fn what_the_page_stages() {
-        let mut g = Box::new(Game::blank());
-        assert!(!page_issued(&mut g));
-        kit_lesson_page(&mut g, true);   // a lesson's page: the issue
-        assert!(page_issued(&mut g));
-        kit_lesson_page(&mut g, false);
-        assert!(!page_issued(&mut g));
-        kit_issued_page(&mut g, None);   // a tool raising it stands alone
-        assert!(page_issued(&mut g));
-    }
 
     /// kitSmokes counts the men who come, never your card; kitBig yields to a wall charge and to the switch.
     #[test]

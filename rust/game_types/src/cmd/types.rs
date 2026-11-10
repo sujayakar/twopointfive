@@ -55,8 +55,6 @@ pub struct Seat {
     /// (a host's hand, which differs by machine: in no bytes)
     #[bytes(skip)]
     pub remote: bool,
-    pub fixed: f64,
-    pub fixed_cmds: f64,
     /// (a host's hand, which differs by machine: in no bytes)
     #[bytes(skip)]
     pub mask: f64,
@@ -71,6 +69,5 @@ pub struct Seat {
 #[derive(Clone, Debug, Default)]
 pub struct CheckCmd {
     pub cmd: crate::cmd::PlayerCmd,
-    pub fixed: f64,
 }
 

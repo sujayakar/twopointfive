@@ -76,7 +76,6 @@ pub fn anim_tell(g: &mut crate::game::Game, c: CharId, kind: crate::character::T
 pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     a.tell_t = -1.0;
-    a.tell_shown = 0.0;
 }
 /// The update; every pose of a man stands in his game's block, so there is no stage to open.
 pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
@@ -627,10 +626,10 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if g.ch[c].anim.tell_t >= 0.0 {   // the idle tells: skipped (the clock still runs out) under anything that has the arms or the head
         let a = &g.ch[c].anim;
         let first = w_hd > 0.003 || w_he > 0.003 || w_lp > 0.003 || kt >= 0.0 || a.throw_t >= 0.0 || a.strike_t >= 0.0 || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.upper_w.aim > 0.003 || a.sig_t >= 0.0;
-        if first || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0 { g.ch[c].anim.tell_shown = 0.0; } else { let t = g.ch[c].anim.tell_t; anim_tell_layer(g, c, t); }
+        if first || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0 {  } else { let t = g.ch[c].anim.tell_t; anim_tell_layer(g, c, t); }
         let a = &mut g.ch[c].anim;
         a.tell_t += dt;
-        if a.tell_t > tell_secs(a.tell_k) { a.tell_t = -1.0; a.tell_shown = 0.0; }
+        if a.tell_t > tell_secs(a.tell_k) { a.tell_t = -1.0;  }
     }
     let a = &g.ch[c].anim;
     if a.wk.last.is_some() || a.sw.t >= 0.0 || a.rx.left > 0.0 || a.rx.w.x > 0.003 {   // handwork: the swap, the work hands, the radio hand, each stood down by whatever has the arms
@@ -672,9 +671,6 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         let gun_w = v3::clamp(a.upper_w.relaxed + a.upper_w.aim + a.upper_w.torch + w_carry, 0.0, 1.0);
         let aim_c = v3::clamp(a.upper_w.aim, 0.0, 1.0);
         anim_watch_layer(g, c, dt, if busy { 0.0 } else { 1.0 - aim_c }, 1.0 - m::max(aim_c, w_carry), 1.0 - gun_w, y, -p * 0.35);
-    } else {
-        let a = &mut g.ch[c].anim;
-        a.watch_shown.w = 0.0; a.watch_shown.yaw = 0.0; a.watch_shown.slip = 0.0; a.watch_shown.lean = 1.0;
     }
     let a = &g.ch[c].anim;
     if a.stealth.is_some() || a.sp.is_some() {   // STEALTH POSES: over the crouch and the close-in carriage, under the ready tell; out, eased, for anything else that has his arms
@@ -719,7 +715,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
             let (w, k) = (a.ready_w, a.ready_k);
             anim_ready_layer(g, c, w, k, want > 0.0, dt, y, -p * 0.35);
         } else {
-            a.ready_shown = 0.0; a.reach_shown = 0.0; a.rd_live = false;
+             a.reach_shown = 0.0; a.rd_live = false;
             if a.ready.is_none() { a.rd_at = None; }
         }
     }
@@ -775,7 +771,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         if a.strike_t > d { a.strike_t = -1.0; a.strike_k = StrikeKind::Cross; }
     }
     let a = &mut g.ch[c].anim;
-    if a.strike_leth && a.strike_t < 0.0 { a.knife_shown = false; a.strike_leth = false; }
+    if a.strike_leth && a.strike_t < 0.0 {  a.strike_leth = false; }
     if let Some(b) = a.bw.clone() {
         if !bw_trunk { anim_blow_trunk(g, c, &b); }
         let b = g.ch[c].anim.bw.clone().unwrap_or(b);

@@ -17,14 +17,14 @@ macro_rules! st {
 }
 
 /// A new game's state: the TypeScript's own literal, whose clocks are not zero.
-pub(super) fn fresh(g: &mut crate::game::Game) -> crate::lanes::State {
+pub(super) fn fresh() -> crate::lanes::State {
     State { said_t: -100.0, t: -1.0, ..State::default() }
 }
 
 /// The game's state, made if it has none: the row itself.
 pub(super) fn s<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::lanes::State {
     if g.m.lanes.states.is_none() {
-        let f = fresh(g);
+        let f = fresh();
         g.m.lanes.states = Some(f);
     }
     g.m.lanes.states.as_mut().unwrap()
@@ -440,7 +440,6 @@ pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, do
             });
             let st = st!(g);
             st.lanes.push(l);
-            st.stats.lanes += 1.0;
             l
         }
     };
@@ -513,7 +512,6 @@ pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, do
         }
         let gone = st.lanes.remove(o);
         lanes_gone(g);
-        st!(g).stats.lapsed += 1.0;
         if g.tab.lanes_lane[gone].cells.is_some() {
             remask(g);
         }
@@ -625,7 +623,6 @@ pub(super) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: Guard
         r.frag_at = now + k.frag_think; // (LANES.frag settled on)
     }
     remask(g);
-    s(g).stats.known += 1.0;
     // (CUES.on settled on: the place is named wherever it has a name)
     let at = g.tab.lanes_lane[l].at;
     let place = crate::dialogue::place_name(g, at);

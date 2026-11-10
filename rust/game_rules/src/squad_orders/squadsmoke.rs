@@ -39,7 +39,6 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
         s.brought = n;
         s.last = JsMap::new();
     }
-    g.stats.squadsmoke.staged += 1;
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
     let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
@@ -187,7 +186,6 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
         auto: None,
         serial,
     });
-    g.stats.squadsmoke.thrown += 1;
     None
 }
 

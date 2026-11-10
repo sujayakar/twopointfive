@@ -180,7 +180,7 @@ pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     if let Some(s) = route_names_now().get(n.clone()) { return s.clone(); }
     alloc::format!("the {}", n.replace('_', " "))
 }
-pub(super) fn door_name(g: &crate::game::Game, n: &str) -> String {
+pub(super) fn door_name(n: &str) -> String {
     let key = String::from(n);
     if let Some(s) = door_names().get(key.clone()) { return s.clone(); }
     if let Some(Some(s)) = door_names_guide().get(key.clone()) { return s.clone(); }
@@ -328,7 +328,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     tokens.partner_route = partner_route;
     let post_word = match post_man.and_then(|x| g.gd[x].post.as_ref().map(|p| p.name.clone())) { Some(n) => alloc::format!("the {}", n), None => route_name(g, route_i) };
     tokens.post = Some(post_word);
-    let door_word = match keyed { Some(d) => { let n = g.dr[d].def.name.clone(); Some(door_name(g, &n)) } None => None };
+    let door_word = match keyed { Some(d) => { let n = g.dr[d].def.name.clone(); Some(door_name(&n)) } None => None };
     tokens.door = door_word;
     let caller_word = match r.caller { Some(c) if c != gd => Some(g.gd[c].callsign.clone()), _ => None };
     tokens.caller = caller_word;
@@ -339,7 +339,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     let clear_cur = match g.clearing.as_ref() { Some(c) if c.stage != crate::squad::ClearStage::Done => c.cur.as_ref().map(|x| (x.room.clone(), x.door.clone())), _ => None };
     let clear_room = match clear_cur {
         Some((Some(room), _)) if !room.is_empty() => Some(with_the_room(&room)),
-        Some((_, door)) => Some(door_name(g, &door)),
+        Some((_, door)) => Some(door_name(&door)),
         None => None,
     };
     tokens.clear_room = clear_room;
@@ -353,7 +353,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     tokens.up = Some(num_word(m::max(1.0, staff_up - down_n)));
     tokens.badge = Some(badge_of(&callsign));
     tokens.code = pad.as_ref().map(|p| p.def.code.clone());
-    let pad_door = match pad.as_ref() { Some(p) => { let n = g.dr[p.door].def.name.clone(); Some(door_name(g, &n)) } None => None };
+    let pad_door = match pad.as_ref() { Some(p) => { let n = g.dr[p.door].def.name.clone(); Some(door_name(&n)) } None => None };
     tokens.pad_door = pad_door;
     let nameless = crate::teams::defender_words(g, gd);
     if nameless { tokens.partner = None; tokens.victim = None; tokens.body = None; tokens.missing = None; }
@@ -378,21 +378,21 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     // intel: live = true of the world now; known = he could plausibly know it
     let raised_at = g.alarm.raised_at;
     let mut intel: Vec<IntelItem> = Vec::new();
-    let check_text = if checker == Some(gd) { check_on_self(g) } else { intel_text(g, IntelKind::CheckOn, t, k) };
+    let check_text = if checker == Some(gd) { check_on_self() } else { intel_text(IntelKind::CheckOn, t, k) };
     intel.push(IntelItem { kind: IntelKind::CheckOn, text: check_text, live: check_task.map_or(false, |x| x.who != gd), known: check_task.map_or(false, |x| checker == Some(gd) || heard_on_net(hs, x.t0)) });
     let clearing_live = lvl >= 2.0 && g.clearing.as_ref().map_or(false, |c| c.stage != crate::squad::ClearStage::Done && c.a != gd && c.b != Some(gd));
-    intel.push(IntelItem { kind: IntelKind::Clearing, text: intel_text(g, IntelKind::Clearing, t, k), live: clearing_live, known: heard_on_net(hs, raised_at) });
-    intel.push(IntelItem { kind: IntelKind::RollcallLive, text: intel_text(g, IntelKind::RollcallLive, t, k), live: !idle && r.caller.is_some() && r.caller != Some(gd), known: true });
-    intel.push(IntelItem { kind: IntelKind::Blackout, text: intel_text(g, IntelKind::Blackout, t, k), live: blackout, known: true });
+    intel.push(IntelItem { kind: IntelKind::Clearing, text: intel_text(IntelKind::Clearing, t, k), live: clearing_live, known: heard_on_net(hs, raised_at) });
+    intel.push(IntelItem { kind: IntelKind::RollcallLive, text: intel_text(IntelKind::RollcallLive, t, k), live: !idle && r.caller.is_some() && r.caller != Some(gd), known: true });
+    intel.push(IntelItem { kind: IntelKind::Blackout, text: intel_text(IntelKind::Blackout, t, k), live: blackout, known: true });
     let door_live = match keyed { Some(d) => g.gd[gd].keys.has(g.dr[d].lock_id.clone()), None => false };
-    intel.push(IntelItem { kind: IntelKind::Door, text: intel_text(g, IntelKind::Door, t, k), live: door_live, known: true });
+    intel.push(IntelItem { kind: IntelKind::Door, text: intel_text(IntelKind::Door, t, k), live: door_live, known: true });
     let code_live = match pad.as_ref() { Some(p) => !g.pl[g.player].codes.has(p.def.name.clone()), None => false };
-    intel.push(IntelItem { kind: IntelKind::Code, text: intel_text(g, IntelKind::Code, t, k), live: code_live, known: true });
-    intel.push(IntelItem { kind: IntelKind::Rollcall, text: intel_text(g, IntelKind::Rollcall, t, k), live: g.ai_enabled && partner.is_some(), known: true });
-    intel.push(IntelItem { kind: IntelKind::LockdownPosts, text: intel_text(g, IntelKind::LockdownPosts, t, k), live: lvl >= 2.0 && post_man.is_some(), known: heard_on_net(hs, raised_at) || post_man == Some(gd) });
-    intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(g, IntelKind::Routes, t, k), live: partner.is_some(), known: true });
-    intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(g, IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });
-    let drive_text = if office { intel_text(g, IntelKind::Drive, t, k) } else { drive_away_text(g, t) };
+    intel.push(IntelItem { kind: IntelKind::Code, text: intel_text(IntelKind::Code, t, k), live: code_live, known: true });
+    intel.push(IntelItem { kind: IntelKind::Rollcall, text: intel_text(IntelKind::Rollcall, t, k), live: g.ai_enabled && partner.is_some(), known: true });
+    intel.push(IntelItem { kind: IntelKind::LockdownPosts, text: intel_text(IntelKind::LockdownPosts, t, k), live: lvl >= 2.0 && post_man.is_some(), known: heard_on_net(hs, raised_at) || post_man == Some(gd) });
+    intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(IntelKind::Routes, t, k), live: partner.is_some(), known: true });
+    intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });
+    let drive_text = if office { intel_text(IntelKind::Drive, t, k) } else { drive_away_text(t) };
     let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && g.level.errand.told;
     intel.push(IntelItem { kind: IntelKind::Drive, text: drive_text, live: drive_live, known: true });
     if !shift { for it in intel.iter_mut() { it.live = false; } }
@@ -403,8 +403,8 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
 /// `driveAway()[t] ?? driveAway()['*']`
-fn drive_away_text(g: &Game, t: crate::game::Temperament) -> String {
-    let d = drive_away(g);
+fn drive_away_text(t: crate::game::Temperament) -> String {
+    let d = drive_away();
     let own = match t { crate::game::Temperament::Steady => d.steady, crate::game::Temperament::Nervy => d.nervy, crate::game::Temperament::Hard => d.hard };
     own.or(d.under).unwrap_or_default()
 }
@@ -489,7 +489,7 @@ fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: 
     }
     true
 }
-fn needs_hold(g: &crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
+fn needs_hold(l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
     let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(facts, Need::Shift), Some(LineOnly::Office) => hold_fact(facts, Need::Office) };
     only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
@@ -505,16 +505,16 @@ pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::Di
     for kind in order {
         let Some(it) = ctx.intel.iter().find(|i| i.kind == kind) else { continue; };
         if !it.live || !it.known || g.tab.game_talk[talk].given.has(String::from(kind.as_str())) { continue; }
-        let own = kind == IntelKind::CheckOn && it.text == check_on_self(g);
+        let own = kind == IntelKind::CheckOn && it.text == check_on_self();
         let shaped = match sc {
-            Some(x) if !own => shaped_intel_text(g, kind, &ShapedIntelTextSc { id: x.id.clone(), shape: x.shape }, ctx.t),
+            Some(x) if !own => shaped_intel_text(kind, &ShapedIntelTextSc { id: x.id.clone(), shape: x.shape }, ctx.t),
             _ => None,
         };
         let lead = if shaped.as_deref().map_or(false, |s| !s.is_empty()) { String::new() } else {
             let shape_lead = match sc { Some(x) if ctx.t != crate::game::Temperament::Hard => lead_of_shape(x.shape), _ => None };
             match shape_lead { Some(s) => s, None => intel_lead(ctx.t, ctx.k) }
         };
-        let fact = run_on(g, &lead, shaped.as_deref().unwrap_or(it.text.as_str()));
+        let fact = run_on(&lead, shaped.as_deref().unwrap_or(it.text.as_str()));
         let Some(text) = expand(&alloc::format!("{}{}", lead, fact), &tokens) else { continue; };
         out.push(PendingIntelItem { kind, text });
     }
@@ -539,9 +539,9 @@ fn sayable(text: Option<&str>, tokens: &JsMap<String, Option<String>>) -> Option
 fn eligible(g: &Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, Option<String>>, talk: GameTalkId, s: StageKey, use_t: bool, use_a: bool, allow_said: bool) -> Vec<(usize, String, f64)> {
     let mut out: Vec<(usize, String, f64)> = Vec::new();
     for (i, l) in lines.iter().enumerate() {
-        if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(g, l, &ctx.facts) { continue; }
+        if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(l, &ctx.facts) { continue; }
         if !allow_said && g.tab.game_talk[talk].said.has(l.id.clone()) { continue; }
-        let said = said_text(g, &SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: l.bare.clone(), guide: l.guide.clone() }, ctx);
+        let said = said_text(&SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: l.bare.clone(), guide: l.guide.clone() }, ctx);
         let Some(text) = expand(&said, tokens) else { continue; };
         let mut w = l.w.unwrap_or(1.0)
             * (if l.needs.as_ref().map_or(false, |n| !n.is_empty()) { 1.6 } else { 1.0 })
@@ -595,16 +595,14 @@ fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, 
     }
     // the pool for this cell and stage: exact, else any temperament, else any agitation too; never another man's knowledge
     let lines = crate::dialogue::lines();
-    let chain: [(bool, bool, bool, DialoguePickWidened); 4] = if s == StageKey::X {
-        [(true, true, false, DialoguePickWidened::Empty), (true, true, true, DialoguePickWidened::Repeat), (false, true, true, DialoguePickWidened::T), (false, false, true, DialoguePickWidened::A)]
+    let chain: [(bool, bool, bool); 4] = if s == StageKey::X {
+        [(true, true, false), (true, true, true), (false, true, true), (false, false, true)]
     } else {
-        [(true, true, false, DialoguePickWidened::Empty), (false, true, false, DialoguePickWidened::T), (false, false, false, DialoguePickWidened::A), (false, false, true, DialoguePickWidened::Repeat)]
+        [(true, true, false), (false, true, false), (false, false, false), (false, false, true)]
     };
-    let mut widened = DialoguePickWidened::Empty;
     let mut pool: Vec<(usize, String, f64)> = Vec::new();
-    for (use_t, use_a, allow_said, tag) in chain {
+    for (use_t, use_a, allow_said) in chain {
         pool = eligible(g, &lines, ctx, &tokens, talk, s, use_t, use_a, allow_said);
-        widened = tag;
         if allow_said && pool.len() > 1 {
             if let Some(last_id) = g.tab.game_talk[talk].last.as_ref().map(|x| x.id.clone()) {
                 let fresh: Vec<(usize, String, f64)> = pool.iter().filter(|p| lines[p.0].id != last_id).cloned().collect();

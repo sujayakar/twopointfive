@@ -114,7 +114,7 @@ pub fn dear_price(g: &crate::game::Game, price: &crate::cleared::DearPrice, ix: 
 }
 
 /// A new one: the field initialisers, nothing more.
-pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms {
+pub fn cleared_rooms_new() -> crate::cleared::ClearedRooms {
     crate::cleared::ClearedRooms::blank()
 }
 

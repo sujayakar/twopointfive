@@ -412,12 +412,6 @@ pub struct SquadOf {
     pub men: Vec<GuardId>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WayRound2Says {
-    pub limit: Option<f64>,
-    pub best: Option<f64>,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct StayKeyRoom {
     pub name: String,

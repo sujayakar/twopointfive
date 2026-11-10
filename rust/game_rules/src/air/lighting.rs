@@ -19,7 +19,6 @@ pub fn lens_clear(g: &mut crate::game::Game, from: V3, lens: V3, radius: f64, li
     }
     let rd = v3::scale(d, 1.0 / len);
     let keep = m::max(0.0, radius) + g.k.lightwall.gap;
-    g.stats.lighting.asked += 1;
     let h = match crate::scene_collision::raycast(g, from, rd, len + keep / LENS_SLANT) {
         Some(h) => h,
         None => return lens,
@@ -28,8 +27,6 @@ pub fn lens_clear(g: &mut crate::game::Game, from: V3, lens: V3, radius: f64, li
     if t >= len - 1e-6 {
         return lens;
     }
-    g.stats.lighting.pulled += 1;
-    g.stats.lighting.max_back = m::max(g.stats.lighting.max_back, len - m::max(0.0, t));
     v3::mad(from, rd, m::max(0.0, t))
 }
 

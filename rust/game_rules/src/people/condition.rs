@@ -87,35 +87,6 @@ pub fn condition_sup(g: &Game, c: CharId, v: f64) -> f64 {
     if is_hurt(g, c, None) { m::max(v, g.k.condition.hurt_sup) } else { v }
 }
 
-/// What state a man is in, the stamps read as they stand.
-fn condition_of(g: &Game, c: CharId) -> Condition {
-    let down = down(g, c);
-    Condition {
-        shaken: !down && g.tune.suppression && g.cond[c].sup.v >= g.k.suppression.flinch,
-        blind: !down && is_blind(g, c),
-        folded: !down && is_folded(g, c),
-        hurt: !down && is_hurt(g, c, None),
-        down,
-    }
-}
-
-/// The panel's line: every man in anything but good order.
-fn condition_summary(g: &Game, seat: &crate::seats::SeatRef) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    let mut say = |name: &str, c: CharId| {
-        let w = word(condition_of(g, c));
-        if !w.is_empty() && !down(g, c) { parts.push(alloc::format!("{name} {w}")); }
-    };
-    say("you", g.pl[seat.player].ch);
-    for &gd in g.guards.iter().filter(|&&gd| g.gd[gd].civ.is_none()) { say(&g.gd[gd].callsign, g.gd[gd].ch); }
-    alloc::format!("condition \u{25b8} {}", if parts.is_empty() { String::from("all sound") } else { parts.join(" \u{b7} ") })
-}
-
-/// One man's states as words, in the panel's order.
-fn word(c: Condition) -> String {
-    [(c.shaken, "shaken"), (c.blind, "blind"), (c.folded, "folded"), (c.hurt, "hurt")].iter().filter(|x| x.0).map(|x| x.1).collect::<Vec<_>>().join(" ")
-}
-
 /// Every frame, after the stun poses are dealt: each man's condition to his figure, by one rule.
 pub fn condition_pose(g: &mut Game) {
     let mut men: Vec<CharId> = crate::seats::men(g).iter().map(|&pl| g.pl[pl].ch).collect();
@@ -210,20 +181,6 @@ mod tests {
         g.k.condition.hurt_secs = 1.0;
         assert!(!is_hurt(&mut g, cg, None), "a limit: exactly at it he is sound");
         assert!(is_hurt(&mut g, cg, Some(9.5)));
-    }
-
-    #[test]
-    fn the_panel_line() {
-        let (mut g, gd, pl, cg, cp) = game();
-        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} all sound");
-        g.cond[g.gd[gd].ch].hurt_at = 9.0;
-        g.cond[g.gd[gd].ch].fold_until = 11.0;
-        g.cond[g.pl[pl].ch].hurt_at = 9.0;
-        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} you hurt \u{b7} Reyes folded hurt");
-        g.cond[cp].down = true;
-        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} Reyes folded hurt");
-        assert!(condition_of(&mut g, cp).down);
-        assert!(!condition_of(&mut g, cp).hurt);
     }
 
     #[test]

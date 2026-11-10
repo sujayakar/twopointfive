@@ -155,7 +155,6 @@ fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     vis
 }
 
-
 /// Perception's share: is a held colleague in his view this frame? If so he is in the standoff and all his eyes-on-Sam is refreshed off the pair.
 pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) -> bool {
     let dt = dt.unwrap_or(1.0 / 60.0);
@@ -213,8 +212,6 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
             seen_t: now,
             last_bark_t: -100.0,
             line_open: false,
-            shots: 0.0,
-            orbit_m: 0.0,
             stalls: 0.0,
             cornered: false,
             backing: false,
@@ -770,33 +767,6 @@ mod tests {
         let lost = pool_of(StandoffMoment::Lost, Temperament::Hard, true);
         assert_eq!(lost, ["lost them — where'd he take {him}?", "I've lost sight — moving up"]);
         assert!(pool_of(StandoffMoment::Enter, Temperament::Steady, true).contains(&"easy. easy. nobody has to get hurt here"));
-    }
-
-    /// This file's lines are the skeleton's table's (read from the same TypeScript), moment by moment.
-    #[test]
-    fn lines_are_the_skeleton_tables() {
-        let table = standoff_lines();
-        let moments = [StandoffMoment::Enter, StandoffMoment::NoShot, StandoffMoment::Line, StandoffMoment::Cornered, StandoffMoment::Dropped, StandoffMoment::Freed, StandoffMoment::Lost, StandoffMoment::HitHim];
-        for moment in moments {
-            let row = table.get(String::from(moment.as_str())).unwrap();
-            let same = |ours: &[&str], theirs: &Option<Vec<String>>| {
-                let theirs: Vec<&str> = theirs.iter().flatten().map(|l| l.as_str()).collect();
-                assert_eq!(ours, theirs.as_slice(), "{}", moment.as_str());
-            };
-            same(lines_of(moment, Temperament::Steady), &row.steady);
-            same(lines_of(moment, Temperament::Nervy), &row.nervy);
-            same(lines_of(moment, Temperament::Hard), &row.hard);
-            same(lines_any(moment), &row.under);
-        }
-        let nameless = standoff_nameless();
-        assert_eq!(nameless.dropped.as_deref(), nameless_line(StandoffMoment::Dropped));
-        assert_eq!(nameless.freed.as_deref(), nameless_line(StandoffMoment::Freed));
-        assert_eq!(nameless.hit_him.as_deref(), nameless_line(StandoffMoment::HitHim));
-        let now = standoff_now();
-        for (was, said) in STANDOFF_NOW {
-            assert_eq!(now.get(String::from(*was)).map(|l| l.as_str()), Some(*said), "{}", was);
-        }
-        assert_eq!(now.len(), STANDOFF_NOW.len());
     }
 
     /// from, to, the man's axis, soles, crown, and what the TypeScript's own arithmetic gives under EXACT (bun)

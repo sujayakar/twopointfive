@@ -148,24 +148,6 @@ pub struct WallreactMod {
     pub wall_react: crate::wallreact::WallReact,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WallreactStats {
-    pub rows: i32,
-    pub breaches: i32,
-    pub merged: i32,
-    pub learned_ops: i32,
-    pub learned_men: i32,
-    pub told: i32,
-    pub moved_def: i32,
-    pub moved_ai: i32,
-    pub moved_op: i32,
-    pub no_cover: i32,
-    pub watches: i32,
-    pub replans: i32,
-    pub openings: i32,
-}
-
 pub const EYE: f64 = 1.55;
 
 pub const CHEST: f64 = 1.1;

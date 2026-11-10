@@ -14,7 +14,7 @@ const SEEDS: [u32; 3] = [5, 6, 7];
 /// seat's squad is whole.
 type Answers = (Vec<game::ids::GuardId>, [f64; 3], String, bool);
 fn answers(g: &Game, seat: &SeatRef) -> Answers {
-    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(g, seat))
+    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(seat))
 }
 
 /// THE RULE: in a game of two players, the readers asked about the second seat while the FIRST stands on the game answer as they do with the

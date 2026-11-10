@@ -102,7 +102,7 @@ pub(super) fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 
 }
 
 /// A new room fight: the class's field initialisers; its constructor only keeps `g`.
-pub fn room_fight_new(g: &crate::game::Game) -> crate::roomfight::RoomFight {
+pub fn room_fight_new() -> crate::roomfight::RoomFight {
     crate::roomfight::RoomFight::blank()
 }
 

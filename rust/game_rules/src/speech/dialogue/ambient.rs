@@ -56,14 +56,6 @@ fn end_ambient(g: &mut crate::game::Game) {
     if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
 }
 
-/// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript.
-pub fn ambient_restart(g: &mut crate::game::Game) {
-    let Some(s) = g.m.dialogue.ambient_by_game.as_mut() else { return; };
-    s.run = None;
-    s.next = -1.0;
-    if !is_office(g) { ambient_state(g).played.clear(); }
-}
-
 /// The line of a pair as it will be said: its `own` wording off the office, else its text.
 fn pair_said(l: &crate::dialogue::PairTalkLinesItem, own: bool) -> String {
     if own { l.own.as_ref().unwrap_or(&l.text).clone() } else { l.text.clone() }
@@ -163,7 +155,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let pad = match crate::devices::devices_pad_near(g, pa) {
                 Some(k) => {
                     let written = g.dr[k.door].def.name.clone();
-                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(g, &written), lock_id: k.def.name.clone() })
+                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(&written), lock_id: k.def.name.clone() })
                 }
                 None => None,
             };

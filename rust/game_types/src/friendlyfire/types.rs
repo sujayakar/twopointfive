@@ -7,9 +7,5 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, Default)]
 pub struct FriendlyfireStats {
     pub sam_on_mate: i32,
-    pub mate_on_mate: i32,
-    pub mate_on_sam: i32,
     pub unpressed: i32,
-    pub held: i32,
-    pub said: i32,
 }

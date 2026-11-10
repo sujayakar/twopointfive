@@ -110,7 +110,7 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
     if g.mission.drive_t >= 0.0 { return String::from("drive"); }
     if g.pl[pl].breaker_move.is_some() { return String::from("breaker"); }
     if let Some(c) = &g.pl[pl].charging { let d = c.door; return format!("charge:{}", g.dr[d].def.name); }
-    if crate::wallcharge::wall_charge_setting(g, seat) { return String::from("charge:wall"); }
+    if crate::wallcharge::wall_charge_setting(seat) { return String::from("charge:wall"); }
     String::new()
 }
 
@@ -277,8 +277,6 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let down = crate::input::input_down(g, input, key);
     let hit = crate::input::input_hit(g, input, key);
     let esc = crate::backkey::back_hit(g, input);
-    let wheel = g.tab.input[input].wheel;
-    let wheeled = js::truthy(wheel);
     if g.pl[pl].f_held && !down && !hit { g.pl[pl].f_held = false; }   // a spent press has come up: Space is live again
     if crate::input::input_hit(g, input, "Paused") && (g.pl[pl].sel.open || g.pl[pl].sel.down_t >= 0.0) { close_selector(g, true); }
     // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
@@ -295,14 +293,12 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         if hit && !g.pl[pl].f_held { g.pl[pl].f_held = true; cancel_sustained(g); }
         else if esc { cancel_sustained(g); }
         else if (js::to_i32(mask) & !js::to_i32(g.pl[pl].sel.move_latch)) != 0 { cancel_sustained(g); }
-        if wheeled && !down { crate::player::wheel_pace(g, wheel); }
         return;
     }
     g.pl[pl].sel.run_key = String::new();
     g.pl[pl].sel.move_latch = 0.0;
     if crate::condition::down(g, g.pl[pl].ch) {
         close_selector(g, false);
-        if wheeled && !down { crate::player::wheel_pace(g, wheel); }
         return;
     }
     // ---- the press edge: armed unless this press is already spent
@@ -397,7 +393,6 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             } else { give(g, lit.as_ref()); }
             return;
         }
-        if wheeled && !down { crate::player::wheel_pace(g, wheel); }
         if !r_free && !down {
             g.pl[pl].sel.ring.as_mut().unwrap().free = Some(true);
             g.pl[pl].sel.down_t = -1.0;
@@ -410,9 +405,6 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let mut d_sel = 0;
     if crate::input::input_hit(g, input, "ArrowDown") { d_sel += 1; }
     if crate::input::input_hit(g, input, "ArrowUp") { d_sel -= 1; }
-    if wheeled {
-        if !down { crate::player::wheel_pace(g, wheel); }
-    }
     if d_sel != 0 && g.nearby.len() > 1 { g.pl[pl].near_sel += d_sel; crate::player::pick_hover(g); }
     let near_sel = g.pl[pl].near_sel;
     if let Some(ring) = g.pl[pl].sel.ring.as_mut() { ring.lit = (near_sel + 1) as f64; }

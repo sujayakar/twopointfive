@@ -92,10 +92,8 @@ fn edge_look_cap(g: &mut crate::game::Game) {
     while g.destr.edge_look.rubble.len() as f64 > most {
         let r = g.destr.edge_look.rubble.remove(0);
         if r.t < r.t_2 { g.destr.edge_look.flying -= 1.0; }
-        g.stats.edge_look.capped += 1;
         crate::scene_boxes::box_let_go(g, r.box_);
     }
-    g.stats.edge_look.rubble = g.destr.edge_look.rubble.len() as i32;
 }
 
 /// The level put back.
@@ -105,7 +103,6 @@ pub(super) fn edge_look_clear(g: &mut crate::game::Game) {
     for r in e.rubble.iter() { crate::scene_boxes::box_let_go(g, r.box_); }
     // (`room` is not put back by the TypeScript's clear: kept)
     g.destr.edge_look.room = e.room;
-    let s = &mut g.stats.edge_look; s.decor = 0; s.rubble = 0; s.flying = 0;
 }
 
 /// Once a frame: the frame's room, a wall dressed or a few cells shed, the fragments in flight moved.
@@ -135,7 +132,7 @@ pub(super) fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
         if s < 1.0 { fl += 1.0; } else { let y = crate::debris::debris_rubble_height(g, r.box_.into(), r.p1[1]); g.tab.frame_boxes[r.box_].c[1] = y; }
         g.destr.edge_look.rubble[i].t = r.t;
     }
-    g.destr.edge_look.flying = fl; g.stats.edge_look.flying = fl as i32;
+    g.destr.edge_look.flying = fl; 
 }
 
 /// Kicked rubble: the fragments at rest are shoved by the men's feet as the pool's pieces are, over records of this lane's own.
@@ -184,8 +181,6 @@ fn edge_look_flush(g: &mut crate::game::Game) {
     let all: Vec<BreakLike> = g.destr.edge_look.dirty.values().cloned().collect();
     for b in all.iter() { edge_look_rebuild(g, b); }
     g.destr.edge_look.dirty.clear();
-    let mut n = 0; for l in g.destr.edge_look.decor.values() { n += l.len(); }
-    g.stats.edge_look.decor = n as i32;
 }
 
 /// This lane's pieces into the frame's dynamic list (after the lane's debris).
@@ -287,7 +282,6 @@ impl Lay {
 
 /// The standing pieces of one wall, made again from its cells.
 fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
-    g.stats.edge_look.rebuilds += 1;
     let f = edge_look_frame(g, b);
     let (n, w, t) = (f.n, f.w, f.t);
     let e = g.m.edge_look.edge;
@@ -411,7 +405,6 @@ fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike)
             }
         }
     }
-    g.stats.edge_look.capped += l.capped;
     // (re-set = the newest: over the level's cap it is the wall dressed longest ago that goes bare)
     if let Some(old) = g.destr.edge_look.decor.delete(crate::Num(b.id)) { for x in old { crate::scene_boxes::box_let_go(g, x); } }
     if !l.out.is_empty() {
@@ -424,7 +417,7 @@ fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike)
         if total <= e.max_decor { break; }
         if id.0 == b.id { continue; }
         let gone_l = g.destr.edge_look.decor.delete(id).unwrap_or_default();
-        total -= gone_l.len() as f64; g.stats.edge_look.capped += gone_l.len() as i32;
+        total -= gone_l.len() as f64; 
         for x in gone_l { crate::scene_boxes::box_let_go(g, x); }
     }
 }
@@ -549,7 +542,7 @@ fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f:
             let x = &mut g.tab.frame_boxes[bx]; x.c = r.p0; x.rot = Some(r.q0);
             g.destr.edge_look.flying += 1.0;
         }
-        g.destr.edge_look.rubble.push(r); g.stats.edge_look.shed += 1;
+        g.destr.edge_look.rubble.push(r); 
         i += 1.0;
     }
 }
@@ -586,7 +579,6 @@ fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, 
     soot(g, p, up(), half * 0.5 + s.floor, s.soot_near * s.soot_floor);
     let p = edge_look_at(g, f, uc, floor, far * (f.t + 0.35));
     soot(g, p, up(), half * 0.4 + s.floor * 0.7, s.soot_far * s.soot_floor);
-    g.stats.edge_look.scorch += 4;
     // the rim: marks centred ON the cut, the uppers' run and the sills' measured apart
     if s.rim <= 0.0 { return; }
     let gone = |k: f64, iy: f64| k >= 0.0 && k < f.n
@@ -615,4 +607,4 @@ fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, 
 }
 
 /// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path).
-pub(super) fn edge_look_new(g: &crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }
+pub(super) fn edge_look_new() -> crate::edge_look::EdgeLook { EdgeLook::blank() }

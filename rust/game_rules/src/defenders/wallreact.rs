@@ -170,7 +170,6 @@ fn take_ask(g: &mut Game, row: &crate::wallbreak::LevelChange, b: Option<Wallrea
 fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
     use crate::wallbreak::LevelChangeKind as Kind;
     if row.kind == Kind::Reset || row.kind == Kind::Door { return; }
-    g.stats.wallreact.rows += 1;
     let b = if row.kind == Kind::Cover { None } else { wall_react_upsert(g, row) };
     if !row.opened.is_empty() {
         match g.m.wallreact.wall_react.flood_all.clone() {
@@ -306,7 +305,6 @@ fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Optio
                 cause: cause_of(row.cause), who: row.who, blast_by: None, ops: -1.0, men: JsMap::new(), said: JsSet::new(), tell: Vec::new(), opening: None,
             });
             g.m.wallreact.wall_react.breaches.push(b);
-            g.stats.wallreact.breaches += 1;
             b
         }
     };
@@ -473,7 +471,6 @@ fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
                     row.cells = cells;
                     row.entries = e;
                     now.set(o, into);
-                    g.stats.wallreact.merged += 1;
                 }
             }
         }
@@ -529,7 +526,6 @@ fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option<f64
 fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId) {
     if g.tab.wallreact_breach[b].ops >= 0.0 { return; }
     g.tab.wallreact_breach[b].ops = g.time;
-    g.stats.wallreact.learned_ops += 1;
 }
 
 fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: WallReactManKnowsHow) {
@@ -545,8 +541,7 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     let minds = &mut g.m.wallreact.wall_react.minds;
     if !minds.has(gd) { minds.set(gd, JsMap::new()); }
     minds.get_mut(gd).unwrap().set(b, Mind { ev, line: false, line_t: -1.0, t });
-    if how == How::Told { g.stats.wallreact.told += 1; return; }
-    g.stats.wallreact.learned_men += 1;
+    if how == How::Told { return; }
     if how == How::Made { return; }
     let at = now + g.k.wallreact.tell_secs;
     g.tab.wallreact_breach[b].tell.push(BreachTellItem { by: gd, at });
@@ -690,7 +685,6 @@ fn wall_react_book(g: &mut Game) {
                 let row = crate::cover::Opening { id: r.key.clone(), kind: crate::cover::OpeningKind::Door, at: [r.at[0], CHEST, r.at[2]], n: [r.n[0], r.n[1]], half: r.half, door: None, pass: None, far: None };
                 let o = g.tab.cover_opening.push(row);
                 g.tab.wallreact_breach[b].opening = Some(o);
-                g.stats.wallreact.openings += 1;
                 o
             }
         };
@@ -777,7 +771,6 @@ fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
     let at = r.at;
     if Some(best) != had {
         g.m.wallreact.wall_react.watching.set(gd, best);
-        g.stats.wallreact.watches += 1;
     }
     pt[0] = at[0];
     pt[2] = at[2];
@@ -825,7 +818,7 @@ fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Option<V
 }
 
 /// what a question is about, in the order it is asked
-fn wall_react_things(g: &Game, p: &Pend) -> Vec<Gone> {
+fn wall_react_things(p: &Pend) -> Vec<Gone> {
     let mut out = vec![Gone { rect: p.rect, b: p.b, who: p.who }];
     if let Some(also) = &p.also { out.extend(also.iter().copied()); }
     out
@@ -834,7 +827,7 @@ fn wall_react_things(g: &Game, p: &Pend) -> Vec<Gone> {
 /// the first thing of the question with a threat he is open to, else why not
 fn wall_react_asks(g: &mut Game, gd: GuardId, p: &Pend, at: V3, h: f64) -> WallReactAsks {
     let mut why = String::new();
-    for x in wall_react_things(g, p) {
+    for x in wall_react_things(p) {
         let threat = match wall_react_threat_for(g, gd, x, at) {
             Some(t) => t,
             None => { if why.is_empty() { why = String::from("nothing beyond it to hide from"); } continue; }
@@ -1108,7 +1101,6 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         let to = match to {
             Some(q) => q,
             None => {
-                g.stats.wallreact.no_cover += 1;
                 p.next = g.time + 1.5;
                 return (R::Later, String::from("nowhere to go"));
             }
@@ -1118,8 +1110,6 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         g.m.wallreact.wall_react.watching.delete(gd);
         let pace = g.tune.guard_chase;
         crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, crate::owner::By::NOBODY);
-        g.fight.stats.took_cover += 1.0;
-        g.stats.wallreact.moved_def += 1;
         g.m.wallreact.wall_react.moved_t.set(gd, now);
         say(g, gd, "cover's gone — moving!");
         return (R::Moved, String::from("moved"));
@@ -1139,7 +1129,7 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     if g.cond[man.ch].sup.cover.is_some() { return WallReactShift::Fine; }
     let to = match wall_react_spot(g, gd, threat, b, others) {
         Some(q) => q,
-        None => { g.stats.wallreact.no_cover += 1; return WallReactShift::Later; }
+        None => {  return WallReactShift::Later; }
     };
     let now = g.time;
     let man = &mut g.gd[gd];
@@ -1153,7 +1143,6 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     man.path_goal_orbit = false;
     man.stall_ref = None;
     crate::game::guard_set_path(g, gd, Vec::new());
-    g.stats.wallreact.moved_ai += 1;
     g.m.wallreact.wall_react.moved_t.set(gd, now);
     WallReactShift::Moved
 }
@@ -1162,7 +1151,7 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
 fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let gd = p.gd;
     let v = crate::seats::view_of(g, gd);
-    let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
+    let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(&crate::seats::here(g), gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
     let post = match g.tab.orders_assignment[a].post { Some(q) => q, None => return WallReactOpMove::Fine };
     if crate::seats::with_seat(g, v, &mut |g| g.door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
     if crate::seats::with_seat(g, v, &mut |g| g.wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
@@ -1175,7 +1164,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
         for m in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
             if m == gd || crate::condition::down(g, g.gd[m].ch) { continue; }
             taken.push(pos_of(g, m));
-            if let Some(b) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
+            if let Some(b) = crate::orders::squad_orders_of(&crate::seats::here(g), m) {
                 if let Some(q) = g.tab.orders_assignment[b].post { taken.push(q); }
             }
         }
@@ -1186,7 +1175,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
         Some(q) => Some(q),
         None => wall_react_step_out(g, gd, post, threat, 1.2, pb, &taken, Some(true)),
     };
-    let to = match to { Some(q) => q, None => { g.stats.wallreact.no_cover += 1; return WallReactOpMove::Later; } };
+    let to = match to { Some(q) => q, None => { return WallReactOpMove::Later; } };
     let now = g.time;
     let at = pos_of(g, gd);
     let row = &mut g.tab.orders_assignment[a];
@@ -1199,7 +1188,6 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     row.mark_t = now;
     row.mark[0] = at[0];
     row.mark[2] = at[2];
-    g.stats.wallreact.moved_op += 1;
     g.m.wallreact.wall_react.moved_t.set(gd, now);
     if flat(at, to) > 0.6 { crate::seats::with_seat(g, v, &mut |g| say(g, gd, "moving off the hole.")); }
     WallReactOpMove::Moved
@@ -1212,7 +1200,7 @@ fn wall_react_replan(g: &mut Game, team: crate::teams::Team, since: f64, men: &[
         if !r.walk { continue; }
         for m in men {
             let t = if team == crate::teams::Team::Operative { r.ops } else { r.men.get(*m).copied().unwrap_or(-1.0) };
-            if t > since { g.stats.wallreact.replans += 1; return true; }
+            if t > since {  return true; }
         }
     }
     false
@@ -1266,13 +1254,6 @@ pub fn wall_react_tick_2(g: &mut crate::game::Game) {
     wall_react_tick(g);
 }
 
-/// A restart.
-pub fn wall_react_reset_2(g: &mut crate::game::Game) {
-    if g.m.wallreact.wall_react.unsub {
-        wall_react_reset(g);
-    }
-}
-
 /// A hole he knows of may take his gun. An unmade one has no breaches.
 pub(super) fn wall_react_look_2(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
     if !g.m.wallreact.wall_react.breaches.is_empty() {
@@ -1289,16 +1270,4 @@ pub fn wall_react_replan_2(g: &mut crate::game::Game, team: crate::teams::Team, 
 mod tests_2 {
     use super::*;
 
-    /// With nothing made, the three askers answer from their own guards and never reach the unmade reaction's methods.
-    #[test]
-    fn an_unmade_reaction_is_not_asked() {
-        let mut g = crate::game::Game::blank();
-        wall_react_reset_2(&mut g);
-        assert!(!g.m.wallreact.wall_react.unsub);
-        let gd = GuardId(0);
-        let mut pt: V3 = [1.0, 2.0, 3.0];
-        wall_react_look_2(&mut g, gd, &mut pt);
-        assert_eq!(pt, [1.0, 2.0, 3.0]);
-        assert!(!wall_react_replan_2(&mut g, crate::teams::Team::Guard, 0.0, &[gd]));
-    }
 }

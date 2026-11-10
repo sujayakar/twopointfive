@@ -108,8 +108,6 @@ pub struct PaneFrame {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakModGBHOST {
     pub shards: f64,
-    pub chips: f64,
-    pub refused: f64,
     pub hooked: f64,
 }
 
@@ -129,7 +127,7 @@ pub struct GlassBreakPaneInfo {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassbreakMod {
-    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
+    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
 }
 
 pub const NO_TYPE: f64 = 9.0;

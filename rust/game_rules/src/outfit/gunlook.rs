@@ -6,13 +6,13 @@ use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
 /// What a row has of its own; None: its stand-in fields are the gun.
-pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
+pub fn gun_own(def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()
 }
 
 /// The voice its report is played with.
 pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
-    match gun_own(g, def).and_then(|own| own.voice) {
+    match gun_own(def).and_then(|own| own.voice) {
         Some(voice) => voice,
         None => def.report.voice.clone(),
     }
@@ -20,19 +20,19 @@ pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Strin
 
 /// The flame and the flash's light gain it fires with.
 pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
-    match gun_own(g, def).and_then(|own| own.flame) {
+    match gun_own(def).and_then(|own| own.flame) {
         Some(flame) => flame,
         None => def.muzzle_fx,
     }
 }
 
 /// A long gun's model by its id; None: the group draws its own parts.
-pub(super) fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
+pub(super) fn long_model(id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
 /// A hand gun's model by its id.
-pub(super) fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
+pub(super) fn pistol_model(id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 

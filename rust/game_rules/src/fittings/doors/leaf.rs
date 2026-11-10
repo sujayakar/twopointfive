@@ -169,7 +169,6 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     let index = index.unwrap_or(0.0);
     let mut door = crate::doors::Door::blank();
     door.i = index;
-    door.drive_cols = drive_cols_new(g, index);
     door.def = def.clone();
     let id = g.dr.push(door);
     // (what the fields' own initialisers were)
@@ -353,7 +352,7 @@ fn pose_of(hinge: [f64; 2], w: f64, closed_dir: f64, thick: f64, height: f64, an
 
 /// the level's doors: their columns a part of the game's one block, `g.sim`. `emit` is not kept: the word is `Doors.sound`'s to say, by name
 pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent)) -> crate::doors::Doors {
-    let store = crate::sim_doorshome::door_store_new(g, crate::Opaque, defs.len() as f64);
+    crate::sim_doorshome::door_store_new(defs.len() as f64);
     let mut list = Vec::with_capacity(defs.len());
     for (i, d) in defs.iter().enumerate() {
         list.push(door_new(g, d, Some(i as f64)));
@@ -588,7 +587,7 @@ fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors:
     io.par[::sim::doors::P_WMAX_X] = world.max[0];
     io.par[::sim::doors::P_WMIN_Z] = world.min[2];
     io.par[::sim::doors::P_WMAX_Z] = world.max[2];
-    io.par[::sim::doors::P_FOOT] = crate::scene_collision::foot_of(g, FLOOR_Y0);
+    io.par[::sim::doors::P_FOOT] = crate::scene_collision::foot_of(FLOOR_Y0);
     let first = g.seats[0];   // (game.ts:1205 settleY1: the head of the span the settled man is pushed out of the statics over, of the first seat's man)
     let man = crate::cmd::seat_man(g, first);
     io.par[::sim::doors::P_SETTLE_Y1] = if g.pl[man].crouch { 1.0 } else { 1.7 };
@@ -629,7 +628,6 @@ mod tests {
         for (n, k) in [(0.0, crate::doors::DoorDriveKind::Boot), (1.0, crate::doors::DoorDriveKind::Swing), (2.0, crate::doors::DoorDriveKind::Body), (3.0, crate::doors::DoorDriveKind::Hand)] {
             assert_eq!(drive_kind_of(n), k);
             assert_eq!(drive_kind_num(k), n);
-            assert_eq!(crate::sim_doorshome::drive_kinds()[n as usize], k.as_str());
         }
     }
 

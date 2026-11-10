@@ -68,7 +68,7 @@ A ruling that stands on a system's own page is there and not here.
 
 - "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are": `picture.rs`, told by `picture_tell`, never
   from the truth.
-- "effectively just a health system ... but with very high lethality": one model for everybody, `condition_of`.
+- "effectively just a health system ... but with very high lethality": one model for everybody, `condition.rs`.
 - "both quiet and maybe even some loud": a response team on a loud level is a `raid` in the level file.
 
 ## Fog of war

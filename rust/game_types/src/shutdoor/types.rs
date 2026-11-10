@@ -8,7 +8,6 @@ pub struct Spot {
     pub pos: V3,
     pub yaw: f64,
     pub side: f64,
-    pub far: bool,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -71,16 +70,6 @@ pub struct PlanArm1 {
 pub struct ShutdoorMod {
     pub jobs: JsMap<GuardId, crate::shutdoor::Job>,
     pub spotted: Option<crate::shutdoor::ShutdoorModSpottedValue>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct ShutdoorStats {
-    pub given: i32,
-    pub shut: i32,
-    pub gave_up: i32,
-    pub to_file: i32,
-    pub stayed: i32,
 }
 
 pub fn k() -> crate::shutdoor::K { crate::shutdoor::K { open: 0.6, body: 0.37, slack: 0.1, reach: 0.95, far_reach: 1.5, handle_in: 0.14, cross: 4.0, go_cap: 25.0, settle: 1.5, blocked_cap: 4.0, latch_cap: 6.0, again: 0.8, hand_to: 0.22 } }

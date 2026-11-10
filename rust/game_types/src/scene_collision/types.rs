@@ -126,33 +126,10 @@ pub struct StaticCollisionLampQ {
 #[derive(Clone, Debug, Default)]
 pub struct SceneCollisionModANYTIME {
     pub on: bool,
-    pub proofs: f64,
-    pub windows: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SceneCollisionModSENSED {
-    pub sight: f64,
-    pub light: f64,
-    pub sound: f64,
-    pub paths: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SceneCollisionModLAMPS {
-    pub parts: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SceneCollisionModRAYS {
-    pub n: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SceneCollisionModPRICED {
-    pub n: f64,
-    pub needs: f64,
-    pub cells: f64,
     pub waits: bool,
 }
 
@@ -257,11 +234,8 @@ pub struct Raycast {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct SceneCollisionMod {
-    #[is(crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0 })] pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
-    #[is(crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, sound: 0.0, paths: 0.0 })] pub sensed: crate::scene_collision::SceneCollisionModSENSED,
-    #[is(crate::scene_collision::SceneCollisionModLAMPS { parts: 0.0 })] pub lamps: crate::scene_collision::SceneCollisionModLAMPS,
-    #[is(crate::scene_collision::SceneCollisionModRAYS { n: 0.0 })] pub rays: crate::scene_collision::SceneCollisionModRAYS,
-    #[is(crate::scene_collision::SceneCollisionModPRICED { n: 0.0, needs: 0.0, cells: 0.0, waits: false })] pub priced: crate::scene_collision::SceneCollisionModPRICED,
+    #[is(crate::scene_collision::SceneCollisionModANYTIME { on: true })] pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
+    #[is(crate::scene_collision::SceneCollisionModPRICED { waits: false })] pub priced: crate::scene_collision::SceneCollisionModPRICED,
 }
 
 pub const FEET_Y: f64 = 0.2;

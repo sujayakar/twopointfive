@@ -16,7 +16,6 @@ pub mod glassbreak;
 pub mod marks;
 pub mod particle_fx;
 pub mod render_decals;
-pub mod shard_model;
 pub mod shards;
 pub mod sheet_model;
 pub mod sparks;

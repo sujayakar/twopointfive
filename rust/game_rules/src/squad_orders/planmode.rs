@@ -9,7 +9,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// Shift + the key adds a goal: on Sam's own squad, and on a lesson only from the step that teaches it.
 pub(super) fn goals_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    crate::orders::squad_orders_sams(g, seat) && !crate::rails::rails_locks(g, "goal")
+    crate::orders::squad_orders_sams(seat) && !crate::rails::rails_locks(g, "goal")
 }
 
 /// The squad as the goals it is on now: the men with nothing to do, and the rest by what they were sent to.
@@ -17,7 +17,7 @@ fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::pla
     let mut idle: Vec<GuardId> = Vec::new();
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
     for m in crate::orders::squad_orders_men(g, seat, Some(crate::orders::SquadOrdersMenSel::All), None) {
-        let a = match crate::orders::squad_orders_of(g, seat, m) {
+        let a = match crate::orders::squad_orders_of(seat, m) {
             Some(a) if g.tab.orders_assignment[a].post.is_some() => a,
             _ => {
                 idle.push(m);
@@ -105,14 +105,10 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
     if crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None).is_empty() {
         return;
     }
-    g.stats.planmode.goals += 1;
     let Some(goal) = goal_men(g, t) else {
         crate::interact::say_why(g, None, crate::view::ThingKind::Wall, crate::planmode::GOAL_NONE, crate::planmode::GOAL_NONE.trim_end_matches('.'));
         return;
     };
-    if goal.how == crate::planmode::GoalMenHow::Split {
-        g.stats.planmode.split += 1;
-    }
     crate::autopilot::quick(g, t, Some(&goal.men));
 }
 
@@ -147,7 +143,7 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 /// `G.every(m => S.of(m)?.door === door)`.
 fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
-        let on = match crate::orders::squad_orders_of(g, seat, m) {
+        let on = match crate::orders::squad_orders_of(seat, m) {
             Some(a) => g.tab.orders_assignment[a].door == Some(door),
             None => false,
         };

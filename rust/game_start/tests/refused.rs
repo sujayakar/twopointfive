@@ -152,7 +152,7 @@ fn the_squads_posture_is_one_order_for_all_and_waits_behind_more_on_a_door() {
         assert!(!first.iter().any(|w| w == "go silent"), "seed {seed}: it took a wedge on the door's first page: {first:?}");
         assert_eq!(give(&mut p, "hold", floor, Who::All), None, "seed {seed}");
         p.run(0.4);
-        let orders = |p: &Play| { let here = game::seats::here(&p.g); p.mates().iter().map(|&m| game::orders::squad_orders_of(&p.g, &here, m)).collect::<Vec<_>>() };
+        let orders = |p: &Play| { let here = game::seats::here(&p.g); p.mates().iter().map(|&m| game::orders::squad_orders_of(&here, m)).collect::<Vec<_>>() };
         let silent = |p: &Play| game::silent::squad_silent(&p.g, &game::seats::here(&p.g));
         let (before, logged) = (orders(&p), p.g.orders.log.len());
         assert_eq!(give(&mut p, "silent", floor, Who::Num(0.0)), None, "seed {seed}");

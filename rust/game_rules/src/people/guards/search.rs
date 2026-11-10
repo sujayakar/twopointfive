@@ -169,7 +169,7 @@ pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>
     let near = beam_walled(g, o, &fan, reach, s_dark) && !man_in(g, gd, o, d, hl, reach);
     let since = if near { s_since } else { t };
     let dark = near && (s_dark || t - since >= g.k.lights.wall_secs - 1e-9);
-    g.m.guards.wall_seen.set(gd, GuardsModWallSeenValue { t, since, dark, out: None });
+    g.m.guards.wall_seen.set(gd, GuardsModWallSeenValue { t, since, dark });
     dark
 }
 
@@ -257,7 +257,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let t = g.time;
-    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
+    let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
     let o = crate::roomfight::room_fight_op_of(g, gd);
     let o_row = o.map(|id| &g.tab.roomfight_op[id]);
     let a_row = a.map(|id| &g.tab.orders_assignment[id]);
@@ -302,7 +302,7 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg
 pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
-    match crate::teampace::team_run_legs(g, seat, gd, speed) {
+    match crate::teampace::team_run_legs(g, gd, speed) {
         Some(legs) => legs,
         None => crate::kitload::load_pace(g, g.gd[gd].ch, speed),
     }
@@ -340,7 +340,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     if unstick_first(g, gd, dt) {
         return false;
     }
-    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt, speed) {
+    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt) {
         return false;
     }
     if !g.gd[gd].fled && crate::lanes::lane_gate(g, gd) {
@@ -691,7 +691,6 @@ pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
             current: -1.0,
             phase: SearchPlanPhase::Sweep,
             phase_t: 0.0,
-            visits: 0.0,
             rr: 0.0,
             said: false,
         };

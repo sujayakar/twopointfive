@@ -13,7 +13,7 @@ fn rag_char(g: &Game, gd: GuardId) -> Option<RagdollId> { g.ch[g.gd[gd].ch].ragd
 /// `rag.point(i)`
 fn pt(g: &mut Game, rc: RagdollId, i: f64) -> V3 { crate::ragdoll::ragdoll_point(g, rc, i, None) }
 /// `rag.radius(i)`
-fn rad(g: &Game, rc: RagdollId, i: f64) -> f64 { crate::ragdoll::ragdoll_radius(g, rc, i) }
+fn rad(i: f64) -> f64 { crate::ragdoll::ragdoll_radius(i) }
 /// `rag.setPin(i, p)`
 fn pin(g: &mut Game, rc: RagdollId, i: f64, p: V3) { crate::ragdoll::ragdoll_set_pin(g, rc, i, p) }
 /// `rag.wake()`
@@ -40,7 +40,7 @@ fn hands_busy(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     {
         return true;
     }
-    crate::wallcharge::wall_charge_setting(g, seat)
+    crate::wallcharge::wall_charge_setting(seat)
 }
 
 /// The middle of two points.
@@ -382,7 +382,7 @@ pub(super) fn haul_pins(g: &mut crate::game::Game, dt: f64) -> bool {
         pin(g, rc, h.i_r, carry[1]);
     } else if h.phase == P::Set {
         let s = v3::smoothstep(0.0, 1.0, h.t / g.k.hands.set_secs);
-        let y = rad(g, rc, h.i_l) + 0.02;
+        let y = rad(h.i_l) + 0.02;
         pin(g, rc, h.i_l, [h.from[0][0], v3::lerp(h.from[0][1], y, s), h.from[0][2]]);
         pin(g, rc, h.i_r, [h.from[1][0], v3::lerp(h.from[1][1], y, s), h.from[1][2]]);
     }
@@ -394,7 +394,7 @@ pub(super) fn haul_pins(g: &mut crate::game::Game, dt: f64) -> bool {
 /// A held limb's wrist spot: a palm's depth above its middle.
 fn up(g: &mut Game, rc: RagdollId, i: f64) -> V3 {
     let p = pt(g, rc, i);
-    [p[0], p[1] + rad(g, rc, i) * 0.6 + 0.02, p[2]]
+    [p[0], p[1] + rad(i) * 0.6 + 0.02, p[2]]
 }
 
 /// The animator's two wrist spots: on the limbs themselves; open hands on the way down, closed from the lift on.

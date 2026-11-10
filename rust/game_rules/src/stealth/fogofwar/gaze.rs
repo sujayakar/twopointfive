@@ -61,9 +61,6 @@ pub(super) fn fog_eye_count(v: f64) -> f64 {
     if v.is_nan() { FOG_EYES_WAS } else { m::max(FOG_EYES_WAS, m::min(crate::render_fogofwar::FOG_EYES, m::floor(v))) }
 }
 
-/// The address's words for the fog, read by the Game's constructor. With no page it does nothing, as the TypeScript's catch does; the host owns the address.
-pub fn fog_flags(g: &crate::game::Game) {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

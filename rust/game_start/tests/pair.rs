@@ -22,7 +22,7 @@ fn pair_with_body(seed: u32, body: Option<[f64; 2]>) -> ((Play, GuardId, GuardId
     let m = p.mates()[0];
     let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
     p.drop_all_but(&foes[..if body.is_some() { 2 } else { 1 }]);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let t1 = foes[0];
     let lying = body.map(|at| {
         // (stood there for his bones to be there, then dropped)
@@ -75,7 +75,7 @@ fn two_seats(seed: u32) -> (Play, GuardId, Vec<Vec<GuardId>>) {
     let mut men = Vec::new();
     for i in 0..2 {
         let s = p.g.seats[i];
-        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true, None));
+        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true));
         let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, s));
         assert!(!mine.is_empty(), "seed {seed}: seat {i} has no men");
         men.push(mine);
@@ -172,7 +172,7 @@ fn sent_to_a_back(oneeye: bool, at: [f64; 2], yaw: f64) -> (Play, GuardId, Guard
     if oneeye { p.g.k.pairup.on = true; game::pairup::pair_up_apply(&mut p.g, None); }
     p.g.k.silent.on = true;
     p.run(0.5);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
     let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
     let foe = foes[0];
@@ -246,7 +246,7 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
     let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
     let t1 = foes[0];
@@ -365,7 +365,7 @@ fn in_a_mans_line(seed: u32, mate_x: f64) -> (i32, i32, f64) {
     let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
     p.drop_all_but(&foes[1..2]);
     let man = foes[1];
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let look = |p: &mut Play| p.pin_man(man, [8.5, 11.0], EAST, GuardState::Suspicious, 0.4);
     look(&mut p);
     p.sam_put([15.2, 11.0]);

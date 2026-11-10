@@ -6,13 +6,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// A fresh set of the net's counters.
-fn new_stats() -> crate::squadnet::SquadNetStats {
-    crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
-}
-
 /// The net as a game starts it; the class's constructor adds nothing to its initialisers.
-pub fn squad_net_new(g: &crate::game::Game) -> crate::squadnet::SquadNet {
+pub fn squad_net_new() -> crate::squadnet::SquadNet {
     crate::squadnet::SquadNet::blank()
 }
 
@@ -24,12 +19,10 @@ pub fn squad_net_reset(g: &mut crate::game::Game) {
     n.seeded = false;
     n.click_due = false;
     n.down_due = false;
-    n.stats = new_stats();
 }
 
 /// A teammate said a line with his head off your screen: the net clicks.
 pub fn squad_net_line(g: &mut crate::game::Game) {
-    g.squad_net.stats.lines += 1.0;
     g.squad_net.click_due = true;
 }
 
@@ -71,7 +64,6 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
         let p = g.ch[g.gd[gd].ch].pos;
         let dur = g.k.squadnet.down_secs;
         g.squad_net.rows.push(crate::squadnet::NetRow { text: alloc::format!("{callsign} is down."), at: [p[0], p[1], p[2]], t, dur });
-        g.squad_net.stats.downs += 1.0;
         g.squad_net.down_due = true;
     }
     g.squad_net.seeded = true;
@@ -92,7 +84,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
 }
 
 /// What a quick-key pick that is not a plain open adds: the end of its row and the answer.
-pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
+pub fn why_words(p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
     let id = p.id.as_deref();
@@ -117,13 +109,11 @@ fn ends_plural(name: &str) -> bool {
 }
 
 /// The call a lead makes when an entry is over. None: nothing is said.
-pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool, seen: bool) -> Option<String> {
+pub fn room_call(name: &str, left: f64, inside: bool, seen: bool) -> Option<String> {
     if !inside && left <= 0.0 {
-        g.squad_net.stats.clears += 1.0;
         return Some(alloc::format!("{name} clear."));
     }
     if left > 0.0 && !seen {
-        g.squad_net.stats.quiets += 1.0;
         let verb = if ends_plural(name) { " are" } else { "'s" };
         return Some(alloc::format!("{name}{verb} quiet. we didn't see all of it."));
     }
@@ -131,13 +121,12 @@ pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool,
 }
 
 /// The call at the end of an entry into a room the mission has no name for; `open` = open floor.
-pub fn plain_call(g: &mut crate::game::Game, open: bool, left: f64, inside: bool, seen: bool) -> Option<String> {
+pub fn plain_call(open: bool, left: f64, inside: bool, seen: bool) -> Option<String> {
     let call = if open {
         if seen { None } else { Some(String::from("clear so far.")) }
     } else {
-        room_call(g, "room", left, inside, seen)
+        room_call("room", left, inside, seen)
     };
-    if call.is_some() { g.squad_net.stats.ends += 1.0; }
     call
 }
 
@@ -178,13 +167,13 @@ mod tests {
     fn a_lead_calls_clear_only_with_nobody_left_and_quiet_only_of_what_he_did_not_see() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
-            assert_eq!(room_call(g, "mess", 0.0, false, false).as_deref(), Some("mess clear."));
-            assert_eq!(room_call(g, "bunks", 3.0, false, false).as_deref(), Some("bunks are quiet. we didn't see all of it."));
-            assert_eq!(room_call(g, "server room", 3.0, true, false).as_deref(), Some("server room's quiet. we didn't see all of it."));
-            assert_eq!(room_call(g, "boss", 3.0, true, false).as_deref(), Some("boss's quiet. we didn't see all of it."));
-            assert_eq!(room_call(g, "mess", 0.0, true, false), None);
-            assert_eq!(room_call(g, "mess", 3.0, true, true), None);
-            assert_eq!(room_call(g, "mess", 3.0, false, true), None);
+            assert_eq!(room_call("mess", 0.0, false, false).as_deref(), Some("mess clear."));
+            assert_eq!(room_call("bunks", 3.0, false, false).as_deref(), Some("bunks are quiet. we didn't see all of it."));
+            assert_eq!(room_call("server room", 3.0, true, false).as_deref(), Some("server room's quiet. we didn't see all of it."));
+            assert_eq!(room_call("boss", 3.0, true, false).as_deref(), Some("boss's quiet. we didn't see all of it."));
+            assert_eq!(room_call("mess", 0.0, true, false), None);
+            assert_eq!(room_call("mess", 3.0, true, true), None);
+            assert_eq!(room_call("mess", 3.0, false, true), None);
         });
     }
 
@@ -193,11 +182,11 @@ mod tests {
     fn open_floor_is_clear_so_far_and_a_room_nobody_named_is_called_as_room() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
-            assert_eq!(plain_call(g, true, 0.0, true, false).as_deref(), Some("clear so far."));
-            assert_eq!(plain_call(g, true, 0.0, false, true), None);
-            assert_eq!(plain_call(g, false, 0.0, false, false).as_deref(), Some("room clear."));
-            assert_eq!(plain_call(g, false, 3.0, false, false).as_deref(), Some("room's quiet. we didn't see all of it."));
-            assert_eq!(plain_call(g, false, 3.0, true, true), None);
+            assert_eq!(plain_call(true, 0.0, true, false).as_deref(), Some("clear so far."));
+            assert_eq!(plain_call(true, 0.0, false, true), None);
+            assert_eq!(plain_call(false, 0.0, false, false).as_deref(), Some("room clear."));
+            assert_eq!(plain_call(false, 3.0, false, false).as_deref(), Some("room's quiet. we didn't see all of it."));
+            assert_eq!(plain_call(false, 3.0, true, true), None);
         });
     }
 
@@ -206,7 +195,7 @@ mod tests {
     fn why_words_says_only_the_reasons() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
-            let ack = |g: &mut Game, p: &AutoPick| why_words(g, p).map(|w| w.ack);
+            let ack = |g: &mut Game, p: &AutoPick| why_words(p).map(|w| w.ack);
             assert_eq!(ack(g, &pick("bangClear", AutoPickWhy::Contact, None)).as_deref(), Some("banging it. i see one in there."));
             assert_eq!(ack(g, &pick("bangClear", AutoPickWhy::Unknown, None)).as_deref(), Some("banging it. nobody's been in there."));
             assert_eq!(ack(g, &pick("charge", AutoPickWhy::Shut, None)).as_deref(), Some("we can't open it. setting a charge."));

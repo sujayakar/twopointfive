@@ -63,14 +63,3 @@ pub enum RingLatch {
     Give,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct CmdringStats {
-    pub opened: i32,
-    pub quick: i32,
-    pub given: i32,
-    pub pages: i32,
-    pub cancelled: i32,
-    pub who: i32,
-    pub twice: i32,
-}

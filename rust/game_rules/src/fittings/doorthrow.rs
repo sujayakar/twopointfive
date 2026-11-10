@@ -107,7 +107,7 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
             let ch = g.gd[gd].ch;
             let mut p = g.ch[ch].pos;
             crate::scene_collision::collide_circle(g, &mut p, 0.3, 0.2, 1.5, None);
-            crate::scene_collision::clamp_to_world(g, &mut p, 0.3);
+            crate::scene_collision::clamp_to_world(&mut p, 0.3);
             g.ch[ch].pos = p;
             crate::character::character_update(g, ch, 0.0);
         }
@@ -127,9 +127,6 @@ fn count(g: &mut Game, s: crate::doors::DoorStrike) {
         g.stats.doorthrow.kicked += 1;
     } else {
         g.stats.doorthrow.pushed += 1;
-    }
-    if s.floor {
-        g.stats.doorthrow.floored += 1;
     }
 }
 

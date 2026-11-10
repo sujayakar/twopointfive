@@ -30,7 +30,7 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
 }
 
 /// A table of names of rust/sim/src/knobs.rs, one a line.
-fn bench_names(x: crate::sim_sim::SimExports, table: f64) -> Vec<String> {
+fn bench_names(table: f64) -> Vec<String> {
     let table = table as u32;
     let (at, n) = (::sim::roles::addr(table), ::sim::roles::len(table));
     // (knobs.rs hands its tables out by address alone, as the page reads them; these are its &'static str names)
@@ -65,8 +65,7 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     }
     if g.m.anim_skeleton.layers.roles != Some(ch) {
         if g.m.anim_skeleton.layers.names.is_none() {
-            let x = crate::sim_sim::sim();
-            let names = AnimSkeletonModLAYERSNames { roles: bench_names(x, 3.0), lists: bench_names(x, 5.0), nums: bench_names(x, 8.0) };
+            let names = AnimSkeletonModLAYERSNames { roles: bench_names(3.0), lists: bench_names(5.0), nums: bench_names(8.0) };
             g.m.anim_skeleton.layers.names = Some(names);
         }
         let names = g.m.anim_skeleton.layers.names.clone().unwrap();
@@ -127,8 +126,6 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
         }
         g.m.anim_skeleton.layers.roles = Some(ch);
     }
-    g.m.anim_skeleton.pose_bench.in_place += 1.0;
-    g.m.anim_skeleton.pose_bench.owed += 1.0;
     slot
 }
 
@@ -137,7 +134,6 @@ pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     if code == 0.0 {
         panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold: char row {:?}, unit {}, guard {:?}", c, g.guards.iter().any(|x| g.gd[*x].ch == c && g.gd[*x].unit.is_some()), g.guards.iter().find(|x| g.gd[**x].ch == c).map(|x| g.gd[*x].callsign.clone()));
     }
-    g.m.anim_skeleton.layers.ran += 1.0;
     if js::to_i32(code) & 2 != 0 {
         bench_get_fk(&mut g.ch[c].anim.fk);
         return;
@@ -458,9 +454,6 @@ fn pose_in(g: &crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
     p.at < Pose::LOOSE
 }
 
-/// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.
-fn pose_out(g: &crate::game::Game, p: crate::anim_skeleton::Pose) {}
-
 /// Every pose of a set at home in the game's block; false = the pool had no room for one of them, see `stray`.
 pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     g.tab.pose_set[s].home = Some(crate::Opaque);
@@ -483,10 +476,6 @@ pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
 pub(super) fn pose_set_out(g: &mut crate::game::Game, s: PoseSetId) {
     g.tab.pose_set[s].home = None;
     g.tab.pose_set[s].stray = 0.0;
-    for k in 0..g.tab.pose_set[s].list.len() {
-        let p = g.tab.pose_set[s].list[k];
-        pose_out(g, p);
-    }
 }
 
 /// Is the pose in a block (not −1, the bench). No g here, so only the sign says anything: the slot it is in is g.sim, which is what lend answers.
@@ -504,7 +493,6 @@ fn lend(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) ->
         bench_put(g, p, place);
         return -1.0;
     }
-    g.m.anim_skeleton.pose_bench.in_place += 1.0;
     g.sim as f64
 }
 
@@ -826,7 +814,6 @@ pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skelet
             }
         }
         if a.at < Pose::LOOSE && b.at < Pose::LOOSE && out.at < Pose::LOOSE {
-            g.m.anim_skeleton.pose_bench.in_place += 1.0;
             known(answer(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, w, mask.is_some(), out.at as usize, n, singles)));
             return;
         }

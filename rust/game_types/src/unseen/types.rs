@@ -32,13 +32,6 @@ pub struct UnseenMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct UnseenStats {
-    pub spells: i32,
-    pub seconds: f64,
-    pub held: i32,
-    pub held_glass: i32,
-    pub wall_places: i32,
-    pub wall_lost: i32,
-    pub wall_past: i32,
     pub cues: i32,
 }
 

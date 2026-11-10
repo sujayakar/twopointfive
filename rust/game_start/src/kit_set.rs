@@ -176,7 +176,6 @@ pub fn set_level(data: &Json, way: usize) -> Cow<'_, Json> {
     let room_clear = json::obj(rc);
     let stub = |id: &str, k: f64| json::obj(vec![("id", json::s(id)), ("c", json::nums(&[far[0] + k * 4.0 * K.stub, K.sunk, far[1]])), ("h", json::nums(&[K.stub, K.stub, K.stub])), ("albedo", json::nums(&[0.0, 0.0, 0.0])), ("flags", json::arr(vec![json::s("NoPrimary"), json::s("NoShadow")]))]);
     let lights: Vec<Json> = data.get("lights").items().iter().filter(|l| l.get("kind").str() == Some("dir")).chain(t.get("lights").items().iter()).cloned().collect();
-    let lit: Vec<&str> = lights.iter().filter_map(|l| l.get("id").str()).collect();
     let materials = data.get("materials");
     let mut boxes: Vec<Json> = t.get("boxes").items().iter().map(|b| set_paint(b, materials)).collect();
     boxes.push(stub(K.panel, 0.0));

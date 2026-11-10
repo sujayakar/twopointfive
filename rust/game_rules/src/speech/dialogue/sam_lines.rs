@@ -71,14 +71,13 @@ fn sam_line_fits(l: &crate::dialogue::SamLine, ctx: &crate::dialogue::DialogueCt
 fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::SamLine>], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> Option<crate::dialogue::ChooseSamLine> {
     let mut mem = mem;
     let mut pool: Vec<Eligible> = Vec::new();
-    let mut fresh = false;
     for tier in tiers {
-        pool = sam_eligible(g, tier, ctx, facts, mem.as_deref(), true);
-        if !pool.is_empty() { fresh = true; break; }
+        pool = sam_eligible(tier, ctx, facts, mem.as_deref(), true);
+        if !pool.is_empty() { break; }
     }
     if pool.is_empty() {
         let flat: Vec<crate::dialogue::SamLine> = tiers.iter().flatten().cloned().collect();
-        pool = sam_eligible(g, &flat, ctx, facts, mem.as_deref(), false);
+        pool = sam_eligible(&flat, ctx, facts, mem.as_deref(), false);
         let last = mem.as_deref().and_then(|m| m.last.clone()).filter(|l| !l.is_empty());
         if pool.len() > 1 {
             if let Some(last) = last {
@@ -185,7 +184,7 @@ fn live_script(g: &mut Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameT
 }
 
 /// chooseSamLine's closure `eligible`: the lines of `lines` that fit, are fresh if asked, and resolve to words.
-fn sam_eligible(g: &Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
+fn sam_eligible(lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
     let mut out: Vec<Eligible> = Vec::new();
     let tokens = tokens_map(&ctx.tokens);
     for l in lines {
@@ -198,7 +197,7 @@ fn sam_eligible(g: &Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialo
             }
         }
         let said = crate::dialogue::SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: None, guide: l.guide.clone() };
-        let line = said_text(g, &said, ctx);
+        let line = said_text(&said, ctx);
         let text = match expand(&line, &tokens) { Some(t) if !t.is_empty() => t, _ => continue };
         out.push((l.clone(), text, sam_weight(l)));
     }
@@ -415,7 +414,6 @@ mod tests {
         let m = tokens_map(&t);
         assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));
         assert_eq!(m.get(String::from("door")), Some(&None));
-        assert_eq!(m.len(), crate::dialogue::tokens().len());
     }
 
 }

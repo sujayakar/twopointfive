@@ -300,7 +300,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     if g.pl[pl].holding.is_some() { crate::kitanim::kit_tick(g, None); update_hold(g, dt, input, cam); return; }
     if g.pl[pl].pending_throw.is_some() && (g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || crate::handwork::sam_work(g).is_some()) { throw_off(g, pl); }
     if g.pl[pl].kick.is_some() { update_kick(g, dt); return; }
-    if g.pl[pl].picking.is_some() { update_picking(g, dt, input); return; }
+    if g.pl[pl].picking.is_some() { update_picking(g, dt); return; }
     if g.pl[pl].wanding.is_some() { update_wanding(g, dt); return; }
     {
         let w = crate::handwork::sam_work(g);
@@ -422,10 +422,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let stunned = crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
     let rooted = crate::samstun::sam_rooted(g, &crate::seats::here(g), None);
     let own_move = !rooted && (mx != 0.0 || mz != 0.0);
-    let mut hands_walk = false;
     {
         let own = own_move;
-        if let Some(hs) = crate::hands::hands_step(g, own, dt) { mx = hs[0]; mz = hs[1]; hands_walk = true; }
+        if let Some(hs) = crate::hands::hands_step(g, own, dt) { mx = hs[0]; mz = hs[1]; }
     }
     if rooted { mx = 0.0; mz = 0.0; }
     let ml = m::hyp2(mx, mz);
@@ -802,7 +801,6 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             ThrowKind::Smoke => (crate::throwables::ItemKind::Smoke, None),
         };
         let it = crate::throwables::throwables_spawn(g, item_kind, origin, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse, who: Some(who), ..Default::default() }));
-        if k2 == ThrowKind::Frag { g.stats.frag.thrown += 1; }
         g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::CanHeard);
         crate::chronicle::chron_thrown(g, k2.as_str());
         g.pl[pl].pending_throw = None;

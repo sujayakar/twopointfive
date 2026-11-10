@@ -150,7 +150,7 @@ fn man_singles_of(g: &Game, s: &crate::levelfit::Stood) -> f64 {
 }
 
 /// One row of the count.
-fn row(row: &str, what: &str, has: f64, cap: f64, table: Option<&str>) -> crate::levelfit::FitRow {
+fn row(what: &str, has: f64, cap: f64) -> crate::levelfit::FitRow {
     crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
 }
 
@@ -189,37 +189,37 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
     let cuts = cut_statics(g, &col.boxes);
     let pieces = crate::wallbreak::wall_break_pieces_sure(g);
     let mut rows = vec![
-        row("boxes", "statics", col.boxes.len() as f64, t("boxes"), Some("boxes")),
-        row("cells", "cells of the floor grid", cells, t("cells"), Some("cells")),
-        row("items", "entries of those cells", entries, t("items"), Some("items")),
-        row("tilted", "tilted statics", tilted, t("tilted"), Some("tilted")),
-        row("cuts", "statics that carry a cut record (a cut or a shaped static takes a cut row; so does a piece with a ragged end)", cuts, t("cuts"), Some("cuts")),
-        crate::levelfit::FitRow { play: Some(true), ..row("pieces", "pieces a broken level may stand up (the wall breaker's knob) against the pieces its room in the three tables above surely holds", g.k.walls.max_pieces, pieces, None) },
-        row("leaves", "leaves (the doors' list of the leaves' table)", col.dynamic_boxes.len() as f64, t("leaves"), Some("leaves")),
-        row("parts", "boxes of the loose furniture (another list of the leaves' table)", parts, m::min(t("leaves"), cap.parts), Some("leaves")),
-        row("things", "loose things of furniture", things, m::min(t("things"), cap.things), Some("things")),
-        row("panes", "glass one line can note (no more than the level's glass)", glass, t("panes"), Some("panes")),
-        row("sheets", "sheets of glass (a row a pane that is no longer whole)", big.sheets, m::min(t("glass"), cap.sheets), Some("glass")),
-        row("view", "sheets of glass (a row a pane a burst's view names)", big.sheets, t("view"), Some("view")),
+        row("statics", col.boxes.len() as f64, t("boxes")),
+        row("cells of the floor grid", cells, t("cells")),
+        row("entries of those cells", entries, t("items")),
+        row("tilted statics", tilted, t("tilted")),
+        row("statics that carry a cut record (a cut or a shaped static takes a cut row; so does a piece with a ragged end)", cuts, t("cuts")),
+        crate::levelfit::FitRow { play: Some(true), ..row("pieces a broken level may stand up (the wall breaker's knob) against the pieces its room in the three tables above surely holds", g.k.walls.max_pieces, pieces) },
+        row("leaves (the doors' list of the leaves' table)", col.dynamic_boxes.len() as f64, t("leaves")),
+        row("boxes of the loose furniture (another list of the leaves' table)", parts, m::min(t("leaves"), cap.parts)),
+        row("loose things of furniture", things, m::min(t("things"), cap.things)),
+        row("glass one line can note (no more than the level's glass)", glass, t("panes")),
+        row("sheets of glass (a row a pane that is no longer whole)", big.sheets, m::min(t("glass"), cap.sheets)),
+        row("sheets of glass (a row a pane a burst's view names)", big.sheets, t("view")),
     ];
     let clumps = clumps_most(g, &lv.boxes);
-    rows.push(row("clumps", "clumps the largest sheet of glass dices into", clumps, if held { ::sim::panes_cap(1) as f64 } else { inf }, None));
+    rows.push(row("clumps the largest sheet of glass dices into", clumps, if held { ::sim::panes_cap(1) as f64 } else { inf }));
     let bars = flagged(g, &col.boxes, flag.bar);
-    rows.push(row("bars", "window's bars (a row a bar gone, in the game's block)", bars, if held { ::sim::panes_cap(0) as f64 } else { inf }, None));
-    rows.push(row("doors", "doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors, None));
-    rows.push(row("men", "a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED, None));
+    rows.push(row("window's bars (a row a bar gone, in the game's block)", bars, if held { ::sim::panes_cap(0) as f64 } else { inf }));
+    rows.push(row("doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors));
+    rows.push(row("a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
     let man_rows = men_most(g, civs);
-    rows.push(row("manrows", "rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64, None));
+    rows.push(row("rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64));
     let poses = if held { let c = civ_most(g); men_most(g, c) * man_singles_of(g, g_2) } else { 0.0 };
-    rows.push(row("poses", "singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }, None));
+    rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }));
     let civ_cap = civ_most(g);
-    rows.push(row("civilians", "civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap, None));
-    rows.push(row("doormen", "contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, dio.as_ref().map_or(inf, |d| d.max_contacts), None));
-    rows.push(row("fixtures", "light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures, None));
-    rows.push(row("lamps", "lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps, None));
-    rows.push(row("cameras", "cameras", big.cameras, cap.cameras, None));
-    rows.push(row("lasers", "tripwires", big.lasers, cap.lasers, None));
-    rows.push(row("beacons", "emergency beacons", big.beacons, cap.beacons, None));
+    rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap));
+    rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, dio.as_ref().map_or(inf, |d| d.max_contacts)));
+    rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));
+    rows.push(row("lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps));
+    rows.push(row("cameras", big.cameras, cap.cameras));
+    rows.push(row("tripwires", big.lasers, cap.lasers));
+    rows.push(row("emergency beacons", big.beacons, cap.beacons));
     rows
 }
 

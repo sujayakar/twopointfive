@@ -178,7 +178,7 @@ impl Me {
         self.wait(2.5).await;
         if !self.go(post, 60.0, || false).await { self.say(format!("(he did not reach his post: at {})", at(self.pos()))); }
         if !sent { self.quick_on(d, "stack").await; }
-        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(g, s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
+        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
         for k in 0..4 {
             if !h.held(self) || self.up().is_empty() { break; }
             if !self.enter(d, if k > 0 { "again" } else { "go in" }).await { self.wait(1.0).await; continue; }

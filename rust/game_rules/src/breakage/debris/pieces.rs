@@ -60,7 +60,7 @@ pub fn hash01(x: f64) -> f64 {
 }
 
 /// A new pool.
-pub(in crate::breakage) fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
+pub(in crate::breakage) fn debris_new() -> crate::debris::Debris { crate::debris::Debris::blank() }
 
 /// The pool's size.
 pub const DEBRIS_CAP: f64 = 64.0;
@@ -82,7 +82,7 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
     let mut v = v;
     if let Some(f) = g.destr.debris.fling { v = v3::add(v, f); }
     debris_thrown(g, kind, box_, v, level, who);
-    debris_spawn_raw(g, kind, box_, v, w, Some(who), Some(true))
+    debris_spawn_raw(g, kind, box_, v, w, Some(who))
 }
 
 /// The simulation's half of a piece that is thrown: its one landing, put in the game's falls.
@@ -117,7 +117,7 @@ pub(in crate::breakage) fn debris_landings(g: &mut crate::game::Game) {
 }
 
 /// spawn() without the glass door; `told` = the simulation has this piece's landing.
-pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
+pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
@@ -232,7 +232,6 @@ pub(in crate::breakage) fn debris_impulse(g: &mut crate::game::Game, imp: crate:
         crate::break_table::breaks_kicked(g, c, kick.s);
         n += 1.0;
     }
-    g.destr.debris.stats.kicked += n;
     n
 }
 
@@ -624,7 +623,6 @@ fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
 pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
     if g.destr.debris.list.is_empty() { return; }
     g.destr.debris.frame += 1.0;
-    let mut moving = 0.0;
     for i in (0..g.destr.debris.list.len()).rev() {
         let c = g.destr.debris.list[i];
         g.tab.debris_chunk[c].age += dt;
@@ -653,7 +651,6 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
             }
             continue;
         }
-        if !is_on(g.tab.debris_chunk[c].foot) { moving += 1.0; }
         let sub = 2;
         let h = dt / sub as f64;
         let mut s = 0;
@@ -668,10 +665,6 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
             if g.tab.debris_chunk[c].glass.is_some() { crate::shards::glass_shards_gone(g, c); }
         }
     }
-    let live = g.destr.debris.list.len() as f64;
-    let st = &mut g.destr.debris.stats;
-    st.peak_live = m::max(st.peak_live, live);
-    st.peak_moving = m::max(st.peak_moving, moving);
 }
 
 fn box_add_c(g: &mut Game, b: AnyBoxId, d: V3) {

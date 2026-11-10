@@ -132,7 +132,7 @@ pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 // ---------------------------------------------------------------- the class
 
 /// the menu's switches as one number, to see one move: on the page all four are settled on
-fn door_tools_thr_sig_now(g: &mut crate::game::Game) -> f64 {
+fn door_tools_thr_sig_now() -> f64 {
     (1 | 2 | 4 | 8) as f64
 }
 
@@ -163,7 +163,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
 /// the row of the door held from outside, the one order of that page on the page's switches
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
-    g.door_tools.thr_sig = door_tools_thr_sig_now(g);
+    g.door_tools.thr_sig = door_tools_thr_sig_now();
     for id in [crate::orders::rows::threshold::ORDER.id, crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
@@ -179,8 +179,6 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
     if what == W::Frag {
         if g.door_tools.frags <= 0.0 { return false; }
         g.door_tools.frags -= 1.0;
-        let said = format!("frag spent · {} left", g.door_tools.frags);
-        door_tools_note(g, &said);
         return true;
     }
     if what == W::Charge {
@@ -190,8 +188,6 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
         if g.door_tools.bangs <= 0.0 { return false; }
         g.door_tools.bangs -= 1.0;
     }
-    let said = format!("{} spent · {} charges {} bangs left", what.as_str(), g.door_tools.charges, g.door_tools.bangs);
-    door_tools_note(g, &said);
     true
 }
 
@@ -200,13 +196,9 @@ pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::Door
     use crate::doortools::DoorToolsRefundWhat as W;
     if what == W::Frag {
         g.door_tools.frags += 1.0;
-        let said = format!("frag back · {} left", g.door_tools.frags);
-        door_tools_note(g, &said);
         return;
     }
     if what == W::Charge { g.door_tools.charges += 1.0; } else { g.door_tools.bangs += 1.0; }
-    let said = format!("{} back · {} charges {} bangs left", what.as_str(), g.door_tools.charges, g.door_tools.bangs);
-    door_tools_note(g, &said);
 }
 
 /// a new cast is a fresh run; the rows that hang on the cast dealt again
@@ -255,7 +247,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
             crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
         }
     }
-    if g.door_tools.thr_sig != door_tools_thr_sig_now(g) {
+    if g.door_tools.thr_sig != door_tools_thr_sig_now() {
         door_tools_thr_rows(g);
         g.door_tools.big_row = None;
     }
@@ -311,7 +303,6 @@ pub fn door_tools_reset(g: &mut crate::game::Game) {
     g.door_tools.frags = crate::seats::seat_share(g, n);
     g.door_tools.stats = crate::doortools::DoorToolsStats::default();
     g.door_tools.seen = None;
-    g.door_tools.led = crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 };
 }
 
 /// nobody came with him: the count is his card's, nothing set, nothing spent

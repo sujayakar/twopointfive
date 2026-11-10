@@ -17,8 +17,6 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, off: V3) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, off) }
 }
 fn callsign_of(g: &Game, gd: Option<GuardId>) -> Option<String> { gd.map(|x| g.gd[x].callsign.clone()) }
-/// `m & CAM.x`, of the words the wrappers answer
-fn has(bits: f64, bit: f64) -> bool { js::to_i32(bits) & js::to_i32(bit) != 0 }
 fn data(rows: &[(&str, Option<ChronDeviceDataValue>)]) -> JsMap<String, Option<ChronDeviceDataValue>> {
     let mut o = JsMap::new();
     for (k, v) in rows { o.set(String::from(*k), v.clone()); }
@@ -29,13 +27,6 @@ fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map
 fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
-/// Append a report to the capped log with its sequence number.
-fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR) {
-    g.devices.seq += 1.0;
-    let row = DeviceLogRow {  };
-    g.devices.log.push(row);
-    if g.devices.log.len() > 48 { let over = g.devices.log.len() - 48; g.devices.log.drain(0..over); }
-}
 /// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.
 pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     let mut this = Devices::blank();
@@ -176,13 +167,12 @@ fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     let name = g.tab.devices_camera_rt[c].def.name.clone();
     let seen = g.tab.devices_camera_rt[c].last_seen.unwrap();
     let where_ = crate::chronicle::room_of(g, seen);
-    let sent = send_to_look(g, seen, &format!("camera {}", index));
+    let sent = send_to_look(g, seen);
     let sign = callsign_of(g, sent);
     let tail = match &sign { Some(s) => format!(" — {}, go and look", s), None => String::new() };
     control(g, &format!("camera {} has movement in the {}{}", index, where_, tail));
     let row = data(&[("camera", text(&name)), ("n", Some(ChronDeviceDataValue::Num(index))), ("sent", opt_text(&sign))]);
     chron_device(g, ChronDeviceKind::CameraSpotted, &row, Some(seen));
-    devices_note(g, &DevicesNoteR {  });
 }
 /// The picture has him: the floor's fix, everybody sharp, the floor up a step.
 fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
@@ -216,7 +206,6 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     crate::guards::raise_escalation(g, to, None, Some(crate::guards::RaiseEscalationCause::Device), None);
     let row = data(&[("camera", text(&name)), ("n", Some(ChronDeviceDataValue::Num(index)))]);
     chron_device(g, ChronDeviceKind::CameraAlarm, &row, Some(p));
-    devices_note(g, &DevicesNoteR {  });
 }
 
 /// One beam's frame: where it ends, what breaks it, the trip.
@@ -313,18 +302,17 @@ fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<Pla
         g.alarm.pos[1] = 0.0;
         g.alarm.pos[2] = at[2];
         g.alarm.placed = true;
-        sent = send_to_look(g, at, "the beam");
+        sent = send_to_look(g, at);
         let to = if crate::guards::escalation_of(g) >= 1.0 { 2.0 } else { 1.0 };
         crate::guards::raise_escalation(g, to, None, Some(crate::guards::RaiseEscalationCause::Device), None);
     } else {
-        sent = send_to_look(g, at, "the beam");
+        sent = send_to_look(g, at);
         let tail = match callsign_of(g, sent) { Some(s) => format!(" — {}, check it", s), None => String::from(" — somebody check it") };
         control(g, &format!("beam broken in the {}{}", where_, tail));
     }
     let sign = callsign_of(g, sent);
     let row = data(&[("laser", text(&d.name)), ("by", text(who)), ("level", text(&level)), ("sent", opt_text(&sign))]);
     chron_device(g, ChronDeviceKind::LaserTripped, &row, Some(at));
-    devices_note(g, &DevicesNoteR {  });
 }
 /// A camera or an emitter shot dead: control loses the feed and sends the nearest calm man to look at it.
 fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3) {
@@ -332,17 +320,15 @@ fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3) {
     g.fx_seed += 1.0;
     crate::sparks::sparks_emit_burst(g, pos, crate::sparks::SparksEmitBurstO { count: 14.0, speed: 2.2, spread: 1.0, lift: 0.5, life: 0.5 }, js::to_u32(seed * 7919.0) as f64);
     let floor = crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2]).unwrap_or([pos[0], 0.0, pos[2]]);
-    let sent = send_to_look(g, floor, spoken);
+    let sent = send_to_look(g, floor);
     let sign = callsign_of(g, sent);
     let tail = match &sign { Some(s) => format!(" — {}, get eyes on it", s), None => String::from(" — somebody get eyes on it") };
     control(g, &format!("{} just went dark{}", spoken, tail));
     let row = data(&[("device", text(name)), ("sent", opt_text(&sign))]);
     chron_device(g, ChronDeviceKind::DeviceDown, &row, Some(floor));
-    let where_ = crate::chronicle::room_of(g, floor);
-    devices_note(g, &DevicesNoteR {  });
 }
 /// The nearest calm, free staff man is sent to `pos` on control's word: a task that survives the suspicion decay.
-pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<GuardId> {
+pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
     let goal = match crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2]) { Some(p) => p, None => v3::copy(pos) };
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
@@ -375,7 +361,6 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
 fn control(g: &mut crate::game::Game, text: &str) {
     crate::cues::cues_radio(g, &format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
-    g.devices.radio_count += 1.0;
     let mut row: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
     row.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(String::from("CONTROL"))));
     row.set(String::from("text"), Some(crate::chronicle::ChronicleDataValue::Text(String::from(text))));
@@ -425,9 +410,6 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     let row = data(&[("door", text(&door_name)), ("how", text(how.as_str())), ("from", opt_text(&sign))]);
     let at = from.map(|f| g.ch[g.gd[f].ch].pos);
     chron_device(g, ChronDeviceKind::CodeLearned, &row, at);
-    let here = g.ch[g.pl[pl].ch].pos;
-    let where_ = crate::chronicle::room_of(g, here);
-    devices_note(g, &DevicesNoteR {  });
     true
 }
 /// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.
@@ -495,9 +477,6 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
-    let here = g.ch[c].pos;
-    let where_ = crate::chronicle::room_of(g, here);
-    devices_note(g, &DevicesNoteR {  });
 }
 /// Break off keying.
 pub fn stop_coding(g: &mut crate::game::Game) {
@@ -537,8 +516,6 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let row = data(&[("door", text(&door_name))]);
     let centre = g.dr[d].frame_centre;
     chron_device(g, ChronDeviceKind::CodeEntered, &row, Some(centre));
-    let where_ = crate::chronicle::room_of(g, p);
-    devices_note(g, &DevicesNoteR {  });
 }
 
 // ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)

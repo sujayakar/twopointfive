@@ -42,7 +42,6 @@ pub struct QuietfogMod {
     #[is(crate::quietfog::QuietRung::Off)] pub pick_def: crate::quietfog::QuietRung,
     pub kept: bool,
     pub cams: Option<bool>,
-    pub cams_read: bool,
     pub held: Option<crate::quietfog::Held>,
 }
 

@@ -288,10 +288,6 @@ pub enum KitModIssuing {
     Own,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitModKept0 {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitModManOfValue {
     pub i: f64,
@@ -302,7 +298,6 @@ pub struct KitModManOfValue {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitModKITSTAGED {
-    pub n: f64,
     pub ops: Vec<GuardId>,
 }
 
@@ -347,10 +342,6 @@ pub struct KitCost {
     pub total: f64,
     pub free: f64,
     pub big: Option<crate::kit::KitCostBig>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KitCostLinesItem {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -485,11 +476,9 @@ pub struct KitMod {
     #[is(crate::kit::KitModIssuing::Bool(false))] pub issuing: crate::kit::KitModIssuing,
     /// this page is a lesson's: its stagings wear the issue
     pub lesson_page: bool,
-    pub kept0: Option<crate::kit::KitModKept0>,
-    pub kept_wand: Vec<bool>,
     pub man_of: JsMap<GuardId, crate::kit::KitModManOfValue>,
     pub bare_eyed: JsSet<GuardId>,
-    #[is(crate::kit::KitModKITSTAGED { n: 0.0, ops: Vec::new() })] pub kit_staged: crate::kit::KitModKITSTAGED,
+    #[is(crate::kit::KitModKITSTAGED { ops: Vec::new() })] pub kit_staged: crate::kit::KitModKITSTAGED,
     pub issued_player: JsMap<PlayerId, crate::kit::KitModIssuedPlayerValue>,
     pub you_bare: JsMap<PlayerId, crate::kit::KitModYouBareValue>,
 }

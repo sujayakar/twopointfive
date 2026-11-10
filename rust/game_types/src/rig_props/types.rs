@@ -256,9 +256,6 @@ pub struct Frame {
     pub z: V3,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RigNodeMeta {
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RigOpts {

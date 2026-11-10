@@ -212,7 +212,6 @@ fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>)
 /// He stands: the wait's seconds counted as they pass.
 fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
-    g.stats.fireline.held_s += m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
     g.m.fireline.states.get_mut(gd).unwrap().t = t;
     FireLineFeet { goal: None, speed: 0.0 }
 }
@@ -270,7 +269,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     };
     let p = g.ch[g.gd[gd].ch].pos;
     if crate::roomfight::room_fight_busy(g, gd, 1.0) {
-        g.stats.fireline.fight += 1;
         end(g, gd, st.as_ref());
         return None;
     }
@@ -338,7 +336,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
         return None;
     }
     if in_enemy_line(g, gd) {
-        g.stats.fireline.enemy += 1;
         end(g, gd, st.as_ref());
         return None;
     }
@@ -347,7 +344,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
         None => {
             let s = St { since: g.time, t: g.time, way: None, look_t: -1e9, go_t: -1.0, said: false };
             g.m.fireline.states.set(gd, s.clone());
-            g.stats.fireline.holds += 1;
             s
         }
     };
@@ -362,14 +358,12 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     if g.time - s.since >= g.k.fireline.max_s + (place & 3) as f64 * 0.3 && g.time - s.look_t >= g.k.fireline.again_s {
         s.look_t = g.time;
         if let Some(way) = way_round(g, gd, l, goal) {
-            g.stats.fireline.ways += 1;
             let next = way[0];
             s.way = Some(way);
             s.t = g.time;
             g.m.fireline.states.set(gd, s);
             return Some(FireLineFeet { goal: Some(next), speed });
         }
-        g.stats.fireline.no_way += 1;
     }
     hold_row(g, gd, s)
 }

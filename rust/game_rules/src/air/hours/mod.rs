@@ -107,11 +107,6 @@ pub fn sun_strength(g: &crate::game::Game) -> f64 {
     match &g.m.hours.states { Some(st) => st.sun_k, None => 1.0 }
 }
 
-/// Was the sun's strength set by hand rather than left to the cloud.
-pub(super) fn sun_given(g: &crate::game::Game) -> bool {
-    match &g.m.hours.states { Some(st) => st.given, None => false }
-}
-
 /// THE ONE NUMBER, live: the sun at k of the hour's own; `given` holds it against a picked weather's cloud.
 pub fn set_sun_strength(g: &mut crate::game::Game, k: f64, given: Option<bool>) {
     let given = given.unwrap_or(true);
@@ -215,7 +210,6 @@ fn under_weather(g: &mut crate::game::Game) {
 pub(super) fn hour_weather_changed(g: &mut crate::game::Game) {
     if g.m.hours.states.is_none() { return; }
     under_weather(g);
-    crate::host_api::host_api_invalidate_world_cache(g);
 }
 
 /// A sun strength set by hand handed back to the weather's cloud.
@@ -243,7 +237,6 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
     if cur.is_some() { take_out(g); }
     let table = hours();
     if let Some(def) = table.get(String::from(id_2.as_str())) { put_in(g, def, cur.as_ref()); }
-    crate::host_api::host_api_invalidate_world_cache(g);
     true
 }
 
@@ -325,13 +318,6 @@ fn lamps_out(g: &mut crate::game::Game) {
             g.tab.fixture[t].on = false;
         }
     }
-}
-
-/// The level's switches are back as authored: the hour's are made again over them.
-pub fn hour_after_reset(g: &mut crate::game::Game) {
-    let Some(st) = g.m.hours.states.as_mut() else { return };
-    st.lamps.clear();
-    lamps_out(g);
 }
 
 // ---------------------------------------------------------------- the meter's stand-in
@@ -734,7 +720,6 @@ mod tests {
         g.m.hours.states = Some(st);
         set_sun_strength(&mut g, 0.5, None);
         assert_eq!((g.tab.light[sun].intensity, g.tab.light[sun].peak_intensity), (3.0, 3.0));
-        assert_eq!((sun_strength(&mut g), sun_given(&mut g)), (0.5, true));
         set_sun_strength(&mut g, f64::NAN, Some(true));   // not a number: the hour's own
         assert_eq!(g.tab.light[sun].intensity, 6.0);
         set_sun_strength(&mut g, 7.0, Some(true));

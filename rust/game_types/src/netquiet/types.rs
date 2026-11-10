@@ -77,29 +77,10 @@ pub struct NetquietMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct NetquietStats {
-    pub asks: i32,
-    pub quiet: i32,
-    pub bodies: i32,
     pub falls: i32,
-    pub unseen: i32,
-    pub lines: i32,
-    pub whips: i32,
-    pub last: i32,
-    pub backs: i32,
-    pub low: i32,
-    pub self_asks: i32,
-    pub released: i32,
-    pub eased: i32,
-    pub squad_asks: i32,
-    pub squad_bodies: i32,
-    pub stand_checks: i32,
-    pub staff_asks: i32,
-    pub staff_bodies: i32,
 }
 
 pub fn netquiet_qa() -> crate::netquiet::NETQUIETQA { crate::netquiet::NETQUIETQA { broken: false } }
-
-pub fn kinds() -> Vec<String> { alloc::vec![String::from("name"), String::from("why"), String::from("last"), String::from("body"), String::from("alone"), String::from("ask")] }
 
 pub fn lines() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("name"), alloc::vec![String::from("{name}. … {name}."), String::from("{name}? … {name}."), String::from("{name}. {name}, answer up.")]); t.set(String::from("why"), alloc::vec![String::from("why's nobody answering?"), String::from("where is everybody? answer me."), String::from("that's another of you quiet. come on.")]); t.set(String::from("last"), alloc::vec![String::from("somebody talk to me!"), String::from("anybody. anybody at all, talk to me!"), String::from("is anyone left on this net?")]); t.set(String::from("body"), alloc::vec![String::from("he's down. nobody heard a thing?"), String::from("man down here. not a sound out of him."), String::from("he's down, and nobody heard it?")]); t.set(String::from("alone"), alloc::vec![String::from("that's my whole squad quiet. it's just me in here."), String::from("nobody left in here but me."), String::from("it's gone quiet in here. i'm on my own.")]); t.set(String::from("ask"), alloc::vec![String::from("all posts, answer up."), String::from("anyone on this net, come in."), String::from("who's still up? sound off.")]); t } }
 

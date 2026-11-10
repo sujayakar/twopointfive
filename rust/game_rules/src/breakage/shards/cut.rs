@@ -199,7 +199,7 @@ pub(super) fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, po
     let off = pr.off;
     let at = |pt: &[f64; 2]| -> [f64; 2] { [pt[0] - off[0], pt[1] - off[1]] };
     let local: Vec<[f64; 2]> = if anti { poly.iter().map(at).collect() } else { poly.iter().rev().map(at).collect() };
-    Some(crate::shards::CutPlateBox { box_, cut: pr.cut, dropped: pr.dropped, poly: local })
+    Some(crate::shards::CutPlateBox { box_, cut: pr.cut, poly: local })
 }
 
 /// a polygon's area with its winding's sign.

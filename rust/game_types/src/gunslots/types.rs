@@ -26,7 +26,6 @@ pub enum SideHung {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct GunslotsStats {
-    pub staged: i32,
     pub out: i32,
     pub back: i32,
 }

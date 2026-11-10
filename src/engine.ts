@@ -178,7 +178,7 @@ export class Engine {
     this.drawWait.calm = PLAN_PACE.calm;
     return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
   }
-  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: rust/game_rules/src/tick/host_api.rs): what the planners have in hand was of the state before, so it is
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back): what the planners have in hand was of the state before, so it is
    *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
    *  stands, and a job in hand is still of it. */
   startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }

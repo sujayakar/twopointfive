@@ -93,15 +93,8 @@ pub struct PropSystem {
     pub time: f64,
     #[is(true)] pub enabled: bool,
     #[is(1.0)] pub friction_scale: f64,
-    #[is(crate::props::PropSystemStats { awake: 0.0 })] pub stats: crate::props::PropSystemStats,
-    pub by_box: JsMap<BoxId, PropId>,
     #[is(true)] pub muted: bool,
     pub doorways: Vec<crate::props::PropSystemDoorwaysItem>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct PropSystemStats {
-    pub awake: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

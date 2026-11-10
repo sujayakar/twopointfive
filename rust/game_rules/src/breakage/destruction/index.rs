@@ -46,11 +46,6 @@ pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
-/// Under the ceiling slab: the office's footprint less a tile's width.
-fn indoors(p: V3) -> bool {
-    p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 23.7
-}
-
 /// The point just over a box's top, where line-of-sight targets aim.
 pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
@@ -116,17 +111,17 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
     g.destr = Destruction::blank();
     g.destr.w = world.grid_w;
     g.destr.cs = world.grid_cell;
-    g.destr.debris = crate::debris::debris_new(g);
-    g.destr.breaks = crate::break_table::breaks_new(g);
+    g.destr.debris = crate::debris::debris_new();
+    g.destr.breaks = crate::break_table::breaks_new();
     g.destr.hw = m::ceil((world.max[0] - world.min[0]) / g.k.chaos.cell);
     g.destr.hh = m::ceil((world.max[2] - world.min[2]) / g.k.chaos.cell);
     g.destr.heat = vec![0.0f32; (g.destr.hw * g.destr.hh) as usize];
     g.destr.cells = vec![Vec::new(); (world.grid_w * world.grid_h) as usize];
     destruction_index(g);
     g.destr.walls = Box::new(crate::wallbreak::wall_break_new(g));
-    g.destr.edge_look = crate::edge_look::edge_look_new(g);
+    g.destr.edge_look = crate::edge_look::edge_look_new();
     g.destr.breaks.look = Some(crate::break_table::BreaksLook {  });
-    g.destr.furn = crate::furnblast::furniture_new(g);
+    g.destr.furn = crate::furnblast::furniture_new();
     core::mem::replace(&mut g.destr, Destruction::blank())
 }
 
@@ -506,7 +501,6 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
     }
 }
 
-
 /// The men on their feet this frame, bar a seated civilian.
 fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
@@ -610,10 +604,4 @@ mod tests {
         assert_eq!(c.ts.len(), 2);
     }
 
-    #[test]
-    fn indoors_is_strict() {
-        assert!(indoors([4.31, 0.0, 4.31]));
-        assert!(!indoors([4.3, 0.0, 10.0]));
-        assert!(!indoors([10.0, 0.0, 23.7]));
-    }
 }

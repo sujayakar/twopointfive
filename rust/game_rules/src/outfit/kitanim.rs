@@ -5,10 +5,6 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
-/// Pushes one row on the module's log, keeping the last 200.
-fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
-}
-
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.
 fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
@@ -171,7 +167,6 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
             let d = m::hyp2(at[0] - pos[0], at[2] - pos[2]);
             let k = kit_closeness(g, d);
             g.ch[c].anim.close_k = k;
-            g.stats.kitanim.close_frames += 1;
         } else if g.ch[c].anim.close_k < 0.0 {
             g.ch[c].anim.close_k = 0.0;
         }
@@ -246,14 +241,12 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         if cur == Some(crate::character::KitItem::Pistol) || cur == Some(crate::character::KitItem::Rifle) {
             g.pl[p].equip_t = m::max(0.0, secs - g.k.kitanim.early);
         }
-        g.stats.kitanim.swaps += 1;
         if let Some(it) = was {
             *g.stats.kitanim.stows.get_or_insert_with(it, || 0) += 1;
         }
         if let Some(it) = cur {
             *g.stats.kitanim.draws.get_or_insert_with(it, || 0) += 1;
         }
-        note(g, crate::kitanim::NoteRow {  });
     }
     g.pl[p].kit_was = Some(cur);
 }
@@ -307,7 +300,6 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
         g.pl[p].kit_owed = -1.0;
         if age >= 0.0 && age <= keep + 0.05 && !crate::input::input_lmb_hit(g, input) {
             g.tab.input[input].clicked = (js::to_i32(g.tab.input[input].clicked) | 1) as f64;
-            g.stats.kitanim.owed += 1;
         }
     }
 }
@@ -384,7 +376,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
             };
             // (a gun with a model of its own carries its own thing in the hand; its magazine / belt box is off the gun when its feeding says so)
             let def = g.m.weapons.weapons.get(g.fa[if long { rifle } else { pistol }].def).unwrap().clone();
-            if crate::gunreload::feed_of(g, &def).is_some() {
+            if crate::gunreload::feed_of(&def).is_some() {
                 draw.mag_l = None;
                 draw.no_mag = Some(long && crate::gunreload::reload_show(g, c, def.id).map_or(false, |s| s.no_mag));
             }
@@ -460,9 +452,8 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
 }
 
 /// A reload began on a kitReload plan: counted.
-pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
+pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
-    note(g, crate::kitanim::NoteRow {  });
 }
 
 #[cfg(test)]

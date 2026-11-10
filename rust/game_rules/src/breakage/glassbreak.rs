@@ -192,7 +192,7 @@ fn normal_on(yaw: f64, u_axis: f64) -> V3 {
 
 /// no shards consumer attached: thin Debris boxes over the fragment and a burst of pale chips
 fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, f: &crate::glassbreak::Fragment) {
-    let (key, bi) = (f.key, f.bi);
+    let key = f.key;
     let uv: Vec<[f64; 2]> = f.outline.iter().map(|p| glass_break_uv(g, v, *p)).collect();
     let (_, cu, cv) = ::sim::pattern::poly_area(&uv.iter().map(|p| (p[0], p[1])).collect::<Vec<_>>());
     let cen = [cu, cv];
@@ -235,7 +235,6 @@ fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFra
             seam_box(g, chunk_box).rough = Some(0.05);
             g.m.glassbreak.gb_host.shards += 1.0;
         } else {
-            g.m.glassbreak.gb_host.refused += 1.0;
         }
         k += 1.0;
     }
@@ -256,7 +255,6 @@ fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFra
         ..Default::default()
     };
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
-    g.m.glassbreak.gb_host.chips += n_chips;
 }
 
 // ---------------------------------------------------------------- which glass
@@ -343,7 +341,7 @@ pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
 
 // ---------------------------------------------------------------- a burst's view of the glass
 /// where the rule's state stands: the slot is `g.sim`, so what comes back says only that it is the module's
-pub fn glass_break_home(g: &crate::game::Game) -> Option<crate::Opaque> {
+pub fn glass_break_home() -> Option<crate::Opaque> {
     Some(crate::Opaque)
 }
 
@@ -380,7 +378,7 @@ pub fn glass_break_rule_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool 
 
 // ---------------------------------------------------------------- per frame
 /// per frame: the gusts, then every touched pane's step in the module, draining after each
-pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
+pub fn glass_break_update(g: &mut crate::game::Game) {
     let touched = !glass_break_untouched(g);
     let s = g.sim;
     if touched && panes::take_gust(s) { g.glass_break.gust_dirty = true; }

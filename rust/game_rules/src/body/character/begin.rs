@@ -547,7 +547,6 @@ pub fn anim_strike(g: &mut crate::game::Game, c: CharId, kind: Option<crate::cha
         a.strike_leth = lethal;
         a.kb_r0 = a.reach_shown;
         a.kb_t = 0.0;
-        a.knife_shown = false;
     }
 }
 

@@ -30,7 +30,6 @@ pub struct Spark {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Sparks {
     pub pool: Vec<crate::sparks::Spark>,
-    pub live: f64,
     pub params: crate::sparks::SparkParams,
 }
 

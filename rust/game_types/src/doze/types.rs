@@ -80,17 +80,6 @@ pub struct DozeMod {
     pub left: Option<JsMap<FixtureId, f64>>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct DozeStats {
-    pub sat: i32,
-    pub slept: i32,
-    pub worked: i32,
-    pub lines: i32,
-    pub rose: i32,
-    pub woke: [i32; 6],
-}
-
 pub fn touch() -> Vec<i32> { alloc::vec![0; 96] }
 
 pub fn screen_lines() -> Vec<String> { alloc::vec![String::from("password expired. of course it has."), String::from("reply all. he replied all."), String::from("…and it's frozen. wonderful."), String::from("who formats a duty roster like this."), String::from("no. no, I saved that."), String::from("page two of two. there is no page two."), String::from("the overtime form wants a form."), String::from("mandatory fun. who writes these."), String::from("loading… still loading."), String::from("printer offline. it's right there."), String::from("one more hand. then the rounds."), String::from("unread, unread, unread. all him.")] }

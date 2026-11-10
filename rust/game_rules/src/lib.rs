@@ -4,13 +4,13 @@
 extern crate alloc;
 pub use game_types::*;
 pub mod tick;
-pub use tick::{audio_iface, camera, cmd, effects, env, game, gpu_device, host_api, input, math_dice, out_events, savestate, seats, standing, sim_men_store, sim_sim, sim_state, state_words, view, walkahead, dice};
+pub use tick::{audio_iface, camera, cmd, effects, env, game, input, math_dice, out_events, savestate, seats, standing, sim_men_store, sim_sim, state_words, view, walkahead, dice};
 pub mod world;
 pub use world::{ask, floor, levelfit, scene_box_mirror, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
 pub mod air;
-pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, snow_marks, weather, weather_kinds, wet, wet_ground, wind};
+pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, weather, weather_kinds, wet, wind};
 pub mod body;
-pub use body::{anim_characters, anim_gltf, anim_skeleton, character, packside, posehome, ragdoll, stealthfeed};
+pub use body::{anim_gltf, anim_skeleton, character, packside, posehome, ragdoll, stealthfeed};
 pub mod outfit;
 pub use outfit::{cast, char_look, gear, gunlook, gunslots, issue, kit, kitanim, kitload, kitstage, loadout, rig_props, slotsetup, stature};
 pub mod guns;
@@ -22,7 +22,7 @@ pub use stealth::{close, devices, disarm, fogofwar, lightswitch, peeksight, stal
 pub mod fittings;
 pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, sim_doorshome, slab, sprintdoor};
 pub mod breakage;
-pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, falls, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sparks, wallbreak, wallskin, wallwear, winbars};
+pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, falls, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shards, sheet_model, sparks, wallbreak, wallskin, wallwear, winbars};
 pub mod missions;
 pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, teamtally, verdict};
 pub mod speech;

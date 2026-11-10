@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// ?irpower and ?irnear read the address, which is the host's: with no page the TypeScript does nothing, and so does this.
-pub fn ir_flags(g: &crate::game::Game) {}
-
 /// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds.
 fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
     g.m.irlight.kits.get_or_insert_with(Kit::default)
@@ -193,15 +190,6 @@ fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
     }
     kit_of(g).near.set(crate::Num(key), crate::irlight::KitNearValue { t: time, k });
     k
-}
-
-/// (QA) how far a carrier's light stands turned down this frame: 1 not at all, or no reading of his this frame.
-fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
-    let s = g.m.irlight.kits.as_ref().and_then(|kit| kit.near.get(crate::Num(key)).copied());
-    match s {
-        Some(s) if s.t == g.time => s.k,
-        _ => 1.0,
-    }
 }
 
 /// His reading is over.
@@ -460,9 +448,6 @@ mod tests {
         assert!(g.m.irlight.kits.is_none());
         let now = g.time;
         kit_of(&mut g).near.set(crate::Num(5.0), KitNearValue { t: now, k: 0.25 });
-        assert_eq!(ir_near_of(&mut g, 5.0), 0.25);
-        assert_eq!(ir_near_of(&mut g, 6.0), 1.0);
         g.time = now + 1.0;
-        assert_eq!(ir_near_of(&mut g, 5.0), 1.0);
     }
 }

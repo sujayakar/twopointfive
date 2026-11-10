@@ -11,7 +11,7 @@ fn man(p: &Play, seat: usize) -> PlayerId { game::cmd::seat_man(&p.g, p.g.seats[
 fn body(p: &Play, seat: usize) -> CharId { p.g.pl[man(p, seat)].ch }
 fn at(p: &Play, seat: usize) -> [f64; 3] { p.g.ch[body(p, seat)].pos }
 fn pair(p: &Play, seat: usize) -> Vec<GuardId> { game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[seat])) }
-fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
+fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
 /// a player's keys and trigger as he holds them, his view on his man, his cursor on a place of the world
 fn hands(p: &mut Play, seat: usize, keys: &[&str], on: Option<[f64; 3]>, fire: bool) {
     let s = p.g.seats[seat];
