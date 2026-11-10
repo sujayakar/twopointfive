@@ -273,7 +273,6 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
         let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
         cut_lens(g, lens, p);
     }
-    g.stats.cleanrestart.cuts += 1;
 }
 
 ///
