@@ -186,14 +186,12 @@ fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option
         let index = i as f64;
         let b = g.col.boxes[i];
         let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
-        let dx = m::max_n(&[c[0] - h[0] - at[0], 0.0, at[0] - c[0] - h[0]]);
-        if dx > bd {
+        let off = |k: usize| [c[k] - h[k] - at[k], at[k] - c[k] - h[k]];
+        let (x, z) = (off(0), off(2));
+        if x[0] > bd || x[1] > bd || z[0] > bd || z[1] > bd {
             continue;
         }
-        let dz = m::max_n(&[c[2] - h[2] - at[2], 0.0, at[2] - c[2] - h[2]]);
-        if dz > bd {
-            continue;
-        }
+        let (dx, dz) = (m::max_n(&[x[0], 0.0, x[1]]), m::max_n(&[z[0], 0.0, z[1]]));
         let bb = crate::wallbreak::wall_break_breakable_at(g, index);
         let passed = match &bb {
             Some(x) => x.kind != crate::wallbreak::BKind::Wall,

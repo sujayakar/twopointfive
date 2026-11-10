@@ -1,8 +1,8 @@
 //! A THING'S ROWS: the lamps, what the errand is for, the breaker.
 use super::*;
 
-/// Every lamp that can be worked is marked; none has a row.
-pub(super) fn lamps(g: &Game, o: &mut Offers) {
+/// Every lamp that can be worked is marked; none has a row. `old`: the markers of the tick before, in which a lamp that stands as it stood has its own.
+pub(super) fn lamps(g: &Game, o: &mut Offers, mut old: Vec<Interactable>) {
     for i in 0..g.targets.len() {
         let id = g.targets[i];
         let f = &g.tab.fixture[id];
@@ -10,8 +10,13 @@ pub(super) fn lamps(g: &Game, o: &mut Offers) {
         let dead = crate::carlamps::dead_lamp(g, id);
         let f = &g.tab.fixture[id];
         let lit = !dead && f.factor > 0.0;
-        let line1 = if lit || dead { f.name.clone() } else { format!("{} (off)", f.name) };
         let line2 = if dead { "click  shoot" } else { "right-click  OCP (the pistol's)  ·  click  shoot" };
+        let named = |line1: &str| if lit || dead { line1 == f.name } else { line1.strip_suffix(" (off)") == Some(&f.name) };
+        if let Some(it) = old.get_mut(o.list.len()).filter(|it| it.target == Some(id) && it.off != lit && it.pos == f.pos && it.line2 == line2 && named(&it.line1)) {
+            o.list.push(core::mem::take(it));
+            continue;
+        }
+        let line1 = if lit || dead { f.name.clone() } else { format!("{} (off)", f.name) };
         o.list.push(Interactable { target: Some(id), off: !lit, ..mark(InteractableKind::Light, f.pos, line1, line2, true) });
     }
 }
