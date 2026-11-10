@@ -23,6 +23,7 @@ pub mod air;
 pub mod bricks;
 pub mod clips;
 pub mod collide;
+pub mod dome;
 pub mod falls;
 pub mod fog;
 pub mod glass;

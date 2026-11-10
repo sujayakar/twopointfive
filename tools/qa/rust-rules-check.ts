@@ -62,6 +62,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
+  'sim/src/dome.rs FAN': 'COPY · the ways up to the sky and down to the ground and what each counts for on a face: a table of numbers, worked out once and the same for every game',
+  'sim/src/dome.rs TABLES': 'COPY · which of those ways are open from a place, held to the statics by the marks of where they have changed (glow.rs Marks), and to the casters\' box and the sun',
   'sim/src/light.rs SET': 'SCRATCH · one sweep\'s lamps, gathered before its metres ask them',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',

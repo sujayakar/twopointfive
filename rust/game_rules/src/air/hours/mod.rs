@@ -144,11 +144,10 @@ fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
 
 /// The sky's share of the light on open ground at an hour as authored.
 fn sky_share(d: &crate::hours::HourDef) -> f64 {
-    let rays = sky();
     let zen = v3::lum(d.sky.zenith);
     let hor = v3::lum(d.sky.horizon);
     let mut k = 0.0;
-    for q in rays.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
+    for q in ::sim::dome::fan().sky.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
     let s = v3::lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
     if k + s > 0.0 { k / (k + s) } else { 1.0 }
 }
@@ -357,15 +356,6 @@ fn box_of(g: &crate::game::Game) -> crate::hours::SkyStateBox {
     b
 }
 
-/// How far a ray from P along d runs before it is out of the casters' box (≤ 60 m).
-fn reach_of(b: crate::hours::SkyStateBox, p: V3, d: V3) -> f64 {
-    let mut t = 60.0;
-    if d[1] > 1e-4 { t = m::min(t, (b.top - p[1]) / d[1]); }
-    if d[0] > 1e-4 { t = m::min(t, (b.x1 - p[0]) / d[0]); } else if d[0] < -1e-4 { t = m::min(t, (b.x0 - p[0]) / d[0]); }
-    if d[2] > 1e-4 { t = m::min(t, (b.z1 - p[2]) / d[2]); } else if d[2] < -1e-4 { t = m::min(t, (b.z0 - p[2]) / d[2]); }
-    m::max(t, 0.0)
-}
-
 /// The one directional light of the sky in force and its dome (None: the picture's own), by the hour laid over the level or by the level's night.
 #[derive(Clone, Copy)]
 struct Sky { sun: Option<LightId>, to_sun: V3, dome: Option<SkyStateDome> }
@@ -385,40 +375,15 @@ fn reach_fresh(g: &mut Game, to_sun: V3) {
     let wrote = g.tab.boxes.world().wrote;
     if g.m.hours.reach.wrote == wrote && g.m.hours.reach.to_sun == to_sun { return; }
     let box_ = box_of(g);
-    let reach = &mut g.m.hours.reach;
-    (reach.wrote, reach.to_sun, reach.box_, reach.cells, reach.fine) = (wrote, to_sun, box_, JsMap::new(), JsMap::new());
+    g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_ };
 }
 
-/// The rays kept for a cell, asked once from `at`.
-fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) {
-    let kept = if fine { &g.m.hours.reach.fine } else { &g.m.hours.reach.cells };
-    if kept.has(key) { return; }
-    let o = open_rays(g, at);
-    let keep = if fine { &mut g.m.hours.reach.fine } else { &mut g.m.hours.reach.cells };
-    keep.set(key, o);
+/// What a question of the sky's ways is of (sim/dome.rs).
+fn under(g: &Game) -> ::sim::dome::Under<'_> {
+    let r = &g.m.hours.reach;
+    ::sim::dome::Under { w: g.tab.boxes.world(), casters: casters(&r.box_), to_sun: r.to_sun, tune: &g.k }
 }
-
-/// The ambient's rays that leave point C unblocked by the statics.
-fn open_rays(g: &crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
-    let to_sun = g.m.hours.reach.to_sun;
-    let (sky_rays, gnd_rays) = g.m.hours.reach.rays.split_at(crate::hours::SKY_RAYS);
-    let mut out: Vec<Open> = Vec::new();
-    let b = g.m.hours.reach.box_;
-    for (i, r) in sky_rays.iter().enumerate() {
-        let len = reach_of(b, c_2, r.d);
-        if len > 0.05 && !crate::scene_collision::wall_between(g, c_2, v3::mad(c_2, r.d, len)) { out.push(Open { ray: i, len, sun_k: 0.0, sky_k: 0.0 }); }
-    }
-    for (i, r) in gnd_rays.iter().enumerate() {
-        let len = m::min((c_2[1] - 0.03) / -r.d[1], reach_of(b, c_2, r.d));
-        if len < 0.3 { continue; }
-        let g_pt = v3::mad(c_2, r.d, len);
-        if g_pt[1] > 0.2 || crate::scene_collision::wall_between(g, c_2, g_pt) { continue; }
-        let sun_k = if to_sun[1] > 0.0 && !crate::scene_collision::wall_between(g, g_pt, v3::mad(g_pt, to_sun, reach_of(b, g_pt, to_sun))) { to_sun[1] } else { 0.0 };
-        let sky_k = if crate::scene_collision::wall_between(g, g_pt, [g_pt[0], b.top, g_pt[2]]) { 0.0 } else { 1.0 };
-        if sun_k > 0.0 || sky_k > 0.0 { out.push(Open { ray: sky_rays.len() + i, len, sun_k, sky_k }); }
-    }
-    out
-}
+fn casters(b: &SkyStateBox) -> ::sim::dome::Casters { ::sim::dome::Casters { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1, top: b.top } }
 
 /// What the sky's one directional light puts on a face turned to it.
 fn sun_of(g: &Game, st: &Sky) -> f64 {
@@ -448,7 +413,7 @@ pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let i_sun = sun_of(g, &st);
     if i_sun <= 0.002 { return; }
     reach_fresh(g, st.to_sun);
-    let t = reach_of(g.m.hours.reach.box_, p, st.to_sun);
+    let t = casters(&g.m.hours.reach.box_).reach(p, st.to_sun);
     if t <= 0.05 || !crate::scene_collision::segment_blocked(g, p, v3::mad(p, st.to_sun, t), None, None, None) {
         for k in 0..6 {
             let cs = v3::dot(N6[k], st.to_sun);
@@ -459,65 +424,47 @@ pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
 
 /// The ambient of P's cell on P's six faces: the sky's dome and the ground, as far as P's cell sees them.
 pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
+    use ::sim::dome::{self, Of};
     let st = sky_in_force(g);
-    let ix = m::floor(p[0] / CELL);
-    let iz = m::floor(p[2] / CELL);
-    let c: V3 = [(ix + 0.5) * CELL, CELL_Y, (iz + 0.5) * CELL];
+    let (ix, iz) = dome::half(p);
+    let c: V3 = [(ix + 0.5) * 0.5, dome::HEIGHT, (iz + 0.5) * 0.5];
     let cut_off = crate::scene_collision::segment_blocked(g, p, c, None, None, None);
     reach_fresh(g, st.to_sun);
     let i_sun = sun_of(g, &st);
-    // the cell's rays stand for P while nothing is between P and the point they were asked from: else the quarter-cell's, else P's own, unkept
+    // the half metre's ways stand for P while nothing is between P and the point they were asked from: else its quarter's, else P's own, unkept
     let mut from = c;
-    let own: Vec<Open>;
-    let open: &[Open] = if !cut_off {
-        let key = crate::Num((iz + 2048.0) * 4096.0 + (ix + 2048.0));
-        kept_rays(g, false, key, c);
-        g.m.hours.reach.cells.get(key).unwrap()
-    } else {
-        let jx = m::floor(p[0] / (CELL / 2.0));
-        let jz = m::floor(p[2] / (CELL / 2.0));
-        let c2: V3 = [(jx + 0.5) * CELL / 2.0, CELL_Y, (jz + 0.5) * CELL / 2.0];
-        if !crate::scene_collision::segment_blocked(g, p, c2, None, None, None) {
-            from = c2;
-            let key = crate::Num((jz + 4096.0) * 8192.0 + (jx + 4096.0));
-            kept_rays(g, true, key, c2);
-            g.m.hours.reach.fine.get(key).unwrap()
-        } else {
-            from = p;
-            own = open_rays(g, p);
-            &own
-        }
-    };
-    if open.is_empty() { return; }
-    let mut leaves: Option<Vec<BoxId>> = None;
-    let mut i = 0;
-    while i < g.col.dynamic_boxes.len() {
-        let db = g.col.dynamic_boxes[i];
-        i += 1;
-        let dc = g.tab.boxes[db].c;
-        if v3::dist_xz(dc, p) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
+    let mut of = Some(Of::Half(ix as i32, iz as i32));
+    if cut_off {
+        let (jx, jz) = dome::quarter(p);
+        let c2: V3 = [(jx + 0.5) * 0.25, dome::HEIGHT, (jz + 0.5) * 0.25];
+        (from, of) = if crate::scene_collision::segment_blocked(g, p, c2, None, None, None) { (p, None) } else { (c2, Some(Of::Quarter(jx as i32, jz as i32))) };
     }
-    let (sky_rays, gnd_rays) = g.m.hours.reach.rays.split_at(crate::hours::SKY_RAYS);
-    let dome = st.dome;
-    let mut e_up = -1.0;   // the sky's irradiance on open ground: asked only when a ground ray is open
-    for o in open.iter() {
-        let ray = o.ray;
-        let sky = ray < sky_rays.len();
-        let r = if sky { &sky_rays[ray] } else { &gnd_rays[ray - sky_rays.len()] };
-        if let Some(leaves) = &leaves {
-            let mut hit = false;
-            for &db in leaves.iter() {
-                if let Some(h) = crate::scene_boxes::ray_box(g, from, r.d, db.into(), o.len) {
-                    if h.t >= 0.0 { hit = true; break; }
-                }
-            }
-            if hit { continue; }
-        }
-        if !sky && e_up < 0.0 {
+    let u = under(g);
+    let open = u.open(g.sim, from, of);
+    if open.sky == 0 && open.sun | open.ground == 0 { return; }
+    let mut leaves: Vec<BoxId> = Vec::new();
+    for &db in g.col.dynamic_boxes.iter() {
+        let dc = g.tab.boxes[db].c;
+        if v3::dist_xz(dc, p) < DOOR_M { leaves.push(db); }
+    }
+    // (a leaf is in a way's way)
+    let shut = |d: V3, len: f64| leaves.iter().any(|&db| crate::scene_boxes::ray_box(g, from, d, db.into(), len).is_some_and(|h| h.t >= 0.0));
+    let (fan, dome) = (dome::fan(), st.dome);
+    for (i, r) in fan.sky.iter().enumerate() {
+        if open.sky & 1 << i == 0 || shut(r.d, u.casters.reach(from, r.d)) { continue; }
+        let lr = sky_lum(g, r.d[1], dome);
+        if lr <= 0.0 { continue; }
+        for k in 0..6 { acc[k] += lr * r.c6[k]; }
+    }
+    let mut e_up = -1.0;   // the sky's irradiance on open ground: asked only when a way down is open
+    for (i, r) in fan.ground.iter().enumerate() {
+        let (sun, sky) = (open.sun & 1 << i != 0, open.ground & 1 << i != 0);
+        if !(sun || sky) || shut(r.d, u.casters.reach_down(from, r.d)) { continue; }
+        if e_up < 0.0 {
             e_up = 0.0;
-            for q in sky_rays.iter() { e_up += sky_lum(g, q.d[1], dome) * q.c6[2]; }
+            for q in fan.sky.iter() { e_up += sky_lum(g, q.d[1], dome) * q.c6[2]; }
         }
-        let lr = if sky { sky_lum(g, r.d[1], dome) } else { GROUND_ALBEDO / m::PI * (i_sun * o.sun_k + e_up * o.sky_k) };
+        let lr = GROUND_ALBEDO / m::PI * (i_sun * (if sun { st.to_sun[1] } else { 0.0 }) + e_up * (if sky { 1.0 } else { 0.0 }));
         if lr <= 0.0 { continue; }
         for k in 0..6 { acc[k] += lr * r.c6[k]; }
     }
@@ -666,9 +613,8 @@ mod tests {
     }
     #[test]
     fn rays_are_the_typescripts_bits() {
-        let (sky_rays, gnd_rays) = (sky(), gnd());
-        assert_eq!((sky_rays.len(), gnd_rays.len()), (15, 8));
-        for (r, &(d, c)) in sky_rays.iter().chain(gnd_rays.iter()).zip(RAYS.iter()) {
+        let f = ::sim::dome::fan();
+        for (r, &(d, c)) in f.sky.iter().chain(f.ground.iter()).zip(RAYS.iter()) {
             assert_eq!(b3(r.d), d);
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
@@ -727,11 +673,11 @@ mod tests {
     }
     #[test]
     fn a_ray_runs_until_it_leaves_the_box() {
-        let b = SkyStateBox { x0: -10.0, x1: 10.0, z0: -5.0, z1: 5.0, top: 4.0 };
-        assert_eq!(reach_of(b, [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]), 4.0);
-        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 10.0);
-        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]), 5.0);
-        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]), 60.0);   // down: the box has no floor, the 60 m stands
-        assert_eq!(reach_of(b, [20.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 0.0);    // already out
+        let b = casters(&SkyStateBox { x0: -10.0, x1: 10.0, z0: -5.0, z1: 5.0, top: 4.0 });
+        assert_eq!(b.reach([0.0, 0.0, 0.0], [0.0, 1.0, 0.0]), 4.0);
+        assert_eq!(b.reach([0.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 10.0);
+        assert_eq!(b.reach([0.0, 1.0, 0.0], [0.0, 0.0, -1.0]), 5.0);
+        assert_eq!(b.reach([0.0, 1.0, 0.0], [0.0, -1.0, 0.0]), 60.0);   // down: the box has no floor, the 60 m stands
+        assert_eq!(b.reach([20.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 0.0);    // already out
     }
 }
