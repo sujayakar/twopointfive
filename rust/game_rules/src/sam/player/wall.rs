@@ -202,11 +202,11 @@ fn clear_of_props(g: &crate::game::Game, q: &mut V3, r: f64) -> bool {
         while i < g.props.props.len() {
             let pr = g.props.props[i];
             i += 1;
-            let (px, pz) = (crate::props::prop_x(g, pr), crate::props::prop_z(g, pr));
+            let (px, pz) = (g.tab.props_prop[pr].x, g.tab.props_prop[pr].z);
             let (radius, hx, hz) = (g.tab.props_prop[pr].radius, g.tab.props_prop[pr].hx, g.tab.props_prop[pr].hz);
             let (dx, dz) = (q[0] - px, q[2] - pz);
             if dx * dx + dz * dz > (radius + r) * (radius + r) { continue; }
-            let (cs, sn) = (crate::props::prop_cs(g, pr), crate::props::prop_sn(g, pr));
+            let (cs, sn) = (g.tab.props_prop[pr].cs, g.tab.props_prop[pr].sn);
             let (lx, lz) = (cs * dx - sn * dz, sn * dx + cs * dz);
             let (qx, qz) = (v3::clamp(lx, -hx, hx), v3::clamp(lz, -hz, hz));
             let (ex, ez) = (lx - qx, lz - qz);

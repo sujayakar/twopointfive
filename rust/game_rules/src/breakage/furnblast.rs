@@ -552,7 +552,7 @@ fn pushable_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &
     let throw_m = g.k.furn.throw_m * k; let break_m = g.k.furn.prop_break_m * k;
     let list = g.props.props.clone();   // (the TypeScript walks a copy too: breakProp takes one off the list)
     for p in list {
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let (radius, height, mass) = { let r = &g.tab.props_prop[p]; (r.radius, r.height, r.mass) };
         let d = m::max(0.0, m::hyp2(px - at[0], pz - at[2]) - radius * 0.5); if d > throw_m { continue; }
         let mid: V3 = [px, m::min(0.6, height * 0.6), pz]; let top: V3 = [px, height + 0.05, pz];

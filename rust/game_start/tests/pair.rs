@@ -335,10 +335,10 @@ fn a_low_man_shoves_a_chair_at_half_the_noise() {
         let m = p.mates()[0];
         let c = p.g.gd[m].ch;
         let chair = p.g.props.props.iter().copied().min_by(|&a, &b| {
-            let d = |q| { let (x, z) = (game::props::prop_x(&p.g, q), game::props::prop_z(&p.g, q)); (x - 19.9).hypot(z - 18.2) };
+            let d = |q| { let (x, z) = (p.g.tab.props_prop[q].x, p.g.tab.props_prop[q].z); (x - 19.9).hypot(z - 18.2) };
             d(a).partial_cmp(&d(b)).unwrap()
         }).expect("the office has furniture");
-        let (x, z) = (game::props::prop_x(&p.g, chair), game::props::prop_z(&p.g, chair));
+        let (x, z) = (p.g.tab.props_prop[chair].x, p.g.tab.props_prop[chair].z);
         p.g.ch[c].pos = [x - 0.45, 0.0, z];
         p.g.ch[c].vel = [3.0, 0.0, 0.0];
         p.g.ch[c].anim.crouch = crouch;

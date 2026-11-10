@@ -363,7 +363,7 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
     if props {
         let g = a.game();
         for &pr in &g.props.props {
-            let (x, z) = (crate::props::prop_x(g, pr), crate::props::prop_z(g, pr));
+            let (x, z) = (g.tab.props_prop[pr].x, g.tab.props_prop[pr].z);
             if m::hyp2(x - p[0], z - p[2]) < span + g.tab.props_prop[pr].radius { furn = true; break; }
         }
     }

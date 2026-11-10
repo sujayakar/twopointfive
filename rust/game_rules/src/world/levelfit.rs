@@ -18,23 +18,21 @@ fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
 fn men_held(g: &mut crate::game::Game) -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
     let doors = crate::sim_doorshome::door_io(g).max_contacts;
-    let held = m::floor(doors / (crate::game::body_door_particles().len() as f64 + 1.0));
-    m::min(held, crate::sim_propshome::prop_io(g).max_contacts)
+    m::floor(doors / (crate::game::body_door_particles().len() as f64 + 1.0))
 }
 
 /// What one step is handed of the men, at most.
 fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
     let door_men = men_most(g, civilians) * (crate::game::body_door_particles().len() as f64 + 1.0);
-    let prop_men = men_most(g, civilians);
-    crate::levelfit::HandOverMost { door_men, prop_men }
+    crate::levelfit::HandOverMost { door_men }
 }
 
 /// How many of each counted thing the game holds.
 pub fn level_caps() -> crate::levelfit::LevelFit {
     crate::levelfit::LevelFit {
         doors: crate::sim_doorshome::DOOR_CAP,
-        things: crate::sim_propshome::PROP_CAP,
-        parts: crate::sim_propshome::PROP_PARTS,
+        things: crate::props::PROP_CAP,
+        parts: crate::props::PROP_PARTS,
         sheets: crate::scene_box_mirror::PANE_CAP,
         fixtures: crate::fixtures::FIXTURES as f64,
         cameras: crate::fixtures::CAMERAS as f64,
@@ -180,7 +178,6 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
     let most = hand_over_most(g, civs);
     let held = crate::sim_sim::sim_why_not().is_empty();
     let dio = if held { Some(crate::sim_doorshome::door_io(g)) } else { None };
-    let pio = if held { Some(crate::sim_propshome::prop_io(g)) } else { None };
     let flag = crate::scene_boxes::box_flag();
     let glass = flagged(g, &col.boxes, flag.glass);
     let mut parts = 0.0;
@@ -218,9 +215,6 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
     let civ_cap = civ_most(g);
     rows.push(row("civilians", "civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap, None));
     rows.push(row("doormen", "contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, dio.as_ref().map_or(inf, |d| d.max_contacts), None));
-    rows.push(row("propmen", "men one step of the furniture is handed at most", most.prop_men, pio.as_ref().map_or(inf, |p| p.max_contacts), None));
-    rows.push(row("frames", "door frames one step of the furniture is handed (a frame a door)", big.doors, pio.as_ref().map_or(inf, |p| p.max_ways), None));
-    rows.push(row("sweeps", "leaves one step of the furniture is handed (a leaf a door)", big.doors, pio.as_ref().map_or(inf, |p| p.max_leaves), None));
     rows.push(row("fixtures", "light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures, None));
     rows.push(row("lamps", "lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps, None));
     rows.push(row("cameras", "cameras", big.cameras, cap.cameras, None));
