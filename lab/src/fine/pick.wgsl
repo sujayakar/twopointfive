@@ -12,7 +12,7 @@ fn hidden(x: vec3f, r: f32, prev: bool) -> bool {
   var far = 1e9; for (var y = i0.y; y <= i1.y; y++) { for (var xx = i0.x; xx <= i1.x; xx++) { far = min(far, textureLoad(hzb, vec2i(xx, y), lod).x); } } return 0.25 / near < far;
 }
 fn put(i: u32, a: FineAt, r: f32) {
-  let h = fine[a.shape]; let kind = h.y & 15u; let made = fF(a.shape + 2u).w; let grow = select(1.0, max3(a.half) / made, (h.y & 16u) != 0u); let d = max(distance(frame.camPos.xyz, a.at) - r, 0.05); let dice = f32(pcg(i * 2654435761u + frame.counts.z) >> 8u) * (1.0 / 16777216.0) - 0.5; let may = exp2(dice * fineK.hzb.w) * fineK.tau * max(bitcast<f32>(atomicLoad(&n[31])), 1.0) * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / grow;
+  let h = fine[a.shape]; let kind = h.y & 15u; let made = fF(a.shape + 2u).w; let grow = select(1.0, max3(a.half) / made, (h.y & 16u) != 0u); let d = max(distance(frame.camPos.xyz, a.at) - r, 0.05); let may = fineK.tau * max(bitcast<f32>(atomicLoad(&n[31])), 1.0) * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / grow;
   var l = h.x - 1u; loop { if (l == 0u || fF(a.shape + 4u + l).x <= may) { break; } l -= 1u; } let lv = fine[a.shape + 4u + l]; let s = atomicAdd(&n[N_SLOTS], lv.z); if (s + lv.z > fineK.most) { atomicStore(&n[N_FULL], 1u); return; } atomicAdd(&n[N_TRIS], lv.w); atomicAdd(&n[N_SEEN], 1u);
   for (var c = 0u; c < lv.z; c++) { let row = a.shape + h.z + lv.y + c; slots[s + c] = vec4u(i, row, a.shape, fine[row].z); }
 }
