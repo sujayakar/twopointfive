@@ -20,8 +20,8 @@ export interface Stage {
   buffers?: Record<string, [string, string, Access]>;
   code: string;
   entry?: string;
-  /** one thread a texel of this size, or a fixed number of workgroups */
-  over: Size | { groups: () => [number, number, number] };
+  /** one thread a texel of this size, a fixed number of workgroups, or as many as a buffer says */
+  over: Size | { groups: () => [number, number, number] } | { asMany: string };
   wg?: [number, number];
   consts?: Record<string, number>;
   when?: () => boolean;
@@ -139,6 +139,7 @@ export class Graph {
       const stamp = this.timer.pass(s.name); if (stamp) shut(); const p: GPUComputePassEncoder = (open as GPUComputePassEncoder | null) ?? (open = enc.beginComputePass({ label: s.name, ...(stamp ? { timestampWrites: stamp } : {}) }));
       p.setPipeline(b.pipe); p.setBindGroup(0, s.alone ? (this.emptyGroup ??= this.g.device.createBindGroup({ layout: this.empty!, entries: [] })) : this.shared.group()); p.setBindGroup(1, group);
       if (typeof s.over === 'object' && !Array.isArray(s.over) && 'groups' in s.over) p.dispatchWorkgroups(...s.over.groups());
+      else if (typeof s.over === 'object' && !Array.isArray(s.over) && 'asMany' in s.over) p.dispatchWorkgroupsIndirect(this.buffers.get(s.over.asMany) ?? fail('no buffer ' + s.over.asMany), 0);
       else { const [w, h] = this.px(s.over), [gx, gy] = s.wg ?? [8, 8]; p.dispatchWorkgroups(Math.ceil(w / gx), Math.ceil(h / gy)); }
       if (stamp || this.watch) { shut(); this.watch?.after(enc, s); }
     }
