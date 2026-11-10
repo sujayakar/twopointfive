@@ -58,7 +58,7 @@ Decide and act are together in `lent` and `behave::act`.
 news), `foe`. Each takes the writer's name. Anybody can read the fields, and no rule writes them any other way.
 
 **Who moves him now: the list.** `rules!` in `control/mod.rs` is one line a rule, and the line's place is its rank: `frag`, `runner`, `morale`,
-`startle`, `duck`, `lost`, `rally`. What a rule asks for decides where it is asked, and the compiler holds it to that:
+`startle`, `duck`, `lost`. What a rule asks for decides where it is asked, and the compiler holds it to that:
 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
@@ -75,10 +75,10 @@ and no longer does (`lost`). The record keeps legs, aim and hands apart, but eve
 **A rule** is `impl Reaction for Rule`. It must write `Ask` and `propose` (which takes `&Game`, so asking changes nothing). It may write `Row`,
 `transition`, `commit` (what his body made of it: `Outcome`) and `lost`.
 
-**Whose man he is: the taskers.** A second question and a second list: `taskers!`, strongest first, from `FRAG` down to `SQUAD`, `PRESS` and `NEEDS`.
+**Whose man he is: the taskers.** A second question and a second list: `taskers!`, strongest first, from `FRAG` down to `SQUAD`, `OUT` and `NEEDS`.
 A squad's man at rest is his squad's, and no rule moves him for it. `owner::claim` sets a bit and `release` clears it. `who` is the strongest, and
 `has` asks of named taskers. `kept` asks "may this tasker take him?": his body first (dead, held, blind, reeling, a hostage in his arms), then anyone
-above it in the list. `claim` itself refuses nobody, so the list decides only where a tasker asks `kept` first. His squad, the press, the lights and
+above it in the list. `claim` itself refuses nobody, so the list decides only where a tasker asks `kept` first. His squad, the lights and
 the last man ask it; other rules ask `has` of those they give way to.
 
 **Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
@@ -86,7 +86,7 @@ writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: 
 rule writes his `mode`. A leg keeps who sent him (`on_leg_of`): sent elsewhere, the first errand is over.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
-`room_fight_cover_passes`, `press_keeps_home`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
+`room_fight_cover_passes`, `last_holds`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
 
 **Dice.** `draw_of(g, "module::function#1", gd)` is a fixed function of the seed, the site, the man, the tick and how many times this site has drawn
 for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The block's die still steps once a

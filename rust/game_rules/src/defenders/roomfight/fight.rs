@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Hard's drilled defenders: where the mission's men are drilled, under the press's own switch.
+/// Hard's drilled defenders: where the mission's men are drilled, on Hard.
 pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
     g.k.pressure.on && g.k.pressure.drilled && g.staged.facts.drilled
 }
@@ -252,7 +252,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     }
     let mut i = 0;
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
-    crate::pressure::press_tick(g, dt);
+    crate::pressure::press_tick(g);
     crate::laststand::last_stand_tick(g);
 }
 

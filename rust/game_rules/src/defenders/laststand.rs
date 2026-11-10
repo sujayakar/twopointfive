@@ -524,7 +524,7 @@ fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     }
 }
 
-/// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.
+/// Once a frame from RoomFight.tick, after the defenders' own ticks.
 pub(super) fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
 }

@@ -13,7 +13,7 @@ pub use line::*;
 pub mod operative;
 pub use operative::*;
 pub mod post;
-pub use post::{at_post, back_on, def_of, is_loose, loose, on_leg, on_leg_of, run, send, Held, Leg};
+pub use post::{boots, loose_at, at_post, back_on, def_of, is_loose, loose, on_leg, on_leg_of, run, send, Held, Leg};
 pub mod rooms;
 pub use rooms::*;
 use crate::game::Game;

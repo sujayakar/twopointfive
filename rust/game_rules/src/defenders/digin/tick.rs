@@ -510,7 +510,6 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
     if dazzled { return; }
     if m.phase != Phase::Idle && m.phase != Phase::Think && m.phase != Phase::ToRoom && (rk.is_none() || my_room != m.room) { drop(g, m, Some(gd)); return; }   // he is somewhere else now: the room fight's man again
     let reach = g.k.digin.reach_m;
-    if m.phase != Phase::Idle && m.far && reach > 0.0 { g.tab.roomfight_def[d].rally_at = m::NAN; }   // held here: no rally clock left running to send him the frame he is let go
     match m.phase {
         Phase::Idle => {
             let room = match my_room { Some(k) if !contact && !g.tab.roomfight_room[k].entries.is_empty() => k, _ => return };
@@ -525,10 +524,6 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             }
             let know = match know { Some(k) => k, None => return };
             if crate::gunroles::gun_keeps_post(g, gd) { m.know_t = t; return; }   // the belt-fed gun stays on its line: heard, and let lie
-            // (DIGIN.keeper off, the difficulty's hard: the press's keeper does not start on his room: heard, and let lie   digin.ts:705)
-            if !g.k.digin.keeper && reach <= 0.0 {
-                if crate::pressure::press_keeps(g, d) { m.know_t = t; return; }
-            }
             let think = g.k.digin.think;
             m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, crate::dice::Who::Def(d), think);
             g.stats.digin.heard += 1;
@@ -543,10 +538,6 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if inside { m.phase = Phase::Idle; return; }              // they are in his room already: the room fight's man
             if now < m.until { return; }
             if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return; }    // his squad has heard and not yet said what it does
-            let far = m.far && reach > 0.0;
-            // (DIGIN.keeper off: made the keeper while he thought: he does not dig in   digin.ts:716)
-            if !g.k.digin.keeper && !far && crate::pressure::press_keeps(g, d) { m.phase = Phase::Idle; return; }
-            if !far && !g.tab.roomfight_def[d].rally_at.is_nan() && g.tab.roomfight_def[d].rally_go && now < g.tab.roomfight_def[d].rally_at + 0.5 { return; }   // he means to go to the fight next door: the rally has him first
             begin(g, d, m);
         }
         Phase::ToRoom => {                                            // planted: with the others, or stopped on the way

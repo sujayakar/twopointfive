@@ -1,4 +1,4 @@
-//! A DEFENDER AT HIS POST: the room fight, lanes, the press, digging in, the dark, the last stand.
+//! A DEFENDER AT HIS POST: the room fight, lanes, Hard's last man of a room, digging in, the dark, the last stand.
 pub mod calmtorch;
 pub mod coverfire;
 pub mod darkdoor;

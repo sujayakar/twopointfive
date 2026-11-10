@@ -34,7 +34,7 @@ fn a_write_moves_the_word_of_its_own_part() {
     assert_eq!(moved(&mut p, |g| g.time += 1.0), ["time"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].hold = !g.gd[gd].hold), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].path.push([1.0, 0.0, 1.0])), ["gd"]);
-    assert_eq!(moved(&mut p, |g| g.k.pressure.memory_secs += 1.0), ["k"]);
+    assert_eq!(moved(&mut p, |g| g.k.pressure.loud_secs += 1.0), ["k"]);
     // (a system's own slot, which only its module can name)
     assert_eq!(moved(&mut p, |g| game::control::set_hold(g, gd, !g.gd[gd].hold, "here")), ["gd", "ctl"]);
     // (a seat's set, of the seat that stands on Game and of the other)
