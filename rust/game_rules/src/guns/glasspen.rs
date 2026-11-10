@@ -22,10 +22,6 @@ fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Opt
     }
     k.default_energy
 }
-/// `g.col.raycast(ro, rd, tmax)` in this file's shape of a hit
-fn cast(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RoundPathSt> {
-    crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| RoundPathSt { t: h.t, index: h.index, n: h.n })
-}
 /// a new state: no log, rev 0
 fn fresh_state() -> PenState { PenState { log: Vec::new(), rev: 0.0 } }
 /// `panesUntouched(g.sim)`: the part's first word. The skeleton's `panes_untouched(b: Opaque)` cannot carry the slot, and the slot is `g.sim`

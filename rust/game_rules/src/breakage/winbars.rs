@@ -237,20 +237,6 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastE
     }
 }
 
-/// As a level resets: every bar stands again.
-pub fn reset_bars(g: &mut crate::game::Game) {
-    if let Some(s) = g.m.winbars.state.as_mut() { s.met.clear(); }
-    if untouched(g) { return; }
-    let s = g.sim;
-    for k in 0..::sim::panes::bars_gone(s) as usize {
-        if let Some(b) = box_of(g, ::sim::panes::bar_gone(s, k) as f64) {
-            seam_box(g, b).flags = ::sim::panes::bar_flags(s, k) as f64;
-            changed(g);
-        }
-    }
-    ::sim::panes::bars_clear(s);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -118,16 +118,6 @@ pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms 
     crate::cleared::ClearedRooms::blank()
 }
 
-/// Nothing known (a restart: Game.resetGuards).
-pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
-    crate::seenwalk::seen_reset(g);
-    g.cleared.known_room.fill(0);
-    g.cleared.looked.clear();
-    g.cleared.known = 0.0;
-    g.cleared.last = -1.0;
-    g.cleared.stats = crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 };
-}
-
 /// The room `p` stands in (0: none, a doorway, open floor).
 pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 {
     cleared_rooms_build(g);
