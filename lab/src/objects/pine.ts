@@ -5,7 +5,7 @@ import { type V3, type Rot, add, sub, mul, norm, cross, dot, rng, rotY, apply, c
 import type { Cluster, Leaf, Piece, World } from '../scene/world';
 import { M } from '../scene/materials';
 import type { Made, ObjectKind, Put } from './object';
-const S = (oval: boolean) => oval ? 0.29 : 0.168, GREEN: V3 = [0.308, 0.386, 0.246];
+const S = (oval: boolean) => oval ? 0.29 : 0.168, GREEN: V3 = [0.328, 0.408, 0.262];
 const across = (d: V3, a: number): V3 => { const x = norm(cross(d, Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), z = cross(x, d); return add(mul(x, Math.cos(a)), mul(z, Math.sin(a))); };
 const face = (n: V3, t: V3): V3 => norm(sub(n, mul(t, dot(n, t))));
 /** how long the kinds of shoot are, metres; a few of each */
@@ -13,9 +13,9 @@ const LONGS = [0.10, 0.155, 0.215, 0.29], EACH = 3;
 interface Grain { needles: number; oval: boolean; long: number; twig: boolean; bright: number; /** the wood that went leaves its color */ brown: number }
 const GRAINS: Grain[] = [
   { needles: 1, oval: false, long: 1, twig: true, bright: 1, brown: 1 },
-  { needles: 4.4, oval: true, long: 0.768, twig: false, bright: 0.945, brown: 1.015 },
-  { needles: 8.4, oval: true, long: 1.065, twig: false, bright: 0.94, brown: 1.04 },
-  { needles: 30, oval: true, long: 1.45, twig: false, bright: 0.935, brown: 1.09 },
+  { needles: 4.4, oval: true, long: 0.768, twig: false, bright: 0.965, brown: 1.015 },
+  { needles: 6.9, oval: true, long: 0.95, twig: false, bright: 0.952, brown: 1.04 },
+  { needles: 10.5, oval: true, long: 1.33, twig: false, bright: 0.938, brown: 1.07 },
 ];
 /** a shoot of one year: pairs of needles in a spiral, the lower spread wide, the upper close about the bud */
 function shoot(kind: number, seed: number, g: Grain): Cluster {
@@ -66,7 +66,7 @@ export const pine: ObjectKind = { name: 'pine', title: 'Young pine', make: (): M
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 0); } },
     { shape: 'leaves', error: 0.02, less: 'three needles of four (the fourth is broad), twigs', put(p) { put(p, 1); } },
-    { shape: 'leaves', error: 0.05, less: 'two broad leaves of three; thin wood', put(p) { put(p, 2); } },
-    { shape: 'leaves', error: 0.12, less: 'a shoot is two leaves; all wood but the stem and the thick of the branches', put(p) { put(p, 3); } },
+    { shape: 'leaves', error: 0.05, less: 'a third of the broad leaves; thin wood', put(p) { put(p, 2); } },
+    { shape: 'leaves', error: 0.12, less: 'most broad leaves; all wood but the stem and the thick of the branches', put(p) { put(p, 3); } },
   ],
 }) };

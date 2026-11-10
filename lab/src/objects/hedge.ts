@@ -6,14 +6,14 @@ import { M } from '../scene/materials';
 import type { Made, ObjectKind, Put } from './object';
 /** how long, high and deep it is cut, how round its edges are, how far up its skirt begins; a patch's size; the cut, in a patch */
 const LONG = 2.0, HIGH = 0.86, DEEP = 0.56, ROUND = 0.045, FOOT = 0.035, S = 0.125, CUT = 0.30;
-const DARK: V3 = [0.178, 0.268, 0.078], YOUNG: V3 = [0.268, 0.362, 0.098], OLD: V3 = [0.16, 0.22, 0.075], WOOD: V3 = [0.62, 0.58, 0.50];
+const DARK: V3 = [0.192, 0.286, 0.084], YOUNG: V3 = [0.288, 0.386, 0.106], OLD: V3 = [0.16, 0.22, 0.075], WOOD: V3 = [0.62, 0.58, 0.50];
 const KINDS = 8, face = (n: V3, t: V3): V3 => norm(sub(n, mul(t, dot(n, t))));
 /** fewer leaves, each larger: one of `keep`, `big` times as long; what would stand out over the cut is let down under it */
 interface Grain { keep: number; big: number; twigs: boolean; bright: number; flat: number; over: number; wide: number }
 const GRAINS: Grain[] = [
   { keep: 1, big: 1, twigs: true, bright: 1, flat: 0, over: 0.07, wide: 9 },
-  { keep: 3, big: 1.66, twigs: false, bright: 0.98, flat: 0.25, over: 0.10, wide: 1.0 },
-  { keep: 12, big: 3.45, twigs: false, bright: 0.94, flat: 0.5, over: 0.10, wide: 0.95 },
+  { keep: 3, big: 1.66, twigs: false, bright: 0.965, flat: 0.25, over: 0.10, wide: 1.0 },
+  { keep: 12, big: 3.45, twigs: false, bright: 0.895, flat: 0.5, over: 0.10, wide: 0.95 },
 ];
 /** a patch of shell: shoots that rise to the cut, a pair of leaves every centimetre or so, each pair across the last; +z is the side that is up */
 function patch(seed: number, g: Grain): Cluster {

@@ -13,16 +13,16 @@ const square = (n: V3, t: V3): V3 => norm(sub(n, mul(t, dot(n, t))));
 /** a frond leaves the heart at `lean` from upright and bends by `bend` more; its leaflets stand up in a V by `vee` (dry ones hang) */
 interface Frond { lean: number; bend: number; long: number; vee: number; pairs: number; leaflet: number; side: number; many: number; age: number }
 const FRONDS: Frond[] = [
-  { lean: 0.08, bend: 0.22, long: 1.30, vee: 1.00, pairs: 38, leaflet: 0.27, side: 0.05, many: 5, age: 0 },
-  { lean: 0.22, bend: 0.46, long: 1.60, vee: 0.75, pairs: 43, leaflet: 0.34, side: -0.06, many: 4, age: 0.06 },
-  { lean: 0.40, bend: 0.66, long: 1.74, vee: 0.62, pairs: 45, leaflet: 0.37, side: 0.08, many: 5, age: 0.15 },
-  { lean: 0.60, bend: 0.82, long: 1.80, vee: 0.55, pairs: 46, leaflet: 0.38, side: -0.10, many: 5, age: 0.28 },
-  { lean: 0.80, bend: 0.94, long: 1.82, vee: 0.48, pairs: 46, leaflet: 0.38, side: 0.06, many: 5, age: 0.40 },
-  { lean: 1.00, bend: 0.98, long: 1.80, vee: 0.42, pairs: 46, leaflet: 0.38, side: 0.12, many: 5, age: 0.55 },
-  { lean: 1.22, bend: 1.02, long: 1.76, vee: 0.34, pairs: 45, leaflet: 0.37, side: -0.08, many: 5, age: 0.70 },
-  { lean: 1.46, bend: 0.98, long: 1.68, vee: 0.26, pairs: 45, leaflet: 0.36, side: 0.10, many: 4, age: 0.85 },
-  { lean: 1.74, bend: 0.80, long: 1.52, vee: 0.12, pairs: 42, leaflet: 0.35, side: -0.12, many: 3, age: 1 },
-  { lean: 2.02, bend: 0.62, long: 1.20, vee: -0.55, pairs: 31, leaflet: 0.29, side: 0.14, many: 3, age: 2 },
+  { lean: 0.08, bend: 0.22, long: 1.30, vee: 1.00, pairs: 34, leaflet: 0.290, side: 0.05, many: 5, age: 0 },
+  { lean: 0.22, bend: 0.46, long: 1.60, vee: 0.75, pairs: 38, leaflet: 0.365, side: -0.06, many: 4, age: 0.06 },
+  { lean: 0.40, bend: 0.66, long: 1.74, vee: 0.62, pairs: 40, leaflet: 0.398, side: 0.08, many: 5, age: 0.15 },
+  { lean: 0.60, bend: 0.82, long: 1.80, vee: 0.55, pairs: 41, leaflet: 0.408, side: -0.10, many: 5, age: 0.28 },
+  { lean: 0.80, bend: 0.94, long: 1.82, vee: 0.48, pairs: 41, leaflet: 0.408, side: 0.06, many: 5, age: 0.40 },
+  { lean: 1.00, bend: 0.98, long: 1.80, vee: 0.42, pairs: 41, leaflet: 0.408, side: 0.12, many: 5, age: 0.55 },
+  { lean: 1.22, bend: 1.02, long: 1.76, vee: 0.34, pairs: 40, leaflet: 0.398, side: -0.08, many: 5, age: 0.70 },
+  { lean: 1.46, bend: 0.98, long: 1.68, vee: 0.26, pairs: 40, leaflet: 0.387, side: 0.10, many: 4, age: 0.85 },
+  { lean: 1.74, bend: 0.80, long: 1.52, vee: 0.12, pairs: 37, leaflet: 0.376, side: -0.12, many: 3, age: 1 },
+  { lean: 2.02, bend: 0.62, long: 1.20, vee: -0.55, pairs: 27, leaflet: 0.312, side: 0.14, many: 3, age: 2 },
 ];
 /** along the keel (outward is +x, the heart is the origin): where it is, its way, its upper side, its left */
 function keel(f: Frond): (q: number) => { at: V3; d: V3; up: V3; left: V3 } {
@@ -36,7 +36,7 @@ function leaflets(f: Frond, seed: number): Leaflet[][] {
     const u = (i + 0.5 + (s ? 0.25 : -0.25) + (r() - 0.5) * 0.3) / f.pairs, q = 0.15 + 0.845 * u, w = way(q), sg = s ? 1 : -1;
     // spines at the foot, longest before the middle, shorter to the tip; they lean forward, more toward the tip, and stand a little in ranks
     const long = f.leaflet * Math.min(1, 0.22 + 3.6 * u) * (1 - 0.50 * Math.pow(u, 2.2)) * (0.90 + 0.2 * r()), ahead = (f.age < 0.1 ? 0.62 : 0.98) - 0.50 * u + (r() - 0.5) * 0.16, vee = f.vee * (1 - 0.25 * u) + [0.20, -0.16, 0.02][i % 3]! + (r() - 0.5) * 0.26, out = add(mul(w.left, sg * Math.cos(vee)), mul(w.up, Math.sin(vee))), limp = f.age * 0.10 + (f.age > 1 ? 0.35 : 0) + 0.10 * r(), t = norm(add(add(mul(w.d, Math.cos(ahead)), mul(out, Math.sin(ahead))), [0, -limp, 0])), n = square(add(mul(w.up, Math.cos(vee)), mul(w.left, -sg * Math.sin(vee) + (r() - 0.5) * 0.6)), t);
-    rows[s]!.push({ root: add(w.at, mul(w.left, sg * 0.004)), t, n, long, tone: 0.24 + 0.42 * r() });
+    rows[s]!.push({ root: add(w.at, mul(w.left, sg * 0.004)), t, n, long, tone: 0.28 + 0.34 * r() });
   }
   return rows;
 }
@@ -45,13 +45,13 @@ const ROWS = FRONDS.map((f, i) => leaflets(f, i));
 const REACH = FRONDS.map((f, i) => { const way = keel(f), ys = [...Array(21).keys()].map(k => way(k / 20).at[1]), tips = ROWS[i]!.flat().map(l => l.root[1] + l.t[1] * l.long); return { lo: Math.min(...ys, ...tips), hi: Math.max(...ys, ...tips) }; });
 const frameAt = (kind: number, level: number) => level ? (REACH[kind]!.lo + REACH[kind]!.hi) / 2 : Math.min(-0.45, REACH[kind]!.lo + 0.03);
 interface Step { bright: V3; big: number }
-const STEPS: Step[] = [{ bright: [1, 1, 1], big: 1 }, { bright: [0.868, 0.851, 0.892], big: 0.967 }, { bright: [0.847, 0.832, 0.859], big: 1.03 }, { bright: [0.875, 0.86, 0.89], big: 1.01 }];
+const STEPS: Step[] = [{ bright: [1, 1, 1], big: 1 }, { bright: [0.861, 0.844, 0.885], big: 0.96 }, { bright: [0.859, 0.842, 0.872], big: 1.005 }, { bright: [0.893, 0.876, 0.910], big: 0.945 }];
 function frond(kind: number, level: number): Cluster {
   const f = FRONDS[kind]!, rows = ROWS[kind]!, way = keel(f), y = frameAt(kind, level), S = frameOf(level), leaves: Leaf[] = [], big = STEPS[level]!.big, put = (at: V3, t: V3, n: V3, size: number, tone: number) => leaves.push({ at: mul(sub(at, [0, y, 0]), 1 / S), t, n: square(n, t), size: size / S, tone }), mean = (v: V3[]) => mul(v.reduce((a, b) => add(a, b), [0, 0, 0] as V3), 1 / v.length);
   if (level === 0) {
     for (const row of rows) for (const l of row) put(add(l.root, mul(l.t, l.long * 0.485)), l.t, l.n, l.long / 2, l.tone);
     // the keel: narrow blades end over end, flat and on edge, thinner to the tip
-    for (let i = 0; i < 7; i++) { const a = 0.10 + 0.86 * i / 7, b = Math.min(0.995, a + 0.86 / 7 * 1.9), p = way(a).at, e = way(b).at, d = sub(e, p), t = norm(d), m = way((a + b) / 2), half = Math.hypot(...d) / 2 * (1 - 0.35 * i / 7); for (const n of [m.up, m.left]) put(add(mul(add(p, e), 0.5), mul(m.up, -0.003)), t, n, half, 0.95); }
+    for (let i = 0; i < 7; i++) { const a = 0.10 + 0.86 * i / 7, b = Math.min(0.995, a + 0.86 / 7 * 1.9), p = way(a).at, e = way(b).at, d = sub(e, p), t = norm(d), m = way((a + b) / 2), half = Math.hypot(...d) / 2 * (1 - 0.35 * i / 7); for (const n of [m.up, m.left]) put(add(mul(add(p, e), 0.5), mul(m.up, -0.003)), t, n, half, 0.90); }
     return { kind: 1, leaves };
   }
   // (by turns they lean a little to either side: turned as the mean of those they stand for, they would all look the same way, and be brighter by lamp for it)
@@ -82,7 +82,7 @@ function stem(p: Put, level: number) {
 function fruit(p: Put, level: number) {
   const r = rng(p.seed * 37 + 3), mat = M['lamp shade']!, strand: V3 = [0.93, 0.63, 0.25]; for (let b = 0; b < 3; b++) { const R = rotY(0.95 + b * 2.35 + (r() - 0.5) * 0.4 + (p.seed === 1 ? 0 : p.seed)), P = (x: number, y: number, z = 0): V3 => add(TOP, apply(R, [x, y, z])), pts = [P(0.03, -0.02), P(0.24, 0.06), P(0.40, -0.02), P(0.485, -0.21)], long = 0.30 + 0.06 * r(); if (level < 2) for (let i = 0; i < 3; i++) p.bar(pts[i]!, pts[i + 1]!, 0.015 - 0.002 * i, 0.013 - 0.002 * i, mat, strand);
     if (level) { p.ball(P(0.49, -0.17 - long * 0.5), [0.074, 0.165, 0.074], mat, [0.69, 0.455, 0.19]); if (level > 1) p.bar(P(0.02, 0, 0), P(0.485, -0.22), 0.013, 0.013, mat, strand); continue; }
-    for (let i = 0; i < 15; i++) { const a = i * 2.39996, k = Math.sqrt((i + 0.5) / 15), from = P(0.465 + 0.01 * Math.cos(a), -0.10 - 0.05 * r(), 0.01 * Math.sin(a)), mid = P(0.48 + 0.085 * k * Math.cos(a), -0.20 - 0.06 * r(), 0.085 * k * Math.sin(a)), end = P(0.49 + 0.105 * k * Math.cos(a), -0.16 - long * (1.05 - 0.25 * k) * (0.9 + 0.2 * r()), 0.105 * k * Math.sin(a)); p.bar(from, mid, 0.0045, 0.004, mat, strand); p.bar(mid, end, 0.004, 0.003, mat, strand); for (let j = 0; j < 4; j++) { const q = 0.12 + 0.86 * (j + r() * 0.6) / 3.6, c = add(mul(mid, 1 - q), mul(end, q)), t = r(); p.ball(add(c, [(r() - 0.5) * 0.018, 0, (r() - 0.5) * 0.018]), [0.0125, 0.0185, 0.0125], M.plastic!, [0.78 + 0.14 * t, 0.42 + 0.20 * t, 0.15 + 0.06 * t]); } } }
+    for (let i = 0; i < 13; i++) { const a = i * 2.39996, k = Math.sqrt((i + 0.5) / 13), from = P(0.465 + 0.01 * Math.cos(a), -0.10 - 0.05 * r(), 0.01 * Math.sin(a)), mid = P(0.48 + 0.085 * k * Math.cos(a), -0.20 - 0.06 * r(), 0.085 * k * Math.sin(a)), end = P(0.49 + 0.105 * k * Math.cos(a), -0.16 - long * (1.05 - 0.25 * k) * (0.9 + 0.2 * r()), 0.105 * k * Math.sin(a)); p.bar(from, mid, 0.0045, 0.004, mat, strand); p.bar(mid, end, 0.004, 0.003, mat, strand); for (let j = 0; j < 3; j++) { const q = 0.14 + 0.84 * (j + r() * 0.6) / 2.6, c = add(mul(mid, 1 - q), mul(end, q)), t = r(); p.ball(add(c, [(r() - 0.5) * 0.018, 0, (r() - 0.5) * 0.018]), [0.0150, 0.0220, 0.0150], mat, [0.78 + 0.14 * t, 0.42 + 0.20 * t, 0.15 + 0.06 * t]); } } }
 }
 /** where every frond is: which kind, which way, how large */
 interface Grown { kind: number; yaw: number; scale: number; tint: V3 }
