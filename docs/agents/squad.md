@@ -38,18 +38,18 @@ block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the gam
 **A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
 under it wins, and a door counts by the doorway the ray looks through.
 
-**The book** is `SquadOrders`, one a seat, read as `g.orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+**The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
 `Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
 `flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
-click steps back. Tab or Esc puts it away.
+click turns back from more, or puts it away. So does Tab.
 
-**The ring is flat** (`squad_orders_flat_rows`): every page's rows in one list, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
+**The ring's rows** (`squad_orders_flat_rows`) are one list: the rows of each tool a listed row opens, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
 tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind
-a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`).
+a last wedge, more.
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
 `can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
@@ -125,7 +125,8 @@ back only by what his own legs closed on him (`no_shove_back`). `walkahead.rs` i
 his order names nothing to watch and no door, on the walk to any mark and on the mark under `Is::LooksAbout` (`cover_eyes_free`), or if it left him
 spare (`cover_spare`). Nearer weighs more, a shut door less, one under Sam's gun or a posted man's little (`sam_k`, `held_k`). A dealt man moves his
 gun and not his feet (`cover_pose_for`). One man steps aside to see through an open door nobody has a line into (`cover_step_deal`), and his mark
-stays. A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
+stays. A man whose walk takes him into a room with floor nobody has looked over is dealt nothing until he is in: he looks where he goes (`walks_in`).
+A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
 a mark a cell within 11 m of whoever has it in his eyes.
 
 **`rearwatch.rs`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
@@ -151,7 +152,7 @@ follows last (`room_keep_tick`, `room_kept`, `room_secs`).
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`; `?knob.cmdring.twice_secs=0.6` turns one. Words: `?qtwice=0`, `?goalhalf=0`, `?doorbrisk=0`,
-  `?pacing=0`, `?nosquadthrow`. `?squad=4` is the team's size.
+  `?pacing=0`. `?squad=4` is the team's size.
 - **A new order:** a file in `orders/rows/` with `pub const ORDER: Row`, a line in `rows!` in its `mod.rs`, and its row on the menu: `rows::def` in
   `squad_orders_new`, or `list` from its `frame`. What other rules need to know of it goes in `Is`.
 - **A place on the ring:** `flat_top` and `flat_left` in `cmdring.rs`.

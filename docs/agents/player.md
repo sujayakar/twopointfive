@@ -33,10 +33,11 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `gunwall.rs` | a raised gun comes down at a wall, for every man |
 | `gunslots.rs`, `gunroles.rs` | the picks a card offers, a teammate's sidearm when dry; what a teammate's gun is for |
 | `slotsetup.rs` | the setup a gun's digit opens |
-| `launcher.rs`, `he40.rs`, `shotgun.rs` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
+| `flight.rs`, `launcher.rs`, `he40.rs`, `shotgun.rs` | a thing off a tube in flight (`leg`), a blunt one at a man (`struck`); sponge round; 40 mm; a shell's pellets, a lock taken with them |
 | `throwables/`, `throwplan.rs`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
 | `kit/`, `kitload.rs`, `loadout/`, `issue.rs`, `gear.rs` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
 | `bigkit.rs`, `packside.rs`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
+| `deed.rs` | what his hands or feet are in the middle of, one thing at a time (`Player.deed`): `begin`, `put_down`, `hands_free` |
 | `hands.rs`, `handwork.rs`, `workstow.rs`, `workthings.rs` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
 | `handslot/`, `handring/` | the empty-hands key; the ring |
 | `friends.rs`, `friendlyfire.rs`, `fireline.rs` | ring and low ready; rounds among friends; a teammate waiting out Sam's lane of fire |
@@ -81,7 +82,7 @@ to rest (`throw_rest`, `rest_of_throw`, which moves nothing) and the burst's rin
 `load_worn` makes the two scores, read against his issue.
 
 **The rows.** `build_interactables` lists what he can do, `update_interact` makes E a tap or the ring (`whistle_wedge` the last wedge), and a tap with
-no row says why (`empty_thing`). So does any other press that did nothing, the trigger, a slot key on a wall and the wall key among them (`refuse`). A row performed is `g.act`.
+no row says why (`empty_thing`). So does any other press that did nothing, the trigger, a slot key on a wall and the wall key among them (`refuse`). A row performed is the seat's `act`.
 
 **His own charges.** `door_tools_sam_rows` and `wall_charge_sam_rows` offer them, `door_tools_sam_tick` and `wall_charge_sam_tick` run the job,
 `update_work_plant` plants him. `sam_stow_tick` puts the gun away first, and the job's clock waits on `sam_stowing`. A step, a sprint or a click ends
@@ -112,7 +113,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
   reloads.
 - **A gun comes down at a wall** and no round goes (`gun_walled`), but the breaching shotgun laid on a lock stays up and fires (`breach_aim`). An AI
   man in a fight (`fight_s`) lowers only a gun standing in the panel; Sam's test is always the calm one.
-- **No ring on a friend** (`friend_no_snap`), and an enemy behind a friend under the cursor is not ringed through him.
+- **No ring on a friend** (`friend`), and an enemy behind a friend under the cursor is not ringed through him.
 - **Off a friend out of a fight** (`sam_off_friend`, `friends_in_fight`) the gun comes down, for a hostage in a rescue too. In a fight it stays up.
   Any round of his can hit a friend, as an enemy's can.
 - **A teammate does not press with a friend where his round could go** (`friend_in_cone`, `ff_unpressed`), and waits out Sam's lane of fire or finds a
@@ -144,7 +145,9 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 - **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.
-- **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads `g.act`. A job that plants him is an arm of `sam_work`. A key: its code in
+- **A thing done by hand:** a kind of `Deed` with what it keeps, begun by `deed::begin`, which puts down the one before, after `hands_free` if it wants
+  both hands. Ask `planted` (his feet are in it too) or `hands_full` (a deed, or a body in `Player.tow`), never a list of kinds.
+- **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads the seat's `act`. A job that plants him is an arm of `sam_work`. A key: its code in
   `update_player`, its row in `KEY_ACTS`.
 - **A new reason his gun cannot fire:** a term of `walled` in `update_player` with its line on a click, and `gun_shut` so that the ring shows the bar.
 - **New state:** nothing to do: a restart throws the whole game away. What must outlive a try goes in `Survivors`.

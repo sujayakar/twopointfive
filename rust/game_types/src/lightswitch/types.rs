@@ -49,7 +49,7 @@ pub struct SwitchHand {
 
 #[derive(Clone, Debug, Default)]
 pub struct SwitchRowsRowOver {
-    pub kind: Option<crate::lightswitch::SwitchRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -66,36 +66,10 @@ pub struct SwitchRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum SwitchRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightswitchMod {
     pub states: Option<crate::lightswitch::St>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct LightswitchStats {
-    pub plates: i32,
-    pub flips: i32,
-    pub guard_on: i32,
-    pub events: i32,
-    pub gone: i32,
 }
 
 pub const WALL_TOP: f64 = 2.2;

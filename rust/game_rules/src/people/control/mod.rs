@@ -19,8 +19,8 @@
 //!   `GuardScript`  asked once his ears and eyes have run (`Stage::Body`): his whole body follows the script for the tick and nothing else of his
 //!                  frame runs (guards::update_guard's `lent`). Below these rules stands his own script (`gd.script`, which 71 files read
 //!                  and so stays where it is), and below that his own state.
-//!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is or goes crouched to a
-//!                  spot, his gun lowered toward the danger, no round fired, his hands free to change magazine (update_guard's `alert`,
+//!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is, his gun lowered toward the
+//!                  danger and no round fired, or goes crouched to a spot, firing as he goes at a man he sees (update_guard's `alert`,
 //!                  its first test). `TakeCover::down()` and `TakeCover::to(spot, pace)` are the two ways to say it.
 //!   `LeavePost`    asked at his post in a room fight, once he has looked and reacted, where he can see (`Stage::Post`, roomfight/defender.rs): he
 //!                  leaves it, on a leg or on his own hunt. It is something he does once, so nobody is recorded as having him for it: on the
@@ -59,8 +59,8 @@ pub enum Intent {
 #[derive(Clone, Copy, Debug)]
 pub enum LeavePost { On(crate::roomfight::Leg), Loose }
 
-/// A man taking cover in a fight: down where he stands or off to a spot, crouched, his gun lowered toward the danger; he fires no round and
-/// his hands may change magazine.
+/// A man taking cover in a fight: down where he stands, his gun lowered toward the danger and no round fired, or off to a spot, crouched, firing
+/// as he goes at a man he sees; his hands may change magazine.
 #[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
 pub struct TakeCover {
     /// where to go; `None`: get down where he stands
@@ -172,8 +172,8 @@ macro_rules! rules {
     };
 }
 
-// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` and `rally` take
-// him off his post.)
+// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` and `open`
+// take him off his post.)
 rules! {
     frag: "a live grenade";
     runner: "broke and ran";
@@ -181,7 +181,7 @@ rules! {
     startle: "startled";
     duck: "head down under fire";
     lost: "his room is lost";
-    rally: "a fight next door";
+    open: "caught in the open";
 }
 // a man's record of who said no is a bit a rule
 const _: () = assert!(RULES.len() <= 32, "Control.declined is 32 bits: widen it before the list holds a 33rd rule");
@@ -400,7 +400,7 @@ mod tests {
     fn heard(_: &mut Game, _: GuardId, _: Outcome) {}
     fn let_go(_: &mut Game, _: GuardId) {}
     fn rule(id: RuleId, stage: Stage, propose: fn(&Game, GuardId) -> Option<Intent>) -> Listed {
-        Listed { id, name: "a test's rule", stage, transition: if propose as usize == never as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
+        Listed { id, name: "a test's rule", stage, transition: if propose as usize == never as *const () as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
     }
 
     #[test]

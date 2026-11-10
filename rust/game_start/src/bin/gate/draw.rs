@@ -151,7 +151,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         if i == MOMENT.1 * 60 && !back {
             // (as the page's `hold` does: the game whole again of that moment, and nothing drawn through it)
             let (m, n, cursor) = kept.take().expect("the moment was kept");
-            p.g = m.stands(p.g.sim);
+            p.g = m.laid(p.g.sim);
             (next, p.cursor, back, i, over) = (n, cursor, true, MOMENT.0 * 60, false);
             d.cut();
         }
@@ -163,7 +163,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         p.frame_shown(|p| {
             if over { d.over(&p.g, u32::MAX); } else { d.take(&p.g, u32::MAX); }
             if !seen { return; }
-            let focus = p.g.aim_point;
+            let focus = p.g.sets[p.g.seat].aim_point;
             for at in [0.5, 1.0] {
                 d.frame(&p.g, at, focus);
                 mirror.upload(&d, f.breaks("mark"));

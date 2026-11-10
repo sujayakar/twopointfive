@@ -195,8 +195,6 @@ pub struct Recap {
 pub struct DeathrecapStats {
     pub deaths: i32,
     pub takes: i32,
-    pub rounds: i32,
-    pub known: i32,
     pub calls: i32,
 }
 

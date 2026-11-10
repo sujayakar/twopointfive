@@ -77,9 +77,9 @@ mod tests {
 }
 
 /// How long a landed blow or shell is followed through before the tool may start back, s.
-pub fn big_rebound(kind: crate::character::BigReboundKind) -> f64 {
+pub fn big_rebound(kind: crate::kit::BigTool) -> f64 {
     let t = &crate::character::BIGMOVE;
-    if kind == crate::character::BigReboundKind::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
+    if kind == crate::kit::BigTool::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
 }
 
 /// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow.

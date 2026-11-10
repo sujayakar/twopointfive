@@ -50,6 +50,8 @@ export class Measure {
   get freezing(): boolean { return this.sweep.freezing || !!this.bench?.freezing; }
   /** a take is on: the picture is held, no ladder is fed */
   get active(): boolean { return this.sweep.active || !!this.bench?.active; }
+  /** the GPU's time is read frame by frame */
+  get reads(): boolean { return this.active || this.rec.recording; }
   /** auto quality may measure the machine */
   calibrates(engine: Engine): boolean { const b = this.bench; return !b || (!b.timing && !(b.active && engine.standsIn)); }
   /** a display frame begins */

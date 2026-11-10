@@ -110,16 +110,14 @@ pub fn smoke_clear(g: &mut crate::game::Game) {
 /// THE LIGHT UNDER A ROOF at a point that is no lamp's and not the sun's own beam (None: it is under the open
 /// sky, or nothing was swept yet).
 pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {
-    sim::bricks::under_roof(g.sim, g.sim, p, &g.k)
+    sim::bricks::under_roof(g.sim, g.tab.boxes.world(), p, &g.k)
 }
 
 /// THE LIGHT THAT STANDS ON A POINT, asked from outside a tick: a page's preview asks it a block of floor at a time. `owners`: whose carried
 /// lamps are left out · `steady`: what the place lights, with nothing that passes · `leave`: lamps of the level's own left out, by what feeds them. The game is as it was
 /// (`game_start/tests/senses.rs`), so no host takes its state again after it.
 pub fn light_asked(g: &mut crate::game::Game, p: V3, owners: &[f64], steady: bool, leave: f64) -> f64 {
-    if crate::ask::WorldAsk::try_of(g).is_err() { crate::scene_collision::stands(g); }
-    crate::scene_box_mirror::box_mirror_things(g);
-    crate::guards::light_at(g, p, Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
+    crate::guards::light_at(g, p, Some(&mut |_: &Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
 }
 
 /// ASKING THE SENSES FROM OUTSIDE A TICK; no rule asks it. `what` 0: the light on points (`xs`: 1 for what the place lights with nothing that
@@ -131,7 +129,7 @@ pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> 
         0 => {
             let [steady, leave, n, rest @ ..] = xs else { return Vec::new() };
             let (owners, points) = rest.split_at(*n as usize);
-            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(*steady != 0.0), Some(*leave)).0).collect()
+            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &Game, o: f64| owners.contains(&o)), Some(*steady != 0.0), Some(*leave)).0).collect()
         }
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {

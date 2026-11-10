@@ -61,11 +61,11 @@ fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crat
         NeedKind::Stretch => n.stretch.as_ref(),
     });
     let s = s.map(|s| OwnSpotS { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() })?;
-    Some(own_spot(g, &s, kind))
+    Some(own_spot(&s))
 }
 
 /// A level's own place as a NeedSpot. (needs.ts ownSpot; `owned`'s cache is dropped, the value is a function of `s`)
-fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
+fn own_spot(s: &crate::needs::OwnSpotS) -> crate::needs::NeedSpot {
     NeedSpot { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
 
@@ -85,9 +85,6 @@ fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloo
 }
 
 /// The last few things that happened. (needs.ts log; NEEDS_DEBUG's sink is host work)
-fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-}
-
 fn frac(s: &str) -> f64 {
     js::rem(crate::math_dice::hash_str(s), 100000.0) / 100000.0
 }
@@ -95,7 +92,7 @@ fn frac(s: &str) -> f64 {
 /// Metres by path; infinite if there is none.
 fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
     let Some(p) = crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) else { return m::INF };
-    path_len(from, &p)
+    crate::places::walk_len(from, &p)
 }
 
 /// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
@@ -119,7 +116,7 @@ fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::
 /// Deal this man his needs, once, off his callsign.
 fn deal(g: &mut crate::game::Game, gd: GuardId) {
     mem(g, gd).dealt = true;
-    if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() || g.gd[gd].route_i < 0 {
+    if g.team(gd) != Team::Guard || g.gd[gd].unit.is_some() || g.gd[gd].route_i < 0 {
         return;
     }
     let cs = g.gd[gd].callsign.clone();
@@ -143,17 +140,8 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
             level: l0[0] + frac(&format!("{}:{}:level0", cs, ks)) * (l0[1] - l0[0]),
             fill_min: lo + frac(&format!("{}:{}:fill", cs, ks)) * (hi - lo),
             wp: dp.wp,
-            trip_m: dp.m,
         });
     }
-    g.stats.needs.dealt += 1;
-    let list: Vec<String> = mem(g, gd)
-        .needs
-        .iter()
-        .map(|n| format!("{} (fills in {} min, at {}, from wp{} {} m)", n.kind.as_str(), js::to_fixed(n.fill_min, 1), js::to_fixed(n.level, 2), n.wp, js::to_fixed(n.trip_m, 0)))
-        .collect();
-    let list = if list.is_empty() { String::from("nothing") } else { list.join(", ") };
-    log(g, gd, &format!("dealt {}", list));
 }
 
 /// May the needs play in this run at all?
@@ -284,7 +272,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
+        if crate::condition::down(g, g.gd[gd].ch) || g.team(gd) != Team::Guard || g.gd[gd].unit.is_some() {
             continue;
         }
         if !mem(g, gd).dealt {
@@ -303,7 +291,6 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
             for n in r.needs.iter_mut() {
                 n.level = m::min(n.level, after);
             }
-            log(g, gd, &format!("calm again — needs capped at {}", after));
         }
         if !live || !calm_floor || row!(g, gd).trip.is_some() || !man_calm(g, gd, CALM_AWARENESS) {
             continue;
@@ -327,21 +314,20 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
         let Some(pick) = pick else { continue };
-        if schedule_trip(g, gd, pick.kind, false) {
+        if schedule_trip(g, gd, pick.kind) {
             away += 1;
         }
     }
 }
 
 /// Put this man on a trip, the telegraph starting now. False if the place cannot be reached.
-fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, forced: bool) -> bool {
+fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind) -> bool {
     let spot = need_spot(g, kind);
     let c = g.gd[gd].ch;
     let Some(spot) = spot else {
         if let Some(n) = mem(g, gd).needs.iter_mut().find(|x| x.kind == kind) {
             n.level = 0.0;
         }
-        log(g, gd, &format!("{}: this floor has no place for it — dropped", kind.as_str()));
         return false;
     };
     let pos = g.ch[c].pos;
@@ -351,7 +337,6 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
             if let Some(n) = mem(g, gd).needs.iter_mut().find(|x| x.kind == kind) {
                 n.level = 0.0;
             }
-            log(g, gd, &format!("{}: no way to {} from here — dropped", kind.as_str(), spot.name));
             return false;
         }
     };
@@ -367,7 +352,6 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
     let last = floor(g).last_depart_at;
     let lead = g.k.needs.announce_lead;
     let wp = g.gd[gd].wp;
-    let name = spot.name.clone();
     crate::owner::claim(g, gd, crate::owner::by::NEEDS, now, None);
     mem(g, gd).trip = Some(Trip {
         kind,
@@ -378,13 +362,11 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
         left_at: -1.0,
         arrived_at: -1.0,
         dwell_until: -1.0,
-        back_at: -1.0,
         wp: wp as f64,
         out_yaw,
         watched: false,
         told: false,
         partner: None,
-        radio: false,
         reply_at: -1.0,
         replied: false,
         necked: false,
@@ -393,29 +375,8 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
         gap_before: last,
     });
     floor(g).last_depart_at = m::max(last, now + lead);
-    g.stats.needs.scheduled += 1;
-    if forced {
-        g.stats.needs.forced += 1;
-    }
-    log(
-        g,
-        gd,
-        &format!("{} {} → {} from wp{} ({} m); walks at +{} s", if forced { "SENT" } else { "schedules" }, kind.as_str(), name, wp, js::to_fixed(path_len(pos, &path), 0), lead),
-    );
     true
 }
-
-/// Length of a path, walked from `from`.
-fn path_len(from: V3, p: &[V3]) -> f64 {
-    let mut s = 0.0;
-    let mut prev = from;
-    for q in p.iter() {
-        s += m::hyp2(q[0] - prev[0], q[2] - prev[2]);
-        prev = *q;
-    }
-    s
-}
-
 /// Break the trip off wherever he is; nothing is resumed.
 fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     if !on_trip(g, gd) {
@@ -425,7 +386,6 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
     let Some(t) = mem(g, gd).trip.take() else { return };
     mem(g, gd).cancels += 1.0;
-    g.stats.needs.cancelled += 1;
     let after = g.k.needs.after_cancel;
     if let Some(n) = mem(g, gd).needs.iter_mut().find(|x| x.kind == t.kind) {
         n.level = m::min(n.level, after);
@@ -448,7 +408,6 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
         let at = g.ch[c].pos;
         crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
     }
-    log(g, gd, &format!("{} CANCELLED in {} — {}", t.kind.as_str(), t.phase.as_str(), why));
 }
 
 /// The line for a slot, off his name and his count.
@@ -470,7 +429,7 @@ fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
         let o = g.guards[i];
         i += 1;
         let x = &g.gd[o];
-        if o == gd || g.cond[x.ch].down || x.held.is_some() || x.team != Team::Guard || x.unit.is_some() {
+        if o == gd || g.cond[x.ch].down || x.held.is_some() || g.ch[x.ch].team != Team::Guard || x.unit.is_some() {
             continue;
         }
         if v3::dist(g.ch[x.ch].pos, my_pos) > g.k.needs.partner_m + 2.0 {
@@ -489,7 +448,6 @@ fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 /// Say it: to the partner's face, else over the net.
 fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
     t.told = true;
-    g.stats.needs.told += 1;
     let p = partner_for(g, gd);
     let quiet = g.level.own_places();
     let lines = crate::dialogue::needs_lines_table();
@@ -498,17 +456,10 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         t.partner = Some(p);
         t.reply_at = g.time + g.k.needs.reply_after;
         let own = if quiet { lines.announce_own.get(key(kind)) } else { None };
-        let was: Vec<String> = own.or_else(|| lines.announce.get(key(kind))).or_else(|| lines.announce.get(key("coffee"))).unwrap().clone();
-        let now: Vec<String> = was.iter().map(|x| lines.now.get(x.clone()).cloned().unwrap_or_else(|| x.clone())).collect();
-        let pool = crate::words::wg::<Vec<String>>(g, &now, &was);
+        let pool: Vec<String> = own.or_else(|| lines.announce.get(key(kind))).or_else(|| lines.announce.get(key("coffee"))).unwrap().clone();
         t.line = pick_line(g, &pool, gd, "announce");
         crate::game::game_say(g, gd, &t.line, None, None);
-        let d = v3::dist_xz(g.ch[g.gd[p].ch].pos, g.ch[g.gd[gd].ch].pos);
-        let pcs = g.gd[p].callsign.clone();
-        log(g, gd, &format!("tells {} ({} m): \"{}\"", pcs, js::to_fixed(d, 1), t.line));
     } else {
-        t.radio = true;
-        g.stats.needs.radioed += 1;
         let own = if quiet { lines.short_own.get(key(kind)) } else { None };
         let short: String = own.or_else(|| lines.short.get(key(kind))).cloned().unwrap_or_else(|| key(kind));
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
@@ -519,7 +470,6 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
             None => g.ch[c].pos,
         };
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
-        log(g, gd, &format!("radios it: \"{}\"", t.line));
     }
 }
 
@@ -539,10 +489,9 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
         || mid_line
         || crate::doze::doze_asleep(g, p)
     {
-        log(g, gd, &format!("{} says nothing back ({}, aw {})", pcs, state.as_str(), js::to_fixed(aw, 2)));
         return;
     }
-    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch));
+    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.team(x) == Team::Guard && g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch));
     let trips = mem(g, gd).trips;
     let lines = crate::dialogue::needs_lines_table();
     let pool: Vec<String> = match third {
@@ -551,16 +500,13 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
             lines.reply_other.iter().map(|s| s.replace("{other}", &other)).collect()
         }
         _ => {
-            let now_pool: Vec<String> = if t.kind == NeedKind::Stretch { lines.reply.iter().filter(|s| s.as_str() != "Bring me one.").cloned().collect() } else { lines.reply.clone() };
-            crate::words::w(g, &now_pool, &lines.reply)
+            if t.kind == NeedKind::Stretch { lines.reply.iter().filter(|s| s.as_str() != "Bring me one.").cloned().collect() } else { lines.reply.clone() }
         }
     };
     let cs = g.gd[gd].callsign.clone();
     let h = crate::math_dice::hash_str(&format!("{}|{}|{}|reply", pcs, cs, trips));
     let line = pool[js::rem(h, pool.len() as f64) as usize].clone();
     crate::game::game_say(g, p, &line, None, None);
-    g.stats.needs.replies += 1;
-    log(g, gd, &format!("{} answers: \"{}\"", pcs, line));
 }
 
 /// `stand()` of needsPatrol: his feet stop.
@@ -631,7 +577,6 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 }
                 let f = floor(g);
                 f.last_depart_at = m::max(f.last_depart_at, now);
-                g.stats.needs.departed += 1;
                 clear_stall(g, gd);
                 let spot_pos = trip!(g, gd).spot.pos;
                 crate::guards::go_to(g, gd, spot_pos, Some(true));
@@ -645,7 +590,6 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 }
                 let at = g.ch[c].pos;
                 crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
-                log(g, gd, &format!("walks ({})", kind.as_str()));
             }
             true
         }
@@ -659,19 +603,14 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
             if arrived {
                 clear_stall(g, gd);
                 if v3::dist_xz(g.ch[c].pos, goal) > 1.2 {
-                    g.stats.needs.stuck += 1;
                     cancel_trip(g, gd, "no way through");
                     return true;
                 }
-                let name = trip!(g, gd).spot.name.clone();
-                let left_at = trip!(g, gd).left_at;
                 let loop_len = trip!(g, gd).spot.loop_.as_ref().map(|l| l.len());
                 if let Some(n) = loop_len {
                     if loop_i + 1.0 < n as f64 {
                         if loop_i < 0.0 {
                             trip!(g, gd).arrived_at = now;
-                            g.stats.needs.arrived += 1;
-                            log(g, gd, &format!("at {} after {} s — round the loop", name, js::to_fixed(now - left_at, 1)));
                         }
                         let next = {
                             let t = trip!(g, gd);
@@ -689,7 +628,6 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                     };
                     let back = route_point(g, gd, wp);
                     crate::guards::go_to(g, gd, back, Some(true));
-                    log(g, gd, &format!("loop walked in {} s — heading back", js::to_fixed(now - arrived_at, 1)));
                     return true;
                 }
                 let dwell = g.k.needs.dwell.get(kind).copied().unwrap_or(20.0);
@@ -699,11 +637,7 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                     t.arrived_at = now;
                     t.dwell_until = now + dwell;
                 }
-                g.stats.needs.arrived += 1;
-                let until = trip!(g, gd).dwell_until;
-                log(g, gd, &format!("at {} after {} s — {} s here", name, js::to_fixed(now - left_at, 1), js::to_fixed(until - now, 0)));
             } else if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
-                g.stats.needs.stuck += 1;
                 cancel_trip(g, gd, "stuck on the way");
                 return true;
             }
@@ -721,7 +655,6 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 let wp = trip!(g, gd).wp;
                 let back = route_point(g, gd, wp);
                 crate::guards::go_to(g, gd, back, Some(true));
-                log(g, gd, &format!("done — heading back to wp{}", wp));
             }
             true
         }
@@ -735,13 +668,11 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
             if arrived {
                 clear_stall(g, gd);
                 if v3::dist_xz(g.ch[c].pos, goal) > 1.5 {
-                    g.stats.needs.stuck += 1;
                     cancel_trip(g, gd, "no way back");
                     return true;
                 }
                 let (left_at, arrived_at, dwell_until) = {
                     let t = trip!(g, gd);
-                    t.back_at = now;
                     (t.left_at, t.arrived_at, t.dwell_until)
                 };
                 crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
@@ -754,7 +685,6 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                         n.level = 0.0;
                     }
                 }
-                g.stats.needs.completed += 1;
                 let away = m::round(now - left_at);
                 let back = crate::dialogue::needs_lines_table().back;
                 let line = pick_line(g, &back, gd, "back");
@@ -766,22 +696,8 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 d.set(key("away"), Some(ChronicleDataValue::Num(away)));
                 let at = g.ch[c].pos;
                 crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
-                log(
-                    g,
-                    gd,
-                    &format!(
-                        "back on wp{} — away {} s ({}: out {} s, there {} s, back {} s)",
-                        wp,
-                        away,
-                        kind.as_str(),
-                        js::to_fixed(arrived_at - left_at, 0),
-                        js::to_fixed(dwell_until - arrived_at, 0),
-                        js::to_fixed(now - dwell_until, 0)
-                    ),
-                );
                 return false;
             } else if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
-                g.stats.needs.stuck += 1;
                 cancel_trip(g, gd, "stuck coming back");
                 return true;
             }
@@ -813,7 +729,7 @@ mod tests {
     fn path_len_bits() {
         let from = [1.25, 0.0, -3.5];
         let path = [[4.75, 0.0, 2.125], [10.1, 1.0, 9.7], [-3.3, 0.0, 0.4]];
-        assert_eq!(path_len(from, &path).to_bits(), BITS);
+        assert_eq!(crate::places::walk_len(from, &path).to_bits(), BITS);
     }
     const BITS: u64 = 0x40401adb95a66fb4;
 }

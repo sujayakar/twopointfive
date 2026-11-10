@@ -1,5 +1,3 @@
-pub use ::game_types::stackline::types;
-pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
@@ -7,8 +5,8 @@ use crate::v3::{self, Quat, V3};
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
 fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) { return true; }
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
+    if g.dr[d].leaf.off { return true; }
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.stackline.ajar
 }
 
 /// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.
@@ -46,6 +44,5 @@ pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignme
     let f = crate::guards::frame_of(g, d);
     let face = if (post[0] - f.hx) * f.nx + (post[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 };
     if ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * face < 0.05 || !stack_line_sees(g, d, p, face) { return None; }
-    g.stats.stackline.paced += 1;
     Some(brisk)
 }

@@ -5,24 +5,12 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
-/// Pushes one row on the module's log, keeping the last 200.
-fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
-}
-
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.
 fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     if crate::condition::down(g, g.pl[p].ch)
-        || g.pl[p].holding.is_some()
-        || g.pl[p].takedown.is_some()
-        || g.pl[p].dragging.is_some()
-        || g.pl[p].picking.is_some()
-        || g.pl[p].wanding.is_some()
-        || g.pl[p].coding.is_some()
-        || g.pl[p].easing.is_some()
-        || g.pl[p].door_move.is_some()
-        || g.pl[p].kick.is_some()
+        || g.pl[p].hands_full()
         || g.pl[p].wall.is_some()
         || g.pl[p].sprinting
         || crate::handwork::sam_work(g).is_some()
@@ -35,7 +23,7 @@ fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     }
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     if g.pl[p].pending_throw.is_some()
-        || g.pl[p].throw_held
+        || g.sets[g.seat].hand.throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::character::anim_reloading(g, c)
         || crate::weapons::firearm_reloading(g, pistol)
@@ -89,7 +77,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     if crate::condition::down(g, g.pl[p].ch) {
         return None;
     }
-    if let Some(variant) = g.pl[p].holding.as_ref().map(|h| h.variant) {
+    if let Some(variant) = g.pl[p].holding().map(|h| h.variant) {
         if variant == crate::character::HoldVariant::Arm && !g.ch[c].anim.hold_gun_side && !g.ch[c].anim.no_knife {
             return Some(crate::character::KitItem::Knife);
         }
@@ -109,7 +97,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     }
     let k = crate::game::player_canister_sel(g, p);
     match k {
-        Some(k) if !g.pl[p].holstered && g.pl[p].dragging.is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
+        Some(k) if !g.pl[p].holstered && g.pl[p].dragging().is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
         _ => None,
     }
 }
@@ -171,7 +159,6 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
             let d = m::hyp2(at[0] - pos[0], at[2] - pos[2]);
             let k = kit_closeness(g, d);
             g.ch[c].anim.close_k = k;
-            g.stats.kitanim.close_frames += 1;
         } else if g.ch[c].anim.close_k < 0.0 {
             g.ch[c].anim.close_k = 0.0;
         }
@@ -187,14 +174,8 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     // something else has his arms, or the item is not his to carry about: no errand
     let carry = crate::bigkit::sam_big_carry(g, &crate::seats::here(g));
     let hard = crate::condition::down(g, g.pl[p].ch)
-        || g.pl[p].holding.is_some()
-        || g.pl[p].takedown.is_some()
-        || g.pl[p].dragging.is_some()
-        || (g.pl[p].kick.is_some() && !carry)
-        || g.pl[p].picking.is_some()
-        || g.pl[p].wanding.is_some()
-        || g.pl[p].coding.is_some()
-        || (crate::handwork::sam_work(g).is_some() && !crate::workstow::sam_stowing(g, &crate::seats::here(g)))
+        || g.pl[p].tow.is_some()
+        || ((g.pl[p].planted() || crate::handwork::sam_work(g).is_some()) && !carry && !crate::workstow::sam_stowing(g, &crate::seats::here(g)))
         || crate::character::anim_in_throw(g, c);
     let quiet = hard || (hands_off_c(g, c) && !carry);
     let was = g.pl[p].kit_was;
@@ -246,14 +227,12 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         if cur == Some(crate::character::KitItem::Pistol) || cur == Some(crate::character::KitItem::Rifle) {
             g.pl[p].equip_t = m::max(0.0, secs - g.k.kitanim.early);
         }
-        g.stats.kitanim.swaps += 1;
         if let Some(it) = was {
             *g.stats.kitanim.stows.get_or_insert_with(it, || 0) += 1;
         }
         if let Some(it) = cur {
             *g.stats.kitanim.draws.get_or_insert_with(it, || 0) += 1;
         }
-        note(g, crate::kitanim::NoteRow {  });
     }
     g.pl[p].kit_was = Some(cur);
 }
@@ -272,7 +251,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.sets[g.seat].orders.menu.is_some() || g.pl[p].holding().is_some() || g.pl[p].tow.is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }
@@ -307,7 +286,6 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
         g.pl[p].kit_owed = -1.0;
         if age >= 0.0 && age <= keep + 0.05 && !crate::input::input_lmb_hit(g, input) {
             g.tab.input[input].clicked = (js::to_i32(g.tab.input[input].clicked) | 1) as f64;
-            g.stats.kitanim.owed += 1;
         }
     }
 }
@@ -338,12 +316,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     let was = g.pl[p].kit_was;
     if h.is_none()
         && was == Some(Some(crate::character::KitItem::Knife))
-        && g.pl[p].holding.is_none()
-        && g.pl[p].takedown.is_none()
-        && g.pl[p].kick.is_none()
-        && g.pl[p].picking.is_none()
-        && g.pl[p].wanding.is_none()
-        && g.pl[p].coding.is_none()
+        && !g.pl[p].planted()
     {
         v.knife = true;
     }
@@ -353,7 +326,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     if let Some(hand) = h {
         v.pistol_in_hand = hand == Some(crate::character::KitItem::Pistol);
         if v.rifle.is_some() {
-            v.rifle = Some(if hand == Some(crate::character::KitItem::Rifle) { crate::kitanim::KitShowVRifle::Hand } else { crate::kitanim::KitShowVRifle::Slung });
+            v.rifle = Some(if hand == Some(crate::character::KitItem::Rifle) { crate::rig_props::RifleAt::Hand } else { crate::rig_props::RifleAt::Slung });
         }
         v.held = if hand == Some(crate::character::KitItem::Can) && !g.pl[p].sprinting { g.pl[p].kit_can } else { None };
         if hand == Some(crate::character::KitItem::Knife) {
@@ -371,7 +344,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
         });
     }
     let rs = crate::character::anim_reload_show(g, c);
-    let long = v.rifle == Some(crate::kitanim::KitShowVRifle::Hand);
+    let long = v.rifle == Some(crate::rig_props::RifleAt::Hand);
     if let Some(rs) = rs {
         let (rifle, pistol) = (g.pl[p].rifle, g.pl[p].pistol);
         if v.pistol_in_hand || (long && g.m.weapons.weapons.get(g.fa[rifle].def).unwrap().pellets.is_none()) {
@@ -384,7 +357,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
             };
             // (a gun with a model of its own carries its own thing in the hand; its magazine / belt box is off the gun when its feeding says so)
             let def = g.m.weapons.weapons.get(g.fa[if long { rifle } else { pistol }].def).unwrap().clone();
-            if crate::gunreload::feed_of(g, &def).is_some() {
+            if crate::gunreload::feed_of(&def).is_some() {
                 draw.mag_l = None;
                 draw.no_mag = Some(long && crate::gunreload::reload_show(g, c, def.id).map_or(false, |s| s.no_mag));
             }
@@ -402,8 +375,7 @@ pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.
 pub fn kit_reload(g: &mut crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
-    let c = g.pl[g.player].ch;
-    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() || !crate::character::anim_kit_hands_on(g, c) {
+    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() {
         return None;
     }
     // by what the weapon will do: a magazine with rounds in it is kept, an empty one dropped; the slide / handle is run iff nothing is chambered
@@ -460,9 +432,8 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
 }
 
 /// A reload began on a kitReload plan: counted.
-pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
+pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
-    note(g, crate::kitanim::NoteRow {  });
 }
 
 #[cfg(test)]

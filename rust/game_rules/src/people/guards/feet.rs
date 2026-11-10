@@ -49,11 +49,11 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
 fn go_to_plan(g: &mut Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.ch[g.gd[gd].ch].pos;
     let mut p = match pen {
-        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
+        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), None),
     };
     if let (Some(plain), Some(q)) = (p.as_ref(), round) {
-        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| crate::orders::prop_penalty_at(g, q, ix, iz)));
+        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &Game, ix: f64, iz: f64| crate::orders::prop_penalty_at(g, q, ix, iz)));
         p = Some(crate::orders::prop_way(g, from, plain, r.as_deref()));
     }
     if p.is_some() { return p; }
@@ -83,8 +83,6 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     // --- feet ---
     let mut move_ = 0.0;
     let far = dist > STANDOFF_MAX_M;
-    let before0 = g.ch[c].pos[0];
-    let before2 = g.ch[c].pos[2];
     g.tab.guards_standoff[s].replan_t -= dt;
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
     let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
@@ -164,7 +162,6 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         g.gd[gd].stall_ref = None;
     }
     let pos = g.ch[c].pos;
-    g.tab.guards_standoff[s].orbit_m += m::hyp2(pos[0] - before0, pos[2] - before2);
     if !jogging {
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(look_at[0] - pos[0], look_at[2] - pos[2]), 4.0 * dt);
     }
@@ -187,9 +184,8 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
         g.arms[g.gd[gd].ch].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
-        let o = crate::aim::guard_round(g, gd, mods.spread, None);
+        let o = crate::aim::guard_round(g, gd, mods.spread);
         crate::combat::fire_weapon(g, c, aim, Some(&o));
-        g.tab.guards_standoff[s].shots += 1.0;
         let w = g.gd[gd].weapon;
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
     }
@@ -206,19 +202,23 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     crate::guards::StandoffAlert { move_, aim: look_at, crouch: gh.map_or(0.0, |h| h.crouch) }
 }
 
+/// why a standoff is over
+#[derive(Clone, Copy, PartialEq)]
+enum Off { Posted, NotAlert, PairDown, HolderDown, Freed, Lost }
+
 /// Every frame for a man carrying a standoff record: is it still one? The pair when it stands.
 pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
     let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
-        Some("off")
+        Some(Off::Posted)
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
-        Some("state")
+        Some(Off::NotAlert)
     } else if p.map_or(true, |q| q.held != pair) {
-        Some(if crate::condition::down(g, g.gd[pair].ch) { "dead" } else if crate::condition::down(g, g.pl[g.player].ch) { "samDown" } else { "free" })
+        Some(if crate::condition::down(g, g.gd[pair].ch) { Off::PairDown } else if crate::condition::down(g, g.pl[g.player].ch) { Off::HolderDown } else { Off::Freed })
     } else if g.time - g.tab.guards_standoff[s].seen_t > STANDOFF_LOSE_SECS && !crate::gunhold::standoff_fix_kept(g, gd) {
-        Some("lost")
+        Some(Off::Lost)
     } else {
         None
     };
@@ -231,7 +231,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     reset_chase(g, gd);
     let seen_t = g.tab.guards_standoff[s].seen_t;
     let watched = g.time - seen_t < 0.6;
-    if why == "dead" && watched {
+    if why == Off::PairDown && watched {
         let b = pair;
         if crate::condition::down(g, g.gd[b].ch) {
             if g.guards.contains(&b) {
@@ -254,10 +254,10 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
             let cd = g.arms[g.gd[gd].ch].fire_cd;
             m::min(cd, 0.15 + crate::dice::draw_of(g, "guards::standoff_upkeep#2", gd) * 0.3)
         };
-    } else if why == "free" && watched {
+    } else if why == Off::Freed && watched {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Freed, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
         g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
-    } else if why == "lost" {
+    } else if why == Off::Lost {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Lost, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, seen_t);
     }
@@ -274,7 +274,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
     let seat = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
-    // (a game of one seat, or a view handed in: the seat is already the one on Game, and there is nothing to swap)
+    // (a game of one seat, or a view handed in: the pass is already about that seat)
     let r = if seat == g.seat {
         let pc = g.pl[g.player].ch;
         can_see_char(g, gd, pc)
@@ -390,13 +390,13 @@ fn dist_term_of(k: &crate::knobs::GuardEyeK, dist: f64) -> f64 {
 }
 
 /// What the team's own eyes pass (FOG.mates on: what the fog's lines pass).
-pub(in crate::people) fn team_through(g: &crate::game::Game) -> f64 {
-    crate::fogofwar::fog_through(g)
+pub(in crate::people) fn team_through() -> f64 {
+    crate::fogofwar::fog_through()
 }
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
 fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.gd[gd].team == crate::teams::Team::Operative { team_through(g) } else { crate::scene_boxes::box_flag().glass }
+    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag().glass }
 }
 
 /// That man's own line to a point, asked bare.
@@ -406,7 +406,7 @@ pub fn eye_blocked(g: &mut crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool
 }
 
 /// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.
-pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
+pub fn eye_contact(g: &crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let is_player = crate::character::is_player(g, pc);
     let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
     let tgt = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.1, 0.0]) };
@@ -485,7 +485,7 @@ fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: crate::
 }
 
 /// Put him on the free cell centre `to` (or the nearest free one) here and now: the last resort, counted, never spoken.
-fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &str) {
+fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let p = match to {
@@ -503,7 +503,6 @@ fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &st
     g.gd[gd].last_pos = v3::copy(g.ch[c].pos);
     g.gd[gd].stall_ref = None;
     g.gd[gd].stuck_t = 0.0;
-    g.m.guards.unstick.snaps += 1.0;
     g.m.guards.unstick.last_snap_t = g.time;
     g.m.guards.unstick.last_snap_who = Some(gd);
 }
@@ -534,7 +533,7 @@ pub(super) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::gu
     let to = match free_cell_near(g, pos, UNSTICK_REACH_M, crate::guards::FreeCellNearTest::Walk) {
         Some(to) => to,
         None => {
-            unstick_snap(g, gd, None, "stranded, no free cell within reach he can walk to");
+            unstick_snap(g, gd, None);
             let pos = g.ch[c].pos;
             if stranded_at(g, pos[0], pos[2]) {
                 let t = g.time + 2.0;
@@ -545,7 +544,6 @@ pub(super) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::gu
         }
     };
     g.m.guards.unstick_legs.set(gd, crate::guards::UnstickLeg { to, best: v3::dist_xz(pos, to), stall_t: 0.0 });
-    g.m.guards.unstick.legs += 1.0;
     crate::guards::UnstickBegin::Leg
 }
 
@@ -567,8 +565,7 @@ fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guard
         if let Some(row) = g.m.guards.unstick_legs.get_mut(gd) { row.stall_t = stall_t; }
         if stall_t > UNSTICK_STALL_SECS {
             if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) {
-                let why = format!("no nearer than {} m in {} s of stepping", js::to_fixed(u.best, 2), UNSTICK_STALL_SECS);
-                unstick_snap(g, gd, Some(u.to), &why);
+                unstick_snap(g, gd, Some(u.to));
             }
             return crate::guards::UnstickStep::Done;
         }
@@ -633,7 +630,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     }
     let way = p.unwrap_or_default();
     let start = g.ch[g.gd[gd].ch].pos;
-    let mut is_free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
+    let mut is_free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let threaded = crate::doors::doors_thread_path(g, &way, start, Some(&mut is_free));
     lay_path(g, gd, threaded);
     g.gd[gd].path_i = 0;

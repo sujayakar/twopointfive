@@ -3,6 +3,10 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// the word's own row as the squad's size has it: none, a squad of one or two (it's on no list and waits stacked), a bigger one
+#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
+pub enum GoRow { None, Small, Big }
+
 /// the step onto the diagonals, kept until the first can's burst has run dry
 #[derive(Clone, Debug, ToBytes)]
 pub enum ThresholdOut {
@@ -27,14 +31,13 @@ pub struct DoorTools {
     pub set: Vec<ChargeId>,
     pub linked: Vec<DoorId>,
     pub lights: Option<bool>,
-    #[is(crate::doortools::DoorToolsStats { orders: 0.0, opened: 0.0, kicks: 0.0, shot: 0.0, picks: 0.0, no_boot: 0.0, hand_kept: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, own_flashed: 0.0, frags: 0.0, blown: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, words: 0.0, stepped_back: 0.0, pods_moved: 0.0, sectors: 0.0, sent_on: 0.0, sent_pair: 0.0, not_sent: 0.0, flowed: 0.0, closed_up: 0.0, flow_late: 0.0 })] pub stats: crate::doortools::DoorToolsStats,
+    #[is(crate::doortools::DoorToolsStats { orders: 0.0, kicks: 0.0, picks: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, frags: 0.0, blown: 0.0, backblast: 0.0 })] pub stats: crate::doortools::DoorToolsStats,
     pub roster: Vec<GuardId>,
     pub seen: Option<crate::floorseen::FloorSeen>,
-    #[is(crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 })] pub led: crate::doortools::DoorToolsLed,
-    pub go_key: Option<Option<String>>,
+    pub go_row: Option<GoRow>,
     pub words: Vec<WordId>,
     #[is(-1000000000.0)] pub word_key_t: f64,
-    pub thr_key: Option<String>,
+    pub thr_row: bool,
     #[is(-1.0)] pub thr_sig: f64,
     pub sam_of: Option<PlayerId>,
     pub sam_spent: f64,
@@ -67,9 +70,9 @@ pub struct DoorToolsDoneItemLane {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemLaneBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub watch: Option<V3>,
     pub stance: Option<crate::character::Stance>,
     pub upper: Option<crate::character::UpperMode>,
@@ -95,10 +98,10 @@ pub struct DoorToolsDoneItemLaneBackTries {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemLaneBackTriesOn {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -200,7 +203,6 @@ pub struct DoorToolsDoneItemSliceValue {
     pub i: f64,
     pub j: f64,
     pub t: f64,
-    pub ahead: Option<GuardId>,
     pub pie: Option<crate::doortools::DoorToolsDoneItemSliceValuePie>,
 }
 
@@ -247,6 +249,7 @@ pub struct DoorToolsDoneItemPass {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemBeatsItem {
     pub t: f64,
+    pub is: crate::doortools::Beat,
     pub what: String,
 }
 
@@ -286,8 +289,6 @@ pub struct Threshold {
     pub out: Option<crate::doortools::ThresholdOut>,
     pub wide: Option<bool>,
     pub early: Option<bool>,
-    pub asked: Option<bool>,
-    pub word_step: Option<bool>,
     pub shut_t: Option<f64>,
 }
 
@@ -333,38 +334,14 @@ pub struct ThreatWatch {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsStats {
     pub orders: f64,
-    pub opened: f64,
     pub kicks: f64,
-    pub shot: f64,
     pub picks: f64,
-    pub no_boot: f64,
-    pub hand_kept: f64,
     pub tested: f64,
     pub halted: f64,
     pub bangs: f64,
-    pub own_flashed: f64,
     pub frags: f64,
     pub blown: f64,
-    pub knocked: f64,
-    pub stunned: f64,
     pub backblast: f64,
-    pub entries: f64,
-    pub words: f64,
-    pub stepped_back: f64,
-    pub pods_moved: f64,
-    pub sectors: f64,
-    pub sent_on: f64,
-    pub sent_pair: f64,
-    pub not_sent: f64,
-    pub flowed: f64,
-    pub closed_up: f64,
-    pub flow_late: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct DoorToolsLed {
-    pub entries: f64,
-    pub by_seen: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -433,7 +410,6 @@ pub struct DoorOp {
     pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
     pub pass: Option<crate::doortools::DoorToolsDoneItemPass>,
     pub beats: Vec<crate::doortools::DoorToolsDoneItemBeatsItem>,
-    pub on_word: bool,
     pub word: Option<WordId>,
     pub hold: f64,
     pub ready_t: f64,
@@ -448,7 +424,7 @@ pub struct DoorOp {
     pub other: Option<JsMap<DoorId, crate::doortools::DoorToolsDoneItemOtherValue>>,
     pub threat: Option<crate::doortools::DoorToolsDoneItemThreat>,
     /// INVENTED by a review: see the proposals
-    pub ended: Option<String>,
+    pub ended: Option<crate::doortools::Ended>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -456,7 +432,6 @@ pub struct KnownThreat {
     pub at: V3,
     pub t: f64,
     pub by: Option<GuardId>,
-    pub how: crate::doortools::KnownThreatHow,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -519,30 +494,10 @@ pub struct DoortoolsModSKYValue {
     pub open: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsTakeWhat {
-    Frag,
-    Bang,
-    Charge,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsRefundWhat {
-    Frag,
-    Bang,
-    Charge,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsStackable {
     Text(String),
     Bool(bool),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsBigWord {
-    Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -569,9 +524,9 @@ pub enum DoorToolsEntryVerb {
 #[derive(Clone, Debug, Default)]
 pub struct DoorToolsAssignA {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub order: Option<String>,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
@@ -623,13 +578,6 @@ pub enum DoorToolsIssue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsOrderKind {
-    BangClear,
-    OpenClear,
-    Threshold,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsOrder {
     Text(String),
@@ -654,12 +602,6 @@ pub enum DoorToolsCanThreshold {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThresholdThenWhat {
-    Bang,
-    Step,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsThresholdThenT {
     Floor(crate::orders::OrderTargetFloor),
@@ -672,24 +614,6 @@ pub enum DoorToolsThresholdThenT {
 pub enum DoorToolsThresholdThen {
     Text(String),
     Arm1(()),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThenOnWordWhat {
-    Bang,
-    Step,
-}
-
-#[derive(Clone, Debug)]
-pub enum DoorToolsThenOnWord {
-    Text(String),
-    Arm1(()),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsCanThresholdThenWhat {
-    Bang,
-    Step,
 }
 
 #[derive(Clone, Debug)]
@@ -806,14 +730,6 @@ pub enum DoorToolsAway {
     No,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorToolsBlow {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorToolsBlowRaw {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct DoorToolsPieNextS {
     pub pts: Vec<V3>,
@@ -863,8 +779,6 @@ pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc:
 
 pub const SAM_SHIFT: f64 = 0.35;
 
-pub const BIG_KEY: &str = "KeyH";
-
 pub const THR_PAGE: &str = "thr";
 
 pub const PIE_WAIT: f64 = 2.5;
@@ -876,3 +790,43 @@ pub const OPEN_RAD: f64 = 0.6;
 pub fn n4() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] }
 
 pub const WORD_LEAD: f64 = 0.15;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ThresholdThen {
+    Bang,
+    Step,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+pub enum DoorToolsCan {
+    Frag,
+    Bang,
+    Charge,
+}
+
+/// how an order at a door was over
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
+pub enum Ended {
+    #[word("steel and locked")] SteelAndLocked,
+    #[word("locked · silent: no boot")] SilentNoBoot,
+    #[word("nobody left on it")] NobodyLeft,
+    #[word("never made the lock")] NoLock,
+    #[word("opens toward us · no boot")] OpensTowardUs,
+    #[word("found shut")] FoundShut,
+    #[word("re-ordered")] ReOrdered,
+    #[word("no floor inside")] NoFloorInside,
+    #[word("never made the stack")] NoStack,
+    #[word("never made the kick spot")] NoKickSpot,
+    #[word("the door held the boot")] HeldTheBoot,
+    #[word("no bang to throw")] NoBang,
+    #[word("the frag is gone")] FragGone,
+    #[word("in")] In,
+    #[word("the charge is gone")] ChargeGone,
+    #[word("the door opened")] DoorOpened,
+    #[word("never made the door")] NoDoor,
+    #[word("no charges")] NoCharges,
+}
+
+/// the beats of an order at a door that a rule asks for; the rest are words for its timeline
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum Beat { #[default] Other, Stacked, Kick, Shove, OpenAlready, Toss, Bang, Go, Word }

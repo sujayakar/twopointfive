@@ -195,7 +195,7 @@ pub(super) fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId
     if c >= 0 {
         return c == 1;
     }
-    let mut every = |_: &mut Game, _: f64| true;
+    let mut every = |_: &Game, _: f64| true;
     let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None);
     let c = if crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at { 1 } else { 0 };
     g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.as_mut().unwrap()[i] = c;
@@ -430,12 +430,10 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
             let mut first = vec![f];
             first.extend(jamb.iter().copied().filter(|&m| m != f));
             g.tab.doortools_door_op[op].thr.as_mut().unwrap().jamb = first;
-            g.door_tools.led.by_seen += 1.0;
             let what = format!("first:{} · has seen most of the room", g.gd[f].callsign);
             door_tools_beat(g, op, &what);
         }
     }
-    g.door_tools.led.entries += 1.0;
     let o = &g.tab.doortools_door_op[op];
     let (men, lead) = (o.men.clone(), o.lead);
     let thr = o.thr.as_ref().unwrap();
@@ -443,7 +441,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let mut rest: Vec<GuardId> = men.iter().copied().filter(|m| !jamb.contains(m)).collect();
@@ -518,15 +516,6 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
         out.push(format!("charge set · {}{}{}", name, tail, close));
     }
     let ops = seat.door_tools.ops.clone();
-    for &op in &ops {
-        let o = &g.tab.doortools_door_op[op];
-        if o.on_word && o.phase == Phase::Ready {
-            let (men, door) = (o.men.clone(), o.door);
-            let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
-            let name = crate::orders::door_words(g, door);
-            out.push(format!("{} ready on your word · {}", who, name));
-        }
-    }
     for &op in &ops {
         let o = &g.tab.doortools_door_op[op];
         if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr {

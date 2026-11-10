@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
+pub mod boxworld;
 pub mod bytes;
 pub mod ids;
 pub mod js;
@@ -19,9 +20,6 @@ pub const M4_IDENTITY: v3::m4::Mat4 = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0
 /// a type a hand decision has yet to name (see the STOP list)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, ToBytes)]
 pub struct Opaque;
-/// a function stored in a field, until a hand decision makes it an enum
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
-pub struct FnField;
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
@@ -149,7 +147,6 @@ pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
 pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
-pub mod math_side { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }
 pub mod moths { pub mod types; pub use types::*; }
@@ -157,7 +154,6 @@ pub mod needs { pub mod types; pub use types::*; }
 pub mod netquiet { pub mod types; pub use types::*; }
 pub mod netquietfeed { pub mod types; pub use types::*; }
 pub mod nightbreach { pub mod types; pub use types::*; }
-pub mod noshove { pub mod types; pub use types::*; }
 pub mod nvg { pub mod types; pub use types::*; }
 pub mod opening { pub mod types; pub use types::*; }
 pub mod orders { pub mod types; pub use types::*; }
@@ -169,7 +165,6 @@ pub mod pairorders { pub mod types; pub use types::*; }
 pub mod pairup { pub mod types; pub use types::*; }
 pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
-pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
@@ -205,7 +200,6 @@ pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
 pub mod scene_air_grid { pub mod types; pub use types::*; }
-pub mod scene_box_mirror { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
@@ -240,19 +234,13 @@ pub mod shotgun { pub mod types; pub use types::*; }
 pub mod showwhy { pub mod types; pub use types::*; }
 pub mod shutdoor { pub mod types; pub use types::*; }
 pub mod silent { pub mod types; pub use types::*; }
-pub mod sim_doorshome { pub mod types; pub use types::*; }
-pub mod sim_fallshome { pub mod types; pub use types::*; }
-pub mod sim_itemshome { pub mod types; pub use types::*; }
+pub mod falls { pub mod types; pub use types::*; }
 pub mod fixtures { pub mod types; pub use types::*; }
-pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
-pub mod sim_slabshome { pub mod types; pub use types::*; }
-pub mod sim_state { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
-pub mod snow_bog { pub mod types; pub use types::*; }
 pub mod sparks { pub mod types; pub use types::*; }
 pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }
@@ -262,7 +250,6 @@ pub mod squadcast { pub mod types; pub use types::*; }
 pub mod squadnet { pub mod types; pub use types::*; }
 pub mod squadsmoke { pub mod types; pub use types::*; }
 pub mod squadthrow { pub mod types; pub use types::*; }
-pub mod stackline { pub mod types; pub use types::*; }
 pub mod stackroom { pub mod types; pub use types::*; }
 pub mod stalk { pub mod types; pub use types::*; }
 pub mod startle { pub mod types; pub use types::*; }

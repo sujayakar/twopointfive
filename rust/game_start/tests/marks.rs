@@ -121,7 +121,7 @@ fn a_mark_on_a_leaf_rides_it() {
     let centre = [f32::from_bits(g[0]), f32::from_bits(g[1]), f32::from_bits(g[2])];
     assert_eq!(centre, [c[0] as f32, c[1] as f32, c[2] as f32], "box {on} of the list is not the leaf");
     let was = [f(d.marks.words[REC0].w), f(d.marks.words[REC0 + 2].w)];
-    p.g.tab.boxes[leaf].c[0] += 1.0;
+    p.g.tab.boxes.edit(leaf).c[0] += 1.0;
     let d = drawn(&p);
     assert!((f(d.marks.words[REC0].w) - was[0] - 1.0).abs() < 1e-5 && (f(d.marks.words[REC0 + 2].w) - was[1]).abs() < 1e-5, "the mark stayed where the leaf was");
     p.g.engine.world.dynamics.retain(|b| *b != leaf.into());
@@ -190,8 +190,8 @@ fn a_charge_set(seed: u32) -> (Play, game::ids::WallChargeId) {
     p.sam_put([14.6, 15.2]);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, [12.06, 0.0, 13.78], None) { panic!("the wall charge was refused: {why}"); }
-    assert!(p.until(60.0, |p| !p.g.wall_charge.set.is_empty()).is_some(), "no charge is on the wall");
-    let c = p.g.wall_charge.set[0];
+    assert!(p.until(60.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).is_some(), "no charge is on the wall");
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     p.sam_put([20.0, 15.2]);
     p.frame();
     (p, c)

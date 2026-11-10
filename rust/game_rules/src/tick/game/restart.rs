@@ -38,11 +38,11 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
             };
             let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
             crate::particle_fx::kick_dust_fx(g, e.door, from);
-            if crate::doors::door_lock_broken(g, e.door) {
+            if g.dr[e.door].leaf.lock_broken {
                 let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
                 crate::particle_fx::lock_splinter_fx(g, e.door, from);
             }
-            crate::destruction::destruction_thud(g, e.pos, Some(1.2), Some(e.who));
+            crate::destruction::destruction_thud(g, e.pos, Some(1.2));
         }
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
@@ -79,13 +79,13 @@ pub(super) fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
         i -= 1;
         let (p, rx, rz) = { let r = &g.rolls[i]; (r.p, r.x, r.z) };
         let here = g.props.props.contains(&p);
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut v = if here && dt > 0.0 { m::hyp2(px - rx, pz - rz) / dt } else { 0.0 };
         if !v.is_finite() { v = 0.0; }
         g.rolls[i].x = px;
         g.rolls[i].z = pz;
         g.rolls[i].k = m::min(1.0, v / voice.full_v);
-        let rolling = crate::props::prop_rolling(g, p);
+        let rolling = g.tab.props_prop[p].rolling;
         if here && rolling && v > voice.min_v {
             g.rolls[i].move_t = g.time;
             if !js::truthy(g.rolls[i].voice) {
@@ -113,7 +113,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
         audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
-        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
+        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed));
     } else if !e.rolling {
         audio_play_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
     }
@@ -154,7 +154,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     let mut rnd = rnd;
     let me = g.player;
     if crate::condition::down(g, g.pl[me].ch) || crate::condition::down(g, g.gd[gd].ch) || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
-    let held = match &g.pl[me].holding { Some(h) => Some(h.g), None => None };
+    let held = match g.pl[me].holding() { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf
         let (a, b) = (g.ch[g.pl[me].ch].pos, g.ch[g.gd[gd].ch].pos);
@@ -179,11 +179,8 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
 }
 
 /// Let go of the man in Sam's arm at once, no shove.
-pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldWhy) {
-    let why = match why {
-        crate::game::GameFreeHeldWhy::Shot => crate::player::FreeHeldWhy::Shot,
-        crate::game::GameFreeHeldWhy::Cancel => crate::player::FreeHeldWhy::Cancel,
-    };
+pub fn game_free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
+    let why = why;
     crate::player::free_held(g, why);
 }
 
@@ -218,7 +215,7 @@ pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     if hit > 1.4 {
         let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
         crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
-        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15), None);
+        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }
 }
 
@@ -242,8 +239,8 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     for s in seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].pending_throw = None;
-        g.pl[pl].throw_held = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[s].hand.throw_held = false;
+        g.sets[s].hand.throw_preview = None;
     }
 }
 
@@ -275,24 +272,16 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
 }
 
 ///
-pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
-    let cause = match cause {
-        crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,
-        crate::game::GameSetBlackoutCause::Ocp => crate::lighting::SetBlackoutCause::Ocp,
-        crate::game::GameSetBlackoutCause::Debug => crate::lighting::SetBlackoutCause::Debug,
-        crate::game::GameSetBlackoutCause::Hand => crate::lighting::SetBlackoutCause::Hand,
-    };
+pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::lighting::SetBlackoutCause) {
+    let cause = cause;
     crate::lighting::set_blackout(g, seconds, cause)
 }
 
 pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
 
 /// `cause` defaults to 'shot' here, as the TypeScript's parameter does.
-pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) {
-    let cause = match cause.unwrap_or(crate::game::GameLightEventCause::Shot) {
-        crate::game::GameLightEventCause::Shot => crate::lighting::LightEventCause::Shot,
-        crate::game::GameLightEventCause::Ocp => crate::lighting::LightEventCause::Ocp,
-    };
+pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::lighting::LightEventCause>, sw_at: Option<V3>) {
+    let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     crate::lighting::light_event(g, t, Some(cause), sw_at)
 }
 
@@ -317,8 +306,8 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             }
         }
     }
-    let into = g.cmd_buf.take();
-    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
+    g.cmd_buf.take();
+    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
         game_step(g, dt, &c);
@@ -330,11 +319,11 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         }
         game_step_seats(g, dt, &cmds);
     }
-    game_host_after(g, input, cam, canvas);
+    game_host_after(g, input, cam);
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.
-fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId) {
     let me = game_host_seat(g);
     let me_cam = g.tab.cmd_seat[me].cam;
     let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
@@ -342,8 +331,8 @@ fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, can
     g.tab.camera[cam].kick = kick;
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
-    crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
+    crate::seats::with_seat(g, me, &mut |g| g.sets[g.seat].view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input));
 }
 
 /// The tick for a game of one seat.
@@ -357,9 +346,10 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.
 pub(in crate::tick) fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
-    let mut col_own = crate::scene_collision::AsideOwn::default();
-    crate::scene_collision::aside(g, &mut col_own, fn_)
+    let asked = core::mem::replace(&mut g.col.sound.asking, true);   // (no sound's route is kept)
+    let r = fn_(g);
+    g.col.sound.asking = asked;
+    r
 }
 
 /// A lens of the host's to put a record's view on while it asks aside: scratch, in no snapshot.

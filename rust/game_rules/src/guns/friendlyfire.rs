@@ -11,8 +11,7 @@ pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     if !(!crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
     }
-    let team = g.gd[gd].team;
-    !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(gd).theirs()
 }
 
 /// Is this shooter's side Sam's: an operative, never the night staff or a defender.
@@ -21,8 +20,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     if g.gd[sg].civ.is_some() {
         return false;
     }
-    let team = g.gd[sg].team;
-    !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(sg).theirs()
 }
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
@@ -171,27 +169,24 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
             if m::hyp3(from[0] + dx * t - p[0], from[1] + dy * t - p[1], from[2] + dz * t - p[2]) > near_m {
                 continue;
             }
-            if crate::suppression::watch_your_fire(g, o) {
-                g.stats.friendlyfire.said += 1;
-            }
+            let _ = crate::suppression::watch_your_fire(g, o);
             break;
         }
     }
 }
 
-/// The room fight's gate held a round for a friend in the cone that its own lane did not hold.
-pub fn ff_held(g: &mut crate::game::Game) {
-    g.stats.friendlyfire.held += 1;
+/// Is this body on the players' side: a player's man, or an AI man of a side that is none of their enemies, and no civilian.
+pub(super) fn on_our_side(g: &crate::game::Game, c: CharId) -> bool {
+    match crate::character::guard_of(g, c) {
+        None => true,
+        Some(gd) => g.team(gd).ours(),
+    }
 }
 
-/// A round of Sam's side has gone into a man of Sam's side: counted.
-pub(super) fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, into_sam: bool) {
+/// A round of the players' side has gone into a man of it: counted.
+pub(super) fn ff_note(g: &mut crate::game::Game, shooter: CharId, into: Option<CharId>) {
+    let into_player = into.map_or(false, |c| crate::character::is_player(g, c));
+    let by_player = crate::character::is_player(g, shooter);
     let s = &mut g.stats.friendlyfire;
-    if is_player {
-        s.sam_on_mate += 1;
-    } else if into_sam {
-        s.mate_on_sam += 1;
-    } else if sg.is_some() {
-        s.mate_on_mate += 1;
-    }
+    if by_player { s.sam_on_mate += 1; }
 }

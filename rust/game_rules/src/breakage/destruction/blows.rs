@@ -8,7 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
 
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ------------------------------------------------------------------ small helpers of this part
 
@@ -33,8 +32,7 @@ fn lane(name: &str) -> LaneMark { *lane_mark().get(String::from(name)).unwrap() 
 fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::BlastEvent) {
     match l {
         BlastListener::Glass => {
-            let n = crate::glassbreak::glass_break_blast(g, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.radius), power: Some(ev.power), who: Some(ev.who) }));
-            ev.res.panes += n;
+            crate::glassbreak::glass_break_blast(g, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.radius), power: Some(ev.power), who: Some(ev.who) }));
         }
         BlastListener::Bars => crate::winbars::bars_blast(g, *ev),
         BlastListener::Snow => { crate::snow_blast::snow_blast_at(g, &ev.at, ev.radius); }
@@ -77,7 +75,6 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
     if hit.index.is_none() && hit.prop.is_none() { return; }
-    g.stats.destruction.destr_rounds += 1;
     let amount = if loud_now(g) { g.k.chaos.loud.heat_k } else { 1.0 };
     let e = destruction_stoke(g, hit_p, amount, chaos);
     g.destr.any_heat = true;
@@ -97,18 +94,18 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
             _ => crate::scene_materials::Surf::Foliage,
         };
         box_ = hit.box_.or_else(|| g.tab.props_prop[prop].boxes.first().copied());
-        if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
+        if let Some(b) = box_ { albedo = g.tab.boxes[b].albedo; }
     } else if let Some(index) = hit.index {
         if index >= 1e6 {
             surf = crate::scene_materials::Surf::Wood;
             box_ = box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]);
-            if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
+            if let Some(b) = box_ { albedo = g.tab.boxes[b].albedo; }
         } else {
             bi = index;
             box_ = box_at(g.col.boxes.len(), bi).map(|k| g.col.boxes[k]);
             if let Some(b) = box_ {
-                albedo = seam_box(g, b).albedo;
-                let word = seam_box(g, b).does;
+                albedo = g.tab.boxes[b].albedo;
+                let word = g.tab.boxes[b].does;
                 surf = if crate::scene_materials::does_of(g, word).wall == Some(crate::scene_materials::DoesWall::Screen) { crate::scene_materials::Surf::Fabric } else { crate::particle_fx::surf_at(g, b) };
             }
         }
@@ -162,11 +159,10 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
         destruction_clutter_near(g, hit_p, dir, chaos, who);
         if let Some(prop) = hit.prop {
             if g.tab.props_prop[prop].def.kind == crate::scene_level_data::PropKindName::Chair {
-                let w = crate::props::prop_w(g, prop);
+                let w = g.tab.props_prop[prop].w;
                 let sign = if destruction_hash(g) < 0.5 { -1.0 } else { 1.0 };
-                crate::props::prop_set_w(g, prop, w + sign * (4.0 + 5.0 * chaos));
+                g.tab.props_prop[prop].w = w + sign * (4.0 + 5.0 * chaos);
                 crate::props::prop_wake(g, prop);
-                g.stats.destruction.destr_chair_spins += 1;
             }
         }
     }
@@ -184,13 +180,13 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
 pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
     let opts = opts.unwrap_or_default();
     let who = opts.who;
-    crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts)))
+    crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts))
 }
 
 /// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.
 fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
     let chaos = chaos_of(g);
-    let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, panes: 0.0, opened: 0.0, serial: g.destr.walls.serial };
+    let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, opened: 0.0 };
     if chaos <= 0.0 {
         if opts.chaos != Some(false) { destruction_bang(g, at, opts.who, None, None); }
         return res;
@@ -217,7 +213,6 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
         destruction_pall_burst(g, at, Some(radius / 2.5));
         crate::floormess::mess_burst(g, at, Some(radius / 2.5));
     }
-    res.serial = g.destr.walls.serial;
     res
 }
 
@@ -304,7 +299,6 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
     if !js::truthy(who) { who = crate::consts::NOBODY_ID; }
-    g.stats.destruction.destr_bangs += 1;
     let loud = loud_now(g);
     let pw = if loud { m::max(0.25, m::min(4.0, power)) } else { 1.0 };
     let reach = m::sqrt(pw);
@@ -327,7 +321,7 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     }
     let eye: V3 = [at[0], m::max(at[1] + 0.3, 0.95), at[2]];
     for d in &wide {
-        let c = seam_box(g, d.box_).c;
+        let c = g.tab.boxes[d.box_].c;
         let dd = v3::dist(c, at);
         let over = top_of(g, d.box_);
         if d.kind == DKind::Paper && dd < 2.6 * reach && !crate::scene_collision::solid_blocked(g, eye, over, None) {
@@ -383,12 +377,10 @@ fn destruction_bang_impulse(g: &mut crate::game::Game, at: V3, eye: V3, chaos: f
     if !impulses_on(g) { return; }
     let b = g.k.chaos.imp.bang;
     let strength = b.strength * imp_k(g, chaos);
-    g.stats.destruction.destr_imp_bang += 1;
     crate::render_particles::particles_impulse(g, at, b.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(b.up), occlude: Some(true), eye: Some(eye), ..Default::default() }));
     let imp = crate::sheet_model::ImpulseLike { pos: at, radius: b.radius, strength, up: b.up, bias: [0.0, 0.0, 0.0] };
     let mut blocked = |g: &mut Game, p: V3| crate::scene_collision::solid_blocked(g, eye, [p[0], p[1] + 0.05, p[2]], None);
-    let kicked = crate::debris::debris_impulse(g, imp, Some(&mut blocked), Some(who));
-    g.stats.destruction.destr_debris_kicked += kicked as i32;
+    crate::debris::debris_impulse(g, imp, Some(&mut blocked), Some(who));
 }
 
 /// A round stopped in a face of normal `n`: what lies beside the hole jumps and scoots along the round's travel.
@@ -399,26 +391,22 @@ fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: 
     let dn = v3::dot(dir, n);
     let bias: V3 = [(dir[0] - n[0] * dn) * i.bias_k, (dir[1] - n[1] * dn) * i.bias_k, (dir[2] - n[2] * dn) * i.bias_k];
     let at = v3::mad(hit_p, n, 0.03);
-    g.stats.destruction.destr_imp_impact += 1;
     crate::render_particles::particles_impulse(g, at, i.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(i.up), bias: Some(bias), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: i.debris_m, strength, up: i.up, bias };
-        let kicked = crate::debris::debris_impulse(g, imp, None, Some(who));
-        g.stats.destruction.destr_debris_kicked += kicked as i32;
+        crate::debris::debris_impulse(g, imp, None, Some(who));
     }
 }
 
 /// A thump on the floor at `pos`: the litter within a stride twitches.
-pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, who: Option<f64>) {
+pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>) {
     let scale = scale.unwrap_or(1.0);
     if !impulses_on(g) { return; }
     let t = g.k.chaos.imp.thud;
     if g.destr.thuds_this_frame >= t.per_frame {
-        g.stats.destruction.destr_imp_thud_dropped += 1;
         return;
     }
     g.destr.thuds_this_frame += 1.0;
-    g.stats.destruction.destr_imp_thud += 1;
     let chaos = chaos_of(g);
     let strength = t.strength * m::max(0.5, m::min(1.5, scale)) * imp_k(g, chaos);
     let at: V3 = [pos[0], m::min(pos[1], 0.3) + 0.03, pos[2]];
@@ -426,8 +414,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
     if !g.destr.debris.list.is_empty() {
         // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on, as in the TypeScript)
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: t.radius * 0.5, strength, up: t.up, bias: [0.0, 0.0, 0.0] };
-        let kicked = crate::debris::debris_impulse(g, imp, None, None);
-        g.stats.destruction.destr_debris_kicked += kicked as i32;
+        crate::debris::debris_impulse(g, imp, None, None);
     }
 }
 
@@ -435,10 +422,9 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
 fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate::scene_materials::Surf, box_: BoxId, dynamic: bool, rifle: bool, item: Option<&crate::destruction::Destructible>) {
     let is_crack = matches!(item, Some(it) if it.kind == DKind::Screen || it.kind == DKind::Tv);   // (`m === LANE_MARK.crack`)
     let mut mark = if is_crack { lane("crack") } else if surf == crate::scene_materials::Surf::Metal { lane("dent") } else if surf == crate::scene_materials::Surf::Fabric { lane("shred") } else { return; };
-    if js::to_i32(seam_box(g, box_).flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
+    if js::to_i32(g.tab.boxes[box_].flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
     let rj = destruction_hash(g);
-    if !destruction_take(g, DestructionTakeK::Decal) { return; }
-    g.stats.destruction.destr_decals += 1;
+    if !destruction_take(g, crate::destruction::RateCapN::Decal) { return; }
     let attach = if dynamic { Some(box_) } else { None };
     let said = if is_crack { None } else { crate::particle_fx::said_surf(g, Some(box_)) };
     match said {
@@ -485,7 +471,6 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
             }
         }
     }
-    g.stats.destruction.destr_screens += 1;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, 0.3, 0.0])), if item.target.is_some() { 22.0 } else { 8.0 }, crate::render_particles::EmitOpts { speed: 3.5, speed_jit: Some(0.7), spread: Some(1.2), life: 0.45, life_jit: Some(0.5), size: 0.0028, ..Default::default() });
 }
 
@@ -494,8 +479,8 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
     let mut list: Vec<Destructible> = Vec::new();
     for d in destruction_near(g, hit_p, &mut list) {
         if d.kind != DKind::Paper { continue; }
-        let c = seam_box(g, d.box_).c;
-        let h = seam_box(g, d.box_).h;
+        let c = g.tab.boxes[d.box_].c;
+        let h = g.tab.boxes[d.box_].h;
         let dd = m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.5, c[2] - hit_p[2]);
         let mut hit_it = dd < g.k.chaos.paper_reach_m * (0.6 + 0.4 * m::min(1.0, e / 3.0)) && !crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), [c[0], c[1] + h[1] + 0.05, c[2]], None);
         if !hit_it {
@@ -515,13 +500,11 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
 
 /// Hide the stack's box and throw its sheets.
 pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, speed: f64, chaos: f64) -> bool {
-    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Paper) { return false; }
+    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Paper) { return false; }
     destruction_hide(g, d);
-    g.stats.destruction.destr_papers += 1;
     dlog(g, &alloc::format!("paper {} scattered", d.i));
-    let (c, h, albedo) = { let b = seam_box(g, d.box_); (b.c, b.h, b.albedo) };
+    let (c, h, albedo) = { let b = &g.tab.boxes[d.box_]; (b.c, b.h, b.albedo) };
     let count = m::round(g.k.chaos.sheets_per_stack * m::min(1.6, m::max(0.5, (h[0] * h[2]) / (0.11 * 0.15))) * (0.7 + 0.6 * chaos));
-    g.stats.destruction.destr_sheets += count as i32;
     let w = m::min(0.22, m::max(0.12, 2.0 * m::min(h[0], h[2]) * 0.95));
     let asp = m::max(1.0, m::max(h[0], h[2]) / m::max(0.04, m::min(h[0], h[2])));
     let pj = m::max(h[0], h[2]) * 0.8;
@@ -535,23 +518,21 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
 pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destructible) {
     let bits = hidden_bits();
     let b = g.col.boxes[d.i as usize];
-    let f = seam_box(g, b).flags;
+    let f = g.tab.boxes[b].flags;
     g.destr.hidden.set(crate::Num(d.i), f);
-    seam_box(g, b).flags = or_bits(f, bits);
+    g.tab.boxes.edit(b).flags = or_bits(f, bits);
     if let (Some(mate), DKind::Housing) = (d.mate, d.kind) {
         let s = g.col.boxes[mate as usize];
         if !g.destr.hidden.has(crate::Num(mate)) {
-            let sf = seam_box(g, s).flags;
+            let sf = g.tab.boxes[s].flags;
             g.destr.hidden.set(crate::Num(mate), sf);
-            seam_box(g, s).flags = or_bits(sf, bits);
+            g.tab.boxes.edit(s).flags = or_bits(sf, bits);
         }
     }
-    crate::scene_collision::wrote(g);
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.
 fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<crate::destruction::DestructionBurstHit>) {
-    g.stats.destruction.destr_bursts += 1;
     let (mut surf, mut albedo) = (surf, albedo);
     if let Some(h) = hit {
         let see = crate::particle_fx::hit_look(g, crate::particle_fx::HitLookHit { index: h.index, prop: h.prop, box_: h.box_ });
@@ -589,17 +570,16 @@ fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf:
 
 /// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
-    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
+    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, crate::destruction::RateCapN::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
         return false;
     }
     g.destr.puffs_this_frame += 1.0;
-    g.stats.destruction.destr_puffs += 1;
     let k = g.k.chaos.puff;
     let by_surf = match surf { crate::scene_materials::Surf::Drywall => 1.0, crate::scene_materials::Surf::Concrete => 0.7, crate::scene_materials::Surf::Fabric => 0.35, _ => 0.5 };
     let dens = k.density * by_surf * m::min(2.0, scale);
     let dir = v3::normalize([n[0], n[1] + 0.25, n[2]]);
-    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
     true
@@ -613,11 +593,9 @@ fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) -> boo
     let now = g.time;
     g.destr.pall_at.retain(|&t| now - t < k.window_secs && t <= now);
     if !always && g.destr.pall_at.len() as f64 >= k.per_window {
-        g.stats.destruction.pall_refused += 1;
         return false;
     }
     g.destr.pall_at.push(now);
-    g.stats.destruction.pall_palls += 1;
     true
 }
 
@@ -631,7 +609,6 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
     if crate::smoke_types::smoke_system_like_budget(g) < k.slack {
-        g.stats.destruction.pall_starved += 1;
         return false;
     }
     let mut p: V3 = v3::copy(pos);
@@ -640,7 +617,6 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
         p = [2.0 * from[0] - pos[0], pos[1], 2.0 * from[2] - pos[2]];
         d = [-dir[0], dir[1], -dir[2]];
         if crate::scene_collision::solid_blocked(g, from, p, None) {
-            g.stats.destruction.pall_shut += 1;
             return false;
         }
     }
@@ -662,10 +638,9 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     }
     let ttl = r.ttl * (0.8 + 0.4 * j);
     let density = r.density * gain * m::min(k.max_gain, m::pow(r.radius / radius, 1.5));
-    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
-    g.stats.destruction.pall_emitters += 1;
     true
 }
 
@@ -697,8 +672,7 @@ pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thi
         }
         let count = m::round(w.dust[if near_side { 0 } else { 1 }] * gain);
         if count > 0.0 && took > 0 {
-            let dust = crate::particle_fx::emit_dust(g, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3::normalize([nn[0], 0.25, nn[2]]), count, crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: w.dust_speed, speed_jit: Some(0.7), lift: Some(0.12), life: w.dust_life, life_jit: Some(0.35), size: w.dust_size, size_jit: Some(0.4), pos_jit: Some(0.6), color: Some(v3::scale(tint, 0.8)), ..Default::default() });
-            g.stats.destruction.pall_dust += dust as i32;
+            crate::particle_fx::emit_dust(g, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3::normalize([nn[0], 0.25, nn[2]]), count, crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: w.dust_speed, speed_jit: Some(0.7), lift: Some(0.12), life: w.dust_life, life_jit: Some(0.35), size: w.dust_size, size_jit: Some(0.4), pos_jit: Some(0.6), color: Some(v3::scale(tint, 0.8)), ..Default::default() });
         }
     }
 }
@@ -729,8 +703,7 @@ fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) 
     let jc = destruction_pall_hash(g, at, 201.0);
     if destruction_pall_emit(g, core, c, [c[0], c[1] + 0.45, c[2]], [0.0, 1.0, 0.0], jc, b.smoke, Some(b.core_gain)) { took += 1; }
     if b.dust > 0.0 && took > 0 {
-        let dust = crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
-        g.stats.destruction.pall_dust += dust as i32;
+        crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
     }
 }
 

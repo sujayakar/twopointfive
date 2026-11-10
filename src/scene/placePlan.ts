@@ -104,12 +104,20 @@ export function doorJambs(statics: readonly Box[], gaps: readonly PlaceGap[]): P
  *  depth counted, and a leaf swung clear leaves the doorway whole. 1 with no leaf near. (Two leaves that meet in one doorway are two doors here, each
  *  measured to the point they meet at: no level has such a pair.) */
 export function doorwayOpen(gap: PlaceGap, leaves: readonly PlaceLeaf[], jambs: readonly Pt[][] = []): number {
-  const [ax, az, bx, bz] = gap, len = Math.hypot(bx - ax, bz - az); if (!(len > 1e-3)) return 1;
-  const mx = (ax + bx) / 2, mz = (az + bz) / 2, hung: Pt[][] = [];
-  for (const l of leaves) if (Math.hypot(l.c[0] - mx, l.c[1] - mz) <= len * 0.5 + l.r + 0.3) hung.push(l.o);
-  if (!hung.length) return 1;
-  const A: Pt[] = [[ax, az], [ax, az]], B: Pt[] = [[bx, bz], [bx, bz]], play = WAY.play, whole = Math.min(len - play, narrowest(A, B, jambs, play));
-  return Math.max(0, Math.min(1, narrowest(A, B, [...jambs, ...hung], play) / Math.max(whole, 1e-3)));
+  const hung = leaves.filter(l => hangsIn(gap, l)); return hung.length ? openPast(gap, hung, jambs, doorwayWhole(gap, jambs)) : 1;
+}
+/** does a leaf hang near enough to a doorway to stand in its way */
+function hangsIn([ax, az, bx, bz]: PlaceGap, l: Pick<PlaceLeaf, 'c' | 'r'>): boolean {
+  const len = Math.hypot(bx - ax, bz - az); return len > 1e-3 && Math.hypot(l.c[0] - (ax + bx) / 2, l.c[1] - (az + bz) / 2) <= len * 0.5 + l.r + 0.3;
+}
+const endsOf = ([ax, az, bx, bz]: PlaceGap): [Pt[], Pt[]] => [[[ax, az], [ax, az]], [[bx, bz], [bx, bz]]];
+/** the way through a doorway with nothing hung in it, m (its walls' alone: no leaf moves it) */
+function doorwayWhole(gap: PlaceGap, jambs: readonly Pt[][]): number {
+  const [A, B] = endsOf(gap); return Math.min(Math.hypot(gap[2] - gap[0], gap[3] - gap[1]) - WAY.play, narrowest(A, B, jambs, WAY.play));
+}
+/** the way past the leaves that hang in it, over the whole */
+function openPast(gap: PlaceGap, hung: readonly PlaceLeaf[], jambs: readonly Pt[][], whole: number): number {
+  const [A, B] = endsOf(gap); return Math.max(0, Math.min(1, narrowest(A, B, [...jambs, ...hung.map(l => l.o)], WAY.play) / Math.max(whole, 1e-3)));
 }
 /** A DOORWAY'S OPENNESS AS THE MAP CARRIES IT: DOOR_STEPS steps of a DOOR_PER_STOP-th of a stop under wide open (so the top step is a doorway whole,
  *  the least is about a thirty-second of it, and a step is the same small change of brightness wherever it falls); 0 = shut, the line is a wall.
@@ -119,6 +127,27 @@ export function doorStep(open: number): number { return open > 0 ? Math.max(0, M
 /** every door's step as the level stands (`jambs`: doorJambs of the same statics and gaps, where the caller keeps them) */
 export function doorSteps(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[], jambs: readonly Pt[][][] = doorJambs(statics, gaps)): number[] {
   const leaves = leafOutlines(dynamics); return gaps.map((g, n) => doorStep(doorwayOpen(g, leaves, jambs[n])));
+}
+/** …KEPT: a door is measured again when a leaf that hangs in it is not where it was, and by nothing else (a doorway's whole way and its jambs are its
+ *  walls'). The steps are doorSteps' of the same boxes, whichever door moved (tools/draw/doors-check.ts). */
+class KeptSteps {
+  readonly steps: number[] = [];
+  /** doors measured since the page began */
+  measured = 0;
+  private jambs: Pt[][][] = []; private whole: number[] = []; private hung: number[][] = [];
+  /** the walls or the doors' lines are others: every door is another door */
+  walls(statics: readonly Box[], gaps: readonly PlaceGap[]): void { this.jambs = doorJambs(statics, gaps); this.whole = gaps.map((g, n) => doorwayWhole(g, this.jambs[n])); this.hung = gaps.map(() => [NaN]); this.steps.length = gaps.length; }
+  /** the leaves have moved */
+  update(dynamics: readonly Box[], gaps: readonly PlaceGap[]): void {
+    const leaves = leafOutlines(dynamics);
+    gaps.forEach((g, n) => {
+      const hung = leaves.filter(l => hangsIn(g, l)), was = this.hung[n]; let k = 0, stands = true;
+      for (const l of hung) for (const p of l.o) { stands &&= was[k] === p[0] && was[k + 1] === p[1]; k += 2; }
+      if (stands && k === was.length) return;
+      this.hung[n] = hung.flatMap(l => l.o.flatMap(p => [p[0], p[1]])); this.measured++;
+      this.steps[n] = doorStep(hung.length ? openPast(g, hung, this.jambs[n], this.whole[n]) : 1);
+    });
+  }
 }
 /** the map of a list of boxes: 255 = wall; a free cell is 1 (a doorway's cell) or 2 (any other), + 4 when no roof is over it (row-major, j * PLACE_W + i).
  *  DOORS OPEN BY DEGREES: A LEAF IS NEVER A WALL WHERE IT HANGS, and a door's cells carry HOW OPEN IT IS in the bits above (× 8: its step,
@@ -174,12 +203,12 @@ function wallsKey(statics: readonly Box[]): number {
 }
 
 /** a number that changes when a leaf has moved at all (to a quarter of a hundredth of a radian, half a centimetre): PlaceMap's, for "are the steps still the steps" */
-function leafKey(dynamics: readonly Box[]): number {
+export function leafKey(dynamics: readonly Box[]): number {
   let key = 17; for (const b of dynamics) { if (placeWall(b) !== FULL) continue; key = (Math.imul(key, 33) + Math.round(b.yaw * 400) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 200)) | 0; }
   return key;
 }
 /** … and each door's line: the map's key but for how far each door stands open */
-function placeKey(statics: readonly Box[], gaps: readonly PlaceGap[]): number {
+export function placeKey(statics: readonly Box[], gaps: readonly PlaceGap[]): number {
   let key = wallsKey(statics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; return key;
 }
 /** the map of the level as it stands, drawn again only when its key moves. ONE a frame, whoever reads it (the field below, render/wallSides.ts): each
@@ -196,15 +225,18 @@ export class PlaceMap {
   closed = 0;
   private was = new Uint8Array(PLACE_W * PLACE_H);
   private key = NaN; private shapeKey = NaN;
-  private wallKey = NaN; private jambs: Pt[][][] = []; private leafKey = NaN; private steps: number[] = [];
+  private wallKey = NaN; private read = NaN; private gaps: readonly PlaceGap[] = []; private leafKey = NaN; readonly doors = new KeptSteps();
   /** No leaf is a wall and each door's line says how open it is (placeMask `steps`). The map is its walls, its doors' lines and their steps, so it is
    *  drawn again when one of those moves and not for a leaf's swing between two steps. The jambs are found again only with the walls, and the steps
-   *  worked out again only when a leaf has moved (a level at rest costs its two keys). */
-  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
-    let key = placeKey(statics, gaps);
-    if (key !== this.wallKey) { this.wallKey = key; this.jambs = doorJambs(statics, gaps); this.leafKey = NaN; }
-    const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.steps = doorSteps(statics, dynamics, gaps, this.jambs); }
-    const steps = this.steps; key = (Math.imul(key, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
+   *  worked out again only when a leaf has moved, and then those of the doors it hangs in. `told` = a count of the statics' changes, by whoever mirrors
+   *  them (scene/boxes.ts staticsTold): while it and the doors' lines (the very list) stand, the walls are not read over (NaN = nobody counts: they are, every time). */
+  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = [], told = NaN): boolean {
+    if (told !== this.read || gaps !== this.gaps) {
+      this.read = told; this.gaps = gaps;
+      const key = placeKey(statics, gaps); if (key !== this.wallKey) { this.wallKey = key; this.doors.walls(statics, gaps); this.leafKey = NaN; }
+    }
+    const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.doors.update(dynamics, gaps); }
+    const steps = this.doors.steps; let key = (Math.imul(this.wallKey, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
     if (key === this.key) return false;
     const first = Number.isNaN(this.key), was = this.was, mask = this.mask; was.set(mask);
     this.key = key; placeMask(statics, dynamics, mask, gaps, steps); this.drawn++;

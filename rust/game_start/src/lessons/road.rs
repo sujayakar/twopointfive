@@ -106,9 +106,9 @@ async fn deed(b: &Bot, id: &str) {
         // the rifle's selector: the setup's first row (the rifle's digit again, then 1)
         "auto" => {
             b.press("Digit2", 12).await;
-            if b.me(|p| p.setup.is_none()) { b.fail(String::from("the rifle's key pressed again did not open its setup")).await; }
+            if b.seen(|_, s| s.hand.setup.is_none()) { b.fail(String::from("the rifle's key pressed again did not open its setup")).await; }
             b.press("Digit1", 12).await;
-            if b.step_is("auto") { b.fail(format!("the selector did not move (the hands hold {:?}, its setup is {})", b.me(|p| p.slot), if b.me(|p| p.setup.is_some()) { "up" } else { "shut" })).await; }
+            if b.step_is("auto") { b.fail(format!("the selector did not move (the hands hold {:?}, its setup is {})", b.me(|p| p.slot), if b.seen(|_, s| s.hand.setup.is_some()) { "up" } else { "shut" })).await; }
             if b.me(|p| p.slot) != SlotKind::Rifle { b.fail(format!("the selector's digit took the {:?} into his hands", b.me(|p| p.slot))).await; }
         }
         // off the wall the way the line says: the move keys, square away from it
@@ -160,7 +160,7 @@ async fn deed(b: &Bot, id: &str) {
             //  line between the two, hide the man)
             let (seen, me, c) = (b.line(x), b.pos(), b.chest(x));
             let zc = c[2] + (me[2] - c[2]) * (c[0] - PLANKS_X) / (c[0] - me[0]);
-            let stand = b.world(|w| w.ray([PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
+            let stand = b.ask(|g| game::scene_collision::raycast(g, [PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
             if seen && stand { b.fail(format!("he has a clear line to the man behind the boards from the doorway with the boards standing between them (he is at {}, the player at {})", Bot::at_str(c), Bot::at_str(me))).await; }
             if seen { b.say(String::from("  the boards on the line to him are down (his own rounds at the door): he is shot through the gap")); }
             let r0 = b.rounds();

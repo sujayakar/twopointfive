@@ -81,7 +81,7 @@ fn silent_net(g: &mut crate::game::Game) -> bool {
     let (mut roster, mut on) = (0, 0);
     for i in 0..g.guards.len() {
         let x = &g.gd[g.guards[i]];
-        if x.unit.is_some() || x.team != crate::teams::Team::Guard { continue; }
+        if x.unit.is_some() || g.ch[x.ch].team != crate::teams::Team::Guard { continue; }
         roster += 1;
         if !g.cond[x.ch].down && x.held.is_none() { on += 1; }
     }
@@ -172,7 +172,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
     let own = mk.is_some();
     if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS {
         g.qrf.state = QrfState::Inbound;
-        g.qrf.answered = true;
         let n = m::min(4.0, if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) });
         let secs = m::round(g.qrf.arrive_at - g.time);
         let (n, secs) = (js::num_str(n), js::num_str(secs));
@@ -196,9 +195,9 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
             let silent = g.qrf.reason == Some(QrfReason::Silent);
             let text = match mk.as_ref() {
                 None => if silent { String::from("all stations — QRF is thirty seconds out from two-six, coming up the west stairs") }
-                    else { String::from(crate::words::wg(g, &"two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side", &"two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end")) },
+                    else { String::from("two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side") },
                 Some(mk) => if silent { format!("all stations — {} is thirty seconds out from {}, {}", mk.team, mk.site, mk.coming) }
-                    else { let side = crate::words::wg(g, &"on that side", &"that end"); format!("{}, {} is thirty seconds out — {}. check your fire {}", mk.site, mk.team, mk.coming, side) },
+                    else { format!("{}, {} is thirty seconds out — {}. check your fire on that side", mk.site, mk.team, mk.coming) },
             };
             control(g, &text);
             note(g, "thirty");
@@ -223,7 +222,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
 fn arriving(g: &mut crate::game::Game) {
     use crate::qrf::{Phase, QrfState};
     g.qrf.state = QrfState::Arriving;
-    g.qrf.said10 = true;
     re_deal(g);
     let mk = marks_of(g).unwrap();
     let want = if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) };
@@ -236,14 +234,14 @@ fn arriving(g: &mut crate::game::Game) {
         let at = match door {
             Some(d) if i == 0 => {
                 let side = crate::doors::doors_side(g, d, mk.muster[0]);
-                crate::handleside::tool_spot(g, d, side, mk.muster[0], None, None).map_or(mk.muster[0], |s| s.pos)
+                crate::handleside::tool_spot(g, d, side, mk.muster[0], None).map_or(mk.muster[0], |s| s.pos)
             }
             _ => match mk.muster.get(i) {
                 Some(&p) => p,
                 None => { let what = format!("spawn-failed:{}:no muster mark", i); note(g, &what); break; }   // (the TypeScript's spawnUnit throws on the missing mark: caught the same way)
             },
         };
-        let team = match side_of_team(g) { crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard, crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile };
+        let team = side_of_team(g);
         let budget = match budget_of(g) { crate::qrf::BudgetOf::Arm0(b) => Some(b.budget), crate::qrf::BudgetOf::Arm1(_) => None };
         let opts = crate::guards::UnitOpts {
             team, pos: at, yaw: Some(yaw), weapon: Some(crate::weapons::WeaponId::Aks74u), name: Some(format!("{}-{}", mk.tag, i + 1)), light: Some(true),
@@ -272,7 +270,7 @@ fn arriving(g: &mut crate::game::Game) {
     if count == 0 {
         g.qrf.state = QrfState::Deployed;
         g.qrf.deployed_at = g.time;
-        let text = crate::words::wg(g, &format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team), &format!("{} — {} is held up, nobody is coming. you are on your own", mk.site, mk.team));
+        let text = format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team);
         control(g, &text);
         note(g, "nobody");
         return;
@@ -331,17 +329,17 @@ fn deploy(g: &mut crate::game::Game) {
 
 /// Throw a shut (or nearly shut) leaf open away from `by` at a kick's pace, breaking nothing.
 fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
-    use crate::doors::{door_angle, door_pos, door_set_closing, door_set_creak_armed, door_set_last_who, door_set_latched, door_set_quiet_t, door_set_since_bash, door_set_vel, doors_side};
-    if m::abs(door_angle(g, d)) > 1.0 { return; }
+    use crate::doors::{door_pos, doors_side};
+    if m::abs(g.dr[d].leaf.angle) > 1.0 { return; }
     let side = doors_side(g, d, pos_of(g, by));
-    door_set_latched(g, d, false);
-    door_set_closing(g, d, false);
-    door_set_vel(g, d, -side * 7.5);
-    door_set_since_bash(g, d, 0.0);
-    door_set_quiet_t(g, d, -0.5);
-    door_set_creak_armed(g, d, false);
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = -side * 7.5;
+    g.dr[d].leaf.since_bash = 0.0;
+    g.dr[d].leaf.quiet_t = -0.5;
+    g.dr[d].leaf.creak_armed = false;
     let who = char_id(g, by);
-    door_set_last_who(g, d, who);
+    g.dr[d].leaf.last_who = who;
     let at = door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
@@ -362,7 +360,6 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
     for x in all {
         let cap = g.k.trained.react_cap;
-        let t = g.time;
         if !crate::condition::is_blind(g, g.gd[x].ch) && !crate::condition::is_folded(g, g.gd[x].ch) && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
         if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
             crate::mind::set_state(g, x, GuardState::Search, "qrf");
@@ -379,7 +376,7 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
         let up = alive(g);
         let shut = match d {
             None => true,
-            Some(d) => crate::doors::door_off(g, d) || crate::doors::door_latched(g, d) || g.dr[d].def.closer == Some(false) || up.is_empty(),
+            Some(d) => g.dr[d].leaf.off || g.dr[d].leaf.latched || g.dr[d].def.closer == Some(false) || up.is_empty(),
         };
         if shut { g.qrf.door_pulled = true; }
         else {
@@ -470,7 +467,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     for i in 0..g.events.len() {
         if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); }
     }
-    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(crate::throwables::item_pos(g, c)), _ => None };
+    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(g.tab.item[c].pos), _ => None };
     let fix_before = g.gd[m].last_known;
     // his hearing runs on the events LESS the element's own; what it writes on an event (`announced`) is on the same object in the TypeScript: written back
     let all = core::mem::take(&mut g.events);
@@ -519,7 +516,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
         while i < g.guards.len() {
             let o = g.guards[i];
             i += 1;
-            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, g.gd[o].team) || crate::rails::rails_down(g, o) { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || !g.team(m).foe_of(g.team(o)) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let vo = crate::guards::can_see_char(g, m, oc);
             if !vo.visible { continue; }
@@ -565,13 +562,13 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             let mc = g.gd[m].ch;
             let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
             let bp = crate::guards::body_pos(g, o);
-            let team = g.gd[m].team;
+            let team = g.team(m);
             let mut n = 0;
             let mut i = 0;
             while i < g.guards.len() {
                 let x = g.guards[i];
                 i += 1;
-                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.gd[x].team != team { continue; }
+                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.team(x) != team { continue; }
                 let take = x == o || {
                     let xp = crate::guards::body_pos(g, x);
                     flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
@@ -583,11 +580,10 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
                 }
             }
             if n != 0 {
-                let the = crate::words::w(g, &"", &"the ");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
                 let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
-                let text = format!("{} down in {}{}{}, {}. pushing on", victim, the, room, many, how);
+                let text = format!("{} down in {}{}, {}. pushing on", victim, room, many, how);
                 radio(g, Some(m), &text);
             }
             let what = format!("found:{}", victim);
@@ -713,7 +709,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
         for p in ps {
             if let Some(door) = crate::doors::doors_by_name(g, &p.door) {
                 let dc = g.dr[door].frame_centre;
-                d = m::min(d, path_len(g, fix, [dc[0], 0.0, dc[2]]));
+                d = m::min(d, crate::places::on_foot(g, fix, [dc[0], 0.0, dc[2]]));
             }
         }
         if is_in { d = -1.0; }
@@ -735,7 +731,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
     } else if let Some((k, ps, _)) = best.as_ref() {
         let (mut plan, mut bl) = (&ps[0], f64::INFINITY);
         for p in ps.iter() {
-            let l = path_len(g, from, p.stack[0]);
+            let l = crate::places::on_foot(g, from, p.stack[0]);
             if l < bl { bl = l; plan = p; }
         }
         Target { kind: TargetKind::Room, plan: Some(plan.clone()), room: k.clone(), pos: v3::copy(plan.stack[0]), word: None }
@@ -789,7 +785,7 @@ fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate::qrf
         if flat(from, c) < 3.0 { let t = g.time; g.qrf.cleared.set(p.name.clone(), t); }
         if g.time - g.qrf.cleared.get(p.name.clone()).copied().unwrap_or(-1e9) < RECLEAR_SECS { continue; }
         let start = if g.qrf.fix.is_some() { fix } else { from };
-        let d = path_len(g, start, c);
+        let d = crate::places::on_foot(g, start, c);
         if d < bd {
             bd = d;
             best = Some(crate::qrf::Target { kind: crate::qrf::TargetKind::Point, plan: None, room: p.name, pos: c, word: None });
@@ -826,15 +822,6 @@ fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     }
     out
 }
-
-/// The walk's length from `a` to `b` on the nav grid (Infinity: none).
-fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
-    let (mut l, mut q) = (0.0, a);
-    for r in p { l += flat(q, r); q = r; }
-    l
-}
-
 /// `p` on the floor, or the nearest free point to it.
 pub(super) fn nearest_free(g: &mut crate::game::Game, p: V3) -> Option<V3> {
     if nav_blocked(g, p[0], p[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) }
@@ -965,8 +952,7 @@ fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
         if t.kind == TargetKind::Room && flat(lp, t.plan.as_ref().unwrap().stack[0]) < 4.0 {
             if !(g.tune.qrf_squad && start_drill(g, el)) { start_stack(g, el); }
         } else if t.kind == TargetKind::Room {
-            let verb = crate::words::wg(g, &"into", &"onto");
-            let text = format!("can't get {} the {} from here — next", verb, t.room);
+            let text = format!("can't get into the {} from here — next", t.room);
             radio(g, Some(lead), &text);
             let when = g.time - RECLEAR_SECS + 30.0;
             g.qrf.cleared.set(t.room.clone(), when);

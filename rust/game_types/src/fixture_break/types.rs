@@ -137,16 +137,6 @@ pub struct FixtureBreakMod {
     #[is(crate::fixture_break::FixtureBreakModFLOOR { on: None })] pub floor: crate::fixture_break::FixtureBreakModFLOOR,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct FixtureBreakStats {
-    pub panels: i32,
-    pub lamps: i32,
-    pub beats: i32,
-    pub boxes: i32,
-    pub sparks: i32,
-}
-
 pub const LOOK: f64 = 10.0;
 
 pub fn down() -> V3 { [0.0, -1.0, 0.0] }

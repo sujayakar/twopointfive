@@ -76,12 +76,12 @@ A file also says a few things no rule of the game reads, which `levelToData` wri
 | beacons, cameras, lasers | 32 each | `faults.rs` |
 | lights, switchables, cameras, lasers and the breaker together | 256 | `faults.rs` |
 | light rows, counted at start with beacons, cameras and vehicle lamps | 256 | a start alone |
-| sheets of glass | 256 | a start alone (`PANE_CAP`) |
+| sheets of glass | 256 | a start alone (`MAX_SHEETS`) |
 
-### What a switch leaves out
+### What comes last
 
-A box in group `dressing` stands only with `k.destruction.on`. A box in a group that starts `lived.` stands only with `k.lived.on`, and so does a prop, light or
-switchable whose `id` starts `lived.`. These come last in their lists, so every other index holds without them.
+A box in group `dressing` or in a group that starts `lived.`, and a prop, light or switchable whose `id` starts `lived.`, comes last in its list, so every other
+index holds without them.
 
 ## Boxes
 
@@ -126,7 +126,7 @@ A marking is a small bitmap on one face (`markings.ts`, carried by `laid_marking
 ### Shape
 
 A shape is cut from the box and said in the box's own frame, so it moves and turns with the box. The box still walks as the plain box; a cut changes the picture and
-every ray. `shape_of` carries it and `shape_level` makes the record; `?shapes=0` stands the plain boxes. `form_faults` holds the rules.
+every ray. `shape_of` carries it and `shape_level` makes the record. `form_faults` holds the rules.
 
 - `round` 1 or 3. A twelve-sided prism about the box's x (1) or z (3). The box must be square across that axis to within 15 hundredths. No `cut` beside it.
 - `arc` record of `axis` (1 or 3) and `rise` (over 0, at most the box's height and half width). The box's top is a round about that axis. Not with `round`.
@@ -271,7 +271,7 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 Glass has no block of its own: a pane is a box with the Glass flag. Its paint is the tint it lets through. `load` makes the box, `glass.rs` keeps its state, and the picture tests
 it apart from the world's boxes. Feet and sound take it as a wall, sight passes through it, and a round, a kick or a bang breaks it. It takes no form, so `shape.with` is the only
 shape it says. A sheet is thin: `is_sheet` asks that the thinner of `h[0]` and `h[2]` is at most `THICK_GLASS_HALF`, and a thicker Glass box is solid glass that does not craze.
-The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
+The kit lays panes with `paneX` and `paneZ`. A level's most is `MAX_SHEETS`.
 
 ## plans
 
@@ -323,7 +323,6 @@ The rooms to take (`roomclear.rs`, `roomfight/`).
 - `team` team start, two `ops` at least; default the night breach's start, which needs `plans.breach`.
 - `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one.
 - `maxMen` whole number 1 to `SQUAD_MAX_MEN`; default five. The most defenders alive at once.
-- `wayOut` true or false; default false. On Hard, the men a lost room draws hold one of its doors from back off it (`pressure/`).
 - `digIn` true or false; default true. False: this floor's men never brace a door, take cover or set a gun on a door (`roomfight/`).
 - `wallCharges` whole number 1 to 9; default the kit's own. The squad carries at least this many wall charges here (`issue.rs`).
 - `rooms` list of at least one record. `check_structure` asks that some room has more than one way in.
@@ -396,7 +395,7 @@ A step:
 
 - `id` text, unique in the lesson. `line` text: the objective row. `done` a test (below).
 - `setupLine`, `ringLine`, `blowLine` text; default `line`. The line while a gun's setup, his own ring, or his own charge is what the keys work.
-- `menuLine` text; default `line`: while the squad's ring is up. `pageLine` default `menuLine`: on a page under the first. `flatLine` default `menuLine`: on a flat ring.
+- `menuLine` text; default `line`: while the squad's ring is up.
 - `hold` seconds at least 0; default none. The test must stay true so long. `settle` over 0, at most 10; default none. Seconds before the next step comes up.
 - `at` V3; default no marker. `atMan` a route's name: the marker rides on that man while he is up, then `at`. `toward` V3, needs `at`: an arrow on the ground from `at`.
 
@@ -413,7 +412,7 @@ On a level with `rails` only:
 
 - `allow` list of actions (`rails.rs`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
 - `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee.
-- `lasers` false: no teammate shows an aiming laser. `flatRing` true: the squad's ring is one flat ring.
+- `lasers` false: no teammate shows an aiming laser.
 - `orders` list of order ids; default all: what the squad's menu lists. `rows` list of verbs; default all: what Space offers.
 
 A test is a record whose `is` says its kind, and `passes` runs it. Where it says n, the default is 1. A kind the build has no row for never passes.

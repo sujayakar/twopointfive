@@ -86,44 +86,16 @@ pub enum LineKind {
     Okay,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LINESValue {
-    pub say: Vec<String>,
-    pub he: Option<Vec<String>>,
-    pub they: Option<Vec<String>>,
-    pub dark: Option<Vec<String>>,
-    pub lit: Option<Vec<String>>,
-    pub now: Option<Vec<String>>,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct MoraleModMixAtValue {
     pub key: String,
-    pub mix: crate::morale::MoraleModMixAtValueMix,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum MoraleModMixAtValueMix {
-    #[default] Hard,
-    Mixed,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MixNow {
-    Hard,
-    Mixed,
+    pub mix: crate::morale::MixNow,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TrainingOf {
     Steady,
     Green,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RoundOf {
-    Dust,
-    Bait,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -145,23 +117,16 @@ pub struct MoraleMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct MoraleStats {
-    pub blasts: i32,
-    pub fed: i32,
-    pub ducks: i32,
-    pub broke: i32,
-    pub rounds: i32,
-    pub calls: i32,
-    pub shouts: i32,
-    pub baits: i32,
-    pub reloads: i32,
     pub orders: i32,
     pub falls: i32,
-    pub flinches: i32,
 }
 
 pub fn morale_at() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("standard"), String::from("mixed")); t.set(String::from("hard"), String::from("hard")); t } }
 
 pub const ALERT_AW: f64 = 0.85;
 
-pub fn lines() -> JsMap<String, crate::morale::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("duck"), crate::morale::LINESValue { say: alloc::vec![String::from("down! get down!"), String::from("get down — stay down!"), String::from("heads down!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("call"), crate::morale::LINESValue { say: Vec::new(), he: Some(alloc::vec![String::from("he's coming in — I've got nobody in here!"), String::from("anyone on this net? he's right on top of me!")]), they: Some(alloc::vec![String::from("they're coming in — I've got nobody in here!"), String::from("anyone on this net? they're right on top of me!")]), dark: Some(alloc::vec![String::from("can't see a thing — somebody get in here!")]), lit: Some(alloc::vec![String::from("right in my room — somebody get in here!")]), now: None }); t.set(String::from("again"), crate::morale::LINESValue { say: alloc::vec![String::from("is anybody there? answer me!"), String::from("nobody's coming. nobody's coming—"), String::from("please — somebody answer!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("out"), crate::morale::LINESValue { say: alloc::vec![String::from("I'm out! I'm out!"), String::from("empty — I'm empty!"), String::from("I'm dry! changing!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("spent"), crate::morale::LINESValue { say: alloc::vec![String::from("no — no, stay back!"), String::from("keep away from me!"), String::from("don't — don't come in!")], he: None, they: None, dark: None, lit: None, now: Some(alloc::vec![String::from("no — no, stay back!"), String::from("stay away from me!"), String::from("don't — don't come in!")]) }); t.set(String::from("clear"), crate::morale::LINESValue { say: alloc::vec![String::from("breach on my room. I'm alone in here.")], he: Some(alloc::vec![String::from("he's breached. I'm on my own in here."), String::from("he's through. holding it on my own.")]), they: Some(alloc::vec![String::from("they've breached. I'm on my own in here."), String::from("they're through. holding it on my own.")]), dark: None, lit: None, now: None }); t.set(String::from("lost"), crate::morale::LINESValue { say: alloc::vec![String::from("they got him! they got him!"), String::from("he's down. oh no, he's down."), String::from("we've lost him! what do we do?")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("order"), crate::morale::LINESValue { say: alloc::vec![String::from("get up. watch that hole. breathe."), String::from("on your feet. eyes on that hole."), String::from("up. gun on the hole. breathe.")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("okay"), crate::morale::LINESValue { say: alloc::vec![String::from("okay — okay."), String::from("yeah. yeah, I'm up."), String::from("I'm up. I'm up.")], he: None, they: None, dark: None, lit: None, now: None }); t } }
-
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum MixNow {
+    #[default] Hard,
+    Mixed,
+}

@@ -122,24 +122,24 @@ impl Owes {
     }
     /// a teammate, or a hostage, down by one of the team
     fn by_the_team(&self, g: &Game, gd: GuardId) -> bool {
-        if g.gd[gd].team != Team::Operative && !g.staged.captives.contains(&gd) { return false; }
+        if !g.team(gd).ours() && !g.staged.captives.contains(&gd) { return false; }
         let k = g.gd[gd].killer_id;
-        k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.gd[x].team == Team::Operative && g.ch[g.gd[x].ch].id == k)
+        k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.team(x).ours() && g.ch[g.gd[x].ch].id == k)
     }
     /// under an order with a mark he is not on, not in a fight, not blinded: does he want to be walking, and has the game given up on that walk
     fn under_order(&self, g: &Game, gd: GuardId, p: [f64; 3], t: f64) -> (bool, bool) {
         let seat = game::seats::here(g);
-        let Some(a) = game::orders::squad_orders_of(g, &seat, gd).map(|a| &g.tab.orders_assignment[a]) else { return (false, false); };
+        let Some(a) = game::orders::squad_orders_of(&seat, gd).map(|a| &g.tab.orders_assignment[a]) else { return (false, false); };
         let h = &g.gd[gd];
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
         let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
         let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
-        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there == "stopped short")
+        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there.at == game::orders::At::StoppedShort)
     }
     fn overlaps(&mut self, g: &Game, t: f64) {
         let mut team: Vec<(usize, [f64; 3])> = Vec::new();
         team.push((usize::MAX, g.ch[g.pl[g.player].ch].pos));
-        for (i, &gd) in g.guards.iter().enumerate() { if g.gd[gd].team == Team::Operative && !game::condition::down(g, g.gd[gd].ch) { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
+        for (i, &gd) in g.guards.iter().enumerate() { if g.team(gd).ours() && !game::condition::down(g, g.gd[gd].ch) { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
         for a in 0..team.len() { for b in a + 1..team.len() {
             let key = (team[a].0, team[b].0);
             let at = self.pairs.iter().position(|p| p.0 == key);
@@ -157,14 +157,14 @@ impl Owes {
         use game::doors as d;
         for k in 0..g.doors.list.len() {
             let id: DoorId = g.doors.list[k];
-            let (a, name) = (d::door_angle(g, id), &g.dr[id].def.name);
-            if d::door_latched(g, id) && a.abs() > 1e-3 { self.fault("door", name, t, format!("latched at angle {:.4}", a)); }
-            if d::door_locked(g, id) && d::door_lock_broken(g, id) { self.fault("door", name, t, String::from("locked and its lock broken")); }
-            let pick = d::door_pick(g, id);
+            let (a, name) = (g.dr[id].leaf.angle, &g.dr[id].def.name);
+            if g.dr[id].leaf.latched && a.abs() > 1e-3 { self.fault("door", name, t, format!("latched at angle {:.4}", a)); }
+            if g.dr[id].leaf.locked && g.dr[id].leaf.lock_broken { self.fault("door", name, t, String::from("locked and its lock broken")); }
+            let pick = g.dr[id].leaf.pick;
             if !(0.0..=1.0).contains(&pick) { self.fault("door", name, t, format!("pick {}", pick)); }
-            if d::door_off(g, id) { continue; }
+            if g.dr[id].leaf.off { continue; }
             if a < d::door_min_a(g, id) - 1e-6 || a > d::door_max_a(g, id) + 1e-6 { self.fault("door", name, t, format!("angle {:.3} outside [{}, {}]", a, d::door_min_a(g, id), d::door_max_a(g, id))); }
-            if d::door_vel(g, id).abs() > MAX_LEAF_SPEED { self.fault("door", name, t, format!("swinging at {:.1}", d::door_vel(g, id))); }
+            if g.dr[id].leaf.vel.abs() > MAX_LEAF_SPEED { self.fault("door", name, t, format!("swinging at {:.1}", g.dr[id].leaf.vel)); }
         }
     }
     fn alarm_owes(&mut self, g: &Game, t: f64) {

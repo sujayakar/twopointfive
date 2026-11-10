@@ -198,8 +198,6 @@ pub struct BreaksLands {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksShedCell {
-    pub thrown: f64,
-    pub refused: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -210,28 +208,6 @@ pub struct BreaksStudsItem {
     pub rough: f64,
     pub metal: bool,
     pub does: crate::scene_materials::DoesWord,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct BreakTableStats {
-    pub shaped: i32,
-    pub plain: i32,
-    pub refused: i32,
-    pub again: i32,
-    pub mayhem: i32,
-    pub china: i32,
-    pub crumbled: i32,
-    pub heap: i32,
-    pub ragged: i32,
-    pub planes: i32,
-    pub dropped: i32,
-    pub chips: i32,
-    pub dressed: i32,
-    pub kinked: i32,
-    pub loose: i32,
-    pub sheets: i32,
-    pub carcasses: i32,
 }
 
 pub const NEVER: f64 = f64::INFINITY;

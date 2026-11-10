@@ -46,10 +46,6 @@ id! {
     CharId,
     /// Door: g.dr
     DoorId,
-    /// SlabRow: no table here
-    SlabRowId,
-    /// DriveCols: no table here
-    DriveColsId,
     /// Prop: g.tab.props_prop
     PropId,
     /// Input: g.tab.input
@@ -112,8 +108,6 @@ id! {
     TacticsDangerRecId,
     /// Lane: g.tab.lanes_lane
     LanesLaneId,
-    /// Man: g.tab.pressure_man
-    PressureManId,
     /// StickyCam: g.tab.stickycam_sticky_cam
     StickyCamId,
     /// Region: g.tab.rescueflow_region

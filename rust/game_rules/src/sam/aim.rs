@@ -142,6 +142,12 @@ pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
+/// The same of a man who fires as he walks: as lined up as a walking man gets.
+pub fn aim_ready_walking(g: &crate::game::Game, gd: GuardId) -> bool {
+    let p = g.k.aim.guard;
+    !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= m::min(p.acquire_min, p.moving_track_cap) - 1e-9
+}
+
 /// The standoff's flank round: are the feet he remembers still enough?
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.arms[g.gd[gd].ch].aim.move_sm <= g.k.aimcost.flank_at
@@ -182,7 +188,7 @@ fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim
 }
 
 /// What to hand fireWeapon for this guard's round; stamps `last_shot`.
-pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Option<bool>) -> crate::combat::FireOpts {
+pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::combat::FireOpts {
     if !g.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
     }
@@ -267,11 +273,11 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let mut a = core::mem::take(&mut g.arms[g.pl[pl].ch].aim);
     feed_feet(g, &mut a, speed, dt, p.feet_tau, Some(hold));
     g.arms[g.pl[pl].ch].aim = a;
-    let tg = match g.aim_guard {
+    let tg = match g.sets[g.seat].aim_guard {
         Some(x) if !crate::condition::down(g, g.gd[x].ch) => Some(x),
         _ => None,
     };
-    let lt = if tg.is_none() { g.aim_target } else { None };
+    let lt = if tg.is_none() { g.sets[g.seat].aim_target } else { None };
     let key = if let Some(t) = tg {
         alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
@@ -313,7 +319,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     } else if let Some(l) = lt {
         g.tab.fixture[l].pos
     } else {
-        g.aim_point
+        g.sets[g.seat].aim_point
     };
     let c_pos = g.ch[c].pos;
     if let Some(tn) = tg {

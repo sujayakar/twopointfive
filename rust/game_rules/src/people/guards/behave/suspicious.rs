@@ -14,7 +14,7 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
     let Acts { mut move_speed, mut aim_at, .. } = Acts::still();
     let mut upper;
     use crate::game::{GuardTask, GuardTaskArm0Kind};
-    upper = if hand_carry(g, gd) == crate::guards::HandCarry::Torch { UpperMode::Torch } else { UpperMode::Aim };
+    upper = if hand_carry(g, gd) == crate::guards::InHand::Torch { UpperMode::Torch } else { UpperMode::Aim };
     if matches!(g.gd[gd].task, Some(GuardTask::CheckOn(_))) { check_on_tick(g, gd); }
     let task_at = match &g.gd[gd].task {
         Some(GuardTask::Arm0(t)) => Some(t.pos),

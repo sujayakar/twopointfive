@@ -7,23 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- what stands between this file and a box's row
-
-/// a box's row
-#[cfg(not(test))]
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
-/// makeBox and thinNote, here so a test of this file's own arithmetic stands on no stub (a test's versions are at the foot of the file).
-#[cfg(not(test))]
-fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { crate::scene_boxes::make_box(g, p) }
-#[cfg(not(test))]
-fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) { crate::thinline::thin_note(g, b.into(), hw0, k, r, g_2, bl); }
-#[cfg(test)]
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { tests::row(b) }
-#[cfg(test)]
-fn made_box(g: &Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { tests::made(p) }
-#[cfg(test)]
-fn noted_thin(g: &Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) {}
-
 /// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor.
 fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
     let f = crate::scene_boxes::box_flag();
@@ -53,7 +36,7 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
     let n = m::max(1.0, js::to_i32(params.max_live) as f64);
     let mut i = 0.0;
     while i < n {
-        let box_ = made_box(g, &streak_box_p());
+        let box_ = crate::scene_boxes::make_box(g, &streak_box_p());
         let lamp = g.tab.light.push(crate::render_lights::RtLight {
             name: String::from("tracer"),
             group: String::from("tracer"),
@@ -142,10 +125,11 @@ pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impac
     let unit = t.dir;
     t.light = None;
     let (lamp, slot_owner, b) = (t.lamp, t.owner, t.box_);
-    let row = seam_box(g, b);
+    let mut row = g.tab.boxes.edit(b);
     row.owner = slot_owner;
     row.rot = Some(v3::quat::from_to([0.0, 0.0, 1.0], unit));
     row.yaw = v3::yaw_of(unit);
+    drop(row);
     if g.tracers.lit < p.max_lights {
         let l = &mut g.tab.light[lamp];
         l.color = color;
@@ -211,11 +195,12 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId
         let tail = m::max(0.0, t.s - t.v * p.shutter);
         let len = m::max(0.05, t.s - tail);
         let mid = t.s - len * 0.5;
-        let b = seam_box(g, t.box_);
+        let mut b = g.tab.boxes.edit(t.box_);
         b.c = [t.from[0] + t.dir[0] * mid, t.from[1] + t.dir[1] * mid, t.from[2] + t.dir[2] * mid];
         b.h = [hw, hw, len * 0.5];
         b.emissive = [t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive];
-        noted_thin(g, t.box_, hw, 0.6, t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive);
+        drop(b);
+        crate::thinline::thin_note(g, t.box_.into(), hw, 0.6);
         g.tracers.pool[i].frames += 1.0;
         out.push(t.box_.into());
     }
@@ -256,20 +241,6 @@ mod tests {
     extern crate std;
     use super::*;
 
-    std::thread_local! { static ROWS: core::cell::RefCell<Vec<*mut crate::scene_boxes::Box>> = core::cell::RefCell::new(Vec::new()); }
-
-    /// A box made for a test: the fields `streak_box_p` gives, in a table of the test's own.
-    pub(super) fn made(p: &crate::scene_boxes::MakeBoxP) -> BoxId {
-        let mut b = crate::scene_boxes::Box::default();
-        b.c = p.c; b.h = p.h; b.albedo = p.albedo.unwrap(); b.emissive = p.emissive.unwrap(); b.flags = p.flags.unwrap();
-        let row = Box::into_raw(Box::new(b));
-        ROWS.with(|r| { let mut r = r.borrow_mut(); r.push(row); BoxId((r.len() - 1) as u32) })
-    }
-    pub(super) fn row(b: BoxId) -> &'static mut crate::scene_boxes::Box {
-        let at = ROWS.with(|r| r.borrow()[b.0 as usize]);
-        unsafe { &mut *at }
-    }
-
     /// `Game::blank()` is built on the stack, and in a debug build it is larger than a test thread's.
     fn on_a_big_stack(f: fn()) {
         std::thread::Builder::new().stack_size(1 << 28).spawn(f).unwrap().join().unwrap();
@@ -283,7 +254,7 @@ mod tests {
         for i in 0..n {
             let mut t = Tracer::default();
             t.lamp = LightId(i);
-            t.box_ = made(&streak_box_p());
+            t.box_ = crate::scene_boxes::make_box(&mut g, &streak_box_p());
             g.tracers.pool.push(t);
         }
         g
@@ -347,7 +318,7 @@ mod tests {
         assert_eq!((t.pool.len(), g.tab.light.len() - before, t.pool[0].dir, t.pool[0].color), (2, 2, [0.0, 0.0, 1.0], [1.0, 0.5, 0.2]));
         assert!(t.pool[0].lamp != t.pool[1].lamp && t.pool[0].light.is_none() && g.engine.lights.lights.is_empty());
         assert!(t.pool[0].box_ != t.pool[1].box_);
-        let b = row(t.pool[1].box_);
+        let b = &g.tab.boxes[t.pool[1].box_];
         assert_eq!((b.c, b.h, b.albedo, b.emissive, b.flags), ([0.0, -10.0, 0.0], [0.006, 0.006, 0.05], [0.04, 0.03, 0.02], [0.0; 3], 10.0));
         let l = &g.tab.light[t.pool[1].lamp];
         assert_eq!((l.pos, l.dir, l.range, l.radius, l.ttl, l.fixture_box, l.outer_deg, l.enabled), ([0.0, -10.0, 0.0], [0.0, -1.0, 0.0], 4.0, 0.06, 30.0, -1.0, 180.0, true));
@@ -383,14 +354,14 @@ mod tests {
         let b = t.box_;
         assert!(v3::dist(t.dir, dir) < 1e-12, "the way the round went, as a unit: {:?}", t.dir);
         assert_eq!(t.v, m::min(p.speed, l / p.min_life));
-        assert!(v3::dist(v3::quat::rotate(row(b).rot.unwrap(), [0.0, 0.0, 1.0]), dir) < 1e-12, "the box lies along the round");
-        assert_eq!(row(b).yaw, v3::yaw_of(dir));
-        assert_eq!(row(b).owner, 255.0, "the shooter's byte");
+        assert!(v3::dist(v3::quat::rotate(g.tab.boxes[b].rot.unwrap(), [0.0, 0.0, 1.0]), dir) < 1e-12, "the box lies along the round");
+        assert_eq!(g.tab.boxes[b].yaw, v3::yaw_of(dir));
+        assert_eq!(g.tab.boxes[b].owner, 255.0, "the shooter's byte");
         let mut out = Vec::new();
         for dt in [0.016, 0.002] {
             tracers_update(&mut g, dt, &mut out);
             let s = g.tracers.pool[0].s;
-            let (c, h, e) = (row(b).c, row(b).h, row(b).emissive);
+            let (c, h, e) = (g.tab.boxes[b].c, g.tab.boxes[b].h, g.tab.boxes[b].emissive);
             assert_eq!((h[0], h[1]), (p.thickness * 0.5, p.thickness * 0.5));
             let head = v3::mad(c, dir, h[2]);
             let want = v3::mad(from, dir, s);

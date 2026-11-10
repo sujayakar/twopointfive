@@ -356,7 +356,7 @@ mod tests {
         manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), None);
         manifest_mark(&mut manifest, "m2", None, None);
         manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), ..LoadoutSpec::default() });
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Civilian, tint: Some([2.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, tint: Some([1.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         let mut level = LintManifestLevel::default();
         level.doors = vec![crate::scene_level::LevelDoorDef { name: "a".into(), ..crate::scene_level::LevelDoorDef::default() }];
@@ -371,7 +371,7 @@ mod tests {
             "plan 'nope': no room-clear plan of that room / door in the level",
             "mark 'm2' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))",
             "mark 'm3' position is not finite",
-            "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)",
+            "loadout 'l1': team 'civilian' cannot be spawned (guard / operative / hostile)",
             "loadout 'l1': tint out of range",
         ]);
     }

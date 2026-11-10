@@ -11,7 +11,7 @@ use core::any::Any;
 use game::game::Game;
 use game::bytes::{ToBytes, W};
 use game::difficulty;
-use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
+use game::kit::{self, CardFor, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
@@ -190,7 +190,7 @@ asks! {
         d.pressed(ok, why, String::new(), Vec::new())
     };
     /// the whole card as issued
-    3 Reset { who: u32 } -> Pressed = |d, who| { let r = kit::kit_preset(&mut d.g, who as f64, KitPreset::Issued); d.pressed(r.ok, r.why, String::new(), Vec::new()) };
+    3 Reset { who: u32 } -> Pressed = |d, who| { let r = kit::kit_reset(&mut d.g, who as f64); d.pressed(r.ok, r.why, String::new(), Vec::new()) };
     /// his card is the copied one
     4 Copy { who: u32 } -> Pressed = |d, who| { let c = kit::kit_shown(&mut d.g, who as f64); d.clip = Some(c); Desk::left(true, String::new()) };
     /// the copied card put on him

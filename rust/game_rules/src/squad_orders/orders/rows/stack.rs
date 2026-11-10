@@ -50,7 +50,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
             upper: Some(crate::character::UpperMode::None),
             move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
             stack_side: Some(post.stack_side),
-            going: format!("stacking · {}", name), there: format!("stacked · {}", name), set_line: Some(String::from("set.")),
+            going: format!("stacking · {}", name).into(), there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", name)), set_line: Some(String::from("set.")),
             ..Default::default()
         };
         squad_orders_assign(g, gd, &a);

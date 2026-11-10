@@ -12,7 +12,7 @@ fn changed(name: &str, what: &str, how: &dyn Fn(&mut Json)) -> std::path::PathBu
     path
 }
 fn member<'a>(j: &'a mut Json, k: &str) -> &'a mut Json { let Json::Obj(m, _) = j else { panic!("not an object: {k}") }; &mut m.iter_mut().find(|(n, _)| n == k).unwrap_or_else(|| panic!("no {k}")).1 }
-fn carried(p: &Play) -> f64 { p.g.wall_charge.carried.unwrap_or(0.0) }
+fn carried(p: &Play) -> f64 { p.g.sets[p.g.seat].wall_charge.carried.unwrap_or(0.0) }
 
 /// THE RULE (the clinic, whose one idea is that the walls are the way in): a room clear whose structure issues wall charges has that many at least in the bag, again after a restart with none
 /// spent and after one with some; it raises a kit's count and never lowers one. A level that issues none keeps what the kit gave.
@@ -24,7 +24,7 @@ fn a_level_issues_its_own_wall_charges() {
     assert_eq!(carried(&p), n, "staged");
     game::savestate::control::restart(&mut p.g);
     assert_eq!(carried(&p), n, "restarted with none spent");
-    p.g.wall_charge.carried = Some(1.0);
+    p.g.sets[p.g.seat].wall_charge.carried = Some(1.0);
     game::savestate::control::restart(&mut p.g);
     assert_eq!(carried(&p), n, "restarted with some spent");
     game::wallcharge::wall_charge_raise_carried(&mut p.g, n + 4.0);
@@ -32,9 +32,9 @@ fn a_level_issues_its_own_wall_charges() {
     assert_eq!(carried(&p), n + 4.0, "a larger count stands");
     drop(p);
     let mut p = Play::mission("block.json", "?levelFile=block.json&roomclear&squad4", &Opts::default());
-    let was = p.g.wall_charge.carried;
+    let was = p.g.sets[p.g.seat].wall_charge.carried;
     assert_eq!(game::issue::issue_stage(&mut p.g), None, "a level with no issue");
-    assert_eq!(p.g.wall_charge.carried, was);
+    assert_eq!(p.g.sets[p.g.seat].wall_charge.carried, was);
 }
 
 /// THE RULE: a level's own cards (`scenarios.issue`) are what its men wear, whatever kit this machine keeps, at every size, and again after a restart: the first teammate's written card on him, the plain
@@ -206,7 +206,7 @@ fn a_levels_leaves_are_made_of_their_paint() {
 #[test]
 fn a_level_may_have_what_the_game_has_room_for() {
     let c = game::levelfit::level_caps();
-    for (name, most, room) in [("doors", c.doors, sim::doors_cap(0)), ("things", c.things, sim::props_cap(0)), ("parts", c.parts, sim::props_cap(3)), ("lamps", c.lamps, sim::lights::ROWS)] {
+    for (name, most, room) in [("doors", c.doors, game::doors::DOOR_CAP), ("things", c.things, sim::world::MAX_THINGS), ("parts", c.parts, sim::world::MAX_LEAVES), ("lamps", c.lamps, sim::lights::ROWS)] {
         assert_eq!(most, room as f64, "{name}");
     }
 }

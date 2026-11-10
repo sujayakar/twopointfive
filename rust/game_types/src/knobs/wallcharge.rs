@@ -3,16 +3,8 @@ use crate::{bytes::ToBytes, Words};
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum WallchargeKMenu {
-    #[default] Page,
-    Direct,
-}
-
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct WallchargeK {
-    /// how the menu reaches the row: 'page' = X, 5 'wall tools ▸', 3 — the door charge's own three presses · 'direct' = X, 5
-    #[k(WallchargeKMenu::Page)] pub menu: WallchargeKMenu,
     /// m: how near a wall's footprint the cursor's point must be for the target to be that wall
     #[k(0.06)] pub pick_m: f64,
     /// m: the charge's height on the wall · how near a wall's end it may sit · how far along the wall a spot is slid to find floor on both faces

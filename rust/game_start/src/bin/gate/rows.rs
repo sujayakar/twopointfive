@@ -327,13 +327,13 @@ fn plant(p: &mut Play, f: Flags) {
     let man = p.g.guards[0];
     if f.breaks("aside") { let c = p.g.gd[man].ch; p.g.ch[c].pos[0] += 0.01; }
     if f.breaks("round") { let gun = p.g.gd[man].weapon; p.g.fa[gun].chamber -= 1.0; }
-    if f.breaks("door") { let d = p.g.doors.list[0]; let a = game::doors::door_angle(&p.g, d); game::doors::door_set_angle(&mut p.g, d, a + 0.1); }
-    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
+    if f.breaks("door") { let d = p.g.doors.list[0]; let a = p.g.dr[d].leaf.angle; p.g.dr[d].leaf.angle = a + 0.1; }
+    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
     if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
     if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
     if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }
     if f.breaks("smoke") { let c = p.g.ch[p.g.gd[man].ch].pos; game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
-    if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes[b].flags = 3.0; }
+    if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes.edit(b).flags = 3.0; }
 }
 
 /// a moment of a run, what a host keeps beside it, and every frame's words of the seconds after it
@@ -391,7 +391,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
     let mut fail = Vec::new();
     'moments: for (m, k) in kept.iter_mut().enumerate() {
         if f.breaks("block") { k.moment.block.clone_from(&end); }
-        p.g = k.moment.stands(if m % 2 == 0 { home } else { 1 });
+        p.g = k.moment.laid(if m % 2 == 0 { home } else { 1 });
         p.cursor = k.cursor;
         let mut next = k.next;
         for (i, was) in k.words.iter().enumerate() {
@@ -418,9 +418,7 @@ fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[Strin
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
         slot -= 1;
-        // (as `face_stand` takes a kept game: its copy of the box world said rows of another slot)
         q.g = m.moment.laid(slot);
-        game::scene_collision::unstand(&mut q.g);
         q.host = game_start::stand::host_of(&q.g).expect("a stood game was handed its host's rows");
         q.cursor = m.cursor;
         let mut next = m.next;
@@ -524,7 +522,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
         }
         None
     };
-    if let Some(why) = moment.take().and_then(|m| { p.g = m.stands(p.g.sim); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
+    if let Some(why) = moment.take().and_then(|m| { p.g = m.laid(p.g.sim); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
     drop(p);
     for shown in [0, 1] {
         let mut q = stand(&e, SEED, 2);

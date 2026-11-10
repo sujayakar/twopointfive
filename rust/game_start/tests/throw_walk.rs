@@ -83,7 +83,7 @@ fn a_shell_is_certain_across_a_room_and_poor_down_a_corridor() {
     let (_, need, near, far) = p.shotgun_rule();
     assert!(near, "the first pellet inside the range");
     assert!(far[..need as usize - 1].iter().all(|x| !x) && far[need as usize - 1], "past it, pellet by pellet: {far:?}");
-    let shooter = p.g.guards.iter().copied().find(|&m| p.g.gd[m].team != game::teams::Team::Operative).unwrap();
+    let shooter = p.g.guards.iter().copied().find(|&m| !p.g.team(m).ours()).unwrap();
     let mut lane = None;   // (the office has no 27 m of clear floor indoors: this finds the lot along its south face)
     let mut z = 1.0;
     while z < 28.0 && lane.is_none() {

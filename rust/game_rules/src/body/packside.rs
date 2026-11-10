@@ -96,16 +96,16 @@ pub fn pack_mask(g: &mut Game, ch: RigId, mask: f64, carries: bool) -> f64 {
     ((mk & !ram) | pack) as f64
 }
 /// A thing's place at a pack's side, in the mesh's bind space.
-pub fn side_bind(g: &Game, e: PackExt, what: SideBindWhat, dims: SideBindDims) -> SidePlace {
+pub fn side_bind(g: &Game, e: PackExt, what: crate::rig_props::PackSideWhat, dims: SideBindDims) -> SidePlace {
     let t = g.k.packside;
-    if what == SideBindWhat::Hammer {
+    if what == crate::rig_props::PackSideWhat::Hammer {
         let head = dims.head.unwrap_or([0.085, 0.045, 0.035]);
         let grip = dims.grip.unwrap_or(0.3);
         let x = e.x0 - t.gap - dims.thick;
         let y_head = m::max(t.head_min, e.top0 + t.over + head[2]);
         return SidePlace { o: [x, y_head - grip, t.handle], x: [1.0, 0.0, 0.0], y: [0.0, 0.0, -1.0], z: [0.0, 1.0, 0.0], pivot: Some([x, y_head, t.handle]), len: Some(dims.len.unwrap_or(0.8)), r: Some(dims.thick) };
     }
-    let left = what == SideBindWhat::Rifle;
+    let left = what == crate::rig_props::PackSideWhat::Rifle;
     let x = if left { e.x1 + t.gap + dims.thick } else { e.x0 - t.gap - dims.thick };
     SidePlace { o: [x, t.butt - dims.rear.unwrap_or(0.3), t.gun - dims.top.unwrap_or(0.02)], x: [1.0, 0.0, 0.0], y: [0.0, 0.0, 1.0], z: [0.0, -1.0, 0.0], pivot: Some([x, t.butt, t.gun]), len: Some(dims.len.unwrap_or(0.8)), r: Some(0.0) }
 }

@@ -121,180 +121,84 @@ pub(super) fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band)
 fn said(s: &Option<String>) -> Option<String> { s.as_ref().filter(|x| !x.is_empty()).cloned() }
 
 /// The words of a row as they are said to this man and by him.
-pub(super) fn said_text(g: &crate::game::Game, l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
+pub(super) fn said_text(l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
 
 fn said_of(l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String {
     if ctx.nameless == Some(true) { if let Some(x) = said(&l.bare) { return x; } }
     if ctx.facts.office != Some(true) { if let Some(x) = said(&l.away) { return x; } }
-    if let Some(x) = said(&l.guide) { return x; }
-    if let Some(x) = said(&l.now) { return x; }
     l.text.clone()
 }
 
 // ---------------------------------------------------------------- intel
 
-/// Calls a macro with every field a kind's row can hold, but the script's own (`sc`).
-macro_rules! intel_fields {
-    ($m:ident; $($a:tt)*) => { $m!($($a)*; steady nervy hard under pedant selfown folder ramble fan stoic con game menace steady_none steady_heard steady_glimpsed steady_saw steady_saw_hurt nervy_none nervy_heard nervy_glimpsed nervy_saw nervy_saw_hurt hard_none hard_heard hard_glimpsed hard_saw hard_saw_hurt __none __heard __glimpsed __saw __saw_hurt pedant_steady pedant_nervy pedant_hard selfown_steady selfown_nervy selfown_hard folder_steady folder_nervy folder_hard ramble_steady ramble_nervy ramble_hard fan_steady fan_nervy fan_hard stoic_steady stoic_nervy stoic_hard con_steady con_nervy con_hard game_steady game_nervy game_hard menace_steady menace_nervy menace_hard) };
-}
+/// What each kind of fact is given in, by who gives it: anybody ("*"), a temper ("hard"), a temper and what he knows ("nervy:sawHurt"), a voice ("fan"),
+/// a voice and a temper ("selfown:nervy"), or one script ("sc:selfown-s1").
+static INTEL: &[(IntelKind, &str, &str)] = &[
+    (IntelKind::CheckOn, "nervy", "{Checker}'s out looking for {checked}— he went quiet— he'll walk right into us—"),
+    (IntelKind::CheckOn, "hard", "{Checker}'s walking {checked}'s route. This way. Soon."),
+    (IntelKind::CheckOn, "*", "{Checker}'s walking {checked}'s route — he went quiet. He'll come past here."),
+    (IntelKind::Clearing, "hard", "Rooms are being cleared. {ClearRoom} first. Then this one."),
+    (IntelKind::Clearing, "*", "They're clearing rooms off your last position. {ClearRoom} first."),
+    (IntelKind::RollcallLive, "hard", "That's the check. If I don't answer, {caller} sends somebody here."),
+    (IntelKind::RollcallLive, "*", "That's a check now. If one of us doesn't answer, {caller} sends someone over."),
+    (IntelKind::Blackout, "hard", "If the lights go out, somebody goes to the breaker in {breakerRoom}. Armed."),
+    (IntelKind::Blackout, "*", "Lights die, one of us goes to the breaker in {breakerRoom} — armed."),
+    (IntelKind::Door, "hard", "{Door} is keyed. We all carry one. Take mine and get out."),
+    (IntelKind::Door, "*", "{Door} is on a key. We all carry one. Mine's on my belt."),
+    (IntelKind::Door, "fan", "{Door}'s keyed— key's on my belt. Do yours open anything? No?"),
+    (IntelKind::Door, "con", "{Door}'s keyed; every belt carries one. Here— inspect mine."),
+    (IntelKind::Door, "selfown:steady", "…Belt. The key's on my belt. Well played, I suppose."),
+    (IntelKind::Door, "selfown:nervy", "…belt. It's on my belt. Please don't make it a whole thing."),
+    (IntelKind::Door, "sc:selfown-s1", "…On my belt. The key's on my belt. Eleven years, for this."),
+    (IntelKind::Door, "sc:selfown-s2", "…Belt. Left side. Take it— you were going to anyway."),
+    (IntelKind::Door, "sc:selfown-s3", "…Belt clip. Under the hi-vis. Nicely done, I suppose."),
+    (IntelKind::Door, "sc:selfown-n2", "…This one. On my belt. I heard it as I said it. I HEARD it."),
+    (IntelKind::Door, "sc:selfown-n3", "…key. Belt, left side. I don't feel better. You said I would."),
+    (IntelKind::Code, "nervy", "The pad by {padDoor}— it's {code}— {code}— don't make me say it twice—"),
+    (IntelKind::Code, "hard", "{PadDoor}: {code} on the pad. Now you know what I know."),
+    (IntelKind::Code, "*", "{PadDoor} is on a pad — {code}. Same four digits every night."),
+    (IntelKind::Code, "fan", "The pad on {padDoor} is {code}— do YOU get codes, or is it all wire?"),
+    (IntelKind::Code, "con", "{PadDoor} takes {code} on the pad, sir. Logged monthly, changed never."),
+    (IntelKind::Rollcall, "nervy", "A check— {checkEta}— I don't answer, somebody comes looking."),
+    (IntelKind::Rollcall, "hard", "Radio check {checkEta}. No answer, they send somebody. Do the math."),
+    (IntelKind::Rollcall, "*", "Radio check {checkEta}. Miss it, they send a man down your route."),
+    (IntelKind::Rollcall, "fan", "Radio check's {checkEta}— miss it, they send someone. Do YOU have checks?"),
+    (IntelKind::Rollcall, "con", "Radio check {checkEta}, sir. No answer, a man walks that route. By the book."),
+    (IntelKind::Rollcall, "nervy:sawHurt", "The check's {checkEta}— {victim} won't answer it— then they ALL come—"),
+    (IntelKind::LockdownPosts, "hard", "Pairs. A man on {post}. Nobody alone — except you."),
+    (IntelKind::LockdownPosts, "*", "We're paired now. One man holds {post}. Nobody walks alone."),
+    (IntelKind::Routes, "nervy", "It's {n} of us— me on {route}, {partner} on {partnerRoute}— that's it—"),
+    (IntelKind::Routes, "hard", "{N}. Me, {route}. {Partner}, {partnerRoute}. Happy?"),
+    (IntelKind::Routes, "*", "{N} of us tonight. I've got {route}, {partner} has {partnerRoute}."),
+    (IntelKind::Routes, "fan", "{N} of us— I do {route}, {partner} {partnerRoute}. What's YOUR route like?"),
+    (IntelKind::Routes, "con", "{N} on shift: I take {route}, {partner} {partnerRoute}. All logged, sir."),
+    (IntelKind::Missing, "hard", "{Missing} is off the air. His route comes up empty, we lock down."),
+    (IntelKind::Missing, "*", "Nobody can raise {missing}. His route turns up empty, this all locks down."),
+    (IntelKind::Drive, "hard", "Your rack went dark on the board. Somebody's on his way to it."),
+    (IntelKind::Drive, "*", "Your rack dropped off the board. Somebody's already been sent to look at it."),
+];
 
-/// A row of INTEL_TEXT as the struct of a kind's table.
-macro_rules! text_row {
-    ($row:ident; $($f:ident)*) => { crate::dialogue::IntelTable { $($f: $row.$f,)* sc: $row.sc } };
-}
-
-/// A row of INTEL_NOW or INTEL_GUIDE laid over: what it writes wins, as a spread.
-macro_rules! lay_over {
-    ($t:ident, $row:ident; $($f:ident)*) => { $(if $row.$f.is_some() { $t.$f = $row.$f; })* };
-}
-
-/// A kind's texts as the page has them: INTEL_TEXT with INTEL_NOW and INTEL_GUIDE laid over.
-fn table_of(kind: IntelKind) -> crate::dialogue::IntelTable {
-    let row = crate::dialogue::intel_text_table().get(st(kind.as_str())).cloned().unwrap_or_default();
-    let mut t = intel_fields!(text_row; row);
-    let (now, guide) = (crate::dialogue::intel_now(), crate::dialogue::intel_guide());
-    macro_rules! over {
-        ($row:expr) => { if let Some(r) = $row { intel_fields!(lay_over; t, r); } };
-    }
-    match kind {
-        IntelKind::CheckOn => { over!(now.check_on); over!(guide.check_on); }
-        IntelKind::Clearing => { over!(now.clearing); over!(guide.clearing); }
-        IntelKind::RollcallLive => { over!(now.rollcall_live); over!(guide.rollcall_live); }
-        IntelKind::Blackout => { over!(now.blackout); over!(guide.blackout); }
-        IntelKind::Door => { over!(now.door); over!(guide.door); }
-        IntelKind::Code => { over!(now.code); over!(guide.code); }
-        IntelKind::Rollcall => { over!(now.rollcall); over!(guide.rollcall); }
-        IntelKind::LockdownPosts => { over!(now.lockdown_posts); over!(guide.lockdown_posts); }
-        IntelKind::Routes => { over!(now.routes); over!(guide.routes); }
-        IntelKind::Missing => { over!(now.missing); over!(guide.missing); }
-        IntelKind::Drive => { over!(now.drive); over!(guide.drive); }
-    }
-    t
-}
-
-/// T[`${t}:${k}`]
-fn of_t_k(x: &crate::dialogue::IntelTable, t: crate::game::Temperament, k: Knowledge) -> Option<&String> {
-    use crate::game::Temperament as T;
-    match (t, k) {
-        (T::Steady, Knowledge::None) => x.steady_none.as_ref(),
-        (T::Steady, Knowledge::Heard) => x.steady_heard.as_ref(),
-        (T::Steady, Knowledge::Glimpsed) => x.steady_glimpsed.as_ref(),
-        (T::Steady, Knowledge::Saw) => x.steady_saw.as_ref(),
-        (T::Steady, Knowledge::SawHurt) => x.steady_saw_hurt.as_ref(),
-        (T::Nervy, Knowledge::None) => x.nervy_none.as_ref(),
-        (T::Nervy, Knowledge::Heard) => x.nervy_heard.as_ref(),
-        (T::Nervy, Knowledge::Glimpsed) => x.nervy_glimpsed.as_ref(),
-        (T::Nervy, Knowledge::Saw) => x.nervy_saw.as_ref(),
-        (T::Nervy, Knowledge::SawHurt) => x.nervy_saw_hurt.as_ref(),
-        (T::Hard, Knowledge::None) => x.hard_none.as_ref(),
-        (T::Hard, Knowledge::Heard) => x.hard_heard.as_ref(),
-        (T::Hard, Knowledge::Glimpsed) => x.hard_glimpsed.as_ref(),
-        (T::Hard, Knowledge::Saw) => x.hard_saw.as_ref(),
-        (T::Hard, Knowledge::SawHurt) => x.hard_saw_hurt.as_ref(),
-    }
-}
-
-/// T[t]
-fn of_t(x: &crate::dialogue::IntelTable, t: crate::game::Temperament) -> Option<&String> {
-    use crate::game::Temperament as T;
-    match t { T::Steady => x.steady.as_ref(), T::Nervy => x.nervy.as_ref(), T::Hard => x.hard.as_ref() }
-}
-
-/// T[`*:${k}`]
-fn of_k(x: &crate::dialogue::IntelTable, k: Knowledge) -> Option<&String> {
-    match k {
-        Knowledge::None => x.__none.as_ref(),
-        Knowledge::Heard => x.__heard.as_ref(),
-        Knowledge::Glimpsed => x.__glimpsed.as_ref(),
-        Knowledge::Saw => x.__saw.as_ref(),
-        Knowledge::SawHurt => x.__saw_hurt.as_ref(),
-    }
-}
-
-/// T[shape]
-fn of_shape(x: &crate::dialogue::IntelTable, shape: ShapeKey) -> Option<&String> {
-    match shape {
-        ShapeKey::Pedant => x.pedant.as_ref(),
-        ShapeKey::Selfown => x.selfown.as_ref(),
-        ShapeKey::Folder => x.folder.as_ref(),
-        ShapeKey::Ramble => x.ramble.as_ref(),
-        ShapeKey::Fan => x.fan.as_ref(),
-        ShapeKey::Stoic => x.stoic.as_ref(),
-        ShapeKey::Con => x.con.as_ref(),
-        ShapeKey::Game => x.game.as_ref(),
-        ShapeKey::Menace => x.menace.as_ref(),
-    }
-}
-
-/// T[`${shape}:${t}`]
-fn of_shape_t(x: &crate::dialogue::IntelTable, shape: ShapeKey, t: crate::game::Temperament) -> Option<&String> {
-    use crate::game::Temperament as T;
-    match (shape, t) {
-        (ShapeKey::Pedant, T::Steady) => x.pedant_steady.as_ref(),
-        (ShapeKey::Pedant, T::Nervy) => x.pedant_nervy.as_ref(),
-        (ShapeKey::Pedant, T::Hard) => x.pedant_hard.as_ref(),
-        (ShapeKey::Selfown, T::Steady) => x.selfown_steady.as_ref(),
-        (ShapeKey::Selfown, T::Nervy) => x.selfown_nervy.as_ref(),
-        (ShapeKey::Selfown, T::Hard) => x.selfown_hard.as_ref(),
-        (ShapeKey::Folder, T::Steady) => x.folder_steady.as_ref(),
-        (ShapeKey::Folder, T::Nervy) => x.folder_nervy.as_ref(),
-        (ShapeKey::Folder, T::Hard) => x.folder_hard.as_ref(),
-        (ShapeKey::Ramble, T::Steady) => x.ramble_steady.as_ref(),
-        (ShapeKey::Ramble, T::Nervy) => x.ramble_nervy.as_ref(),
-        (ShapeKey::Ramble, T::Hard) => x.ramble_hard.as_ref(),
-        (ShapeKey::Fan, T::Steady) => x.fan_steady.as_ref(),
-        (ShapeKey::Fan, T::Nervy) => x.fan_nervy.as_ref(),
-        (ShapeKey::Fan, T::Hard) => x.fan_hard.as_ref(),
-        (ShapeKey::Stoic, T::Steady) => x.stoic_steady.as_ref(),
-        (ShapeKey::Stoic, T::Nervy) => x.stoic_nervy.as_ref(),
-        (ShapeKey::Stoic, T::Hard) => x.stoic_hard.as_ref(),
-        (ShapeKey::Con, T::Steady) => x.con_steady.as_ref(),
-        (ShapeKey::Con, T::Nervy) => x.con_nervy.as_ref(),
-        (ShapeKey::Con, T::Hard) => x.con_hard.as_ref(),
-        (ShapeKey::Game, T::Steady) => x.game_steady.as_ref(),
-        (ShapeKey::Game, T::Nervy) => x.game_nervy.as_ref(),
-        (ShapeKey::Game, T::Hard) => x.game_hard.as_ref(),
-        (ShapeKey::Menace, T::Steady) => x.menace_steady.as_ref(),
-        (ShapeKey::Menace, T::Nervy) => x.menace_nervy.as_ref(),
-        (ShapeKey::Menace, T::Hard) => x.menace_hard.as_ref(),
-    }
-}
-
-/// The words for what was taken, off the office: DRIVE_AWAY with DRIVE_AWAY_GUIDE laid over.
-pub(super) fn drive_away(g: &crate::game::Game) -> crate::dialogue::DriveAway { drive_away_of() }
-
-fn drive_away_of() -> crate::dialogue::DriveAway {
-    let (was, now) = (crate::dialogue::drive_away_table(), crate::dialogue::drive_away_guide());
-    crate::dialogue::DriveAway {
-        steady: now.steady.or(was.steady),
-        nervy: now.nervy.or(was.nervy),
-        hard: now.hard.or(was.hard),
-        under: now.under.or(was.under),
-    }
-}
-
-fn intel_text_of(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> String {
-    let x = table_of(kind);
-    of_t_k(&x, t, k).or_else(|| of_t(&x, t)).or_else(|| of_k(&x, k)).or(x.under.as_ref()).cloned().unwrap_or_default()
+/// The words written for `kind` as `by` gives it.
+fn written(kind: IntelKind, by: &str) -> Option<&'static str> {
+    INTEL.iter().find(|(k, b, _)| *k == kind && *b == by).map(|(_, _, text)| *text)
 }
 
 /// The text a man of this temperament and knowledge gives for `kind`, the most specific variant written.
-pub(super) fn intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
-    intel_text_of(kind, t, k)
-}
-
-fn shaped_of(kind: IntelKind, id: &str, shape: ShapeKey, t: crate::game::Temperament) -> Option<String> {
-    let x = table_of(kind);
-    x.sc.get(st(id)).or_else(|| of_shape_t(&x, shape, t)).or_else(|| of_shape(&x, shape)).cloned()
+pub(super) fn intel_text(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> String {
+    let (t, k) = (t.as_str(), k.as_str());
+    let of = |by: &str| written(kind, by);
+    st(of(&format!("{t}:{k}")).or_else(|| of(t)).or_else(|| of(&format!("*:{k}"))).or_else(|| of("*")).unwrap_or(""))
 }
 
 /// The script's own or the shape-voiced variant of `kind`, or None when none is written.
-pub(super) fn shaped_intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
-    shaped_of(kind, &sc.id, sc.shape, t)
+pub(super) fn shaped_intel_text(kind: IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
+    let shape = sc.shape.as_str();
+    let of = |by: &str| written(kind, by);
+    of(&format!("sc:{}", sc.id)).or_else(|| of(&format!("{shape}:{}", t.as_str()))).or_else(|| of(shape)).map(st)
 }
 
 /// The checker's own words when he is the man walking the silent colleague's route.
-pub(super) fn check_on_self(g: &crate::game::Game) -> String {
+pub(super) fn check_on_self() -> String {
     st(crate::dialogue::CHECKON_SELF_NOW)
 }
 
@@ -327,7 +231,7 @@ fn run_on_text(lead: &str, fact: &str) -> String {
     }
 }
 
-pub(super) fn run_on(g: &mut crate::game::Game, lead: &str, fact: &str) -> String { run_on_text(lead, fact) }
+pub(super) fn run_on(lead: &str, fact: &str) -> String { run_on_text(lead, fact) }
 
 /// Four digits off a callsign, the same every night for the same man.
 pub(super) fn badge_of(callsign: &str) -> String {
@@ -342,63 +246,54 @@ mod tests {
 
     const TS: [Temperament; 3] = [Temperament::Steady, Temperament::Nervy, Temperament::Hard];
     const KS: [Knowledge; 5] = [Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw, Knowledge::SawHurt];
-    const SH: [ShapeKey; 9] = [ShapeKey::Pedant, ShapeKey::Selfown, ShapeKey::Folder, ShapeKey::Ramble, ShapeKey::Fan, ShapeKey::Stoic, ShapeKey::Con, ShapeKey::Game, ShapeKey::Menace];
+
+    fn script(id: &str, shape: ShapeKey) -> crate::dialogue::ShapedIntelTextSc { crate::dialogue::ShapedIntelTextSc { id: st(id), shape } }
 
     /// A FAILURE MEANS: a man gives a fact in silence: some temper or knowledge has no words for it.
     #[test]
     fn every_man_has_words_for_every_fact() {
         for kind in crate::dialogue::intel_kinds() {
-            for t in TS { for k in KS { assert!(!intel_text_of(kind, t, k).is_empty(), "{} {} {}", kind.as_str(), t.as_str(), k.as_str()); } }
+            for t in TS { for k in KS { assert!(!intel_text(kind, t, k).is_empty(), "{} {} {}", kind.as_str(), t.as_str(), k.as_str()); } }
+        }
+    }
+
+    /// A FAILURE MEANS: words are written for a man nobody is, so he talks like everybody else.
+    #[test]
+    fn every_row_is_written_for_somebody() {
+        let sh = [ShapeKey::Pedant, ShapeKey::Selfown, ShapeKey::Folder, ShapeKey::Ramble, ShapeKey::Fan, ShapeKey::Stoic, ShapeKey::Con, ShapeKey::Game, ShapeKey::Menace];
+        let scripts = crate::dialogue::scripts();
+        for (kind, by, _) in INTEL {
+            let known = *by == "*"
+                || TS.iter().any(|t| *by == t.as_str() || KS.iter().any(|k| *by == format!("{}:{}", t.as_str(), k.as_str())))
+                || KS.iter().any(|k| *by == format!("*:{}", k.as_str()))
+                || sh.iter().any(|s| *by == s.as_str() || TS.iter().any(|t| *by == format!("{}:{}", s.as_str(), t.as_str())))
+                || scripts.iter().any(|s| *by == format!("sc:{}", s.id));
+            assert!(known, "{} {by}", kind.as_str());
         }
     }
 
     /// A FAILURE MEANS: a nervy man who saw it talks like a man who knows nothing: the most specific words written are the ones said.
     #[test]
     fn a_fact_is_said_in_the_most_specific_words_written_for_the_man() {
-        let (mut both, mut temper) = (0, 0);
-        for kind in crate::dialogue::intel_kinds() {
-            let x = table_of(kind);
+        for (kind, by, text) in INTEL {
             for t in TS { for k in KS {
-                let said = intel_text_of(kind, t, k);
-                if let Some(w) = of_t_k(&x, t, k) { assert_eq!(&said, w); both += 1; }
-                else if let Some(w) = of_t(&x, t) { assert_eq!(&said, w); temper += 1; }
-                else if let (None, Some(w)) = (of_k(&x, k), x.under.as_ref()) { assert_eq!(&said, w); }
+                let own = written(*kind, &format!("{}:{}", t.as_str(), k.as_str()));
+                if own == Some(*text) || own.is_none() && *by == t.as_str() { assert_eq!(intel_text(*kind, t, k), *text); }
             } }
         }
-        assert!(both > 0 && temper > 0, "the table has lost what this test reads");
     }
 
     /// A FAILURE MEANS: a script's man says the common line where his own was written, or a voice's line for another temper.
     #[test]
     fn a_shaped_fact_takes_the_scripts_own_then_its_temper_then_its_shape() {
-        let door = table_of(IntelKind::Door);
-        let own = door.sc.get(st("selfown-s1")).cloned();
-        assert!(own.is_some());
-        assert_eq!(shaped_of(IntelKind::Door, "selfown-s1", ShapeKey::Selfown, Temperament::Steady), own);
-        assert_eq!(shaped_of(IntelKind::Door, "nope", ShapeKey::Selfown, Temperament::Steady), door.selfown_steady);
-        let (mut temper, mut shape) = (0, 0);
-        for kind in crate::dialogue::intel_kinds() {
-            let x = table_of(kind);
-            for sh in SH { for t in TS {
-                let said = shaped_of(kind, "nope", sh, t);
-                if let Some(w) = of_shape_t(&x, sh, t) { assert_eq!(said.as_ref(), Some(w)); temper += 1; }
-                else if let Some(w) = of_shape(&x, sh) { assert_eq!(said.as_ref(), Some(w)); shape += 1; }
-                else { assert_eq!(said, None); }
-            } }
+        let door = |id: &str, sh| shaped_intel_text(IntelKind::Door, &script(id, sh), Temperament::Steady);
+        assert_eq!(door("selfown-s1", ShapeKey::Selfown).as_deref(), written(IntelKind::Door, "sc:selfown-s1"));
+        assert_eq!(door("nope", ShapeKey::Selfown).as_deref(), written(IntelKind::Door, "selfown:steady"));
+        assert!(written(IntelKind::Door, "sc:selfown-s1").is_some() && written(IntelKind::Door, "selfown:steady").is_some());
+        for (kind, _, text) in INTEL.iter().filter(|(_, by, _)| *by == "fan") {
+            for t in TS { assert_eq!(shaped_intel_text(*kind, &script("nope", ShapeKey::Fan), t).as_deref(), Some(*text)); }
         }
-        assert!(temper > 0 && shape > 0, "the table has lost what this test reads");
-    }
-
-    /// A FAILURE MEANS: the words of an older pass come back: what the guide wrote lies over what came before it.
-    #[test]
-    fn the_guides_words_lie_over_the_old() {
-        let guide = crate::dialogue::intel_guide();
-        let live = guide.rollcall_live.unwrap();
-        assert!(live.under.is_some() && live.under != crate::dialogue::intel_text_table().get(st("rollcallLive")).unwrap().under);
-        assert_eq!(table_of(IntelKind::RollcallLive).under, live.under);
-        let (was, now, d) = (crate::dialogue::drive_away_table(), crate::dialogue::drive_away_guide(), drive_away_of());
-        assert!(now.under.is_some() && now.under != was.under);
-        assert_eq!((d.under, d.hard, d.steady), (now.under, now.hard, None));
+        assert_eq!(shaped_intel_text(IntelKind::Door, &script("nope", ShapeKey::Game), Temperament::Steady), None);
     }
 
     /// A FAILURE MEANS: "Oh— and Radio check", or "oh— and {checker}'s walking" with a man's name in lower case, or "…Fine. radio check" behind a lead that ends its sentence.
@@ -414,16 +309,16 @@ mod tests {
     /// A FAILURE MEANS: a nameless man speaks as a named one, or the office's words are heard away from the office.
     #[test]
     fn said_text_takes_the_first_that_applies() {
-        let l = SaidTextL { text: st("t"), now: Some(st("n")), away: Some(st("a")), bare: Some(st("b")), guide: Some(st("g")) };
+        let l = SaidTextL { text: st("t"), away: Some(st("a")), bare: Some(st("b")) };
         let mut ctx = DialogueCtx::default();
         assert_eq!(said_of(&l, &ctx), "a");
         ctx.facts.office = Some(false);
         assert_eq!(said_of(&l, &ctx), "a");
         ctx.facts.office = Some(true);
-        assert_eq!(said_of(&l, &ctx), "g");
+        assert_eq!(said_of(&l, &ctx), "t");
         ctx.nameless = Some(true);
         assert_eq!(said_of(&l, &ctx), "b");
-        let l2 = SaidTextL { text: st("t"), now: None, away: Some(st("")), bare: Some(st("")), guide: Some(st("")) };
+        let l2 = SaidTextL { text: st("t"), away: Some(st("")), bare: Some(st("")) };
         ctx.facts.office = None;
         assert_eq!(said_of(&l2, &ctx), "t");
     }

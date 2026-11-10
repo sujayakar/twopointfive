@@ -10,7 +10,7 @@ pub(super) fn in_sight(g: &crate::game::Game, o: GuardId) -> bool {
 }
 
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.
-fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
+fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g, seat) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
     crate::autopilot::AutoEntries { ids: vec![String::from(crate::orders::rows::openclear::ORDER.id)], why, kept: None }
 }
@@ -67,12 +67,12 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
         return AutoPick { id: Some(String::from(crate::orders::rows::stack::ORDER.id)), men: Some(w.men), word: false, why: AutoPickWhy::Set, t: t.clone(), kept: None };
     }
     // the men's own face of the door, off the marks they stand on: no path search to find it
-    let a = match w.men.first().copied() { Some(m) => crate::orders::squad_orders_of(g, &crate::seats::here(g), m), None => None };
+    let a = match w.men.first().copied() { Some(m) => crate::orders::squad_orders_of(&crate::seats::here(g), m), None => None };
     let post = match a { Some(a) => g.tab.orders_assignment[a].post, None => None };
     let side = match post { Some(p) => crate::orders::side_of(g, door, p), None => td.side };
     let td_men = crate::orders::OrderTargetDoor { side, ..*td };
     let tm = crate::orders::OrderTarget::Door(td_men);
-    let e = auto_entries(g, &crate::seats::here(g), td_men, None);
+    let e = auto_entries(g, &crate::seats::here(g));
     let why = e.why;
     // (nothing fits: given all the same — a man says why, in the row's words)
     AutoPick { id: Some(e.ids[0].clone()), men: Some(w.men), word: false, why, t: tm, kept: e.kept }
@@ -86,56 +86,46 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
 pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> bool {
     use crate::autopilot::AutoPickWhy;
     let p = auto_pick(g, &crate::seats::here(g), t, None, men);
-    let (tail, group) = (g.orders.log.last().map(|row| row.serial), g.orders.group); // the last row, asked by identity in the TypeScript: its serial
+    let (tail, group) = (g.sets[g.seat].orders.log.last().map(|row| row.serial), g.sets[g.seat].orders.group); // the last row, asked by identity in the TypeScript: its serial
     let to = p.men.clone().or_else(|| men.map(|m| m.to_vec()));
-    g.stats.autopilot.presses += 1;
     if p.why == AutoPickWhy::Pending { return false; }
     if p.why == AutoPickWhy::Set {
         let lines = crate::autopilot::restack_lines();
         crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, to.as_deref().unwrap_or(&[]), &lines);
-        g.stats.autopilot.again += 1;
         return false;
     }
     let no = if p.word {
         let at = g.ch[g.pl[g.player].ch].pos;
         if men.is_some() || crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
             let none = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [at[0], 0.0, at[2]], man: None });
-            let opts = crate::orders::GiveOpts { men: to, ack: None, on_word: None };
+            let opts = crate::orders::GiveOpts { men: to, ack: None };
             crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&none), None, Some(&opts))
         } else {
-            let who = g.orders.who;
+            let who = g.sets[g.seat].orders.who;
             crate::doortools::door_tools_go(g, Some(who))
         }
     } else if let Some(id) = &p.id {
-        let ack = crate::squadnet::why_words(g, &p).map(|w| w.ack);
-        let opts = crate::orders::GiveOpts { men: to, ack, on_word: None };
+        let ack = crate::squadnet::why_words(&p).map(|w| w.ack);
+        let opts = crate::orders::GiveOpts { men: to, ack };
         crate::orders::squad_orders_give(g, id, Some(t), None, Some(&opts))
     } else {
         return false;
     };
     if no.is_some() {
-        g.stats.autopilot.refused += 1;
         return false;
     }
-    if !p.word && crate::squadnet::why_words(g, &p).is_some() { g.squad_net.stats.whys += 1.0; }
-    if let Some(row) = g.orders.log.last_mut() {
+    if let Some(row) = g.sets[g.seat].orders.log.last_mut() {
         if Some(row.serial) != tail { row.auto = Some(true); }
     }
     let id = p.id.as_deref();
     if p.word {
-        g.stats.autopilot.word += 1;
     } else if p.why == AutoPickWhy::First {
-        g.stats.autopilot.first += 1;
     } else if p.why == AutoPickWhy::Blow {
-        g.stats.autopilot.blow += 1;
     } else if id == Some(crate::orders::rows::bangclear::ORDER.id) {
-        g.stats.autopilot.bang += 1;
     } else if id == Some(crate::orders::rows::charge::ORDER.id) {
-        g.stats.autopilot.charge += 1;
     } else {
-        g.stats.autopilot.open += 1;
     }
-    g.orders.group != group
+    g.sets[g.seat].orders.group != group
 }
 
 /// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.

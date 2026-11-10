@@ -598,79 +598,6 @@ pub struct WatchK {
     #[k(0.6)] pub squeeze: f64,
 }
 
-/// THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
-///  muzzle climbing, the trunk rocked — controlled by a trained man, climbing away from an untrained one), the bang TOSSED underhand off the support hand with the
-///  rifle still in the other (the teams' "throw" was a pointing chop), a stun charge that leaves a man bent away from it with his forearm over his eyes for as long
-///  as he is blind (it was one twitch, then a statue), a FLINCH (a duck: head down and away, knees soft) that is not the same clip as taking a HIT (the torso knocked
-///  along the round), a walk that tells the two sides apart (the team sunk onto bent knees and leaning into the gun, gliding; the defenders upright, shoulders
-///  swinging, elbow out), falls that do not all go over backwards, and the stack's shoulder squeeze. Every part has its own switch and `on` is the master:
-///  **on = 0 is the animator exactly as it was** (every new branch below is behind `mvOn`, the old statements untouched) — the headless harness stands up with it
-///  off, so every frozen digest holds; the page has it on, `?nomoves` puts it off. Poses feed the game (the muzzle rides the hand, hit columns
-///  ride the hips and chest), so ON is a different simulation in the small.
-#[derive(Clone, Copy, Debug, ToBytes, Knobs)]
-pub struct MovesK {
-    #[k(1.0)] pub on: f64,
-    #[k(1.0)] pub recoil: f64,
-    #[k(1.0)] pub toss: f64,
-    #[k(1.0)] pub dazzle: f64,
-    #[k(1.0)] pub flinch: f64,
-    #[k(1.0)] pub gait: f64,
-    #[k(1.0)] pub fall: f64,
-    #[k(1.0)] pub squeeze: f64,
-    /// THE SECOND PASS — looks laid on states the game already has. `reload`, `bound` and `clutch` move ARMS ONLY that
-    ///  nothing in the fight reads (a rifleman's support arm; an unarmed civilian's two): the trunk, the head, the trigger hand and with them the muzzle, the bore, the
-    ///  eyes and the hit columns are bit for bit what they were, so these are on with the pass. `entry` lowers a teammate's muzzle past a friend's back — the muzzle is
-    ///  the game's own (rounds leave it, the line-of-fire tests start at it), so it is a different simulation in the small: OFF — tallied over 144 seeds (CLAUDE.md, the MOVES second pass): no mission is measurably better for it, The block leans worse, and the bore still ends on the friend.
-    ///  `entryEyes` (a part of `entry`, nothing without it): the dipped man still LOOKS where he is going — guards.ts's eyes-on-the-sights test reads his gun line
-    ///  as if it were not dipped (`sightsLift`). The weapon light stays down with the muzzle, as a real one does.
-    #[k(1.0)] pub reload: f64,
-    #[k(1.0)] pub bound: f64,
-    #[k(1.0)] pub clutch: f64,
-    #[k(0.0)] pub entry: f64,
-    #[k(0.0)] pub entry_eyes: f64,
-    /// the clutch's FOLD: a man knocked about and still up stays doubled over the hurt, swaying, for as long as the game roots him — the TRUNK and head, so not
-    ///  arms-only (his hit columns and a lowered gun move with it; he fires nothing while rooted). NOT on with the pass: 0 = off (the trunk of a staggered man is the base's), 1 = on by itself (`?fold`), -1 = never (`?fold=0`).
-    #[k(0.0)] pub fold: f64,
-    /// THE SNAP SHOT (a pistol fired from the relaxed carry; the same trade when the aim is raised or let go by hand). The carry and the two-hand aim are two
-    ///  layers eased on two clocks (9 and 14 a second), so while they traded neither had the arm and the base clip's HANGING arm came through from under both: a
-    ///  ninth of it on the fire frame (the wrist 10 cm in that one frame) and a third of it on the way back to the carry (16 cm in a frame, the hand dipping 20 cm
-    ///  and more toward the thigh and up again). On: the layers TRADE — the carry stays whole under the aim until the aim has covered it, the aim stays until the
-    ///  carry is back under it — and the aim comes in from rest over its first frames instead of a fifth of the way at once (MV.snap). And a shot along a PITCHED
-    ///  aim keeps its pitch: the shot clip is keyed level, so blended in whole it lifted hands, trunk and head to the level pose for the length of every such shot
-    ///  (aimed at his feet: the wrist 47 cm up in three frames, down again after) — its recoil alone is laid on the pitched pose instead; a level shot is the clip
-    ///  to the bit. What the round is does not move: it leaves on its own frame from where the muzzle stood before the pose did (combat.ts fireWeapon reads it
-    ///  ahead of the animator) toward its target, and the drawn bore is the aim's own line (Character.gunDir = aimDir()) — fired from rest it is the same round to
-    ///  the bit, with the aim up the same to a micron (moves-snap holds both); one fired while the layers are still trading leaves from the hand's new path, a
-    ///  few cm off the old.
-    ///  Like the rest of MOVES it is a different simulation in the small: the pistol man's hands, chest and head (a guard's eyes ride his head, a torch its hand)
-    ///  are where the new trade has them. Pistol in the hands only (no long gun shown, no share of one mid-swap: a rifleman's pitched shot still takes the level
-    ///  clip's trunk). `?snap=0` off.
-    #[k(1.0)] pub snap: f64,
-    /// THE CROUCH WALK CARRIED LEVEL (the maintainer, twice: "the crouch walk animation looks like waddling"). Measured off Crouch_Fwd_Loop as the game drives it
-    ///  (side to side over a cycle, against the standing walk): the feet come down 33 cm apart on 17.5 cm of hip (the walk: 18), the knees 32–38 cm apart, the
-    ///  pelvis rolls 15° peak to peak (5°) and the whole trunk tips with it, 16° (6°) — so the head rides 17–18 cm from side to side (6 cm), once a stride, and at
-    ///  the player's crouch pace that is nearly twice a second. A wide base with the trunk rocked over each foot in turn is what a waddle IS. On: the cycle's own
-    ///  pelvis roll and the trunk's side lean are taken most of the way back out (MV.steady: the weight goes over the planted foot by the hips' few cm of travel,
-    ///  as in the walk, not by tipping the body), the feet come down nearer his middle and the knees track over them. Fore and aft nothing moves: stride, cadence,
-    ///  the planted foot's ground speed, the pelvis's height and the deliberate layer's stride and surge are the cycle's own. By the crouch walk's share of the
-    ///  pose only — a still crouch, the kneel and every upright gait are untouched. Anybody who crouch-walks (Sam, a sneaking partner). Like the rest of MOVES a
-    ///  different simulation in the small: his head and hands are a few cm from where the rocking had them. `?steady=0` off. SETTING 2 (`?steady=2`; never
-    ///  the default) also rides him HIGHER through the cycle — the pelvis up to `MV.steady.rise` off the kneel wherever both legs can pay it out, so the rear knee
-    ///  no longer drops to a hand off the floor on every step. That one is NOT a look-only change: the eyes that look for him read his head and chest bones, and
-    ///  a head 7 cm higher is 7 cm more of him over low cover.
-    ///  AND THE SPRINT WITH THE RIFLE (the maintainer, after the crouch walk: "sprint animation still has some waddling") — see `steadyRun` below.
-    #[k(1.0)] pub steady: f64,
-    /// THE RIFLE SPRINT WITHOUT THE SIDE ROLL (needs `steady`; `?steady=0` puts it off with the rest — a key of its own ONLY so a recording from before it,
-    ///  whose MOVES row has `steady` and not this, replays on the trunk it was recorded with: journal.ts; no URL flag, no Tab row). A figure that steadies its
-    ///  long gun (longSteady: Sam, and every teammate carrying the issue rifle) has the run clip's shoulder twist taken back out down the spine so the shoulders
-    ///  stay on the weapon (longBody, LONG_STEADY.runYaw). That was done about the model's upright — and a SPRINTER's trunk is pitched ~25° forward, so ±25° of
-    ///  twist about ITS line less ±25° about the upright left the whole trunk rolling ±11° and the head 17 cm from side to side, three steps a second (hands
-    ///  empty the same sprint moves the head 1.7 cm). On, by the SPRINT's share of the pose (0 at and under the jog's speed), the twist is taken out about the
-    ///  trunk's own line and the neck is handed it back: head 4–5 cm, trunk lean 2°, legs to the bit and the gun where they were. Only a sprinter changes, and
-    ///  with a rifle in both hands that is the player: a teammate tops out under the jog's speed and his run is the old hold to the bit.
-    #[k(1.0)] pub steady_run: f64,
-}
-
 /// The motion pass's numbers. Pairs are [untrained, trained], read by CharacterAnimator.trained (0 … 1; the game sets it per side — game.ts). First-pass values
 ///  judged on pose strips (tools/qa/pose-strip.ts), not yet on a GPU.
 #[derive(Clone, Debug, ToBytes, Knobs)]
@@ -693,8 +620,6 @@ pub struct MvK {
     ///  sneak and the close-in creep — a rear knee swung in under a pelvis sunk that far went through the floor) and under a stance that re-plants the legs
     ///  (stanceBody sends the knees out over the toes: on a narrowed base they came 4 cm lower). The level pelvis stays in all of them — and, sunk, a low knee
     ///  is set `kneeOut` of its sideways set further OUT, which hands back the 7 mm the levelled pelvis alone took off it.
-    ///  Setting 2 only: `rise` = how far the pelvis is carried up off the kneel (m), never by more than leaves each leg at `reach` of its full length with its
-    ///  ankle where it is, eased in and out at `riseRate` (1/s)
     pub steady: MvKSteady,
 }
 
@@ -804,8 +729,6 @@ pub struct MvKSnap {
 ///  sneak and the close-in creep — a rear knee swung in under a pelvis sunk that far went through the floor) and under a stance that re-plants the legs
 ///  (stanceBody sends the knees out over the toes: on a narrowed base they came 4 cm lower). The level pelvis stays in all of them — and, sunk, a low knee
 ///  is set `kneeOut` of its sideways set further OUT, which hands back the 7 mm the levelled pelvis alone took off it.
-///  Setting 2 only: `rise` = how far the pelvis is carried up off the kneel (m), never by more than leaves each leg at `reach` of its full length with its
-///  ankle where it is, eased in and out at `riseRate` (1/s)
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct MvKSteady {
     #[k(0.7)] pub roll: f64,
@@ -815,9 +738,6 @@ pub struct MvKSteady {
     #[k(0.5)] pub knee_low: f64,
     #[k(alloc::vec![0.03, 0.05])] pub deep: Vec<f64>,
     #[k(0.25)] pub knee_out: f64,
-    #[k(0.07)] pub rise: f64,
-    #[k(0.95)] pub reach: f64,
-    #[k(8.0)] pub rise_rate: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
@@ -831,7 +751,6 @@ pub struct TurnK {
     #[k(150.0)] pub aim_acc: f64,
     #[k(7.0)] pub body: f64,
     #[k(60.0)] pub body_acc: f64,
-    #[k(1.0)] pub on: f64,
 }
 
 /// A MAN WHO HAS RUN BREATHES HARD, AND IT SHOWS (the maintainer, 10-19: "characters should breathe more forcefully when sprinting (e.g. on snow levels)").

@@ -191,7 +191,7 @@ fn in_a_game_of_two_each_hud_is_told_its_own_men_its_own_line_and_its_own_room()
         assert_eq!(own(&p.view_of(1)), Some((String::from("who sent you?"), Some(b.me))), "seed {}: the second seat", seed);
         assert_eq!(own(&p.view_of(0)), None, "seed {}: the first seat", seed);
         // a teammate of the second seat's: his to find at the edge, and to the first only a man on the floor
-        let theirs = p.g.guards.iter().copied().find(|&gd| game::seats::in_seat(&p.g, pl, gd) && p.g.gd[gd].team == game::teams::Team::Operative && p.g.gd[gd].unit.is_some());
+        let theirs = p.g.guards.iter().copied().find(|&gd| game::seats::in_seat(&p.g, pl, gd) && p.g.team(gd).ours() && p.g.gd[gd].unit.is_some());
         let m = theirs.unwrap_or_else(|| panic!("seed {}: the second seat has no man of its own", seed));
         says(&mut p, m, "on you.");
         let id = id_of(&p, m);

@@ -58,14 +58,6 @@ pub struct St {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunHoldStats {
-    pub armed: f64,
-    pub ran: f64,
-    pub no_cover: f64,
-    pub rounds: f64,
-    pub no_way: f64,
-    pub looks: f64,
-    pub gone: f64,
-    pub lines: f64,
     pub free_t: f64,
 }
 
@@ -91,22 +83,6 @@ pub struct PickCover {
     pub edge: Option<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum GunHoldPoolKind {
-    Shot,
-    Round,
-    Gone,
-    Gun,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BarkKind {
-    Shot,
-    Round,
-    Gone,
-    Gun,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GunHoldFeetFs {
     pub ok: bool,
@@ -127,7 +103,7 @@ pub struct GunHoldFeet {
 pub struct GunholdMod {
     pub knowns: JsMap<u32, crate::gunhold::Known>,
     pub states: JsMap<GuardsStandoffId, crate::gunhold::St>,
-    #[is(Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
+    #[is(Some(crate::gunhold::GunHoldStats { free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
     pub planned: Option<f64>,
 }
 
@@ -146,3 +122,11 @@ pub fn lines() -> crate::gunhold::LINES { crate::gunhold::LINES { gun: alloc::ve
 pub fn gunhold_defender_lines() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("gun"), alloc::vec![String::from("pistol's out behind his shield — get to cover!"), String::from("he's drawn from the hold — get behind something!")]); t.set(String::from("shot"), alloc::vec![String::from("he's firing past his shield — off that line, move!"), String::from("rounds from the hold — get off it, go round him!")]); t.set(String::from("round"), alloc::vec![String::from("going round behind him — keep his eyes on you"), String::from("coming at his back. hold him where he is")]); t.set(String::from("gone"), alloc::vec![String::from("he's moved — nobody where we left them!")]); t } }
 
 pub fn gunhold_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("shots! get off his line — go round him!"), String::from("shots! get out of his line of fire — go around him!")); t.set(String::from("going round him — keep him talking"), String::from("going around him — keep him talking")); t.set(String::from("he's drawn from the hold — get behind something!"), String::from("he's pulled a pistol — get behind something!")); t.set(String::from("rounds from the hold — get off it, go round him!"), String::from("he's shooting — get out of his line of fire, go around him!")); t.set(String::from("going round behind him — keep his eyes on you"), String::from("going around behind him — keep his eyes on you")); t.set(String::from("coming at his back. hold him where he is"), String::from("coming up behind him. keep him where he is")); t.set(String::from("he's moved — nobody where we left them!"), String::from("he's moved — they're not where we left them!")); t } }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+pub enum BarkKind {
+    Shot,
+    Round,
+    Gone,
+    Gun,
+}

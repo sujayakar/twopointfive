@@ -44,6 +44,13 @@ pub struct HoldAfter {
     pub text: String,
 }
 
+/// His hands' work put him on a knee: how he stood just before it, low and sneaking as his squad counts them
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Knee {
+    pub low: bool,
+    pub sneaks: bool,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Legs {
     pub char: crate::player::LegsChar,
@@ -54,8 +61,7 @@ pub struct Legs {
     pub backpedal: bool,
     pub speed_sm: f64,
     pub pace: f64,
-    pub dragging: Option<GuardId>,
-    pub haul: Option<crate::hands::Haul>,
+    pub tow: Option<crate::game::Tow>,
     pub shoved: [f64; 2],
     pub shoved_t: f64,
     pub shoved_from: [f64; 2],
@@ -75,8 +81,7 @@ impl Default for Legs {
             backpedal: false,
             speed_sm: 0.0,
             pace: 0.0,
-            dragging: None,
-            haul: None,
+            tow: None,
             shoved: [0.0; 2],
             shoved_t: 0.0,
             shoved_from: [0.0; 2],
@@ -119,8 +124,7 @@ pub struct WallHold {
     pub at_edge: f64,
     pub peek: f64,
     pub peek_dir: f64,
-    pub crouched: bool,
-    pub take_t: Option<f64>,
+    pub take_t: f64,
     pub yaw0: Option<f64>,
     pub yaw_d: Option<f64>,
     pub hit_t: Option<f64>,
@@ -261,18 +265,6 @@ pub struct HeldTalk {
     pub speaking: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum StartKickTool {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SideKickSpot {
     pub pos: V3,
@@ -383,10 +375,6 @@ pub const WALL_PEEK_LOOK: f64 = 0.5235987755982988;
 
 pub const WALL_SHOVE_OFF: f64 = 0.25;
 
-pub const WALL_AWAY_SECS: f64 = 0.25;
-
-pub const WALL_SETTLE: f64 = 0.22;
-
 pub const WALL_PEEK_SECS: f64 = 0.3;
 
 pub const PROP_BODY_R: f64 = 0.3;
@@ -406,3 +394,9 @@ pub const EASE_RATE: f64 = 0.55;
 pub const EASE_MAX: f64 = 1.45;
 
 pub const EASE_OFFER: f64 = 0.62;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum FreeHeldWhy {
+    Shot,
+    Cancel,
+}

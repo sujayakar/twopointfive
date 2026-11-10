@@ -14,8 +14,8 @@
 import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
 import { NET, netText, netParse, heldOf, restOf, withEdges, cleanName } from './wire';
 
-/** the host's game as the client drives it: one confirmed tick on every seat's record, and the chained state word after the last */
-export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; /** the word of the whole game after the last word tick (words.ts foldWhole), where the host has one */ watch?(): string | null; }
+/** the host's game as the client drives it: one confirmed tick on every seat's record, and the state word after the last */
+export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; }
 
 export class NetClient {
   welcome: Welcome | null = null;
@@ -32,9 +32,6 @@ export class NetClient {
   confirmed = 0; heard = 0;
   /** state words that matched · the first that did not: the tick it was after, the server's and the host's own */
   wordsOk = 0; bad: { t: number; server: string; mine: string } | null = null;
-  /** THE WHOLE GAME'S WORD, WATCHED (words.ts foldWhole): word ticks on which this machine's was the server's, on which it was not, and the first of those.
-   *  Never an alarm: the game plays on, nothing is said to the server or the player; whoever reads the client's state is told */
-  watchOk = 0; watchOff = 0; watchFirst: number | null = null;
   /** the next tick a record may be sent for · records sent · beats held (the host beat faster than the server ticks) · ticks skipped (the beat came late) · the last pace note's depth */
   sendTick = 0; sent = 0; holds = 0; skips = 0; lead = NaN;
   /** walked ticks the server ran on a HELD record for this seat (its own came late, or none was sent): what a look ahead could not have known */
@@ -46,7 +43,7 @@ export class NetClient {
   /** the server's tick minus this host's clock in ticks, by the least-delayed tick message of this span of NET.clockMs and the one before; NaN before the first */
   private ahead = NaN;
   private span = -1; private aheadNow = NaN; private aheadWas = NaN;
-  private queue: { c: (WireCmd | 0)[]; w?: string; v?: string }[] = [];
+  private queue: { c: (WireCmd | 0)[]; w?: string }[] = [];
   private prev: (WireCmd | null)[] = [];
   /** pace notes about ticks before this one are not acted on (the margin moved, or the sending began again, after they were sent for) */
   private settle = 0;
@@ -63,7 +60,7 @@ export class NetClient {
     let m: ToClient; try { m = netParse(text) as ToClient; } catch { return; }
     if (!m || typeof m !== 'object') return;
     if (m.k === 'welcome') { this.welcome = m; this.seat = m.seat; this.state = m.state; this.prev = new Array<WireCmd | null>(m.seats).fill(null); }
-    else if (m.k === 't') { if (m.t === this.heard) { this.queue.push({ c: m.c, ...(m.w !== undefined ? { w: m.w } : {}), ...(m.v !== undefined ? { v: m.v } : {}) }); this.heard++; this.clock(now); } else if (m.t > this.heard) this.broken ||= `tick ${m.t} came where tick ${this.heard} was due`; }
+    else if (m.k === 't') { if (m.t === this.heard) { this.queue.push({ c: m.c, ...(m.w !== undefined ? { w: m.w } : {}) }); this.heard++; this.clock(now); } else if (m.t > this.heard) this.broken ||= `tick ${m.t} came where tick ${this.heard} was due`; }
     else if (m.k === 'tape') { if (m.from > this.heard) this.broken ||= `the run from tick ${m.from} came where tick ${this.heard} was due`; for (let i = 0; i < m.ticks.length; i++) if (m.from + i === this.heard) { this.queue.push(m.ticks[i]); this.heard++; } }
     else if (m.k === 'pace') { this.lead = m.l;
       if (!this.sent || m.t < this.settle || m.t >= this.sendTick) { /* a note about a tick sent for before the margin last moved or the sending last began, or one nothing was sent past: not about the way up */ }
@@ -84,8 +81,10 @@ export class NetClient {
    *  waits for the other seat, and before its first live tick is heard, nothing is sent. */
   beat(cmd: WireCmd | null, now: number): void { if (cmd) this.out(cmd, now); }
   /** the host's hands are off (a card is up over its game, its tab is hidden): one record that holds nothing and says so (wire.ts restOf), so the server
-   *  does not hold the seat's last keys down for as long as that lasts. Nothing is sent when nothing was held */
-  rest(now: number): void { const l = this.last; if (l && (l.k.length || l.b)) this.out(restOf(l), now, true); }
+   *  does not hold the seat's last keys down for as long as that lasts, and a ring that stood with no key down is put away. `held`: only if something was held (a page that catches up) */
+  rest(now: number, held = false): void { const l = this.last; if (l && !this.off && (!held || l.k.length || l.b)) this.out(restOf(l), now, true); }
+  /** the last record sent took the hands off */
+  private off = false;
   /** the last record sent */
   private last: WireCmd | null = null;
   /** `must`: a record that is never held back for the beat's pace (the hands coming off: the host may not beat again for as long as that lasts) */
@@ -96,7 +95,7 @@ export class NetClient {
     if (t > due + NET.burst && !must) { this.holds++; if (w.p) for (const k of w.p) if (!this.carry.p.includes(k)) this.carry.p.push(k); this.carry.c |= w.c ?? 0; this.carry.w += w.w ?? 0; return; }
     if (this.sent && t > this.sendTick) this.skips += t - this.sendTick;
     if (!this.sent || t > this.sendTick + NET.burst) this.settle = t;   // (the sending begins, or begins again after a gap: notes about ticks before this one are not about these records)
-    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.send(netText({ k: 'in', t, c: w }));
+    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.off = must; this.send(netText({ k: 'in', t, c: w }));
   }
 
   /** step the host's game through confirmed ticks, at most `max` of them; answers how many it stepped */
@@ -110,7 +109,6 @@ export class NetClient {
       const t = this.confirmed++; n++;
       while (this.pending.length && this.pending[0][0] <= t) this.pending.shift();
       if (row.w !== undefined) { const mine = host.word(); if (mine === row.w) this.wordsOk++; else if (!this.bad) { this.bad = { t, server: row.w, mine }; this.send(netText({ k: 'lost', t, w: mine })); } }
-      if (row.v !== undefined) { const mine = host.watch?.(); if (mine) { if (mine === row.v) this.watchOk++; else { this.watchOff++; this.watchFirst ??= t; } } }
     }
     return n;
   }

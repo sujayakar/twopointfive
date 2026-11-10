@@ -1,7 +1,7 @@
 //! THE MISSION LIST BEFORE A GAME: its rows in the page's order, the sheet of one mission, a choice pressed on it, and the links they all make. What it holds of its own is `Sitting`: the
 //! visitor's address, the hour and weather picked on it, the way in picked per mission, and what this machine keeps of the levers. The difficulty, the levers and the quiet picks are the game's
 //! own tables. (src/ui/missions.ts, startpage.ts, levers.ts: what those screens lit and wrote, without the screens.)
-use crate::difficulty::{self, Difficulty, DifficultyNow, DifficultyWordsLevel, KitRung, LeverKey};
+use crate::difficulty::{self, Difficulty, DifficultyNow, KitRung, LeverKey};
 use crate::game::Game;
 use crate::hours::{self, HourId};
 use crate::js;
@@ -433,13 +433,13 @@ impl Sitting {
                 Some(vec![text(KEPT_LEVEL, difficulty::level_text(g)), text(KEPT_LEVERS, String::new())])
             }
             "fog" if m.quiet_row() => {
-                quietfog::set_quiet_fog(g, [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| r.as_str() == to)?, Some(true));
+                quietfog::set_quiet_fog(g, [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| r.as_str() == to)?);
                 Some(vec![text(KEPT_FOG, quietfog::quiet_fog_text(g))])
             }
             "cams" => {
                 let on = to == "1";
                 let lever_was = quietfog::quiet_fog(g);
-                quietfog::set_quiet_cams(g, on, Some(true));
+                quietfog::set_quiet_cams(g, on);
                 let mut kept = vec![text(KEPT_CAMS, quietfog::quiet_cams_text(g, on))];
                 if quietfog::quiet_fog(g) != lever_was { kept.push(text(KEPT_FOG, quietfog::quiet_fog_text(g))); }
                 Some(kept)
@@ -497,7 +497,7 @@ impl Sitting {
 /// Standard | Hard, greyed where the pick changes nothing.
 fn difficulty_row(g: &Game, m: &Mission) -> Setting {
     let now = difficulty::difficulty_now(g);
-    let level = match now { DifficultyNow::Standard => DifficultyWordsLevel::Standard, DifficultyNow::Hard => DifficultyWordsLevel::Hard, DifficultyNow::Custom => DifficultyWordsLevel::Custom };
+    let level = now;
     let note = match &m.entry {
         Some(e) if e.kind == MissionKind::Quiet => String::from("a quiet mission uses the level's own shift on either setting"),
         Some(e) => difficulty::difficulty_words(g, Some(level), Some(&difficulty::squads_held(e))),

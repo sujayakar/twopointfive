@@ -40,7 +40,7 @@ for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.len
     game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed: 5 });
     { const o = D.at[Section.view]; cam.target = [D.f[o + View.follow], D.f[o + View.follow + 1], D.f[o + View.follow + 2]]; cam.rebuild(); }
     // the ticks a page plays and throws away before the first: the game that plays is the game that was started
-    at = 'the ticks thrown away'; let cold = true; { const was = game.mark(true), t0 = performance.now(); await game.warm(36, (N, i) => { input.keys.clear(); if (i >= 12) input.keys.add('KeyW'); input.buttons = i >= 24 ? 1 : 0; return sampleHand(N, input, cam, canvas); }, async () => { /* */ }); input.keys.clear(); input.buttons = 0; const is = game.mark(true);
+    at = 'the ticks thrown away'; let cold = true; { const was = game.mark(), t0 = performance.now(); await game.warm(36, (N, i) => { input.keys.clear(); if (i >= 12) input.keys.add('KeyW'); input.buttons = i >= 24 ? 1 : 0; return sampleHand(N, input, cam, canvas); }, async () => { /* */ }); input.keys.clear(); input.buttons = 0; const is = game.mark();
       cold = JSON.stringify(was) === JSON.stringify(is) && game.ticks === 0; const which = stood(); run(1, 'the first tick'); cold &&= stood() === which; warmMs = Math.max(warmMs, performance.now() - t0); }
     game.commands.god(1);
     run(60, 'a second standing');

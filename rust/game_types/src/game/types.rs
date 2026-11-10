@@ -59,22 +59,6 @@ pub struct Interactable {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum InteractableKind {
-    #[default] Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Verb {
     Push,
@@ -134,6 +118,33 @@ pub enum DownKind {
     Choked,
 }
 
+/// what put a man down, as the debrief tells it
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum With<'a> {
+    /// what is in the hand: the gun, or the hand itself
+    #[default] Hand,
+    Ring,
+    Whip,
+    Knife,
+    /// a charge on the wall he stood behind
+    Charge,
+    /// what went off, by its name
+    Blast(&'a str),
+}
+
+impl With<'_> {
+    /// how a man who still breathes was put down, in a word
+    pub fn method(self, how: DownKind) -> &'static str {
+        match (how, self) {
+            (DownKind::Choked, _) => "choke",
+            (_, With::Ring) => "ring",
+            (_, With::Whip) => "whip",
+            (_, With::Charge) => "charge",
+            _ => "takedown",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,
@@ -151,7 +162,6 @@ pub struct Witness {
     pub saw_body: Option<crate::game::WitnessSawBody>,
     pub called_to_body: Option<crate::game::WitnessCalledToBody>,
     pub saw_held: Option<crate::game::WitnessSawHeld>,
-    pub was_held: f64,
     pub dazzled: f64,
 }
 
@@ -221,7 +231,6 @@ pub enum MissionStage {
 pub struct Mission {
     pub stage: crate::game::MissionStage,
     pub t0: f64,
-    pub drive_t: f64,
     pub pulled: bool,
     pub alarm_on: bool,
     pub sweep_at: f64,
@@ -263,7 +272,7 @@ pub struct GameEvent {
     pub weapon: Option<crate::weapons::WeaponId>,
     pub from: Option<V3>,
     pub to: Option<V3>,
-    pub cause: Option<crate::game::GameEventCause>,
+    pub cause: Option<crate::lighting::LightEventCause>,
     pub sw_at: Option<V3>,
     pub blind: Option<bool>,
     pub lure: Option<bool>,
@@ -272,12 +281,6 @@ pub struct GameEvent {
     pub ears: Option<[V3; 2]>,
     /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
     pub serial: u32,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum GameEventCause {
-    Shot,
-    Ocp,
 }
 
 /// What a game was stood with: its own record, set once at the stand, and the one rules read
@@ -332,19 +335,13 @@ pub struct Game {
     #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
-    pub falls: crate::sim_fallshome::FallStore,
+    pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
     pub show_debug: bool,
     #[is(-1.0)] pub spectate: f64,
     pub player_invisible: bool,
-    pub threat_proximity: f64,
-    #[is(-100.0)] pub torch_on_t: f64,
-    pub aim_point: V3,
-    pub aim_target: Option<FixtureId>,
-    pub aim_guard: Option<GuardId>,
-    pub aim_friend: Option<GuardId>,
     pub dyn_boxes: Vec<AnyBoxId>,
     pub rings: Vec<crate::launcher::Ring>,
     pub shells: Vec<crate::he40::Shell>,
@@ -352,13 +349,7 @@ pub struct Game {
     pub doors: crate::doors::Doors,
     pub door_deals: Vec<crate::doorswing::SwingDeal>,
     pub props: crate::props::PropSystem,
-    pub use_door: Option<DoorId>,
     pub reach_interior: Option<Vec<u8>>,
-    pub hover: Option<crate::game::Interactable>,
-    pub interactables: Vec<crate::game::Interactable>,
-    pub nearby: Vec<crate::game::Interactable>,
-    pub aim_snap: Option<V3>,
-    pub act: Option<crate::game::Interactable>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     /// a scripted hand is at this point of the world: his cursor is on it, and his aim is it
@@ -375,14 +366,13 @@ pub struct Game {
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
-    pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
+    #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub staged: crate::mission::Staged,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -411,7 +401,6 @@ pub struct Game {
     pub recap: crate::deathrecap::Recap,
     pub verdict: crate::verdict::Verdict,
     pub room_clear: crate::roomclear::RoomClearScenario,
-    pub orders: crate::orders::SquadOrders,
     pub fog_of_war: crate::fogofwar::FogOfWar,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
@@ -423,10 +412,7 @@ pub struct Game {
     pub entry: crate::entrypoints::EntryPoints,
     pub cleared: crate::cleared::ClearedRooms,
     pub rescue: crate::rescue::Rescue,
-    pub door_tools: crate::doortools::DoorTools,
     pub pair: crate::pairorders::PairOrders,
-    pub work: crate::workthings::WorkThings,
-    pub wall_charge: crate::wallcharge::WallCharge,
     pub door_path: crate::doorpath::DoorPath,
     /// (this machine's own saves: in no bytes)
     #[bytes(skip)]
@@ -439,20 +425,19 @@ pub struct Game {
     pub smoke: crate::smoke_types::SmokeSystemLike,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
     pub aside: bool,
-    /// (the host's camera: in no bytes)
-    #[bytes(skip)]
-    pub view_proj: Option<crate::game::GameViewProj>,
     pub rolls: Vec<crate::game::Roll>,
     pub roll_seq: f64,
     pub restart_cut: bool,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
+    /// the seat a pass is about, and its man (`seats::with_seat`)
     #[is(SeatId(0))] pub seat: SeatId,
+    /// each seat's own things, by its id
+    #[is(crate::seats::sets_new())] pub sets: Tab<SeatId, crate::seats::SeatSet>,
     pub seats: Vec<SeatId>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
-    pub ticking: bool,
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub alone_own: crate::game::AsideOwn,
@@ -464,7 +449,7 @@ pub struct Game {
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// INVENTED: what g.serial() deals
     #[is(1)] pub serial_next: u32,
-    /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
+    /// INVENTED: a second cast of the squad is in the seat's row (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
     /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
     pub box_frame_rows: Vec<FrameBoxId>,
@@ -666,31 +651,22 @@ pub enum Temperament {
     Hard,
 }
 
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
     #[is(CharId(0))] pub ch: CharId,
     pub crouch: bool,
-    pub aim_held: bool,
     #[is(-10.0)] pub last_fire_t: f64,
     pub backpedal: bool,
     pub sprinting: bool,
     pub dash: bool,
-    pub friend_low: bool,
-    #[is(-10.0)] pub friend_t: f64,
     #[is([0.0, 0.0])] pub shoved: [f64; 2],
     #[is(-1.0)] pub shoved_t: f64,
     #[is([0.0, 0.0])] pub shoved_from: [f64; 2],
-    pub haul: Option<crate::hands::Haul>,
-    pub door_move: Option<crate::hands::DoorMove>,
-    pub dragging: Option<GuardId>,
-    pub drag_yaw: f64,
-    pub drag_noise_t: f64,
-    pub drag_stuck_t: f64,
+    /// what his hands or feet are in the middle of: one thing, or nothing
+    pub deed: Option<crate::game::Deed>,
+    /// the body he has hold of
+    pub tow: Option<crate::game::Tow>,
     pub noise: f64,
-    pub takedown: Option<crate::game::PlayerTakedown>,
-    pub holding: Option<crate::player::Hold>,
-    pub catch_due: Option<f64>,
     pub bubble: Option<crate::game::PlayerBubble>,
     pub speed_sm: f64,
     pub hit_flash: f64,
@@ -715,9 +691,7 @@ pub struct Player {
     #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
-    pub setup: Option<crate::game::PlayerSetup>,
     pub setup_hand: Option<crate::game::PlayerSetupHand>,
-    pub setup_key: Option<crate::game::PlayerSetupKey>,
     pub rifle_gone: bool,
     pub kit_was: Option<Option<crate::character::KitItem>>,
     pub kit_can: Option<crate::game::ThrowKind>,
@@ -728,34 +702,19 @@ pub struct Player {
     #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
-    pub coding: Option<DoorId>,
-    pub code_t: f64,
-    pub breaker_move: Option<crate::game::PlayerBreakerMove>,
     pub hand_wait: f64,
-    pub near_sel: i32,
-    #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
     #[is(LightId(0))] pub light: LightId,
-    pub throw_eaten: bool,
-    pub throw_held: bool,
     #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
-    pub throw_preview: Option<crate::throwables::ThrowSolution>,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
-    pub easing: Option<DoorId>,
-    pub ease_stall_t: f64,
-    pub ease_best: f64,
-    pub picking: Option<DoorId>,
-    pub kick: Option<crate::game::PlayerKick>,
-    pub f_held: bool,
+    /// he is low because his hands' work put him there, not by his own key
+    pub knee: Option<crate::player::Knee>,
     pub wand: bool,
-    pub wanding: Option<crate::wand::Wanding>,
     #[is(crate::kit::BigKit::None)] pub big_kit: crate::kit::BigKit,
     pub cams: Vec<StickyCamId>,
     pub cam_seq: f64,
-    pub charging: Option<crate::game::PlayerCharging>,
     pub work_stow: Option<crate::game::PlayerWorkStow>,
     pub wall: Option<crate::player::WallHold>,
     pub safe: Option<V3>,
@@ -763,6 +722,101 @@ pub struct Player {
     #[is(1.0)] pub step_travel: f64,
     pub step_owed: f64,
     #[is(-1.0)] pub step_at: f64,
+}
+
+/// A thing done by hand or foot that has an end of its own. He is in the middle of one at a time: `deed::begin` puts down the one before.
+#[derive(Clone, Debug, ToBytes)]
+pub enum Deed {
+    /// a door kicked in, or the big slot's beat at one
+    Kick(crate::game::PlayerKick),
+    /// a lock picked
+    Pick(DoorId),
+    /// a look under a door
+    Wand(crate::wand::Wanding),
+    /// a leaf eased open
+    Ease(crate::game::Easing),
+    /// a code keyed in
+    Code(crate::game::Coding),
+    /// a charge set on a door
+    Charge(crate::game::PlayerCharging),
+    /// the breaker's lever thrown
+    Breaker(crate::game::PlayerBreakerMove),
+    /// a leaf pushed or pulled by hand
+    Door(crate::hands::DoorMove),
+    /// a man struck down
+    Takedown(crate::game::PlayerTakedown),
+    /// a man held
+    Hold(crate::player::Hold),
+    /// a charge set on a wall
+    Wall(crate::wallcharge::WallChargeSam),
+    /// the errand's thing taken from where it is kept, and for how long he has been at it
+    Take(f64),
+}
+
+macro_rules! deeds {
+    ($($(#[$doc:meta])* $kind:ident $ty:ty: $get:ident $get_mut:ident $over:ident;)*) => {
+        impl Player {
+            $(
+                $(#[$doc])*
+                pub fn $get(&self) -> Option<&$ty> { match &self.deed { Some(Deed::$kind(d)) => Some(d), _ => None } }
+                pub fn $get_mut(&mut self) -> Option<&mut $ty> { match &mut self.deed { Some(Deed::$kind(d)) => Some(d), _ => None } }
+                /// that deed is over, if he is in the middle of it
+                pub fn $over(&mut self) { if let Some(Deed::$kind(_)) = self.deed { self.deed = None; } }
+            )*
+        }
+    };
+}
+deeds! {
+    Kick crate::game::PlayerKick: kick kick_mut kick_over;
+    Pick DoorId: picking picking_mut picking_over;
+    Wand crate::wand::Wanding: wanding wanding_mut wanding_over;
+    Ease crate::game::Easing: easing easing_mut easing_over;
+    Code crate::game::Coding: coding coding_mut coding_over;
+    Charge crate::game::PlayerCharging: charging charging_mut charging_over;
+    Breaker crate::game::PlayerBreakerMove: breaker_move breaker_move_mut breaker_over;
+    Door crate::hands::DoorMove: door_move door_move_mut door_move_over;
+    Takedown crate::game::PlayerTakedown: takedown takedown_mut takedown_over;
+    Hold crate::player::Hold: holding holding_mut holding_over;
+    Wall crate::wallcharge::WallChargeSam: wall_work wall_work_mut wall_work_over;
+    Take f64: taking taking_mut taking_over;
+}
+
+impl Player {
+    /// Does what he is in the middle of have his feet too? A leaf worked by hand leaves them his own.
+    pub fn planted(&self) -> bool { !matches!(self.deed, None | Some(Deed::Ease(_) | Deed::Door(_))) }
+    /// Has he a deed under way, or a body in tow?
+    pub fn hands_full(&self) -> bool { self.deed.is_some() || self.tow.is_some() }
+    /// Has he his hands on a man?
+    pub fn on_a_man(&self) -> bool { matches!(self.deed, Some(Deed::Takedown(_) | Deed::Hold(_))) }
+    /// the body he has hold of
+    pub fn dragging(&self) -> Option<GuardId> { self.tow.map(|t| t.who) }
+    /// how he has hold of it, once he has it by an end or on his shoulder
+    pub fn haul(&self) -> Option<crate::hands::Haul> { self.tow.and_then(|t| t.haul) }
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Easing {
+    pub door: DoorId,
+    /// the furthest it has come, and how long it has come no further
+    pub best: f64,
+    pub stall_t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Coding {
+    pub door: DoorId,
+    pub t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes)]
+pub struct Tow {
+    pub who: GuardId,
+    pub haul: Option<crate::hands::Haul>,
+    pub yaw: f64,
+    /// until the next scrape of it is heard
+    pub noise_t: f64,
+    /// how long it has been wedged
+    pub stuck_t: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -882,7 +936,7 @@ pub struct PlayerKick {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerKickTool {
-    pub kind: crate::game::PlayerKickToolKind,
+    pub kind: crate::kit::BigTool,
     pub side: f64,
     pub t: f64,
     pub lead: Option<f64>,
@@ -892,12 +946,6 @@ pub struct PlayerKickTool {
     pub done: f64,
     pub gave: Option<bool>,
     pub moves: Option<crate::game::PlayerKickToolMoves>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum PlayerKickToolKind {
-    #[default] Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -982,7 +1030,6 @@ pub struct Guard {
     #[is(CharId(0))] pub ch: CharId,
     #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
-    #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
     /// the man he has in mind: a player's or an AI man. He may be a man who has left: a body stays readable, tables never shrink
     pub foe: Option<CharId>,
     pub faces: Option<f64>,
@@ -1011,7 +1058,7 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 })] pub witness: crate::game::Witness,
+    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, dazzled: 0.0 })] pub witness: crate::game::Witness,
     #[is(GameTalkId(0))] pub talk: GameTalkId,
     pub keys: JsSet<String>,
     #[is(-1.0)] pub missed_at: f64,
@@ -1123,8 +1170,6 @@ pub struct GuardHeld {
     pub by: crate::game::GuardHeldBy,
     pub since: f64,
     pub variant: crate::character::HoldVariant,
-    pub phase: crate::character::HoldPhase,
-    pub reverse: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -1226,26 +1271,6 @@ pub struct GameNewOpts {
     pub seats: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameFreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameSetBlackoutCause {
-    Shot,
-    Ocp,
-    Debug,
-    Hand,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameLightEventCause {
-    Shot,
-    Ocp,
-}
-
 pub const PLAYER_MAX_HITS: f64 = 1.0;
 
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
@@ -1258,16 +1283,6 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
-impl Guard {
-    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
-    pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
-        let mut g = Guard::blank();
-        g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
-        if let Some(t) = team { g.team = t; }
-        g.keys = keys; g.weapon = weapon; g.talk = talk;
-        g
-    }
-}
 impl Player {
     ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
@@ -1277,6 +1292,8 @@ impl Player {
     }
 }
 impl Game {
+    /// whose man he is
+    pub fn team(&self, gd: GuardId) -> crate::teams::Team { self.ch[self.gd[gd].ch].team }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }
@@ -1285,9 +1302,13 @@ impl Game {
 #[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Tabs {
-    pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
+    pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
     pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
@@ -1327,7 +1348,6 @@ pub struct Tabs {
     pub tactics_plan: Tab<TacticsPlanId, crate::tactics::Plan>,
     pub tactics_danger_rec: Tab<TacticsDangerRecId, crate::tactics::DangerRec>,
     pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
-    pub pressure_man: Tab<PressureManId, crate::pressure::Man>,
     pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub rescueflow_region: Tab<RescueflowRegionId, crate::rescueflow::Region>,
     pub squad_room_clear: Tab<RoomClearId, crate::squad::RoomClear>,
@@ -1345,17 +1365,18 @@ impl core::ops::Index<AnyBoxId> for Tabs {
     type Output = crate::scene_boxes::Box;
     #[inline] fn index(&self, id: AnyBoxId) -> &Self::Output { match id { AnyBoxId::World(b) => &self.boxes[b], AnyBoxId::Frame(b) => &self.frame_boxes[b] } }
 }
-impl core::ops::IndexMut<AnyBoxId> for Tabs {
-    #[inline] fn index_mut(&mut self, id: AnyBoxId) -> &mut Self::Output { match id { AnyBoxId::World(b) => &mut self.boxes[b], AnyBoxId::Frame(b) => &mut self.frame_boxes[b] } }
+impl Tabs {
+    /// a box to write, of the world or of the picture
+    #[inline]
+    pub fn edit(&mut self, b: impl Into<AnyBoxId>) -> crate::boxworld::Edit<'_> {
+        match b.into() { AnyBoxId::World(b) => self.boxes.edit(b), AnyBoxId::Frame(b) => crate::boxworld::Edit::frame(&mut self.frame_boxes[b]) }
+    }
 }
 
 /// each module's top-level state: g.m.<module>
 #[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Mods {
-    /// (the process's: in no bytes)
-    #[bytes(skip)]
-    pub math_side: crate::math_side::MathSideMod,
     /// (the process's: in no bytes)
     #[bytes(skip)]
     pub math_exact: crate::math_exact::MathExactMod,
@@ -1368,40 +1389,19 @@ pub struct Mods {
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
     pub sim_sim: crate::sim_sim::SimSimMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_propshome: crate::sim_propshome::SimPropshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod,
-    /// (counts of what was asked: in no bytes)
-    #[bytes(skip)]
-    pub scene_collision: crate::scene_collision::SceneCollisionMod,
     pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     /// (a memo, worked out again from the rig: in no bytes)
     #[bytes(skip)]
     pub packside: crate::packside::PacksideMod,
     pub rig_props: crate::rig_props::RigPropsMod,
     pub character: crate::character::CharacterMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
-    pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub holdfire: crate::holdfire::HoldfireMod,
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_fallshome: crate::sim_fallshome::SimFallshomeMod,
     pub edge_look: crate::edge_look::EdgeLookMod,
-    pub wallbreak: crate::wallbreak::WallbreakMod,
-    pub furnblast: crate::furnblast::FurnblastMod,
     pub doorblast: crate::doorblast::DoorblastMod,
     pub fire: crate::fire::FireMod,
     pub winbars: crate::winbars::WinbarsMod,
@@ -1455,22 +1455,18 @@ pub struct Mods {
     pub squadthrow: crate::squadthrow::SquadthrowMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
-    pub cmd: crate::cmd::CmdMod,
     pub fireline: crate::fireline::FirelineMod,
     pub doorforce: crate::doorforce::DoorforceMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
     pub glass: crate::glass::GlassMod,
-    pub wallpen: crate::wallpen::WallpenMod,
     pub suppression: crate::suppression::SuppressionMod,
     pub enemysquads: crate::enemysquads::EnemysquadsMod,
     pub morale: crate::morale::MoraleMod,
     pub doortools: crate::doortools::DoortoolsMod,
-    pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
-    pub pairup: crate::pairup::PairupMod,
     pub sneak: crate::sneak::SneakMod,
     pub silent: crate::silent::SilentMod,
     pub cast: crate::cast::CastMod,
@@ -1478,10 +1474,6 @@ pub struct Mods {
     pub blast_feel: crate::blast_feel::BlastFeelMod,
     pub combat: crate::combat::CombatMod,
     pub scene_level_load: crate::scene_level_load::SceneLevelLoadMod,
-    pub snow_bog: crate::snow_bog::SnowBogMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_itemshome: crate::sim_itemshome::SimItemshomeMod,
     pub frag: crate::frag::FragMod,
     pub teampace: crate::teampace::TeampaceMod,
     pub squad: crate::squad::SquadMod,
@@ -1511,106 +1503,70 @@ pub struct Mods {
 /// each module's counters: g.stats.<module>
 #[derive(Clone, Debug, Default)]
 pub struct Stats {
-    pub wand: crate::wand::WandStats,
-    pub cmdring: crate::cmdring::CmdringStats,
     pub workstow: crate::workstow::WorkstowStats,
-    pub holdfire: crate::holdfire::HoldfireStats,
     pub picture: crate::picture::PictureStats,
-    pub shards: crate::shards::ShardsStats,
     pub carlamps: crate::carlamps::CarlampsStats,
-    pub edge_look: crate::edge_look::EdgeLookStats,
-    pub wallbreak: crate::wallbreak::WallbreakStats,
-    pub furnblast: crate::furnblast::FurnblastStats,
     pub doorblast: crate::doorblast::DoorblastStats,
-    pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
-    pub break_table: crate::break_table::BreakTableStats,
-    pub wind: crate::wind::WindStats,
     pub glasspen: crate::glasspen::GlasspenStats,
-    pub gunroles: crate::gunroles::GunrolesStats,
     pub doorway: crate::doorway::DoorwayStats,
-    pub handleside: crate::handleside::HandlesideStats,
-    pub aimcost: crate::aimcost::AimcostStats,
-    pub runner: crate::runner::RunnerStats,
     pub netquiet: crate::netquiet::NetquietStats,
     pub stackroom: crate::stackroom::StackroomStats,
-    pub rearwatch: crate::rearwatch::RearwatchStats,
-    pub roomfit: crate::roomfit::RoomfitStats,
     pub gunslots: crate::gunslots::GunslotsStats,
     pub coverfire: crate::coverfire::CoverfireStats,
-    pub wallreact: crate::wallreact::WallreactStats,
     pub tactics: crate::tactics::TacticsStats,
-    pub digin: crate::digin::DiginStats,
-    pub stickycam: crate::stickycam::StickycamStats,
     pub par: crate::par::ParStats,
-    pub aimweight: crate::aimweight::AimweightStats,
-    pub calmtorch: crate::calmtorch::CalmtorchStats,
-    pub darkfoe: crate::darkfoe::DarkfoeStats,
     pub whistle: crate::whistle::WhistleStats,
     pub attention: crate::attention::AttentionStats,
-    pub doze: crate::doze::DozeStats,
-    pub needs: crate::needs::NeedsStats,
-    pub gunwall: crate::gunwall::GunwallStats,
-    pub lightswitch: crate::lightswitch::LightswitchStats,
     pub samstun: crate::samstun::SamstunStats,
-    pub stalk: crate::stalk::StalkStats,
     pub darkdoor: crate::darkdoor::DarkdoorStats,
-    pub startle: crate::startle::StartleStats,
     pub flinch: crate::flinch::FlinchStats,
     pub sprintdoor: crate::sprintdoor::SprintdoorStats,
-    pub seenwalk: crate::seenwalk::SeenwalkStats,
-    pub wet: crate::wet::WetStats,
     pub he40: crate::he40::He40Stats,
-    pub stackline: crate::stackline::StacklineStats,
     pub unseen: crate::unseen::UnseenStats,
-    pub squadsmoke: crate::squadsmoke::SquadsmokeStats,
-    pub squad40: crate::squad40::Squad40Stats,
-    pub throwplan: crate::throwplan::ThrowplanStats,
-    pub squadthrow: crate::squadthrow::SquadthrowStats,
-    pub autopilot: crate::autopilot::AutopilotStats,
     pub kitanim: crate::kitanim::KitanimStats,
-    pub peeksight: crate::peeksight::PeeksightStats,
     pub friends: crate::friends::FriendsStats,
     pub friendlyfire: crate::friendlyfire::FriendlyfireStats,
     pub cleanrestart: crate::cleanrestart::CleanrestartStats,
     pub fireline: crate::fireline::FirelineStats,
-    pub noshove: crate::noshove::NoshoveStats,
-    pub doorforce: crate::doorforce::DoorforceStats,
     pub wallpen: crate::wallpen::WallpenStats,
     pub condition: crate::condition::ConditionStats,
     pub morale: crate::morale::MoraleStats,
     pub shotgun: crate::shotgun::ShotgunStats,
     pub bigkit: crate::bigkit::BigkitStats,
-    pub close: crate::close::CloseStats,
     pub takedown: crate::takedown::TakedownStats,
     pub spotted: crate::spotted::SpottedStats,
     pub pairorders: crate::pairorders::PairordersStats,
     pub pairup: crate::pairup::PairupStats,
     pub sneak: crate::sneak::SneakStats,
     pub silent: crate::silent::SilentStats,
-    pub lesson: crate::lesson::LessonStats,
     pub rails: crate::rails::RailsStats,
     pub frag: crate::frag::FragStats,
     pub teampace: crate::teampace::TeampaceStats,
-    pub quiet: crate::quiet::QuietStats,
-    pub workthings: crate::workthings::WorkthingsStats,
-    pub lighting: crate::lighting::LightingStats,
-    pub handwork: crate::handwork::HandworkStats,
     pub wandorder: crate::wandorder::WandorderStats,
     pub civilians: crate::civilians::CiviliansStats,
     pub deathrecap: crate::deathrecap::DeathrecapStats,
-    pub planmode: crate::planmode::PlanmodeStats,
     pub doorthrow: crate::doorthrow::DoorthrowStats,
-    pub shutdoor: crate::shutdoor::ShutdoorStats,
-    pub fixture_break: crate::fixture_break::FixtureBreakStats,
-    pub moths: crate::moths::MothsStats,
-}
-impl Stats {
-    pub fn blank() -> Self { Self::default() }
 }
 
 #[cfg(test)]
 mod stands {
     #[test]
     fn a_blank_game_can_be_built() { let g = super::Game::blank(); let _ = g.k.startle.beat; let h = g.clone(); let _ = h.time; }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum InteractableKind {
+    #[default] Cam,
+    Guard,
+    Breaker,
+    Door,
+    Light,
+    Body,
+    Objective,
+    Held,
+    Wall,
+    Switch,
+    Charge,
+    Cancel,
 }

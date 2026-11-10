@@ -9,10 +9,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seams: what skeleton 5 cannot say yet
-
-fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
-
 // ------------------------------------------------------------ small local helpers
 
 /// a man's feet
@@ -36,7 +32,7 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 fn join_v3(p: V3) -> String { format!("{},{},{}", p[0], p[1], p[2]) }
 /// J is one object in TypeScript: what a body wrote on its copy goes to the row, if there still is one
 fn put_job(g: &mut Game, gd: GuardId, j: &Job) {
-    if let Some(r) = g.work.jobs.get_mut(gd) { r.t0 = j.t0; r.last_t = j.last_t; }
+    if let Some(r) = g.sets[g.seat].work.jobs.get_mut(gd) { r.t0 = j.t0; r.last_t = j.last_t; }
 }
 /// a floor target standing on the thing; a new object each asking, so serial 0: orders.ts:937 stamps the one a menu keeps
 fn thing_target(th: WorkThing) -> crate::orders::OrderTargetFloor {
@@ -81,7 +77,7 @@ fn panel_face(g: &crate::game::Game) -> crate::workthings::PanelFace {
     let mut n: V3 = [0.0, 0.0, -1.0];
     let mut face: V3 = [bp[0], bp[1], bp[2]];
     if let Some(bx) = bx {
-        let (c, h) = seam_box_c_h(g, bx);
+        let (c, h) = { let x = &g.tab.boxes[bx]; (x.c, x.h) };
         let dx = bp[0] - c[0];
         let dz = bp[2] - c[2];
         if m::abs(dx) > m::abs(dz) {
@@ -128,7 +124,6 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
 /// Makes the row and registers it on the orders' menu.
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
     let def = crate::orders::rows::def(&crate::orders::rows::work::ORDER, crate::orders::OrderDef {
-        key: Some(1.0),
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
@@ -140,7 +135,7 @@ pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThin
 }
 
 /// The things that can be worked now: the tick's list.
-pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::workthings::WorkThing> { seat.work.cache.as_ref().map_or(Vec::new(), |c| c.list.clone()) }
+pub fn work_things_things(seat: &crate::seats::SeatRef) -> Vec<crate::workthings::WorkThing> { seat.work.cache.as_ref().map_or(Vec::new(), |c| c.list.clone()) }
 
 /// THE TICK'S LIST OF THEM, for the seat standing: read afresh when what places them changes and once a second besides
 pub fn work_things_keep(g: &mut crate::game::Game) {
@@ -156,7 +151,7 @@ pub fn work_things_keep(g: &mut crate::game::Game) {
         if drive { join_v3(rf) } else { String::new() },
         if drive { g.level.errand.holder.as_str() } else { "" },
     );
-    if let Some(c) = &g.work.cache {
+    if let Some(c) = &g.sets[g.seat].work.cache {
         if c.key == key && g.time >= c.t && g.time - c.t < 1.0 { return; }
     }
     work_things_prune(g);
@@ -185,21 +180,21 @@ pub fn work_things_keep(g: &mut crate::game::Game) {
         let name = g.level.errand.holder.clone();
         list.push(WorkThing { kind: WorkThingKind::Objective, face: [rf[0], y, rf[2]], n, stand, name });
     }
-    g.work.cache = Some(WorkThingsCache { key, t: g.time, list });
+    g.sets[g.seat].work.cache = Some(WorkThingsCache { key, t: g.time, list });
 }
 
 /// Drops the records of men no longer at it, and hands with no living owner on the roster.
 fn work_things_prune(g: &mut crate::game::Game) {
     let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
-    for gd in g.work.jobs.keys() {
-        let a = g.work.jobs.get(gd).unwrap().a;
-        if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != Some(a) {
-            g.work.jobs.delete(gd);
+    for gd in g.sets[g.seat].work.jobs.keys() {
+        let a = g.sets[g.seat].work.jobs.get(gd).unwrap().a;
+        if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || crate::orders::squad_orders_of(&crate::seats::here(g), gd) != Some(a) {
+            g.sets[g.seat].work.jobs.delete(gd);
         }
     }
-    for c in g.work.hands.keys() {
+    for c in g.sets[g.seat].work.hands.keys() {
         if !squad.iter().any(|&gd| g.gd[gd].ch == c && !crate::condition::down(g, g.gd[gd].ch)) {
-            g.work.hands.delete(c);
+            g.sets[g.seat].work.hands.delete(c);
         }
     }
 }
@@ -241,7 +236,7 @@ pub(super) fn work_things_moot(g: &crate::game::Game, th: &crate::workthings::Wo
 fn work_things_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<crate::workthings::WorkThingsNear> {
     let mut best: Option<WorkThing> = None;
     let mut bd = m::INF;
-    for th in work_things_things(g, seat) {
+    for th in work_things_things(seat) {
         let d = flat(th.face, at);
         let wide = th.kind != WorkThingKind::Breaker;
         if d >= (if wide { g.k.work.pick_wide_m } else { g.k.work.pick_m }) || d >= bd { continue; }
@@ -256,7 +251,7 @@ fn work_things_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3)
 fn work_things_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
     let b = box_?.world()?;   // (a thing's own box is the level's)
     if !g.level.breaker.boxes.iter().any(|&i| g.engine.world.statics.get(i as usize) == Some(&b)) { return None; }
-    let th = work_things_things(g, seat).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
+    let th = work_things_things(seat).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
     Some(crate::orders::OrderTarget::Floor(thing_target(th)))
 }
 
@@ -267,7 +262,7 @@ fn work_things_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &cra
     let mut out = vec![seat.work.row];
     for &id in rows {
         let d = &g.tab.orders_order_def[id];
-        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) && d.key != Some(1.0) { out.push(id); }
+        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) { out.push(id); }
     }
     out
 }
@@ -341,15 +336,14 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(walk),
-        going: format!("to {}", th.name),
-        there: format!("at {}", th.name),
+        going: format!("to {}", th.name).into(),
+        there: format!("at {}", th.name).into(),
         set_line: None,
         ..Default::default()
     });
-    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), w).unwrap();
+    let a = crate::orders::squad_orders_of(&crate::seats::here(g), w).unwrap();
     let now = g.time;
-    g.work.jobs.set(w, Job { thing: th.clone(), verb, a, t0: -1.0, last_t: now });
-    let mut covers: Vec<String> = Vec::new();
+    g.sets[g.seat].work.jobs.set(w, Job { thing: th.clone(), verb, a, t0: -1.0, last_t: now });
     for &mate in men {
         if mate == w { continue; }
         let p = pos(g, mate);
@@ -365,8 +359,8 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
                 move_: Some(walk),
                 spare: Some(true),
                 from: Some([p[0], 0.0, p[2]]),
-                going: String::from("moving"),
-                there,
+                going: "moving".into(),
+                there: there.into(),
                 set_line: Some(String::from("set.")),
                 ..Default::default()
             });
@@ -378,52 +372,41 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
                 face: Some(yaw),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 ..Default::default()
             });
         }
-        covers.push(g.gd[mate].callsign.clone());
     }
-    g.stats.workthings.given += 1;
-    let tail = if covers.is_empty() { String::new() } else { format!(" · {} covers", covers.join(", ")) };
-    let what = format!("sent to {} at {},{}{}", verb.as_str(), js::to_fixed(stand[0], 1), js::to_fixed(stand[2], 1), tail);
-    work_things_note(g, w, &what);
     WorkThingsIssue::Arm1(())
 }
 
 /// Once a frame for the man at work, before the orders pose him.
 pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let now = g.time;
-    let mut j = match g.work.jobs.get(gd) { Some(j) if j.a == a => j.clone(), _ => return };
+    let mut j = match g.sets[g.seat].work.jobs.get(gd) { Some(j) if j.a == a => j.clone(), _ => return };
     let th = j.thing.clone();
     let verb = j.verb;
     let stand = th.stand.unwrap();
     let c = g.gd[gd].ch;
-    let h0 = g.work.hands.get(c).copied();
+    let h0 = g.sets[g.seat].work.hands.get(c).copied();
     if j.t0 >= 0.0 && (now - j.last_t > 0.25 || h0.map_or(true, |h| h.until != m::INF)) { work_things_hand_off(g, gd, &mut j); }
     j.last_t = now;
     put_job(g, gd, &j);
     // the run has ended under his hand: the mission's thing is nobody's; the breaker is the level's and goes on
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) && verb == WorkVerb::Drive {
-        g.stats.workthings.moot += 1;
-        work_things_note(g, gd, "moot: the run is over");
         work_things_settle(g, gd, &mut j, None, false);
         return;
     }
     if let Some(why) = work_things_moot(g, &th, verb) {
-        g.stats.workthings.moot += 1;
-        work_things_note(g, gd, &format!("moot: {}", why));
         work_things_settle(g, gd, &mut j, Some(&why), true);
         return;
     }
     // the orders bring a mark to a man who cannot reach it, and call that arrived: he is not at the thing
     let far = match g.tab.orders_assignment[a].post { None => true, Some(post) => flat(post, stand) > 0.3 };
     if far {
-        g.stats.workthings.moot += 1;
-        work_things_note(g, gd, "stopped short of it");
-        let line = if g.tab.orders_assignment[a].there == "stopped short" { None } else { Some("can't get to it.") };
+        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get to it.") };
         work_things_settle(g, gd, &mut j, line, false);
         return;
     }
@@ -439,7 +422,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     g.tab.orders_assignment[a].pace = if low { Some(low_pace) } else { None };
     if !on {
         if j.t0 >= 0.0 { work_things_hand_off(g, gd, &mut j); }
-        g.tab.orders_assignment[a].there = format!("at {}", th.name);
+        g.tab.orders_assignment[a].there = format!("at {}", th.name).into();
         return;
     }
     if j.t0 < 0.0 {
@@ -448,7 +431,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
         if d_f < g.k.work.hand_m {
             let need = work_things_need_of(g, verb);
             let push = crate::character::DoorPush { p: th.face, n: th.n, w: 1.0, hand: 0.0, reach: None };
-            g.work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
+            g.sets[g.seat].work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
         }
         if verb == WorkVerb::Drive {
             crate::audio_iface::game_audio_like_play(g, "click", Some(th.face), Some(0.8), None);
@@ -460,19 +443,19 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
             }
         }
     }
-    if let Some(h) = g.work.hands.get_mut(c) { h.seen = now; }
+    if let Some(h) = g.sets[g.seat].work.hands.get_mut(c) { h.seen = now; }
     let need = work_things_need_of(g, verb);
     let k = (now - j.t0) / need;
     g.tab.orders_assignment[a].there = if verb == WorkVerb::Drive {
-        format!("{}… {}%", work_things_words(g, &th), m::min(99.0, m::round(k * 100.0)))
+        format!("{}… {}%", work_things_words(g, &th), m::min(99.0, m::round(k * 100.0))).into()
     } else {
-        format!("on {}", th.name)
+        format!("on {}", th.name).into()
     };
     if k < 1.0 { return; }
     let line: String;
     match verb {
         WorkVerb::BreakerOff => {
-            crate::game::game_set_blackout(g, 86400.0, crate::game::GameSetBlackoutCause::Hand);
+            crate::game::game_set_blackout(g, 86400.0, crate::lighting::SetBlackoutCause::Hand);
             line = String::from("lights out.");
         }
         WorkVerb::BreakerOn => {
@@ -487,8 +470,6 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
             line = format!("got {}.", g.level.errand.thing);
         }
     }
-    g.stats.workthings.done += 1;
-    work_things_note(g, gd, &format!("done: {}", verb.as_str()));
     work_things_settle(g, gd, &mut j, Some(&line), true);
 }
 
@@ -498,7 +479,7 @@ fn work_things_hand_off(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::w
     put_job(g, gd, j);
     let c = g.gd[gd].ch;
     let until = g.time + g.k.work.fade_secs;
-    if let Some(h) = g.work.hands.get_mut(c) {
+    if let Some(h) = g.sets[g.seat].work.hands.get_mut(c) {
         if h.until == m::INF { h.until = until; h.push.w = 0.0; }
     }
 }
@@ -507,7 +488,7 @@ fn work_things_hand_off(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::w
 fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::workthings::Job, line: Option<&str>, turn: bool) {
     let p = pos(g, gd);
     work_things_hand_off(g, gd, j);
-    g.work.jobs.delete(gd);
+    g.sets[g.seat].work.jobs.delete(gd);
     if let Some(line) = line { crate::game::game_say(g, gd, line, None, None); }
     let th = &j.thing;
     let face = if turn { m::atan2(th.n[0], th.n[2]) } else { g.ch[g.gd[gd].ch].body_yaw };
@@ -517,8 +498,8 @@ fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wor
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
-        going: String::from("holding"),
-        there: if turn { format!("holding · {}", th.name) } else { String::from("holding") },
+        going: "holding".into(),
+        there: if turn { format!("holding · {}", th.name).into() } else { String::from("holding").into() },
         set_line: None,
         ..Default::default()
     });
@@ -528,10 +509,10 @@ fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wor
 fn work_things_hand(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::character::DoorPush> {
     let now = g.time;
     let fade = g.k.work.fade_secs;
-    let h = g.work.hands.get_mut(c_2)?;
+    let h = g.sets[g.seat].work.hands.get_mut(c_2)?;
     if h.until == m::INF && now - h.seen > 0.25 { h.until = now + fade; h.push.w = 0.0; }   // (the fight has him)
     if now > h.until || now < h.seen - 1.0 {   // (… or the clock has gone back under it: a restart)
-        g.work.hands.delete(c_2);
+        g.sets[g.seat].work.hands.delete(c_2);
         return None;
     }
     Some(h.push)
@@ -563,11 +544,7 @@ fn work_things_at_thing(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd:
 /// Is this man working a thing.
 fn work_things_working(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match seat.work.jobs.get(gd) { Some(j) => j.a, None => return false };
-    !crate::condition::down(g, g.gd[gd].ch) && crate::orders::squad_orders_of(g, seat, gd) == Some(a)
-}
-
-/// A line of the module's log, kept to 200.
-fn work_things_note(g: &crate::game::Game, gd: GuardId, what: &str) {
+    !crate::condition::down(g, g.gd[gd].ch) && crate::orders::squad_orders_of(seat, gd) == Some(a)
 }
 
 /// A thing a teammate can work near a point.
@@ -630,10 +607,10 @@ pub fn work_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthi
 
 /// Is the breaker none of this man's business unless he is told.
 pub fn work_not_his(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
 }
 
 /// A man who cannot leave where he stands is not handed the errand.
 pub fn work_stays_put(g: &crate::game::Game, gd: GuardId) -> bool {
-    (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
+    g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some() 
 }

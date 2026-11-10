@@ -150,8 +150,7 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
         gun_hand(g, dm.gd, gun);
         let w = g.gd[dm.gd].weapon;
         let got = g.fa[w].def;
-        g.stats.gunroles.dealt += 1;
-        if got == W::Pkm { g.stats.gunroles.belt += 1; } else if got == W::Guard9mm { g.stats.gunroles.pistol += 1; } else if got == W::Akms { g.stats.gunroles.akms += 1; }
+        if got == W::Pkm {  } else if got == W::Guard9mm {  } else if got == W::Akms {  }
         out.push(GunDealItem { gd: dm.gd, gun: got, line: line[i] });
     }
     let mut said: Vec<String> = Vec::with_capacity(out.len());
@@ -164,8 +163,7 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
 
 /// A defender with the belt-fed gun keeps the post he was dealt.
 pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
-    g.stats.gunroles.posts += 1;
+    if g.team(gd) != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
     true
 }
 
@@ -196,7 +194,6 @@ pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     let lo = m::min_n(&ranks);
     let keep: Vec<GuardId> = men.iter().zip(&ranks).filter(|(_, &r)| r == lo).map(|(&x, _)| x).collect();
     if keep.len() == men.len() { return men.to_vec(); }
-    g.stats.gunroles.first += 1;
     keep
 }
 
@@ -215,7 +212,6 @@ pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> 
     if long.is_empty() || long.len() == turn.iter().filter(|&&x| x != first).count() { return turn.to_vec(); }
     let mut out: Vec<GuardId> = turn.iter().copied().filter(|x| !long.contains(x)).collect();
     out.extend_from_slice(&long);
-    if out.iter().zip(turn).any(|(a, b)| a != b) { g.stats.gunroles.last += 1; }
     out
 }
 
@@ -225,7 +221,6 @@ pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     let back: Vec<GuardId> = men.iter().zip(&ranks).filter(|(_, &r)| r == 2.0).map(|(&x, _)| x).collect();
     if back.is_empty() || back.len() == men.len() { return men.to_vec(); }
-    g.stats.gunroles.last += 1;
     let mut out: Vec<GuardId> = men.iter().zip(&ranks).filter(|(_, &r)| r != 2.0).map(|(&x, _)| x).collect();
     out.extend_from_slice(&back);
     out

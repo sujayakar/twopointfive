@@ -15,7 +15,7 @@
 //   z 19 │  ▒▒▒▒ livedQuiet ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ │
 //   z 22 │  ░░░░ livedTrain ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
 //   z 28 └────────────────────────────────────────────────────────┘      the man starts in the west aisle (x under 3)
-// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (lib/lived.ts): the tail of the lists, left out with the switch off.
+// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (lib/lived.ts): the tail of the lists.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
 import type { LevelScenarios, Rect } from './lib/scenarios';

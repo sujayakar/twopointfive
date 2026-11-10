@@ -100,21 +100,18 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Any
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
-pub(super) fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub(super) fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
-    seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
+    seg_at(g, out, g_2, s, adj, albedo, emissive, name);
 }
 
 /// seg() with the part's adjustment handed in.
-pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
     let len = m::max(0.001, (s.l1 - s.l0) / 2.0);
-    if let Some(meta) = meta {
-        meta.push(RigNodeMeta {  });
-    }
     let lit = emissive[0] + emissive[1] + emissive[2] > 0.0;
     let yaw = m::atan2(dir[0], dir[2]);
     let rot = v3::quat::from_basis(f.x, f.y, f.z);
@@ -164,8 +161,7 @@ fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, own
 }
 
 /// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between.
-pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
-    let mut meta = meta;
+pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::RigGoggles, k: Option<f64>) {
     let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
     let f = head_flat_forward(g, c_2);
     let (mut fwd, mut up, mut side): (V3, V3, V3) = (f, [0.0, 1.0, 0.0], [f[2], 0.0, -f[0]]);
@@ -188,9 +184,6 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
             cl = Frame { o: v3::mad(v3::lerp3(a.o, b.o, k), fwd, crate::rig_props::NV_SWING * m::sin(m::PI * k)), x, y, z };
         }
     }
-    if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta {  });
-    }
     let owner = owner_of(g, c_2);
     g.m.rig_props.cur_owner = owner;
     let t = g_2.tubes;
@@ -199,9 +192,6 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     let hs = apply_adj(cl, g_2.housing_adj);
     let rot_h = v3::quat::from_basis(hs.x, hs.y, hs.z);
     let yaw_h = m::atan2(hs.z[0], hs.z[2]);
-    if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta {  });
-    }
     for (part_at, part_half) in [(t.bridge.at, t.bridge.half), (t.arm.at, t.arm.half)] {
         let made = goggle_part(g, at(hs, part_at), v3::copy(part_half), yaw_h, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_h);
         out.push(made.into());
@@ -209,9 +199,6 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     let ln = apply_adj(cl, g_2.lens_adj);
     let rot_l = v3::quat::from_basis(ln.x, ln.y, ln.z);
     let yaw_l = m::atan2(ln.z[0], ln.z[2]);
-    if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta {  });
-    }
     for sx in [-t.side, t.side] {
         let tube = goggle_part(g, at(ln, [sx, t.down, (t.front - t.back) / 2.0]), [t.half, t.half, (t.front + t.back) / 2.0], yaw_l, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_l);
         out.push(tube.into());

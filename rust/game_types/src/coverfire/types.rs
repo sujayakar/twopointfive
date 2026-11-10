@@ -28,7 +28,8 @@ impl Default for Know {
 #[derive(Clone, Debug, ToBytes)]
 pub struct Chew {
     pub id: f64,
-    pub kind: String,
+    /// none: his rounds go through it, nothing breaks
+    pub kind: Option<crate::wallbreak::BKind>,
     pub who: CharId,
     pub to: V3,
     pub hit: V3,
@@ -51,7 +52,7 @@ impl Default for Chew {
     fn default() -> Self {
         Chew {
             id: 0.0,
-            kind: String::new(),
+            kind: None,
             who: CharId(0),
             to: [0.0; 3],
             hit: [0.0; 3],
@@ -118,14 +119,12 @@ pub struct StateStats {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateByIdValue {
-    pub landed: f64,
-    pub gave: f64,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Ask {
     pub id: f64,
-    pub kind: String,
+    pub kind: Option<crate::wallbreak::BKind>,
     pub hit: V3,
     pub rounds: f64,
     pub layers: f64,
@@ -162,7 +161,7 @@ pub enum Ask2 {
 
 #[derive(Clone, Debug, Default)]
 pub struct CoverfireOn {
-    pub kind: String,
+    pub kind: Option<crate::wallbreak::BKind>,
     pub fired: f64,
 }
 

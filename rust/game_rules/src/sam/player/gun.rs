@@ -64,7 +64,7 @@ pub(super) fn collide_man(g: &mut crate::game::Game, pl: &mut crate::player::Col
                 p[2] += dz / n;
                 let r = body_r(g, p);
                 crate::scene_collision::collide_circle(g, &mut p, r, 0.2, y1, Some(4.0));
-                crate::scene_collision::clamp_to_world(g, &mut p, BODY_R);
+                crate::scene_collision::clamp_to_world(&mut p, BODY_R);
                 i += 1.0;
             }
             p[0] += dx / n;
@@ -74,7 +74,7 @@ pub(super) fn collide_man(g: &mut crate::game::Game, pl: &mut crate::player::Col
     for _k in 0..4 {
         let r = body_r(g, p);
         crate::scene_collision::collide_circle(g, &mut p, r, 0.2, y1, Some(6.0));
-        if !crate::scene_collision::clamp_to_world(g, &mut p, BODY_R) { break; }
+        if !crate::scene_collision::clamp_to_world(&mut p, BODY_R) { break; }
     }
     pl.char.pos = p;
     pl.safe = Some([p[0], 0.0, p[2]]);
@@ -106,9 +106,6 @@ pub fn settle_player(g: &mut crate::game::Game) {
 
 /// the crouch-walk's top speed: the sneak's own
 pub(super) fn crouch_pace(g: &crate::game::Game) -> f64 { g.k.twogears.crouch }
-
-/// one notch of the wheel on his pace: under TWOGEARS.on (settled) the wheel is nobody's pace
-pub(in crate::sam) fn wheel_pace(g: &crate::game::Game, wheel: f64) {}
 
 /// asked once a frame by both places a footfall is filed: 0 none, 1 at an edge of the cycle, 2 one the legs owe
 pub(super) fn footfall_due(g: &mut crate::game::Game, dt: f64, phase: f64, speed: f64) -> f64 {
@@ -185,7 +182,7 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
 pub fn stow_holster(g: &mut crate::game::Game, on: bool) { set_holstered(g, on, Some(true)); }
 
 /// every gun's reload in hand abandoned: the hands are wanted
-pub(super) fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::sam) fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
     let (c, pistol, rifle) = (g.pl[pl].ch, g.pl[pl].pistol, g.pl[pl].rifle);
     crate::weapons::firearm_cancel_reload(g, pistol);
     crate::weapons::firearm_cancel_reload(g, rifle);
@@ -289,7 +286,7 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
             None => { let h = crate::rig_props::sc20k_grip(None, Some(true)); (h.wrist, h.fingers, h.back) }
         };
         g.ch[c].anim.long_grip = crate::character::AnimLongGrip { wrist, fingers, back };
-        let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(g, id, None), None => None };
+        let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(id, None), None => None };
         g.ch[c].muzzle_ahead = match ahead { Some(a) => a, None => crate::rig_props::sc20k_muzzle_ahead(None) };
     } else {
         g.ch[c].muzzle_ahead = def_of(g, pistol_def).muzzle_ahead;
@@ -356,7 +353,7 @@ pub(super) fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>,
             match plan {
                 Some(p) => {
                     crate::character::anim_reload(g, c, Some(p.beat.dur), Some(p.beat));
-                    crate::kitanim::kit_reload_note(g, p.kind, p.beat.dur);
+                    crate::kitanim::kit_reload_note(g, p.kind);
                 }
                 None => crate::character::anim_reload(g, c, None, None),
             }
@@ -387,7 +384,7 @@ pub(super) fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>,
             match plan {
                 Some(p) => {
                     crate::character::anim_reload(g, c, Some(p.beat.dur), Some(p.beat));
-                    crate::kitanim::kit_reload_note(g, p.kind, p.beat.dur);
+                    crate::kitanim::kit_reload_note(g, p.kind);
                 }
                 None => {
                     let r = def_of(g, def).reload.clone();

@@ -7,4 +7,3 @@ pub mod doornames;
 pub mod showwhy;
 pub mod squadnet;
 pub mod told;
-pub mod words;

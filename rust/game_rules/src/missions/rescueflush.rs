@@ -11,7 +11,7 @@ use alloc::{format, vec, vec::Vec};
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A new one: the field initialisers; the constructor only keeps `g` and `R`.
-pub(super) fn rescue_flush_new(g: &crate::game::Game) -> crate::rescueflush::RescueFlush { RescueFlush::blank() }
+pub(super) fn rescue_flush_new() -> crate::rescueflush::RescueFlush { RescueFlush::blank() }
 
 /// Back to nothing having happened.
 pub(super) fn rescue_flush_reset(g: &mut crate::game::Game) {
@@ -149,7 +149,6 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
         let Some(to) = to else { continue; };
         crate::belief::word(g, h, to); clear_path(g, h);
         if g.rescue.flush.sent.get(h).unwrap().via.is_empty() {
-            g.rescue.flush.sent.get_mut(h).unwrap().goal = Goal::Room;
             let note = format!("flush:through:{}", g.gd[h].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -228,16 +227,15 @@ fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescuef
     crate::belief::word(g, h, at); clear_path(g, h);
     crate::guards::reset_chase(g, h);
     let time = g.time;
-    g.rescue.flush.sent.set(h, Sent { at: time, n: n + 1.0, goal, via: via.iter().map(|p| v3::copy(*p)).collect() });
+    g.rescue.flush.sent.set(h, Sent { at: time, n: n + 1.0, via: via.iter().map(|p| v3::copy(*p)).collect() });
     g.rescue.flush.count += 1.0;
     let note = format!("flush:{}:{}", goal.as_str(), g.gd[h].callsign);
     crate::rescue::rescue_note(g, &note);
     if n > 0.0 { return; }   // (a man's second errand is not announced: one line a man)
     let text: &str = match goal {
-        Goal::Room => crate::words::w(g, &"it's gone quiet in there — I'm going in for them!", &"it's gone quiet in there — i'm going in for them!"),
+        Goal::Room => "it's gone quiet in there — I'm going in for them!",
         Goal::Side => {
-            let now = crate::words::wg(g, &"going around — I'll take the other door!", &"going round — I'll take the other door!");
-            crate::words::w(g, &now, &"going round — i'll take the other door!")
+            "going around — I'll take the other door!"
         }
         Goal::Out => "on the way out — they don't leave with the hostages!",
         Goal::Noise => "moving on that noise — keep them boxed in!",

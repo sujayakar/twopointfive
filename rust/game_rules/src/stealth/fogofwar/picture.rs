@@ -14,17 +14,12 @@ use crate::m;
 use crate::v3::V3;
 use alloc::{vec, vec::Vec};
 
-/// a box's row
-fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
 /// sees; lit but remembered out = lit only where the team sees. (What a man carries who is not on the team, and every flash not a teammate's own, take
 /// their class from the team's list, which the pass filled: render_lights::light_set_fog_class.)
 pub(super) fn fill(g: &mut crate::game::Game) {
-    g.fog_picture.full_stats.hidden = 0.0;
-    g.fog_picture.full_stats.ghosts = 0.0;
-    g.fog_picture.full_stats.held = 0.0;
     let down = g.light_home.mains.active;
     let mut i = 0;
     while i < g.targets.len() {
@@ -42,25 +37,17 @@ pub(super) fn fill(g: &mut crate::game::Game) {
             if lit { fog_of_war_face_seen(g, t); }
             continue;
         }
-        g.fog_picture.full_stats.held += 1.0;
         if lit || !(mains && down) { fog_of_war_lamp_face(g, t, Some(!lit)); }
         if lit {
             if let Some(l) = light { g.tab.light[l].fog = Some(1.0); }
             for al in &areas { g.tab.light[al.light].fog = Some(1.0); }
         } else if !(mains && down) {
-            g.fog_picture.full_stats.ghosts += 1.0;
             if let Some(l) = light {
                 let ghost = match g.tab.light[l].steady { Some(ref s) => s.intensity, None => g.tab.fixture[t].base_intensity };
                 g.tab.light[l].fog_ghost = Some(ghost);
             }
             for al in &areas { g.tab.light[al.light].fog_ghost = Some(al.base); }
         }
-    }
-    let mut i = 0;
-    while i < g.engine.lights.lights.len() {
-        let l = g.engine.lights.lights[i];
-        i += 1;
-        if crate::render_lights::light_set_fog_class(g, l) == 1.0 { g.fog_picture.full_stats.hidden += 1.0; }
     }
 }
 
@@ -76,9 +63,6 @@ pub(super) fn off(g: &mut crate::game::Game) {
         g.tab.light[l].fog_ghost = Some(0.0);
     }
     fog_of_war_faces_lift(g);
-    g.fog_picture.full_stats.hidden = 0.0;
-    g.fog_picture.full_stats.ghosts = 0.0;
-    g.fog_picture.full_stats.held = 0.0;
 }
 
 /// A fresh encounter: no list kept for a viewer's draw, no lamp's face kept.
@@ -99,7 +83,7 @@ fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<boo
         let at = i;
         i += 1;
         let b = match g.engine.world.statics.get(boxes[at] as usize) { Some(&b) => b, None => continue };
-        let q = bx(g, b);
+        let mut q = g.tab.edit(b);
         let on = match lit {
             Some(on) => on,
             None => {
@@ -132,7 +116,7 @@ fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
         let at = i;
         i += 1;
         let b = match g.engine.world.statics.get(boxes[at] as usize) { Some(&b) => b, None => continue };
-        let e = bx(g, b).emissive;
+        let e = g.tab.boxes[b].emissive;
         let k = &mut g.fog_picture.face_recs.get_mut(t).unwrap()[at];
         k[0] = m::max(k[0] * FACE_HOLD, e[0]);
         k[1] = m::max(k[1] * FACE_HOLD, e[1]);

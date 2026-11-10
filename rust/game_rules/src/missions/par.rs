@@ -30,7 +30,7 @@ pub fn clock(s: f64) -> String { let n = m::max(0.0, m::floor(s)) as u64; format
 pub fn medal_of(d: &ParData, total: f64) -> Medal { let t = m::floor(total); MEDALS.iter().copied().find(|&md| t <= bar(d, md)).unwrap_or(Medal::None) }
 
 /// a run's result against a par: `secs` on the clock, `lost` teammates of `of`
-pub fn par_result(d: &ParData, secs: f64, lost: f64, of: f64) -> ParResult {
+pub fn par_result(d: &ParData, secs: f64, lost: f64) -> ParResult {
     let penalty = lost * d.loss_secs;
     let total = secs + penalty;
     let shown = m::floor(total);
@@ -78,7 +78,7 @@ fn marks_now(g: &mut Game) -> Vec<ParMark> {
     let mut out: Vec<ParMark> = Vec::new();
     crate::seats::each_seat(g, &mut |g| {
         let p = g.ch[g.pl[g.player].ch].pos;
-        out.push(ParMark { origin: p, order0: g.orders.log.last().map(|r| r.serial) });
+        out.push(ParMark { origin: p, order0: g.sets[g.seat].orders.log.last().map(|r| r.serial) });
     });
     if let (Some(s), Some(first)) = (start, out.first_mut()) { first.origin = s; }
     out
@@ -91,7 +91,7 @@ fn done_since(g: &mut Game) -> (bool, bool) {
         if let Some(mk) = g.par.marks.get(i).copied() {
             let p = g.ch[g.pl[g.player].ch].pos;
             moved |= m::hyp2(p[0] - mk.origin[0], p[2] - mk.origin[2]) > PAR_START_M;
-            ordered |= g.orders.log.last().map(|r| r.serial) != mk.order0;
+            ordered |= g.sets[g.seat].orders.log.last().map(|r| r.serial) != mk.order0;
         }
         i += 1;
     });
@@ -119,7 +119,7 @@ pub fn par_tick(g: &mut Game) {
     }
     if g.par.res.is_some() || g.room_clear.end != Some(crate::roomclear::RoomClearEnd::Taken) { return; }
     let (lost, of) = lost(g);
-    let r = par_result(&d, par_secs(g), lost, of);
+    let r = par_result(&d, par_secs(g), lost);
     g.stats.par.finished += 1;
     g.par.res = Some(r);
 }

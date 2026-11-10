@@ -17,7 +17,6 @@ pub struct RescueFlush {
 pub struct Sent {
     pub at: f64,
     pub n: f64,
-    pub goal: crate::rescueflush::Goal,
     pub via: Vec<V3>,
 }
 

@@ -32,8 +32,7 @@ fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The two sides whose men keep these manners.
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
-    team == crate::teams::Team::Operative || team == crate::teams::Team::Hostile
+    matches!(g.team(gd), crate::teams::Team::Ours | crate::teams::Team::Hostile)
 }
 
 /// `p` in `d`'s frame's own axes.
@@ -52,7 +51,7 @@ pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) ->
 
 /// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.
 fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
-    if crate::doors::door_off(g, d) { return false; }
+    if g.dr[d].leaf.off { return false; }
     let r = rel(g, d, p);
     if r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= g.k.doormanners.half { return false; }
     if m::hyp2(r.along, r.perp) > r.f.w + g.k.doormanners.sweep { return false; }
@@ -72,7 +71,7 @@ pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
 
 /// Not standing open enough to have a lane: on its hinges and latched, or under `laneAjar`.
 fn no_lane(g: &mut crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < g.k.doormanners.lane_ajar)
+    !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < g.k.doormanners.lane_ajar)
 }
 
 /// STAND, the lane: the door standing open whose lane `p` is in.
@@ -110,7 +109,7 @@ pub fn doorway_lane_price(g: &mut crate::game::Game, not: Option<&mut dyn FnMut(
 }
 
 /// What a `DoorwayLanePrice` costs at a cell: the function doorwayLanePrice hands back.
-pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 {
+pub fn doorway_lane_price_at(g: &crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 {
     let DoorwayLanePrice::Lanes { open, memo } = price;
     let i = crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz));
     if let Some(v) = memo.get(i) { return *v; }
@@ -122,7 +121,7 @@ pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorw
         if flat(p, fc) > g.k.doormanners.lane_m + g.dr[d].def.width { continue; }
         let r = rel(g, d, p);
         let depth = m::abs(r.perp);
-        if depth > g.k.doormanners.lane_m || (depth < g.k.doormanners.lane_strip && (crate::doors::door_off(g, d) || r.perp * crate::doors::door_angle(g, d) <= 0.0)) { continue; }
+        if depth > g.k.doormanners.lane_m || (depth < g.k.doormanners.lane_strip && (g.dr[d].leaf.off || r.perp * g.dr[d].leaf.angle <= 0.0)) { continue; }
         let e = g.k.doormanners.lane_out + g.k.doormanners.lane_flare * depth;
         if r.along < -e || r.along > r.f.w + e { continue; }
         if crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [fc[0], 0.45, fc[2]], None) { continue; }
@@ -157,9 +156,9 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
 
 /// Is the place at (along, perp) of `d`'s frame behind its open leaf.
 fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
-    if crate::doors::door_off(g, d) { return false; }
+    if g.dr[d].leaf.off { return false; }
     let w = g.dr[d].def.width;
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     leaf_cuts(w, angle, along, perp)
 }
 
@@ -176,11 +175,11 @@ fn leaf_cuts(w: f64, angle: f64, along: f64, perp: f64) -> bool {
 }
 
 /// `leafRound`: does this man go round a leaf standing open across his walk.
-pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
+pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.team(gd).ours() }
 
 /// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.
 pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     state_of(g, gd);
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -194,8 +193,8 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if t - s.leaf_t < stall_secs { return false; }
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_off(g, d) || crate::doors::door_latched(g, d) { continue; }
-        let angle = crate::doors::door_angle(g, d);
+        if g.dr[d].leaf.off || g.dr[d].leaf.latched { continue; }
+        let angle = g.dr[d].leaf.angle;
         if m::abs(angle) < 0.8 || flat(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.5 { continue; }
         let r = rel(g, d, p);
         let (cx, cz) = (m::cos(angle), m::sin(angle));
@@ -210,7 +209,6 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let s = st!(g, gd);
         s.leaf_by = t + push;
         s.leaf_t = t;
-        g.stats.doorway.leaf_stall += 1;
         return true;
     }
     false
@@ -243,15 +241,15 @@ fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::Door
 /// His own side about him, living, other than himself: the men, and Sam with the squad.
 fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
     let mut out = Vec::new();
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o != gd && g.gd[o].team == team && !crate::condition::down(g, g.gd[o].ch) {
+        if o != gd && g.team(o) == team && !crate::condition::down(g, g.gd[o].ch) {
             let c = g.gd[o].ch;
             out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: Some(o), id: g.ch[c].id });
         }
     }
-    if team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[g.player].ch) {
+    if team.ours() && !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
         out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: None, id: g.ch[c].id });
     }
@@ -284,7 +282,7 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
+    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
@@ -360,7 +358,7 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 
 /// The mark his order gave him, if any.
 fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
-    let a = crate::orders::squad_orders_of(g, seat, gd)?;
+    let a = crate::orders::squad_orders_of(seat, gd)?;
     g.tab.orders_assignment[a].post
 }
 
@@ -502,8 +500,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
                 if nav_blocked(g, cand[0], cand[2]) || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [cand[0], 0.45, cand[2]], None) || !spot_free(g, &crate::seats::here(g), gd, cand, 0.6) { continue; }
                 let at = g.gd[gd].path_i;
                 g.gd[gd].path.insert(at, cand);
-                g.stats.doorway.round += 1;
-                if round_own { g.stats.doorway.round_own += 1; }
                 break;
             }
         }
@@ -511,14 +507,12 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     let held = scale < 0.2 || (waiting && hold);   // a man at a jamb is held as long as the frame is not his
     if held {
         st!(g, gd).by = Some(who);
-        if st!(g, gd).held_t == 0.0 { g.stats.doorway.held += 1; }
         st!(g, gd).held_t += dt;
         if st!(g, gd).held_t >= patience {
             let rest = g.k.doormanners.rest;
             let s = st!(g, gd);
             s.held_t = 0.0;
             s.pass = t + rest;
-            g.stats.doorway.passed += 1;
             if waiting { release(g, gd, true); }
             return Some(speed);
         }
@@ -548,7 +542,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
                 s.door = Some(x.d);
                 s.side = x.side;
                 s.path = Some(walk);
-                g.stats.doorway.aside += 1;
                 step_to(g, gd, p, m::min(speed, step), dt, turn);
                 return None;
             }
@@ -616,7 +609,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let mut door: Option<DoorId> = None;
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
         if in_opening(g, d, pos, None) { door = Some(d); break; }
     }
     let door = match door {
@@ -634,7 +627,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let off = (aim_at[0] - f.hx) * f.nx + (aim_at[2] - f.hz) * f.nz;
     let sgn: f64 = if off >= 0.0 { 1.0 } else { -1.0 };
     // the squad steps THROUGH, to the side its man is on (failing that, back off it); a defender steps back on his own side, never out toward them
-    let foe = g.gd[gd].team == crate::teams::Team::Hostile;
+    let foe = g.team(gd) == crate::teams::Team::Hostile;
     let cov = foe;   // (stepCover: settled on)
     // them ALONG the door's wall: the half-plane says nothing there, so covered floor on either face will do
     let along = (aim_at[0] - f.hx) * f.ux + (aim_at[2] - f.hz) * f.uz - f.w / 2.0;
@@ -663,7 +656,6 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
                 if cov {
                     let e = exposed(g, aim_at, p);
                     if if cover { e > 0 } else { e > here } {
-                        if !cover && e == 1 { g.stats.doorway.step_glass += 1; }
                         continue;
                     }
                 }
@@ -672,8 +664,6 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
                     st.step = Some(p);
                     st.step_by = t + 1.5;
                 }
-                g.stats.doorway.stepped += 1;
-                if cover { g.stats.doorway.step_cover += 1; }
                 step_to(g, gd, p, pace, dt, false);
                 return true;
             }
@@ -710,7 +700,7 @@ pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
 /// front of whatever comes through.
 pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
     for &d in &g.doors.list {
-        if d == but || crate::doors::door_off(g, d) { continue; }
+        if d == but || g.dr[d].leaf.off { continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) < BEFORE_DEEP && r.along > -BEFORE_WIDE && r.along < r.f.w + BEFORE_WIDE { return true; }
     }
@@ -734,10 +724,10 @@ pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let (mut shut, mut open) = (false, false);
     for &d in &g.doors.list {
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let fc = g.dr[d].frame_centre;
         if v3::dist_xz(p, fc) > g.dr[d].def.width + BRUSH_M { continue; }
-        if !crate::doors::door_latched(g, d) { open = true; continue; }
+        if !g.dr[d].leaf.latched { open = true; continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) > BRUSH_M || r.along < -BRUSH_M || r.along > r.f.w + BRUSH_M { continue; }
         if means_to_pass(g, gd, d) { return false; }

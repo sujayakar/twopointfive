@@ -45,7 +45,3 @@ pub struct DebrisK {
     #[k(1.0)] pub min_speed: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Knobs)]
-pub struct DestructionK {
-    #[k(true)] pub on: bool,
-}

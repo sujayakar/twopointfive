@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use crate::doortools::DoorToolsCanThresholdThenWhat as What;
+use crate::doortools::ThresholdThen as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -28,6 +28,5 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    crate::doortools::row_entry(g, false, men, t, on_word)
+    crate::doortools::row_entry(g, false, men, t)
 }

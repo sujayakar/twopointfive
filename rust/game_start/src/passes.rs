@@ -76,10 +76,10 @@ fn stands_free(ai: usize, boxes: &[Box], width: f64) -> bool {
 /// A LEVEL'S THIN THINGS: every static's mark off, then on the ones that stand free. Answers how many.
 pub fn thin_level(g: &mut Game, ids: &[BoxId], doors: &[LevelDoorDef]) -> usize {
     let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes[b], f.thin, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), f.thin, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let free: Vec<usize> = (0..boxes.len()).filter(|&i| solid(&boxes[i]) && narrow(&boxes[i], THIN_WIDTH) && !at_door(&boxes[i], doors) && stands_free(i, &boxes, THIN_WIDTH)).collect();
-    for &i in free.iter() { set(&mut g.tab.boxes[ids[i]], f.thin, true); }
+    for &i in free.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.thin, true); }
     free.len()
 }
 
@@ -126,10 +126,10 @@ fn in_opening(ai: usize, boxes: &[Box]) -> bool {
 /// A LEVEL'S WINDOW BARS: every static's mark off, then on the ones the rule names. Answers how many.
 pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
     let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes[b], f.bar, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), f.bar, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let bars: Vec<usize> = (0..boxes.len()).filter(|&i| slim(&boxes[i]) && in_opening(i, &boxes)).collect();
-    for &i in bars.iter() { set(&mut g.tab.boxes[ids[i]], f.bar, true); }
+    for &i in bars.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.bar, true); }
     bars.len()
 }
 
@@ -179,7 +179,7 @@ fn form_box(b: &mut Box, f: &Form) {
     else if let Some(arc) = f.arc { let w = if arc.axis == 1.0 { b.h[2] } else { b.h[0] }; let r = (w * w + arc.rise * arc.rise) / (2.0 * arc.rise); b.cut_round = Some(arc.axis); b.cut_arc = Some(r - b.h[1]); }
     if f.old == Some(true) { b.cut_old = Some(true); }
 }
-/// A LEVEL'S SHAPES (shapes.ts shapeLevel with the switch up): each box that says a shape is given its record, and its pieces of trim follow the
+/// A LEVEL'S SHAPES (shapes.ts shapeLevel): each box that says a shape is given its record, and its pieces of trim follow the
 /// level's last box, so no box changes its number. Never a tilted box, a box cut already or a window's bar. Answers how many
 /// boxes are shaped; `ids` grows by the pieces.
 pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
@@ -189,8 +189,8 @@ pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
         let b = &g.tab.boxes[id];
         let Some(s) = b.shape.clone() else { continue; };
         if b.rot.is_some() || b.cut.is_some() || has(b, f.bar) { continue; }
-        let b = &mut g.tab.boxes[id];
-        form_box(b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
+        let mut b = g.tab.boxes.edit(id);
+        form_box(&mut b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
         b.shaped = Some(true);
         let b = b.clone();
         for w in s.with.iter().flatten() {

@@ -90,7 +90,7 @@ pub struct ShardsK {
     #[k({ let mut t = JsMap::new(); t.set(String::from("glassTinkle"), 0.07); t.set(String::from("glassShatter"), 0.11); t })] pub sound_gap: JsMap<String, f64>,
     #[k(0.5)] pub sound_thicken: f64,
     #[k(0.6)] pub sound_owed_secs: f64,
-    /// a landing's hearing level (= the base's LANDING.shard), 0.35 when a plate shatters
+    /// a landing's hearing level, 0.35 when a plate shatters
     #[k(0.3)] pub level: f64,
     /// s between hearing events from spray landings
     #[k(0.4)] pub event_gap: f64,

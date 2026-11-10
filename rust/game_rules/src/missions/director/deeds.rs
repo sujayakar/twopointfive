@@ -8,19 +8,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers of the context
 
-/// `+x.toFixed(2)`, for the log's rows only
-fn fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse::<f64>().unwrap_or(f64::NAN) }
-/// a `{ key: value }` of the log's rows, in the written order
-fn obj(rows: Vec<(&str, Option<Json>)>) -> Json {
-    let mut o = JsMap::new();
-    for (k, v) in rows { o.set(String::from(k), v); }
-    Json::Arm4(o)
-}
-fn text(s: &str) -> Option<Json> { Some(Json::Text(String::from(s))) }
-/// this.push with `beat: b.name`
-fn push(g: &mut Game, b: DirectorLiveBeatId, kind: DirectorPushRowKind, what: String, data: Option<Json>) {
-    director_push(g, &DirectorPushRow { t: None });
-}
 fn unit_ref_of(g: &Game, gd: GuardId) -> UnitRef {
     UnitRef { id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
 }
@@ -61,9 +48,9 @@ pub(in crate::missions) fn director_beat_order(g: &mut crate::game::Game, r: Dir
 
 // ---- waiting (ts 888)
 /// c.wait
-pub(in crate::missions) fn director_beat_wait(g: &crate::game::Game, r: DirectorRunId, secs: f64, label: Option<&str>) -> Result<crate::director::Cond, String> {
+pub(in crate::missions) fn director_beat_wait(g: &crate::game::Game, r: DirectorRunId, secs: f64) -> Result<crate::director::Cond, String> {
     if !secs.is_finite() { return Err(format!("wait({}): not a finite number of seconds", js::num_str(secs))); }
-    Ok(Cond::Arm0(CondArm0 { until: g.tab.director_run[r].t + m::max(0.0, secs), label: label.map(String::from) }))
+    Ok(Cond::Arm0(CondArm0 { until: g.tab.director_run[r].t + m::max(0.0, secs) }))
 }
 /// c.frames
 pub(in crate::missions) fn director_beat_frames(g: &crate::game::Game, r: DirectorRunId, n: Option<f64>) -> crate::director::Cond {
@@ -71,16 +58,13 @@ pub(in crate::missions) fn director_beat_frames(g: &crate::game::Game, r: Direct
     Cond::Arm1(CondArm1 { due: g.tab.director_run[r].tick_n + m::max(1.0, m::floor(n)) })
 }
 /// c.until
-pub(in crate::missions) fn director_beat_until(test: crate::director::CondTest, label: Option<&str>) -> crate::director::Cond {
-    Cond::Arm2(CondArm2 { test, label: String::from(label.unwrap_or("until")) })
+pub(in crate::missions) fn director_beat_until(test: crate::director::CondTest) -> crate::director::Cond {
+    Cond::Arm2(CondArm2 { test })
 }
 /// c.on: the union `filterOrName` comes resolved, a name or a filter
-pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::CondArm3Kind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
+pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::EventViewKind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
     Cond::Arm3(CondArm3 { kind, name: name.map(String::from), filter, got: None, tick0: g.tab.director_run[r].tick_n })
 }
-/// c.done, of a beat's name (of a drill: its `.beat`)
-fn ctx_done(beat: &str) -> Cond { Cond::Arm4(CondArm4 { name: String::from(beat), state: CondArm4State::Done }) }
-fn ctx_started(beat: &str) -> Cond { Cond::Arm4(CondArm4 { name: String::from(beat), state: CondArm4State::Started }) }
 /// c.all
 pub(in crate::missions) fn director_beat_all(of: Vec<crate::director::Cond>) -> crate::director::Cond { Cond::Arm5(CondArm5 { k: CondArm5K::All, of }) }
 /// c.any
@@ -88,17 +72,13 @@ pub(in crate::missions) fn director_beat_any(of: Vec<crate::director::Cond>) -> 
 
 // ---- flow (ts 896)
 /// c.start
-pub(in crate::missions) fn director_beat_start(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, name: &str) {
-    push(g, b, DirectorPushRowKind::Trigger, format!("start {}", name), None);
+pub(in crate::missions) fn director_beat_start(g: &mut crate::game::Game, r: DirectorRunId, name: &str) {
     director_start_beat(g, r, name);
 }
 /// c.signal
-pub(in crate::missions) fn director_beat_signal(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, name: &str, data: Option<crate::director::Json>) {
+pub(in crate::missions) fn director_beat_signal(g: &mut crate::game::Game, r: DirectorRunId, name: &str) {
     g.tab.director_run[r].signals.push(RunSignalsItem { name: String::from(name) });
-    push(g, b, DirectorPushRowKind::Note, format!("signal:{}", name), data);
 }
-/// c.note
-pub(in crate::missions) fn director_beat_note(g: &mut crate::game::Game, b: DirectorLiveBeatId, what: &str, data: Option<crate::director::Json>) { push(g, b, DirectorPushRowKind::Note, String::from(what), data); }
 /// c.rand: a draw of the run's own die
 pub(in crate::missions) fn director_beat_rand(g: &mut crate::game::Game, r: DirectorRunId) -> f64 { run_rand(&mut g.tab.director_run[r]) }
 fn run_rand(run: &mut Run) -> f64 { run.dice.roll() }
@@ -123,17 +103,10 @@ pub(in crate::missions) fn director_beat_spawn(g: &mut crate::game::Game, r: Dir
     let ref_ = unit_ref_of(g, gd);
     g.tab.director_run[r].units.set(crate::Num(ref_.id), UnitRec { gd });
     touch(g, b, &ref_);
-    let what = g.gd[gd].callsign.clone();
-    push(g, b, DirectorPushRowKind::Spawn, what, Some(obj(vec![
-        ("id", Some(Json::Num(ref_.id))),
-        ("loadout", text(&l.id)),
-        ("team", text(spec.team.as_str())),
-        ("at", Some(Json::Array(vec![Some(Json::Num(fixed2(p[0]))), Some(Json::Num(0.0)), Some(Json::Num(fixed2(p[2])))]))),
-    ])));
     Ok(ref_)
 }
 /// c.unit
-pub(in crate::missions) fn director_beat_unit(g: &crate::game::Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
+pub(in crate::missions) fn director_beat_unit(g: &crate::game::Game, callsign: &str) -> Option<crate::director::UnitRef> {
     let found = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign);
     found.map(|gd| unit_ref_of(g, gd))
 }
@@ -144,37 +117,33 @@ pub(in crate::missions) fn director_beat_rout(g: &mut crate::game::Game, r: Dire
     if crate::condition::down(g, g.gd[gd].ch) { return Ok(false); }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
     crate::control::set_hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
-    push(g, b, DirectorPushRowKind::Note, format!("rout {}", u.callsign), None);
     Ok(true)
 }
 /// c.release
-pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::squad::EndGuardScriptState>) -> Result<(), String> {
-    let state = state.unwrap_or(crate::squad::EndGuardScriptState::Search);
+pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::game::GuardState>) -> Result<(), String> {
+    let state = state.unwrap_or(crate::game::GuardState::Search);
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
     crate::control::set_hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
-    push(g, b, DirectorPushRowKind::Note, format!("release {}", u.callsign), Some(obj(vec![("state", text(state.as_str()))])));
     Ok(())
 }
 
 // ---- speech
 /// c.say of a man
-pub(in crate::missions) fn director_beat_say(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, line: &str, radio: Option<bool>) -> Result<(), String> {
+pub(in crate::missions) fn director_beat_say(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef, line: &str, radio: Option<bool>) -> Result<(), String> {
     let radio = radio.unwrap_or(false);
     let gd = director_guard_of(g, r, u)?;
     if !line.is_empty() && !crate::condition::down(g, g.gd[gd].ch) {
         crate::guards::say(g, gd, line, Some(radio), Some(true)); // (forced: a scripted line is deliberate)
-        let what = format!("{}{}: {}", g.gd[gd].callsign, if radio { "" } else { " (says)" }, line);
-        push(g, b, DirectorPushRowKind::Radio, what, None);
     }
     Ok(())
 }
 /// c.radio: a line on the net under a name, said by that man if he stands in the world, else by the voice alone
-pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, b: DirectorLiveBeatId, callsign: &str, line: &str) {
+pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsign: &str, line: &str) {
     let gd = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign && !crate::condition::down(g, g.gd[*x].ch));
     if let Some(x) = gd {
         let dur = crate::guards::bubble_secs(line);
@@ -185,29 +154,28 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, b: Dir
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
     let at = gd.map(|x| { let c = g.gd[x].ch; match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos } });
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
-    push(g, b, DirectorPushRowKind::Radio, format!("{}: {}", callsign, line), None);
 }
 // ---- world: doors (ts 985)
 /// c.doors.lock
 pub(in crate::missions) fn director_beat_door_lock(g: &mut crate::game::Game, d: &crate::director::DoorRef, on: bool) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_locked(g, door, on);
-    if on { crate::doors::door_set_lock_broken(g, door, false); }
+    g.dr[door].leaf.locked = on;
+    if on { g.dr[door].leaf.lock_broken = false; }
     Ok(())
 }
 /// c.doors.open
 pub(in crate::missions) fn director_beat_door_open(g: &mut crate::game::Game, d: &crate::director::DoorRef, angle: Option<f64>, hold: Option<bool>) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_latched(g, door, false);
-    crate::doors::door_set_closing(g, door, false);
+    g.dr[door].leaf.latched = false;
+    g.dr[door].leaf.closing = false;
     match angle {
-        Some(a) => { crate::doors::door_set_angle(g, door, a); crate::doors::door_set_vel(g, door, 0.0); crate::doors::door_place(g, door); }
+        Some(a) => { g.dr[door].leaf.angle = a; g.dr[door].leaf.vel = 0.0; crate::doors::door_place(g, door); }
         None => {
             let sign = js::or(m::sign(g.dr[door].def.angle.unwrap_or(1.0)), 1.0);
-            crate::doors::door_set_vel(g, door, sign * 3.2);
+            g.dr[door].leaf.vel = sign * 3.2;
         }
     }
-    if hold == Some(true) { crate::doors::door_set_quiet_t(g, door, -3600.0); } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
+    if hold == Some(true) { g.dr[door].leaf.quiet_t = -3600.0; } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
     Ok(())
 }
 // ---- world: stimulus (ts 999)
@@ -225,17 +193,12 @@ pub(in crate::missions) fn director_beat_charge(g: &mut crate::game::Game, r: Di
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
     if toss == Some(true) { crate::character::anim_toss_item(g, c, Some(crate::character::TOSS_QUICK)); }
-    push(g, b, DirectorPushRowKind::Stimulus, format!("charge {}", kind.as_str()), Some(obj(vec![
-        ("by", text(&by.callsign)),
-        ("at", Some(Json::Array(vec![Some(Json::Num(fixed2(to[0]))), Some(Json::Num(0.0)), Some(Json::Num(fixed2(to[2])))]))),
-    ])));
     Ok(())
 }
 /// c.stimulus.burst: the cond it hands back asks of the burst's own record, by its serial
 pub(in crate::missions) fn director_beat_burst(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, at: crate::director::RunBurstsItemAt, rounds: f64, cadence: Option<f64>, spread: Option<f64>) -> Result<crate::director::Cond, String> {
     director_guard_of(g, r, u)?;
     touch(g, b, u);
-    let label = format!("burst {} ×{}", u.callsign, js::num_str(rounds));
     let serial = g.serial();
     let next = g.tab.director_run[r].t;
     g.tab.director_run[r].bursts.push(RunBurstsItem {
@@ -245,33 +208,12 @@ pub(in crate::missions) fn director_beat_burst(g: &mut crate::game::Game, r: Dir
         cadence: m::max(0.05, cadence.unwrap_or(0.16)),
         spread: spread.unwrap_or(0.01),
         next,
-        fired: 0.0,
         serial,
     });
-    push(g, b, DirectorPushRowKind::Stimulus, format!("burst ×{}", js::num_str(rounds)), Some(obj(vec![("by", text(&u.callsign))])));
-    Ok(Cond::Arm2(CondArm2 { test: CondTest::Burst { serial }, label }))
+    Ok(Cond::Arm2(CondArm2 { test: CondTest::Burst { serial } }))
 }
 
 // ---------------------------------------------------------------- the part's functions
-
-/// What the log says a beat waits on; empty = nothing worth a row.
-pub(super) fn cond_label(c_2: &crate::director::Cond) -> String {
-    match c_2 {
-        Cond::Arm0(c) => c.label.clone().unwrap_or_default(),
-        Cond::Arm1(_) => String::new(),
-        Cond::Arm2(c) => if c.label == "until" { String::new() } else { c.label.clone() },
-        Cond::Arm3(c) => match &c.name {
-            Some(n) if !n.is_empty() => format!("on {}:{}", c.kind.as_str(), n),
-            _ => format!("on {}", c.kind.as_str()),
-        },
-        Cond::Arm4(c) => format!("{} {}", if c.state == CondArm4State::Done { "done" } else { "started" }, c.name),
-        Cond::Arm5(c) => {
-            let mut parts: Vec<String> = Vec::new();
-            for x in c.of.iter() { let l = cond_label(x); if !l.is_empty() { parts.push(l); } }
-            if parts.is_empty() { String::new() } else { format!("{}({})", c.k.as_str(), parts.join(", ")) }
-        }
-    }
-}
 
 fn view_kind(k: crate::director::EventKind) -> EventViewKind {
     match k {
@@ -288,7 +230,7 @@ fn view_kind(k: crate::director::EventKind) -> EventViewKind {
     }
 }
 /// What a script sees of a hearing event.
-pub(super) fn view_of(g: &crate::game::Game, r: DirectorRunId, e: crate::game::GameEvent) -> crate::director::EventView {
+pub(super) fn view_of(e: crate::game::GameEvent) -> crate::director::EventView {
     EventView {
         kind: view_kind(e.kind),
         pos: v3::copy(e.pos),
@@ -297,7 +239,7 @@ pub(super) fn view_of(g: &crate::game::Game, r: DirectorRunId, e: crate::game::G
     }
 }
 /// What a script sees of a signal: where the player stands.
-pub(super) fn signal_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView {
+pub(super) fn signal_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &crate::director::SignalViewS) -> crate::director::EventView {
     let c = g.pl[seat.player].ch;
     EventView {
         kind: EventViewKind::Signal,
@@ -305,33 +247,4 @@ pub(super) fn signal_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, r
         level: 0.0,
         name: Some(s.name.clone()),
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn time(label: Option<&str>) -> Cond { Cond::Arm0(CondArm0 { until: 1.0, label: label.map(String::from) }) }
-    fn pred(label: &str) -> Cond { Cond::Arm2(CondArm2 { test: CondTest::Script { id: 0 }, label: String::from(label) }) }
-
-    #[test]
-    fn labels_as_the_log_writes_them() {
-        assert_eq!(cond_label(&time(None)), "");
-        assert_eq!(cond_label(&time(Some("t"))), "t");
-        assert_eq!(cond_label(&Cond::Arm1(CondArm1 { due: 1.0 })), "");
-        assert_eq!(cond_label(&pred("until")), "");
-        assert_eq!(cond_label(&pred("door shut")), "door shut");
-        let mut on = CondArm3 { kind: CondArm3Kind::Signal, name: Some(String::from("go")), filter: None, got: None, tick0: 0.0 };
-        assert_eq!(cond_label(&Cond::Arm3(on.clone())), "on signal:go");
-        on.name = Some(String::new());
-        assert_eq!(cond_label(&Cond::Arm3(on.clone())), "on signal");
-        on.name = None; on.kind = CondArm3Kind::LightOut;
-        assert_eq!(cond_label(&Cond::Arm3(on)), "on lightOut");
-        assert_eq!(cond_label(&ctx_done("a")), "done a");
-        assert_eq!(cond_label(&ctx_started("b")), "started b");
-        assert_eq!(cond_label(&director_beat_all(vec![time(None), ctx_done("a"), pred("x")])), "all(done a, x)");
-        assert_eq!(cond_label(&director_beat_any(vec![time(None), pred("until")])), "");
-    }
-
-
 }

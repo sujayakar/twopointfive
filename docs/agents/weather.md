@@ -11,7 +11,8 @@ What time of day a level stands at, what falls from its sky, what blows through 
 - **Rain is cover for your ears.** Small sounds carry about half as far outdoors, and a downpour drowns more. Gunfire is still placed as in dry air.
 - **Fog and dust are cover for your eyes.** They stand between any eye and what it looks at, for men and cameras alike. Dust comes in at a door you
   open.
-- **Lightning is real light.** Under a picked weather a stroke can show you to a man.
+- **Lightning is real light.** Under a picked weather a stroke can show you to a man. The next stroke's way is read off the storm's own die before it comes
+  (`weather_next_way`), so the picture makes its reach mask ahead (`render/reachKeep.ts coming`). A stroke asked for by hand, or one that comes as the level moves, has its mask made in its own frame.
 - **Snow is a place, not a pick.** A few levels are built for it. It hides nobody and slows nobody. A thrown thing sticks where it lands in deep snow.
   Boots leave prints.
 - Men get wet under open sky and dry slowly. Sam drips and leaves wet prints indoors. An open fire lights its yard, leans in the wind and takes a
@@ -32,10 +33,10 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `fire.rs` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
 | `moths.rs` | moths round the lit yard lamps; dress |
 | `snow_bog.rs`, `render_snow_field.rs` | how deep snow takes a thing that lands; which box is lying snow, by its word |
-| `snow_blast.rs`, `snow_marks.rs` | only what is told to the picture |
+| `snow_blast.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
-Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs`, `bog_of` in `items.rs`, `glow.rs`.
+Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`.
 `rust/game_draw/src/` tells the picture: `sky.rs`, `winds.rs`, `fires.rs`, `snow.rs`, `wet.rs`.
 
 The page's half reads those rows and writes nothing back:

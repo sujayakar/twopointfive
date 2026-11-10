@@ -72,16 +72,6 @@ pub fn in_bounds(p: V3, b: Option<crate::scene_level::BreachPlanBounds>, pad: Op
         None => false,
     }
 }
-
-/// Metres of nav path from a to b, Infinity if there is none.
-fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
-    let mut l = 0.0;
-    let mut q = a;
-    for r in p { l += flat(q, r); q = r; }
-    l
-}
-
 /// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there.
 pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
     let mut c = Clearing::blank();
@@ -101,7 +91,7 @@ fn clearing_cap(g: &mut crate::game::Game) -> f64 {
 /// Hand whoever of ours is still scripted back to the AI calm.
 pub fn clearing_cancel(g: &mut crate::game::Game) {
     for gd in clearing_men(g) {
-        if g.gd[gd].script.is_some() && g.guards.contains(&gd) { end_guard_script(g, gd, Some(EndGuardScriptState::Patrol)); }
+        if g.gd[gd].script.is_some() && g.guards.contains(&gd) { end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
     }
     let c = cl!(g);
     c.stage = ClearStage::Done;
@@ -135,7 +125,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             let left = if dead == a { b } else { Some(a) };
             if let Some(left) = left {
                 if !crate::condition::down(g, g.gd[left].ch) {
-                    end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
+                    end_guard_script(g, left, Some(crate::game::GuardState::Suspicious));
                     crate::mind::raise(g, left, 0.6, "squad");
                     let at = g.ch[g.gd[dead].ch].pos;
                     crate::belief::word(g, left, at);
@@ -178,7 +168,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     }
     if worst == Some(Perceive::Body) {
         for &gd in &men {
-            end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
+            end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
             crate::mind::raise(g, gd, 0.5, "squad");
             if let Some(f) = fix { crate::belief::word(g, gd, f); }
             g.gd[gd].react_t = 0.6;
@@ -191,7 +181,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         let to = fix.or(g.gd[a].last_known);
         break_off(g, a, SUSPECT + 0.05, to);
         if let Some(b) = b {
-            end_guard_script(g, b, Some(EndGuardScriptState::Suspicious));
+            end_guard_script(g, b, Some(crate::game::GuardState::Suspicious));
             crate::mind::raise(g, b, SUSPECT, "squad");
             if let Some(f) = fix { crate::belief::word(g, b, f); }
             g.gd[b].react_t = 1.2;
@@ -210,8 +200,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         return false;
     }
     if cl!(g).total > clearing_cap(g) {
-        let w = crate::words::wg(g, &"to", &"on");
-        let text = format!("that's long enough — back {} the corridor{}", w, if b.is_some() { ", stay paired" } else { "" });
+        let text = format!("that's long enough — back to the corridor{}", if b.is_some() { ", stay paired" } else { "" });
         clearing_say(g, &text, None);
         clearing_cancel(g);
         return false;
@@ -314,7 +303,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         let d = g.doors.list[at];
         at += 1;
         let how = match crate::guards::door_tamper(g, d) { Some(h) => h, None => continue };
-        if crate::doors::door_noticed(g, d) { continue; }
+        if g.dr[d].leaf.noticed { continue; }
         let forced = how == crate::guards::DoorTamper::Forced;
         let mut by: Option<GuardId> = None;
         let men = if cl!(g).stage == ClearStage::Drill { vec![cl!(g).a] } else { clearing_men(g) };
@@ -328,9 +317,9 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
             if !crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { by = Some(gd); break; }
         }
         let by = match by { Some(by) => by, None => continue };
-        crate::doors::door_set_noticed(g, d, true);
+        g.dr[d].leaf.noticed = true;
         let now = g.time;
-        crate::doors::door_set_noticed_t(g, d, now);
+        g.dr[d].leaf.noticed_t = now;
         let mut line = String::from(if forced { "this one's been forced — someone's through here" } else { "lock's been picked — he's been through here" });
         let mut replanned = false;
         let room = match &g.level.clear_plans {
@@ -377,7 +366,7 @@ fn nearest(g: &mut Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: f
     let mut bl = f64::INFINITY;
     if ps.len() > 1 {
         for (i, p) in ps.iter().enumerate() {
-            let l = path_len(g, at, to(p));
+            let l = crate::places::on_foot(g, at, to(p));
             if l < bl { bl = l; best = i; }
         }
     }
@@ -467,7 +456,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
     let mut l = 0.0;
     let mut q = from;
     for w in walk {
-        l += m::min(path_len(g, q, w), flat(q, w) * 3.0);
+        l += m::min(crate::places::on_foot(g, q, w), flat(q, w) * 3.0);
         q = w;
     }
     cl!(g).eta = l / APPROACH_SPEED + 8.0;
@@ -499,8 +488,7 @@ fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> bool 
     cl!(g).room_i += 1;
     let (more, count, has_b) = { let c = cl!(g); (c.rooms.get(c.room_i).is_some(), c.rooms.len(), c.b.is_some()) };
     if !more {
-        let w = crate::words::wg(g, &"to", &"on");
-        let text = format!("{} — back {} the corridor{}", if count > 1 { "that's the near rooms done" } else { "room done" }, w, if has_b { ", stay paired" } else { "" });
+        let text = format!("{} — back to the corridor{}", if count > 1 { "that's the near rooms done" } else { "room done" }, if has_b { ", stay paired" } else { "" });
         clearing_say(g, &text, None);
         clearing_cancel(g);
         return false;

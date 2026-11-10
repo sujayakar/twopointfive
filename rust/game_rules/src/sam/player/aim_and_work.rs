@@ -1,5 +1,5 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
+use crate::game::{Deed, Game};
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -10,11 +10,11 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let Some(h) = g.pl[pl].holding.as_ref() else { return };
+    let Some(h) = g.pl[pl].holding() else { return };
     let h_g = h.g;
     let shot = why == crate::player::FreeHeldWhy::Shot;
     hand_back(g, h_g, if shot { 0.6 } else { 0.3 });
-    g.pl[pl].holding = None;
+    g.pl[pl].holding_over();
     g.ch[c].anim.hold_pose = None;
     if shot {
         let hc = g.gd[h_g].ch;
@@ -27,7 +27,7 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
 pub(super) fn drop_hold(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let Some(gd) = g.pl[pl].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[pl].holding().map(|h| h.g) else { return };
     if g.gd[gd].held.as_ref().map_or(false, |h| h.by == crate::game::GuardHeldBy::Player) {
         g.gd[gd].held = None;
     }
@@ -37,50 +37,39 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
         let talk = g.gd[gd].talk;
         g.tab.game_talk[talk].held_since = -1.0;
     }
-    g.pl[pl].holding = None;
+    g.pl[pl].holding_over();
     g.ch[c].anim.hold_pose = None;
 }
 
 /// The 'pick the lock' row: drop what the hands were doing and start working the lock.
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() {
         return;
     }
     if g.dr[d].def.steel.unwrap_or(false) {
         return;
     }
-    release_wall(g);
-    if g.pl[pl].dragging.is_some() {
-        crate::game::game_toggle_drag(g, None);
-    }
-    cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
-    g.pl[pl].sprinting = false;
-    g.pl[pl].easing = None;
-    crate::wand::wand_drop(g, pl);
-    g.pl[pl].picking = Some(d);
-    g.pl[pl].crouch = true;
+    crate::unseen::kneel(g, pl);
+    crate::deed::hands_free(g);
+    crate::deed::begin(g, Deed::Pick(d));
 }
 
 /// Hands off the tools: the progress stays on the door, he stays on his knee.
 pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
     let pl = g.player;
-    if g.pl[pl].picking.is_none() {
+    if g.pl[pl].picking().is_none() {
         return;
     }
-    let c = g.pl[pl].ch;
-    g.pl[pl].picking = None;
-    g.ch[c].anim.lockpick = false;
+    crate::deed::put_down(g, pl);
     g.pl[pl].speed_sm = 0.0;
 }
 
 /// Working the lock, on its own clock once begun.
-pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let d = g.pl[pl].picking.unwrap();
+    let d = g.pl[pl].picking().copied().unwrap();
     let pos = g.ch[c].pos;
     if !crate::doors::doors_locked_out(g, d, pos, None) {
         stop_picking(g);
@@ -93,7 +82,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 8.0, dt);
-        g.pl[pl].crouch = true;
+        crate::unseen::kneel(g, pl);
         g.pl[pl].sprinting = false;
         g.pl[pl].backpedal = false;
         g.ch[c].anim.reverse = false;
@@ -118,36 +107,23 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
 pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].wanding.is_some() {
-        return;
-    }
-    if g.pl[pl].coding.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].breaker_move.is_some() || g.mission.drive_t >= 0.0 || crate::handwork::sam_work(g).is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || crate::handwork::sam_work(g).is_some() {
         return;
     }
     if !crate::wand::wand_offered(g, pl, d) {
         return;
     }
-    release_wall(g);
-    if g.pl[pl].dragging.is_some() {
-        crate::game::game_toggle_drag(g, None);
-    }
-    cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
-    g.pl[pl].sprinting = false;
-    g.pl[pl].easing = None;
-    g.pl[pl].picking = None;
+    crate::unseen::kneel(g, pl);
+    crate::deed::hands_free(g);
     let pos = g.ch[c].pos;
     let side = crate::doors::doors_side(g, d, pos);
-    g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, t: 0.0, pan: 0.0, live: false, off: 0.0, age: 0.0 });
-    g.pl[pl].crouch = true;
-    g.stats.wand.looks += 1;
+    crate::deed::begin(g, Deed::Wand(crate::wand::Wanding { door: d, side, pan: 0.0, live: false, off: 0.0, age: 0.0 }));
 }
 
 /// The wand pulled out: he stays on his knee.
 pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game) {
     let pl = g.player;
-    if g.pl[pl].wanding.is_none() {
+    if g.pl[pl].wanding().is_none() {
         return;
     }
     crate::wand::wand_drop(g, pl);
@@ -159,7 +135,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     // The TypeScript's W outlives a stop (its object is only dropped from pl.wanding), so a local copy written back while he still has the look does the same.
-    let mut w = g.pl[pl].wanding.unwrap();
+    let mut w = g.pl[pl].wanding().copied().unwrap();
     let d = w.door;
     let pos = g.ch[c].pos;
     if !crate::fogofwar::fog_of_war_active(g) {
@@ -178,7 +154,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 8.0, dt);
-        g.pl[pl].crouch = true;
+        crate::unseen::kneel(g, pl);
         g.pl[pl].sprinting = false;
         g.pl[pl].backpedal = false;
         g.ch[c].anim.reverse = false;
@@ -191,11 +167,9 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         w.age += dt;
         if planted {
             w.off = 0.0;
-            w.t += dt;
             let crouch = g.ch[c].anim.crouch;
-            if !w.live && crate::wand::wand_through(g, w.t, w.age, crouch, Some(true)) {
+            if !w.live && crate::wand::wand_through(g, w.age, crouch, Some(true)) {
                 w.live = true;
-                g.stats.wand.live += 1;
                 wand_row_back(g, pl, w);
             }
         } else if w.live {
@@ -209,8 +183,8 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
             stop_wand(g);
         }
         wand_row_back(g, pl, w);
-        if g.pl[pl].wanding.is_some() && w.live {
-            let aim = g.aim_point;
+        if g.pl[pl].wanding().is_some() && w.live {
+            let aim = g.sets[g.seat].aim_point;
             crate::wand::wand_turn(g, pl, aim, dt);
         }
     }
@@ -222,7 +196,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
 
 /// W's fields back on the row, if he still has the look.
 fn wand_row_back(g: &mut crate::game::Game, pl: PlayerId, w: crate::wand::Wanding) {
-    if let Some(row) = g.pl[pl].wanding.as_mut() {
+    if let Some(row) = g.pl[pl].wanding_mut() {
         *row = w;
     }
 }
@@ -231,8 +205,8 @@ fn wand_row_back(g: &mut crate::game::Game, pl: PlayerId, w: crate::wand::Wandin
 pub(super) fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let coding = g.pl[pl].coding.unwrap();
-    let k = crate::devices::devices_pad_of(g, coding);
+    let d = g.pl[pl].coding().unwrap().door;
+    let k = crate::devices::devices_pad_of(g, d);
     g.ch[c].vel = [0.0, 0.0, 0.0];
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     if let Some(k) = &k {
@@ -299,8 +273,8 @@ pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crat
 /// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript: the write goes to that owner, by the kind of work.
 fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork::SamWorkKind, dx: f64, dz: f64) {
     let at = match kind {
-        crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
-        crate::handwork::SamWorkKind::Door => g.pl[pl].charging.as_mut().map(|s| &mut s.at),
+        crate::handwork::SamWorkKind::Wall => g.pl[pl].wall_work_mut().map(|s| &mut s.at),
+        crate::handwork::SamWorkKind::Door => g.pl[pl].charging_mut().map(|s| &mut s.at),
         _ => None,
     };
     if let Some(at) = at {
@@ -310,11 +284,11 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
 }
 
 /// Kick a door in: one committed second, updateKick runs it; with a tool the big slot's beat in the boot's place.
-pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool: Option<crate::player::StartKickTool>) {
+pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool: Option<crate::kit::BigTool>) {
     let run = run.unwrap_or(false);
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].kick.is_some() || crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::character::anim_kicking(g, c) {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || crate::character::anim_kicking(g, c) {
         return;
     }
     if g.pl[pl].crouch && !can_stand(g) {
@@ -322,29 +296,18 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     }
     if let Some(t) = tool {
         let (pos, door_at, frame) = (g.ch[c].pos, crate::doors::door_pos(g, d), g.dr[d].frame_centre);
-        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= crate::doors::DOORS_USE_REACH && crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)).is_none() {
+        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= crate::doors::DOORS_USE_REACH && crate::bigkit::sam_big_spot(g, d, pos, t).is_none() {
             return;
         }
     }
-    release_wall(g);
-    if g.pl[pl].dragging.is_some() {
-        crate::game::game_toggle_drag(g, None);
-    }
-    g.pl[pl].picking = None;
-    crate::wand::wand_drop(g, pl);
-    g.ch[c].anim.lockpick = false;
-    g.pl[pl].easing = None;
-    g.pl[pl].sprinting = false;
+    crate::deed::hands_free(g);
     g.pl[pl].crouch = false;
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
-    g.pl[pl].f_held = true;
+    g.sets[g.seat].hand.f_held = true;
     g.pl[pl].speed_sm = 0.0;
-    cancel_reloads(g, pl);
     g.pl[pl].door_kick_tail = false;
     let pos = g.ch[c].pos;
     let beside = match tool {
-        Some(t) => crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)),
+        Some(t) => crate::bigkit::sam_big_spot(g, d, pos, t),
         None => None,
     };
     // taken ONCE, off the leaf as it stands now
@@ -370,11 +333,8 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
                 crate::shotgun::lock_point(g, d, s)
             }
         };
-        let kind = match t {
-            crate::player::StartKickTool::Shotgun => crate::game::PlayerKickToolKind::Shotgun,
-            crate::player::StartKickTool::Hammer => crate::game::PlayerKickToolKind::Hammer,
-        };
-        g.pl[pl].kick = Some(crate::game::PlayerKick {
+        let kind = t;
+        crate::deed::begin(g, Deed::Kick(crate::game::PlayerKick {
             door: d,
             spot: spot_pos,
             yaw: spot_yaw,
@@ -391,23 +351,16 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
                 gave: None,
                 moves: Some(crate::game::PlayerKickToolMoves { arrived: false, at, blows: Vec::new(), end: -1.0, via: beside.as_ref().and_then(|s| s.via) }),
             }),
-        });
+        }));
         return;
     }
-    g.pl[pl].kick = Some(crate::game::PlayerKick { door: d, spot: spot_pos, yaw: spot_yaw, run: if run { Some(true) } else { None }, tool: None });
+    crate::deed::begin(g, Deed::Kick(crate::game::PlayerKick { door: d, spot: spot_pos, yaw: spot_yaw, run: if run { Some(true) } else { None }, tool: None }));
     crate::character::anim_kick_door(g, c, None);
-}
-
-fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTool {
-    match t {
-        crate::player::StartKickTool::Shotgun => crate::bigkit::SamBigSpotTool::Shotgun,
-        crate::player::StartKickTool::Hammer => crate::bigkit::SamBigSpotTool::Hammer,
-    }
 }
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
 fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return None;
     }
     let f = crate::doors::doors_frame_coords(g, d, from);
@@ -427,7 +380,7 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     // `spot` stays the same object in the TypeScript even if pl.kick is cleared under the walk: what it is read for below is taken here.
-    let k = g.pl[pl].kick.as_ref().unwrap();
+    let k = g.pl[pl].kick().unwrap();
     let (d, spot_at, spot_yaw) = (k.door, k.spot, k.yaw);
     let run = k.run.unwrap_or(false);
     let has_tool = k.tool.is_some();
@@ -461,7 +414,7 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     crate::character::character_update(g, c, dt);
     if has_tool {
         if crate::bigkit::sam_big_tick(g, dt) {
-            g.pl[pl].kick = None;
+            g.pl[pl].kick_over();
             crate::bigkit::sam_big_ended(g);
         }
         pose_gun_light(g);
@@ -471,10 +424,10 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let home = !run || crate::doors::doors_boot_holds(g, d, pos);
     let who = g.ch[c].id;
     let kick_k = g.k.sprintdoor.kick_k;
-    if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
+    if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
         g.stats.sprintdoor.kicks += 1;
         crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
-    } else if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && home {
+    } else if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && home {
         let pos = g.ch[c].pos;
         let gave = crate::doors::doors_kick_in(g, d, pos, who, None);
         let pos = g.ch[c].pos;
@@ -484,9 +437,9 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     if !crate::character::anim_kicking(g, c) {
-        g.pl[pl].kick = None;
+        g.pl[pl].kick_over();
     } else if run && crate::character::anim_kick_time(g, c) >= m::max(g.k.sprintdoor.kick_free, 0.5) {
-        g.pl[pl].kick = None;
+        g.pl[pl].kick_over();
         g.pl[pl].door_kick_tail = true;
     }
     pose_gun_light(g);
@@ -602,26 +555,26 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         Some(aim) => v3::copy(aim),
         None => p,
     };
-    g.aim_point = p;
+    g.sets[g.seat].aim_point = p;
     let (w, h) = (canvas.client_width, canvas.client_height);
-    build_interactables(g, cam, mx, my, w, h);
+    build_interactables(g);
     // A light TAKEN is KEPT while the cursor stays where it took it.
     let reach = m::min(crate::aim::SNAP_PX, g.k.aim.player.light_snap_px);
     let at = g.m.player.light_at.get(g.player).copied();
-    let kept = match (g.aim_target, at) {
+    let kept = match (g.sets[g.seat].aim_target, at) {
         (Some(t), Some(a)) if m::hyp2(mx - a[0], my - a[1]) <= reach => Some(t),
         _ => None,
     };
     let mut on_it = false;
     let mut best_px = crate::aim::SNAP_PX;
-    g.aim_target = None;
-    g.aim_guard = None;
-    g.aim_snap = None;
-    g.aim_friend = None;
+    g.sets[g.seat].aim_target = None;
+    g.sets[g.seat].aim_guard = None;
+    g.sets[g.seat].aim_snap = None;
+    g.sets[g.seat].aim_friend = None;
     if hand_at.is_none() {
         let mut i = 0;
-        while i < g.interactables.len() {
-            let it = &g.interactables[i];
+        while i < g.sets[g.seat].interactables.len() {
+            let it = &g.sets[g.seat].interactables[i];
             i += 1;
             if it.kind != crate::game::InteractableKind::Light {
                 continue;
@@ -641,17 +594,17 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
                 continue;
             }
             best_px = d;
-            g.aim_target = Some(target);
-            g.aim_snap = Some(v3::copy(pos));
+            g.sets[g.seat].aim_target = Some(target);
+            g.sets[g.seat].aim_snap = Some(v3::copy(pos));
             on_it = on;
         }
     }
-    let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
+    let held = g.pl[g.player].holding().map(|h| h.g);
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend(g, gd) {
             continue;
         }
         let com = chest_or(g, gd, 1.2);
@@ -663,16 +616,16 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         let eye = v3::add(g.ch[me].pos, [0.0, 1.3, 0.0]);
         if d < best_px && !crate::scene_collision::segment_blocked(g, eye, com, None, None, None) {
             best_px = d;
-            g.aim_guard = Some(gd);
-            g.aim_target = None;
-            g.aim_snap = Some(com);
+            g.sets[g.seat].aim_guard = Some(gd);
+            g.sets[g.seat].aim_target = None;
+            g.sets[g.seat].aim_snap = Some(com);
         }
     }
     // the exact ray still counts when it lands ON a man the loose test missed; the NEAREST body on the ray decides
-    if g.aim_guard.is_none() {
+    if g.sets[g.seat].aim_guard.is_none() {
         let mut best_t = hit_t.unwrap_or(1e9);
         let mut friend_t = f64::INFINITY;
-        let (lit, lit_at) = (g.aim_target, g.aim_snap);
+        let (lit, lit_at) = (g.sets[g.seat].aim_target, g.sets[g.seat].aim_snap);
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];
@@ -685,43 +638,41 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if !(t >= 0.0 && t < best_t + 0.5) {
                 continue;
             }
-            if crate::friends::friend_on_ray(g, gd) {
+            if crate::friends::friend(g, gd) {
                 if t < friend_t {
                     friend_t = t;
-                    g.aim_friend = Some(gd);
+                    g.sets[g.seat].aim_friend = Some(gd);
                 }
-                if crate::friends::friend_no_snap(g, gd) {
-                    continue;
-                }
+                continue;
             }
-            g.aim_guard = Some(gd);
-            g.aim_target = None;
-            g.aim_snap = Some(chest_or(g, gd, 1.2));
+            g.sets[g.seat].aim_guard = Some(gd);
+            g.sets[g.seat].aim_target = None;
+            g.sets[g.seat].aim_snap = Some(chest_or(g, gd, 1.2));
             best_t = t;
         }
-        if let (Some(friend), Some(guard)) = (g.aim_friend, g.aim_guard) {
+        if let (Some(friend), Some(guard)) = (g.sets[g.seat].aim_friend, g.sets[g.seat].aim_guard) {
             if guard != friend {
                 if friend_t >= best_t {
-                    g.aim_friend = None;
-                } else if crate::friends::friend_no_snap(g, friend) {
-                    g.aim_guard = None;
-                    g.aim_target = lit;
-                    g.aim_snap = lit_at;
+                    g.sets[g.seat].aim_friend = None;
+                } else {
+                    g.sets[g.seat].aim_guard = None;
+                    g.sets[g.seat].aim_target = lit;
+                    g.sets[g.seat].aim_snap = lit_at;
                 }
             }
         }
     }
     if crate::samstun::sam_blind(g, &crate::seats::here(g), None) > 0.5 {
-        g.aim_guard = None;
-        g.aim_target = None;
-        g.aim_snap = None;
+        g.sets[g.seat].aim_guard = None;
+        g.sets[g.seat].aim_target = None;
+        g.sets[g.seat].aim_snap = None;
     }
-    if let Some(snap) = g.aim_snap {
+    if let Some(snap) = g.sets[g.seat].aim_snap {
         if hand_at.is_none() {
-            g.aim_point = v3::copy(snap);
+            g.sets[g.seat].aim_point = v3::copy(snap);
         }
     }
-    if g.aim_target.is_none() {
+    if g.sets[g.seat].aim_target.is_none() {
         g.m.player.light_at.delete(g.player);
     } else if on_it || at.is_none() {
         g.m.player.light_at.set(g.player, [mx, my]);

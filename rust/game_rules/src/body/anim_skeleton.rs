@@ -30,7 +30,7 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
 }
 
 /// A table of names of rust/sim/src/knobs.rs, one a line.
-fn bench_names(x: crate::sim_sim::SimExports, table: f64) -> Vec<String> {
+fn bench_names(table: f64) -> Vec<String> {
     let table = table as u32;
     let (at, n) = (::sim::roles::addr(table), ::sim::roles::len(table));
     // (knobs.rs hands its tables out by address alone, as the page reads them; these are its &'static str names)
@@ -65,8 +65,7 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     }
     if g.m.anim_skeleton.layers.roles != Some(ch) {
         if g.m.anim_skeleton.layers.names.is_none() {
-            let x = crate::sim_sim::sim();
-            let names = AnimSkeletonModLAYERSNames { roles: bench_names(x, 3.0), lists: bench_names(x, 5.0), nums: bench_names(x, 8.0) };
+            let names = AnimSkeletonModLAYERSNames { roles: bench_names(3.0), lists: bench_names(5.0), nums: bench_names(8.0) };
             g.m.anim_skeleton.layers.names = Some(names);
         }
         let names = g.m.anim_skeleton.layers.names.clone().unwrap();
@@ -127,8 +126,6 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
         }
         g.m.anim_skeleton.layers.roles = Some(ch);
     }
-    g.m.anim_skeleton.pose_bench.in_place += 1.0;
-    g.m.anim_skeleton.pose_bench.owed += 1.0;
     slot
 }
 
@@ -137,7 +134,6 @@ pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     if code == 0.0 {
         panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold: char row {:?}, unit {}, guard {:?}", c, g.guards.iter().any(|x| g.gd[*x].ch == c && g.gd[*x].unit.is_some()), g.guards.iter().find(|x| g.gd[**x].ch == c).map(|x| g.gd[*x].callsign.clone()));
     }
-    g.m.anim_skeleton.layers.ran += 1.0;
     if js::to_i32(code) & 2 != 0 {
         bench_get_fk(&mut g.ch[c].anim.fk);
         return;
@@ -458,9 +454,6 @@ fn pose_in(g: &crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
     p.at < Pose::LOOSE
 }
 
-/// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.
-fn pose_out(g: &crate::game::Game, p: crate::anim_skeleton::Pose) {}
-
 /// Every pose of a set at home in the game's block; false = the pool had no room for one of them, see `stray`.
 pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     g.tab.pose_set[s].home = Some(crate::Opaque);
@@ -483,10 +476,6 @@ pub(super) fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
 pub(super) fn pose_set_out(g: &mut crate::game::Game, s: PoseSetId) {
     g.tab.pose_set[s].home = None;
     g.tab.pose_set[s].stray = 0.0;
-    for k in 0..g.tab.pose_set[s].list.len() {
-        let p = g.tab.pose_set[s].list[k];
-        pose_out(g, p);
-    }
 }
 
 /// Is the pose in a block (not −1, the bench). No g here, so only the sign says anything: the slot it is in is g.sim, which is what lend answers.
@@ -504,7 +493,6 @@ fn lend(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) ->
         bench_put(g, p, place);
         return -1.0;
     }
-    g.m.anim_skeleton.pose_bench.in_place += 1.0;
     g.sim as f64
 }
 
@@ -692,13 +680,13 @@ pub(super) fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes
 // ---------------------------------------------------------------- sampling and blending
 
 /// Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written): a question of the module, or this file's own arithmetic for what it refuses.
-pub(super) fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_: bool, out: crate::anim_skeleton::Pose, singles: bool) {
+pub(super) fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_: bool, out: crate::anim_skeleton::Pose) {
     let n = out.nodes as f64;
     if bench_for(n, None).is_some() {
         let (at, need) = clip_place(g, clip);
         if at >= 0.0 && need <= n {
             let (slot, place) = lent_at(g, out, 0.0);
-            known(answer(::sim::skeleton::ask_sample(slot, place, out.nodes as usize, at as usize, t, loop_, singles)));
+            known(answer(::sim::skeleton::ask_sample(slot, place, out.nodes as usize, at as usize, t, loop_)));
             if slot == ::sim::skeleton::ON_BENCH {
                 bench_get(g, out, 0.0);
             }
@@ -706,11 +694,11 @@ pub(super) fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_
         }
     }
     let d = cols_of(g, out);
-    sample_own(&g.tab.clip[clip], t, loop_, d, rows_of(out), n, singles);
+    sample_own(&g.tab.clip[clip], t, loop_, d, rows_of(out), n);
 }
 
 /// sampleClip's own arithmetic over a pose's singles (`n_` rows a column). Every track searches by itself: the same place as ClipSide.lines finds, so the same pose.
-fn sample_own(clip: &crate::anim_gltf::Clip, t: f64, loop_: bool, d: &mut [f32], n_: usize, num_nodes: f64, singles: bool) {
+fn sample_own(clip: &crate::anim_gltf::Clip, t: f64, loop_: bool, d: &mut [f32], n_: usize, num_nodes: f64) {
     let fr = m::fround;
     let dur = clip.duration;
     let mut t = t;
@@ -765,56 +753,32 @@ fn sample_own(clip: &crate::anim_gltf::Clip, t: f64, loop_: bool, d: &mut [f32],
             continue;
         }
         let v = |i: usize| vals[i] as f64;
-        if singles {
-            let fs = fr(f);
-            if comps == 3 {
-                for c in 0..3 {
-                    d[o + c * n_] = (v(a + c) + fr(fr(v(b + c) - v(a + c)) * fs)) as f32;
-                }
-                continue;
-            }
-            let (mut bx, mut by, mut bz, mut bw) = (v(b), v(b + 1), v(b + 2), v(b + 3));
-            let (ax, ay, az, aw) = (v(a), v(a + 1), v(a + 2), v(a + 3));
-            if fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0.0 {
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            let (x, y, z, w) = (fr(ax + fr(fr(bx - ax) * fs)), fr(ay + fr(fr(by - ay) * fs)), fr(az + fr(fr(bz - az) * fs)), fr(aw + fr(fr(bw - aw) * fs)));
-            let l = js::or(fr(m::sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(w * w)))), 1.0);
-            d[o] = (x / l) as f32;
-            d[o + n_] = (y / l) as f32;
-            d[o + 2 * n_] = (z / l) as f32;
-            d[o + 3 * n_] = (w / l) as f32;
-            continue;
-        }
+        let fs = fr(f);
         if comps == 3 {
             for c in 0..3 {
-                d[o + c * n_] = (v(a + c) + (v(b + c) - v(a + c)) * f) as f32;
+                d[o + c * n_] = (v(a + c) + fr(fr(v(b + c) - v(a + c)) * fs)) as f32;
             }
-        } else {
-            // nlerp, the shorter way round
-            let (mut bx, mut by, mut bz, mut bw) = (v(b), v(b + 1), v(b + 2), v(b + 3));
-            let (ax, ay, az, aw) = (v(a), v(a + 1), v(a + 2), v(a + 3));
-            if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            let (x, y, z, w) = (ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, aw + (bw - aw) * f);
-            let l = js::or(m::hyp4(x, y, z, w), 1.0);
-            d[o] = (x / l) as f32;
-            d[o + n_] = (y / l) as f32;
-            d[o + 2 * n_] = (z / l) as f32;
-            d[o + 3 * n_] = (w / l) as f32;
+            continue;
         }
+        let (mut bx, mut by, mut bz, mut bw) = (v(b), v(b + 1), v(b + 2), v(b + 3));
+        let (ax, ay, az, aw) = (v(a), v(a + 1), v(a + 2), v(a + 3));
+        if fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0.0 {
+            bx = -bx;
+            by = -by;
+            bz = -bz;
+            bw = -bw;
+        }
+        let (x, y, z, w) = (fr(ax + fr(fr(bx - ax) * fs)), fr(ay + fr(fr(by - ay) * fs)), fr(az + fr(fr(bz - az) * fs)), fr(aw + fr(fr(bw - aw) * fs)));
+        let l = js::or(fr(m::sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(w * w)))), 1.0);
+        d[o] = (x / l) as f32;
+        d[o + n_] = (y / l) as f32;
+        d[o + 2 * n_] = (z / l) as f32;
+        d[o + 3 * n_] = (w / l) as f32;
     }
 }
 
 /// out = lerp(a, b, w * mask[node]); no mask means uniform weight. `a` None means out is a.
-pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skeleton::Pose>, b: crate::anim_skeleton::Pose, w: f64, mask: Option<&[f32]>, out: crate::anim_skeleton::Pose, singles: bool) {
+pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skeleton::Pose>, b: crate::anim_skeleton::Pose, w: f64, mask: Option<&[f32]>, out: crate::anim_skeleton::Pose) {
     let a = a.unwrap_or(out);
     let n = a.nodes as usize;
     let alike = b.nodes == a.nodes && out.nodes == a.nodes && mask.map_or(true, |k| k.len() == n);
@@ -826,8 +790,7 @@ pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skelet
             }
         }
         if a.at < Pose::LOOSE && b.at < Pose::LOOSE && out.at < Pose::LOOSE {
-            g.m.anim_skeleton.pose_bench.in_place += 1.0;
-            known(answer(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, w, mask.is_some(), out.at as usize, n, singles)));
+            known(answer(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, w, mask.is_some(), out.at as usize, n)));
             return;
         }
         let sb = if b == a { 0 } else { 1 };
@@ -836,11 +799,11 @@ pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skelet
         if sb != 0 {
             bench_put(g, b, 1.0);
         }
-        known(answer(::sim::skeleton::ask_blend(::sim::skeleton::ON_BENCH, 0, sb, w, mask.is_some(), so, n, singles)));
+        known(answer(::sim::skeleton::ask_blend(::sim::skeleton::ON_BENCH, 0, sb, w, mask.is_some(), so, n)));
         bench_get(g, out, so as f64);
         return;
     }
-    blend_own(pool_at(g.sim), span_of(a), span_of(b), span_of(out), n, rows_of(a), w, mask, singles);
+    blend_own(pool_at(g.sim), span_of(a), span_of(b), span_of(out), n, rows_of(a), w, mask);
 }
 
 /// A read of a pose (first single, how many) as a typed array reads: past its end is no number.
@@ -861,7 +824,7 @@ fn write_of(d: &mut [f32], p: (usize, usize), o: usize, v: f64) {
 }
 
 /// blendPose's own arithmetic, for what the module is not asked (poses of different sizes, a mask of another length, more nodes than the bench): the three poses are spans of one store, and out may be a's.
-fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, usize), n: usize, n_: usize, w: f64, mask: Option<&[f32]>, singles: bool) {
+fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, usize), n: usize, n_: usize, w: f64, mask: Option<&[f32]>) {
     let fr = m::fround;
     let same = out == a;
     macro_rules! aa {
@@ -875,66 +838,11 @@ fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, u
         };
     }
     let at = |k: &[f32], i: usize| k.get(i).map_or(f64::NAN, |v| *v as f64);
-    if singles {
-        let tw = fr(w);
-        for i in 0..n {
-            let t = match mask {
-                Some(k) => fr(tw * at(k, i)),
-                None => tw,
-            };
-            if t <= 0.0 {
-                if !same {
-                    let mut o = i;
-                    for _ in 0..10 {
-                        let v = aa!(o);
-                        write_of(d, out, o, v);
-                        o += n_;
-                    }
-                }
-                continue;
-            }
-            if t >= 1.0 {
-                let mut o = i;
-                for _ in 0..10 {
-                    let v = bb!(o);
-                    write_of(d, out, o, v);
-                    o += n_;
-                }
-                continue;
-            }
-            let mut o = i;
-            for _ in 0..3 {
-                let v = aa!(o) + fr(fr(bb!(o) - aa!(o)) * t);
-                write_of(d, out, o, v);
-                o += n_;
-            }
-            let mut o = 7 * n_ + i;
-            for _ in 7..10 {
-                let v = aa!(o) + fr(fr(bb!(o) - aa!(o)) * t);
-                write_of(d, out, o, v);
-                o += n_;
-            }
-            let (mut bx, mut by, mut bz, mut bw) = (bb!(3 * n_ + i), bb!(4 * n_ + i), bb!(5 * n_ + i), bb!(6 * n_ + i));
-            let (ax, ay, az, aw) = (aa!(3 * n_ + i), aa!(4 * n_ + i), aa!(5 * n_ + i), aa!(6 * n_ + i));
-            if fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0.0 {
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            let (x, y, z, ww) = (fr(ax + fr(fr(bx - ax) * t)), fr(ay + fr(fr(by - ay) * t)), fr(az + fr(fr(bz - az) * t)), fr(aw + fr(fr(bw - aw) * t)));
-            let l = js::or(fr(m::sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(ww * ww)))), 1.0);
-            write_of(d, out, 3 * n_ + i, x / l);
-            write_of(d, out, 4 * n_ + i, y / l);
-            write_of(d, out, 5 * n_ + i, z / l);
-            write_of(d, out, 6 * n_ + i, ww / l);
-        }
-        return;
-    }
+    let tw = fr(w);
     for i in 0..n {
         let t = match mask {
-            Some(k) => w * at(k, i),
-            None => w,
+            Some(k) => fr(tw * at(k, i)),
+            None => tw,
         };
         if t <= 0.0 {
             if !same {
@@ -958,26 +866,26 @@ fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, u
         }
         let mut o = i;
         for _ in 0..3 {
-            let v = aa!(o) + (bb!(o) - aa!(o)) * t;
+            let v = aa!(o) + fr(fr(bb!(o) - aa!(o)) * t);
             write_of(d, out, o, v);
             o += n_;
         }
         let mut o = 7 * n_ + i;
         for _ in 7..10 {
-            let v = aa!(o) + (bb!(o) - aa!(o)) * t;
+            let v = aa!(o) + fr(fr(bb!(o) - aa!(o)) * t);
             write_of(d, out, o, v);
             o += n_;
         }
         let (mut bx, mut by, mut bz, mut bw) = (bb!(3 * n_ + i), bb!(4 * n_ + i), bb!(5 * n_ + i), bb!(6 * n_ + i));
         let (ax, ay, az, aw) = (aa!(3 * n_ + i), aa!(4 * n_ + i), aa!(5 * n_ + i), aa!(6 * n_ + i));
-        if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
+        if fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0.0 {
             bx = -bx;
             by = -by;
             bz = -bz;
             bw = -bw;
         }
-        let (x, y, z, ww) = (ax + (bx - ax) * t, ay + (by - ay) * t, az + (bz - az) * t, aw + (bw - aw) * t);
-        let l = js::or(m::hyp4(x, y, z, ww), 1.0);
+        let (x, y, z, ww) = (fr(ax + fr(fr(bx - ax) * t)), fr(ay + fr(fr(by - ay) * t)), fr(az + fr(fr(bz - az) * t)), fr(aw + fr(fr(bw - aw) * t)));
+        let l = js::or(fr(m::sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(ww * ww)))), 1.0);
         write_of(d, out, 3 * n_ + i, x / l);
         write_of(d, out, 4 * n_ + i, y / l);
         write_of(d, out, 5 * n_ + i, z / l);
@@ -1242,21 +1150,19 @@ mod tests {
     #[test]
     fn a_blend_goes_from_one_pose_to_the_other_by_its_weight() {
         let (a, b) = (stood(1.0, 0.2, 1.0), stood(3.0, 1.0, 2.0));
-        for singles in [false, true] {
-            for (w, want) in [(0.0, &a), (-1.0, &a), (1.0, &b), (2.0, &b)] {
-                let mut d = store(&a, &b, &[0.0; 80]);
-                blend_own(&mut d, A, B, OUT, 5, ROWS, w, None, singles);
-                assert_eq!(folded(&d[160..]), folded(want), "weight {w} singles {singles}");
-            }
+        for (w, want) in [(0.0, &a), (-1.0, &a), (1.0, &b), (2.0, &b)] {
             let mut d = store(&a, &b, &[0.0; 80]);
-            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.25, None, singles);
-            let o = &d[160..];
-            near(o[2] as f64, 1.5, "a quarter of the way between the places");
-            near(o[7 * ROWS + 2] as f64, 1.25, "and the scales");
-            assert!(m::abs(yaw_at(o, 2) - 0.4) < 0.01, "and about that of the turn: {}", yaw_at(o, 2));
-            let l: f64 = (3..7).map(|c| { let x = o[c * ROWS + 2] as f64; x * x }).sum();
-            near(l, 1.0, "a turn stays a turn");
+            blend_own(&mut d, A, B, OUT, 5, ROWS, w, None);
+            assert_eq!(folded(&d[160..]), folded(want), "weight {w}");
         }
+        let mut d = store(&a, &b, &[0.0; 80]);
+        blend_own(&mut d, A, B, OUT, 5, ROWS, 0.25, None);
+        let o = &d[160..];
+        near(o[2] as f64, 1.5, "a quarter of the way between the places");
+        near(o[7 * ROWS + 2] as f64, 1.25, "and the scales");
+        assert!(m::abs(yaw_at(o, 2) - 0.4) < 0.01, "and about that of the turn: {}", yaw_at(o, 2));
+        let l: f64 = (3..7).map(|c| { let x = o[c * ROWS + 2] as f64; x * x }).sum();
+        near(l, 1.0, "a turn stays a turn");
     }
 
     /// A rotation and its negative are one rotation: a blend between them stands still, it does not go round the long way or through nothing.
@@ -1265,11 +1171,9 @@ mod tests {
         let a = stood(0.0, 0.3, 1.0);
         let mut b = a.clone();
         for i in 0..5 { for c in 3..7 { b[c * ROWS + i] = -b[c * ROWS + i]; } }
-        for singles in [false, true] {
-            let mut d = store(&a, &b, &[0.0; 80]);
-            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.5, None, singles);
-            near(yaw_at(&d[160..], 1), 0.3, "half way between a turn and itself");
-        }
+        let mut d = store(&a, &b, &[0.0; 80]);
+        blend_own(&mut d, A, B, OUT, 5, ROWS, 0.5, None);
+        near(yaw_at(&d[160..], 1), 0.3, "half way between a turn and itself");
     }
 
     /// A layer on part of the body: each node takes the weight times his share, and a node with no share stays the first pose.
@@ -1277,32 +1181,28 @@ mod tests {
     fn a_mask_gives_each_node_his_share_of_a_blend() {
         let (a, b) = (stood(0.0, 0.0, 1.0), stood(2.0, 0.0, 1.0));
         let mask = [0.0f32, 0.25, 0.5, 1.0, 1.5];
-        for singles in [false, true] {
-            let mut d = store(&a, &b, &[0.0; 80]);
-            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.8, Some(&mask), singles);
-            let got: Vec<f64> = (0..5).map(|i| d[160 + i] as f64).collect();
-            for (i, want) in [0.0, 0.4, 0.8, 1.6, 2.0].iter().enumerate() { near(got[i], *want, "a node's share"); }
-            // a blend written over its own first pose comes out the same, and with no share leaves the node as it stood
-            let mut own = store(&a, &b, &[]);
-            blend_own(&mut own, A, B, A, 5, ROWS, 0.8, Some(&mask), singles);
-            assert_eq!(folded(&own[..80]), folded(&d[160..]), "singles {singles}");
-        }
+        let mut d = store(&a, &b, &[0.0; 80]);
+        blend_own(&mut d, A, B, OUT, 5, ROWS, 0.8, Some(&mask));
+        let got: Vec<f64> = (0..5).map(|i| d[160 + i] as f64).collect();
+        for (i, want) in [0.0, 0.4, 0.8, 1.6, 2.0].iter().enumerate() { near(got[i], *want, "a node's share"); }
+        // a blend written over its own first pose comes out the same, and with no share leaves the node as it stood
+        let mut own = store(&a, &b, &[]);
+        blend_own(&mut own, A, B, A, 5, ROWS, 0.8, Some(&mask));
+        assert_eq!(folded(&own[..80]), folded(&d[160..]));
     }
 
     /// The module and the rules each hold a blend: they answer alike, and it writes only the pose it was given.
     #[test]
     fn the_module_finds_a_pose_by_its_place_and_blends_as_the_rules_do() {
         let (_h, mut g) = hold();
-        for singles in [false, true] {
-            let (a, b, o) = (pose_of(&mut g, 37), pose_of(&mut g, 53), pose_pool_new(&mut g, 5));
-            assert!(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, 0.37, false, o.at as usize, 5, singles));
-            let mut d = store(&cols(37), &cols(53), &[0.0; 80]);
-            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.37, None, singles);
-            assert_eq!(folded(pose_cols(&mut g, o)), folded(&d[160..]), "singles {singles}");
-            // the poses either side are as they were
-            assert_eq!(folded(pose_cols(&mut g, a)), folded(&cols(37)));
-            assert_eq!(folded(pose_cols(&mut g, b)), folded(&cols(53)));
-        }
+        let (a, b, o) = (pose_of(&mut g, 37), pose_of(&mut g, 53), pose_pool_new(&mut g, 5));
+        assert!(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, 0.37, false, o.at as usize, 5));
+        let mut d = store(&cols(37), &cols(53), &[0.0; 80]);
+        blend_own(&mut d, A, B, OUT, 5, ROWS, 0.37, None);
+        assert_eq!(folded(pose_cols(&mut g, o)), folded(&d[160..]));
+        // the poses either side are as they were
+        assert_eq!(folded(pose_cols(&mut g, a)), folded(&cols(37)));
+        assert_eq!(folded(pose_cols(&mut g, b)), folded(&cols(53)));
     }
 
     fn track(node: f64, path: f64, times: &[f32], values: &[f32], step: bool) -> crate::anim_gltf::Track {
@@ -1324,28 +1224,26 @@ mod tests {
     #[test]
     fn a_sample_goes_between_a_clips_keys_and_holds_at_its_ends() {
         let clip = clip_of(true);
-        for singles in [false, true] {
-            let read = |t: f64, looped: bool| { let mut o = cols(37); sample_own(&clip, t, looped, &mut o, ROWS, 5.0, singles); o };
-            let o = read(0.25, false);
-            near(o[0] as f64, 0.5, "half way between two keys: half way between their places");
-            near(o[ROWS] as f64, 1.0, "in each column");
-            near(read(0.5, false)[0] as f64, 1.0, "on a key: the key");
-            near(yaw_at(&read(0.5, false), 1), m::PI / 4.0, "half of a quarter turn");
-            near(read(1.2, false)[0] as f64, 3.0, "past the last key: the last");
-            near(read(-1.0, false)[0] as f64, 0.0, "before the first key, and before the clip: the first");
-            near(read(9.0, false)[0] as f64, 3.0, "past the clip's end: its end");
-            // a stepped track holds its key until the next
-            near(read(0.74, false)[7 * ROWS + 2] as f64, 1.0, "a step before its next key");
-            near(read(0.76, false)[7 * ROWS + 2] as f64, 2.0, "a step past it");
-            // a loop comes round
-            near(read(0.25 + 1.25, true)[0] as f64, 0.5, "once round");
-            near(read(0.25 - 1.25, true)[0] as f64, 0.5, "back round");
-            // what no track names stands as it stood, and a node past the rig writes nothing
-            let was = cols(37);
-            let o = read(0.25, false);
-            assert_eq!(o[4].to_bits(), was[4].to_bits(), "node 4 has no track");
-            assert_eq!(o[ROWS + 4].to_bits(), was[ROWS + 4].to_bits());
-        }
+        let read = |t: f64, looped: bool| { let mut o = cols(37); sample_own(&clip, t, looped, &mut o, ROWS, 5.0); o };
+        let o = read(0.25, false);
+        near(o[0] as f64, 0.5, "half way between two keys: half way between their places");
+        near(o[ROWS] as f64, 1.0, "in each column");
+        near(read(0.5, false)[0] as f64, 1.0, "on a key: the key");
+        near(yaw_at(&read(0.5, false), 1), m::PI / 4.0, "half of a quarter turn");
+        near(read(1.2, false)[0] as f64, 3.0, "past the last key: the last");
+        near(read(-1.0, false)[0] as f64, 0.0, "before the first key, and before the clip: the first");
+        near(read(9.0, false)[0] as f64, 3.0, "past the clip's end: its end");
+        // a stepped track holds its key until the next
+        near(read(0.74, false)[7 * ROWS + 2] as f64, 1.0, "a step before its next key");
+        near(read(0.76, false)[7 * ROWS + 2] as f64, 2.0, "a step past it");
+        // a loop comes round
+        near(read(0.25 + 1.25, true)[0] as f64, 0.5, "once round");
+        near(read(0.25 - 1.25, true)[0] as f64, 0.5, "back round");
+        // what no track names stands as it stood, and a node past the rig writes nothing
+        let was = cols(37);
+        let o = read(0.25, false);
+        assert_eq!(o[4].to_bits(), was[4].to_bits(), "node 4 has no track");
+        assert_eq!(o[ROWS + 4].to_bits(), was[ROWS + 4].to_bits());
     }
 
     /// The module and the rules each hold a sample: they answer alike. A clip is written once, however often it is asked for.
@@ -1357,13 +1255,11 @@ mod tests {
         assert_eq!(clip_write(&clip).unwrap() as usize, at);
         let p = pose_pool_new(&mut g, 5);
         for (t, looped) in [(0.7, true), (-0.2, true), (5.1, false), (-1.0, false), (0.5, true), (1.1, false)] {
-            for singles in [false, true] {
-                let mut want = cols(37);
-                sample_own(&clip, t, looped, &mut want, ROWS, 5.0, singles);
-                pose_cols(&mut g, p).copy_from_slice(&cols(37));
-                assert!(::sim::skeleton::ask_sample(g.sim, p.at as usize, 5, at, t, looped, singles));
-                assert_eq!(folded(pose_cols(&mut g, p)), folded(&want), "t {t} singles {singles}");
-            }
+            let mut want = cols(37);
+            sample_own(&clip, t, looped, &mut want, ROWS, 5.0);
+            pose_cols(&mut g, p).copy_from_slice(&cols(37));
+            assert!(::sim::skeleton::ask_sample(g.sim, p.at as usize, 5, at, t, looped));
+            assert_eq!(folded(pose_cols(&mut g, p)), folded(&want), "t {t}");
         }
     }
 

@@ -122,17 +122,15 @@ fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
 
 /// A panel on a → b as a round sees one, counted.
 fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    g.stats.gunwall.asked += 1;
     wood_between(g, a, b)
 }
 
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through.
-pub(super) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
-    if !crate::combat::solid_between(q, a, b) { return false; }
+pub(super) fn wood_between(g: &Game, a: V3, b: V3) -> bool {
+    if !crate::combat::solid_between(g, a, b) { return false; }
     let d = v3::sub(b, a);
     let l = v3::len(d);
-    let h = if l > 1e-3 { q.ray(a, v3::scale(d, 1.0 / l), l) } else { None };
-    let g = q.game();
+    let h = if l > 1e-3 { crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), l) } else { None };
     match h {
         Some(h) if h.index < 1e6 => { let b = g.col.boxes[h.index as usize]; !crate::glass::is_pane(g, Some(b)) }
         _ => true,
@@ -145,7 +143,6 @@ fn cast(g: &mut Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bo
     let l = v3::len(d);
     if l < 1e-3 { return false; }
     let rd = v3::scale(d, 1.0 / l);
-    g.stats.gunwall.asked += 1;
     let h = match crate::scene_collision::raycast(g, a, rd, l + need) { Some(h) => h, None => return false };
     let at_m = g.k.gunwall.at_m;
     !(match to { Some(to) => (deep || h.t > l - AT_IN) && v3::dist(to, v3::mad(a, rd, h.t)) < at_m, None => false })
@@ -226,7 +223,7 @@ pub(super) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapo
     if h.index < 1e6 { return None; }
     let bx = g.col.dynamic_boxes.get((h.index - 1e6) as usize).copied()?;
     let d = g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx)?;
-    if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { return None; }
+    if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { return None; }
     let p = v3::mad(ml.a, dir, h.t);
     let u = crate::doors::door_dir(g, d);
     let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);
@@ -251,10 +248,6 @@ pub(super) fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crat
         r.low = low;
         if !low { r.hold = None; }
         r.rose = was && !low;
-        if low {
-            g.stats.gunwall.lowered_s += dt;
-            if !was { g.stats.gunwall.lowered += 1; }
-        }
     }
     row(g, c_2).low
 }
@@ -305,7 +298,6 @@ fn pose_one(g: &mut Game, c: CharId, yaw: f64, reach0: f64, span: f64, w: &mut f
     let (tuck_m, tuck_lead_s) = (g.k.gunwall.tuck_m, g.k.gunwall.tuck_lead_s);
     let lead = closing(s, fr.f) * tuck_lead_s;
     for o in [0.0, -TUCK_HALF, TUCK_HALF] {
-        g.stats.gunwall.asked += 1;
         let h = match crate::scene_collision::raycast(g, [a[0] + fr.r[0] * o, a[1], a[2] + fr.r[2] * o], rd, l * (reach + tuck_m + lead) / reach0) { Some(h) => h, None => continue };
         let room = h.t / l * reach0 - tuck_m - lead;
         let k = (reach - room) / span;
@@ -336,7 +328,6 @@ pub fn gun_wall_pose(g: &mut crate::game::Game, c_2: CharId) {
     pose_one(g, c, aim_yaw, reach0, span, &mut w);
     if m::abs(v3::wrap_angle(aim_yaw - body_yaw)) > 0.15 { pose_one(g, c, body_yaw, reach0, span, &mut w); }
     g.ch[c].anim.gun_wall = w;
-    if w > 0.0 { g.stats.gunwall.tucked += 1; }
 }
 
 /// Sam's pistol: the low ready this rule put him in is taken off again by it and by nobody else.

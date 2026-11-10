@@ -53,7 +53,7 @@ fn park(g: &mut Game) -> (u32, u32) {
     let (mut k, mut men, mut alarms) = (0.0, 0, 0);
     let all: Vec<GuardId> = g.guards.iter().chain(g.civilians.iter()).copied().collect();
     for x in all {
-        if g.gd[x].team == crate::teams::Team::Operative { continue; }
+        if g.team(x).ours() { continue; }
         let (c, light) = (g.gd[x].ch, g.gd[x].flashlight);
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
@@ -95,7 +95,7 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
         let Some(&b) = list.get(i) else { continue };
         // (index for index the level's boxes head the world's: one that is not is left alone)
         if st.sunk.contains(&i) || g.engine.world.statics.get(i) != Some(&b) { continue; }
-        let row = &mut g.tab.boxes[b];
+        let mut row = g.tab.boxes.edit(b);
         let r = m::hyp2(row.h[0], row.h[2]);
         x0 = m::min(x0, row.c[0] - r); x1 = m::max(x1, row.c[0] + r); z0 = m::min(z0, row.c[2] - r); z1 = m::max(z1, row.c[2] + r);
         row.c[1] -= 30.0;
@@ -112,7 +112,6 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
 /// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
 fn box_changed(g: &mut Game) {
     g.engine.world.geom_serial += 1.0;
-    crate::scene_collision::wrote(g);
 }
 pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
     for &i in hidden { if let Some(&p) = g.props.all.get(i) { crate::props::prop_system_remove(g, p); } }
@@ -120,7 +119,6 @@ pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
 
 /// the room behind the door at this share of itself: each lamp's own base, which the game multiplies each step, and its fixture's glow
 pub(super) fn quiet_inside(g: &mut Game, st: &mut KitStage, k: f64, blade: f64) {
-    st.share = k;
     st.a.blade = blade;
     for a in &st.lit_in {
         g.tab.fixture[a.t].on = true;
@@ -232,7 +230,7 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
         let x = st.order[k];
         let is_open = acts::actor(g, st) == Some(x);
         let (p, low) = match st.mate { Some(p) if k == 0 && !is_open => (p, st.quiet), _ => (st.spots[k], false) };
-        let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
+        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
         super::walk::send(g, x, p, super::walk::faces(st, p), None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }
@@ -267,9 +265,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     let quiet_lit = porch_lit(or(o.porch.intensity, QK.lamp.intensity), o.porch.day, plan.indoors, out_now);
     let q = st.quiet_kind != 0 && QK.on && quiet_lit > 0.0;
     st.quiet = q;
-    st.out.clear();
     st.lit_in.clear();
-    st.share = 1.0;
     let (lamp0, offset_q, aim_q) = if q {
         let po = plan.lamps.porch.offset;
         (&QK.lamp, po, if o.porch.aim { plan.lamps.porch.aim } else { [po[0], po[1] + QK.tip, 0.0] })
@@ -324,9 +320,9 @@ fn place(g: &mut Game, st: &mut KitStage) {
             let r = &g.tab.fixture[t];
             let Some(l) = r.light else { continue };
             if r.kind != FixtureKind::Analytic || g.tab.light[l].kind == 2.0 { continue; }
-            let (pos, range, name) = (r.pos, g.tab.light[l].range, r.name.clone());
+            let (pos, range) = (r.pos, g.tab.light[l].range);
             if out_of(pos) >= plan.wall.back {
-                if g.tab.fixture[t].on && dist(pos, foot) <= range { g.tab.fixture[t].on = false; st.out.push(name); }
+                if g.tab.fixture[t].on && dist(pos, foot) <= range { g.tab.fixture[t].on = false;  }
             } else if lit0.contains(&t) && dist(pos, wedge) <= m::min(range, KIT_PLAN.lit_reach) {
 let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].base_emissive);
                 st.lit_in.push(LampAs { t, intensity, emissive });
@@ -339,8 +335,8 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
         for i in roofs {
             let b = g.col.boxes[i];
             if g.engine.world.statics.get(i) != Some(&b) { continue; }
-            let f = &mut g.tab.boxes[b].flags;
-            *f = (js::to_i32(*f) & !np) as f64;
+            let mut b = g.tab.boxes.edit(b);
+            b.flags = (js::to_i32(b.flags) & !np) as f64;
         }
         if any { box_changed(g); }
     }
@@ -383,7 +379,7 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
         crate::control::set_pinned(g, x, true, "the kit picture");
         chars.push((c, super::walk::faces(st, [p[0], p[1]])));
     }
-    let shut0 = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
+    let shut0 = door.map_or(0.0, |d| g.dr[d].leaf.angle);
     let (rifle, pistol) = (g.pl[pl].rifle, g.pl[pl].pistol);
     g.fa[rifle].light_on = st.sam_on;
     g.fa[pistol].light_on = st.sam_on;
@@ -393,8 +389,8 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
         g.pl[pl].holstered = true;
         g.ch[sam_ch].anim.crouch = 1.0;
         g.ch[sam_ch].anim.crouch_target = 1.0;
-        if let Some(d) = door { if !crate::doors::door_off(g, d) {
-            crate::doors::door_set_locked(g, d, false);
+        if let Some(d) = door { if !g.dr[d].leaf.off {
+            g.dr[d].leaf.locked = false;
             let id = g.ch[sam_ch].id;
             crate::doors::doors_crack(g, d, [slots[0][0], 0.0, slots[0][1]], id, 1.0, None, Some(QK.ajar_deg * R), Some(QK.ajar_deg * R));
         } }
@@ -526,7 +522,7 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
         st.frag_m = m::max(0.6, m::min(K.sam_frag_m, reach_in - 0.5));
         st.frag_land = m::min(K.frag_land, m::max(0.3, st.frag_m - 0.5));
         st.door = door; st.walled = wall; st.width = a.width; st.reach_in = reach_in; st.hole = false; st.side = side; st.latch = latch;
-        st.leaf_shut = shut0; st.leaf_rest = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
+        st.leaf_shut = shut0; st.leaf_rest = door.map_or(0.0, |d| g.dr[d].leaf.angle);
         st.sam_smoke = at_of(&plan, [0.0, -K.sam_smoke_m, 0.0]);
         st.sam_stun = at_of(&plan, [0.0, -K.sam_stun_m, 0.0]);
         st.sam_frag = at_of(&plan, [0.0, -st.frag_m, 0.0]);
@@ -540,7 +536,6 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
     g.saves.enabled = false;
     g.tune.qrf = false;
     let t = &mut g.k.turn;
-    t.on = 1.0;
     t.aim = m::round(K.gun_rate * R * 1000.0) / 1000.0;
     t.aim_acc = m::round(K.gun_rate * R / K.ramp * 100.0) / 100.0;
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;

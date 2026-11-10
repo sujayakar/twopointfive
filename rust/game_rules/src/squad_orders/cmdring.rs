@@ -10,10 +10,6 @@ use alloc::{string::String, vec, vec::Vec};
 fn cl(v: f64, m_: f64, max: f64) -> f64 {
     if max > 2.0 * m_ { m::max(m_, m::min(max - m_, v)) } else { v }
 }
-/// A string as a condition: absent and '' are false.
-fn str_truthy(s: &Option<String>) -> bool {
-    s.as_deref().map_or(false, |s| !s.is_empty())
-}
 /// `(r.listed ?? r.targets).includes('none')`
 fn lists_none(listed: &Option<Vec<String>>, targets: &[String]) -> bool {
     listed.as_deref().unwrap_or(targets).iter().any(|t| t == "none")
@@ -118,66 +114,16 @@ pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input
     let (lone, shapes) = (lone.unwrap_or(0.0), shapes.unwrap_or(0.0));
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     let wedges = g.k.cmdring.wedges;
-    let pill = lone > 0.0 && crate::ringlone::on_pill(g, lone, wedges, (mouse_x - r.ax) / r.z, (mouse_y - r.ay) / r.z);
+    let pill = lone > 0.0 && crate::ringlone::on_pill(lone, wedges, (mouse_x - r.ax) / r.z, (mouse_y - r.ay) / r.z);
     ring_want_on(&g.k.cmdring, r, mouse_x, mouse_y, digit, time, lone, shapes, pill)
 }
 
-/// Which row is on which wedge (CMDRING.only, the page's way): the rows with digits keep them, the rest take the spare wedges, the last spare is 'more'.
-pub(super) fn ring_seats(g: &crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
-    ring_seats_of(g.k.cmdring.wedges, rows, place, word_key, first.unwrap_or(true))
-}
-/// ringSeats on the number of wedges alone.
-fn ring_seats_of(wedges: f64, rows: &[SeatRow], place: bool, word_key: &str, first: bool) -> RingSeats {
-    let w = wedges as usize;
-    let mut row: Vec<f64> = vec![-1.0; w + 1];
-    let mut rest: Vec<f64> = Vec::new();
-    let mut last: Vec<f64> = Vec::new();
-    for (i, r) in rows.iter().enumerate() {
-        let i = i as f64;
-        if r.hot_key.as_deref() == Some(word_key) {
-            continue;
-        }
-        if place && r.free == Some(true) && !str_truthy(&r.opens) && !str_truthy(&r.hot_key) && lists_none(&r.listed, &r.targets) {
-            last.push(i);
-            continue;
-        }
-        match r.key {
-            // (a digit that is no whole number finds no wedge: row[k] is undefined there, and undefined < 0 is false)
-            Some(k) if k >= 1.0 && k <= wedges && k == m::floor(k) && row[k as usize] < 0.0 => row[k as usize] = i,
-            _ => rest.push(i),
-        }
-    }
-    let mut spare: Vec<usize> = Vec::new();
-    for d in (if first { 2 } else { 1 })..=w {
-        if row[d] < 0.0 {
-            spare.push(d);
-        }
-    }
-    if rest.len() <= spare.len() {
-        for (n, i) in rest.iter().chain(last.iter()).take(spare.len()).enumerate() {
-            row[spare[n]] = *i;
-        }
-        return RingSeats { row, more: 0.0, over: Vec::new() };
-    }
-    let more = spare.pop().unwrap_or(w);
-    let mut over = rest;
-    if row[more] >= 0.0 {
-        over.insert(0, row[more]);
-        row[more] = -1.0;
-    }
-    for &d in &spare {
-        row[d] = over.remove(0);
-    }
-    over.truncate(w);
-    RingSeats { row, more: more as f64, over }
-}
-
-/// Which row is on which wedge of the flat tree: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.
-pub(super) fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
-    flat_seats_of(g.k.cmdring.wedges, rows, kind, word_key, lead)
+/// Which row is on which wedge: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.
+pub(super) fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, lead: f64) -> crate::cmdring::FlatSeats {
+    flat_seats_of(g.k.cmdring.wedges, rows, kind, lead)
 }
 /// flatSeats on the number of wedges alone.
-fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead: f64) -> FlatSeats {
+fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, lead: f64) -> FlatSeats {
     let w = wedges as usize;
     let mut row: Vec<f64> = vec![-1.0; w + 1];
     let (flat_top, flat_left) = (flat_top(), flat_left());
@@ -190,7 +136,7 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead
     }
     for (i, r) in rows.iter().enumerate() {
         let i = i as f64;
-        if str_truthy(&r.opens) || r.hot_key.as_deref() == Some(word_key) || left.map_or(false, |l| l.contains(&r.id)) {
+        if r.word || left.map_or(false, |l| l.contains(&r.id)) {
             continue;
         }
         let k = top.and_then(|t| t.get(r.id.clone())).copied().unwrap_or(0.0);
@@ -201,7 +147,7 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead
         if i == lead {
             continue;
         }
-        if r.free == Some(true) && !str_truthy(&r.hot_key) && lists_none(&r.listed, &r.targets) {
+        if r.free == Some(true) && lists_none(&r.listed, &r.targets) {
             last.push(i);
         } else {
             rest.push(i);
@@ -268,7 +214,7 @@ fn wedge_at(dx: f64, dy: f64, n: f64) -> f64 {
     js::rem(js::rem(k, n) + n, n) + 1.0
 }
 
-/// each kind of target's rows that hold a place at the top of the flat ring, by the place
+/// each kind of target's rows that hold a place at the top of the ring, by the place
 fn flat_top() -> JsMap<String, JsMap<String, f64>> {
     let place = |rows: &[(&str, f64)]| { let mut t = JsMap::new(); for &(id, at) in rows { t.set(String::from(id), at); } t };
     let mut t = JsMap::new();
@@ -391,53 +337,15 @@ mod tests {
         assert_eq!(on_drawn(540.0, 10.2, true, None, 8.0), (2.0, true, Some(true)));              // where nothing is drawn a flick still goes, and that was off one
     }
 
-    #[derive(Clone, Default)]
-    struct S { key: Option<f64>, hot: Option<&'static str>, opens: Option<&'static str>, free: bool, targets: Option<&'static str>, listed: Option<&'static str> }
-    fn seat(s: &S) -> SeatRow {
-        SeatRow {
-            key: s.key,
-            hot_key: s.hot.map(String::from),
-            opens: s.opens.map(String::from),
-            free: if s.free { Some(true) } else { None },
-            targets: vec![String::from(s.targets.unwrap_or("floor"))],
-            listed: s.listed.map(|l| vec![String::from(l)]),
-        }
-    }
-    fn k(key: f64) -> S { S { key: Some(key), ..S::default() } }
-    fn plain() -> S { S::default() }
-    fn posture(key: f64) -> S { S { key: Some(key), free: true, targets: Some("none"), ..S::default() } }
-
-    /// What a player finds on which wedge. `row[d]` is the row on wedge d, -1 none. (rows, a place is pointed at, wedge 1 is the lead's, row, 'more' wedge, what is behind it)
-    #[test]
-    fn rows_keep_their_digits_and_the_rest_take_the_spare_wedges_or_go_behind_more() {
-        let cases: Vec<(&str, Vec<S>, bool, bool, [f64; 6], f64, Vec<f64>)> = vec![
-            ("each on its digit", vec![k(1.), k(2.), k(3.)], false, true, [-1., 0., 1., 2., -1., -1.], 0., vec![]),
-            ("the word's key takes no wedge, the rest fill up", vec![k(1.), S { hot: Some("F"), ..k(2.) }, plain(), plain(), plain()], false, true, [-1., 0., 2., 3., 4., -1.], 0., vec![]),
-            ("too many: the last wedge is more", vec![k(1.), k(2.), k(3.), k(4.), k(5.), plain(), plain()], false, true, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6.]),
-            ("wedge 1 is free on the next page", vec![plain(), plain(), plain(), plain(), plain(), plain()], false, false, [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
-            ("pointed at a place, a posture goes last", vec![posture(2.), k(3.), plain(), plain()], true, true, [-1., -1., 2., 1., 3., 0.], 0., vec![]),
-            ("a posture keeps its digit otherwise", vec![posture(2.), k(3.)], false, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
-            ("a posture that opens a page stays put", vec![S { opens: Some("x"), ..posture(2.) }, k(3.)], true, true, [-1., -1., 0., 1., -1., -1.], 0., vec![]),
-            ("a digit taken or no digit of the ring is no seat", vec![k(2.), k(2.), k(9.), k(0.), k(1.5)], false, true, [-1., -1., 0., 1., 2., -1.], 5., vec![3., 4.]),
-        ];
-        for (what, rows, place, first, row, more, over) in &cases {
-            let rows: Vec<SeatRow> = rows.iter().map(seat).collect();
-            let got = ring_seats_of(5.0, &rows, *place, "F", *first);
-            assert_eq!(got.row.as_slice(), row.as_slice(), "{what}");
-            assert_eq!((got.more, &got.over), (*more, over), "{what}");
-        }
-    }
-
     fn fr(id: &str) -> FlatRow { FlatRow { id: String::from(id), targets: vec![String::from("floor")], ..FlatRow::default() } }
     fn fp(id: &str) -> FlatRow { FlatRow { free: Some(true), targets: vec![String::from("none")], ..fr(id) } }
     fn frs(ids: &[&str]) -> Vec<FlatRow> { ids.iter().map(|id| fr(id)).collect() }
     fn with_p(mut rows: Vec<FlatRow>, p: &str) -> Vec<FlatRow> { rows.push(fp(p)); rows }
 
-    /// On the flat ring a kind of target has rows that hold a place: a player learns where cover is. (rows, target, the lead row, row, 'more' wedge, what is behind it)
+    /// A kind of target has rows that hold a place: a player learns where cover is. (rows, target, the lead row, row, 'more' wedge, what is behind it)
     #[test]
-    fn the_flat_ring_keeps_each_target_s_rows_in_their_places() {
-        let opened = FlatRow { opens: Some(String::from("p")), ..fr("a") };
-        let worded = FlatRow { hot_key: Some(String::from("F")), ..fr("b") };
+    fn the_ring_keeps_each_target_s_rows_in_their_places() {
+        let worded = FlatRow { word: true, ..fr("b") };
         let cases: Vec<(&str, Vec<FlatRow>, &str, f64, [f64; 6], f64, Vec<f64>)> = vec![
             ("the floor's own places, the rest behind more", with_p(frs(&["a", "cover", "fallIn", "hold", "b"]), "silent"), "floor", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5.]),
             ("a door's own places, and fall in and hold are not on its ring", frs(&["a", "cover", "openClear", "bangClear", "fallIn", "hold", "b"]), "door", 0., [-1., 0., 1., 2., 3., 6.], 0., vec![]),
@@ -448,10 +356,10 @@ mod tests {
             ("behind more is a ring's worth at most, the postures left off first", with_p(frs(&["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]), "p"), "wall", 0., [-1., 0., 1., 2., 3., -1.], 5., vec![4., 5., 6., 7., 8.]),
             ("postures take the last wedges", vec![fr("a"), fp("p1"), fp("p2"), fr("b"), fr("c")], "wall", 0., [-1., 0., 3., 4., 1., 2.], 0., vec![]),
             ("no rows, no lead: nothing", vec![], "floor", -1., [-1., -1., -1., -1., -1., -1.], 0., vec![]),
-            ("a row that opens a page and the word's key take no wedge", vec![opened, worded, fr("c"), fr("d")], "foe", 2., [-1., 2., 3., -1., -1., -1.], 0., vec![]),
+            ("the word's row takes no wedge", vec![worded, fr("c"), fr("d")], "foe", 1., [-1., 1., 2., -1., -1., -1.], 0., vec![]),
         ];
         for (what, rows, kind, lead, row, more, over) in &cases {
-            let got = flat_seats_of(5.0, rows, kind, "F", *lead);
+            let got = flat_seats_of(5.0, rows, kind, *lead);
             assert_eq!(got.row.as_slice(), row.as_slice(), "{what}");
             assert_eq!((got.more, &got.over), (*more, over), "{what}");
         }

@@ -77,7 +77,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             c: p.ch,
             pl: Some(pl),
             gd: None,
-            can: !g.cond[p.ch].down && p.dragging.is_none() && p.holding.is_none() && p.kick.is_none() && p.picking.is_none() && p.wanding.is_none() && p.takedown.is_none(),
+            can: !g.cond[p.ch].down && p.tow.is_none() && !p.planted(),
             right_free: p.holstered,
         });
     }
@@ -112,8 +112,8 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             let (mut crack, mut move_) = (false, false);
             let speed = m::hyp2(cvel[0], cvel[2]);
             if let Some(p) = pl {
-                if let Some(dd) = g.pl[p].door_move.as_ref().map(|dm| dm.d) {
-                    if !crate::doors::door_off(g, dd) { hit = Some(dd); crack = true; move_ = true; }
+                if let Some(dd) = g.pl[p].door_move().map(|dm| dm.d) {
+                    if !g.dr[dd].leaf.off { hit = Some(dd); crack = true; move_ = true; }
                 }
             }
             for k in 0..list.len() {
@@ -122,12 +122,12 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 let hx = g.dr[d].def.hinge[0];
                 let hz = g.dr[d].def.hinge[1];
                 let wd = g.dr[d].def.width;
-                if crate::doors::door_off(g, d) { continue; }
+                if g.dr[d].leaf.off { continue; }
                 let vx = cpos[0] - hx;
                 let vz = cpos[2] - hz;
                 if vx * vx + vz * vz > m::pow(wd + 1.2, 2.0) { continue; }
                 if let Some(p) = pl {
-                    if g.pl[p].easing == Some(d) { hit = Some(d); crack = true; break; }
+                    if g.pl[p].easing().map(|e| e.door) == Some(d) { hit = Some(d); crack = true; break; }
                 }
                 let u = crate::doors::door_dir(g, d);
                 let along = vx * u[0] + vz * u[1];
@@ -137,13 +137,13 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 let thick = g.dr[d].thick;
                 let touching = along > 0.14 && along < wd + 0.3 && dist < 0.34 + thick / 2.0 + 0.05;
                 let sgn = if perp >= 0.0 { -1.0 } else { 1.0 };
-                let angle = crate::doors::door_angle(g, d);
+                let angle = g.dr[d].leaf.angle;
                 let da = angle - was_at(before, Some(k));
                 let pushing = touching && da * sgn > 1e-4;
                 if pushing { hit = Some(d); break; }
                 let swing = crate::doors::door_swing(g, d);
                 let mine = sgn * swing < 0.0 && angle * swing < 1.35;
-                if mine && crate::doors::door_pull_t(g, d) > 0.0 && crate::doors::door_last_who(g, d) == cid && dist < 0.9 { hit = Some(d); break; }
+                if mine && g.dr[d].leaf.pull_t > 0.0 && g.dr[d].leaf.last_who == cid && dist < 0.9 { hit = Some(d); break; }
                 if !touching && speed > 0.3 {
                     let wx = cvel[0] / speed;
                     let wz = cvel[2] / speed;
@@ -200,7 +200,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 Some(h) => {
                     let hand = crate::handwork::TeamWorkHandH { p: h.p, n: h.n, w: h.w };
                     let verb = wj.as_ref().map(|j| j.verb);
-                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) { crate::handwork::TeamWorkHandKind::Take } else { crate::handwork::TeamWorkHandKind::Lever };
+                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) { crate::character::WorkKind::Take } else { crate::character::WorkKind::Lever };
                     let secs = wj.as_ref().map_or(0.0, |j| j.secs);
                     let need = wj.as_ref().map_or(1.0, |j| j.need);
                     let dir = if verb == Some(crate::workthings::WorkVerb::BreakerOn) { -1.0 } else { 1.0 };
@@ -217,7 +217,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
         let (hx, hz) = (hinge[0], hinge[1]);
         let wd = g.dr[d].def.width;
         let k = list.iter().position(|x| *x == d);
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let da = v3::clamp(angle - was_at(before, k), -0.3, 0.3);
         let (min_a, max_a) = (crate::doors::door_min_a(g, d), crate::doors::door_max_a(g, d));
         let a = g.dr[d].def.closed_dir + v3::clamp(angle + da, min_a, max_a);
@@ -303,12 +303,12 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     let list: Vec<DoorId> = g.doors.list.clone();
     let mut any_off = false;
     for d in list.iter().copied() {
-        if crate::doors::door_off(g, d) { any_off = true; break; }
+        if g.dr[d].leaf.off { any_off = true; break; }
     }
     let leaves: Vec<BoxId> = if any_off {
         let mut l = Vec::new();
         for d in list.iter().copied() {
-            if !crate::doors::door_off(g, d) { l.push(g.dr[d].box_); }
+            if !g.dr[d].leaf.off { l.push(g.dr[d].box_); }
         }
         l
     } else {

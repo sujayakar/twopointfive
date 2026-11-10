@@ -4,8 +4,8 @@
 //! STATEMENT FOR STATEMENT with the TypeScript: the same hashes, the same bearings and chords worked out by the same maths (maths.rs), the same compares.
 //! tools/qa/glass-ident.ts holds the two together over panes broken by a game.
 //!
-//! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes_g`. A pane with no row is whole: shut
-//! everywhere. (A world with no game behind it, a tool's, has a copy here, written by src/scene/boxMirror.ts.)
+//! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes`. A pane with no row is whole: shut
+//! everywhere.
 //!
 //! A ROW. Doubles (GD): nine a site, eight sites (u, v, the bearing of radial 0, the four base radii, the ring zone's radius, the share of merged
 //! sectors), then the dice of a toughened pane coming down (the blow's u and v, the pane's half sides, the key of the last clump out and which clump
@@ -19,7 +19,7 @@
 //! judgment and is none at every other time.
 
 use game_types::knobs::Knobs;
-use crate::maths::{atan2, cos, hypot3, sin};
+use crate::maths::{atan2, cos, sin};
 use crate::world::*;
 use prim::floor;
 
@@ -52,11 +52,6 @@ pub const GW_CRATER: usize = 63;
 pub const G_GONE: u32 = 1;
 pub const G_DICE: u32 = 2;
 pub const G_RUN: u32 = 4;
-
-/// the views: glass stands where it stands · what a blast has just taken is gone to it · what a burst would break is counted out
-pub const VIEW_NONE: u32 = 0;
-pub const VIEW_BLOWN: u32 = 1;
-pub const VIEW_GIVES: u32 = 2;
 
 // ---- glassPattern.ts, its numbers
 const MAX_SECTORS: u32 = 12;
@@ -243,55 +238,28 @@ fn to_uv(b: &[f64], x: f64, y: f64, z: f64) -> (f64, f64) {
     (if b[R_H] >= b[R_H + 2] { lx } else { lz }, y - b[R_C + 1])
 }
 
-/// the view's word on a pane it may name: glass a burst would break is no glass to the man reckoning it (glassbreak.ts wouldGive, worked out by its
-/// owner into the view's rows: a pane that gives whole has a reach below nought, float glass gives within its reach of the pane's nearest point)
-fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
-    if o.panes_g != NO_BLOCK {
-        return crate::panes::gives(o.panes_g as usize - 1, o, bi, x, y, z, tune);
-    }
-    for k in 0..o.view_n as usize {
-        if o.view_bi[k] as usize != bi {
-            continue;
-        }
-        let q = &o.view[k * VD..k * VD + VD];
-        return q[3] < 0.0 || hypot3(x - q[0], y - q[1], z - q[2]) <= q[3];
-    }
-    false
-}
-
 /// IS STATIC `bi`, A PANE OF GLASS, OPEN AT (x, y, z) — the game's rule: a piece has fallen out there, or
-/// the view in hand counts the glass there out.
+/// the view in hand counts the glass there out (glass a burst would break is no glass to the man reckoning it). With no glass hung every pane is shut.
 pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
-    // (where the pane's state stands: its row in the game's block, the rule being this module's own (panes.rs) — or the copy's, the rule being the host's)
-    let (d, w): (&[f64], &[u32]) = if o.panes_g != NO_BLOCK {
-        match crate::panes::row_for(o.panes_g as usize - 1, bi as u32) {
-            Some(row) => row,
-            None => return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z, tune),
-        }
-    } else {
-        let r = o.glass_of[bi] as usize;
-        if r == 0 || r > o.glass_n as usize {
-            return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z, tune);
-        }
-        (&o.glass[(r - 1) * GD..r * GD], &o.glass_w[(r - 1) * GW..r * GW])
-    };
+    let Some(g) = o.panes else { return false };
+    let gives = || o.view == VIEW_GIVES && crate::panes::gives(g, o, bi, x, y, z, tune);
+    let Some((d, w)) = crate::panes::row_for(g, bi as u32) else { return gives() };
     let fl = w[GW_FLAGS];
     if fl & G_GONE != 0 {
         return true;
     }
-    let (u, v) = to_uv(&o.rec[bi * REC..bi * REC + REC], x, y, z);
+    let (u, v) = to_uv(o.row(bi), x, y, z);
     if fl & G_DICE != 0 {
         // (a pane coming down is on its way out to a blast, and counted out by a man reckoning one)
-        return dice_out(&d[G_DICE_AT..], w, u, v) || o.view_kind != VIEW_NONE;
+        return dice_out(&d[G_DICE_AT..], w, u, v) || o.view != VIEW_NONE;
     }
     let fid = classify_row(d, w, u, v);
     if fid >= 0 && bit(w, GW_OPEN, fid as u32) {
         return true;
     }
-    match o.view_kind {
+    match o.view {
         // goingAt: the piece there is queued to leave, or it is a crater's wedge and one of its crater is
         VIEW_BLOWN => fid >= 0 && (bit(w, GW_GOING, fid as u32) || ((fid as u32 % FRAGS_PER_SITE) / MAX_SECTORS == 0 && w[GW_CRATER] >> (fid as u32 / FRAGS_PER_SITE) & 1 != 0)),
-        VIEW_GIVES => gives(o, bi, x, y, z, tune),
-        _ => false,
+        _ => gives(),
     }
 }

@@ -30,13 +30,12 @@ pub struct StackPost {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadOrders {
-    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
+    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
     /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
     pub made: JsMap<String, OrdersOrderDefId>,
     /// what the squad's panel says of this seat, as its last tick left it (orders/shown.rs; Rust's own: not on the wire, so blank after a load until the next tick)
     pub shown: crate::orders::Shown,
-    pub owners: Vec<crate::orders::SquadOwner>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
     #[is(crate::orders::Who::All)] pub who: crate::orders::Who,
@@ -49,8 +48,7 @@ pub struct SquadOrders {
     pub asg: JsMap<GuardId, OrdersAssignmentId>,
     pub trail: Vec<V3>,
     #[is([0.0, 0.0, -1.0])] pub back: V3,
-    #[is(crate::orders::SquadOrdersView { input: None, cam: None, canvas: None })] pub view: crate::orders::SquadOrdersView,
-    pub esc_used: bool,
+    #[is(crate::orders::SquadOrdersView { input: None })] pub view: crate::orders::SquadOrdersView,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
     pub group: f64,
@@ -77,13 +75,9 @@ pub struct SquadOrders {
     pub glass_sig: f64,
     pub fur_in: bool,
     pub worked: JsMap<DoorId, Vec<Option<crate::orders::SquadOrdersWorkedValueItem>>>,
-    pub face_flip: bool,
     pub reached: JsMap<String, crate::orders::SquadOrdersReachedValue>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SquadOwner {
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadOrdersPosture {
@@ -108,16 +102,10 @@ pub struct Menu {
     pub rows: Vec<OrdersOrderDefId>,
     pub why: Vec<Option<String>>,
     pub sel: f64,
-    pub wheel_acc: f64,
     pub read_t: f64,
     pub part: Option<Vec<GuardId>>,
-    pub split: Option<bool>,
-    pub page: Option<String>,
-    pub word_row: bool,
-    pub on_word: bool,
     pub men_side: Option<f64>,
     pub side_key: String,
-    pub flat: Option<bool>,
     /// each row's words, read beside its why (orders/words.rs): no part of the wire
     pub words: Vec<String>,
     /// the first wedge's word, the quick key's there (the same)
@@ -131,16 +119,10 @@ impl Default for Menu {
             rows: Vec::new(),
             why: Vec::new(),
             sel: 0.0,
-            wheel_acc: 0.0,
             read_t: 0.0,
             part: None,
-            split: None,
-            page: None,
-            word_row: false,
-            on_word: false,
             men_side: None,
             side_key: String::new(),
-            flat: None,
             words: Vec::new(),
             quick: None,
         }
@@ -237,8 +219,6 @@ pub struct SquadOrdersShowsItem {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadOrdersView {
     pub input: Option<InputId>,
-    pub cam: Option<CameraId>,
-    pub canvas: Option<crate::host_hud::View>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -342,7 +322,6 @@ pub enum TargetKind {
 #[derive(Clone, Debug, Default)]
 pub struct GiveOpts {
     pub ack: Option<String>,
-    pub on_word: Option<bool>,
     pub men: Option<Vec<GuardId>>,
 }
 
@@ -354,14 +333,13 @@ pub struct OrderDef {
     #[bytes(skip)]
     pub row: &'static crate::orders::Row,
     pub targets: Vec<crate::orders::TargetKind>,
-    pub key: Option<f64>,
+    /// the name of the rows this one is among: they're listed where a row that opens the name is
     pub page: Option<String>,
     pub opens: Option<String>,
     pub listed: Option<Vec<crate::orders::TargetKind>>,
-    pub hot_key: Option<String>,
+    /// the word's own row: F gives it with the ring up, and it has no wedge
+    pub word: bool,
     pub ack: Option<Vec<String>>,
-    pub ack_now: Option<Vec<String>>,
-    pub on_word: Option<bool>,
     pub free: Option<bool>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
@@ -371,14 +349,11 @@ impl Default for OrderDef {
             id: String::new(),
             row: &crate::orders::Row::NONE,
             targets: Vec::new(),
-            key: None,
             page: None,
             opens: None,
             listed: None,
-            hot_key: None,
+            word: false,
             ack: None,
-            ack_now: None,
-            on_word: None,
             free: None,
             stands_in: None,
         }
@@ -404,8 +379,8 @@ pub struct Assignment {
     pub upper: crate::character::UpperMode,
     pub stack_side: f64,
     pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub going: String,
-    pub there: String,
+    pub going: crate::orders::Doing,
+    pub there: crate::orders::Doing,
     pub set_line: Option<String>,
     pub group: f64,
     pub set_said: bool,
@@ -497,10 +472,10 @@ pub struct SquadOrdersSceneHit {
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersAssignA {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -548,13 +523,11 @@ pub struct SquadOrdersAssignA {
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersRingUpG {
     pub men: Vec<GuardId>,
-    pub split: bool,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersGoalPart {
     pub men: Vec<GuardId>,
-    pub split: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -671,10 +644,6 @@ pub const FUR_M: f64 = 0.12;
 
 pub const BACK_TRIES: f64 = 2.0;
 
-pub const WHEEL_STEP: f64 = 60.0;
-
-pub const ORDER_DIGITS: f64 = 5.0;
-
 pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }
 
 pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
@@ -704,7 +673,7 @@ pub struct Row {
     pub only: Option<fn(&mut Game, &[GuardId], &OrderTarget) -> Vec<GuardId>>,
     pub valid: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> Result<(), Option<String>>>,
     pub issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>,
-    /// the flat ring does not offer the row on this target at all
+    /// the ring does not offer the row on this target at all
     pub gone: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
     /// it stands in for the row its data names (`stands_in`) now
     pub when: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
@@ -769,3 +738,29 @@ pub struct Shown {
     /// the quick key's line for what the seat's cursor is on: the row it would give, and what it is on. None: a menu is up, or the key gives nothing there
     pub quick: Option<String>,
 }
+
+/// what a man on an order is at, where a rule asks
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum At {
+    #[default] Other,
+    /// on his place at a door, before its word
+    Stacked,
+    /// the same, with the order waiting on the word alone
+    Ready,
+    /// clear of somebody's charge
+    StandingOff,
+    /// he could not get to his place
+    StoppedShort,
+}
+
+/// what a man on an order is doing: the fact a rule asks, and the words his row says
+#[derive(Clone, PartialEq, Debug, ToBytes, Default)]
+pub struct Doing {
+    pub at: crate::orders::At,
+    pub words: String,
+}
+impl Doing {
+    pub fn new(at: crate::orders::At, words: impl Into<String>) -> Self { Doing { at, words: words.into() } }
+}
+impl From<String> for Doing { fn from(words: String) -> Self { Doing { at: At::Other, words } } }
+impl From<&str> for Doing { fn from(words: &str) -> Self { String::from(words).into() } }

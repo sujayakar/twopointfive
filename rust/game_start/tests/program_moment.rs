@@ -1,7 +1,7 @@
 //! A PICTURE OF A GAME TOUCHES NOTHING, AND HOLDS ITS PROGRAM WHOLE. A level's program in the middle of a beat goes on through a checkpoint as if none were taken, every man as he was, and a game put
 //! back, in a fresh slot after another game has stood and gone, goes on as the game that was not put back did. A beat's place is plain data (`BeatFrame`), so nothing has to be stopped for a picture, or started again after one.
 //! `PROGRAM_MOMENT_BREAK=1`: the moment comes back with a beat's place lost, and the tests must fail on it.
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::savestate::control;
 use game::scene_scenario_list::{all_missions, pick_search};
 use game::savestate::control::Moment;
@@ -19,7 +19,7 @@ fn stand(id: &str) -> Play {
 fn put_step(p: &mut Play, step: &str) { p.g.lesson.i = game::lesson::lesson_data(&p.g).unwrap().steps.iter().position(|t| t.id == step).unwrap_or_else(|| panic!("no step '{}'", step)) as f64; }
 fn block(g: &Game) -> Vec<u8> { game_start::block::bytes(g.sim).to_vec() }
 /// the game kept stands again in a fresh game's slot, as the page's module puts one back
-fn lay(p: &mut Play, g: &Game, b: &[u8], slot: usize) { p.g = Moment { game: Box::new(g.clone()), block: b.to_vec() }.stands(slot); }
+fn lay(p: &mut Play, g: &Game, b: &[u8], slot: usize) { p.g = Moment { game: Box::new(g.clone()), block: b.to_vec() }.laid(slot); }
 fn words(p: &mut Play) -> Vec<u32> {
     let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
     game::state_words::state_words(&mut p.g, &mut w, &mut out);

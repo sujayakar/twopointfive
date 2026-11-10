@@ -19,7 +19,6 @@ pub fn lens_clear(g: &mut crate::game::Game, from: V3, lens: V3, radius: f64, li
     }
     let rd = v3::scale(d, 1.0 / len);
     let keep = m::max(0.0, radius) + g.k.lightwall.gap;
-    g.stats.lighting.asked += 1;
     let h = match crate::scene_collision::raycast(g, from, rd, len + keep / LENS_SLANT) {
         Some(h) => h,
         None => return lens,
@@ -28,8 +27,6 @@ pub fn lens_clear(g: &mut crate::game::Game, from: V3, lens: V3, radius: f64, li
     if t >= len - 1e-6 {
         return lens;
     }
-    g.stats.lighting.pulled += 1;
-    g.stats.lighting.max_back = m::max(g.stats.lighting.max_back, len - m::max(0.0, t));
     v3::mad(from, rd, m::max(0.0, t))
 }
 
@@ -61,8 +58,7 @@ pub fn lens_recheck(g: &mut crate::game::Game) {
 
 /// The mains are the business of the side whose building it is.
 fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
 }
 
 /// The re-arm's gate for one man: a trip he can undo, a few seconds old, and he alive, not held, within reach of the panel's front.
@@ -120,14 +116,15 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         if g.tab.fixture[t].lens.is_some() { crate::carlamps::car_lamp_paint(g, t); }
         if g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker {
             let e: V3 = if g.tab.fixture[t].broken { [0.0, 0.0, 0.0] } else if g.light_home.mains.active { [5.0, 0.3, 0.1] } else { [0.3, 4.0, 0.6] };
-            for bi in g.tab.fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes[b].emissive = e; }
+            for bi in g.tab.fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes.edit(b).emissive = e; }
             continue;
         }
         let base = g.tab.fixture[t].base_emissive;
         for bi in g.tab.fixture[t].boxes.clone() {
             let b = g.engine.world.statics[bi as usize];
-            g.tab.boxes[b].emissive = [base[0] * f, base[1] * f, base[2] * f];
-            g.tab.boxes[b].mark_gain = Some(f);
+            let mut lens = g.tab.boxes.edit(b);
+            lens.emissive = [base[0] * f, base[1] * f, base[2] * f];
+            lens.mark_gain = Some(f);
         }
     }
 }
@@ -224,10 +221,7 @@ pub fn light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate:
     if crate::carlamps::dead_lamp(g, t) {
         return;
     }
-    let cause = match cause.unwrap_or(crate::lighting::LightEventCause::Shot) {
-        crate::lighting::LightEventCause::Shot => crate::game::GameEventCause::Shot,
-        crate::lighting::LightEventCause::Ocp => crate::game::GameEventCause::Ocp,
-    };
+    let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     let pos = g.tab.fixture[t].pos;
     let time = g.time;
     let serial = g.serial();
@@ -280,7 +274,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let t = match t {
         Some(t) => t,
         None => {
-            if let Some(gd) = g.aim_guard {
+            if let Some(gd) = g.sets[g.seat].aim_guard {
                 if !crate::condition::down(g, g.gd[gd].ch) {
                     if !ocpable(g, &crate::seats::here(g)) {
                         return;
@@ -335,7 +329,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         let muzzle = g.ch[c].muzzle;
         crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
         let secs = g.tune.ocp_duration * 2.5;
-        crate::game::game_set_blackout(g, secs, crate::game::GameSetBlackoutCause::Ocp);
+        crate::game::game_set_blackout(g, secs, crate::lighting::SetBlackoutCause::Ocp);
         return;
     }
     let name = g.tab.fixture[t].name.clone();
@@ -348,7 +342,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let until = g.time + g.tune.ocp_duration;
     g.tab.fixture[t].blind_until = until;
     if kind != crate::fixtures::FixtureKind::Device {
-        crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Ocp), None);
+        crate::game::game_light_event(g, t, Some(crate::lighting::LightEventCause::Ocp), None);
     }
     let tg = crate::chronicle::FixtureNameTg { name, group: g.tab.fixture[t].group.clone() };
     let what = crate::chronicle::fixture_name(&tg);

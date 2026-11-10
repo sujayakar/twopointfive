@@ -20,7 +20,7 @@ pub struct Sense { lvl: f64, eyes: Option<foe::Eyes> }
 /// Are his ears and eyes kept somewhere else? A squad man under an order has the room fight's (roomfight/operative.rs, its meters), and a man of the response
 /// team under its script the team's own (qrf `perceive_scripted`).
 fn kept_elsewhere(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].script.is_some() && (g.gd[gd].team == crate::teams::Team::Operative || crate::qrf::qrf_owns(g, gd))
+    g.gd[gd].script.is_some() && (g.team(gd).ours() || crate::qrf::qrf_owns(g, gd))
 }
 
 /// HIS EARS AND EYES, every tick, whoever has his body.

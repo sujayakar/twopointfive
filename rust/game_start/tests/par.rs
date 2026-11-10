@@ -117,14 +117,14 @@ fn the_medal_is_judged_on_the_whole_seconds_shown() {
     for (total, want) in [(d.gold, Medal::Gold), (d.gold + 1.0, Medal::Silver), (d.silver, Medal::Silver), (d.silver + 1.0, Medal::Bronze), (d.bronze, Medal::Bronze), (d.bronze + 1.0, Medal::None)] {
         assert_eq!(medal_of(&d, total), want, "a total of {} s", total);
     }
-    let r = par_result(&d, d.gold + 0.4, 0.0, 4.0);
+    let r = par_result(&d, d.gold + 0.4, 0.0);
     assert!(r.medal == Medal::Gold && r.shown == d.gold && r.next.is_none() && !r.line.contains("was"), "{} s reads {:?}", d.gold + 0.4, r.line);
-    let (a, b) = (par_result(&d, d.gold - 1.0, 0.0, 4.0), par_result(&d, d.gold - 1.0, 2.0, 4.0));
+    let (a, b) = (par_result(&d, d.gold - 1.0, 0.0), par_result(&d, d.gold - 1.0, 2.0));
     assert!(a.medal == Medal::Gold && a.penalty == 0.0 && b.penalty == 2.0 * d.loss_secs && b.total == d.gold - 1.0 + 2.0 * d.loss_secs && b.medal != Medal::Gold);
     assert!(b.line.contains("(2 lost)"), "{:?}", b.line);
-    let c = par_result(&d, d.silver + 3.0, 0.0, 4.0);
+    let c = par_result(&d, d.silver + 3.0, 0.0);
     assert!(c.medal == Medal::Bronze && c.next.map(|n| (n.medal, n.short)) == Some((Medal::Silver, 3.0)) && c.line.contains(" · BRONZE · silver was "), "{:?}", c.line);
-    let (fast, clean) = (par_result(&d, d.gold - 10.0, 2.0, 4.0), par_result(&d, d.gold - 10.0 + 2.0 * d.loss_secs - 1.0, 0.0, 4.0));
+    let (fast, clean) = (par_result(&d, d.gold - 10.0, 2.0), par_result(&d, d.gold - 10.0 + 2.0 * d.loss_secs - 1.0, 0.0));
     assert!(fast.total > clean.total, "a run that loses two men ranks under a clean one that is slower by less than two penalties");
     assert_eq!(game::par::clock(65.4), "1:05");
 }

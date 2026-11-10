@@ -23,20 +23,12 @@ fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
 
 /// A new row of the counts: its least and most start at the infinities, not at a blank's zeros.
 fn fresh() -> crate::fire::FireStats {
-    crate::fire::FireStats { fires: 0.0, lit: 0.0, frames: 0.0, cracks: 0.0, lo: m::INF, hi: -m::INF, sum: 0.0, n: 0.0 }
+    crate::fire::FireStats { lo: m::INF, hi: -m::INF }
 }
 
 /// The game's row of counts, made if it has none: the row itself, a caller writes through it.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireStats {
     g.m.fire.states.get_or_insert_with(fresh)
-}
-
-/// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.
-fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
-    match g.m.fire.states {
-        Some(s) => s,
-        None => fresh(),
-    }
 }
 
 /// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.
@@ -196,7 +188,7 @@ pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> b
     let b = static_at(g, ix);
     let r = m::max(mouth.lid * 1.7, 0.3);
     let Some(b) = b else { return false };
-    let c = seam_box(g, b).c;
+    let c = g.tab.boxes[b].c;
     if m::hyp2(c[0] - mouth.pos[0], c[2] - mouth.pos[2]) > 0.05 || c[1] > mouth.pos[1] {
         return false;
     }
@@ -287,8 +279,6 @@ fn plain(g: &mut crate::game::Game, t: FixtureId) {
 
 // ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
 
-/// A box's row.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {
@@ -356,18 +346,6 @@ mod tests {
     fn a_new_row_of_counts_starts_at_the_infinities() {
         let s = fresh();
         assert_eq!((s.lo, s.hi), (m::INF, -m::INF));
-    }
-
-    #[test]
-    fn a_write_through_state_of_lands_in_the_row_and_a_reader_makes_none() {
-        let mut g = crate::game::Game::blank();
-        // a reader gets a blank row and leaves none behind
-        assert_eq!(fire_stats(&mut g).lo, m::INF);
-        assert!(g.m.fire.states.is_none());
-        state_of(&mut g).frames = 3.0;
-        state_of(&mut g).cracks += 1.0;
-        let s = fire_stats(&mut g);
-        assert_eq!((s.frames, s.cracks, s.lo), (3.0, 1.0, m::INF));
     }
 
     /// a lamp on a fixture, with no box hung on it
@@ -464,12 +442,10 @@ mod tests_need_box_rows {
         assert!(fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0));
         assert!(!fire_struck(&g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
         assert!(!fire_struck(&g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
-        g.tab.boxes[id].c = [2.0, 1.0, 3.0];
+        g.tab.boxes.edit(id).c = [2.0, 1.0, 3.0];
         assert!(!fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
     }
 }
-
-fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { g.tab.boxes[bx].emissive = e; }
 
 /// A lamp's place across: where the level hung it, wandering by two sines.
 fn wander_across(hung: f64, wander: f64, rate_a: f64, phase_a: f64, rate_b: f64, phase_b: f64, time: f64) -> f64 {
@@ -561,7 +537,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let books = g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default);
         if stale {
             books.fire = Some(FireShown {
-                n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(), smokes: 0.0,
+                n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(),
                 ember: Vec::new(), embers: 0.0,
             });
         }
@@ -570,11 +546,9 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         p.time = time;
     }
     let mut fires = 0.0;
-    let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
     let mut jets: Vec<crate::smoke_types::WindGpuSource> = Vec::new();
     let snow_lift = look.fire_snow > 0.0;
-    if moved { state_of(g).frames += 1.0; }
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
@@ -597,7 +571,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             crate::fixtures::light_home_feed_burning(g, l);
             continue;
         }
-        lit += 1.0;
         let seed = fire_seed(g, t);
         let fl = fire_flicker(g, seed, time);
         let mouth = mouth_of(g, t);
@@ -637,15 +610,13 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let bi = g.tab.fixture[t].boxes[b];
             b += 1;
             if let Some(&bx) = g.engine.world.statics.get(bi as usize) {
-                seam_box_set_emissive(g, bx, [glow[0] * ck, glow[1] * ck, glow[2] * ck]);
+                g.tab.boxes.edit(bx).emissive = [glow[0] * ck, glow[1] * ck, glow[2] * ck];
             }
         }
         if moved {
             let s = state_of(g);
             s.lo = m::min(s.lo, fl);
             s.hi = m::max(s.hi, fl);
-            s.sum += fl;
-            s.n += 1.0;
         }
         let crate::fire::WindAt { wv, wl, wind } = wind_at(g, mouth.pos);
         // the embers: a steady few off the flame and a throw with each crack, of every fire on every host; the picture leaves out what is far from where it looks
@@ -659,7 +630,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let a = axis_at(g, flame_h * 0.5, wind);
             let n = m::hyp3(a[2], 1.0, a[3]);
             jets.push(crate::smoke_types::WindGpuSource {
-                kind: crate::smoke_types::WindGpuSourceKind::Jet,
+                kind: crate::wind::WindSourceKind::Jet,
                 pos: mouth.pos,
                 dir: [a[2] / n, 1.0 / n, a[3] / n],
                 speed: w.speed * heat,
@@ -688,7 +659,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if moved {
             for p in fire_pops(g, seed, time, 1.5) {
                 if p.at > was && p.at <= time {
-                    state_of(g).cracks += 1.0;
                     let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * heat;
                     let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
                     crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(mouth.pos), Some(gain), Some(&opts));
@@ -707,7 +677,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let goes = p.smoke.get(ix).copied() == Some(n - 1.0);
             put_at(&mut p.smoke, ix, n, NO_FRAME);
             if slot != m::floor(was / b.every) || !goes {
-                p.smokes += 1.0;
                 let l = fl_smoke;
                 let a = axis_at(g, height * l.up, wind);
                 smoke_emit(g, &crate::smoke_types::SmokeEmitter {
@@ -723,7 +692,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     kind: crate::smoke_types::SmokeEmitterKind::Cloud,
                     push: Some(b.push),
                     jitter: Some(b.jitter),
-                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
+                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
                     ..crate::smoke_types::SmokeEmitter::default()
@@ -752,7 +721,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     expand: Some(l.puff_expand),
                     attack: Some(0.06),
                     jitter: Some(0.9),
-                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
+                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
                     ..crate::smoke_types::SmokeEmitter::default()
@@ -766,9 +735,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         crate::render_particles::particles_set_heat(g, &jets);
     }
-    let s = state_of(g);
-    s.fires = fires;
-    s.lit = lit;
+    state_of(g);
 }
 
 #[cfg(test)]

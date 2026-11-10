@@ -8,9 +8,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
 /// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way.
-pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, who: Option<GuardId>, t: f64, dir: V3) -> bool {
+pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, c: CharId, t: f64, dir: V3) -> bool {
     let p = s.def.pellets.unwrap();
-    let h = s.men.get_or_insert_with(who, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
+    let h = s.men.get_or_insert_with(c, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
     h.n += 1.0;
     h.near = m::min(h.near, t);
     g.stats.shotgun.in_men += 1;
@@ -31,8 +31,6 @@ pub(super) fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: 
 pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
     let p = def.pellets.unwrap();
     let mut shell = crate::shotgun::Shell { def: def.clone(), i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() };
-    g.stats.shotgun.shells += 1;
-    g.stats.shotgun.pellets += p.n as i32;
     let muzzle = v3::copy(g.ch[shooter].muzzle);
     let first = crate::combat::FireOpts { spread: o.spread, weapon: Some(def.clone()), steady: o.steady, blind: o.blind };
     crate::combat::fire_pellet(g, shooter, target, &first, &mut shell);
@@ -51,34 +49,12 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), &rest, &mut shell);
         i += 1.0;
     }
-    let mut l = 0;
-    while l < shell.late.len() {
-        crate::combat::run_shell_late(g, &shell.late[l]);
-        l += 1;
-    }
-    for (who, h) in shell.men.iter() {
+    for r in &shell.late { crate::combat::round_in(g, r); }
+    for (c, h) in shell.men.iter() {
         if h.down { continue; }
         g.stats.shotgun.peppered += 1;
-        match who {
-            None => {
-                let pl = g.player;
-                let c = g.pl[pl].ch;
-                crate::character::anim_hit(g, c);
-                g.pl[pl].hit_flash = 1.0;
-            }
-            Some(who) => {
-                if crate::condition::down(g, g.gd[who].ch) { continue; }
-                if g.gd[who].civ.is_some() {
-                    let c = g.gd[who].ch;
-                    crate::character::anim_hit(g, c);
-                } else {
-                    crate::launcher::stagger_guard(g, who, h.dir, shooter);
-                }
-            }
-        }
+        crate::flight::struck(g, c, h.dir, shooter);
     }
-    g.m.shotgun.shotgun_last.ends = shell.ends.clone();
-    g.m.shotgun.shotgun_last.glass = shell.glass.clone();
     let b = match p.breach { Some(b) => b, None => return };
     let mut leaves: Option<JsMap<DoorId, f64>> = None;
     for e in shell.ends.iter() {
@@ -86,7 +62,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         let bx = g.col.dynamic_boxes.get((e.index - 1e6) as usize).copied();
         let d = match bx { Some(bx) => g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx), None => None };
         let d = match d { Some(d) => d, None => continue };
-        if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { continue; }
+        if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { continue; }
         let u = crate::doors::door_dir(g, d);
         let along = (e.at[0] - g.dr[d].def.hinge[0]) * u[0] + (e.at[2] - g.dr[d].def.hinge[1]) * u[1];
         if along < g.dr[d].def.width - b.latch_m { continue; }
@@ -99,7 +75,6 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
             if *n >= b.need {
                 let id = g.ch[shooter].id;
                 if !crate::doors::doors_kick_in(g, d, muzzle, id, Some(true)) { continue; }
-                g.stats.shotgun.locks += 1;
                 if crate::character::is_player(g, shooter) {
                     crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
                 }
@@ -124,7 +99,7 @@ pub fn lock_point(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
 }
 
 /// Where the man with the gun stands for d's lock on face `side`. None: no spot has floor and a line.
-pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::shotgun::BreachSpotClose>) -> Option<crate::shotgun::BreachSpot> {
+pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::kit::BigTool>) -> Option<crate::shotgun::BreachSpot> {
     let avoid: &[V3] = avoid.unwrap_or(&[]);
     let at = lock_point(g, d, side);
     let w = g.dr[d].def.width;
@@ -141,14 +116,11 @@ pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Optio
     };
     let mut mine: Option<Option<crate::shotgun::BreachSpot>> = None;
     if let Some(close) = close {
-        let tool = match close {
-            crate::shotgun::BreachSpotClose::Shotgun => crate::bigkit::BigSpotsTool::Shotgun,
-            crate::shotgun::BreachSpotClose::Hammer => crate::bigkit::BigSpotsTool::Hammer,
-        };
+        let tool = close;
         for s in crate::bigkit::big_spots(g, d, side, tool) {
             if crowds(g, avoid, s.pos)
                 || crate::orders::squad_orders_behind_glass(g, d, side, s.pos)
-                || (close == crate::shotgun::BreachSpotClose::Shotgun && across(g, at, avoid, s.pos))
+                || (close == crate::kit::BigTool::Shotgun && across(g, at, avoid, s.pos))
             {
                 continue;
             }
@@ -262,13 +234,13 @@ mod tests {
         let mut g = Game::blank();
         let mut s = m870_shell(&g);
         let p = s.def.pellets.unwrap();
-        assert!(pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
-        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
+        assert!(pellet_drops(&mut g, &mut s, CharId(1), p.drop_m, [1.0, 0.0, 0.0]));
+        assert!(!pellet_drops(&mut g, &mut s, CharId(1), p.drop_m, [1.0, 0.0, 0.0]));
         assert_eq!(g.stats.shotgun.in_men, 2);
         assert_eq!(g.stats.shotgun.dropped, 1);
     }
 
-    /// Past dropM only the need-th pellet of this shell does it; the player (None) keeps his own count, the first dir and the nearest t.
+    /// Past dropM only the need-th pellet of this shell does it; each man keeps his own count, the first dir and the nearest t.
     #[test]
     fn past_drop_range_the_need_th_pellet_drops_him() {
         let mut g = Game::blank();
@@ -277,17 +249,17 @@ mod tests {
         let far = p.drop_m + 5.0;
         let mut n = 1.0;
         while n < p.need {
-            assert!(!pellet_drops(&mut g, &mut s, None, far + n, [n, 0.0, 0.0]));
+            assert!(!pellet_drops(&mut g, &mut s, CharId(0), far + n, [n, 0.0, 0.0]));
             n += 1.0;
         }
-        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(1)), far, [0.0, 0.0, 1.0]));
-        assert!(pellet_drops(&mut g, &mut s, None, far, [9.0, 0.0, 0.0]));
-        let h = s.men.get(None).unwrap();
+        assert!(!pellet_drops(&mut g, &mut s, CharId(2), far, [0.0, 0.0, 1.0]));
+        assert!(pellet_drops(&mut g, &mut s, CharId(0), far, [9.0, 0.0, 0.0]));
+        let h = s.men.get(CharId(0)).unwrap();
         assert!(h.down);
         assert_eq!(h.n, p.need);
         assert_eq!(h.near, far);
         assert_eq!(h.dir, [1.0, 0.0, 0.0]);
-        let keys: Vec<Option<GuardId>> = s.men.iter().map(|(k, _)| k).collect();
-        assert_eq!(keys, vec![None, Some(GuardId(1))]);
+        let keys: Vec<CharId> = s.men.iter().map(|(k, _)| k).collect();
+        assert_eq!(keys, vec![CharId(0), CharId(2)]);
     }
 }

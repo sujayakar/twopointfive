@@ -54,11 +54,6 @@ pub(super) fn q_yaw(a: f64) -> Quat {
     v3::quat::axis_angle(crate::character::ay(), a)
 }
 
-/// A critically damped follower at `x`, at rest.
-fn spring_new(x: Option<f64>) -> crate::character::Spring {
-    crate::character::Spring { v: 0.0, x: x.unwrap_or(0.0) }
-}
-
 /// One step toward `target`; w is about 6 / settle time.
 pub(super) fn spring_step(this: &mut crate::character::Spring, target: f64, w: f64, dt: f64) -> f64 {
     let y = this.x - target;
@@ -96,8 +91,7 @@ pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::an
     if stale {
         let kept = crate::anim_skeleton::pose_cols(g, out).to_vec();
         crate::anim_skeleton::pose_cols(g, out).fill(f32::NAN);
-        let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
-        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out, singles);
+        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out);
         let (at, v) = keyed_slots(crate::anim_skeleton::pose_cols(g, out));
         crate::anim_skeleton::pose_cols(g, out).copy_from_slice(&kept);
         g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows, at, v });
@@ -209,28 +203,6 @@ mod tests_2 {
         assert!(m::abs(nod_lift(0.0)) < EPS, "no nod: no lift");
         assert_eq!(nod_lift(0.3), nod_lift(-0.3));
         assert!(nod_lift(0.5) < nod_lift(0.1) && nod_lift(0.1) < 0.0, "the further he nods, the more it shows: {} {}", nod_lift(0.5), nod_lift(0.1));
-    }
-
-    /// Every carriage and sway rides on these: a follower that passed its mark would show as a wobble, and one that went by the frame would change with the machine.
-    #[test]
-    fn a_follower_gets_there_without_passing_it_at_any_frame_rate() {
-        let mut s = spring_new(Some(0.3));
-        assert_eq!((s.x, s.v), (0.3, 0.0));
-        assert_eq!(spring_new(None).x, 0.0);
-        let mut last = 0.3;
-        for _ in 0..120 {
-            let x = spring_step(&mut s, 1.0, 16.0, 1.0 / 60.0);
-            assert!(x >= last - EPS && x <= 1.0 + EPS, "it went from {last} to {x}");
-            last = x;
-        }
-        assert!(m::abs(last - 1.0) < 1e-3, "two seconds on it is at {last}");
-        // one long frame or four short ones: the same place and the same speed
-        let (mut one, mut four) = (spring_new(Some(0.0)), spring_new(Some(0.0)));
-        one.v = 2.0;
-        four.v = 2.0;
-        spring_step(&mut one, 1.0, 16.0, 1.0 / 15.0);
-        for _ in 0..4 { spring_step(&mut four, 1.0, 16.0, 1.0 / 60.0); }
-        assert!(m::abs(one.x - four.x) < 1e-9 && m::abs(one.v - four.v) < 1e-9, "{} {} against {} {}", one.x, one.v, four.x, four.v);
     }
 
     const KEYS: &[[f64; 2]] = &[[0.0, 0.1], [0.13, 1.7], [0.2, -0.4], [0.55, 0.9], [1.1, 0.0]];

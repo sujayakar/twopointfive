@@ -49,7 +49,7 @@ const seatsN = stood.seats;
 const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
-const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
+const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
   { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat

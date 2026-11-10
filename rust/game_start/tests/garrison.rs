@@ -18,7 +18,7 @@ fn mission(id: &str, seed: u32) -> Play {
     for o in p.mates() { p.parked(o); }
     p
 }
-fn defenders(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
+fn defenders(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.team(m) == Team::Hostile).collect() }
 fn events(p: &Play) -> Vec<(What, f64)> { p.squad_names().iter().flat_map(|q| p.squad_events(q)).collect() }
 /// the men of a squad who are not with the hostages
 fn free(p: &Play) -> Vec<GuardId> { defenders(p).into_iter().filter(|&m| !game::mission::leads(&p.g, m)).collect() }
@@ -49,7 +49,7 @@ fn a_rescues_men_miss_one_of_theirs() {
             let far = |m: GuardId| defenders(&p).into_iter().filter(|&o| o != m).map(|o| dist(p.at(m), p.at(o))).fold(f64::MAX, f64::min);
             far(a).total_cmp(&far(b))
         }).expect("a man who is not with the hostages");
-        game::combat::kill_guard(&mut p.g, alone, [1.0, 0.0, 0.0], Some(true), None, None, None);
+        game::combat::kill_guard(&mut p.g, alone, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand);
         let asked = p.until(90.0, |p| events(p).iter().any(|e| e.0 == What::Asks));
         assert!(asked.is_some(), "seed {s}: 90 s and nobody asks for him: {:?}", events(&p));
         let looked = p.until(40.0, |p| events(p).iter().any(|e| e.0 == What::Looks));

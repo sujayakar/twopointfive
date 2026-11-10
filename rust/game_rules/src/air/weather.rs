@@ -7,17 +7,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// a box's row
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript, statics appended later included. `level.boxes` is not a field in Rust.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 
 /// Paints a box's row.
 fn paint(g: &mut Game, b: BoxId, albedo: V3, flags: f64, rough: Option<f64>, aniso: Option<bool>) {
-    let x = seam_box(g, b);
+    let mut x = g.tab.boxes.edit(b);
     x.albedo = albedo; x.flags = flags; x.rough = rough; x.aniso = aniso;
-    crate::scene_collision::wrote(g);   // (what it sends back of the light is of the box world's row)
 }
 
 /// `WEATHER_PRESETS[kind]`.
@@ -75,8 +72,14 @@ const THUNDERS: usize = 16;
 
 /// the storm's die thrown: mulberry32 over its own word
 fn rnd(w: &mut Weather) -> f64 {
-    let a = w.die.wrapping_add(0x6D2B79F5);
-    w.die = a;
+    let v = throw_of(w.die, 0);
+    w.die = w.die.wrapping_add(DIE_STEP);
+    v
+}
+const DIE_STEP: u32 = 0x6D2B79F5;
+/// what the throw after the next `ahead` will be, the die as it stands
+fn throw_of(die: u32, ahead: u32) -> f64 {
+    let a = die.wrapping_add(DIE_STEP.wrapping_mul(ahead + 1));
     let mut t = (a ^ (a >> 15)).wrapping_mul(1 | a);
     t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t)) ^ t;
     ((t ^ (t >> 14)) as f64) / 4294967296.0
@@ -371,8 +374,8 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     if g.weather.flash.is_some() { weather_end_flash(g); }
     // (what was given is a number, what was not is thrown for, in the order the rule has always thrown them)
     let (time, w) = (g.time, &mut g.weather);
-    let bearing = opts.bearing.unwrap_or_else(|| rnd(w) * m::PI * 2.0);
-    let elev = opts.elev_deg.unwrap_or_else(|| 24.0 + rnd(w) * 30.0) * m::PI / 180.0;
+    let bearing = opts.bearing.unwrap_or_else(|| stroke_bearing(rnd(w)));
+    let elev = opts.elev_deg.map_or_else(|| stroke_elev(rnd(w)), |d| d * m::PI / 180.0);
     let dist = match opts.dist_km { Some(d) => d, None => 0.3 + m::pow(rnd(w), 1.3) * 3.7 * (1.15 - 0.5 * w.storm) };
     let peak = opts.peak.unwrap_or_else(|| FLASH_PEAK * (0.55 + 0.9 * rnd(w)) * v3::clamp(1.25 - dist * 0.18, 0.45, 1.2));
     // two return strokes, sometimes a third flicker
@@ -386,7 +389,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     let dir = dir_of(bearing, elev);
     let light = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
-        radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
+        radius: STROKE_RADIUS, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
         ..crate::render_lights::RtLight::default()   // (every field the literal leaves absent)
     });
     crate::render_lights::light_set_add(g, light);
@@ -394,6 +397,24 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     g.weather.stats.flashes += 1.0;
     weather_apply_flash(g, 0.0, 1.0 / 60.0);   // lit from this very frame
     g.weather.flash.clone()
+}
+
+/// where a stroke stands, of its first two throws
+fn stroke_bearing(throw: f64) -> f64 { throw * m::PI * 2.0 }
+fn stroke_elev(throw: f64) -> f64 { (24.0 + throw * 30.0) * m::PI / 180.0 }
+/// the throws a thunder takes as it comes due: its pitch and what somebody says of it
+const THUNDER_THROWS: u32 = 4;
+/// how wide a stroke is as a lamp
+pub const STROKE_RADIUS: f64 = 0.006;
+/// THE NEXT STROKE'S WAY, before it comes: what the picture works out ahead of a light that stands for an instant. Read off the storm's own die, which the thunders due
+/// before the stroke throw first. None with no stroke on its way. One that is asked for by hand is not foreseen, and comes as it comes.
+pub fn weather_next_way(g: &Game) -> Option<V3> {
+    let w = &g.weather;
+    if !w.on || !(w.storm > 0.01) || w.next_flash_at < 0.0 { return None; }
+    let ticks = |at: f64| m::max(m::ceil((at - g.time) * 60.0), 1.0);
+    let stroke = ticks(w.next_flash_at);
+    let before = w.thunders.iter().filter(|t| ticks(t.at) < stroke).count() as u32 * THUNDER_THROWS;
+    Some(dir_of(stroke_bearing(throw_of(w.die, before)), stroke_elev(throw_of(w.die, before + 1))))
 }
 
 /// Once a frame from Game.update: the clock, the strokes, the flash lamp, the thunder due. The frame's numbers are the picture's.
@@ -497,7 +518,6 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
     let opts = crate::audio_iface::PlayOpts::Thunder { lowpass, rate, pan: v3::clamp(right * 0.6, -0.6, 0.6), wet: if near { 0.35 } else { 0.55 } };
     crate::audio_iface::game_audio_like_play(g, name, None, Some(gain), Some(&opts));
     g.weather.stats.thunders += 1.0;
-    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder {  });
     // the three dice for a remark are thrown on EVERY thunder, whoever is on screen: same seed, same storm
     let [r_bark, r_who, r_line] = remark;
     if th.loud > 0.45 && g.time - g.weather.last_bark_t > BARK_COOLDOWN && r_bark < BARK_CHANCE {
@@ -516,7 +536,7 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
             let mut line: &str = &lines[js::rem(g.weather.stats.barks + m::floor(r_line * 2.0), lines.len() as f64) as usize];
             if line.contains("not out in that") {
                 let p = g.ch[g.gd[gd].ch].pos;
-                if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = crate::words::wg(g, &THUNDER_OUT_GUIDE, &THUNDER_OUT); }   // he is out in it
+                if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = THUNDER_OUT; }   // he is out in it
             }
             crate::game::game_say(g, gd, line, None, None);
             g.weather.stats.barks += 1.0;
@@ -535,7 +555,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
         let mut asphalt = None;
         for i in 0..g.engine.world.statics.len() {
             let b = g.engine.world.statics[i];
-            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
             if c[1] < 0.0 && c[1] + h[1] > -0.01 && h[0] > 18.0 && h[2] > 12.0 { asphalt = Some(b); break; }
         }
         if let Some(b) = asphalt { soak(g, b); }
@@ -545,13 +565,11 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
         for t in &touched { paint(g, t.box_, t.albedo, t.flags, t.rough, t.aniso); }
         g.weather.lot = None;
     }
-    // the rest of the wet ground is the picture's and follows in this very call
-    crate::wet_ground::wet_ground_follow(g);
 }
 
 /// Darkens a box and remembers what to put back.
 fn soak(g: &mut Game, b: BoxId) {
-    let (albedo, flags, rough, aniso) = { let x = seam_box(g, b); (x.albedo, x.flags, x.rough, x.aniso) };
+    let (albedo, flags, rough, aniso) = { let x = &g.tab.boxes[b]; (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
     let gloss = crate::scene_boxes::box_flag().gloss;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
@@ -623,7 +641,7 @@ pub fn loud_len(g: &mut crate::game::Game, path_len: f64, ear: V3) -> f64 {
 }
 
 /// A stroke of lightning under a picked weather, added to the six faces of the light meter's stand-in.
-pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let l = if g.weather.kind_now.is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
     let Some(l) = l else { return };
     let (enabled, color, intensity, dir) = { let r = &g.tab.light[l]; (r.enabled, r.color, r.intensity, r.dir) };

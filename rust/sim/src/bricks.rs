@@ -11,10 +11,9 @@
 //! word says how many of its bytes are the game's (the row up to the end of the highest brick that stands), and the host carries those and no more.
 //! WHAT IS NOT STATE and is made again from the state and the box world, a set of tables a slot of the blocks: where each brick is (`INDEX`, from the
 //! state alone) and which faces of each cell are open (`FACES`: asked of the box world's lines once a cell; again round every leaf at every step, since a
-//! door swings, and wherever the host says a static was written). So the faces are at every step what asking them all afresh would give: a game put back
-//! from a snapshot and one that never was step alike. WHOSE the tables of a slot are is three numbers (`MADE`): the block's stamp they were made from
-//! (src/sim/state.ts SimState.stamp: another number whenever a block was written wholesale or changed place), and the box world and the copy of it the
-//! faces were asked of. A call names the three as they are now; where one differs the tables are made again before anything is read from them.
+//! door swings, and wherever a static's row is another, `SEEN`). So the faces are at every step what asking them all afresh would give: a game put back
+//! from a snapshot and one that never was step alike. WHOSE the tables of a slot are is the block's stamp they were made from (`MADE`: another number
+//! whenever a block was written wholesale or changed place); where it differs the tables are made again before anything is read from them.
 //!
 //! The arithmetic is + − × ÷ and the game's own exp and length, in an order that is written down (bricks by slot, cells by index): the same bits on every
 //! machine.
@@ -23,7 +22,7 @@ use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{exp, hypot3};
 use crate::state::{state, state_read, GAMES};
-use crate::world::{js_max, js_min, world, ASK_HOST, K_ROT, LEAF_SETS, MAX_LEAVES, REC, R_C, R_H, R_KIND};
+use crate::world::{js_max, js_min, ASK_HOST, K_ROT, MAX_LEAVES, REC, R_C, R_H, R_KIND, World, Seen};
 use core::mem::size_of;
 use prim::floor;
 
@@ -101,12 +100,10 @@ static mut FACES: [[u8; MAX_BRICKS * CELLS]; GAMES] = [[0; MAX_BRICKS * CELLS]; 
 /// the leaves as the last step found them, a row each as the box world holds it, and how many
 static mut LEAF_AT: [[f64; MAX_LEAVES * REC]; GAMES] = [[0.0; MAX_LEAVES * REC]; GAMES];
 static mut LEAF_N: [usize; GAMES] = [0; GAMES];
-/// WHOSE A SLOT'S TABLES ARE: the stamp of the block INDEX was made from · the box world FACES and the leaves were asked of · and the copy of it (the
-/// host's numbers, never 0: 0 = made from nothing yet)
-static mut MADE: [[f64; 3]; GAMES] = [[0.0; 3]; GAMES];
-const M_STAMP: usize = 0;
-const M_WORLD: usize = 1;
-const M_COPY: usize = 2;
+/// WHOSE A SLOT'S TABLES ARE: the stamp of the block INDEX was made from (0: none yet) · have the faces of that state been asked
+static mut MADE: [(f64, bool); GAMES] = [(0.0, false); GAMES];
+/// the statics as the faces were last asked of them: each one's word, and the rectangle of the plan round it
+static mut SEEN: [Seen; GAMES] = [const { Seen::NONE }; GAMES];
 /// a step's change of every cell, summed before any is applied; and which bricks the step left with next to nothing in them
 static mut DELTA: [f64; MAX_BRICKS * CELLS] = [0.0; MAX_BRICKS * CELLS];
 static mut THIN: [bool; MAX_BRICKS] = [false; MAX_BRICKS];
@@ -125,7 +122,7 @@ const F_NORTH: u8 = 32;
 const F_EDGE: u8 = 64;
 
 #[inline(always)]
-fn made(g: usize) -> &'static mut [f64; 3] {
+fn made(g: usize) -> &'static mut (f64, bool) {
     unsafe { &mut (*core::ptr::addr_of_mut!(MADE))[g] }
 }
 
@@ -175,7 +172,7 @@ pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
     let st = &state_read(g).smoke.st;
     let (wide, deep) = dims(st);
     let m = made(g);
-    if wide == 0 || m[M_STAMP] != stamp || m[M_COPY] == 0.0 {
+    if wide == 0 || *m != (stamp, true) {
         return None;
     }
     Some(Stands { wide, deep, steps: st[H_STEPS], g })
@@ -194,10 +191,10 @@ impl Stands {
     }
 }
 /// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
-pub fn under_roof(g: usize, w: usize, p: [f64; 3], tune: &Knobs) -> Option<crate::glow::Field> {
+pub fn under_roof(g: usize, w: &World, p: [f64; 3], tune: &Knobs) -> Option<crate::glow::Field> {
     let st = &state_read(g).smoke.st;
     let (x, z) = dims(st);
-    crate::glow::at(w, st, x, z, p, tune)
+    crate::glow::at(g, w, st, x, z, p, tune)
 }
 /// THE PLAN A GAME'S GRID STANDS ON, in metres along x and z (0 by 0 before its first step)
 pub fn plan(g: usize) -> (f64, f64) {
@@ -349,32 +346,22 @@ impl Grid {
 fn tables(g: usize, stamp: f64) -> Grid {
     let m = made(g);
     let mut gr = grid(g);
-    if m[M_STAMP] != stamp {
-        m[M_STAMP] = stamp;
-        m[M_COPY] = 0.0;
+    if m.0 != stamp {
+        *m = (stamp, false);
         gr.remake();
     }
     gr
 }
-/// …and its faces were asked of copy `copy` of box world `w`, or none is known now (the copy was made afresh; the game steps over another world)
-fn over(g: usize, w: usize, copy: f64) {
-    let m = made(g);
-    if m[M_WORLD] == w as f64 && m[M_COPY] == copy {
-        return;
-    }
-    m[M_WORLD] = w as f64;
-    m[M_COPY] = copy;
-    grid(g).forget();
-}
-/// A STATIC WAS WRITTEN inside this rectangle of the plan of box world `w` (where it stood, or where it stands): the faces near it are asked again at
-/// the next step, in every set of tables whose faces were asked of that world
-pub fn dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
-    for g in 0..GAMES {
-        let m = made(g);
-        if m[M_COPY] != 0.0 && m[M_WORLD] == w as f64 {
-            grid(g).dirty(x0, z0, x1, z1);
-        }
-    }
+/// …and its faces are of the statics as they stand: where one was written, they are asked again (where it stood, and where it stands)
+fn over(g: usize, w: &World) {
+    made(g).1 = true;
+    let mut gr = grid(g);
+    let round = |r: &[f64]| {
+        let e = r[R_H] + r[R_H + 1] + r[R_H + 2];
+        [r[R_C] - e, r[R_C + 2] - e, r[R_C] + e, r[R_C + 2] + e]
+    };
+    let seen = unsafe { &mut (*core::ptr::addr_of_mut!(SEEN))[g] };
+    seen.look(w, round, |r| gr.dirty(r[0], r[1], r[2], r[3]));
 }
 /// THE GAME IN SLOT `g` HAS A GRID (`home`: an empty one, on no plan yet, nothing swept) OR HAS NONE (its part is nobody's, zeros). The whole row is
 /// written, not what was in use of it: a slot keeps what the block before left past its own.
@@ -385,7 +372,7 @@ pub fn reset(g: usize, home: bool) {
     }
     p.live = if home { (ROW + O_RHO * 8) as u32 } else { 0 };
     p.spare = 0;
-    *made(g) = [0.0; 3];
+    *made(g) = (0.0, false);
 }
 /// NO SMOKE ANYWHERE: the cells, the emitters, the book and the count of steps are zeros. The plan the grid stands on and the light that comes round
 /// stay: they are the level's, not the smoke's.
@@ -403,28 +390,28 @@ pub fn empty(g: usize) {
         *v = 0.0;
     }
     gr.relive();
-    *made(g) = [0.0; 3];
+    *made(g) = (0.0, false);
 }
 
 /// is the way between two cells' centres open: nothing solid and no leaf between them, asked both ways (a line that STARTS inside a box is not stopped by
 /// it — collision.ts segmentBlocked's own rule for an eye in a wall — so a cell inside a wall is shut off by the line that ends in it)
-fn open(w: usize, set: i32, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
-    clear(w, set, a, b, CELL, tune) && clear(w, set, b, a, CELL, tune)
+fn open(w: &World, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
+    clear(w, a, b, CELL, tune) && clear(w, b, a, CELL, tune)
 }
 /// nothing solid and no leaf on the line a → b of this length (the one place this file walks a line: the walk is not copied into every asker)
 #[inline(never)]
-fn clear(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64, tune: &Knobs) -> bool {
-    clear_but(w, set, a, b, len, 0, tune)
+fn clear(w: &World, a: [f64; 3], b: [f64; 3], len: f64, tune: &Knobs) -> bool {
+    clear_but(w, a, b, len, 0, tune)
 }
 /// …the same line for what passes boxes of the flags `through` (glow.rs: light goes through a pane, smoke does not)
 #[inline(never)]
-pub(crate) fn clear_but(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64, through: u32, tune: &Knobs) -> bool {
-    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, through, set, 0, tune) != -1
+pub(crate) fn clear_but(w: &World, a: [f64; 3], b: [f64; 3], len: f64, through: u32, tune: &Knobs) -> bool {
+    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, through, true, 0, tune) != -1
 }
 /// can what is let out at `p` reach the point `c` (a line of any length; one too short to be a line is open)
-fn reaches(w: usize, set: i32, p: [f64; 3], c: [f64; 3], tune: &Knobs) -> bool {
+fn reaches(w: &World, p: [f64; 3], c: [f64; 3], tune: &Knobs) -> bool {
     let len = hypot3(c[0] - p[0], c[1] - p[1], c[2] - p[2]);
-    len < 1e-4 || clear(w, set, p, c, len, tune)
+    len < 1e-4 || clear(w, p, c, len, tune)
 }
 
 /// what a step is told: the model's numbers
@@ -574,27 +561,26 @@ pub fn beat(g: usize, dt: f64) -> u32 {
 }
 
 /// the plan of box world `w`, in squares
-fn plan_of(w: usize) -> (f64, f64) {
-    let o = world(w);
-    (-floor(-(o.w as f64 * o.cs) / SIDE), -floor(-(o.h as f64 * o.cs) / SIDE))
+fn plan_of(w: &World) -> (f64, f64) {
+    (-floor(-(w.w as f64 * w.cs) / SIDE), -floor(-(w.h as f64 * w.cs) / SIDE))
 }
 /// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
-pub fn light_ready(w: usize, to_sun: [f64; 3], tune: &Knobs) {
+pub fn light_ready(g: usize, w: &World, to_sun: [f64; 3], tune: &Knobs) {
     let (x, z) = plan_of(w);
     if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
-        crate::glow::ready(w, x as usize, z as usize, to_sun, tune);
+        crate::glow::ready(g, w, x as usize, z as usize, to_sun, tune);
     }
 }
-/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
-/// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
+/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over box world `w` as it stands.
+/// 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
 /// state is as it was.
-pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>, tune: &Knobs) -> u32 {
+pub fn step(g: usize, stamp: f64, w: &World, n: u32, k: &K, glow: Option<&crate::glow::K>, tune: &Knobs) -> u32 {
     let (nbx, nbz) = plan_of(w);
-    if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || set >= LEAF_SETS as i32 || state(g).smoke.live == 0 {
+    if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || state(g).smoke.live == 0 {
         return ASK_HOST;
     }
     tables(g, stamp);
-    over(g, w, copy);
+    over(g, w);
     let mut g = grid(g);
     if g.st[H_NBX] != nbx || g.st[H_NBZ] != nbz {
         // (the first step on this level: a state from any other plan holds nothing that is anywhere here)
@@ -608,9 +594,9 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
         g.remake();
     }
     for _ in 0..n {
-        substep(w, set, &mut g, k, tune);
+        substep(w, &mut g, k, tune);
         match glow {
-            Some(gk) => crate::glow::step(w, set, g.st, g.nbx, g.nbz, gk, tune),
+            Some(gk) => crate::glow::step(g.g, w, g.st, g.nbx, g.nbz, gk, tune),
             None => crate::glow::down(g.st),
         }
         g.st[H_STEPS] += 1.0;
@@ -619,32 +605,31 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
     0
 }
 
-/// THE WAYS OF THE STATE THAT STANDS are asked, over the copy `copy` of box world `w` as it stands and the leaves of list `set`: what the next step would
+/// THE WAYS OF THE STATE THAT STANDS are asked, over box world `w` as it stands: what the next step would
 /// ask first, for whoever draws a game put back before it steps. No state is written. Nothing, where the state's plan is not the level's (no step yet).
-pub fn ways(g: usize, stamp: f64, w: usize, copy: f64, set: i32, tune: &Knobs) {
+pub fn ways(g: usize, stamp: f64, w: &World, tune: &Knobs) {
     let (on, plan) = (dims(&state_read(g).smoke.st), plan_of(w));
-    if set >= LEAF_SETS as i32 || on.0 == 0 || on != (plan.0 as usize, plan.1 as usize) {
+    if on.0 == 0 || on != (plan.0 as usize, plan.1 as usize) {
         return;
     }
     tables(g, stamp);
-    over(g, w, copy);
+    over(g, w);
     let mut g = grid(g);
-    leaves(w, set, &mut g);
-    ask(w, set, &mut g, tune);
+    leaves(w, &mut g);
+    ask(w, &mut g, tune);
 }
 /// the faces round every leaf that is not as it was last found (a door swings; one is new, one is gone) are to be asked again: where it stood and where
 /// it stands. A leaf that has not moved keeps the answers it had.
-fn leaves(w: usize, set: i32, g: &mut Grid) {
+fn leaves(w: &World, g: &mut Grid) {
     let s = g.g;
     let (kept, kept_n) = unsafe { (&mut (*core::ptr::addr_of_mut!(LEAF_AT))[s], &mut (*core::ptr::addr_of_mut!(LEAF_N))[s]) };
-    let o = world(w);
-    let n = if set < 0 { 0 } else { js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize };
+    let n = js_min(w.leaves() as f64, MAX_LEAVES as f64) as usize;
     // (its reach in plan whichever way it is turned: the two half sides, and the third where it is tilted off the upright)
     let reach = |r: &[f64]| r[R_H] + r[R_H + 2] + if r[R_KIND] as u32 & K_ROT != 0 { r[R_H + 1] } else { 0.0 };
     for i in 0..if n > *kept_n { n } else { *kept_n } {
-        let at = if set < 0 { 0 } else { (set as usize * MAX_LEAVES + i) * REC };
-        let (was, now) = (&mut kept[i * REC..(i + 1) * REC], &o.leaf[at..at + REC]);
         let (had, has) = (i < *kept_n, i < n);
+        let was = &mut kept[i * REC..(i + 1) * REC];
+        let now = if has { &w.leaf[i * REC..(i + 1) * REC] } else { &[][..] };
         if had && has && (0..REC).all(|j| was[j].to_bits() == now[j].to_bits()) {
             continue;
         }
@@ -663,7 +648,7 @@ fn leaves(w: usize, set: i32, g: &mut Grid) {
     *kept_n = n;
 }
 /// the faces nobody has asked (a new brick's, those round a leaf, those round a static that was written)
-fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
+fn ask(w: &World, g: &mut Grid, tune: &Knobs) {
     for b in 0..MAX_BRICKS {
         let Some((bx, bz)) = g.key(b) else { continue };
         let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
@@ -676,13 +661,13 @@ fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
                     }
                     let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
                     let mut f = F_ASKED;
-                    if open(w, set, p, [p[0] + CELL, p[1], p[2]], tune) {
+                    if open(w, p, [p[0] + CELL, p[1], p[2]], tune) {
                         f |= F_X;
                     }
-                    if y + 1 < BY && open(w, set, p, [p[0], p[1] + CELL, p[2]], tune) {
+                    if y + 1 < BY && open(w, p, [p[0], p[1] + CELL, p[2]], tune) {
                         f |= F_Y;
                     }
-                    if open(w, set, p, [p[0], p[1], p[2] + CELL], tune) {
+                    if open(w, p, [p[0], p[1], p[2] + CELL], tune) {
                         f |= F_Z;
                     }
                     g.faces[c] = f;
@@ -694,9 +679,9 @@ fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
 
 /// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
 const LAID: f64 = 0.4;
-fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
+fn substep(w: &World, g: &mut Grid, k: &K, tune: &Knobs) {
     // 0. the leaves as they stand now
-    leaves(w, set, g);
+    leaves(w, g);
 
     // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
     //    and the spent ones leave the list
@@ -735,7 +720,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
                     if tx < 0.0 || tz < 0.0 || tx >= (g.nbx * BX) as f64 || tz >= (g.nbz * BX) as f64 {
                         continue;
                     }
-                    if reaches(w, set, p, [(tx + 0.5) * CELL, (js_min(js_max(floor(p[1] / CELL), 0.0), top) + 0.5) * CELL, (tz + 0.5) * CELL], tune) {
+                    if reaches(w, p, [(tx + 0.5) * CELL, (js_min(js_max(floor(p[1] / CELL), 0.0), top) + 0.5) * CELL, (tz + 0.5) * CELL], tune) {
                         cx = tx;
                         cz = tz;
                         break;
@@ -797,7 +782,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
                         continue;
                     }
                     let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
-                    if open(w, set, p, [p[0] + dx as f64 * CELL, p[1], p[2] + dz as f64 * CELL], tune) {
+                    if open(w, p, [p[0] + dx as f64 * CELL, p[1], p[2] + dz as f64 * CELL], tune) {
                         wanted = true;
                         break 'edge;
                     }
@@ -810,7 +795,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
     }
 
     // 3. the faces nobody has asked
-    ask(w, set, g, tune);
+    ask(w, g, tune);
 
     let delta = unsafe { &mut *core::ptr::addr_of_mut!(DELTA) };
     let came = unsafe { &mut *core::ptr::addr_of_mut!(CAME) };
@@ -859,10 +844,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
                             if ((x == 0 && bx == 0) || (z == 0 && bz == 0)) && g.faces[c] & F_EDGE == 0 {
                                 let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
                                 let mut f = g.faces[c] | F_EDGE;
-                                if x == 0 && bx == 0 && open(w, set, p, [p[0] - CELL, p[1], p[2]], tune) {
+                                if x == 0 && bx == 0 && open(w, p, [p[0] - CELL, p[1], p[2]], tune) {
                                     f |= F_WEST;
                                 }
-                                if z == 0 && bz == 0 && open(w, set, p, [p[0], p[1], p[2] - CELL], tune) {
+                                if z == 0 && bz == 0 && open(w, p, [p[0], p[1], p[2] - CELL], tune) {
                                     f |= F_NORTH;
                                 }
                                 g.faces[c] = f;

@@ -30,8 +30,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         backpedal: g.pl[pl].backpedal,
         speed_sm: g.pl[pl].speed_sm,
         pace: 1.0, // TWOGEARS.on is settled on the page
-        dragging: None,
-        haul: None,
+        tow: None,
         shoved: [0.0, 0.0],
         shoved_t: -1.0,
         shoved_from: [0.0, 0.0],
@@ -40,7 +39,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         door_bash_at: g.pl[pl].door_bash_at,
         door_bash_lean: g.pl[pl].door_bash_lean,
     };
-    let mut aim: Option<V3> = Some(g.aim_point);
+    let mut aim: Option<V3> = Some(g.sets[g.seat].aim_point);
     if let Some(p) = path.as_deref_mut() { p.resize(n, [0.0; 3]); }
     if free && n > 0 {
         crate::game::game_aside(g, &mut |g: &mut Game| {

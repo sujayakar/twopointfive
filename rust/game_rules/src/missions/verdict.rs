@@ -50,7 +50,7 @@ pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, seat); }
     let (mut red, mut blue) = (false, false);
     for &gd in g.guards.iter() {
-        if g.gd[gd].team != crate::teams::Team::Operative { continue; }
+        if !g.team(gd).ours() { continue; }
         match g.gd[gd].unit.as_ref().and_then(|u| u.pair) { Some(crate::game::PairId::Red) => red = true, Some(crate::game::PairId::Blue) => blue = true, None => {} }
     }
     red && blue
@@ -76,7 +76,7 @@ fn fresh(g: &mut Game, tail: Option<u32>) {
     let t0 = if resumed { g.time - g.mission.stats.elapsed } else { f64::NAN };
     let run = Some(g.mission.serial);
     let v = &mut g.verdict;
-    v.run = run; v.res = None; v.card_at = -1.0; v.kept = None; v.cheat = false;
+    v.run = run; v.res = None; v.card_at = -1.0;  v.cheat = false;
     v.found_at = -1.0; v.dark_at = -1.0; v.dark_when_found = false; v.through = false; v.holes = Vec::new();
     v.wall_serial = wall_serial;
     v.tracks.clear(); v.foes.clear(); v.fell.clear(); v.fell_at = Vec::new();
@@ -125,7 +125,7 @@ fn watch(g: &mut Game) {
     // the defenders: every man hostile to the player this run has met
     for i in 0..g.guards.len() {
         let h = g.guards[i];
-        if !g.verdict.foes.has(h) && g.gd[h].team != crate::teams::Team::Operative && crate::teams::hostile_to(g, h, crate::teams::Team::Player) { g.verdict.foes.add(h); }
+        if !g.verdict.foes.has(h) && g.team(h).theirs() { g.verdict.foes.add(h); }
     }
     let mut hunting = false;
     for h in g.verdict.foes.keys() {

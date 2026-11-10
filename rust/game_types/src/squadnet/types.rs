@@ -6,9 +6,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadNet {
     pub rows: Vec<crate::squadnet::NetRow>,
-    /// (counts: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 })] pub stats: crate::squadnet::SquadNetStats,
     pub down: Vec<String>,
     pub seeded: bool,
     pub click_due: bool,
@@ -22,16 +19,6 @@ pub struct NetRow {
     pub at: V3,
     pub t: f64,
     pub dur: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadNetStats {
-    pub lines: f64,
-    pub downs: f64,
-    pub whys: f64,
-    pub quiets: f64,
-    pub clears: f64,
-    pub ends: f64,
 }
 
 #[derive(Clone, Debug, Default)]

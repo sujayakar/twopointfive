@@ -59,7 +59,7 @@ pub struct Weather {
     #[is([1.1, 0.45])] pub wind: [f64; 2],
     #[is(true)] pub wet_gloss: bool,
     pub flash: Option<crate::weather::Flash>,
-    #[is(crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0, last_thunder: None })] pub stats: crate::weather::WeatherStats,
+    #[is(crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0 })] pub stats: crate::weather::WeatherStats,
     pub touched: Vec<crate::weather::WeatherTouchedItem>,
     pub snow_rate: f64,
     pub own: bool,
@@ -93,11 +93,6 @@ pub struct WeatherStats {
     pub flashes: f64,
     pub thunders: f64,
     pub barks: f64,
-    pub last_thunder: Option<crate::weather::WeatherStatsLastThunder>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct WeatherStatsLastThunder {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -149,9 +144,7 @@ pub const SKY_FLASH_K: f64 = 0.045;
 
 pub fn thunder_lines() -> Vec<String> { alloc::vec![String::from("lovely night for it."), String::from("that one was close."), String::from("glad I'm not out in that."), String::from("it's really coming down."), String::from("storm's right on top of us.")] }
 
-pub const THUNDER_OUT: &str = "no let-up, is there.";
-
-pub const THUNDER_OUT_GUIDE: &str = "it's not letting up, huh.";
+pub const THUNDER_OUT: &str = "it's not letting up, huh.";
 
 pub const BARK_COOLDOWN: f64 = 45.0;
 

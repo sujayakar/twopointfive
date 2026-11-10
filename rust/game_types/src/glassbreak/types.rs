@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassBreak {
-    pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
@@ -16,13 +15,6 @@ pub struct GlassBreakViewOf {
     pub kind: crate::glassbreak::GlassBreakViewOfKind,
     pub from: V3,
     pub size: crate::glassbreak::GlassBlastOpts,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum GlassBreakViewOfKind {
-    #[default] Blown,
-    Wary,
-    Counted,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -108,16 +100,7 @@ pub struct PaneFrame {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakModGBHOST {
     pub shards: f64,
-    pub chips: f64,
-    pub refused: f64,
     pub hooked: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassBreakSeeThroughView {
-    Blown,
-    Wary,
-    Counted,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -129,16 +112,22 @@ pub struct GlassBreakPaneInfo {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassbreakMod {
-    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
+    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
 }
 
 pub const NO_TYPE: f64 = 9.0;
 
 pub const NO_OVER: f64 = 3.0;
 
-pub const SKY_UNKNOWN: f64 = 2.0;
+pub const SKY_UNKNOWN: i32 = 2;
 
 pub const GW_FLAGS: f64 = 1.0;
 
 pub const G_GONE: f64 = 1.0;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum GlassBreakViewOfKind {
+    #[default] Blown,
+    Wary,
+    Counted,
+}

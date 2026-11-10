@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 /// the hold of this seat, where the TypeScript keeps `H`: re-read at every use, never held across a call that takes `g`
 macro_rules! hold {
     ($g:ident, $p:ident) => {
-        $g.pl[$p].holding.as_mut().unwrap()
+        $g.pl[$p].holding_mut().unwrap()
     };
 }
 
@@ -190,14 +190,14 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             && hold!(g, p).swap_t >= k.swap
             && (crate::input::input_hit(g, input, "KeyE") || crate::input::input_hit(g, input, if gun { crate::handslot::HANDSLOT_KEY } else { "Digit1" }))
             && !crate::game::player_choosing(g, p)
-            && g.pl[p].sel.down_t < 0.0
+            && g.sets[g.seat].hand.sel.down_t < 0.0
         {
             swap_hold(g);
             gun = hold!(g, p).variant == crate::character::HoldVariant::Gun;
         }
         let swapping = hold!(g, p).swap_t < k.swap;
         // ---- his rows, performed this frame
-        let act = match &g.act {
+        let act = match &g.sets[g.seat].act {
             Some(a) if a.kind == crate::game::InteractableKind::Held => a.verb,
             _ => None,
         };
@@ -311,8 +311,8 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                     crate::audio_iface::game_audio_like_play(g, "dryFire", Some(muzzle), Some(0.7), None);
                 }
             }
-            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
-                let target = g.aim_target;
+            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.sets[g.seat].aim_target.is_none() && g.sets[g.seat].aim_guard.is_none())) {
+                let target = g.sets[g.seat].aim_target;
                 crate::game::game_ocp(g, target);
             }
             let time = g.time;
@@ -336,11 +336,11 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 g.arms[g.pl[p].ch].fire_cd = HOLD_FIRE_CD;
                 g.pl[p].last_fire_t = time;
                 hold!(g, p).shot_t = time;
-                let ag = match g.aim_guard {
+                let ag = match g.sets[g.seat].aim_guard {
                     Some(a) if a != gd && !crate::condition::down(g, g.gd[a].ch) => Some(a),
                     _ => None,
                 };
-                let tgt: V3 = if let Some(t) = g.aim_target {
+                let tgt: V3 = if let Some(t) = g.sets[g.seat].aim_target {
                     v3::copy(g.tab.fixture[t].pos)
                 } else if let Some(a) = ag {
                     man_aim(g, &crate::seats::here(g), a, 1.25)
@@ -353,7 +353,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             }
         }
         // ---- turning: the pair comes round toward the cursor, rate-limited
-        let ap = g.aim_point;
+        let ap = g.sets[g.seat].aim_point;
         let tx = ap[0] - g.ch[c].pos[0];
         let tz = ap[2] - g.ch[c].pos[2];
         let ad = m::hyp2(tx, tz);
@@ -367,10 +367,10 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         }
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         if gun {
-            let ty = if let Some(t) = g.aim_target {
+            let ty = if let Some(t) = g.sets[g.seat].aim_target {
                 v3::clamp(g.tab.fixture[t].pos[1], 0.3, 2.95)
             } else {
-                match g.aim_guard {
+                match g.sets[g.seat].aim_guard {
                     Some(a) if a != gd => man_aim(g, &crate::seats::here(g), a, 1.2)[1],
                     _ => {
                         if level_on(g) {
@@ -438,9 +438,6 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         g.ch[hc].vel = v3::copy(cv);
         g.gd[gd].speed = speed;
         g.ch[hc].body_yaw = g.ch[c].body_yaw;
-        if let Some(h) = g.gd[gd].held.as_mut() {
-            h.reverse = backpedal;
-        }
     }
     g.pl[p].sprinting = false;
     g.pl[p].crouch = false;
@@ -461,11 +458,11 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         an.stance = Stance::None;
         an.look_yaw_extra = 0.0;
     }
-    let has = g.pl[p].holding.is_some();
+    let has = g.pl[p].holding().is_some();
     let low = if has { 1.0 } else { 0.0 };
     let beats = has;
     let haul = has;
-    let h = g.pl[p].holding.clone();
+    let h = g.pl[p].holding().cloned();
     let strip = match h.as_ref().and_then(|h| h.strip) {
         Some(s) => Some(crate::disarm::disarm_pose(s)),
         None => None,
@@ -537,11 +534,8 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         haul: Some(haul),
         strip: strip.map(|s| crate::character::StripPose { t: s.t, at: None }),
     });
-    if let Some(held) = g.gd[gd].held.as_mut() {
-        held.phase = h.phase;
-    }
     // where his torch points: up over Sam's arm at the ceiling, wandering with the struggle
-    let torch = crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch;
+    let torch = crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch;
     let tt = time - h.since;
     let yaw_to = g.ch[hc].body_yaw + (if torch { 0.07 * m::sin(tt * 0.9) + 0.04 * m::sin(tt * 2.3 + 1.0) } else { 0.0 });
     g.ch[hc].aim_yaw = v3::approach_angle(g.ch[hc].aim_yaw, yaw_to, 4.0 * dt);
@@ -578,23 +572,24 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
 /// A new beat of the hold: its clock from nought, nothing chosen, nothing queued, Sam's question dead.
 fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     let p = g.player;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     h.phase = phase;
     h.t = 0.0;
     h.wind_t = -1.0;
     h.fire_queued = false;
-    let gd = h.g;
-    if let Some(held) = g.gd[gd].held.as_mut() {
-        held.phase = phase;
-    }
     cancel_ask(g);
 }
 
-/// Stop the choke / the whip under way (a Space tap, a step, Esc): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
+/// Is the choke or the whip under way, or chosen?
+pub(in crate::sam) fn hold_works(h: &Hold) -> bool {
+    h.wind_t >= 0.0 || matches!(h.phase, crate::character::HoldPhase::Choke | crate::character::HoldPhase::Whip)
+}
+
+/// Stop the choke / the whip under way (a Space tap, a step, the back key): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
 pub(in crate::sam) fn ease_off_hold(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     let gd = h.g;
     if h.phase != Ph::Choke && h.phase != Ph::Whip {
         h.wind_t = -1.0;
@@ -612,7 +607,7 @@ pub(in crate::sam) fn ease_off_hold(g: &mut crate::game::Game) {
 fn cancel_ask(g: &mut crate::game::Game) {
     let p = g.player;
     let time = g.time;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     h.after = None;
     if h.ask.is_none() {
         return;
@@ -626,7 +621,7 @@ fn cancel_ask(g: &mut crate::game::Game) {
 /// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear. Nobody answers it.
 fn say_after(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(a) = g.pl[p].holding.as_mut().and_then(|h| h.after.take()) else { return };
+    let Some(a) = g.pl[p].holding_mut().and_then(|h| h.after.take()) else { return };
     let time = g.time;
     say_over_sam(g, &a.text, time);
 }
@@ -645,7 +640,7 @@ fn swap_hold(g: &mut crate::game::Game) {
     use crate::character::HoldVariant as Var;
     let p = g.player;
     let swap = g.k.hold.secs.swap;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     if h.phase != crate::character::HoldPhase::Held {
         return;
     }
@@ -682,7 +677,7 @@ fn swap_hold(g: &mut crate::game::Game) {
 fn start_choke(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let hc = g.gd[gd].ch;
     set_phase(g, Ph::Choke);
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
@@ -694,7 +689,7 @@ fn start_choke(g: &mut crate::game::Game) {
 /// HOLD.secs.chokeHold after the whip was chosen: the pistol comes off his head and cocks back; the crack is whipOut's.
 fn start_whip(g: &mut crate::game::Game) {
     let p = g.player;
-    if g.pl[p].holding.is_none() {
+    if g.pl[p].holding().is_none() {
         return;
     }
     set_phase(g, crate::character::HoldPhase::Whip);
@@ -708,7 +703,7 @@ fn start_whip(g: &mut crate::game::Game) {
 fn place_held(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let hc = g.gd[gd].ch;
     let r = g.ch[hc].radius;
     let dist = g.k.hold.dist;
@@ -718,7 +713,7 @@ fn place_held(g: &mut crate::game::Game) {
         let wz = g.ch[c].pos[2] + f[2] * dist;
         let mut hp: V3 = [wx, 0.0, wz];
         crate::scene_collision::collide_circle(g, &mut hp, r, 0.2, 1.5, Some(4.0));
-        crate::scene_collision::clamp_to_world(g, &mut hp, r);
+        crate::scene_collision::clamp_to_world(&mut hp, r);
         g.ch[hc].pos = hp;
         let dx = hp[0] - wx;
         let dz = hp[2] - wz;
@@ -735,7 +730,7 @@ fn place_held(g: &mut crate::game::Game) {
 fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
-    let Some(held) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(held) = g.pl[p].holding().map(|h| h.g) else { return };
     let dist = g.k.hold.dist;
     let f = crate::character::character_forward(g, c);
     let hx = g.ch[c].pos[0] + f[0] * dist;
@@ -796,7 +791,7 @@ pub(super) fn held_talk(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: 
 /// A tap on his row, one EXCHANGE: Sam's line first, up for its beat; the answer follows when it ends.
 fn ask_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(h) = g.pl[p].holding.clone() else { return };
+    let Some(h) = g.pl[p].holding().cloned() else { return };
     let gd = h.g;
     let talk = held_talk(g, &crate::seats::here(g), &h);
     if talk.sam_up {
@@ -837,7 +832,7 @@ fn ask_held(g: &mut crate::game::Game) {
 /// Sam's line has hung its beat: the man answers it, and the muffled sound of it under the arm.
 fn answer_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let pick = crate::game::game_interrogate(g, gd, None);
     if pick.is_some() {
         let hc = g.gd[gd].ch;
@@ -867,13 +862,13 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.6 }));
     crate::mission::tally(g, crate::mission::TallyK::Keys);
     crate::chronicle::chron_key(g, gd);
-    let variant = match &g.pl[p].holding {
+    let variant = match g.pl[p].holding() {
         Some(h) if h.g == gd => Some(h.variant),
         _ => None,
     };
     if let Some(variant) = variant {
         if let Some(line) = crate::dialogue::sam_key_line_for(g, gd, variant, rnd) {
-            if let Some(h) = g.pl[p].holding.as_mut() {
+            if let Some(h) = g.pl[p].holding_mut() {
                 h.after = Some(crate::player::HoldAfter { text: line.text });
             }
         }
@@ -883,7 +878,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
 /// After the door leaves have had their say: whatever a leaf shoved the held man off his station by, the PAIR gives. Not during the reach.
 pub fn settle_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let gd = match &g.pl[p].holding {
+    let gd = match g.pl[p].holding() {
         Some(h) if h.phase != crate::character::HoldPhase::Grab => h.g,
         _ => return,
     };
@@ -908,7 +903,7 @@ pub fn settle_held(g: &mut crate::game::Game) {
 /// The choke run through HOLD.secs.choke: he goes limp in the arm and folds forward at Sam's feet, out cold.
 fn choke_out(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let c = g.pl[p].ch;
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
@@ -916,16 +911,16 @@ fn choke_out(g: &mut crate::game::Game) {
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "chokeLimp", Some(at), Some(0.35), None);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Choke));
-    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), None);
+    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), crate::game::With::Hand);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, FOLD_NOISE);
-    g.pl[p].holding = None;
+    g.pl[p].holding_over();
 }
 
 /// The whip run through HOLD.secs.whip: the pistol lands behind his right ear and he drops out of the arm, the loudest thing a hold does.
 fn whip_out(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let c = g.pl[p].ch;
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
@@ -936,11 +931,11 @@ fn whip_out(g: &mut crate::game::Game) {
     };
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
-    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some("pistol-whipped — out cold, and that was not quiet"));
+    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Whip);
     crate::audio_iface::game_audio_like_play(g, "whipThud", Some(head), Some(0.7), None);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, WHIP_NOISE);
-    g.pl[p].holding = None;
+    g.pl[p].holding_over();
     g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, 0.5);
 }
 

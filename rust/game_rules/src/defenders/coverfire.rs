@@ -20,17 +20,6 @@ fn who_passes(who: Option<CharId>, k: CharId) -> bool {
 fn new_man() -> Man {
     Man { know: Vec::new(), chew: None, gave: JsMap::new(), no: None, said_t: -100.0 }
 }
-/// `{ ...WALL_STATS }`: the engine's counts as this game's books open
-fn wall_base(g: &Game) -> JsMap<String, f64> {
-    let w = &g.stats.wallbreak;
-    let rows = [
-        ("rounds", w.rounds), ("ports", w.ports), ("holes", w.holes), ("coverCells", w.cover_cells), ("coverDead", w.cover_dead), ("blasts", w.blasts),
-        ("refused", w.refused), ("falls", w.falls), ("floating", w.floating), ("chunks", w.chunks), ("chunksDemoted", w.chunks_demoted), ("navOpened", w.nav_opened),
-    ];
-    let mut out = JsMap::new();
-    for (k, v) in rows { out.set(String::from(k), v as f64); }
-    out
-}
 /// `gd.weapon.def`: which gun is in his hands
 fn def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
     g.fa[g.gd[gd].weapon].def
@@ -46,7 +35,7 @@ fn seen_now(time: f64, dt: f64, t: f64) -> bool {
 /// the team's line when one of them starts a chew or a burst
 fn say_line(g: &mut Game, gd: GuardId) {
     let (t, say_secs) = (g.time, g.k.coverfire.say_secs);
-    if g.k.coverfire.line.is_empty() || g.gd[gd].team != crate::teams::Team::Operative { return; }
+    if g.k.coverfire.line.is_empty() || !g.team(gd).ours() { return; }
     let m_said = man_of(g, gd).said_t;
     let s_said = state_of(g).said_t;
     if !(t - m_said > say_secs && t - s_said > 4.0) { return; }
@@ -124,7 +113,6 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::State
             s.last_t = time;
         }
     } else {
-        let base = wall_base(g);
         g.m.coverfire.states = Some(State {
             last_t: time,
             men: JsMap::new(),
@@ -221,9 +209,9 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
             }
         }
     }
-    let (team, my_pos) = (g.gd[gd].team, g.ch[g.gd[gd].ch].pos);
+    let (team, my_pos) = (g.team(gd), g.ch[g.gd[gd].ch].pos);
     for (mate, row) in s.men.iter() {
-        if mate == gd || g.gd[mate].team != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
+        if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
         if !g.ch[mc].alive || flat(g.ch[mc].pos, my_pos) > call_m { continue; }
         for k in row.know.iter() {
@@ -269,7 +257,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
             {
                 return Some(Ask2::Ask(Ask {
                     id: -2.0 - x.index,
-                    kind: String::from("thru"),
+                    kind: None,
                     hit: x.at,
                     rounds: g.k.wallpen.thru_rounds,
                     layers: tl.walls.len() as f64,
@@ -284,8 +272,8 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
         None => { no(g, "solid"); return None; }
     };
     if st.t < g.k.coverfire.near_m { no(g, "close"); return None; }
-    let kind = b.kind.as_str();
-    let behind = g.k.coverfire.behind_m.get(String::from(kind)).copied().unwrap_or(3.0);
+    let kind = b.kind;
+    let behind = g.k.coverfire.behind_m.get(String::from(kind.as_str())).copied().unwrap_or(3.0);
     if l - st.t > behind { no(g, "beyond"); return None; }
     if crate::props::prop_system_raycast(g, from, dir, st.t).is_some() { no(g, "prop"); return None; }
     let w = weight_of(g, gd);
@@ -320,7 +308,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
     if rounds > g.k.coverfire.max_rounds { no(g, "rounds"); return None; }
     Some(Ask2::Ask(Ask {
         id: b.id,
-        kind: String::from(kind),
+        kind: Some(kind),
         hit,
         rounds: m::max(1.0, rounds),
         layers: ids.len() as f64,
@@ -340,8 +328,8 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         let energy = crate::glasspen::round_energy(g, def);
         crate::wallpen::flight_len(g, to, dir, past_m, energy) };
     let t_max = 1.0 + flight / l;
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+    let team = g.team(gd);
+    if !team.theirs() {
         for pl in crate::seats::men(g) {
             if !crate::condition::down(g, g.pl[pl].ch) { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
         }
@@ -353,8 +341,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         if !g.ch[oc].alive { continue; }
-        let oteam = g.gd[o].team;
-        if !crate::teams::is_hostile(g, team, oteam) && lane_hit(g, oc, from, dx, dz, l2, t_max, l) { return false; }
+        if !team.foe_of(g.team(o)) && lane_hit(g, oc, from, dx, dz, l2, t_max, l) { return false; }
     }
     for cv in crate::civilians::civilian_bodies(g) {
         let cc = g.gd[cv].ch;
@@ -374,19 +361,13 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
 fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
-    let mut len = 0.0;
-    let mut q = pos;
-    for p in path.iter() {
-        len += flat(q, *p);
-        q = *p;
-    }
-    len += flat(q, to);
+    let len = crate::places::walk_len(pos, &path) + flat(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
 }
 
 /// rounds he will spend on it: a chew gets slack, a burst through is what it is
-fn budget_of(g: &crate::game::Game, kind: &str, rounds: f64) -> f64 {
-    if kind == "thru" { rounds } else { m::ceil(rounds * g.k.coverfire.slack_k) + g.k.coverfire.slack }
+fn budget_of(g: &crate::game::Game, thru: bool, rounds: f64) -> f64 {
+    if thru { rounds } else { m::ceil(rounds * g.k.coverfire.slack_k) + g.k.coverfire.slack }
 }
 
 /// a man with no feet of his own to weigh
@@ -447,11 +428,11 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
         None => return None,
         Some(Ask2::Ask(a)) => a,
     };
-    let thru = a.kind == "thru";
-    let budget = budget_of(g, &a.kind, a.rounds);
+    let thru = a.kind.is_none();
+    let budget = budget_of(g, thru, a.rounds);
     let row = man_of(g, gd);
     let own_chew = held && !row.chew.as_ref().unwrap().call;
-    if call && a.kind != "cover" && !own_chew {
+    if call && a.kind != Some(crate::wallbreak::BKind::Cover) && !own_chew {
         if held { row.chew = None; }
         no(g, "call");
         return None;
@@ -480,7 +461,7 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
         };
         row.chew = Some(Chew {
             id: a.id,
-            kind: a.kind.clone(),
+            kind: a.kind,
             who: k.who,
             to: v3::copy(to),
             hit: a.hit,
@@ -723,7 +704,6 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     g.tab.roomfight_op[o].rounds += 1.0;
     let k_now = cw.k + 1.0;
     set_chew(g, gd, |row| row.k = k_now);
-    g.fight.stats.op_rounds += 1.0;
     let str_ = crate::gunroles::gun_string(g, gd);
     let gap = if js::rem(k_now, js::or(str_, 2.0)) == 0.0 {
         sk.shift[0] + crate::dice::draw_op(g, "coverfire::cover_op#1", o) * (sk.shift[1] - sk.shift[0])
@@ -762,7 +742,6 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             for r in rows.unwrap().iter() {
                 if r.kind == crate::wallbreak::LevelChangeKind::Door || r.id < 0.0 { continue; }
                 let s = state_of(g);
-                if let Some(rec) = s.by_id.get_mut(crate::Num(r.id)) { rec.gave += 1.0; }
                 let mut mine = false;
                 for (_, row) in s.men.iter_mut() {
                     if let Some(cw) = row.chew.as_mut() {
@@ -830,7 +809,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
                 _ => continue,
             };
             let (fired, cw_call, cw_id, cw_hit) = (cw.fired, cw.call, cw.id, cw.hit);
-            if cw.kind == "thru" {
+            if cw.kind.is_none() {
                 if !js::truthy(fired) {
                     bump(g, BumpK::Thru);
                     let name = name_of(g, cw.who);
@@ -845,10 +824,10 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             if !js::truthy(fired) {
                 bump(g, BumpK::Chews);
                 if cw_call { bump(g, BumpK::Calls); }
-                let side = if g.gd[gd].team == crate::teams::Team::Operative { BumpK::OpChews } else { BumpK::DefChews };
+                let side = if g.team(gd).ours() { BumpK::OpChews } else { BumpK::DefChews };
                 bump(g, side);
                 let name = name_of(g, cw.who);
-                let line = alloc::format!("{} on {} #{} for {}{}: {} rounds wanted, {} deep", g.gd[gd].callsign, cw.kind, js::num_str(cw_id), name, if cw_call { " (a call)" } else if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
+                let line = alloc::format!("{} on {} #{} for {}{}: {} rounds wanted, {} deep", g.gd[gd].callsign, cw.kind.map_or("thru", |k| k.as_str()), js::num_str(cw_id), name, if cw_call { " (a call)" } else if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
                 log(g, &line);
                 say_line(g, gd);
             }
@@ -866,9 +845,8 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
                 bump(g, BumpK::Landed);
                 let s = state_of(g);
                 if let Some(rec) = s.by_id.get_mut(crate::Num(cw_id)) {
-                    rec.landed += 1.0;
                 } else {
-                    s.by_id.set(crate::Num(cw_id), StateByIdValue { landed: 1.0, gave: 0.0 });
+                    s.by_id.set(crate::Num(cw_id), StateByIdValue {  });
                 }
             }
             break;
@@ -898,7 +876,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 /// QA: what `gd` is on this frame
 pub(super) fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
-    Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
+    Some(CoverfireOn { kind: cw.kind, fired: cw.fired })
 }
 
 #[cfg(test)]
@@ -951,7 +929,7 @@ mod tests {
     fn a_burst_through_gets_no_slack() {
         let mut g = Game::blank();
         (g.k.coverfire.slack_k, g.k.coverfire.slack) = (1.5, 2.0);
-        assert_eq!(budget_of(&mut g, "thru", 3.0), 3.0);
-        assert_eq!(budget_of(&mut g, "cover", 3.0), 7.0);
+        assert_eq!(budget_of(&mut g, true, 3.0), 3.0);
+        assert_eq!(budget_of(&mut g, false, 3.0), 7.0);
     }
 }

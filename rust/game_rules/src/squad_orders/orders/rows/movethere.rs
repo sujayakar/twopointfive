@@ -40,12 +40,12 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     let mut bodies: Vec<V3> = vec![sam];
     let mut held: Vec<String> = Vec::new();
     for &m in &rest {
-        let of = squad_orders_of(g, &crate::seats::here(g), m);
+        let of = squad_orders_of(&crate::seats::here(g), m);
         let post = of.and_then(|a| g.tab.orders_assignment[a].post);
         bodies.push(match post { Some(p) => p, None => g.ch[g.gd[m].ch].pos });
     }
     for &m in &rest {
-        let of = squad_orders_of(g, &crate::seats::here(g), m);
+        let of = squad_orders_of(&crate::seats::here(g), m);
         let key = of.and_then(|a| g.tab.orders_assignment[a].fit.as_ref().and_then(|f| f.key.clone()));
         if let Some(k) = key { if !k.is_empty() { held.push(k); } }
     }
@@ -73,7 +73,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let on = SquadOrdersAssignA {
             order: String::from(ORDER.id), post: Some(p), face: Some(face),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
+            going: "moving".into(), there: "in position".into(), set_line: Some(String::from("set.")), fit,
             ..Default::default()
         };
         if let Some(w) = walk {

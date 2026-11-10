@@ -20,8 +20,8 @@ fn hard_at_stuns(g: &Game, structure: &str) -> Option<f64> {
 }
 
 /// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it.
-fn store_name_in(g: &Game, level: Difficulty) {
-    if level == Difficulty::Standard { crate::savestate::save_store_remove(g, LS); } else { crate::savestate::save_store_set(g, LS, level.as_str()); }
+fn store_name_in(level: Difficulty) {
+    if level == Difficulty::Standard {  } else { crate::savestate::save_store_set(); }
 }
 
 /// JSON.stringify of a Partial<Levers>, in the order of these rows; the words need no escape. None when no row is present (Object.keys(S).length === 0).
@@ -31,130 +31,6 @@ fn levers_json(rows: &[(&str, Option<&str>)]) -> Option<String> {
 }
 
 // ---------------------------------------------------------------- JSON.parse, as far as keptLevers looks at what it gives
-
-/// the rows of a JSON object: (key, its value if a string). Anything else, JSON or not, is no rows: to keptLevers (:301) a throw, null, a number and an array all keep nothing.
-fn json_rows(text: &str) -> Vec<(String, Option<String>)> {
-    let b = text.as_bytes();
-    let mut i = 0;
-    json_ws(b, &mut i);
-    if b.get(i) != Some(&b'{') { return Vec::new(); }
-    match json_object(b, &mut i) {
-        Some(rows) => { json_ws(b, &mut i); if i == b.len() { rows } else { Vec::new() } }
-        None => Vec::new(),
-    }
-}
-
-fn json_ws(b: &[u8], i: &mut usize) {
-    while matches!(b.get(*i), Some(b' ' | b'\t' | b'\n' | b'\r')) { *i += 1; }
-}
-
-/// at a `{`: its rows, later duplicates after earlier ones. None = not JSON.
-fn json_object(b: &[u8], i: &mut usize) -> Option<Vec<(String, Option<String>)>> {
-    *i += 1;
-    let mut rows = Vec::new();
-    json_ws(b, i);
-    if b.get(*i) == Some(&b'}') { *i += 1; return Some(rows); }
-    loop {
-        json_ws(b, i);
-        let k = json_string(b, i)?;
-        json_ws(b, i);
-        if b.get(*i) != Some(&b':') { return None; }
-        *i += 1;
-        let v = json_value(b, i)?;
-        rows.push((k, v));
-        json_ws(b, i);
-        match b.get(*i) {
-            Some(b',') => *i += 1,
-            Some(b'}') => { *i += 1; return Some(rows); }
-            _ => return None,
-        }
-    }
-}
-
-/// one value: Some(Some(text)) a string, Some(None) anything else. None = not JSON.
-fn json_value(b: &[u8], i: &mut usize) -> Option<Option<String>> {
-    json_ws(b, i);
-    match *b.get(*i)? {
-        b'"' => json_string(b, i).map(Some),
-        b'{' => json_object(b, i).map(|_| None),
-        b'[' => {
-            *i += 1;
-            json_ws(b, i);
-            if b.get(*i) == Some(&b']') { *i += 1; return Some(None); }
-            loop {
-                json_value(b, i)?;
-                json_ws(b, i);
-                match b.get(*i) {
-                    Some(b',') => *i += 1,
-                    Some(b']') => { *i += 1; return Some(None); }
-                    _ => return None,
-                }
-            }
-        }
-        b't' => json_word(b, i, b"true"),
-        b'f' => json_word(b, i, b"false"),
-        b'n' => json_word(b, i, b"null"),
-        _ => json_number(b, i),
-    }
-}
-
-fn json_word(b: &[u8], i: &mut usize, w: &[u8]) -> Option<Option<String>> {
-    if b[*i..].starts_with(w) { *i += w.len(); Some(None) } else { None }
-}
-
-fn json_digits(b: &[u8], i: &mut usize) -> bool {
-    let at = *i;
-    while matches!(b.get(*i), Some(b'0'..=b'9')) { *i += 1; }
-    *i > at
-}
-
-fn json_number(b: &[u8], i: &mut usize) -> Option<Option<String>> {
-    if b.get(*i) == Some(&b'-') { *i += 1; }
-    if b.get(*i) == Some(&b'0') { *i += 1; } else if !json_digits(b, i) { return None; }
-    if b.get(*i) == Some(&b'.') { *i += 1; if !json_digits(b, i) { return None; } }
-    if matches!(b.get(*i), Some(b'e' | b'E')) {
-        *i += 1;
-        if matches!(b.get(*i), Some(b'+' | b'-')) { *i += 1; }
-        if !json_digits(b, i) { return None; }
-    }
-    Some(None)
-}
-
-/// at a `"`: the text. None = not JSON. A lone surrogate reads as U+FFFD: it can be no rung's word or lever's key either way.
-fn json_string(b: &[u8], i: &mut usize) -> Option<String> {
-    if b.get(*i) != Some(&b'"') { return None; }
-    *i += 1;
-    let mut out: Vec<u8> = Vec::new();
-    loop {
-        let c = *b.get(*i)?;
-        *i += 1;
-        match c {
-            b'"' => return String::from_utf8(out).ok(),
-            0..=0x1f => return None,
-            b'\\' => {
-                let e = *b.get(*i)?;
-                *i += 1;
-                let d = match e {
-                    b'"' | b'\\' | b'/' => e as char,
-                    b'b' => '\u{8}',
-                    b'f' => '\u{c}',
-                    b'n' => '\n',
-                    b'r' => '\r',
-                    b't' => '\t',
-                    b'u' => {
-                        let mut n = 0u32;
-                        for _ in 0..4 { n = n * 16 + (*b.get(*i)? as char).to_digit(16)?; *i += 1; }
-                        char::from_u32(n).unwrap_or('\u{fffd}')
-                    }
-                    _ => return None,
-                };
-                let mut buf = [0u8; 4];
-                out.extend_from_slice(d.encode_utf8(&mut buf).as_bytes());
-            }
-            _ => out.push(c),
-        }
-    }
-}
 
 // ---------------------------------------------------------------- JSON.stringify(a) === JSON.stringify(b), for what the part compares
 
@@ -176,12 +52,12 @@ macro_rules! rows_same {
 
 /// `same` of two PRESSURE tables.
 fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bool {
-    rows_same!(a, b, crate::knobs::PressureK; on, press, flank, squad_drill, second, max_men, memory_secs, organise_k, warned, stand_press, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, loud_secs, out_secs, gather_secs, flank_secs, siege_secs, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
+    rows_same!(a, b, crate::knobs::PressureK; on, stuns, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, loud_secs, out_secs, sweep)
 }
 
 /// `same` of two DIGIN tables.
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, keeper, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words
@@ -326,17 +202,11 @@ fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: O
     if set.ai.unwrap_or(level) == Difficulty::Hard {
         let h = g.k.hard;
         p.on = true;
-        p.warned = true;
-        p.second = true;
-        p.picket = false;
-        p.by_way = true;
         p.rescue_crew = true;
-        p.way_out = true;
         p.drilled = true;
         p.sweep = true;
         d.on = true;
         d.reach_m = h.reach_m;
-        d.keeper = false;
     }
     if level == Difficulty::Hard {
         p.stuns = g.k.hard.stuns;
@@ -469,12 +339,12 @@ fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 }
 
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`.
-fn store_levers(g: &crate::game::Game, all: Option<bool>) {
+fn store_levers(g: &crate::game::Game) {
     let s = g.m.difficulty.set;
     let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
     match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
-        Some(line) => { crate::savestate::save_store_set(g, LS_LEVERS, &line); }
-        None => crate::savestate::save_store_remove(g, LS_LEVERS),
+        Some(line) => { crate::savestate::save_store_set(); }
+        None => {},
     }
 }
 
@@ -487,8 +357,8 @@ pub fn set_difficulty(g: &mut crate::game::Game, level: crate::difficulty::Diffi
     if keep {
         crate::pressure::reset_pressure(g);
         crate::digin::reset_dig_in(g);
-        store_levers(g, Some(true));
-        store_name_in(g, level);
+        store_levers(g);
+        store_name_in(level);
     }
     write(g, None);
 }
@@ -560,8 +430,8 @@ pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, ru
             crate::pressure::reset_pressure(g);
             crate::digin::reset_dig_in(g);
         }
-        store_levers(g, None);
-        if stood || !own(key) { let base = g.m.difficulty.base; store_name_in(g, base); }
+        store_levers(g);
+        if stood || !own(key) { let base = g.m.difficulty.base; store_name_in(base); }
     }
     write(g, Some(own(key)));
     keep && (stood || !own(key))
@@ -691,16 +561,12 @@ pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String
 }
 
 /// what a level is, in a sentence.
-pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyWordsLevel>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
+pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyNow>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
     let level = match level {
         Some(l) => l,
-        None => match difficulty_now(g) {
-            DifficultyNow::Hard => DifficultyWordsLevel::Hard,
-            DifficultyNow::Standard => DifficultyWordsLevel::Standard,
-            DifficultyNow::Custom => DifficultyWordsLevel::Custom,
-        },
+        None => difficulty_now(g),
     };
-    if level == DifficultyWordsLevel::Custom && levers_mixed(g) {
+    if level == crate::difficulty::DifficultyNow::Custom && levers_mixed(g) {
         return alloc::format!("your own mix: {}", levers_line(g, Some(true)));
     }
     // (squads: a word, or true = one not said which; '' and false = not one)
@@ -709,7 +575,7 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         Some(DifficultyWordsSquads::Bool(true)) => Some(None),
         _ => None,
     };
-    if let (Some(word), DifficultyWordsLevel::Hard) = (squad_word, level) {
+    if let (Some(word), crate::difficulty::DifficultyNow::Hard) = (squad_word, level) {
         let w = word.and_then(|sq| squad_hard().into_iter().find(|x| x.file == sq || x.structure == sq).map(|x| x.words));
         let at = match word {
             Some(sq) => { let s = structure_of_level(Some(sq)); if s.is_empty() { String::from(sq) } else { s } }
@@ -723,13 +589,13 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         };
     }
     match level {
-        DifficultyWordsLevel::Standard => String::from("standard: the usual defenders"),
-        DifficultyWordsLevel::Hard => {
+        crate::difficulty::DifficultyNow::Standard => String::from("standard: the usual defenders"),
+        crate::difficulty::DifficultyNow::Hard => {
             let here = g.m.difficulty.here.clone();
             let kit = if hard_at_stuns(g, &here).map_or(false, js::truthy) { ". Here each defender carries a stun charge, and he'll throw it through a door before he comes in" } else { "" };
             alloc::format!("hard: the defenders come at you together and around through a second door, a far room's defenders come as a group, and they stand and fight where they meet you in the open. If they hear you before your first entry, they'll get ready. The last defender in a room will slip out through another door before you reach his door. At the records office, the defenders who come to a lost room will watch its door from out of a flashbang's reach and let you come out to them. On a hostage rescue the captor calls your assault on the radio and his guards act on it. On the night breach the defenders are drilled, half as shaken by a flashbang, and they'll fire blind through the door they were watching{}{}", kit, CONE_TAIL)
         }
-        DifficultyWordsLevel::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
+        crate::difficulty::DifficultyNow::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
     }
 }
 
@@ -765,14 +631,14 @@ mod tests {
         let a = crate::knobs::PressureK::page();
         let mut b = a;
         assert!(pressure_same(&a, &b));
-        b.sweep_pair_m = -0.0;
+        b.flank_k = -0.0;
         let mut c = a;
-        c.sweep_pair_m = 0.0;
+        c.flank_k = 0.0;
         assert!(pressure_same(&b, &c));   // -0 is 0
-        c.sweep_pair_m = f64::NAN;
-        b.sweep_pair_m = f64::INFINITY;
+        c.flank_k = f64::NAN;
+        b.flank_k = f64::INFINITY;
         assert!(pressure_same(&b, &c));   // both null
-        b.sweep_pair_m = 1.0;
+        b.flank_k = 1.0;
         assert!(!pressure_same(&b, &c));
         let mut d = a;
         d.last_man_secs[1] += 1.0;
@@ -845,19 +711,6 @@ mod tests {
         assert_eq!(hard_at_stuns(&g, ""), None);
         g.k.hard_at.rows.set(String::from("a floor"), None);   // (a row with no stuns reads as no row)
         assert_eq!(hard_at_stuns(&g, "a floor"), None);
-    }
-
-    #[test]
-    fn the_store_text_reads_as_json_parse_does() {
-        let word = |t: &str, k: &str| json_rows(t).iter().rev().find(|r| r.0 == k).and_then(|r| r.1.clone());
-        assert_eq!(word(" {\"fog\" : \"cones\", \"told\":\"bare\"} ", "told").as_deref(), Some("bare"));
-        assert_eq!(word("{\"fog\":\"team\",\"fog\":\"own\"}", "fog").as_deref(), Some("own"));   // the last duplicate
-        assert_eq!(word("{\"fog\":\"team\",\"fog\":1}", "fog"), None);
-        assert_eq!(word("{\"x\":[1,{\"a\":null},-2.5e3,true],\"f\\u006fg\":\"o\\u0077n\"}", "fog").as_deref(), Some("own"));
-        assert!(json_rows("{}").is_empty());
-        for bad in ["", "null", "[\"fog\"]", "\"fog\"", "1", "{", "{\"fog\"}", "{\"fog\":}", "{\"fog\":\"team\",}", "{\"fog\":\"team\"} x", "{\"fog\":01}", "{\"fog\":tru}", "{\"fog\":\"a\nb\"}"] {
-            assert!(json_rows(bad).is_empty(), "{}", bad);
-        }
     }
 
     #[test]

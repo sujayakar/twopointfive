@@ -14,7 +14,7 @@ fn wary_dots(awareness: f64) -> String {
 /// a man of the floor's mark: which glyphs, which colour, and nothing of where
 fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     let m = &g.gd[gd];
-    let own = m.team == crate::teams::Team::Operative;
+    let own = g.ch[m.ch].team.ours();
     let (mut text, mut tone) = (String::new(), HeadTone::Calm);
     let zz = crate::doze::doze_mark(g, gd);
     match m.state {
@@ -24,9 +24,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
         GuardState::Patrol => if !zz.is_empty() { text = String::from(zz); } else if !own { let d = wary_dots(m.awareness); if !d.is_empty() { text = d; tone = HeadTone::Sus; } },
     }
     // (a man of your own bent away with a forearm over his eyes says it himself)
-    let posed = own && g.k.moves.on > 0.5 && g.k.moves.dazzle > 0.5;
-    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !posed {
-        if text.is_empty() && own { tone = HeadTone::Sus; }
+    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !own {
         text.insert(0, '✹');
     }
     (text, tone)
@@ -97,9 +95,8 @@ pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
 
 /// the arc he has up, with where it comes to rest and what it would reach
 fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
-    let sol = g.pl[seat.player].throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
-    let mut world = crate::ask::WorldAsk::try_of(g).ok();
-    let rest = world.as_mut().and_then(|w| crate::player::throw_rest(w, seat.player));
+    let sol = g.sets[seat.id].hand.throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
+    let rest = crate::player::throw_rest(g, seat.player);
     let at = rest.as_ref().map(|r| r.at);
     Some(ThrowView { points: sol.points.clone(), land: sol.land, short: crate::he40::preview_too_close(g, seat.player), reach: crate::frag::throw_reach(g, seat.player, at), rest })
 }
@@ -109,11 +106,11 @@ pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let pl = seat.player;
     let p = &g.pl[pl];
     let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !g.cond[p.ch].down;
-    let steady = gun_out && !p.sprinting && p.dragging.is_none();
+    let steady = gun_out && !p.sprinting && p.dragging().is_none();
     let model = g.tune.aim_model && steady;
     let swing = if steady { crate::aimweight::aim_gun_point(g, seat) } else { None };
     let trail = swing.is_some() && !crate::aimweight::aim_gun_on(g, pl);
-    let shut = steady && crate::ask::WorldAsk::try_of(g).map_or(false, |mut w| crate::player::gun_shut(&mut w, seat));
+    let shut = steady && crate::player::gun_shut(g, seat);
     let snap = seat.aim_snap;
     let ring = if gun_out && (snap.is_some() || model || swing.is_some()) {
         let at = swing.or(snap).unwrap_or(seat.aim_point);

@@ -223,14 +223,14 @@ impl StealthAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
-    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.phase) }
-    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.g) }
+    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding().map(|h| h.phase) }
+    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding().map(|h| h.g) }
     fn out_cold(&self, gd: GuardId) -> bool { self.state(gd) == game::game::GuardState::Dead && game::game::is_breathing(&self.g, gd) }
     fn down_kind(&self, gd: GuardId) -> Option<game::game::DownKind> { self.g.gd[gd].down_kind }
-    fn grab_row(&self, gd: GuardId) -> bool { self.g.nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
+    fn grab_row(&self, gd: GuardId) -> bool { self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
     fn choke_secs(&self) -> f64 { self.g.k.hold.secs.choke }
     fn grab_secs(&self) -> f64 { self.g.k.hold.secs.grab }
     fn sam_takes(&mut self, gd: GuardId) -> bool {
@@ -261,7 +261,7 @@ impl StealthAsk for Play {
     }
     fn shots_heard(&self, gd: GuardId) -> f64 { self.g.gd[gd].witness.heard.shots }
     fn hand_of(&self, gd: GuardId) -> Option<game::guards::InHand> { game::guards::in_hand(&self.g, gd) }
-    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((game::throwables::item_carried(&self.g, i) == Some(true), game::throwables::item_settled(&mut self.g, i))) }
+    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((self.g.tab.item[i].carried == Some(true), self.g.tab.item[i].settled)) }
     fn response(&self) -> game::qrf::QrfState { self.g.qrf.state }
     fn response_reason(&self) -> Option<game::qrf::QrfReason> { self.g.qrf.reason }
     fn response_men(&self) -> Vec<GuardId> { self.g.qrf.men.iter().copied().collect() }
@@ -298,19 +298,18 @@ impl StealthAsk for Play {
     fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden(&self.g, gd) }
     fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
     fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
-    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [self.g.tab.props_prop[it].x, self.g.tab.props_prop[it].z] }
     fn prop_shoved(&mut self, it: game::ids::PropId, at: [f64; 2]) {
-        game::props::prop_set_x(&mut self.g, it, at[0]);
-        game::props::prop_set_z(&mut self.g, it, at[1]);
-        game::props::prop_set_dirty(&mut self.g, it, true);
+        game::props::prop_move_to(&mut self.g, it, at[0], at[1]);
+        self.g.tab.props_prop[it].dirty = true;
         game::props::prop_place(&mut self.g, it);
     }
     fn ours(&self, who: Option<f64>) -> bool { game::fogofwar::fog_of_war_ours_id(&self.g, who) }
     fn door_at(&self, name: &str) -> [f64; 2] { let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")); let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
     fn door_shut(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
     }
     fn in_doors_line(&self, name: &str, from: [f64; 2], at: [f64; 2]) -> bool {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
@@ -373,7 +372,7 @@ impl StealthAsk for Play {
     fn fog_saw(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_seen(&self.g, gd) }
     fn in_newest_wedge(&self, at: [f64; 3]) -> bool { let e = *self.g.fog_of_war.eyes.last().expect("an eye"); game::fogofwar::fog_of_war_in_field(&self.g, e, at) }
     fn cams(&self) -> (usize, f64) { let pl = &self.g.pl[self.g.player]; (pl.cams.len(), self.g.fa[pl.rifle].cams) }
-    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding.as_ref().map(|w| w.live) }
+    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding().map(|w| w.live) }
     fn eye_is_lens(&self) -> bool { self.g.fog_of_war.eyes.iter().any(|e| e.wand == Some(true)) }
     fn smoke_counts(&mut self) -> game::smokebreak::SmokeBreakStats { game::smokebreak::state_of(&mut self.g).stats }
     fn hand_from_head(&self, gd: GuardId, bone: game::character::Bone) -> f64 {
@@ -384,12 +383,12 @@ impl StealthAsk for Play {
     fn holds_round(&mut self, m: GuardId, h: GuardId) -> bool { game::spotted::spotted_holds_round(&mut self.g, m, h) }
     fn leaf(&self, name: &str) -> (bool, f64, f64) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        (game::fogofwar::fog_of_war_door_held(&self.g, d), game::doors::door_angle(&self.g, d), game::fogofwar::fog_of_war_door_shown(&self.g, d))
+        (game::fogofwar::fog_of_war_door_held(&self.g, d), self.g.dr[d].leaf.angle, game::fogofwar::fog_of_war_door_shown(&self.g, d))
     }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
     fn throws_the_breaker(&mut self) {
         let seat = game::seats::here(&self.g);
-        let th = game::workthings::work_things_things(&self.g, &seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
+        let th = game::workthings::work_things_things(&seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
         let at = th.stand.expect("a place to stand at it");
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
@@ -511,6 +510,6 @@ impl StealthAsk for Play {
     fn pair_silent(&mut self) {
         self.g.k.silent.on = true;
         self.g.k.sneak.on = true;
-        game::silent::set_silent(&mut self.g, true, None);
+        game::silent::set_silent(&mut self.g, true);
     }
 }

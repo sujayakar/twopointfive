@@ -22,7 +22,7 @@ fn the_yard_is_lit_off_the_mains_and_dark_with_them_out() {
         let lit = p.place_light(at);
         assert!(lit.0 > 0.6, "{what}, the mains on: reads {lit:?}");
     }
-    game::game::game_set_blackout(&mut p.g, 86400.0, game::game::GameSetBlackoutCause::Hand);
+    game::game::game_set_blackout(&mut p.g, 86400.0, game::lighting::SetBlackoutCause::Hand);
     p.run(4.0);
     for at in [[8.0, 18.0], [5.0, 21.8]] {
         let d = p.place_light(at);
@@ -41,7 +41,7 @@ fn the_yard_is_lit_off_the_mains_and_dark_with_them_out() {
 fn the_gate_and_the_middle_of_the_yard_are_dark_with_the_mains_out() {
     let mut p = Play::mission("floodlit.json", "?levelFile=floodlit.json&roomclear&squad4", &seed(1));
     p.g.god_mode = true;
-    game::game::game_set_blackout(&mut p.g, 86400.0, game::game::GameSetBlackoutCause::Hand);
+    game::game::game_set_blackout(&mut p.g, 86400.0, game::lighting::SetBlackoutCause::Hand);
     p.run(4.5);
     for at in [[20.0, 23.4], [20.0, 18.5]] { let d = p.place_light(at); assert!(d.0 < 0.2 && d.1 < 0.2, "the yard at {at:?}: reads {d:?}"); }
     let d = p.place_light([26.0, 10.6]);
@@ -58,7 +58,7 @@ fn the_breaker_is_the_squads_to_throw_from_inside_the_shed() {
         p.run(0.3);
         let shed = p.g.level.scenarios.as_ref().and_then(|c| c.places.as_ref()).and_then(|v| v.areas.iter().find(|a| a.name == "generator shed")).expect("a shed").bounds;
         let inside = |q: [f64; 2], m: f64| q[0] > shed.x0 - m && q[0] < shed.x1 + m && q[1] > shed.z0 - m && q[1] < shed.z1 + m;
-        let th = game::workthings::work_things_things(&p.g, &game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("the breaker");
+        let th = game::workthings::work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("the breaker");
         let st = th.stand.expect("a place to stand");
         assert!(inside([st[0], st[2]], 0.15), "seed {s}: he throws it from {st:?}");
         assert_eq!(game::workthings::work_things_words(&p.g, &th), "throw the breaker", "seed {s}");

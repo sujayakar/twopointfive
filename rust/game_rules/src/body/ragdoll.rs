@@ -105,7 +105,7 @@ pub(super) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V
 /// (Ragdoll.point)
 pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
-pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_radius(i: f64) -> f64 { rd_radius(i) }
 /// (Ragdoll.addVelocity)
 pub(super) fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
@@ -141,8 +141,14 @@ fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 
     p
 }
 
+/// The floor under particle i as the rag has met it: what it rests on, else the ground.
+pub fn ragdoll_floor_under(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+    let k = i as usize;
+    if this.cn[k * 3 + 1] > 0.0 { this.x[k * 3 + 1] - RADIUS[k] } else { 0.0 }
+}
+
 /// Collision radius of particle i.
-fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+fn rd_radius(i: f64) -> f64 {
     RADIUS[i as usize]
 }
 

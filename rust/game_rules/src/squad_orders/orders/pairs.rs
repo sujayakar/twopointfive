@@ -23,7 +23,7 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) { locks += 1.0; }
+        if g.dr[d].leaf.locked && g.dr[d].leaf.latched { locks += 1.0; }
         i += 1;
     }
     let key = format!(
@@ -34,15 +34,15 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
     );
     let t = g.time;
-    if let Some(hit) = g.orders.reached.get(key.clone()) {
+    if let Some(hit) = g.sets[g.seat].orders.reached.get(key.clone()) {
         if m::abs(t - hit.t) < 1.0 {
             return SquadOrdersAsked { why: hit.why.clone(), lock: hit.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) };
         }
     }
-    if g.orders.reached.len() > 96 { g.orders.reached.clear(); }
+    if g.sets[g.seat].orders.reached.len() > 96 { g.sets[g.seat].orders.reached.clear(); }
     let r = squad_orders_route(g, gd, to, None, None, Some(true));
     let kept = SquadOrdersReachedValue { t, why: r.why.clone(), lock: r.lock.map(|l| SquadOrdersReachedValueLock { door: l.door, side: l.side }) };
-    g.orders.reached.set(key, kept);
+    g.sets[g.seat].orders.reached.set(key, kept);
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
@@ -75,10 +75,7 @@ fn find(root: &mut [usize], i: usize) -> usize {
 fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
     let p = man_pos(g, gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
-    let mut l = 0.0;
-    let mut q = p;
-    for &c in w.iter() { l += flat(q, c); q = c; }
-    l + flat(q, to)
+    crate::places::walk_len(p, &w) + flat(w.last().copied().unwrap_or(p), to)
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
@@ -230,9 +227,6 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             best: Vec::new(), bc: m::INF, best0: Vec::new(), bc0: m::INF,
         };
         pair_rec(g, &mut s, 0, 0.0);
-        if s.cross.is_some() && s.best.len() == n && s.best.iter().zip(s.best0.iter()).any(|(a, b)| a != b) {
-            g.m.doorway.stack_own.queue += 1.0;
-        }
         if s.best.len() == n {
             return men.iter().enumerate().map(|(i, &gd)| (gd, spots[s.best[i]])).collect();
         }
@@ -251,7 +245,6 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             None => (0.0, 0.0),
         };
         let keeps = d00 + d11 + gc01 + xc01 <= d01 + d10 + gc10 + xc10;
-        if cross.is_some() && (d00 + d11 + gc01 <= d01 + d10 + gc10) != keeps { g.m.doorway.stack_own.queue += 1.0; }
         return if keeps { vec![(men[0], spots[0]), (men[1], spots[1])] } else { vec![(men[0], spots[1]), (men[1], spots[0])] };
     }
     let mut left: Vec<V3> = spots.to_vec();
@@ -276,28 +269,20 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {
+        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
-        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.clone() } else { g.tab.orders_assignment[a].going.clone() };
+        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.words.clone() } else { g.tab.orders_assignment[a].going.words.clone() };
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert { return String::from("in contact"); }
         return match w {
             Some(w) if !w.is_empty() => format!("{} · {}", word, w),
             _ => word,
         };
     }
-    for own in [true, false] {
-        let mut i = 0;
-        while i < seat.orders.owners.len() {
-            if crate::mission::has(g, gd) == own {
-                if let Some(s) = crate::mission::doing(g, gd) {
-                    if !s.is_empty() { return s; }
-                }
-            }
-            i += 1;
-        }
+    match crate::mission::doing(g, gd) {
+        Some(s) if !s.is_empty() => s,
+        _ => String::from("no orders"),
     }
-    String::from("no orders")
 }
 
 /// Who the next order goes to, as the panel names it.
@@ -351,14 +336,6 @@ pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders:
 
 // ------------------------------------------------------------ ORDERS.propRound
 
-/// orders.ts:2645 `len`: the metres of a way from `from`
-fn way_len(from: V3, w: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut q = from;
-    for &c in w { l += flat(q, c); q = c; }
-    l
-}
-
 /// orders.ts:2647 `doors`: the doors a way crosses, each once, in the order it crosses them
 fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     let mut out: Vec<DoorId> = Vec::new();
@@ -378,7 +355,7 @@ fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
 /// Of the way over the statics alone and the way laid with movable things dear, the one he walks.
 pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
     let round = match round { Some(r) if !r.is_empty() => r, _ => return plain.to_vec() };
-    if way_len(from, round) > way_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
+    if crate::places::walk_len(from, round) > crate::places::walk_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
     let a = way_doors(g, from, plain);
     let b = way_doors(g, from, round);
     if a.len() == b.len() && a.iter().all(|d| b.contains(d)) { round.to_vec() } else { plain.to_vec() }
@@ -386,12 +363,8 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched, and the one search is the search it was.
 pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
-    let mut i = 0;
-    while i < seat.orders.owners.len() {
-        if crate::mission::has(g, gd) { return None; }
-        i += 1;
-    }
+    if !g.team(gd).ours() || g.props.props.is_empty() { return None; }
+    if crate::mission::has(g, gd) { return None; }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);
     let cs = g.col.nav.cell;
     let mut dear: JsSet<crate::Num> = JsSet::new();
@@ -399,7 +372,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
     while pi < g.props.props.len() {
         let p = g.props.props[pi];
         pi += 1;
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut near = false;
         for &d in g.doors.list.iter() {
             let fc = g.dr[d].frame_centre;

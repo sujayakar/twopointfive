@@ -24,7 +24,6 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
         if drew {
             holster(g, true);
             crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
-            g.stats.workstow.sam_down += 1;
         }
         return;
     };
@@ -38,21 +37,18 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
     g.pl[pl].work_stow = None;
     if !s.drew || !g.pl[pl].holstered { return; }
     let p = &g.pl[pl];
-    if g.cond[p.ch].down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.picking.is_some() || p.wanding.is_some() {
-        g.stats.workstow.sam_kept += 1;
+    if g.cond[p.ch].down || p.hands_full() {
         return;
     }
     if let Some(w) = g.pl[pl].wall.as_mut() {
         if w.kind != Some(crate::player::WallHoldKind::Stack) {
             w.drawn = true;
-            g.stats.workstow.sam_kept += 1;
             return;
         }
     }
     holster(g, false);
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.workstow.sam_up);
     crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
-    g.stats.workstow.sam_up += 1;
 }
 
 /// The thing is still on its way out of his hand: the job's clock has not started.
@@ -117,7 +113,6 @@ pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     g.gd[gd].work_stow = None;
     g.ch[c].anim.stowed = false;
-    g.stats.workstow.mate_fired += 1;
 }
 
 /// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.

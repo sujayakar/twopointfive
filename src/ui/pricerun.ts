@@ -251,7 +251,7 @@ function countPrograms() {
 interface PageHooks { __prewarm?: () => boolean; /** the page's warm-up has cleared what it threw in (host/drawpage.ts; undefined: a build without the word) */ __prewarmed?: boolean; __perfrec?: { commit?: string };
   __ready?: Promise<unknown>; __timeScale?: number; __pauseLoop?: boolean; __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean | 'none') => void; __menu?: { isOpen?: boolean }; __game?: { time: number; /** the mission's own word: its stage, whether the alarm is on, and its count of alarm episodes (someone went to alert while nobody was) */ mission?: { stage?: string; alarmOn?: boolean; stats?: { alerts?: number } } };
   __engine?: { width: number; height: number; outWidth: number; outHeight: number; settings: { renderScale: number; sharpDirect?: boolean; maxInternalHeight?: number; gatherThird?: boolean; volQuarter?: boolean }; gpu?: { adapterInfo?: string; adapterFallback?: boolean }; device?: { queue: { onSubmittedWorkDone(): Promise<unknown> } };
-    timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: readonly string[]): number } };
+    timer?: { enabled: boolean; resolved: number; ask(): void; lastFrame: Map<string, number>; unionMs(exclude: readonly string[]): number } };
   __quality?: { label: string; calibrating: boolean; displayHz?: number; displayHzPin?: number; /** the preset standing · auto: it moves by itself · the ladder's switch (the menu's "Hold frame rate") · a preset's rows put on */ current?: string; auto?: boolean; adaptive?: boolean; apply?: (name: string) => void; /** the ladder's sample of a frame (a method of its class: an own one put over it stands in until it is deleted) */ sample?: (dt: number, gpuMs?: number) => void };
   __perfsweep?: { extra?: { id: string; flip(): string | { apply(): () => void } }[] };
   __boot?: { line?: string };
@@ -307,7 +307,7 @@ async function turn(w: PageHooks, secs: number, stop: () => boolean, drive?: (ts
       const n = worked(); if (n !== undefined && n === workedLast) { res(); return; } workedLast = n;   // (the page passed this display frame over)
       dev.queue.onSubmittedWorkDone().then(() => { work.push(performance.now() - start); res(); }, () => res()); }; ch.port2.postMessage(0); })); };
     const t0 = last; let kept = -1;   // (the moment the measured part began)
-    for (;;) { const now = await frame(), dt = now - last; last = now; if (stop()) return null;
+    for (;;) { T?.ask(); const now = await frame(), dt = now - last; last = now; if (stop()) return null;
       if (dt > PRICE.awayS * 1000 || document.hidden) { away = true; break; }
       if (drive?.(now)) stepped++;
       if (kept < 0) { if (now - t0 >= PRICE.capS * 1000 && w0 !== undefined && drawn(w0, 0) <= 0) throw new Error(NO_FRAME);

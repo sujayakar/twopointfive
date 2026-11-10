@@ -53,21 +53,21 @@ fn holster_frame_of(th: V3, kn: V3, hp: V3, fwd: V3, h: Option<crate::rig_props:
 pub(super) fn long_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::rig_props::LongLookOf> {
     let k = g.ch[c_2].gun_look?;
     let a = if held { k.hand } else { k.long };
-    if let Some(l) = crate::gunlook::long_model(g, a) {
+    if let Some(l) = crate::gunlook::long_model(a) {
         return Some(LongLookOf { id: a.unwrap(), l });
     }
     if !held {
         return None;
     }
     // (the frames of a swap: the long gun is still drawn in the hand that is letting go of it)
-    crate::gunlook::long_model(g, k.long).map(|l| LongLookOf { id: k.long.unwrap(), l })
+    crate::gunlook::long_model(k.long).map(|l| LongLookOf { id: k.long.unwrap(), l })
 }
 
 /// A long model's support-hand grip for the animator; `fit` moves it with the gun as drawn, and a fist round a post into the hook of the fingers.
 pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::character::AnimLongGrip> {
     let fit = fit.unwrap_or(false);
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
-    let l = crate::gunlook::long_model(g, Some(id_2))?;
+    let l = crate::gunlook::long_model(Some(id_2))?;
     let gr = long_grip_of(rig.sc20k.adj, LongGripOfG { off: l.grip_l.off, fingers: l.grip_l.fingers, back: l.grip_l.back });
     if !fit {
         return Some(gr);
@@ -85,9 +85,9 @@ pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: 
 }
 
 /// How far ahead of the wrist along the bore a long model's muzzle is.
-pub fn model_muzzle_ahead(g: &crate::game::Game, id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> {
+pub fn model_muzzle_ahead(id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
-    let l = crate::gunlook::long_model(g, Some(id_2))?;
+    let l = crate::gunlook::long_model(Some(id_2))?;
     Some(muzzle_ahead_of(rig.sc20k.adj, Seg { l0: 0.0, l1: l.ahead, thick: 0.0, tall: 0.0, adj: None }))
 }
 
@@ -152,7 +152,7 @@ pub(super) fn muzzle_ahead_of(group_adj: Option<crate::rig_props::Adj>, part: cr
 }
 
 /// The right hand that holds the rifle as it hangs in front, in the torso's axes off the mid-back joint.
-pub fn sling_front_hand(g: &crate::game::Game, s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>) -> crate::rig_props::SlingFrontHand {
+pub fn sling_front_hand(s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>) -> crate::rig_props::SlingFrontHand {
     let s = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
     let rest = rest.unwrap_or(0.0);
     let p = sling_front();
@@ -214,21 +214,15 @@ fn of_model(s: crate::gunlook::Seg) -> Seg {
     Seg { l0: s.l0, l1: s.l1, thick: s.thick, tall: s.tall, adj: s.adj.map(|a| Adj { off: a.off, rot: a.rot }) }
 }
 
-/// A node of the viewer's tree in the meta sink, if there is one.
-fn node(meta: &mut Option<&mut Vec<RigNodeMeta>>, path: &str, label: &str, depth: f64, parent: Frame, frame: Frame, box_start: usize, box_count: f64) {
-    if let Some(m) = meta.as_deref_mut() {
-        m.push(RigNodeMeta {  });
-    }
-}
 
-/// `seg(out, f, s, albedo, emissive, meta, path, label, 2, name)`: a named part of a group in the viewer's tree.
-fn part(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, f: Frame, s: Seg, albedo: V3, emissive: Option<V3>, meta: &mut Option<&mut Vec<RigNodeMeta>>, path: &str, label: &str, name: Option<&str>) {
-    seg(g, out, f, s, albedo, emissive, meta.as_deref_mut(), Some(path), Some(label), Some(2.0), name);
+/// `seg(out, f, s, albedo, emissive, path, label, 2, name)`: a named part of a group in the viewer's tree.
+fn part(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, f: Frame, s: Seg, albedo: V3, emissive: Option<V3>, name: Option<&str>) {
+    seg(g, out, f, s, albedo, emissive, name);
 }
 
 /// `segAt(out, f, s, adj, albedo, NO_GLOW)`: an unlit part with its adjustment handed in, no node of its own.
 fn part_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, f: Frame, s: Seg, adj: Option<Adj>, albedo: V3) {
-    seg_at(g, out, f, s, adj, albedo, no_glow(), None, None, None, None, None);
+    seg_at(g, out, f, s, adj, albedo, no_glow(), None);
 }
 
 /// A gun group's frame moved by a GRIPFIT shift, in its own axes.
@@ -320,52 +314,47 @@ pub fn mag_box_l(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>
 }
 
 /// Held and worn props for one character as small boxes, appended to `out`. Call after his update: it needs his bones.
-pub fn rig_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
+pub fn rig_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>) {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
-    let mut meta = meta;
-    kit_boxes(g, c_2, o, out, rig, meta.as_deref_mut());
+    kit_boxes(g, c_2, o, out, rig);
     if let Some(big) = o.big {
-        let kind = match big {
-            RigOptsBig::Shotgun => BigBoxesKind::Shotgun,
-            RigOptsBig::Hammer => BigBoxesKind::Hammer,
-        };
-        big_boxes(g, c_2, kind, o.big_k.unwrap_or(0.0), out, Some(rig), Some(o.big_clear.unwrap_or(false)), meta);
+        let kind = big;
+        big_boxes(g, c_2, kind, o.big_k.unwrap_or(0.0), out, Some(rig), Some(o.big_clear.unwrap_or(false)));
     }
 }
 
 /// His kit, the big slot's tool apart: Sam's three slots, or a guard's torch, pistol or long gun.
-fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: crate::rig_props::Rig, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
-    let mut meta = meta;
+fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Vec<AnyBoxId>, rig: crate::rig_props::Rig) {
     let hand = bone(g, c_2, crate::character::Bone::HandR);
     g.m.rig_props.cur_owner = owner_of(g, c_2);
     let cols = col();
     if !o.is_guard {
         if let Some(hand) = hand.filter(|_| o.slot == 1.0) {
-            player_pistol(g, c_2, o, out, rig, hand, &mut meta);
+            player_pistol(g, c_2, o, out, rig, hand);
         }
         if o.slot != 1.0 {
             if o.holster == Some(true) {
                 let parts = HolsterBoxesParts { slide: rig.pistol.slide, grip: rig.pistol.grip, suppressor: Some(rig.pistol.suppressor) };
-                holster_boxes(g, c_2, out, parts, meta.as_deref_mut(), Some(rig.holster));
+                holster_boxes(g, c_2, out, parts, Some(rig.holster));
             }
             if let Some(held) = o.held {
-                held_can_boxes(g, c_2, held, out, Some(rig.can), meta.as_deref_mut(), o.fit, None);
+                held_can_boxes(g, c_2, held, out, Some(rig.can), o.fit, None);
             }
         }
         let knife = o.knife.unwrap_or(false);
         if knife {
-            knife_boxes(g, c_2, out, Some(rig.knife), meta.as_deref_mut());
+            knife_boxes(g, c_2, out, Some(rig.knife));
         }
         if o.sheath.unwrap_or(false) {
-            sheath_boxes(g, c_2, out, Some(!knife), Some(rig), meta.as_deref_mut());
+            sheath_boxes(g, c_2, out, Some(!knife), Some(rig));
         }
-        if o.rifle == Some(RigOptsRifle::Hand) && hand.is_some() {
+        if o.rifle == Some(crate::rig_props::RifleAt::Hand) && hand.is_some() {
             let lens = if o.rifle_light.unwrap_or(false) { v3::scale(rail_lens_color(), rig.sc20k.lens_glow) } else { [0.0, 0.0, 0.0] };
-            let m4 = rifle_m4(g, Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Hand), Some(lens), meta.as_deref_mut(), m4, o.kit, o.fit, Some(false), None, o.rifle_black);
-        } else if o.rifle == Some(RigOptsRifle::Slung) {
-            let m4 = rifle_m4(g, Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Slung), Some([0.0, 0.0, 0.0]), meta.as_deref_mut(), m4, None, Some(false), o.sling_front, o.sling_rest, o.rifle_black);
+            let m4 = rifle_m4(Some(rig));
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Hand), Some(lens), m4, o.kit, o.fit, Some(false), None, o.rifle_black);
+        } else if o.rifle == Some(crate::rig_props::RifleAt::Slung) {
+            let m4 = rifle_m4(Some(rig));
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Slung), Some([0.0, 0.0, 0.0]), m4, None, Some(false), o.sling_front, o.sling_rest, o.rifle_black);
         }
         if let Some(mag_l) = o.kit.and_then(|k| k.mag_l) {
             mag_box_l(g, c_2, out, mag_l, o.fit, None, None);
@@ -375,7 +364,7 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
                 Some(k) => k > 0.5,
                 None => o.nv,
             };
-            goggles_boxes(g, c_2, nv, out, rig.goggles, meta.as_deref_mut(), o.nv_k);
+            goggles_boxes(g, c_2, nv, out, rig.goggles, o.nv_k);
         }
         return;
     }
@@ -396,24 +385,24 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
             _ => [0.0, 0.0, 0.0],
         }
     };
-    if o.weapon == Some(RigOptsWeapon::Carbine) || o.weapon == Some(RigOptsWeapon::Sc20k) {
-        let sc20k = o.weapon == Some(RigOptsWeapon::Sc20k);
+    if o.weapon == Some(crate::rig_props::RigWeapon::Carbine) || o.weapon == Some(crate::rig_props::RigWeapon::Sc20k) {
+        let sc20k = o.weapon == Some(crate::rig_props::RigWeapon::Sc20k);
         if hang {
-            hung_boxes(g, c_2, if sc20k { HungBoxesWeapon::Sc20k } else { HungBoxesWeapon::Carbine }, out, Some(rig), Some(false), meta.as_deref_mut());
+            hung_boxes(g, c_2, if sc20k { crate::rig_props::LongRig::Sc20k } else { crate::rig_props::LongRig::Carbine }, out, Some(rig), Some(false));
         } else if sc20k {
-            let m4 = rifle_m4(g, Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Hand), Some(lit(rig.sc20k.lens_glow)), meta.as_deref_mut(), m4, None, None, None, None, None);
+            let m4 = rifle_m4(Some(rig));
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Hand), Some(lit(rig.sc20k.lens_glow)), m4, None, None, None, None, None);
         } else {
-            carbine_boxes(g, c_2, out, rig.carbine, lit(rig.carbine.lens_glow), meta.as_deref_mut(), None, None);
+            carbine_boxes(g, c_2, out, rig.carbine, lit(rig.carbine.lens_glow), None, None);
         }
         if wears {
-            holster_boxes(g, c_2, out, side, meta.as_deref_mut(), hr);
+            holster_boxes(g, c_2, out, side, hr);
         }
         return;
     }
     if hang {
         if wears {
-            holster_boxes(g, c_2, out, side, meta.as_deref_mut(), hr);
+            holster_boxes(g, c_2, out, side, hr);
         }
         return;
     }
@@ -423,24 +412,21 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
         let along = o.beam_dir.unwrap_or(g.ch[c_2].gun_dir);
         let hand_f = frame_from(hand, along, None);
         let f = apply_adj(hand_f, rig.torch.adj);
-        node(&mut meta, "torch", "hand torch (group + light)", 1.0, hand_f, f, out.len(), 2.0);
         let t = rig.torch;
-        part(g, out, f, t.body, cols.torch, None, &mut meta, "torch.body", "body", None);
-        part(g, out, f, t.lens, cols.lens_body, Some(lens), &mut meta, "torch.lens", "lens", None);
+        part(g, out, f, t.body, cols.torch, None, None);
+        part(g, out, f, t.lens, cols.lens_body, Some(lens), None);
         if wears {
-            holster_boxes(g, c_2, out, side, meta.as_deref_mut(), hr);
+            holster_boxes(g, c_2, out, side, hr);
         }
     } else {
         let in_hand = o.in_hand.unwrap_or(false);
         let pf = pistol_frame(g, c_2, hand, PistolFrameP { adj: rig.guard_pistol.adj }, Some(in_hand));
-        let hand_f = pf.hand_f;
         let f = if in_hand { fit_frame(pf.g, gripfit().guard_pistol) } else { pf.g };
-        node(&mut meta, "guardPistol", "guard pistol (group + light)", 1.0, hand_f, f, out.len(), if alive { 3.0 } else { 2.0 });
         let gm = pistol_look_of(g, c_2, true);
         let gp = rig.guard_pistol;
         if let Some(gm) = gm {
-            seg_at(g, out, f, of_model(gm.slide), gp.slide.adj, cols.gun, no_glow(), meta.as_deref_mut(), Some("guardPistol.slide"), Some("slide"), Some(2.0), None);
-            seg_at(g, out, f, of_model(gm.grip), gp.grip.adj, model_col(gm.frame, false), no_glow(), meta.as_deref_mut(), Some("guardPistol.grip"), Some("grip"), Some(2.0), None);
+            seg_at(g, out, f, of_model(gm.slide), gp.slide.adj, cols.gun, no_glow(), None);
+            seg_at(g, out, f, of_model(gm.grip), gp.grip.adj, model_col(gm.frame, false), no_glow(), None);
             if let Some(can) = gm.can {
                 let can_col = match gm.can_col {
                     Some(c) => model_col(c, false),
@@ -452,17 +438,17 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
                 part_at(g, out, f, of_model(mag), gp.grip.adj, cols.dark_metal);
             }
         } else {
-            part(g, out, f, gp.slide, cols.gun, None, &mut meta, "guardPistol.slide", "slide", None);
-            part(g, out, f, gp.grip, cols.gun, None, &mut meta, "guardPistol.grip", "grip", None);
+            part(g, out, f, gp.slide, cols.gun, None, None);
+            part(g, out, f, gp.grip, cols.gun, None, None);
         }
         if alive {
-            part(g, out, f, gp.lens, cols.lens_body, Some(lens), &mut meta, "guardPistol.lens", "weapon light lens", None);
+            part(g, out, f, gp.lens, cols.lens_body, Some(lens), None);
         }
     }
 }
 
 /// Sam's pistol in his right hand (kitBoxes' first branch): a closure's worth of locals, so a function here.
-fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut Vec<AnyBoxId>, rig: Rig, hand: V3, meta: &mut Option<&mut Vec<RigNodeMeta>>) {
+fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut Vec<AnyBoxId>, rig: Rig, hand: V3) {
     let cols = col();
     let pm = pistol_look_of(g, c_2, true);
     let p = match pm {
@@ -487,7 +473,6 @@ fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut V
     let in_hand = o.in_hand.unwrap_or(false);
     let fit = o.fit.unwrap_or(false);
     let pf = pistol_frame(g, c_2, hand, PistolFrameP { adj: p.adj }, Some(in_hand));
-    let hand_f = pf.hand_f;
     let mut f = pf.g;
     if let Some(kit) = o.kit {
         f = kit_gun_frame(g, c_2, hand, KitGunFrameP { adj: p.adj }, f, kit.roll.unwrap_or(0.0));
@@ -528,15 +513,13 @@ fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut V
             part_at(g, out, f, of_model(mag), mix_adj(p.grip.adj, Some(grip_hung()), hk), cols.dark_metal);
         }
         if hk < 0.5 {
-            seg(g, out, under, rail, cols.torch, None, None, None, None, None, None);
+            seg(g, out, under, rail, cols.torch, None, None);
         }
     } else {
-        let box_count = (if o.light_on { 5.0 } else { 4.0 }) - (if pm.is_none() && bare_side { 1.0 } else { 0.0 });
-        node(meta, "pistol", "pistol (group + rail light)", 1.0, hand_f, f, out.len(), box_count);
-        part(g, out, f, p.slide, cols.gun, None, meta, "pistol.slide", "slide + frame", None);
-        part(g, out, f, p.grip, pcol, None, meta, "pistol.grip", "grip", None);
+        part(g, out, f, p.slide, cols.gun, None, None);
+        part(g, out, f, p.grip, pcol, None, None);
         if has_can {
-            part(g, out, f, p.suppressor, ccol, None, meta, "pistol.suppressor", "suppressor", None);
+            part(g, out, f, p.suppressor, ccol, None, None);
         }
         let kit_no_mag = o.kit.and_then(|k| k.no_mag).unwrap_or(false);
         let show_no_mag = pshow.map(|s| s.no_mag).unwrap_or(false);
@@ -545,10 +528,10 @@ fn player_pistol(g: &mut crate::game::Game, c_2: CharId, o: RigOpts, out: &mut V
                 part_at(g, out, f, of_model(mag), p.grip.adj, cols.dark_metal);
             }
         }
-        part(g, out, under, rail, cols.torch, None, meta, "pistol.rail", "rail light body", None);
+        part(g, out, under, rail, cols.torch, None, None);
         if o.light_on {
             let lens = Seg { l0: p.lens.l0, l1: p.lens.l1, thick: p.lens.thick, tall: p.lens.tall, adj: p.lens.adj };
-            part(g, out, apply_adj(under, p.rail.adj), lens, cols.lens_body, Some(p.lens.glow), meta, "pistol.lens", "rail light lens (lit)", None);
+            part(g, out, apply_adj(under, p.rail.adj), lens, cols.lens_body, Some(p.lens.glow), None);
         }
     }
     if let Some(pid) = pid {
@@ -612,7 +595,7 @@ pub(super) fn long_model_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId
             _ => g_2,
         };
         let emissive = if p.is == Some(ModelPartIs::Lens) { lens } else { no_glow() };
-        seg(g, out, f, of_model(p.s), model_col(p.col, black), Some(emissive), None, Some(""), Some(""), Some(0.0), Some(GUNMODEL_TAG));
+        seg(g, out, f, of_model(p.s), model_col(p.col, black), Some(emissive), Some(GUNMODEL_TAG));
     }
 }
 
@@ -620,11 +603,11 @@ pub(super) fn long_model_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId
 fn pistol_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::gunlook::PistolModel> {
     let k = g.ch[c_2].gun_look?;
     if held {
-        if let Some(pm) = crate::gunlook::pistol_model(g, k.hand) {
+        if let Some(pm) = crate::gunlook::pistol_model(k.hand) {
             return Some(pm);
         }
     }
-    crate::gunlook::pistol_model(g, k.side)
+    crate::gunlook::pistol_model(k.side)
 }
 
 /// What a reload under way shows on the model in his hands, and the thing in his support hand.
@@ -638,8 +621,7 @@ pub(super) fn model_in_hands(g: &mut crate::game::Game, c_2: CharId, id_2: crate
 }
 
 /// The sidearm in a thigh holster: the drawn gun's part boxes hung on the leg's frame.
-pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, parts: crate::rig_props::HolsterBoxesParts, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, holster_rig: Option<crate::rig_props::RigHolster>) {
-    let mut meta = meta;
+pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, parts: crate::rig_props::HolsterBoxesParts, holster_rig: Option<crate::rig_props::RigHolster>) {
     let th = bone(g, c_2, crate::character::Bone::ThighR);
     let kn = bone(g, c_2, crate::character::Bone::ShinR);
     let hp = bone(g, c_2, crate::character::Bone::Hips);
@@ -661,11 +643,6 @@ pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBo
     let hm = pistol_look_of(g, c_2, false);
     let bare = g.ch[c_2].gun_look.and_then(|k| k.bare_side).unwrap_or(false);
     let can = if bare { None } else { parts.suppressor };
-    let threes = match hm {
-        Some(hm) => hm.can.is_some(),
-        None => can.is_some(),
-    };
-    node(&mut meta, "holster", "holstered sidearm (thigh)", 1.0, f0, gg, out.len(), if threes { 3.0 } else { 2.0 });
     let cols = col();
     if let Some(hm) = hm {
         part_at(g, out, gg, of_model(hm.slide), None, cols.gun);
@@ -690,8 +667,7 @@ pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBo
 }
 
 /// The combat knife in the right fist: four traced boxes with his owner byte; where it ends up is the hand's doing.
-fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigKnife>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
-    let mut meta = meta;
+fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigKnife>) {
     let hand = match bone(g, c_2, crate::character::Bone::HandR) {
         Some(hand) => hand,
         None => return,
@@ -702,17 +678,15 @@ fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, 
     let o = v3::mad(v3::mad(v3::mad(hand, h.fingers, k.grip.fwd), h.back, -k.grip.palm), h.thumb, k.grip.side);
     let fist = Frame { o, x: v3::cross(h.back, h.thumb), y: h.back, z: h.thumb };
     let f = apply_adj(fist, k.adj);
-    node(&mut meta, "knife", "combat knife (right fist)", 1.0, fist, f, out.len(), 4.0);
     let cols = col();
-    part(g, out, f, k.handle, cols.knife_grip, None, &mut meta, "knife.handle", "handle", Some(KNIFE_TAG));
-    part(g, out, f, k.guard, cols.blade, None, &mut meta, "knife.guard", "guard", Some(KNIFE_TAG));
-    part(g, out, f, k.blade, cols.blade, None, &mut meta, "knife.blade", "blade", Some(KNIFE_TAG));
-    part(g, out, f, k.edge, cols.edge, None, &mut meta, "knife.edge", "edge strip (lighter)", Some(KNIFE_TAG));
+    part(g, out, f, k.handle, cols.knife_grip, None, Some(KNIFE_TAG));
+    part(g, out, f, k.guard, cols.blade, None, Some(KNIFE_TAG));
+    part(g, out, f, k.blade, cols.blade, None, Some(KNIFE_TAG));
+    part(g, out, f, k.edge, cols.edge, None, Some(KNIFE_TAG));
 }
 
 /// The knife's sheath on the left chest webbing: the dark body always, and with `full` the knife's handle and guard standing out of its mouth.
-fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, full: Option<bool>, rig: Option<crate::rig_props::Rig>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
-    let mut meta = meta;
+fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, full: Option<bool>, rig: Option<crate::rig_props::Rig>) {
     let full = full.unwrap_or(true);
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let f = match sheath_frame(g, c_2, Some(rig.sheath)) {
@@ -720,19 +694,17 @@ fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>,
         None => return,
     };
     g.m.rig_props.cur_owner = owner_of(g, c_2);
-    node(&mut meta, "sheath", "knife sheath (left chest)", 1.0, f, f, out.len(), if full { 3.0 } else { 1.0 });
     let cols = col();
-    part(g, out, f, rig.sheath.body, cols.sheath, None, &mut meta, "sheath.body", "sheath", Some(SHEATH_TAG));
+    part(g, out, f, rig.sheath.body, cols.sheath, None, Some(SHEATH_TAG));
     if full {
-        part(g, out, f, rig.knife.guard, cols.blade, None, &mut meta, "sheath.guard", "guard (sheathed)", Some(SHEATH_TAG));
-        part(g, out, f, rig.knife.handle, cols.knife_grip, None, &mut meta, "sheath.handle", "handle (sheathed)", Some(SHEATH_TAG));
+        part(g, out, f, rig.knife.guard, cols.blade, None, Some(SHEATH_TAG));
+        part(g, out, f, rig.knife.handle, cols.knife_grip, None, Some(SHEATH_TAG));
     }
 }
 
 /// A canister in the fist, the throwable's own body and band.
-fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigCan>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, fit: Option<bool>, left: Option<bool>) {
+fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>, k: Option<crate::rig_props::RigCan>, fit: Option<bool>, left: Option<bool>) {
     use crate::game::ThrowKind;
-    let mut meta = meta;
     let (fit, left) = (fit.unwrap_or(false), left.unwrap_or(false));
     let hand = bone(g, c_2, if left { crate::character::Bone::HandL } else { crate::character::Bone::HandR });
     let hand = match hand {
@@ -761,20 +733,18 @@ fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::Thr
         ThrowKind::Flash => ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66], "canister in the fist (stun)"),
         ThrowKind::Smoke => ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06], "canister in the fist (smoke)"),
     };
-    node(&mut meta, "can", label, 1.0, g0, f1, out.len(), 2.0);
-    seg(g, out, f1, k.body, body, Some([0.0, 0.0, 0.0]), meta.as_deref_mut(), Some("can.body"), None, None, None);
-    seg(g, out, f1, k.band, band, Some([0.0, 0.0, 0.0]), meta.as_deref_mut(), Some("can.band"), None, None, None);
+    seg(g, out, f1, k.body, body, Some([0.0, 0.0, 0.0]), None);
+    seg(g, out, f1, k.band, band, Some([0.0, 0.0, 0.0]), None);
 }
 
 /// The can of a throw off the free hand: in the left fist, as a fitted can is in the right.
-pub fn free_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) {
+pub fn free_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<AnyBoxId>) {
     g.m.rig_props.cur_owner = owner_of(g, c_2);
-    held_can_boxes(g, c_2, kind, out, None, meta, Some(true), Some(true));
+    held_can_boxes(g, c_2, kind, out, None, Some(true), Some(true));
 }
 
 /// The guards' carbine: eleven boxes off the right hand, or a model of its own in the group's frame; `at` is the frame when it is somewhere other than his hands.
-pub(super) fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, c_3: crate::rig_props::RigCarbine, lens: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) {
-    let mut meta = meta;
+pub(super) fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, c_3: crate::rig_props::RigCarbine, lens: V3, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) {
     let hand = match bone(g, c_2, crate::character::Bone::HandR) {
         Some(hand) => hand,
         None => return,
@@ -787,7 +757,7 @@ pub(super) fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Ve
         }
     };
     let look = match as_ {
-        Some(id) => crate::gunlook::long_model(g, Some(id)).map(|l| LongLookOf { id, l }),
+        Some(id) => crate::gunlook::long_model(Some(id)).map(|l| LongLookOf { id, l }),
         None => long_look_of(g, c_2, at.is_none()),
     };
     if let Some(look) = look {
@@ -799,23 +769,17 @@ pub(super) fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Ve
         return;
     }
     let cols = col();
-    node(&mut meta, "carbine", "carbine (group + weapon light)", 1.0, hand_f, f, out.len(), 11.0);
-    part(g, out, f, c_3.receiver, cols.gun, None, &mut meta, "carbine.receiver", "receiver + cover", None);
-    part(g, out, f, c_3.handguard, cols.furniture, None, &mut meta, "carbine.handguard", "handguard (wood)", None);
-    part(g, out, f, c_3.barrel, cols.gun, None, &mut meta, "carbine.barrel", "barrel", None);
-    part(g, out, f, c_3.muzzle, cols.gun, None, &mut meta, "carbine.muzzle", "muzzle booster", None);
-    part(g, out, f, c_3.mag, cols.furniture, None, &mut meta, "carbine.mag", "magazine (upper)", None);
-    part(g, out, f, c_3.mag2, cols.furniture, None, &mut meta, "carbine.mag2", "magazine (lower, the curve)", None);
-    part(g, out, f, c_3.grip, cols.furniture, None, &mut meta, "carbine.grip", "pistol grip", None);
-    part(g, out, f, c_3.stock_top, cols.gun, None, &mut meta, "carbine.stockTop", "stock, top strut", None);
-    part(g, out, f, c_3.stock_low, cols.gun, None, &mut meta, "carbine.stockLow", "stock, lower strut", None);
-    part(g, out, f, c_3.light, cols.torch, None, &mut meta, "carbine.light", "weapon light body", None);
-    part(g, out, f, c_3.lens, cols.lens_body, Some(lens), &mut meta, "carbine.lens", "weapon light lens", None);
-    if meta.is_some() {
-        let gl = c_3.grip_l;
-        let o = v3::mad(v3::mad(v3::mad(f.o, f.x, gl.off[0]), f.y, gl.off[1]), f.z, gl.off[2]);
-        node(&mut meta, "carbine.gripL", "support hand grip point (arrows only)", 2.0, f, Frame { o, ..f }, out.len(), 0.0);
-    }
+    part(g, out, f, c_3.receiver, cols.gun, None, None);
+    part(g, out, f, c_3.handguard, cols.furniture, None, None);
+    part(g, out, f, c_3.barrel, cols.gun, None, None);
+    part(g, out, f, c_3.muzzle, cols.gun, None, None);
+    part(g, out, f, c_3.mag, cols.furniture, None, None);
+    part(g, out, f, c_3.mag2, cols.furniture, None, None);
+    part(g, out, f, c_3.grip, cols.furniture, None, None);
+    part(g, out, f, c_3.stock_top, cols.gun, None, None);
+    part(g, out, f, c_3.stock_low, cols.gun, None, None);
+    part(g, out, f, c_3.light, cols.torch, None, None);
+    part(g, out, f, c_3.lens, cols.lens_body, Some(lens), None);
 }
 
 #[cfg(test)]

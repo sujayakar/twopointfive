@@ -21,13 +21,11 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stalk::St {
 }
 
 /// The stalk is over, for `why` if one was on.
-fn end(g: &mut crate::game::Game, pl: PlayerId, why: crate::stalk::Why) {
+fn end(g: &mut crate::game::Game, pl: PlayerId) {
     let r = g.m.stalk.state.get_mut(pl).unwrap();
     if r.on.is_some() {
         r.armed = Some(false);
         r.on = None;
-        g.stats.stalk.out[why as usize] += 1;
-        g.stats.stalk.last = String::from(why.as_str());
     }
     let r = g.m.stalk.state.get_mut(pl).unwrap();
     r.orbit_r = None;
@@ -47,12 +45,8 @@ fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].holstered
         && !crate::condition::down(g, g.pl[me].ch)
-        && g.pl[me].holding.is_none()
-        && g.pl[me].takedown.is_none()
-        && g.pl[me].dragging.is_none()
-        && g.pl[me].kick.is_none()
-        && g.pl[me].picking.is_none()
-        && g.pl[me].wanding.is_none()
+        && !g.pl[me].planted()
+        && g.pl[me].tow.is_none()
         && g.pl[me].wall.is_none()
         && able(g, &crate::seats::here(g))
 }
@@ -70,7 +64,7 @@ fn shut(g: &mut crate::game::Game) -> bool {
 /// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever.
 fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let me = seat.player;
-    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
+    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move().is_none()
 }
 
 /// How far off a press can begin one.
@@ -126,8 +120,8 @@ pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point.
 fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
     let p = g.ch[g.pl[g.player].ch].pos;
-    let a = g.aim_point;
-    if let Some(ag) = g.aim_guard {
+    let a = g.sets[g.seat].aim_point;
+    if let Some(ag) = g.sets[g.seat].aim_guard {
         if out_of(g, ag, &p, true).is_none() {
             return Some(ag);
         }
@@ -159,12 +153,8 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || drawn
         || !g.pl[me].holstered
         || crate::condition::down(g, g.pl[me].ch)
-        || g.pl[me].holding.is_some()
-        || g.pl[me].takedown.is_some()
-        || g.pl[me].dragging.is_some()
-        || g.pl[me].kick.is_some()
-        || g.pl[me].picking.is_some()
-        || g.pl[me].wanding.is_some()
+        || g.pl[me].planted()
+        || g.pl[me].tow.is_some()
         || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))
@@ -183,7 +173,7 @@ fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
+        if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
         let pos = g.ch[g.gd[gd].ch].pos;
@@ -245,15 +235,12 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     r.wait = Some(false);
     broke_duck(g, me);
     if !free(g) {
-        end(g, me, Why::Hands);
+        end(g, me);
         if lmb || lmb_hit {
             let wait = corner_gate(g);
             g.m.stalk.state.get_mut(me).unwrap().wait = Some(wait);
             if let Some(gd) = corner_man(g) {
                 g.m.stalk.state.get_mut(me).unwrap().grab = Some(gd);
-                g.stats.stalk.grabs += 1;
-                g.stats.stalk.corner += 1;
-                g.stats.stalk.last = String::from("corner");
             }
         }
         return None;
@@ -270,17 +257,16 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
             let r = g.m.stalk.state.get_mut(me).unwrap();
             r.on = Some(gd);
             r.armed = Some(false);
-            g.stats.stalk.begun += 1;
         }
     }
     let gd = g.m.stalk.state.get(me).unwrap().on?;
     if !lmb && !lmb_hit {
-        end(g, me, Why::Let);
+        end(g, me);
         return None;
     }
     let round = own_keys && keys.is_some();
     if own_keys && !round {
-        end(g, me, Why::Keys);
+        end(g, me);
         return None;
     }
     let p = g.ch[g.pl[me].ch].pos;
@@ -294,7 +280,7 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
                 g.m.stalk.state.get_mut(me).unwrap().broke = Some(StBroke { gd, t, at: [p[0], p[1], p[2]] });
             }
         }
-        end(g, me, why);
+        end(g, me);
         broke_duck(g, me);
         return None;
     }
@@ -461,7 +447,7 @@ pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
+        if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
         let pos = g.ch[g.gd[gd].ch].pos;
@@ -514,8 +500,6 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
     let r = state_of(g);
     r.on = None;
     r.armed = Some(false);
-    g.stats.stalk.grabs += 1;
-    g.stats.stalk.last = String::from("grab");
 }
 
 /// The man being stalked right now.

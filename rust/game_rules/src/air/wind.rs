@@ -225,28 +225,6 @@ fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWin
     })
 }
 
-/// The record a source goes to both consumers as. (WindSource extends WindGpuSource in the TypeScript)
-fn gpu_of(s: &WindSource) -> crate::smoke_types::WindGpuSource {
-    crate::smoke_types::WindGpuSource {
-        kind: match s.kind {
-            WindSourceKind::Jet => crate::smoke_types::WindGpuSourceKind::Jet,
-            WindSourceKind::Storm => crate::smoke_types::WindGpuSourceKind::Storm,
-        },
-        pos: s.pos,
-        dir: s.dir,
-        speed: s.speed,
-        reach: s.reach,
-        tan_spread: s.tan_spread,
-        r0: s.r0,
-        d_max: s.d_max,
-        floor_y: s.floor_y,
-        field: s.field,
-        bound: s.bound,
-        kinds: s.kinds,
-        heat: s.heat,
-    }
-}
-
 /// wind.ts:165 in1, :173 under: is (x, z) under any of the roofs (edges in)?
 fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
@@ -344,12 +322,6 @@ fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
     }
 }
 
-/// The share 0‥1 of its own vector the storm's field has at ground point (x, z) under the roofs in force.
-fn wind_storm_share(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
-    let roofs = g.tab.wind_wind_source[g.wind.storm].roofs.clone();
-    wind_share_under(g, x, z, roofs.as_deref())
-}
-
 /// …under the roofs given; none = the storm record's two rectangles.
 pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option<&[Vec<f64>]>) -> f64 {
     let p: V3 = [x, 0.0, z];
@@ -405,13 +377,10 @@ pub fn wind_storm_wind(g: &crate::game::Game) -> Option<V3> {
 /// of the standing game where a pool is.
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let master = wind_of(g);
-    let relax = g.k.wind.smoke_relax;
     g.wind.active.clear();
     if master <= 0.0 {
-        crate::smoke_types::smoke_system_like_set_wind(g, &[], relax);
         return;
     }
-    g.stats.wind.frames += 1;
     wind_sync_field(g);
     let t = g.time;
     let sw = wind_storm_wind(g);
@@ -419,9 +388,6 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
         Some(w) => m::hyp2(w[0], w[2]),
         None => 0.0,
     };
-    if sw.is_some() {
-        g.stats.wind.storm_frames += 1;
-    }
     let vent_k = g.k.wind.vent_k;
     let ramp_up = g.k.wind.ramp_up;
     let ramp_down = g.k.wind.ramp_down;
@@ -484,7 +450,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                         continue;
                     }
                 };
-                let open = m::min(1.0, m::abs(crate::doors::door_angle(g, d)) / g.k.wind.door_open_rad);
+                let open = m::min(1.0, m::abs(g.dr[d].leaf.angle) / g.k.wind.door_open_rad);
                 if open < 0.04 {
                     let s = &mut g.tab.wind_wind_source[id];
                     s.speed = 0.0;
@@ -497,7 +463,6 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 base = storm_speed * door_k * open * (0.35 + 0.65 * facing);
                 s.on = 1.0;
                 s.gust = 1.0 + storm_gust_amp * vnoise(seed, t / storm_gust_period);
-                g.stats.wind.door_gusts += 1;
             }
         }
         let s = &mut g.tab.wind_wind_source[id];
@@ -509,10 +474,6 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
             s.speed = 0.0;
         }
     }
-    g.stats.wind.active += g.wind.active.len() as i32;
-    let recs: Vec<crate::smoke_types::WindGpuSource> = g.wind.active.iter().map(|&s| gpu_of(&g.tab.wind_wind_source[s])).collect();
-    crate::smoke_types::smoke_system_like_set_wind(g, &recs, relax);
-    g.stats.wind.to_smoke += recs.len() as i32;
 }
 
 /// The air's velocity at p this frame, m/s: the sum over every active source.
@@ -545,18 +506,6 @@ pub(super) fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
 /// The source called `name`.
 pub fn wind_by_name(g: &crate::game::Game, name: &str) -> Option<WindWindSourceId> {
     g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
-}
-
-/// One line per source for the panel.
-fn wind_describe(g: &crate::game::Game) -> Vec<String> {
-    g.wind
-        .all
-        .iter()
-        .map(|&id| {
-            let s = &g.tab.wind_wind_source[id];
-            alloc::format!("{:<18} {} speed {} (base {} × on {} × gust {})", s.name, if s.speed > 0.0 { "ON " } else { "off" }, js::to_fixed(s.speed, 2), js::to_fixed(s.base, 2), js::to_fixed(s.on, 2), js::to_fixed(s.gust, 2))
-        })
-        .collect()
 }
 
 #[cfg(test)]
@@ -712,7 +661,6 @@ mod tests {
     fn share_under_the_storms_rectangles() {
         let (mut g, _) = with_storm();
         assert_eq!(wind_share_under(&mut g, 5.0, 5.0, None), 0.0);
-        assert_eq!(wind_storm_share(&mut g, 5.0, 5.0), 0.0);
         assert_eq!(wind_share_under(&mut g, -50.0, 5.0, None), 1.0);
     }
 
@@ -729,10 +677,4 @@ mod tests {
         assert_eq!(g.m.wind.shape.as_ref().map(|s| s.len()), Some(10));
     }
 
-    #[test]
-    fn describe_rounds_as_tofixed_does() {
-        let (mut g, st) = with_storm();
-        g.tab.wind_wind_source[st].base = 0.125; // an exact tie: the language gives 0.13
-        assert_eq!(wind_describe(&mut g), vec![String::from("storm              off speed 0.00 (base 0.13 × on 0.00 × gust 0.00)")]);
-    }
 }

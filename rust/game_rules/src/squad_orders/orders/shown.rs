@@ -6,13 +6,12 @@ use crate::ids::*;
 
 /// Once a frame for each seat, after the menu's own input.
 pub fn keep(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    g.orders.shown = Shown { quick: quick(g, input, cam, canvas) };
+    g.sets[g.seat].orders.shown = Shown { quick: quick(g, input, cam, canvas) };
 }
 
 /// the quick key's line for what this seat's cursor is on, as its press would take it: the row's words, then what it is on
 fn quick(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> Option<alloc::string::String> {
-    if g.orders.menu.is_some() || !squad_orders_active(g, &crate::seats::here(g)) { return None; }
-    crate::scene_collision::stands(g);
+    if g.sets[g.seat].orders.menu.is_some() || !squad_orders_active(g, &crate::seats::here(g)) { return None; }
     let now = crate::view::host_now(g, input, cam, canvas);
     let t = hover(g, &crate::seats::here(g), &now)?;
     let words = crate::autopilot::auto_hint(g, &t, None)?;

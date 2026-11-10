@@ -4,7 +4,7 @@ use crate::Row;
 use alloc::vec::Vec;
 use game::character::Bone;
 use game::fogofwar::fog_of_war_hidden as hidden;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game::m;
 use game::out_events::OutEvent;
@@ -122,31 +122,27 @@ impl Snow {
     }
 
     fn props(&mut self, g: &Game) {
-        let s = &::sim::state::state_read(g.sim).props;
         for &id in &g.props.props {
-            let (p, r) = (&g.tab.props_prop[id], s.row[id.0 as usize] as usize);
-            let (vx, vz, spin, rest) = (s.vx[r], s.vz[r], s.w[r], s.flags[r] & ::sim::props::F_ASLEEP != 0);
+            let p = &g.tab.props_prop[id];
+            let (vx, vz, spin, rest) = (p.vx, p.vz, p.w, p.asleep);
             for (i, part) in p.def.parts.iter().enumerate() {
                 let Some(&bx) = p.boxes.get(i) else { continue };
                 let b = &g.tab.boxes[bx];
-                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: rest as u32, at: [s.x[r] as f32, s.z[r] as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
+                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: rest as u32, at: [p.x as f32, p.z as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
             }
         }
     }
 
     fn items(&mut self, g: &Game) {
-        let s = &::sim::state::state_read(g.sim).items;
         for &id in &g.items.items {
             let it = &g.tab.item[id];
-            if it.kept.is_some() { continue; }
-            let r = it.r as usize;
             let mut t = Thing::ZERO;
             (t.kind, t.key) = (1, id.ix() as u32);
-            t.says = (s.flags[r] & ::sim::items::F_SETTLED != 0) as u32 | ((s.on[r] != 0) as u32) << 1;
-            t.c = [s.px[r] as f32, s.py[r] as f32, s.pz[r] as f32];
+            t.says = it.settled as u32 | ((it.on != 0) as u32) << 1;
+            t.c = [it.pos[0] as f32, it.pos[1] as f32, it.pos[2] as f32];
             t.at = [t.c[0], t.c[2]];
-            t.vel = [s.vx[r] as f32, s.vy[r] as f32, s.vz[r] as f32];
-            t.radius = s.radius[r] as f32;
+            t.vel = [it.vel[0] as f32, it.vel[1] as f32, it.vel[2] as f32];
+            t.radius = it.radius as f32;
             self.things.push(t);
         }
     }

@@ -45,8 +45,8 @@ export interface Stood {
   readonly seats: number; readonly ticks: number;
   /** one tick on the seats' records, the state word folded after it */
   step(cmds: WireCmd[]): void;
-  /** the chained state word after the last tick (src/net/words.ts) · the whole game's word after the last word tick (null before the first) */
-  word(): string; watch(): string | null;
+  /** the state word after the last tick (src/net/words.ts) */
+  word(): string;
   /** how the mission ended, by the game's own verdict: null while it is being played */
   ended(): Outcome | null;
   /** which seat this machine shows: nothing a tick reads */
@@ -55,7 +55,8 @@ export interface Stood {
   ahead(seat: number, cmds: WireCmd[]): Ahead;
 }
 
-export async function standStart(start: NetStart): Promise<Stood> {
+/** `bent`: a check's. This machine's word of the part so named is not the game's, as if that part of its game were another */
+export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
   const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
   const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
@@ -63,12 +64,15 @@ export async function standStart(start: NetStart): Promise<Stood> {
   const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
   const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
   X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);
+  if (bent) { const said = (n: number): Uint8Array => new Uint8Array(memory.buffer, X.face_out_ptr() >>> 0, n), words = X.face_state_words.bind(X);
+    const at = Array.from({ length: X.face_state_n() }, (_, i) => { X.face_state_name(i); return new TextDecoder().decode(said(X.face_out_len() >>> 0).slice()); }).indexOf(bent); if (at < 0) throw new Error(`the game has no part ${bent}`);
+    X.face_state_words = n => { words(n); said(at * 4 + 1)[at * 4] ^= 1; }; }
   const game = new NetGame(X, memory, h), keep = wordsKept();
   game.clear();
   return {
     seats: start.seats, get ticks() { return game.ticks; },
     step(cmds) { game.step(cmds); game.clear(); if (keep && wordTick(game.ticks - 1)) keep(game.ticks, game.whole(true)); },
-    word: () => game.word(), watch: () => game.watch(), ended: () => game.ended(),
+    word: () => game.word(), ended: () => game.ended(),
     show: seat => X.face_show_seat(h, seat),
     ahead: (seat, cmds) => game.ahead(seat, cmds),
   };

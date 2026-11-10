@@ -52,9 +52,6 @@ fn area(r: crate::doorswing::Rect) -> f64 {
 /// What roofOver reads of a static: c, h, yaw, flags.
 type BoxNumbers = (V3, V3, f64, f64);
 
-/// A static's numbers by its ID.
-fn seam_box_numbers(g: &Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
-
 /// roofOver's count over the statics' numbers.
 fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
     let c = def.closed_dir;
@@ -89,7 +86,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
 fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
-    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
+    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }).collect();
     roof_points(&boxes, &g.dr[d].def, s)
 }
 
@@ -372,8 +369,6 @@ fn deal(g: &Game, d: DoorId, swing: f64, why: crate::doorswing::SwingWhy, into: 
         swing,
         why,
         into: into.filter(|i| !i.is_empty()).map(String::from),
-        out: None,
-        clear: None,
     })
 }
 /// dealSwings' `toward`: the side of the leaf a rectangle's middle is on.
@@ -508,8 +503,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                 swing: if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 },
                 why: SwingWhy::Wider,
                 into: None,
-                out: None,
-                clear: None,
             },
         };
         let out = if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds {
@@ -518,10 +511,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
         } else {
             None
         };
-        let out_swing = out.as_ref().map_or(0.0, |o| o.swing);
-        if let Some(o) = out {
-            got.out = Some(Box::new(o));
-        }
         let mut clear: Option<crate::doorswing::SwingDeal> = None;
         if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds && got.why != SwingWhy::Plan && got.why != SwingWhy::StandsOpen
             && !js::truthy(g.dr[d].def.angle.unwrap_or(0.0)) && opens(g, d, -got.swing)
@@ -533,16 +522,11 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                     swing: -got.swing,
                     why: SwingWhy::LeafRoom,
                     into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", js::to_fixed(cut, 1))),
-                    out: None,
-                    clear: None,
                 });
             }
         }
         let clear_swing = clear.as_ref().map_or(0.0, |c| c.swing);
-        if let Some(c) = clear {
-            got.clear = Some(Box::new(c));
-        }
-        crate::doors::door_set_swing(g, d, got.swing, Some(out_swing), Some(clear_swing));
+        crate::doors::door_set_swing(g, d, got.swing, Some(clear_swing));
         dealt.push(got);
     }
     dealt
@@ -550,11 +534,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
 
 /// Deal every door of the level its side (Door.setSwing) and say why.
 pub fn deal_swings(g: &mut crate::game::Game) -> Vec<crate::doorswing::SwingDeal> {
-    if !g.doors.list.is_empty() {
-        crate::scene_collision::window(g, &mut |g| deal_all(g))
-    } else {
-        deal_all(g)
-    }
+    deal_all(g)
 }
 
 #[cfg(test)]

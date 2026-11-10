@@ -23,23 +23,18 @@ fn head_at(g: &Game, c: CharId) -> f64 {
     if ch.ragdoll.is_some() { m::max(0.3, head.unwrap_or(0.3)) } else { head.unwrap_or(ch.pos[1] + 1.6) }
 }
 
-/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. A man's coat is the picture's, but the call is the game's: it stands the rule's copy of the box world (`rule_open`), asks the roofs and may cast the
-/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host.
+/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. Sam's drips and prints after it (samAftermath) tell the host.
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        // everyCharacter: Sam (every seat's man), then the guards, living or not
-        let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
-        all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
-        for c in all {
-            let mem = mem_at(g, c);
-            let head = head_at(g, c);
-            wet_step(g, (w, set, ask), c, head, mem, dt);
-        }
-    });
+    // everyCharacter: Sam (every seat's man), then the guards, living or not
+    let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
+    all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
+    for c in all {
+        let mem = mem_at(g, c);
+        let head = head_at(g, c);
+        wet_step(g, c, head, mem, dt);
+    }
     crate::seats::each_seat(g, &mut |v: &mut Game| sam_aftermath(v, dt));
 }
 
@@ -50,24 +45,23 @@ const WET_SKY_SECS: f64 = 0.25;
 const SKY_OFFSETS: [[f64; 2]; 5] = [[0.0, 0.0], [SKY_RING, 0.0], [-SKY_RING, 0.0], [0.0, SKY_RING], [0.0, -SKY_RING]];
 
 /// Is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of a second a man.
-fn open_sky(g: &mut Game, (w, set, ask): (usize, i32, u32), c: CharId, head: f64, mem: &mut WetMem) -> bool {
+fn open_sky(g: &Game, c: CharId, head: f64, mem: &mut WetMem) -> bool {
     let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     if ::sim::weather::under_any(&g.weather.roof_rects, x, z) { return false; }
     let time = g.time;
     if time - mem.sky_t >= WET_SKY_SECS || mem.sky_t < 0.0 || time < mem.sky_t {
         mem.sky_t = time;
-        let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(w, set, ask, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
+        let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(g.tab.boxes.world(), true, ::sim::lines::ASK_GLASS, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
         mem.open = covered < 3;
-        g.stats.wet.sky_tests += 1;
     }
     mem.open
 }
 
 /// One man soaked or dried by this tick's weather.
-fn wet_step(g: &mut Game, world: (usize, i32, u32), c: CharId, head: f64, mem: WetMem, dt: f64) {
+fn wet_step(g: &mut Game, c: CharId, head: f64, mem: WetMem, dt: f64) {
     let rain = m::max(0.0, g.weather.rain_now);
     let mut mem = mem;
-    let wetting = rain > 0.001 && open_sky(g, world, c, head, &mut mem);
+    let wetting = rain > 0.001 && open_sky(g, c, head, &mut mem);
     *g.m.wet.mem.get_mut(c).unwrap() = mem;
     let (k, ch) = (&g.k.wet, &mut g.ch[c]);
     let runoff = m::max(k.bead_runoff_secs, 0.1);
@@ -89,15 +83,11 @@ fn wet_step(g: &mut Game, world: (usize, i32, u32), c: CharId, head: f64, mem: W
 fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     let mem = mem_at(g, c);
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        let head = head_at(g, c);
-        let mut mem = mem;
-        let open = open_sky(g, (w, set, ask), c, head, &mut mem);
-        *g.m.wet.mem.get_mut(c).unwrap() = mem;
-        open
-    })
+    let head = head_at(g, c);
+    let mut mem = mem;
+    let open = open_sky(g, c, head, &mut mem);
+    *g.m.wet.mem.get_mut(c).unwrap() = mem;
+    open
 }
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
@@ -153,7 +143,6 @@ fn drip(g: &mut crate::game::Game, c_2: CharId) {
         color: Some([0.42, 0.47, 0.55]),
         ..crate::render_particles::EmitOpts::default()
     });
-    g.stats.wet.drips += 1;
 }
 
 /// A footfall of Sam's: if he has come in wet, a print under the foot that landed, fainter each step. The foot ahead along his motion wins over `left_hint`

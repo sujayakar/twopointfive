@@ -28,9 +28,9 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |
 
 And `guards/frame.rs` (one man's frame), `guards/behave/` (what he does by his state), `guards/looks.rs` (`LOOKS`, where some module has him look),
-`control/man.rs` (what a rule may ask of a man), `control/frag.rs`, `runner.rs`, `morale.rs`, `startle.rs`, `duck.rs` (the rules; their code is in
-`frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.rs`), `squad/` (`order`, `end_guard_script`, `run_guard_script`: a man's own script) and
-`dice.rs`.
+`control/man.rs` (what a rule may ask of a man), `control/frag.rs`, `runner.rs`, `morale.rs`, `startle.rs`, `duck.rs`, `lost.rs`, `open.rs` (the rules;
+their code is in `frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.rs`, `roomfight/`), `squad/` (`order`, `end_guard_script`,
+`run_guard_script`: a man's own script) and `dice.rs`.
 
 ## How it works
 
@@ -58,12 +58,12 @@ Decide and act are together in `lent` and `behave::act`.
 news), `foe`. Each takes the writer's name. Anybody can read the fields, and no rule writes them any other way.
 
 **Who moves him now: the list.** `rules!` in `control/mod.rs` is one line a rule, and the line's place is its rank: `frag`, `runner`, `morale`,
-`startle`, `duck`, `lost`, `rally`. What a rule asks for decides where it is asked, and the compiler holds it to that:
+`startle`, `duck`, `lost`. What a rule asks for decides where it is asked, and the compiler holds it to that:
 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
 - A rule whose `Ask` is `TakeCover` is `Stage::Cover`, asked at the top of `alert` by `grant_cover`, so only of a man who is alert with no script and
-  no body rule. He gets down (`TakeCover::down`) or goes crouched to a spot (`TakeCover::to`), gun lowered, firing nothing, hands free to reload. A
+  no body rule. He gets down (`TakeCover::down`), gun lowered, firing nothing, or goes crouched to a spot (`TakeCover::to`), firing as he goes; hands free to reload. A
   blind or staggered man gets down wherever it sends him.
 - A rule whose `Ask` is `LeavePost` is `Stage::Post`, asked by `grant_post` of a defender at his post who can see, once he has looked and reacted. He
   goes on a leg or loose, once: on the leg, his script has him.
@@ -75,18 +75,19 @@ and no longer does (`lost`). The record keeps legs, aim and hands apart, but eve
 **A rule** is `impl Reaction for Rule`. It must write `Ask` and `propose` (which takes `&Game`, so asking changes nothing). It may write `Row`,
 `transition`, `commit` (what his body made of it: `Outcome`) and `lost`.
 
-**Whose man he is: the taskers.** A second question and a second list: `taskers!`, strongest first, from `FRAG` down to `SQUAD`, `PRESS` and `NEEDS`.
+**Whose man he is: the taskers.** A second question and a second list: `taskers!`, strongest first, from `FRAG` down to `SQUAD`, `OUT` and `NEEDS`.
 A squad's man at rest is his squad's, and no rule moves him for it. `owner::claim` sets a bit and `release` clears it. `who` is the strongest, and
 `has` asks of named taskers. `kept` asks "may this tasker take him?": his body first (dead, held, blind, reeling, a hostage in his arms), then anyone
-above it in the list. `claim` itself refuses nobody, so the list decides only where a tasker asks `kept` first. His squad, the press, the lights and
+above it in the list. `claim` itself refuses nobody, so the list decides only where a tasker asks `kept` first. His squad, the lights and
 the last man ask it; other rules ask `has` of those they give way to.
 
 **Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
-writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`. No
-rule writes his `mode`. A leg keeps who sent him (`on_leg_of`): sent elsewhere, the first errand is over.
+writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`.
+No rule writes his `mode` or works out whether he is there: `leg_ended` tells his sender that he arrived, has no way, met somebody or was taken
+off it. An `errand` tries again; one that `stays` has him stand at its end.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
-`room_fight_cover_passes`, `press_keeps_home`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
+`room_fight_cover_passes`, `last_holds`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
 
 **Dice.** `draw_of(g, "module::function#1", gd)` is a fixed function of the seed, the site, the man, the tick and how many times this site has drawn
 for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The block's die still steps once a
@@ -113,6 +114,8 @@ man. No panel of the page shows any of this: ask from a native test.
 - **Alert is not "has a man to fight".** A bang alone makes a man alert. A rule that means a fight asks `saw_his_man_within`.
 - **A question lives in `control/man.rs`:** one line, takes `&Game`, and its comment says what it does not tell you. Add the missing one there instead
   of reading fields in a rule.
+- **Floor is asked of `world/places.rs`** before a rule sends a man to it: nobody stands there, goes there or is sent there by any rule (`taken`), his
+  shoulders fit (`roomy`), his walk ends there (`walk`). What else suits it, hidden from whom or in sight of what, is the rule's own.
 - **A new tasker asks `kept`** and keeps no list of its own. Add no assignment to `awareness`, `state`, `last_known` or `foe`: they go through
   `mind.rs`.
 
@@ -185,8 +188,8 @@ Agreed and not built. Assume none of it.
 - **The whole list in bands:** incapable, staged, reflex, scripted, close, task, initiative, routine, with his script, fight, search and patrol as
   rules in it, and the room fight's `Def` and `Op` as taskers and rules.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door, every `transition` run every tick.
-- **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. `Foe`
-  names a man (`Foe::Player` does not). A squad's knowledge is one record of contacts.
+- **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. A
+  squad's knowledge is one record of contacts.
 - **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen

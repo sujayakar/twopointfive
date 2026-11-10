@@ -16,6 +16,5 @@ pub(super) fn hud_look(g: &Game) -> HudLook {
         attention: AttentionLook { ring_m: k.attention.ring_m, way_reask: k.attention.way_reask },
         line_clear: k.rails.line_clear,
         mark_clear: k.rails.mark_clear,
-        back: if k.backkey.tab { BackKey::Tab } else { BackKey::Esc },
     }
 }

@@ -6,7 +6,6 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use game::game::{GuardState, InteractableKind, MissionStage, Verb};
-use game::guards::HandCarry;
 use game::ids::GuardId;
 use game::weapons::RifleAttachment;
 
@@ -50,7 +49,7 @@ fn clear_to(b: &Bot, from: V3, h: GuardId) -> bool {
     let d = [to[0] - p[0], to[1] - p[1], to[2] - p[2]];
     let len = game::m::hyp3(d[0], d[1], d[2]);
     let dir = [d[0] / len, d[1] / len, d[2] / len];
-    !b.world(|w| w.ray(p, dir, len - 0.3).is_some()) && !b.ask(|g| game::props::prop_system_raycast_here(g, p, dir, len - 0.3).is_some())
+    b.ask(|g| game::scene_collision::raycast(g, p, dir, len - 0.3).is_none() && game::props::prop_system_raycast(g, p, dir, len - 0.3).is_none())
 }
 /// he has stood still for `secs`
 async fn stood_still(b: &Bot, x: GuardId, secs: f64, max: f64) -> bool {
@@ -80,7 +79,7 @@ async fn deed(b: &Bot, id: &str) {
             let secs = b.ask(|g| g.k.handring.hold_secs);
             b.down(game::consts::INTERACT_KEY);
             b.hold(&[game::consts::INTERACT_KEY], secs + 0.1, || false).await;
-            if b.me(|p| p.sel.ring.is_none()) { b.fail(String::from("the interaction key kept down put no ring up")).await; }
+            if b.seen(|_, s| s.hand.sel.ring.is_none()) { b.fail(String::from("the interaction key kept down put no ring up")).await; }
             b.press("Digit5", 0).await;
             let t0 = b.t();
             b.wait(REACT).await;
@@ -125,13 +124,13 @@ async fn deed(b: &Bot, id: &str) {
             // his torch has come down for the smoke and he has clicked it off: still the hand's, under his shoulder, and dark
             let low = b.ask(|g| { let c = g.gd[a].ch; g.ch[c].bones.get(game::character::Bone::UpperArmR).map_or(-1.0, |u| u[1] - g.tab.light[g.gd[a].flashlight].pos[1]) });
             let carry = b.ask(|g| game::guards::hand_carry(g, a));
-            if b.scripted(a) && (carry != HandCarry::Torch || lit_up(a) || low < 0.2) { b.fail(format!("{} does not smoke with his torch low and switched off ({:?}, {}, {:.2} m under the shoulder)", b.called(a), carry, if lit_up(a) { "lit" } else { "out" }, low)).await; }
+            if b.scripted(a) && (carry != game::guards::InHand::Torch || lit_up(a) || low < 0.2) { b.fail(format!("{} does not smoke with his torch low and switched off ({:?}, {}, {:.2} m under the shoulder)", b.called(a), carry, if lit_up(a) { "lit" } else { "out" }, low)).await; }
             if !b.close_in(a, Some([25.5, 0.0, 17.75])).await { b.fail(format!("could not get behind the first man ({:.2} m off, he stands at {}, {:?})", flat(b.pos(), b.man_at(a)), at(b.man_at(a)), b.state(a))).await; }
             b.unseen(n0, a, "coming up behind him").await;
             if !b.scripted(a) { b.fail(format!("{} turned from his smoke as the player came up crouched ({:?})", b.called(a), b.state(a))).await; }
             let q = b.man_at(a);
             if !b.tap(InteractableKind::Guard, Verb::Grab, Some([q[0], 1.35, q[2]])).await { b.fail(String::from("no grab row behind the first man")).await; }
-            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding.as_ref().map(|h| h.phase)), b.called(a), b.state(a), flat(b.pos(), b.man_at(a)))).await; }
+            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding().map(|h| h.phase)), b.called(a), b.state(a), flat(b.pos(), b.man_at(a)))).await; }
             b.say(format!("  held {:.1} s after the whistle", b.t() - t0));
         }
         "ask" => {
@@ -190,11 +189,11 @@ async fn deed(b: &Bot, id: &str) {
             let w0 = blown();
             b.press("KeyV", 6).await;
             b.hold(&[game::consts::INTERACT_KEY], 0.6, || false).await;
-            let ring = b.me(|p| p.sel.open);
+            let ring = b.seen(|_, s| s.hand.sel.open);
             b.click(LEFT, Some(b.chest(h))).await;
             b.ticks(20).await;
             if ring || blown() > w0 { b.fail(format!("in the store {} (a whistle would bring the hall's man round to him)", if blown() > w0 { "he whistled" } else { "the interaction key held put the hand's ring up" })).await; }
-            if b.me(|p| p.sel.open) { b.press("Escape", 3).await; }
+            if b.seen(|_, s| s.hand.sel.open) { b.press(game::backkey::BACK_KEY, 3).await; }
             b.say(format!("  in the corner: lit {:.2}; {} {:?}, aware {:.2}, {:.1} m off", b.lit(), b.called(h), b.state(h), b.awareness(h), flat(b.pos(), b.man_at(h))));
             b.unseen(n0, h, "coming into the store").await;
         }

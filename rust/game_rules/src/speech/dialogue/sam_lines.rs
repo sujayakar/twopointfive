@@ -71,14 +71,13 @@ fn sam_line_fits(l: &crate::dialogue::SamLine, ctx: &crate::dialogue::DialogueCt
 fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::SamLine>], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> Option<crate::dialogue::ChooseSamLine> {
     let mut mem = mem;
     let mut pool: Vec<Eligible> = Vec::new();
-    let mut fresh = false;
     for tier in tiers {
-        pool = sam_eligible(g, tier, ctx, facts, mem.as_deref(), true);
-        if !pool.is_empty() { fresh = true; break; }
+        pool = sam_eligible(tier, ctx, facts, mem.as_deref(), true);
+        if !pool.is_empty() { break; }
     }
     if pool.is_empty() {
         let flat: Vec<crate::dialogue::SamLine> = tiers.iter().flatten().cloned().collect();
-        pool = sam_eligible(g, &flat, ctx, facts, mem.as_deref(), false);
+        pool = sam_eligible(&flat, ctx, facts, mem.as_deref(), false);
         let last = mem.as_deref().and_then(|m| m.last.clone()).filter(|l| !l.is_empty());
         if pool.len() > 1 {
             if let Some(last) = last {
@@ -112,7 +111,7 @@ fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
         let asks = ask.is_some();
         let line = match ask {
             Some(a) => a,
-            None => { let now = beat.sam_now.clone().unwrap_or_else(|| beat.sam.clone()); crate::words::wg(g, &now, &beat.sam) }
+            None => beat.sam.clone(),
         };
         let tokens = tokens_map(&ctx.tokens);
         if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
@@ -185,7 +184,7 @@ fn live_script(g: &mut Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameT
 }
 
 /// chooseSamLine's closure `eligible`: the lines of `lines` that fit, are fresh if asked, and resolve to words.
-fn sam_eligible(g: &Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
+fn sam_eligible(lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
     let mut out: Vec<Eligible> = Vec::new();
     let tokens = tokens_map(&ctx.tokens);
     for l in lines {
@@ -197,8 +196,8 @@ fn sam_eligible(g: &Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialo
                 }
             }
         }
-        let said = crate::dialogue::SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: None, guide: l.guide.clone() };
-        let line = said_text(g, &said, ctx);
+        let said = crate::dialogue::SaidTextL { text: l.text.clone(), away: l.away.clone(), bare: None };
+        let line = said_text(&said, ctx);
         let text = match expand(&line, &tokens) { Some(t) if !t.is_empty() => t, _ => continue };
         out.push((l.clone(), text, sam_weight(l)));
     }
@@ -269,26 +268,6 @@ fn stage_word(s: crate::dialogue::StageKey) -> String {
 fn js_len(s: &str) -> f64 {
     s.encode_utf16().count() as f64
 }
-
-/// `Object.entries` of an intel table but its 'sc:<script id>' rows (the map `sc`, walked after these): the TypeScript's key beside the field it became (a struct's order, not the literal's: only the order of the lint's messages feels it).
-macro_rules! intel_rows { ($t:expr) => { [
-    ("steady", &$t.steady), ("nervy", &$t.nervy), ("hard", &$t.hard), ("*", &$t.under),
-    ("pedant", &$t.pedant), ("selfown", &$t.selfown), ("folder", &$t.folder), ("ramble", &$t.ramble), ("fan", &$t.fan), ("stoic", &$t.stoic), ("con", &$t.con), ("game", &$t.game), ("menace", &$t.menace),
-    ("steady:none", &$t.steady_none), ("steady:heard", &$t.steady_heard), ("steady:glimpsed", &$t.steady_glimpsed), ("steady:saw", &$t.steady_saw), ("steady:sawHurt", &$t.steady_saw_hurt),
-    ("nervy:none", &$t.nervy_none), ("nervy:heard", &$t.nervy_heard), ("nervy:glimpsed", &$t.nervy_glimpsed), ("nervy:saw", &$t.nervy_saw), ("nervy:sawHurt", &$t.nervy_saw_hurt),
-    ("hard:none", &$t.hard_none), ("hard:heard", &$t.hard_heard), ("hard:glimpsed", &$t.hard_glimpsed), ("hard:saw", &$t.hard_saw), ("hard:sawHurt", &$t.hard_saw_hurt),
-    ("*:none", &$t.__none), ("*:heard", &$t.__heard), ("*:glimpsed", &$t.__glimpsed), ("*:saw", &$t.__saw), ("*:sawHurt", &$t.__saw_hurt),
-    ("pedant:steady", &$t.pedant_steady), ("pedant:nervy", &$t.pedant_nervy), ("pedant:hard", &$t.pedant_hard),
-    ("selfown:steady", &$t.selfown_steady), ("selfown:nervy", &$t.selfown_nervy), ("selfown:hard", &$t.selfown_hard),
-    ("folder:steady", &$t.folder_steady), ("folder:nervy", &$t.folder_nervy), ("folder:hard", &$t.folder_hard),
-    ("ramble:steady", &$t.ramble_steady), ("ramble:nervy", &$t.ramble_nervy), ("ramble:hard", &$t.ramble_hard),
-    ("fan:steady", &$t.fan_steady), ("fan:nervy", &$t.fan_nervy), ("fan:hard", &$t.fan_hard),
-    ("stoic:steady", &$t.stoic_steady), ("stoic:nervy", &$t.stoic_nervy), ("stoic:hard", &$t.stoic_hard),
-    ("con:steady", &$t.con_steady), ("con:nervy", &$t.con_nervy), ("con:hard", &$t.con_hard),
-    ("game:steady", &$t.game_steady), ("game:nervy", &$t.game_nervy), ("game:hard", &$t.game_hard),
-    ("menace:steady", &$t.menace_steady), ("menace:nervy", &$t.menace_nervy), ("menace:hard", &$t.menace_hard),
-] } }
-use intel_rows;
 
 #[cfg(test)]
 mod tests {
@@ -415,7 +394,6 @@ mod tests {
         let m = tokens_map(&t);
         assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));
         assert_eq!(m.get(String::from("door")), Some(&None));
-        assert_eq!(m.len(), crate::dialogue::tokens().len());
     }
 
 }

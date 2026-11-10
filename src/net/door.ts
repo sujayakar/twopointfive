@@ -48,7 +48,6 @@ function tryFrom(words: Record<string, string>): void {
 }
 
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
-  /** the whole game's word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
   sent: number; holds: number; skips: number; /** a message from the server waited this long in the page's own queue (ms, eased: a worse connection asked for) */ heldMs: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
   /** his own man ahead of the game (null: drawn where the game has him): records played, where they take him and how far that is from where the game has him
    *  (m), what is left of a correction (m), corrections so far past a centimetre and the longest (m), and what a look ahead costs (ms, eased) */
@@ -150,10 +149,10 @@ export class NetDoor {
   /** the look ahead, at the end of a page tick (foresee.ts) */
   look(walk: ((cmds: WireCmd[]) => Ahead) | null): Foreseen | null { return this.fore.look(walk, this.client, this.far); }
 
-  /** how the page is doing (`word`: the chained state word after the last tick) */
+  /** how the page is doing (`word`: the state word after the last tick) */
   state(word: string): NetPageState {
     const c = this.client, F = this.fore;
-    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.far, wordsOk: c.wordsOk, bad: c.bad, word, watchOk: c.watchOk, watchOff: c.watchOff, watchFirst: c.watchFirst, sent: c.sent, holds: c.holds, skips: c.skips, heldMs: this.heldMs,
+    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.far, wordsOk: c.wordsOk, bad: c.bad, word, sent: c.sent, holds: c.holds, skips: c.skips, heldMs: this.heldMs,
       margin: c.margin, lead: c.lead, pending: c.pending.length, broken: c.broken, bye: c.bye, refuse: this.refuse, outcome: c.outcome, walkMs: this.walkMs,
       ahead: F.last ? { n: F.last.n, pos: Array.from(F.last.to.pos), move: Math.hypot(F.last.by[0], F.last.by[1], F.last.by[2]), off: F.rest, fixes: F.fixes, fixMax: F.fixMax, ms: F.ms } : null };
   }

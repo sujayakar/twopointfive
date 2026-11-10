@@ -122,21 +122,6 @@ pub fn foe(g: &mut Game, gd: GuardId, to: Option<crate::ids::CharId>, by: &'stat
     if was.is_some() { crate::guards::burst_broken(g, gd); }
 }
 
-/// Why he is as aware as he is, in one line: his awareness and state, and who last raised him, lowered him and
-/// changed his state, with how long ago.
-fn why(g: &Game, gd: GuardId) -> String {
-    let man = &g.gd[gd];
-    let n = crate::control::state(g).and_then(|s| s.mind.get(gd)).copied().unwrap_or_default();
-    let mut s = format!("{}: {} at {:.2}", man.callsign, man.state.as_str(), man.awareness);
-    let ago = |t: f64| g.time - t;
-    if let Some(from) = n.state_from { s.push_str(&format!(" · {} since {:.1} s ago by {} (was {})", man.state.as_str(), ago(n.state.t), n.state.by, from.as_str())); }
-    if !n.up.by.is_empty() { s.push_str(&format!(" · raised to {:.2} by {} {:.1} s ago", n.up.to, n.up.by, ago(n.up.t))); }
-    if !n.down.by.is_empty() { s.push_str(&format!(" · lowered to {:.2} by {} {:.1} s ago", n.down.to, n.down.by, ago(n.down.t))); }
-    if !n.fix.by.is_empty() { s.push_str(&format!(" · {} by {} {:.1} s ago", if man.last_known.is_some() { "his fix" } else { "no fix" }, n.fix.by, ago(n.fix.t))); }
-    if !n.foe.by.is_empty() { s.push_str(&format!(" · {} by {} {:.1} s ago", if man.foe.is_some() { "his man" } else { "nobody to fight" }, n.foe.by, ago(n.foe.t))); }
-    s
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,20 +173,6 @@ mod tests {
         fix(&mut g, gd, None, "stood down");
         assert_eq!((g.gd[gd].last_known, g.gd[gd].fix_stamp), (None, 2));
         g.time = 8.0;
-        assert!(why(&g, gd).contains("no fix by stood down 1.0 s ago"), "{}", why(&g, gd));
     }
 
-    #[test]
-    fn a_change_of_state_says_who_and_what_from() {
-        let (mut g, gd) = one_man();
-        g.time = 2.0;
-        set_state(&mut g, gd, GuardState::Alert, "guards");
-        g.time = 3.0;
-        set_state(&mut g, gd, GuardState::Alert, "squad");
-        let n = *crate::control::state(&g).and_then(|s| s.mind.get(gd)).expect("he has a note");
-        assert_eq!((n.state.by, n.state.t, n.state_from), ("guards", 2.0, Some(GuardState::Patrol)));
-        g.time = 5.0;
-        let line = why(&g, gd);
-        assert!(line.contains("alert since 3.0 s ago by guards (was patrol)"), "{}", line);
-    }
 }

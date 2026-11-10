@@ -77,7 +77,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
     passes::thin_level(g, boxes, &doors);
     passes::bar_level(g, boxes);
-    if g.k.shapes.on { passes::shape_level(g, boxes); }
+    passes::shape_level(g, boxes);
     for &b in boxes.iter() { game::scene_boxes::box_world_add_static(g, b); }
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
@@ -121,11 +121,10 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, no skin
-    g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
+    g.engine.world = game::scene_boxes::box_world_new(&mut g, None);
     game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
-    let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
-    let mut loaded = level::load(&mut g, data, dressing, lived);
+    let mut loaded = level::load(&mut g, data);
     populate_host(&mut g, &mut loaded.boxes);
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     let men = game::standing::Men {
@@ -166,7 +165,7 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
 pub fn step(g: &mut Game, h: &Host, dt: f64) {
     game::game::game_update(g, dt, h.input, h.cam, h.canvas);
     let me = game::game::game_host_seat(g);
-    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     game::input::input_end_frame(g, h.input);

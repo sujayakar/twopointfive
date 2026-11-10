@@ -85,10 +85,10 @@ impl Default for Walk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WalkBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -160,10 +160,10 @@ impl Default for Lent {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LentBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -366,22 +366,6 @@ pub struct SquadthrowMod {
     pub states: JsMap<PlayerId, crate::squadthrow::State>,
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct SquadthrowStats {
-    pub thrown: i32,
-    pub frags: i32,
-    pub stuns: i32,
-    pub refused: i32,
-    pub walks: i32,
-    pub walked: i32,
-    pub gave_up: i32,
-    pub searches: i32,
-    pub arcs: i32,
-    pub ducks: i32,
-    pub cells: i32,
 }
 
 pub const THROW_PAGE: &str = "throw";

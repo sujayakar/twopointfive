@@ -32,14 +32,15 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `furnblast.rs` | furniture and a blast |
 | `frag/`, `he40.rs` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
 | `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
-| `shards/`, `shard_model.rs`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
+| `shards/`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
 | `fixture_break.rs`, `blast_look.rs`, `blast_feel/`, `dust_look.rs`, `floormess.rs` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
 | `marks.rs`, `render_decals/` | who asks for a mark, the list of marks |
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `falls.rs` for landings and
-litter; `slabs.rs` for a leaf in the air (`doors.md`). The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
+The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
+`rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
 
 ## How it works
@@ -95,10 +96,10 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 `apart_m` (`furn_break_row`); props are thrown inside `throw_m`. `FurnKMouth` clears a hole's way, whoever owns what stands there.
 `furniture_hung_goes` tears boards hung under a charge.
 
-**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and `fall_store_schedule` keeps the landing in the game's
-falls. `debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
+**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and the landing is kept in `g.falls`.
+`debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
 piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
-one he and a wall pin slides along it (`off_along_wall`).
+`way_off` slides it the shortest free way clear of all of him.
 
 **Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
@@ -150,7 +151,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`: `destruction.rs` (`ChaosK`), `wallbreak.rs` (`WallsK`), `wallcharge.rs` (`WallchargeK`, `WallshotK`,
-  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one; `?wallskin=0` leaves paint whole.
+  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one.
 - **What a stuff does:** its `MATERIALS` row in `src/scene/materials.ts` with the twin `does_of` reads (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.

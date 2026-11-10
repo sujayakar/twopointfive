@@ -5,9 +5,9 @@ use crate::game::Game;
 
 /// the menu's words and quick word, read as things are
 pub(super) fn read_words(g: &mut Game) {
-    let Some(m) = g.orders.menu.clone() else { return };
-    let mt = super::squad_orders_menu_target(g, &crate::seats::here(g)).unwrap();
+    let Some(m) = g.sets[g.seat].orders.menu.clone() else { return };
+    let mt = super::squad_orders_menu_target(&crate::seats::here(g)).unwrap();
     let words = m.rows.iter().map(|&d| super::squad_orders_label_of(g, d, &mt)).collect();
-    let quick = if m.page.is_none() { super::squad_orders_menu_quick(g, &m) } else { None };
-    if let Some(up) = g.orders.menu.as_mut() { up.words = words; up.quick = quick; }
+    let quick = super::squad_orders_menu_quick(g, &m);
+    if let Some(up) = g.sets[g.seat].orders.menu.as_mut() { up.words = words; up.quick = quick; }
 }

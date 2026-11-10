@@ -7,8 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
-/// `col.boxes[i]`'s centre, half sizes and yaw: g.col.boxes is Vec<BoxId> and no table holds the rows, while the index says g.col.boxes[id].c
-fn seam_box_c_h_yaw(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, seat: &crate::seats::SeatRef, m: &Option<&mut Legs>) -> V3 {
@@ -148,7 +146,7 @@ fn face_at(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Option<[f
     let knee = face_cast(g, ox, oz, n, KNEE_Y, COPLANAR)?;
     if face_cast(g, ox, oz, n, CHEST_Y, UPPER_TOL).is_none() && face_cast(g, ox, oz, n, HIGH_Y, UPPER_TOL).is_none() { return None; }
     let b = g.col.boxes[knee.index as usize];
-    let (c, h, yaw) = seam_box_c_h_yaw(g, b);
+    let (c, h, yaw) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let hw = m::abs(t[0] * cs - t[2] * sn) * h[0] + m::abs(t[0] * sn + t[2] * cs) * h[2];
     let uc = c[0] * t[0] + c[2] * t[2];
@@ -202,11 +200,11 @@ fn clear_of_props(g: &crate::game::Game, q: &mut V3, r: f64) -> bool {
         while i < g.props.props.len() {
             let pr = g.props.props[i];
             i += 1;
-            let (px, pz) = (crate::props::prop_x(g, pr), crate::props::prop_z(g, pr));
+            let (px, pz) = (g.tab.props_prop[pr].x, g.tab.props_prop[pr].z);
             let (radius, hx, hz) = (g.tab.props_prop[pr].radius, g.tab.props_prop[pr].hx, g.tab.props_prop[pr].hz);
             let (dx, dz) = (q[0] - px, q[2] - pz);
             if dx * dx + dz * dz > (radius + r) * (radius + r) { continue; }
-            let (cs, sn) = (crate::props::prop_cs(g, pr), crate::props::prop_sn(g, pr));
+            let (cs, sn) = (g.tab.props_prop[pr].cs, g.tab.props_prop[pr].sn);
             let (lx, lz) = (cs * dx - sn * dz, sn * dx + cs * dz);
             let (qx, qz) = (v3::clamp(lx, -hx, hx), v3::clamp(lz, -hz, hz));
             let (ex, ez) = (lx - qx, lz - qz);
@@ -242,7 +240,7 @@ fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mut cr
     let vel = g.ch[c].vel;
     let f = crate::character::character_forward(g, c);
     let sp = m::hyp2(vel[0], vel[2]);
-    let far = g.k.wallsnap.on && sp > 0.5;
+    let far = sp > 0.5;
     let reach = if far { m::max(WALL_REACH, g.k.wallsnap.reach_moving) } else { WALL_REACH };
     let mut cands: Vec<WallCand> = Vec::new();
     for k in 0..16 {
@@ -277,7 +275,7 @@ fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mut cr
         if m::abs(u - u0) > 0.35 { continue; }
         let mut q: V3 = [t[0] * u + n[0] * (cand.d + BODY_R + WALL_GAP), 0.0, t[2] * u + n[2] * (cand.d + BODY_R + WALL_GAP)];
         crate::scene_collision::collide_circle(g, &mut q, BODY_R, 0.2, y1, Some(4.0));
-        crate::scene_collision::clamp_to_world(g, &mut q, BODY_R);
+        crate::scene_collision::clamp_to_world(&mut q, BODY_R);
         let by_props = clear_of_props(g, &mut q, PROP_BODY_R + 0.02);
         let off = q[0] * n[0] + q[2] * n[2] - (cand.d + BODY_R + WALL_GAP);
         let uq = q[0] * t[0] + q[2] * t[2];
@@ -305,7 +303,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
     let c = g.pl[pl].ch;
     {
         let p = &g.pl[pl];
-        if p.wall.is_some() || g.cond[p.ch].down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() { return false; }
+        if p.wall.is_some() || g.cond[p.ch].down || p.tow.is_some() || p.planted() { return false; }
     }
     // one object in the TypeScript, two shapes in the skeleton: findWall's flag comes back to the caller's, whatever it found
     let mut fw = why.as_deref().map(|w| FindWallWhy { blocked: w.blocked });
@@ -328,43 +326,41 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
     g.pl[pl].wall = Some(WallHold {
         n, along: t, d: f.d, lo: f.lo, hi: f.hi, open_lo, open_hi,
         u: f.u, v: 0.0, side, off: 0.0, away_t: 0.0, settle: 0.0, from: v3::copy(g.ch[c].pos), block_dir: 0.0, block_t: 0.0, seated: false,
-        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch, serial,
+        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, serial,
         ..WallHold::default()
     });
-    let stack = g.k.wallsnap.on && crate::game::player_rifle_up(g, pl);
-    if g.k.wallsnap.on {
-        let away_yaw = m::atan2(n[0], n[2]);
-        let base = f.d + BODY_R + WALL_GAP;
-        let mut yd = v3::wrap_angle((if stack { away_yaw - side * m::PI / 2.0 } else { away_yaw }) - body_yaw);
-        if !stack && m::abs(yd) > m::PI - 0.3 { yd = side * m::abs(yd); }
-        let pos = g.ch[c].pos;
-        let take_t = crate::wallsnap::ws_take_secs(g, m::hyp2(t[0] * f.u + n[0] * base - pos[0], t[2] * f.u + n[2] * base - pos[2]), yd);
-        if let Some(w) = g.pl[pl].wall.as_mut() {
-            w.yaw0 = Some(body_yaw); w.yaw_d = Some(yd); w.hit_t = Some(0.0);
-            w.take_t = Some(take_t);
-        }
-        {
-            let b = &g.ch[c].bones;
-            let bone = |k: crate::character::Bone| b.get(k).copied();
-            let l = foot_at(bone(crate::character::Bone::FootL), bone(crate::character::Bone::ToeL));
-            let r = foot_at(bone(crate::character::Bone::FootR), bone(crate::character::Bone::ToeR));
-            let feet = match (l, r) {
-                (Some(l), Some(r)) => Some(crate::character::AnimWallTakeFeet {
-                    l: crate::character::AnimFootSpot { p: l.0, yaw: l.1 },
-                    r: crate::character::AnimFootSpot { p: r.0, yaw: r.1 },
-                }),
-                _ => None,
-            };
-            g.ch[c].anim.wall_take_feet = feet;
-        }
-        if stack {
-            if let Some(w) = g.pl[pl].wall.as_mut() {
-                w.kind = Some(WallHoldKind::Stack); w.up = Some(0.0); w.lean = Some(0.0); w.lean_want = Some(false); w.lean_dir = Some(side);
-                w.lean_dwell = Some(0.0); w.lean_out_t = Some(0.0); w.lean_off = Some(0.0);
-            }
-        }
-        g.m.player.ws_pend.delete(pl);
+    let stack = crate::game::player_rifle_up(g, pl);
+    let away_yaw = m::atan2(n[0], n[2]);
+    let base = f.d + BODY_R + WALL_GAP;
+    let mut yd = v3::wrap_angle((if stack { away_yaw - side * m::PI / 2.0 } else { away_yaw }) - body_yaw);
+    if !stack && m::abs(yd) > m::PI - 0.3 { yd = side * m::abs(yd); }
+    let pos = g.ch[c].pos;
+    let take_t = crate::wallsnap::ws_take_secs(g, m::hyp2(t[0] * f.u + n[0] * base - pos[0], t[2] * f.u + n[2] * base - pos[2]), yd);
+    if let Some(w) = g.pl[pl].wall.as_mut() {
+        w.yaw0 = Some(body_yaw); w.yaw_d = Some(yd); w.hit_t = Some(0.0);
+        w.take_t = take_t;
     }
+    {
+        let b = &g.ch[c].bones;
+        let bone = |k: crate::character::Bone| b.get(k).copied();
+        let l = foot_at(bone(crate::character::Bone::FootL), bone(crate::character::Bone::ToeL));
+        let r = foot_at(bone(crate::character::Bone::FootR), bone(crate::character::Bone::ToeR));
+        let feet = match (l, r) {
+            (Some(l), Some(r)) => Some(crate::character::AnimWallTakeFeet {
+                l: crate::character::AnimFootSpot { p: l.0, yaw: l.1 },
+                r: crate::character::AnimFootSpot { p: r.0, yaw: r.1 },
+            }),
+            _ => None,
+        };
+        g.ch[c].anim.wall_take_feet = feet;
+    }
+    if stack {
+        if let Some(w) = g.pl[pl].wall.as_mut() {
+            w.kind = Some(WallHoldKind::Stack); w.up = Some(0.0); w.lean = Some(0.0); w.lean_want = Some(false); w.lean_dir = Some(side);
+            w.lean_dwell = Some(0.0); w.lean_out_t = Some(0.0); w.lean_off = Some(0.0);
+        }
+    }
+    g.m.player.ws_pend.delete(pl);
     g.pl[pl].sprinting = false;
     g.pl[pl].backpedal = false;
     g.ch[c].anim.reverse = false;
@@ -375,7 +371,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
 }
 
 /// Step off the wall, by any way: stance and neck come off, no carry, what he had in his hand is back in it.
-pub(super) fn release_wall(g: &mut crate::game::Game) {
+pub(in crate::sam) fn release_wall(g: &mut crate::game::Game) {
     let pl = g.player;
     let Some(w) = g.pl[pl].wall else { return };
     let c = g.pl[pl].ch;
@@ -392,13 +388,13 @@ pub(super) fn release_wall(g: &mut crate::game::Game) {
     if w.drawn && !crate::condition::down(g, g.pl[pl].ch) { set_holstered(g, false, None); }
 }
 
-/// The player's own ways off the wall: releaseWall, and with the switch on his momentum kept.
+/// The player's own ways off the wall: releaseWall, and his momentum kept.
 pub(super) fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64, how: crate::player::WallStepOffHow) {
     let pl = g.player;
     let w = g.pl[pl].wall;
     release_wall(g);
     let Some(w) = w else { return };
-    if !g.k.wallsnap.on || crate::condition::down(g, g.pl[pl].ch) { return; }
+    if crate::condition::down(g, g.pl[pl].ch) { return; }
     let c = g.pl[pl].ch;
     g.ch[c].anim.stance_out = g.k.wallsnap.slow_out;
     wall_voice(g, w, false);
@@ -415,7 +411,6 @@ pub(super) fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64
 
 /// The hold's own two sounds, the player's ears only: `on` = his back has just landed; else he has stepped or been pushed off.
 pub(super) fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, on: bool) {
-    if !g.k.wallsnap.on || w.take_t.is_none() { return; }
     if !on && !(w.hit_t.unwrap_or(0.0) > 0.0) { return; }
     let gain = if on { g.k.wallsnap.voice_on } else { g.k.wallsnap.voice_off };
     if gain > 0.0 {
@@ -428,7 +423,7 @@ pub(super) fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, 
 /// Q pressed with no face in reach while he is on the move: remembered for WALLSNAP.buffer seconds.
 pub(super) fn wall_snap_later(g: &mut crate::game::Game, ml: f64, why: crate::player::WallSnapLaterWhy) -> bool {
     let pl = g.player;
-    if !g.k.wallsnap.on || ml <= 0.0 || g.k.wallsnap.buffer <= 0.0 || g.pl[pl].dragging.is_some() { return false; }
+    if ml <= 0.0 || g.k.wallsnap.buffer <= 0.0 || g.pl[pl].dragging().is_some() { return false; }
     let row = PlayerModWsPendValue { t: g.k.wallsnap.buffer, at: g.time, blocked: why.blocked };
     g.m.player.ws_pend.set(pl, row);
     true
@@ -518,18 +513,18 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let rifle_up = !holstered && crate::game::player_rifle_up(g, pl);
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
-    let busy = g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].charging.is_some()
-        || crate::game::player_choosing(g, pl) || g.pl[pl].sel.down_t >= 0.0 || g.pl[pl].throw_held || g.orders.menu.is_some()
+    let busy = g.pl[pl].hands_full()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].hand.throw_held || g.sets[g.seat].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
-    let alert_enemy = || g.guards.iter().any(|&h| g.gd[h].state == crate::game::GuardState::Alert && g.gd[h].team != crate::teams::Team::Operative && g.gd[h].team != crate::teams::Team::Civilian);
+    let alert_enemy = || g.guards.iter().any(|&h| g.gd[h].state == crate::game::GuardState::Alert && !g.team(h).ours() && g.team(h) != crate::teams::Team::Civilian);
     if busy || (gun_away && alert_enemy()) { g.m.player.ws_press.get_mut(pl).unwrap().t = 0.0; return; }
     let mut thing = false;
     let mut i = 0;
-    while i < g.nearby.len() {
-        if g.nearby[i].in_reach && g.m.player.press_things.has(String::from(g.nearby[i].kind.as_str())) {
-            let it = g.nearby[i].clone();
+    while i < g.sets[g.seat].nearby.len() {
+        if g.sets[g.seat].nearby[i].in_reach && g.m.player.press_things.has(String::from(g.sets[g.seat].nearby[i].kind.as_str())) {
+            let it = g.sets[g.seat].nearby[i].clone();
             if thing_dist(g, &it, face.at) < g.k.wallsnap.press_thing_at { thing = true; break; }
         }
         i += 1;
@@ -551,15 +546,10 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     }
 }
 
-/// Does the rifle, drawn on this hold, stack on it?
-pub(super) fn wall_stacks(g: &crate::game::Game, w: crate::player::WallHold) -> bool {
-    g.k.wallsnap.on && w.take_t.is_some()
-}
-
 /// The take's turn: his body comes round on the take's own clock. False = not taking.
 pub(super) fn wall_take_yaw(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     let w = g.pl[pl].wall.unwrap();
-    if w.take_t.is_none() || w.settle >= 1.0 { return false; }
+    if w.settle >= 1.0 { return false; }
     let e = crate::wallsnap::ws_ease(w.settle, g.k.wallsnap.yaw_pow);
     let c = g.pl[pl].ch;
     g.ch[c].body_yaw = v3::wrap_angle(w.yaw0.unwrap() + w.yaw_d.unwrap() * e);
@@ -567,23 +557,19 @@ pub(super) fn wall_take_yaw(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// Where the can he is aiming will come to rest: the arc's first touch bounces and rolls on. Read only.
-pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crate::player::ThrowRest> {
-    let g = world.shared();
-    let (from, v0) = match &g.pl[pl].throw_preview {
+pub fn throw_rest(g: &Game, pl: PlayerId) -> Option<crate::player::ThrowRest> {
+    let (from, v0) = match &g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
-    if !(g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
+    if !(g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
     let kind = g.pl[pl].held_kind;
-    let rest = crate::frag::rest_of_throw(world, kind, from, v0);
+    let rest = crate::frag::rest_of_throw(g, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
 
-/// Esc with the launcher's button down: the gesture is let go of, nothing sent.
-pub fn launch_cancel(g: &mut crate::game::Game) -> bool {
+/// The launcher's arc is let go of, nothing sent.
+pub fn launch_let_go(g: &mut crate::game::Game) {
     let pl = g.player;
-    if g.pl[pl].launch_held.is_none() { return false; }
-    g.pl[pl].launch_held = None;
-    g.pl[pl].throw_preview = None;
-    true
+    if g.pl[pl].launch_held.take().is_some() { g.sets[g.seat].hand.throw_preview = None; }
 }

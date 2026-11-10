@@ -27,7 +27,7 @@ fn legs_of(g: &Game, pl: PlayerId) -> crate::player::Legs {
     crate::player::Legs {
         char: crate::player::LegsChar { pos: c.pos, vel: c.vel, body_yaw: c.body_yaw, aim_yaw: c.aim_yaw },
         safe: p.safe, crouch: p.crouch, sprinting: p.sprinting, dash: p.dash, backpedal: p.backpedal, speed_sm: p.speed_sm, pace: p.pace,
-        dragging: p.dragging, haul: p.haul, shoved: p.shoved, shoved_t: p.shoved_t, shoved_from: p.shoved_from,
+        tow: p.tow, shoved: p.shoved, shoved_t: p.shoved_t, shoved_from: p.shoved_from,
         down: g.cond[p.ch].down, door_rip_until: p.door_rip_until, door_bash_at: p.door_bash_at, door_bash_lean: p.door_bash_lean,
     }
 }
@@ -58,9 +58,7 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 /// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
-    let busy = crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
-        || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
-        || g.pl[pl].door_move.is_some();
+    let busy = crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || g.pl[pl].wall.is_some() || g.pl[pl].tow.is_some() || g.pl[pl].door_move().is_some();
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
 }
 
@@ -68,7 +66,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
 fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
     let mut max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.tune.player_sprint }
-        else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }
+        else if let Some(t) = m.tow { if t.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }
         else if m.dash { g.k.crouchrun.pace }
         else { (if m.crouch { crouch_pace(g) } else { g.tune.player_walk }) * m.pace };
     crate::kitload::sam_load_pace(g, g.pl[seat.player].ch, max_speed, Some(m.sprinting))
@@ -106,7 +104,7 @@ pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> boo
 
 /// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.
 pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
-    let dragging = m.dragging.is_some();
+    let dragging = m.tow.is_some();
     if dragging { m.crouch = crate::hands::haul_crouch(g); }
     m.sprinting = want_sprint && !m.crouch;
     m.dash = want_sprint && m.crouch && !dragging && !stalk;
@@ -136,7 +134,7 @@ pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Opti
     let now = now.unwrap_or(g.time);
     let sprinting = match m { Some(m) => m.sprinting, None => g.pl[pl].sprinting };
     let pistol = g.pl[pl].pistol;
-    (crate::game::player_pistol_up(g, pl) && (now - g.pl[pl].last_fire_t < 1.6 || g.fa[pistol].light_on || g.pl[pl].aim_held))
+    (crate::game::player_pistol_up(g, pl) && (now - g.pl[pl].last_fire_t < 1.6 || g.fa[pistol].light_on || g.sets[crate::seats::seat_of_man(g, pl)].hand.aim_held))
         || crate::game::player_braced_at(g, pl, sprinting)
 }
 
@@ -185,7 +183,7 @@ pub fn hips_turn(m: &mut crate::player::Legs, speed: f64, aiming: bool, orbit: b
 /// updatePlayer's `draw`: an item chosen, in the hand or waiting for the step off a wall.
 fn draw(g: &mut Game, pl: PlayerId) {
     let on_plaster = match g.pl[pl].wall {
-        Some(w) => !(g.pl[pl].slot == crate::game::SlotKind::Rifle && wall_stacks(g, w)),
+        Some(w) => g.pl[pl].slot != crate::game::SlotKind::Rifle,
         None => false,
     };
     if on_plaster {
@@ -224,8 +222,8 @@ fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     use crate::handwork::SamWorkKind;
     let Some(at) = w.at else { return };
     match w.kind {
-        SamWorkKind::Wall => if let Some(s) = g.wall_charge.sam.as_mut() { s.at = at; },
-        SamWorkKind::Door => if let Some(s) = g.pl[pl].charging.as_mut() { s.at = at; },
+        SamWorkKind::Wall => if let Some(s) = g.pl[pl].wall_work_mut() { s.at = at; },
+        SamWorkKind::Door => if let Some(s) = g.pl[pl].charging_mut() { s.at = at; },
         SamWorkKind::Breaker | SamWorkKind::Drive | SamWorkKind::Switch => {}
     }
 }
@@ -239,6 +237,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let c = g.pl[pl].ch;
     let gun = g.pl[pl].pistol;
     g.pl[pl].pace = 1.0;
+    if !g.pl[pl].crouch && g.pl[pl].dragging().is_none() { g.pl[pl].knee = None; }   // (up again: how he went down is over)
     g.pl[pl].dash = false; g.ch[c].anim.dash = 0.0; g.ch[c].anim.run_ready = false;
     g.tab.camera[cam].peek_offset = None;
     crate::aimweight::aim_weigh_begin(g, pl);
@@ -259,13 +258,13 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     crate::bigkit::sam_big_tail_tick(g, dt);
     crate::workstow::sam_stow_tick(g, &mut stow_holster);
     if crate::condition::down(g, g.pl[pl].ch) {
-        if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); }
         if g.pl[pl].kit_was.is_some() || crate::character::anim_kit_busy(g, c) { crate::kitanim::kit_tick(g, None); }
         release_wall(g);
-        if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Shot); }
+        free_held(g, crate::player::FreeHeldWhy::Shot);
+        crate::deed::put_down(g, pl);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         let light = g.pl[pl].light; g.tab.light[light].enabled = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[g.seat].hand.throw_preview = None;
         g.ch[c].anim.lockpick = false; g.ch[c].anim.long_gun = false;
         crate::character::character_update(g, c, dt);
         crate::game::game_body_thud(g, c);
@@ -279,16 +278,18 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     g.pl[pl].equip_t = m::max(0.0, g.pl[pl].equip_t - dt);
     g.pl[pl].noise *= m::exp(-2.2 * dt);
     crate::samstun::sam_stun_pose(g);
-    if g.pl[pl].holding.is_some() && crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { free_held(g, crate::player::FreeHeldWhy::Shot); }
+    if g.pl[pl].holding().is_some() && crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { free_held(g, crate::player::FreeHeldWhy::Shot); }
     crate::whistle::whistle_key(g, input);
     crate::gunwall::gun_wall_stance(g, c, false);
     crate::gunwall::gun_wall_pose(g, c);
-    let beat_has_him = g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some();
-    if g.pl[pl].wanding.is_some() { nv_key(g, Some(input), dt); }
+    let work = crate::handwork::sam_work(g);
+    let held = g.pl[pl].holding().is_some();
+    let beat_has_him = g.pl[pl].planted() && work.is_none() && !held;
+    if g.pl[pl].wanding().is_some() { nv_key(g, Some(input), dt); }
     else if beat_has_him { nv_key(g, None, dt); }
-    if beat_has_him || g.pl[pl].holding.is_some() || crate::handwork::sam_work(g).is_some() || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { g.pl[pl].kit_owed = -1.0; }
-    if g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() { crate::kitanim::kit_tick(g, None); }
-    if g.pl[pl].takedown.is_some() {
+    if g.pl[pl].planted() || work.is_some() || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { g.pl[pl].kit_owed = -1.0; }
+    if beat_has_him || held { crate::kitanim::kit_tick(g, None); }
+    if g.pl[pl].takedown().is_some() {
         update_takedown(g, dt);
         g.ch[c].anim.speed = 0.0; g.ch[c].anim.upper = crate::character::UpperMode::None;
         arm_rifle(g, false, None);
@@ -296,11 +297,11 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let light = g.pl[pl].light; g.tab.light[light].enabled = false;
         return;
     }
-    if g.pl[pl].holding.is_some() { crate::kitanim::kit_tick(g, None); update_hold(g, dt, input, cam); return; }
-    if g.pl[pl].pending_throw.is_some() && (g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || crate::handwork::sam_work(g).is_some()) { throw_off(g, pl); }
-    if g.pl[pl].kick.is_some() { update_kick(g, dt); return; }
-    if g.pl[pl].picking.is_some() { update_picking(g, dt, input); return; }
-    if g.pl[pl].wanding.is_some() { update_wanding(g, dt); return; }
+    if held { update_hold(g, dt, input, cam); return; }
+    if g.pl[pl].planted() || crate::handwork::sam_work(g).is_some() { throw_off(g, pl); }
+    if g.pl[pl].kick().is_some() { update_kick(g, dt); return; }
+    if g.pl[pl].picking().is_some() { update_picking(g, dt); return; }
+    if g.pl[pl].wanding().is_some() { update_wanding(g, dt); return; }
     {
         let w = crate::handwork::sam_work(g);
         let on = match w { Some(w) => !(input_lmb_hit(g, input) && crate::handwork::sam_work_let_go(g, w)), None => false };
@@ -313,7 +314,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             return;
         }
     }
-    if g.pl[pl].coding.is_some() { update_coding_plant(g, dt); return; }
+    if g.pl[pl].coding().is_some() { update_coding_plant(g, dt); return; }
     g.ch[c].anim.lockpick = false;
     // the keys: the digits are KIT_ORDER's
     let was_in = crate::game::player_gun_in_hand(g, pl);
@@ -338,9 +339,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     {
         let e_key = hit(g, input, "KeyE");
         let away = !e_key && !crate::game::player_choosing(g, pl) && hit(g, input, crate::handslot::HANDSLOT_KEY);
-        if (e_key || away) && g.pl[pl].dragging.is_none() && g.pl[pl].takedown.is_none() {
+        if (e_key || away) && g.pl[pl].tow.is_none() {
             let plain_wall = match g.pl[pl].wall {
-                Some(w) => w.kind != Some(crate::player::WallHoldKind::Stack) && !(crate::game::player_rifle_sel(g, pl) && wall_stacks(g, w)),
+                Some(w) => w.kind != Some(crate::player::WallHoldKind::Stack) && !crate::game::player_rifle_sel(g, pl),
                 None => false,
             };
             if plain_wall {
@@ -416,22 +417,21 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
         crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
-    if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
-    if g.pl[pl].dragging.is_none() && (g.pl[pl].haul.is_some() || g.ch[c].anim.haul.is_some()) { g.pl[pl].haul = None; g.ch[c].anim.haul = None; }
+    if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; g.pl[pl].knee = None; }
+    if g.pl[pl].tow.is_none() { g.ch[c].anim.haul = None; }
     let stunned = crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
     let rooted = crate::samstun::sam_rooted(g, &crate::seats::here(g), None);
     let own_move = !rooted && (mx != 0.0 || mz != 0.0);
-    let mut hands_walk = false;
     {
         let own = own_move;
-        if let Some(hs) = crate::hands::hands_step(g, own, dt) { mx = hs[0]; mz = hs[1]; hands_walk = true; }
+        if let Some(hs) = crate::hands::hands_step(g, own, dt) { mx = hs[0]; mz = hs[1]; }
     }
     if rooted { mx = 0.0; mz = 0.0; }
     let ml = m::hyp2(mx, mz);
     if ml > 0.0 { mx /= ml; mz /= ml; }
-    if hit(g, input, "KeyC") && g.pl[pl].dragging.is_none() { own_legs(g, pl, |g, m| crouch_key(g, m)); }
+    if hit(g, input, "KeyC") && g.pl[pl].dragging().is_none() { own_legs(g, pl, |g, m| crouch_key(g, m)); }
     let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, None) && shift_down(g, input)
-        && (if g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() { own_move } else { ml > 0.0 && stalk.is_none() });
+        && (if g.pl[pl].haul().is_some() || g.pl[pl].door_move().is_some() { own_move } else { ml > 0.0 && stalk.is_none() });
     // back to the wall (Q)
     if rooted { /* folded: no reaching for a wall, no pushing off one */ }
     else if hit(g, input, "KeyQ") {
@@ -439,18 +439,18 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         else if !want_sprint {
             let mut why = crate::player::WallSnapWhy { blocked: false };
             if !wall_snap(g, cam, Some(&mut why), None) && !wall_snap_later(g, ml, crate::player::WallSnapLaterWhy { blocked: why.blocked }) {
-                let text = if g.pl[pl].dragging.is_some() { "your hands are full" } else if why.blocked { "can't get to that wall" } else { "no wall to take here" };
+                let text = if g.pl[pl].dragging().is_some() { "your hands are full" } else if why.blocked { "can't get to that wall" } else { "no wall to take here" };
                 crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), text);
             }
         }
     }
-    else if g.k.wallsnap.on { wall_snap_pending(g, dt, cam, want_sprint); }
-    if g.k.wallsnap.on && g.k.wallsnap.press && !rooted && stalk.is_none() && !crate::rails::rails_locks_wall(g) { wall_press(g, dt, input, cam, mx, mz, ml, want_sprint); }
+    else { wall_snap_pending(g, dt, cam, want_sprint); }
+    if g.k.wallsnap.press && !rooted && stalk.is_none() && !crate::rails::rails_locks_wall(g) { wall_press(g, dt, input, cam, mx, mz, ml, want_sprint); }
     let ran_on = wall_ran_on(g, pl, input);
     if g.pl[pl].wall.is_some() && want_sprint && !ran_on { wall_step_off(g, mx, mz, ml, crate::player::WallStepOffHow::Run); }
     let on_wall = g.pl[pl].wall.is_some() && move_on_wall(g, dt, cam, mx, mz, ml);
     if !on_wall {
-        if want_sprint && g.pl[pl].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
+        if want_sprint && g.pl[pl].dragging().is_some() { crate::game::game_toggle_drag(g, None); }
         own_legs(g, pl, |g, m| sprint_stance(g, m, want_sprint, stalk.is_some()));
         if g.pl[pl].sprinting && firearm_reloading(g, gun) { firearm_cancel_reload(g, gun); crate::character::anim_cancel_reload(g, c); }
         if g.pl[pl].sprinting && firearm_reloading(g, rifle) { firearm_cancel_reload(g, rifle); crate::character::anim_cancel_reload(g, c); }
@@ -461,26 +461,27 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let speed = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);
     // aim
-    let ap = match stalk { Some(s) => s.at, None => g.aim_point };
+    let ap = match stalk { Some(s) => s.at, None => g.sets[g.seat].aim_point };
     let to_aim: V3 = [ap[0] - g.ch[c].pos[0], 0.0, ap[2] - g.ch[c].pos[2]];
     let aim_dist = m::hyp2(to_aim[0], to_aim[2]);
-    g.pl[pl].aim_held = false;
+    g.sets[g.seat].hand.aim_held = false;
     let gun_up = crate::game::player_pistol_up(g, pl);
     let rifle_up = crate::game::player_rifle_up(g, pl);
-    let aiming = gun_raised(g, pl, None, None) && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && !crate::hands::door_move_lowers(g, &crate::seats::here(g))
+    let aiming = gun_raised(g, pl, None, None) && !g.pl[pl].sprinting && g.pl[pl].dragging().is_none() && !crate::hands::door_move_lowers(g, &crate::seats::here(g))
         && !(g.pl[pl].wall.map_or(false, |w| w.kind == Some(crate::player::WallHoldKind::Stack)) && !stack_up(g, dt, input));
-    if let Some(dragged) = g.pl[pl].dragging {
+    if let Some(mut tow) = g.pl[pl].tow {
         // dragging: the ragdoll's ankles pinned at his hands, facing its hips; torn out of his hands if it wedges
-        let body = g.gd[dragged].ch;
+        let body = g.gd[tow.who].ch;
         let rag = g.ch[body].ragdoll;
         let has_rag = rag.is_some();
         let hips = match g.ch[body].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[body].pos };
         let (dx, dz) = (hips[0] - g.ch[c].pos[0], hips[2] - g.ch[c].pos[2]);
         let d = m::hyp2(dx, dz);
-        if d > 1e-4 { g.pl[pl].drag_yaw = m::atan2(dx, dz); }
+        if d > 1e-4 { tow.yaw = m::atan2(dx, dz); }
         let strained = match rag { Some(r) => g.tab.ragdoll[r].strain > 0.2 || crate::hands::haul_slack(g), None => false };
-        g.pl[pl].drag_stuck_t = if strained { g.pl[pl].drag_stuck_t + dt } else { 0.0 };
-        if !has_rag || d > 2.2 || g.pl[pl].drag_stuck_t > 0.25 {
+        tow.stuck_t = if strained { tow.stuck_t + dt } else { 0.0 };
+        g.pl[pl].tow = Some(tow);
+        if !has_rag || d > 2.2 || tow.stuck_t > 0.25 {
             crate::game::game_toggle_drag(g, None);
         }
         else if crate::hands::haul_set_done(g) { release_body(g, Some(true)); }
@@ -500,8 +501,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 6.0, dt);
                 g.pl[pl].backpedal = false; g.ch[c].anim.reverse = false;
             } else {
-                let face_yaw = match crate::hands::haul_yaw(g, &crate::seats::here(g)) { Some(y) => y, None => g.pl[pl].drag_yaw };
-                let hauling = g.pl[pl].haul.is_some();
+                let face_yaw = match crate::hands::haul_yaw(g, &crate::seats::here(g)) { Some(y) => y, None => tow.yaw };
+                let hauling = g.pl[pl].haul().is_some();
                 g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, if hauling { -0.45 } else { -0.9 }, 6.0, dt);
                 if hauling {
                     let rel = v3::approach_angle(v3::wrap_angle(g.ch[c].aim_yaw - g.ch[c].body_yaw), 0.0, 8.0 * dt);
@@ -516,11 +517,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             }
             // a soft periodic scrape while the body is actually sliding
             let sleeping = g.tab.ragdoll[rag].sleeping;
-            let carried = g.pl[pl].haul.as_ref().map_or(false, |h| h.carry.is_some());
+            let carried = g.pl[pl].haul().map_or(false, |h| h.carry.is_some());
             if speed > 0.3 && !sleeping && !carried {
-                g.pl[pl].drag_noise_t -= dt;
-                if g.pl[pl].drag_noise_t <= 0.0 {
-                    g.pl[pl].drag_noise_t = 0.55;
+                let scrapes = match g.pl[pl].tow.as_mut() {
+                    Some(t) => { t.noise_t -= dt; t.noise_t <= 0.0 }
+                    None => false,
+                };
+                if scrapes {
+                    if let Some(t) = g.pl[pl].tow.as_mut() { t.noise_t = 0.55; }
                     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(hips), Some(0.25), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
                     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
                     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [hips[0], 0.0, hips[2]], time, loud: false, level: Some(0.22), who: Some(who), serial, ..Default::default() });
@@ -583,7 +587,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, pitch, 12.0, dt);
         // a leaf he is walking open is taken square on unless the gun is actually up
         let dp = g.ch[c].anim.door_push.clone();
-        let by_hand = g.pl[pl].door_move.is_some() && dp.as_ref().map_or(false, |d| d.w >= 1.0) && !aiming;
+        let by_hand = g.pl[pl].door_move().is_some() && dp.as_ref().map_or(false, |d| d.w >= 1.0) && !aiming;
         let into_door = if by_hand {
             let d = dp.as_ref().unwrap();
             Some(m::atan2(d.p[0] - g.ch[c].pos[0], d.p[2] - g.ch[c].pos[2]))
@@ -605,7 +609,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     {
         use crate::character::UpperMode;
-        g.ch[c].anim.upper = if g.pl[pl].sprinting || g.pl[pl].dragging.is_some() { UpperMode::None } else if aiming { UpperMode::Aim } else if gun_up { UpperMode::Relaxed } else { UpperMode::None };
+        g.ch[c].anim.upper = if g.pl[pl].sprinting || g.pl[pl].dragging().is_some() { UpperMode::None } else if aiming { UpperMode::Aim } else if gun_up { UpperMode::Relaxed } else { UpperMode::None };
     }
     g.ch[c].anim.run_ready = g.pl[pl].sprinting && gun_up && !g.ch[c].anim.hide_held_item;
     {
@@ -638,12 +642,11 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     crate::gunwall::gun_wall_stance(g, c, walled && !rifle_aim);
     // slot actions
-    if g.pl[pl].wall.is_some() && g.k.wallsnap.on { wall_snap_pose(g, dt, aiming); }
-    else if g.pl[pl].wall.map_or(false, |w| w.take_t.is_some()) { g.ch[c].anim.wall_take = -1.0; g.ch[c].anim.wall_hit = 0.0; g.ch[c].anim.stack_press = 0.0; g.ch[c].anim.stance_in = 0.0; }
+    if g.pl[pl].wall.is_some() { wall_snap_pose(g, dt, aiming); }
     g.arms[g.pl[pl].ch].fire_cd -= dt;
     let gun_def = g.fa[gun].def;
     if def_auto(g, gun_def).is_some() { let trigger = gun_up && input_lmb(g, input); crate::weapons::firearm_auto_idle(g, gun, dt, trigger); }
-    if gun_up && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() {
+    if gun_up && !g.pl[pl].sprinting && g.pl[pl].dragging().is_none() {
         let auto = firearm_automatic(g, gun);
         let pull = if auto { input_lmb(g, input) || input_lmb_hit(g, input) } else { input_lmb_hit(g, input) };
         if pull && !walled && g.arms[g.pl[pl].ch].fire_cd <= (if auto { 1e-4 } else { 0.0 }) && g.pl[pl].equip_t <= 0.0 {
@@ -662,8 +665,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             }
         }
         // right click with the pistol out: the OCP zaps the light the reticle has snapped to
-        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
-            let t = g.aim_target;
+        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.sets[g.seat].aim_target.is_none() && g.sets[g.seat].aim_guard.is_none())) {
+            let t = g.sets[g.seat].aim_target;
             crate::game::game_ocp(g, t);
         }
     }
@@ -696,7 +699,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let owed = walled && !stunned && launch_was.is_some() && crate::aimweight::aim_weigh_launch_keep(g, pl, dt);
         let mut held = None;
         if let Some(l) = load {
-            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
+            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.sets[g.seat].orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
                 if !crate::backkey::back_hit(g, input) && !hit(g, input, "Blur") && !hit(g, input, "Paused") { held = Some(l); }
             }
         }
@@ -758,15 +761,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         g.pl[pl].launch_held = held;
     }
     // throwables: preview while a canister slot is up; throw on LMB (QUICKTHROW is off on the page: no G gesture)
-    if g.pl[pl].throw_eaten && !down(g, input, "KeyG") && !hit(g, input, "KeyG") { g.pl[pl].throw_eaten = false; }
-    let prev_preview = g.pl[pl].throw_preview.take();
+    let prev_preview = g.sets[g.seat].hand.throw_preview.take();
     {
         let tk = g.pl[pl].throw_kind;
         let other = if tk == ThrowKind::Flash { ThrowKind::Smoke } else { ThrowKind::Flash };
         if crate::game::game_throw_count(g, &crate::seats::here(g), tk) <= 0.0 && crate::game::game_throw_count(g, &crate::seats::here(g), other) > 0.0 { g.pl[pl].throw_kind = other; }
     }
     let slot_kind: Option<ThrowKind> = if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) };
-    let (throw_held, held_kind, throw_kind) = (g.pl[pl].throw_held, g.pl[pl].held_kind, g.pl[pl].throw_kind);
+    let (throw_held, held_kind, throw_kind) = (g.sets[g.seat].hand.throw_held, g.pl[pl].held_kind, g.pl[pl].throw_kind);
     let kind: ThrowKind = if slot_kind == Some(ThrowKind::Frag) && throw_held {
         if held_kind != ThrowKind::Frag { held_kind } else if throw_kind == ThrowKind::Frag { ThrowKind::Smoke } else { throw_kind }
     } else {
@@ -777,7 +779,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let tp = ap;
         let origin = throw_origin(g, &crate::seats::here(g));
         let sol = crate::throwables::throwables_solve(g, origin, [tp[0], m::max(0.05, m::min(tp[1], 2.6)), tp[2]], None);
-        g.pl[pl].throw_preview = Some(sol.clone());
+        g.sets[g.seat].hand.throw_preview = Some(sol.clone());
         let hold_ok = match g.ch[c].anim.kit_hold {
             None => true,
             Some(Some(crate::character::KitItem::Can)) => g.pl[pl].kit_can == slot_kind,
@@ -785,12 +787,12 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         };
         if input_lmb_hit(g, input) && g.arms[g.pl[pl].ch].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.arms[g.pl[pl].ch].fire_cd = 0.6; }
     }
-    if g.pl[pl].throw_held && !g.pl[pl].sprinting && !stunned {
-        let sol = match g.pl[pl].throw_preview.clone() { Some(s) => Some(s), None => prev_preview };
+    if g.sets[g.seat].hand.throw_held && !g.pl[pl].sprinting && !stunned {
+        let sol = match g.sets[g.seat].hand.throw_preview.clone() { Some(s) => Some(s), None => prev_preview };
         if let Some(sol) = sol { do_throw(g, &sol, kind); }
     }
-    g.pl[pl].throw_held = false;
-    if g.pl[pl].throw_preview.is_none() && ring_preview.is_some() && !g.pl[pl].throw_held { g.pl[pl].throw_preview = ring_preview; }
+    g.sets[g.seat].hand.throw_held = false;
+    if g.sets[g.seat].hand.throw_preview.is_none() && ring_preview.is_some() && !g.sets[g.seat].hand.throw_held { g.sets[g.seat].hand.throw_preview = ring_preview; }
     if let Some(p) = g.pl[pl].pending_throw.as_mut() { p.t -= dt; }
     if g.pl[pl].pending_throw.as_ref().map_or(false, |p| p.t <= 0.0) {
         let (sol, k2) = { let p = g.pl[pl].pending_throw.as_ref().unwrap(); (p.sol.clone(), p.kind) };
@@ -802,7 +804,6 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             ThrowKind::Smoke => (crate::throwables::ItemKind::Smoke, None),
         };
         let it = crate::throwables::throwables_spawn(g, item_kind, origin, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse, who: Some(who), ..Default::default() }));
-        if k2 == ThrowKind::Frag { g.stats.frag.thrown += 1; }
         g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::CanHeard);
         crate::chronicle::chron_thrown(g, k2.as_str());
         g.pl[pl].pending_throw = None;

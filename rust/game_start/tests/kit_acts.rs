@@ -1,5 +1,4 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the highlight, at the door, again and again. Every row of every card is played here on the kinds of way a level has: a door, a set, a blank wall, an open gap, the quiet picture, the solo night. There is no other game to compare with: a row's marks are what it did, in the game's own books.
-use game::game::GuardState;
 use game::kitstage::{self, light::KIT_VIEW_LOOP as K, walk, KitStage};
 use game::out_events::OutEvent;
 use game_start::json::{self, Json};
@@ -155,7 +154,7 @@ fn every_row(level: &str, words: &str, what: &str) -> Vec<String> {
     kitstage::cards(&mut p.g, -1);
     p.run(1.0);
     let rows = game::kit::kit_rows(&mut p.g, 0.0);
-    for r in rows { let f = r.field.as_str(); assert!(game::kitstage::acts::thing(&p.g, f, 0).is_some() || matches!(f, "bare" | "cans"), "{}: Sam's tile {} has no row", what, f); }
+    for r in rows { let f = r.field.as_str(); assert!(game::kitstage::acts::thing(&p.g, f, 0).is_some(), "{}: Sam's tile {} has no row", what, f); }
     for &t in THINGS_SAM { play_row(&mut p, what, 0, t, &mut table); }
     if !st(&p).order.is_empty() {
         for &t in THINGS_MATE { play_row(&mut p, what, 1, t, &mut table); }
@@ -275,7 +274,7 @@ fn a_card_changed_is_written_live() {
     // counts: on the pools
     tell(&mut p, &mut |m| m.bangs = 3.0, 1, -1);
     p.frame();
-    assert!(p.g.door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.door_tools.bangs);
+    assert!(p.g.sets[p.g.seat].door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.sets[p.g.seat].door_tools.bangs);
     assert_eq!(st(&p).a.restages, serial, "no restage for any of it");
     // Sam's gun and counts
     kitstage::open(&mut p.g, 0, "weapon");

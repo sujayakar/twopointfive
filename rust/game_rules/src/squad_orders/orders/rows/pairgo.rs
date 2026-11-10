@@ -30,8 +30,7 @@ fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if !crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return Ok(()); }
-    let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
-    Err(Some(crate::words::wg(g, &now, &was)))
+    Err(Some(String::from("nobody's waiting on your mark.")))
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {

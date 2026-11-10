@@ -162,23 +162,12 @@ fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
-
-/// The length of a walk from `from` through `pts`.
-fn walk_len(from: V3, pts: &[V3]) -> f64 {
-    let (mut s, mut a) = (0.0, from);
-    for b in pts {
-        s += m::hyp2(b[0] - a[0], b[2] - a[2]);
-        a = *b;
-    }
-    s
-}
-
 /// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None.
 fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
     let p = g.ch[g.gd[gd].ch].pos;
     let berth_m = g.k.fireline.berth_m;
-    let mut penalty = |g: &mut Game, ix: f64, iz: f64| -> f64 {
+    let mut penalty = |g: &Game, ix: f64, iz: f64| -> f64 {
         if in_shape(g, l, (ix + 0.5) * cs, (iz + 0.5) * cs, Some(berth_m)) { 40.0 } else { 1.0 }
     };
     let path = crate::scene_collision::nav_grid_find_path(g, p, goal, Some(2500.0), Some(&mut penalty));
@@ -196,7 +185,7 @@ fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, g
         return None;
     }
     let across = walk_of(g, gd, goal).unwrap_or_else(|| vec![goal]);
-    if walk_len(p, &way) > walk_len(p, &across) + g.k.fireline.way_more_m {
+    if crate::places::walk_len(p, &way) > crate::places::walk_len(p, &across) + g.k.fireline.way_more_m {
         return None;
     }
     Some(way)
@@ -212,7 +201,6 @@ fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>)
 /// He stands: the wait's seconds counted as they pass.
 fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
-    g.stats.fireline.held_s += m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
     g.m.fireline.states.get_mut(gd).unwrap().t = t;
     FireLineFeet { goal: None, speed: 0.0 }
 }
@@ -270,7 +258,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     };
     let p = g.ch[g.gd[gd].ch].pos;
     if crate::roomfight::room_fight_busy(g, gd, 1.0) {
-        g.stats.fireline.fight += 1;
         end(g, gd, st.as_ref());
         return None;
     }
@@ -338,7 +325,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
         return None;
     }
     if in_enemy_line(g, gd) {
-        g.stats.fireline.enemy += 1;
         end(g, gd, st.as_ref());
         return None;
     }
@@ -347,7 +333,6 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
         None => {
             let s = St { since: g.time, t: g.time, way: None, look_t: -1e9, go_t: -1.0, said: false };
             g.m.fireline.states.set(gd, s.clone());
-            g.stats.fireline.holds += 1;
             s
         }
     };
@@ -362,14 +347,12 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     if g.time - s.since >= g.k.fireline.max_s + (place & 3) as f64 * 0.3 && g.time - s.look_t >= g.k.fireline.again_s {
         s.look_t = g.time;
         if let Some(way) = way_round(g, gd, l, goal) {
-            g.stats.fireline.ways += 1;
             let next = way[0];
             s.way = Some(way);
             s.t = g.time;
             g.m.fireline.states.set(gd, s);
             return Some(FireLineFeet { goal: Some(next), speed });
         }
-        g.stats.fireline.no_way += 1;
     }
     hold_row(g, gd, s)
 }

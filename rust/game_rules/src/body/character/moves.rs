@@ -30,38 +30,6 @@ pub(super) fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     t[c.fwd as usize] -= v3::clamp(gun_wall - 1.0, 0.0, 1.0) * wall.over;
 }
 
-/// Is the stagger's fold up: `too` is the figure's own foldToo.
-pub(super) fn fold_on(g: &Game, too: Option<bool>) -> bool {
-    let too = too.unwrap_or(false);
-    g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && too))
-}
-
-/// One part of the motion pass: on?
-pub(super) fn mv_on(g: &Game, k: crate::character::MvOnK) -> bool {
-    use crate::character::MvOnK;
-    let t = &g.k.moves;
-    let v = match k {
-        MvOnK::On => return true,
-        MvOnK::Reload => t.reload,
-        MvOnK::Fold => t.fold,
-        MvOnK::Steady => t.steady,
-        MvOnK::Toss => t.toss,
-        MvOnK::Entry => t.entry,
-        MvOnK::Flinch => t.flinch,
-        MvOnK::Fall => t.fall,
-        MvOnK::Squeeze => t.squeeze,
-        MvOnK::Snap => t.snap,
-        MvOnK::Recoil => t.recoil,
-        MvOnK::Dazzle => t.dazzle,
-        MvOnK::Gait => t.gait,
-        MvOnK::Bound => t.bound,
-        MvOnK::Clutch => t.clutch,
-        MvOnK::EntryEyes => t.entry_eyes,
-        MvOnK::SteadyRun => t.steady_run,
-    };
-    v > 0.5
-}
-
 /// A read of an ArrayLike of singles, as a double: past its end is undefined, which is NaN in the sum.
 fn q_at(a: &[f32], n: f64) -> f64 {
     a.get(n as usize).map_or(m::NAN, |x| *x as f64)
@@ -71,15 +39,6 @@ fn q_at(a: &[f32], n: f64) -> f64 {
 pub(super) fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
     let d = m::abs(q_at(a, i) * q_at(b, k) + q_at(a, i + s) * q_at(b, k + 1.0) + q_at(a, i + 2.0 * s) * q_at(b, k + 2.0) + q_at(a, i + 3.0 * s) * q_at(b, k + 3.0));
     if d >= 1.0 { 0.0 } else { 2.0 * m::acos(d) }
-}
-
-/// MOVES.entry's lane: something (dx, dz) from a man stands before his muzzle.
-pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool {
-    let l = MV2.dip.lane;
-    let fx = m::sin(gun_yaw);
-    let fz = m::cos(gun_yaw);
-    let along = dx * fx + dz * fz;
-    along > l[0] && along < l[1] && m::abs(dx * fz - dz * fx) < l[2]
 }
 
 #[cfg(test)]
@@ -118,22 +77,5 @@ mod tests {
         near(past[fwd], tl.fwd - 0.5 * wall.over, "half way past: half the draw back");
         near(run(9.0)[fwd], tl.fwd - wall.over, "no further than the most");
         near(past[pitch], tl.pitch, "the rest stands at the tuck");
-    }
-
-    #[test]
-    fn a_thing_stands_in_the_dip_lane_only_before_his_muzzle() {
-        let l = MV2.dip.lane;
-        let mid = (l[0] + l[1]) / 2.0;
-        for yaw in [0.0, 0.7, -1.5, 3.0] {
-            let (fx, fz) = (m::sin(yaw), m::cos(yaw));
-            // `along` metres down the gun, `off` to its side
-            let lane = |along: f64, off: f64| in_dip_lane(fx * along + fz * off, fz * along - fx * off, yaw);
-            assert!(lane(mid, 0.0), "yaw {yaw}: straight ahead");
-            assert!(lane(mid, l[2] * 0.9) && lane(mid, -l[2] * 0.9), "yaw {yaw}: to either side, inside its width");
-            assert!(!lane(mid, l[2] * 1.1) && !lane(mid, -l[2] * 1.1), "yaw {yaw}: out to the side");
-            assert!(!lane(l[0] - 0.01, 0.0), "yaw {yaw}: too near");
-            assert!(!lane(l[1] + 0.01, 0.0), "yaw {yaw}: too far");
-            assert!(!lane(-mid, 0.0), "yaw {yaw}: behind him");
-        }
     }
 }

@@ -11,7 +11,7 @@ fn man(p: &Play, seat: usize) -> PlayerId { game::cmd::seat_man(&p.g, p.g.seats[
 fn body(p: &Play, seat: usize) -> CharId { p.g.pl[man(p, seat)].ch }
 fn at(p: &Play, seat: usize) -> [f64; 3] { p.g.ch[body(p, seat)].pos }
 fn pair(p: &Play, seat: usize) -> Vec<GuardId> { game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[seat])) }
-fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
+fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
 /// a player's keys and trigger as he holds them, his view on his man, his cursor on a place of the world
 fn hands(p: &mut Play, seat: usize, keys: &[&str], on: Option<[f64; 3]>, fire: bool) {
     let s = p.g.seats[seat];
@@ -107,7 +107,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
             p.sam_unhurt();
             let theirs = p.g.tab.cmd_seat[p.g.seats[1]].cam;
             game::camera::follow_camera_rotate(&mut p.g, theirs, 1.3);
-            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
+            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.team(m) == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
             let (had, mut rows, mut rounds) = (up(&p), Vec::new(), 0.0f64);
             for k in 0..1500usize {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }
@@ -143,7 +143,7 @@ fn a_flash_of_either_player_is_the_teams() {
         let mut men = vec![(body(&p, 0), first, true, 0.0), (body(&p, 1), second, true, 0.0)];
         for m in p.mates() { men.push((p.g.gd[m].ch, first, false, 0.0)); }
         men.push((p.g.gd[foe].ch, first, false, 1.0));
-        for (c, seat, player, class) in men {
+        for (c, seat, _player, class) in men {
             let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
             let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
             game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], Some(&o)));
@@ -177,7 +177,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         let kept = game::savestate::control::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
         assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
-        p.g = kept.stands(p.g.sim);
+        p.g = kept.laid(p.g.sim);
         assert_eq!(p.words(), there, "seed {seed}: the moment put back is the moment");
         let again = play(&mut p, 100, 90);
         if let Some((k, parts)) = parting(&once, &again) { panic!("seed {seed}: from the moment put back the same hands part in {parts} at tick {k}"); }
@@ -191,4 +191,27 @@ fn a_rescue_refuses_two_players() {
     let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Rescue, squad: 2.0, level: None, seed: None });
     assert!(why.is_some_and(|w| !w.is_empty()) && p.g.rescue.result.is_none());
     for _ in 0..30 { frame(&mut p, 0); }
+}
+
+/// THE RULE: a restart in a game of two leaves each machine showing its own player, every hand checked as it was, and the one game the same on both.
+/// A FAILURE MEANS: the second player's page is on the first player's man from the first restart on, or nobody's hand is checked any more.
+#[test]
+fn after_a_restart_each_machine_still_shows_its_own() {
+    let run = |shown: usize| {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, seats: 2, dress: true, ..Default::default() });
+        for s in p.g.seats.clone() { p.g.tab.cmd_seat[s].remote = true; }
+        let seat = p.g.seats[shown];
+        game::seats::show_seat(&mut p.g, seat);
+        for _ in 0..90 { hands(&mut p, 0, &["KeyW"], None, false); hands(&mut p, 1, &["KeyD"], None, false); frame(&mut p, shown); }
+        game::seats::show_seat(&mut p.g, seat);
+        assert!(game::savestate::control::restart(&mut p.g));
+        assert_eq!((p.g.local_seat, p.g.seat, p.g.player), (Some(seat), seat, man(&p, shown)), "seat {shown} is shown");
+        assert!(p.g.seats.iter().all(|&s| p.g.tab.cmd_seat[s].remote), "a hand is no longer checked");
+        let first = p.words();
+        for _ in 0..60 { hands(&mut p, 1, &["KeyW"], None, false); frame(&mut p, shown); }
+        (first, p.words())
+    };
+    let (a, b) = (run(0), run(1));
+    let names = game_start::parts::names();
+    for (x, y) in [(&a.0, &b.0), (&a.1, &b.1)] { assert!(game_start::parts::differ(&names, x, y).is_empty(), "{:?}", game_start::parts::differ(&names, x, y)); }
 }

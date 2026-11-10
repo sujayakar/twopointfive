@@ -144,21 +144,21 @@ fn sample_on(c: &mut Chronicle, x: f64, z: f64, t: f64) {
 /// `g.chronicle.counts[count]++`
 fn bump_count(n: &mut ChronCounts, count: ChronCountKey) {
     match count {
-        ChronCountKey::Heard => n.heard += 1.0,
+        ChronCountKey::Heard => {},
         ChronCountKey::SeenUp => n.seen_up += 1.0,
         ChronCountKey::Esc1 => n.esc1 += 1.0,
         ChronCountKey::Esc2 => n.esc2 += 1.0,
         ChronCountKey::ShotsNearMen => n.shots_near_men += 1.0,
         ChronCountKey::LightsShot => n.lights_shot += 1.0,
         ChronCountKey::Ocps => n.ocps += 1.0,
-        ChronCountKey::Blackouts => n.blackouts += 1.0,
+        ChronCountKey::Blackouts => {},
         ChronCountKey::Kicked => n.kicked += 1.0,
         ChronCountKey::Picked => n.picked += 1.0,
         ChronCountKey::Intel => n.intel += 1.0,
         ChronCountKey::Thrown => n.thrown += 1.0,
         ChronCountKey::Grabs => n.grabs += 1.0,
-        ChronCountKey::Contacts => n.contacts += 1.0,
-        ChronCountKey::Radio => n.radio += 1.0,
+        ChronCountKey::Contacts => {},
+        ChronCountKey::Radio => {},
         ChronCountKey::CivSeen => n.civ_seen += 1.0,
         ChronCountKey::CivReported => n.civ_reported += 1.0,
         ChronCountKey::CivComplied => n.civ_complied += 1.0,
@@ -251,7 +251,7 @@ fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
 /// The first player's feet.
 fn pos_of(g: &mut crate::game::Game) -> V3 {
-    let man = crate::seats::man_here(g, &crate::seats::here(g));
+    let man = crate::seats::man_here(&crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }
 
@@ -322,7 +322,6 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
                     Some(at)
                 }
                 None => {
-                    g.chronicle.counts.heard += 1.0;
                     let data = row_data(vec![("what", tx(&what)), ("by", tx(&callsign)), ("k", num(1.0)), ("n", num(1.0)), ("react", tx(react))]);
                     let r = add_row(g, t, ChronKind::Heard, where_.unwrap_or(ev.pos), data);
                     if r.is_none() { chronicle_mark_heard_counted(g, key); }
@@ -412,10 +411,10 @@ pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option
 }
 
 /// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.
-pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<GuardId>, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
+pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, into_man: bool, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let t = now_of(g);
-    if hit_guard.is_some() { g.chronicle.counts.shots_near_men += 1.0; return None; }
+    if into_man { g.chronicle.counts.shots_near_men += 1.0; return None; }
     let mut near = false;
     let mut nearest = String::new();
     {
@@ -520,43 +519,23 @@ pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chroni
 }
 
 /// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').
-pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
-    chron_down_by(g, gd, how, line, None)
-}
-
-/// `chron_down`, with what did it when that is not the gun in the hand.
-pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
-    use crate::game::DownKind;
-    let l = line.unwrap_or("");
-    let callsign = man_callsign(g, gd);
+pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, with: crate::game::With) -> Option<crate::chronicle::ChronEvent> {
+    use crate::game::{DownKind, With};
+    let who = ("who", tx(&man_callsign(g, gd)));
     let p = man_pos(g, gd);
-    if how == DownKind::Shot {
-        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)); }
-        let weapon = if l.starts_with("knife") {
-            String::from("knife")
-        } else {
-            let man = crate::seats::man_here(g, &crate::seats::here(g));
+    if how != DownKind::Shot { return live_row(g, ChronKind::Ko, row_data(vec![who, ("method", tx(with.method(how)))]), Some(p)); }
+    let weapon = match with {
+        With::Blast(w) => return live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)),
+        With::Knife => String::from("knife"),
+        _ => {
+            let man = crate::seats::man_here(&crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
-                Some(gun) => {
-                    crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap())
-                }
+                Some(gun) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()),
                 None => String::from("a round"),
             }
-        };
-        return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", ChronEventDataValue::Text(weapon))]), Some(p));
-    }
-    let method = if how == DownKind::Choked {
-        "choke"
-    } else if l.starts_with("ring") {
-        "ring"
-    } else if l.contains("whip") {
-        "whip"
-    } else if l.ends_with("behind the wall when it went") {
-        "charge"
-    } else {
-        "takedown"
+        }
     };
-    live_row(g, ChronKind::Ko, row_data(vec![("who", tx(&callsign)), ("method", tx(method))]), Some(p))
+    live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", ChronEventDataValue::Text(weapon))]), Some(p))
 }
 
 /// A body discovered: whose, by whom, found breathing or not.
@@ -715,11 +694,11 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
     let r = rating_of(score);
     let badges = badges_of(g, &counts);
     let (state, line_state) = if counts.done {
-        (DebriefState::Done, SummaryLineState::Done)
+        (DebriefState::Done, crate::chronicle::DebriefState::Done)
     } else if counts.failed || counts.down {
-        (DebriefState::Down, SummaryLineState::Down)
+        (DebriefState::Down, crate::chronicle::DebriefState::Down)
     } else {
-        (DebriefState::Sofar, SummaryLineState::Sofar)
+        (DebriefState::Sofar, crate::chronicle::DebriefState::Sofar)
     };
     let scored = !crate::verdict::loud_row(g);
     let summary = summary_line(&counts, score, &r.word, &badges, line_state, Some(scored));
@@ -728,7 +707,7 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
 }
 
 /// The one line the 'copy summary' button puts on the clipboard.
-fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::SummaryLineState, scored: Option<bool>) -> String {
+fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::DebriefState, scored: Option<bool>) -> String {
     let c = c_2;
     let scored = scored.unwrap_or(true);
     let mut parts: Vec<String> = Vec::new();
@@ -754,7 +733,7 @@ fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badge
         let on: Vec<&str> = badges.iter().filter(|b| b.on).map(|b| b.name.as_str()).collect();
         if !on.is_empty() { parts.push(on.join(", ")); }
     }
-    if state != SummaryLineState::Done { parts.push(String::from(if state == SummaryLineState::Down { "went down" } else { "run so far" })); }
+    if state != crate::chronicle::DebriefState::Done { parts.push(String::from(if state == crate::chronicle::DebriefState::Down { "went down" } else { "run so far" })); }
     if c.sandbox { parts.push(String::from("sandbox flags on")); }
     format!("twopointsix — {}", parts.join(" · "))
 }
@@ -937,15 +916,15 @@ mod tests {
     fn the_summary_line_tells_the_run_and_only_a_scored_run_has_a_grade() {
         let b = crate::knobs::BadgeK::page();
         let a = blank_counts();
-        let so_far = summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), SummaryLineState::Sofar, None);
+        let so_far = summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), crate::chronicle::DebriefState::Sofar, None);
         assert!(so_far.starts_with("twopointsix — GHOST 100 · 00:00 · seen 0 · alarms 0") && so_far.contains("never seen") && so_far.ends_with("run so far"), "{}", so_far);
         assert!(!so_far.contains("civilians:") && !so_far.contains("sandbox"), "{}", so_far);
         let mut c = blank_counts();
         c.seen = 1.0; c.civ_seen = 1.0; c.civ_killed = 2.0; c.sandbox = true; c.done = true; c.elapsed = 692.9;
         let badges = badges_for(&b, &c);
-        let scored = summary_line(&c, 3.0, "ASSAULT", &badges, SummaryLineState::Done, None);
+        let scored = summary_line(&c, 3.0, "ASSAULT", &badges, crate::chronicle::DebriefState::Done, None);
         assert!(scored.starts_with("twopointsix — ASSAULT 3 · 11:32") && scored.contains("civilians: saw you 1 · told them 0 · KILLED 2") && scored.ends_with("sandbox flags on"), "{}", scored);
-        let not = summary_line(&c, 0.0, "ASSAULT", &badges, SummaryLineState::Done, Some(false));
+        let not = summary_line(&c, 0.0, "ASSAULT", &badges, crate::chronicle::DebriefState::Done, Some(false));
         assert!(not.starts_with("twopointsix — 11:32") && !not.contains("no kills"), "{}", not);
     }
 }

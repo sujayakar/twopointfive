@@ -12,5 +12,5 @@ every 48 from 5    order openClear door blue
 every 24 from 6    order go door all
 every 24 from 12   order fallIn sam all
 every 24 from 14   order stack door blue
-every 24 from 18   order bangClear door blue
+every 24 from 16   order bangClear door blue
 every 24 from 8    order shutDoor opendoor all

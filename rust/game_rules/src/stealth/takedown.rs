@@ -86,7 +86,6 @@ pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Opti
     let (at, at2) = marks(g, by, vic, style);
     let opts = BlowOpts { hit: None, end: None, live: Some(BlowLive { by, vic, style }), rise: Some(may_rise(g, by)), tail: Some(true) };
     crate::character::anim_blow(g, by, style, at, at2, Some(&opts));
-    g.stats.takedown.blows += 1;
     if style == BlowStyle::Mouth {
         crate::character::anim_taken(g, vic, TakenStyle::Arch, Some(0.12));
     } else if style == BlowStyle::Chop {

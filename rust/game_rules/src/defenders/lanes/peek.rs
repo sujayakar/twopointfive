@@ -56,14 +56,11 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     if crate::condition::down(g, g.gd[gd].ch) {
         peek_off(g, gd);
         if p.frag.is_some() {
-            s(g).stats.frag_lost += 1.0;
-            if let Some(l) = ll { let gap = g.k.lanes.frag_gap; let r = &mut g.tab.lanes_lane[l]; r.frag_at = m::max(r.frag_at, now + gap); let id = r.id; note(g, Some(gd), &format!("lane {}: the grenade cost him", js::num_str(id))); }
+            if let Some(l) = ll { let gap = g.k.lanes.frag_gap; let r = &mut g.tab.lanes_lane[l]; r.frag_at = m::max(r.frag_at, now + gap); }
         } else if p.fire.is_some() {
-            s(g).stats.pin_lost += 1.0;
-            if let Some(l) = ll { let rest = g.k.lanes.pin_rest; let r = &mut g.tab.lanes_lane[l]; r.pin_n = 0.0; r.pin_at = now + rest; let id = r.id; note(g, Some(gd), &format!("lane {}: firing down it cost him", js::num_str(id))); }
+            if let Some(l) = ll { let rest = g.k.lanes.pin_rest; let r = &mut g.tab.lanes_lane[l]; r.pin_n = 0.0; r.pin_at = now + rest; }
         } else {
-            s(g).stats.peek_lost += 1.0;
-            if let Some(l) = ll { let lost = g.k.lanes.peek_lost; let r = &mut g.tab.lanes_lane[l]; r.peek_n += 1.0; r.peek_at = now + lost; let id = r.id; note(g, Some(gd), &format!("lane {}: the look cost him", js::num_str(id))); }
+            if let Some(l) = ll { let lost = g.k.lanes.peek_lost; let r = &mut g.tab.lanes_lane[l]; r.peek_n += 1.0; r.peek_at = now + lost; }
         }
         return;
     }
@@ -128,10 +125,7 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         r.peek_n += 1.0;
         r.peek_at = now + m::min(most, gap * m::pow(2.0, r.peek_n));
         if r.guns.len() < 4 && r.guns.iter().all(|&q| flat(q, seen) > 1.5) { r.guns.push([seen[0], 0.0, seen[2]]); }   // (where they stand now: a place to stop is out of that one's sight too)
-        let next = r.peek_at - now;
-        s(g).stats.peek_there += 1.0;
         if now - s(g).said_t > 2.0 { s(g).said_t = now; say_net(g, gd, "they're still on it — stay back!"); }
-        note(g, Some(gd), &format!("lane {}: a look — still held, from ({}, {}); next no sooner than {} s", js::num_str(id), js::to_fixed(seen[0], 1), js::to_fixed(seen[2], 1), js::to_fixed(next, 0)));
         peek_back(g, gd, d);
         return;
     }
@@ -150,7 +144,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         let r = &mut g.tab.lanes_lane[l];
         r.peek_at = now + gap;
         r.peek_part = 0.0;
-        note(g, Some(gd), &format!("lane {}: a look — nobody in his view, but a mate has eyes on them there: back", js::num_str(id)));
         peek_back(g, gd, d);
         return;
     }
@@ -170,8 +163,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
             r.peek_part += 1.0;
             if r.peek_part < 2.0 || now - r.last_t < sure {
                 r.peek_at = now + gap;
-                let n = r.peek_part;
-                note(g, Some(gd), &format!("lane {}: a look — nobody in his view, but not all of where they stood ({}): back", js::num_str(id), js::num_str(n)));
                 peek_back(g, gd, d);
                 return;
             }
@@ -179,8 +170,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         peek_off(g, gd);
         {
             let st = s(g);
-            st.stats.peek_clear += 1.0;
-            st.stats.lapsed += 1.0;
             st.lanes.retain(|&x| x != l);
         }
         lanes_gone(g);
@@ -194,15 +183,12 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
                 if o != gd && fit(g, o) { mates.push(o); }
             }
         }
-        let (downs, last_t, from) = { let r = &g.tab.lanes_lane[l]; (r.downs, r.last_t, r.from) };   // (the row outlives its place on the list)
-        let tail = if !mates.is_empty() { format!(", {} move up together", mates.len() + 1) } else { String::from(", back to his place") };
-        note(g, Some(gd), &format!("lane {}: a look — nobody on it: clear{}", js::num_str(id), tail));
-        note(g, None, &format!("lane {}: forgotten ({} down, last round {} s ago)", js::num_str(id), js::num_str(downs), js::to_fixed(now - last_t, 0)));
+        let from = g.tab.lanes_lane[l].from;   // (the row outlives its place on the list)
         // with a mate held on it too they go on TOGETHER to where the guns were; a man by himself goes nowhere on it: back to his place
         if !mates.is_empty() {
             say_net(g, gd, "they're off it — move up, together!");
-            for &o in mates.iter() { if let Some(dm) = def_of(g, o) { crate::pressure::loose(g, dm, from); } }
-            crate::pressure::loose(g, d, from);
+            for &o in mates.iter() { if let Some(dm) = def_of(g, o) { crate::roomfight::loose_at(g, dm, from); } }
+            crate::roomfight::loose_at(g, d, from);
         } else {
             say_net(g, gd, "they've moved off it — eyes open!");
             peek_on(g, gd, p);
@@ -213,7 +199,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     }
     if done {
         g.tab.lanes_lane[l].peek_at = now + gap;
-        note(g, Some(gd), &format!("lane {}: no line down it from its mouth — back", js::num_str(id)));
         peek_back(g, gd, d);
     }
 }
@@ -297,8 +282,6 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if let Some(goal) = g.gd[gd].path_goal {
             crate::guards::go_to(g, gd, goal, Some(true));
             let Some(again) = ahead(g, &m, gd, false) else {
-                s(g).stats.rerouted += 1.0;
-                note(g, Some(gd), "a covered lane on his way: goes round it");
                 return false;
             };
             first = again;
@@ -362,13 +345,10 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     crate::guards::guard_set_path_goal(g, gd, None);
     let (p, now) = (pos_of(g, gd), g.time);
     held_on(g, gd, StateHeldValue { lane, t: now, look, aimed: true, at: p });
-    s(g).stats.held += 1.0;
     if now - s(g).said_t > 5.0 {
         s(g).said_t = now;
         crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None);
     }
-    let p = pos_of(g, gd);
-    note(g, Some(gd), &format!("lane {}: stops short of it at ({}, {})", js::num_str(lane), js::to_fixed(p[0], 1), js::to_fixed(p[2], 1)));
 }
 
 /// The first point of a known lane on the next `aheadM` of his way; `inside`: he stands in one, and None means his way leaves it for good within reach.
@@ -448,7 +428,6 @@ pub fn lane_door(g: &mut crate::game::Game, gd: GuardId, far: V3, centre: V3, ca
 /// The two questions tryEngage asked, asked again while the drill has him this side of the doorway. True = the drill lets him go.
 pub fn lane_drill(g: &mut crate::game::Game, gd: GuardId, at: V3, far: V3, centre: V3, can: bool) -> bool {
     if !lane_covers(g, gd, at) && !lane_door(g, gd, far, centre, can) { return false; }
-    note(g, Some(gd), "the doorway drill has him at a doorway in a lane his side knows of: it lets him go");
     true
 }
 
@@ -458,20 +437,11 @@ pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     !pushing(g, gd) && !flanking(g, gd) && lane_on(g, p, gd).is_some()
 }
 
-/// He stands in a lane his side knows is covered: no place to plant himself.
-pub(in crate::defenders) fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.m.lanes.states.is_none() || !live(g) || !mine(g, gd) { return false; }
-    if pushing(g, gd) || flanking(g, gd) { return false; }
-    if no_lanes(g) || close_fight(g, gd) { return false; }
-    let p = pos_of(g, gd);
-    lane_on(g, p, gd).is_some()
-}
-
 /// A new state, the counters kept; every man this file had is let go of first.
 pub fn lanes_reset(g: &mut crate::game::Game) {
     let Some(stats) = g.m.lanes.states.as_ref().map(|st| st.stats) else { return };
     let_go(g);
-    let mut st = fresh(g);
+    let mut st = fresh();
     st.stats = stats;
     g.m.lanes.states = Some(st);
 }

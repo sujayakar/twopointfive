@@ -30,13 +30,7 @@ fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
         Some(path) => path,
         None => return f64::INFINITY,
     };
-    let mut l = 0.0;
-    let mut at = p;
-    for w in path {
-        l += flat(at, w);
-        at = w;
-    }
-    l + flat(at, q)
+    crate::places::walk_len(p, &path) + flat(path.last().copied().unwrap_or(p), q)
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route.
@@ -109,7 +103,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
+        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.team(gd) != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
             continue;
         }
         if !g.m.opening.born.has(gd) {

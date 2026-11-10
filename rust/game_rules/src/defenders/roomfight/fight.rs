@@ -8,14 +8,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Hard's drilled defenders: where the mission's men are drilled, under the press's own switch.
+/// Hard's drilled defenders: where the mission's men are drilled, on Hard.
 pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
     g.k.pressure.on && g.k.pressure.drilled && g.staged.facts.drilled
 }
 
 /// × the seconds a stun canister doubles this man over: DRILLED.shaken for a drilled defender, 1 for anybody else.
 pub fn drilled_k(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.gd[gd].team == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
+    if g.team(gd) == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
 }
 
 /// Distance on the floor.
@@ -102,7 +102,7 @@ pub(super) fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 
 }
 
 /// A new room fight: the class's field initialisers; its constructor only keeps `g`.
-pub fn room_fight_new(g: &crate::game::Game) -> crate::roomfight::RoomFight {
+pub fn room_fight_new() -> crate::roomfight::RoomFight {
     crate::roomfight::RoomFight::blank()
 }
 
@@ -113,13 +113,8 @@ pub fn room_fight_on(g: &crate::game::Game) -> bool {
     !(show_runs && !crate::rails::rails_live(g))
 }
 
-/// A line of the fight's log, kept to its last few hundred.
-pub(in crate::defenders) fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: String::from(what) });
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
-}
+/// What a man or a squad of the fight has just done, for who would say it aloud (cues.rs). It lasts the tick.
+pub fn tell_news(g: &mut crate::game::Game, news: News) { g.fight.news.push(news); }
 
 /// `this.ops.find(o => o.gd === gd)`: the first operative's row for this man.
 pub(super) fn op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> {
@@ -204,7 +199,7 @@ pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightO
 /// Once a frame from Game.update.
 pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     if !room_fight_on(g) { if g.fight.live { room_fight_stop(g); } return; }
-    let any = g.guards.iter().any(|&x| g.gd[x].unit.is_some() && (g.gd[x].team == crate::teams::Team::Hostile || g.gd[x].team == crate::teams::Team::Operative));
+    let any = g.guards.iter().any(|&x| g.team(x) == crate::teams::Team::Hostile || g.team(x).ours());
     if !any { if g.fight.live { room_fight_stop(g); } return; }
     g.fight.live = true;
     for i in 0..g.seats.len() {
@@ -222,8 +217,8 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while gi < g.guards.len() {
         let x = g.guards[gi]; gi += 1;
         if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
-        if g.gd[x].team == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
-        else if g.gd[x].team == crate::teams::Team::Operative && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
+        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
+        else if g.team(x).ours() && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
     let mut ei = 0;
     while ei < g.events.len() {
@@ -239,7 +234,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
             if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, pos_of(g, og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
         }
         if e.kind == crate::director::EventKind::GuardShot {
-            if let Some(w) = guard_by_char_id(g, e.who) { if g.gd[w].team == crate::teams::Team::Hostile {
+            if let Some(w) = guard_by_char_id(g, e.who) { if g.team(w) == crate::teams::Team::Hostile {
                 let both = e.from.is_some() && e.to.is_some();
                 g.fight.reports.push(RoomFightReportsItem { by: w, t: e.time, from: if both { e.from } else { None }, to: if both { e.to } else { None } });
             } }
@@ -252,14 +247,14 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     }
     let mut i = 0;
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
-    crate::pressure::press_tick(g, dt);
+    crate::pressure::press_tick(g);
     crate::laststand::last_stand_tick(g);
 }
 
 /// an enemy's footfall: heard by a teammate as any man hears a step
 pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
     let wc = g.gd[w].ch;
     let (mut near, mut nd, mut from): (Option<RoomfightOpId>, f64, V3) = (None, f64::INFINITY, e.pos);
     for i in 0..g.fight.ops.len() {
@@ -278,10 +273,10 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
 /// a door noise under an enemy's hand, kept for cue()
 pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile && g.gd[w].unit.is_some() => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
     let (mut dr, mut dm): (Option<DoorId>, f64) = (None, 1.6);
     for x in g.doors.list.clone() { let q = flat(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
-    let dr = match dr { Some(x) if !crate::doors::door_off(g, x) => x, _ => return };
+    let dr = match dr { Some(x) if !g.dr[x].leaf.off => x, _ => return };
     let fc = g.dr[dr].frame_centre;
     let (mut free, mut post, mut post_at, mut post_turn): (i32, Option<RoomfightOpId>, Option<V3>, f64) = (0, None, None, f64::INFINITY);
     for i in 0..g.fight.ops.len() {
@@ -317,7 +312,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
-        if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+        if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
         if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::control::set_hold(g, gd, true, "roomfight"); }
         crate::control::set_pinned(g, gd, pinned0, "roomfight");
     }
@@ -330,7 +325,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
 /// a fresh staging.
 pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
-    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::default();
+    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.stats = RoomFightStats::default();
 }
 
 #[cfg(test)]
@@ -345,8 +340,9 @@ mod tests {
     fn man(g: &mut Game, state: crate::game::GuardState) -> GuardId {
         let c = crate::character::man_new(g, crate::character::Character::blank());
         g.cond[c].down = state == crate::game::GuardState::Dead;
-        let mut m = crate::game::Guard::new(c, String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), JsSet::new(), FirearmId(0), [0.0; 3], 0.0, GameTalkId(0));
-        m.state = state;
+        g.ch[c].team = crate::teams::Team::Ours;
+        let mut m = crate::game::Guard::blank();
+        (m.ch, m.state, m.foe) = (c, state, None);
         g.gd.push(m)
     }
 

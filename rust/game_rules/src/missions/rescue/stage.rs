@@ -123,11 +123,11 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
 }
 
 /// A new one: the field initialisers, and its three helpers.
-pub fn rescue_new(g: &crate::game::Game) -> crate::rescue::Rescue {
+pub fn rescue_new() -> crate::rescue::Rescue {
     let mut r = Rescue::blank();
-    r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
-    r.ending = crate::rescueend::rescue_end_new(g);
-    r.flush = crate::rescueflush::rescue_flush_new(g);
+    r.flow = Box::new(crate::rescueflow::rescue_flow_new());
+    r.ending = crate::rescueend::rescue_end_new();
+    r.flush = crate::rescueflush::rescue_flush_new();
     r
 }
 
@@ -286,7 +286,7 @@ fn rescue_clear_cast(g: &mut crate::game::Game) {
     let mut men = g.staged.team.clone();
     men.extend_from_slice(&g.staged.foes);
     for gd in men {
-        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Patrol)); }
+        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
         crate::guards::despawn_unit(g, gd);
     }
     let hostages = g.staged.captives.clone();
@@ -312,25 +312,25 @@ fn rescue_marks(g: &mut crate::game::Game, on: bool) {
     let side = s.as_ref().and_then(|s| s.side.clone());
     let fd = match &s { Some(s) => crate::doors::doors_by_name(g, &s.room.door), None => None };
     let sd = match &side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
-    let mut i = g.orders.door_marks.len();
+    let mut i = g.sets[g.seat].orders.door_marks.len();
     while i > 0 {
         i -= 1;
-        if sd == Some(g.orders.door_marks[i].door) { g.orders.door_marks.remove(i); }
+        if sd == Some(g.sets[g.seat].orders.door_marks[i].door) { g.sets[g.seat].orders.door_marks.remove(i); }
     }
-    g.door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
-    g.door_tools.lights = None;
+    g.sets[g.seat].door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
+    g.sets[g.seat].door_tools.lights = None;
     if !on { return; }
     if let (Some(sd), Some(x)) = (sd, side.as_ref()) {
         if let Some(stack) = x.stack.as_ref().filter(|st| !st.is_empty()) {
             let face = rescue_face_of(g, sd);
-            g.orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
+            g.sets[g.seat].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
                 door: sd, side: face, stack: stack.clone(),
                 standoff: x.standoff.clone().unwrap_or_else(|| stack.clone()),
             });
         }
     }
-    if let Some(d) = fd { g.door_tools.linked.push(d); }
-    if let Some(d) = sd { g.door_tools.linked.push(d); }
+    if let Some(d) = fd { g.sets[g.seat].door_tools.linked.push(d); }
+    if let Some(d) = sd { g.sets[g.seat].door_tools.linked.push(d); }
 }
 
 /// The face of one of the room's doors that is not the room's.
@@ -372,19 +372,19 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     // the hostage room's door shut on its latch (the night leaves it ajar)
     let Some(d) = crate::doors::doors_by_name(g, &s.room.door) else { return Err(String::from("Cannot read properties of undefined (reading 'reset')")); };
     crate::doors::door_reset(g, d);
-    crate::doors::door_set_angle(g, d, 0.0);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_latched(g, d, true);
-    crate::doors::door_set_closing(g, d, false);
+    g.dr[d].leaf.angle = 0.0;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.latched = true;
+    g.dr[d].leaf.closing = false;
     // the side door from the server room: shut, and for the scenario not locked
     let side = match &s.side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
     if let Some(sd) = side {
         crate::doors::door_reset(g, sd);
-        crate::doors::door_set_angle(g, sd, 0.0);
-        crate::doors::door_set_vel(g, sd, 0.0);
-        crate::doors::door_set_latched(g, sd, true);
-        crate::doors::door_set_closing(g, sd, false);
-        crate::doors::door_set_locked(g, sd, false);
+        g.dr[sd].leaf.angle = 0.0;
+        g.dr[sd].leaf.vel = 0.0;
+        g.dr[sd].leaf.latched = true;
+        g.dr[sd].leaf.closing = false;
+        g.dr[sd].leaf.locked = false;
     }
     // the opposition: captor, door man, roamers
     let mut cast: Vec<CastRow> = vec![CastRow { role: Role::Captor, in_room: true, mark: s.captor, name: String::from("Captor") }];
@@ -415,7 +415,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         crate::control::set_pinned(g, gd, true, "rescue");
         g.staged.foes.push(gd);
         g.rescue.defs.set(gd, Def {
-            role: c.role, in_room: c.in_room, mark: DefMark { pos: c.mark.pos, aim_at: c.mark.aim_at },
+            role: c.role, in_room: c.in_room, mark: DefMark { aim_at: c.mark.aim_at },
             learned: f64::NAN, set: false, saw_foe: false, released: false,
             burst: crate::nightbreach::BlindBurst { until: -1.0, n: 0.0, next: 0.0 },
             k: k as f64, crew: DefCrew::Empty, look: None, spot: None, noise0: None,
@@ -459,13 +459,13 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             Some(r) => {
                 let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
                 crate::guards::UnitOpts {
-                    team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
+                    team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
                     budget: Some(m::max(crate::nightbreach::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
                 }
             }
             None => crate::guards::UnitOpts {
-                team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
+                team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
                 budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::default()
             },
@@ -486,11 +486,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             None => match ["Marta", "Owen", "Ines"].get(i) { Some(n) => String::from(*n), None => format!("Hostage {}", i + 1) },
         };
         let kind = match cd {
-            Some(c) => match c.kind {
-                crate::scene_level::CivilianDefKind::Cleaner => crate::civilians::SpawnHostageDefKind::Cleaner,
-                crate::scene_level::CivilianDefKind::Worker => crate::civilians::SpawnHostageDefKind::Worker,
-            },
-            None => if i == 0 { crate::civilians::SpawnHostageDefKind::Cleaner } else { crate::civilians::SpawnHostageDefKind::Worker },
+            Some(c) => c.kind,
+            None => if i == 0 { crate::scene_level::CivilianDefKind::Cleaner } else { crate::scene_level::CivilianDefKind::Worker },
         };
         let tint = match cd {
             Some(c) => c.tint,
@@ -504,7 +501,6 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.resolve = 0.0;
     g.rescue.resolve_secs = m::max(5.0, g.k.rescue.resolve_secs);
     g.rescue.t0 = f64::NAN;
-    g.rescue.door_orders = 0.0;
     g.rescue.blind_rounds = 0.0;
     g.rescue.result = None;
     (g.staged.over, g.staged.saved) = (false, None);
@@ -519,7 +515,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.noise_serial = None;
     g.rescue.alarm_at = f64::NAN;
     g.rescue.way = None;
-    g.rescue.last_order = g.orders.log.last().map(|o| o.serial);
+    g.rescue.last_order = g.sets[g.seat].orders.log.last().map(|o| o.serial);
     let pl = g.player;
     let sam_at = g.k.rescue.sam_at;
     crate::game::game_teleport_player(g, v3::copy(sam_at));

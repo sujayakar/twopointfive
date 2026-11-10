@@ -92,12 +92,11 @@ pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> b
 
 /// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither.
 pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
-    let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
-    let team = g.gd[gd].team;
-    if shooter == team {
-        return crate::guards::ShotRelation::Own;
-    }
-    if crate::teams::is_hostile(g, team, shooter) { crate::guards::ShotRelation::Threat } else { crate::guards::ShotRelation::None }
+    use crate::guards::ShotRelation;
+    let team = g.team(gd);
+    if e.kind == crate::director::EventKind::Shot { return if team.theirs() { ShotRelation::Threat } else { ShotRelation::None }; }   // (a player's round is no news to his squad)
+    let shooter = crate::teams::team_of_id(g, e.who.unwrap_or(-1.0));
+    if shooter == team { ShotRelation::Own } else if team.foe_of(shooter) { ShotRelation::Threat } else { ShotRelation::None }
 }
 
 /// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has.
@@ -121,26 +120,19 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     }
     let player_pos = g.ch[g.pl[g.player].ch].pos;
     if let Some(s) = sh {
-        let who = g.gd[s].foe.or_else(|| if g.gd[s].team == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
+        let who = g.gd[s].foe.or_else(|| if g.team(s) == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
             if let Some(i) = crate::picture::idea_of(g, s, who) {
-                let tr = g.ch[who].pos;
                 let mine = crate::picture::idea_of(g, gd, who);
-                g.stats.picture.shot_placed += 1;
-                if m::hyp2(i.at[0] - tr[0], i.at[2] - tr[2]) >= 1.0 {
-                    g.stats.picture.shot_off += 1;
-                }
                 let own = match &mine {
                     Some(mi) => mi.t >= i.t,
                     None => false,
                 };
                 if g.gd[gd].last_known.is_some() && (i.lost || own || g.gd[gd].fix_t >= i.t) {
-                    g.stats.picture.shot_kept += 1;
                     return None;
                 }
                 let w = if own { mine.unwrap() } else { i };
                 if own {
-                    g.stats.picture.shot_kept += 1;
                 } else if !i.lost {
                     let age = g.time - i.t;
                     crate::picture::picture_tell(g, gd, who, i.at, Some(age));
@@ -152,7 +144,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
         }
     }
     let s = match sh {
-        Some(s) if g.gd[s].team != crate::teams::Team::Guard => s,
+        Some(s) if g.team(s) != crate::teams::Team::Guard => s,
         _ => return Some(player_pos),
     };
     if let Some(fc) = g.gd[s].foe {
@@ -167,19 +159,13 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
 /// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id.
 pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     if crate::seats::is_man_id(g, who) {
-        crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+        team.theirs()
     } else {
         let of = crate::teams::team_of_id(g, who);
-        crate::teams::is_hostile(g, team, of)
+        team.foe_of(of)
     }
-}
-
-/// A restart: the fresh man's start is not a step from where the last one fell.
-pub fn ground_fresh(g: &mut crate::game::Game) {
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.guards.ground_track.delete(view);
 }
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
@@ -279,7 +265,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.gd[o].team != g.gd[gd].team {
+        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.team(o) != g.team(gd) {
             continue;
         }
         if crate::guards::body_seen(g, gd, o, None) {
@@ -322,7 +308,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     };
     if g.tune.body_light {
         let seen_at = if at_feet { m::min(dist, g.k.body_light.near_m) } else { dist };
-        if !crate::guards::body_lit(g, gd, o, eye, seen_at) {
+        if !crate::guards::body_lit(g, o, eye, seen_at) {
             return false;
         }
     }
@@ -356,7 +342,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 }
 
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
-pub(super) fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
+pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];

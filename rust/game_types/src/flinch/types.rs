@@ -18,7 +18,5 @@ pub struct FlinchMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct FlinchStats {
-    pub ducks: i32,
-    pub broke: i32,
     pub last: Option<Vec<f64>>,
 }

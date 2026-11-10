@@ -24,7 +24,50 @@ pub struct DoorDef {
     pub steel: Option<bool>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+/// A LEAF AS IT STANDS: what the doors' step moves and the rules write
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
+pub struct Leaf {
+    pub angle: f64,
+    pub vel: f64,
+    /// the same two as the step last left them: what differs was written by a rule since
+    pub angle_seen: f64,
+    pub vel_seen: f64,
+    /// the side it was dealt to open into, and the one a clear way gives it (0: none)
+    pub dealt: f64,
+    pub clearway: f64,
+    pub latched: bool,
+    pub closing: bool,
+    /// come to rest in its frame by a body's sweep
+    pub swept: bool,
+    /// off its hinges: to whoever reads a door, a doorway
+    pub off: bool,
+    pub locked: bool,
+    pub lock_broken: bool,
+    pub picking: bool,
+    pub noticed: bool,
+    #[is(true)] pub creak_armed: bool,
+    #[is(-1.0)] pub last_who: f64,
+    /// the men passing through it, a bit a man
+    pub passers: i32,
+    pub drive: Option<DoorDrive>,
+    /// the rounds' work it has taken
+    pub shot: f64,
+    pub pick: f64,
+    pub pick_n: f64,
+    pub pick_idle: f64,
+    pub pick_clock: f64,
+    #[is(-1000.0)] pub noticed_t: f64,
+    #[is(10.0)] pub quiet_t: f64,
+    #[is(10.0)] pub since_bash: f64,
+    pub rattle_t: f64,
+    #[is(-100.0)] pub guard_t: f64,
+    pub pull_t: f64,
+    pub press_t: f64,
+    pub solid_t: f64,
+    #[is(10.0)] pub open_t: f64,
+}
+/// how it is being driven, and by whom
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorDrive {
     pub who: f64,
     pub dir: f64,
@@ -39,7 +82,7 @@ pub struct DoorDrive {
     pub hit: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DoorDriveKind {
     #[default] Boot,
     Body,
@@ -117,8 +160,9 @@ pub struct DoorEvent {
     pub level: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SlabSeen {
+/// a leaf off its hinges
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Slab {
     pub p: [f64; 3],
     pub v: [f64; 3],
     pub a: f64,
@@ -132,7 +176,8 @@ pub struct SlabSeen {
     pub t: f64,
     pub ang: f64,
     pub bits: Option<[f64; 4]>,
-    pub wedged: Option<f64>,
+    /// the clock a wedged slab is not searched for before
+    pub wedged: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -144,14 +189,13 @@ pub struct Door {
     pub thick: f64,
     pub min_auth: f64,
     pub max_auth: f64,
-    #[is(DriveColsId(0))] pub drive_cols: DriveColsId,
+    #[is(crate::doors::Leaf::blank())] pub leaf: crate::doors::Leaf,
     #[is(BoxId(0))] pub box_: BoxId,
     pub handle_boxes: Vec<BoxId>,
-    #[is(SlabRowId(0))] pub slab_row: SlabRowId,
+    pub slab: Option<crate::doors::Slab>,
     pub leaf_h: V3,
     pub leaf_marks: Option<Vec<crate::scene_markings::MarkingDef>>,
     pub def: crate::doors::DoorDef,
-    #[is([0.0, 1.0, 0.0])] pub pos_at: V3,
     pub frame_centre: V3,
 }
 
@@ -168,46 +212,13 @@ pub struct DoorSwing {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Doors {
     pub list: Vec<DoorId>,
-    pub slabs: crate::sim_slabshome::SlabStore,
     pub rounds: f64,
-    #[is(crate::doors::DoorsSolids { carried: 0.0, stopped: 0.0, passed: 0.0, reached: 0.0, held: 0.0, aside: 0.0 })] pub solids: crate::doors::DoorsSolids,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct DoorsSolids {
-    pub carried: f64,
-    pub stopped: f64,
-    pub passed: f64,
-    pub reached: f64,
-    pub held: f64,
-    pub aside: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SIDEKICK {
     pub past: f64,
     pub out: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum SlabRowGK {
-    T,
-    A,
-    Vx,
-    Vz,
-    By,
-    Px,
-    Py,
-    Pz,
-    Vy,
-    Spin,
-    Wedged,
-    Tip,
-    TipV,
-    Ang,
-    Bw,
-    Bl,
-    Bx,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -241,12 +252,6 @@ pub struct DoorsFrameCoords {
     pub off: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorsTornCause {
-    Blast,
-    Fire,
-}
-
 pub const DOORS_PICK_SECS: f64 = 4.2;
 
 pub const DOORS_PICK_LEVEL: f64 = 0.16;
@@ -271,8 +276,6 @@ pub const SHUT_HOME: f64 = 0.05;
 
 pub const FLOOR_KEY: &str = "floor";
 
-pub const MAN_SIDE: f64 = 3.0;
-
 pub const MAN_FOLDED: f64 = 4.0;
 
 pub const MAN_BRACED: f64 = 8.0;
@@ -281,6 +284,10 @@ pub const MAN_CALM: f64 = 16.0;
 
 pub const MAN_HELD: f64 = 32.0;
 
-pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
-
 pub const FLOOR_Y0: f64 = 0.2;
+
+/// doors a level can have
+pub const DOOR_CAP: usize = 64;
+
+/// contacts a step of the doors is sized for: how many men a game can hold is worked out of it
+pub const DOOR_CONTACTS: f64 = 256.0;

@@ -20,7 +20,7 @@ pub struct StickyLivePl {
 
 #[derive(Clone, Debug, Default)]
 pub struct StickyRowsRowOver {
-    pub kind: Option<crate::stickycam::StickyRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -37,37 +37,10 @@ pub struct StickyRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum StickyRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StickycamMod {
     pub visit: Option<f64>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct StickycamStats {
-    pub fired: i32,
-    pub stuck: i32,
-    pub dropped: i32,
-    pub retired: i32,
-    pub blind: i32,
-    pub taken: i32,
 }
 
 pub const EYE_ID: f64 = 200.0;

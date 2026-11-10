@@ -57,7 +57,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
 /// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
     let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
-    anim_layer(g, c, |s, an, k| ::sim::layers::act_pose(s, an, clip, w, dt, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
 }
 
 // ---- MOVES
@@ -111,7 +111,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let pist = an.rl_b.hand && !long_gun && an.reload_t >= 0.0;
         let (throw_t, strike_t, no_tool) = (an.throw_t, an.strike_t, an.big_tool.is_none());
         let want = if live
-            && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
+            && (pist || (long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
             let rate = MV2.reload.rate;
@@ -134,7 +134,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let (hurt, aim, clutch_in, off_hand) = (an.hurt, an.upper_w.aim, an.clutch, an.throw_t < 0.0 && an.strike_t < 0.0 && an.big_tool.is_none());
         let reload_shown = an.mv2_shown.reload;
         let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * MV2.hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
-        let want = if mv_on(g, MvOnK::Clutch) && reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
+        let want = if reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.cl.x != 0.0 {
             let rate = MV2.clutch.rate;
             let cl = &mut g.ch[c].anim.mv2.cl;
@@ -152,10 +152,9 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
     }
     // ---- kept down: a hostage's wrists behind her back, hands on the head for somebody told to stay where he is
     {
-        let mv_bound = mv_on(g, MvOnK::Bound);
         let an = &mut g.ch[c].anim;
         let bound = an.bound;
-        let on = mv_bound && bound != 0.0 && !an.long_gun;
+        let on = bound != 0.0 && !an.long_gun;
         let want = if on && (an.mv2.bd.x < 0.02 || an.mv2.bd_k == bound) { 1.0 } else { 0.0 };
         if on && an.mv2.bd.x < 0.02 { an.mv2.bd_k = bound; }
         if want > 0.0 || an.mv2.bd.x != 0.0 {
@@ -190,7 +189,7 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
     use crate::gunreload::{FeedBeat, FeedMarks, FeedPath};
     let an = &g.ch[c].anim;
     let (feed, b, n, port, back) = (an.feed, an.rl_b, an.feed_n, an.feed_port, an.reload_back);
-    let own = feed.and_then(|model| crate::gunreload::feed_path(g, model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
+    let own = feed.and_then(|model| crate::gunreload::feed_path(model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
     let marks = |r: &Mv2ReloadBox| FeedMarks { mag: r.mag, strip: r.strip, handle: r.handle, pull: r.pull, hf: r.hf, hb: r.hb };
     let (marks, keys) = match own {
         Some(FeedPath::Arm1(p)) => (p.marks.unwrap_or(marks(&MV2.reload.box_)), None),
@@ -207,10 +206,10 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
 fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
 /// The support hand pressed to his ribs.
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::clutch_arm(s, an, w, k)); }
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
 
 /// A figure kept down: wrists behind the back, or hands on the head.
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -225,8 +224,7 @@ pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 
 /// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis.
 fn anim_mv_post_body(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
-    let fold = fold_on(g, Some(g.ch[c].anim.fold_too));
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, fold, k));
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, k));
 }
 
 /// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss.
@@ -435,7 +433,7 @@ pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_i
     let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
-    anim_layer(g, c, |s, an, k| ::sim::layers::stand_pose(s, an, &cycle, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
 }
 
 /// The crouch laid over the stand pose.

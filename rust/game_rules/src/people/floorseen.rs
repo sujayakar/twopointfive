@@ -16,7 +16,7 @@ pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
 pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     let (cs, w, h, t) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h, g.time);
     let frame = {
-        let s = g.door_tools.seen.as_mut().unwrap();
+        let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
         s.frame = s.frame + 1.0;
         s.frame
     };
@@ -25,7 +25,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
         let gd = men[j];
         if crate::condition::down(g, g.gd[gd].ch) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
         {
-            let s = g.door_tools.seen.as_mut().unwrap();
+            let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
             if !s.at.has(gd) || !s.asked.has(gd) {
                 let cells = (w * h) as usize;
                 s.at.set(gd, vec![NEVER as f32; cells]);
@@ -47,7 +47,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
         let z0 = m::floor(eye[2] / cs);
         // The man's two arrays are held out of the record for the walk: the line test takes `g`, and nothing it reaches reads this record.
         let (mut a, mut q) = {
-            let s = g.door_tools.seen.as_mut().unwrap();
+            let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
             (core::mem::take(s.at.get_mut(gd).unwrap()), core::mem::take(s.asked.get_mut(gd).unwrap()))
         };
         let (x_lo, x_hi) = (m::max(0.0, x0 - n), m::min(w - 1.0, x0 + n));
@@ -74,14 +74,14 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
                 if !crate::scene_collision::segment_blocked(g, eye, [px, 1.0, pz], None, None, None) { a[i] = t as f32; }
             }
         }
-        let s = g.door_tools.seen.as_mut().unwrap();
+        let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
         *s.at.get_mut(gd).unwrap() = a;
         *s.asked.get_mut(gd).unwrap() = q;
     }
 }
 
 /// How many of `cells` (nav cell indices) `gd` has seen since game time `since`.
-pub fn floor_seen_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64], since: f64) -> f64 {
+pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64], since: f64) -> f64 {
     let s = seat.door_tools.seen.as_ref().unwrap();
     let Some(a) = s.at.get(gd) else { return 0.0 };
     let mut n = 0.0;
@@ -107,11 +107,11 @@ mod tests {
         let gd = GuardId(0);
         let mut seen = floor_seen_new(&mut g);
         seen.at.set(gd, vec![0.1f64 as f32, 0.7f64 as f32, NEVER as f32]);
-        g.door_tools.seen = Some(seen);
+        g.sets[g.seat].door_tools.seen = Some(seen);
         // 0.1 rounds up and counts at 0.1; 0.7 rounds down and does not count at 0.7; cell 2 was never seen; cell 9 is past the array.
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.1), 2.0);
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.7), 0.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.1), 2.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.7), 0.0);
         // A man with no record has seen nothing.
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), GuardId(1), &[0.0], -2e9), 0.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), GuardId(1), &[0.0], -2e9), 0.0);
     }
 }

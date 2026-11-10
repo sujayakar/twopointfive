@@ -46,7 +46,7 @@ export function buildGraphics(panel: Panel, engine: Engine, smoke: SmokeSystem, 
   const adv = (f: () => void) => { const was = panel.advanced; panel.advanced = true; try { f(); } finally { panel.advanced = was; } };
   const W_ = window as unknown as { __readout?: { on: boolean; set(v: boolean): void }; __taa?: { summary?: () => string }; __sharp?: { summary?: () => string }; __sdfrig?: { summary?: () => string }; __dn?: { summary: () => string }; __quality?: { motionCalm?: boolean; applyMotionCalm(v: boolean): void }; __save?: { load: (k: string) => string | null } };
   // the status strip: preset · internal → output resolution · fps · gpu ∪ — the read-out's headline numbers, so the panel is worth having up with the read-out off
-  panel.setStatus(() => { const h = hud?.(); return `${tierWords(quality.label)}${quality.adaptive ? '' : ' · fixed'} · ${engine.width}×${engine.height}${S.taau ? `→${engine.outHeight}p` : ''} ×${S.renderScale.toFixed(2)}${h ? ` · ${h.fps.toFixed(0)} fps · gpu ∪ ${h.union.toFixed(1)} ms` : ''} · ${engine.lights.activeCount} lights`; });
+  panel.setStatus(() => { engine.timer.ask(); const h = hud?.(); return `${tierWords(quality.label)}${quality.adaptive ? '' : ' · fixed'} · ${engine.width}×${engine.height}${S.taau ? `→${engine.outHeight}p` : ''} ×${S.renderScale.toFixed(2)}${h ? ` · ${h.fps.toFixed(0)} fps · gpu ∪ ${h.union.toFixed(1)} ms` : ''} · ${engine.lights.activeCount} lights`; });
 
   // ================================================================ FRAME: quality + resolution, debug view, TAAU, sharp direct + GBAA, the look, the camera
   panel.system(SYS.frame);

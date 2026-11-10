@@ -6,13 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The pool of thrown things, over the game's block `st`.
-pub fn throwables_new(g: &crate::game::Game, st: Option<crate::Opaque>) -> crate::throwables::Throwables {
-    let mut t = Throwables::blank();
-    t.store = crate::sim_itemshome::item_store_new(g, st.unwrap_or_default());
-    t
-}
-
 /// Closest hit among statics + door leaves and props.
 fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
@@ -21,29 +14,6 @@ fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
         return Some(ThrowablesRay { t: ph.t });
     }
     st.map(|s| ThrowablesRay { t: s.t })
-}
-
-/// The rows are the list: where `items` is not the list the rows were last laid in, what left it leaves with its numbers and the rows are laid anew.
-fn throwables_sync(g: &mut crate::game::Game) {
-    if g.items.items == g.items.rows {
-        return;
-    }
-    let list = g.items.items.clone();
-    let mut rows: Vec<Vec<f64>> = Vec::with_capacity(list.len());
-    for &it in &list {
-        rows.push(item_numbers(g, it));
-    }
-    let was = g.items.rows.clone();
-    for &it in &was {
-        if !list.contains(&it) {
-            item_leave(g, it);
-        }
-    }
-    crate::sim_itemshome::item_store_lay(g, &rows);
-    for (k, &it) in list.iter().enumerate() {
-        item_stand(g, it, k as f64);
-    }
-    g.items.rows = list;
 }
 
 /// A new thing in the pool: the dice in the order they were always drawn and before anything is given up for it; `opts` over the rest.
@@ -65,10 +35,9 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
     let heading = v3::yaw_of(vel);
     let serial = g.items.serial;
     g.items.serial += 1.0;
-    throwables_sync(g);
     // FIFO cap, before the push so the new item can never evict itself; a can on its fuse or venting is never evicted: spent things first, then the oldest
-    // dropped gun or torch, and past the columns' rows the oldest whatever it is.
-    if g.items.items.len() as f64 >= crate::sim_itemshome::ITEM_CAP {
+    // dropped gun or torch, and past ITEM_ROWS the oldest whatever it is.
+    if g.items.items.len() as f64 >= ITEM_CAP {
         let mut i = first_spent(g);
         if i.is_none() {
             i = first_not_live(g);
@@ -76,44 +45,39 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
         if let Some(i) = i {
             throwables_remove_at(g, i as f64);
         }
-        if g.items.items.len() as f64 >= crate::sim_itemshome::ITEM_ROWS {
+        if g.items.items.len() as f64 >= ITEM_ROWS {
             throwables_remove_at(g, 0.0);
         }
     }
-    let row = crate::sim_itemshome::item_store_enter(g);
-    let it = item_new(g, row);
-    // every field through its own setter: the row is written
-    item_set_kind(g, it, opts.kind.unwrap_or(kind));
-    item_set_pos(g, it, opts.pos.unwrap_or(pos));
-    item_set_vel(g, it, opts.vel.unwrap_or(vel));
-    item_set_radius(g, it, opts.radius.unwrap_or(radius));
-    item_set_restitution(g, it, opts.restitution.unwrap_or(restitution));
-    item_set_friction(g, it, opts.friction.unwrap_or(friction));
-    item_set_yaw(g, it, opts.yaw.unwrap_or(yaw));
-    item_set_spin(g, it, opts.spin.unwrap_or(spin));
-    item_set_tumble(g, it, opts.tumble.unwrap_or(tumble));
-    item_set_tumble_rate(g, it, opts.tumble_rate.unwrap_or(tumble_rate));
-    item_set_settled(g, it, opts.settled.unwrap_or(false));
-    item_set_age(g, it, opts.age.unwrap_or(0.0));
-    item_set_fuse(g, it, opts.fuse.unwrap_or(1.3));
-    item_set_fired(g, it, opts.fired.unwrap_or(false));
-    item_set_life(g, it, opts.life.unwrap_or(life));
-    item_set_emit_t(g, it, opts.emit_t.unwrap_or(0.0));
-    item_set_fill(g, it, opts.fill.unwrap_or(0.0));
-    item_set_bounces(g, it, opts.bounces.unwrap_or(0.0));
-    item_set_heading(g, it, opts.heading.unwrap_or(heading));
-    item_set_who(g, it, opts.who.unwrap_or(0.0));
+    let mut it = Item::blank();
+    it.kind = opts.kind.unwrap_or(kind);
+    it.pos = opts.pos.unwrap_or(pos);
+    it.vel = opts.vel.unwrap_or(vel);
+    it.radius = opts.radius.unwrap_or(radius);
+    it.restitution = opts.restitution.unwrap_or(restitution);
+    it.friction = opts.friction.unwrap_or(friction);
+    it.yaw = opts.yaw.unwrap_or(yaw);
+    it.spin = opts.spin.unwrap_or(spin);
+    it.tumble = opts.tumble.unwrap_or(tumble);
+    it.tumble_rate = opts.tumble_rate.unwrap_or(tumble_rate);
+    it.settled = opts.settled.unwrap_or(false);
+    it.age = opts.age.unwrap_or(0.0);
+    it.fuse = opts.fuse.unwrap_or(1.3);
+    it.fired = opts.fired.unwrap_or(false);
+    it.life = opts.life.unwrap_or(life);
+    it.emit_t = opts.emit_t.unwrap_or(0.0);
+    it.fill = opts.fill.unwrap_or(0.0);
+    it.bounces = opts.bounces.unwrap_or(0.0);
+    it.heading = opts.heading.unwrap_or(heading);
+    it.who = opts.who.unwrap_or(0.0);
+    it.on_pose = opts.on_pose.unwrap_or(0.0);
+    it.serial = opts.serial.unwrap_or(serial);
+    it.carried = opts.carried;
+    it.side = opts.side;
+    it.clatters = opts.clatters;
+    let it = g.tab.item.push(it);
     item_set_on(g, it, opts.on);
-    item_set_on_pose(g, it, opts.on_pose.unwrap_or(0.0));
-    item_set_serial(g, it, opts.serial.unwrap_or(serial));
-    // (what only `opts` says: absent stays unset)
-    if opts.carried.is_some() {
-        item_set_carried(g, it, opts.carried);
-    }
-    g.tab.item[it].side = opts.side;
-    g.tab.item[it].clatters = opts.clatters;
     g.items.items.push(it);
-    g.items.rows.push(it);
     it
 }
 
@@ -121,7 +85,7 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
 fn first_spent(g: &mut Game) -> Option<usize> {
     for i in 0..g.items.items.len() {
         let x = g.items.items[i];
-        let k = item_kind(g, x);
+        let k = g.tab.item[x].kind;
         if k == ItemKind::Mag || k == ItemKind::Ring || k == ItemKind::Shell || ((k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && !live_can(g, x)) {
             return Some(i);
         }
@@ -140,18 +104,9 @@ fn first_not_live(g: &mut Game) -> Option<usize> {
     None
 }
 
-/// An item leaves by the pool's own rule: it takes its numbers, its row is given up, the rows behind it close up. (`sync` has run.)
+/// An item leaves by the pool's own rule.
 pub fn throwables_remove_at(g: &mut crate::game::Game, i: f64) {
-    let i = i as usize;
-    let it = g.items.items[i];
-    item_leave(g, it);
-    crate::sim_itemshome::item_store_close(g, i as f64);
-    g.items.items.remove(i);
-    g.items.rows.remove(i);
-    for k in i..g.items.items.len() {
-        let x = g.items.items[k];
-        item_stand(g, x, k as f64);
-    }
+    g.items.items.remove(i as usize);
 }
 
 /// Launch velocity from `from` to land at `to` with a pleasant arc; also the sampled preview points until first impact.
@@ -195,134 +150,197 @@ pub fn throwables_solve(g: &mut crate::game::Game, from: V3, to: V3, max_speed: 
     ThrowSolution { v0, t, points, land }
 }
 
-/// One tick of the pool: the module walks it from the newest down, then what the steps listed is done in order.
-pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
-    throwables_sync(g);
-    let mut r = g.items.items.len() as f64 - 1.0;
-    if r < 0.0 {
-        return;
-    }
-    throwables_world(g);
-    let mut ev: Vec<f64> = Vec::new();
-    g.m.sim_itemshome.items_stepped.steps_there += 1.0;
-    while r >= 0.0 {
-        // the module walks from row r down to the bottom (−1). A row it hands back met a ray that is no number: a mistake, said by name
-        r = throwables_walk_there(g, dt, r, &mut ev);
-        if r < 0.0 {
-            break;
-        }
-        g.m.sim_itemshome.items_stepped.host += 1.0;
-        panic!("a ray that is no number, from a thrown thing's walk (row {})", r);
-    }
-    throwables_say(g, &ev);
-}
+const GRAVITY_NOW: f64 = 9.81;
+/// substeps of a tick
+const SUB: f64 = 2.0;
 
-/// The box world's copy stood for the walk, with the game's own leaves and the furniture in it. In Rust the walk is always the module's: nothing to decide, nothing to hand back.
-fn throwables_world(g: &mut crate::game::Game) {
-    let dyn_ = g.col.dynamic_boxes.clone();
-    crate::scene_collision::rules_world(g, &dyn_);
-    debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
-    if !crate::scene_box_mirror::box_mirror_things(g) {
-        panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
-    }
+use ::sim::world::World;
+/// what the walk asks of the world, and what it knows of it
+struct Walk<'a> {
+    w: &'a World,
+    snow: Option<::sim::snow::Snow>,
+    rifle_share: f64,
+    tune: &'a crate::knobs::Knobs,
 }
-
-/// One number of the walk's hand-over (rust/sim items.rs PAR, by its address as the TypeScript has it: never a reference kept across the walk).
-fn par_put(i: usize, v: f64) {
-    debug_assert!(i < sim::items::NPAR);
-    unsafe { *(sim::items::addr(0) as *mut f64).add(i) = v }
+/// What a step did that is not its own numbers, in the order it happened, to be done when the walk is back. None is read by a later step: furniture is met by where it stands, which an impulse does not move.
+enum Told {
+    Bounce { it: ItemId, speed: f64, at: V3, n: V3 },
+    Impulse { it: ItemId, thing: usize, at: V3, j: V3 },
+    Gone { it: ItemId },
 }
-fn par_get(i: usize) -> f64 {
-    debug_assert!(i < sim::items::NPAR);
-    unsafe { *(sim::items::addr(0) as *const f64).add(i) }
+/// a thing of furniture's pose as one number: any change of pose changes it
+fn pose_key(o: &World, id: usize) -> f64 {
+    use ::sim::world::{TH, TH_X, TH_YAW, TH_Z};
+    o.thing[id * TH + TH_X] * 7919.0 + o.thing[id * TH + TH_Z] * 104729.0 + o.thing[id * TH + TH_YAW]
 }
-/// One number of what the walk listed (rust/sim items.rs EVS).
-fn ev_get(i: usize) -> f64 {
-    debug_assert!(i < sim::items::MAX_EVENTS * sim::items::EV);
-    unsafe { *(sim::items::addr(1) as *const f64).add(i) }
+/// the furniture along a ray: how far, the normal, and the id of the thing met
+fn things(w: &World, p: V3, d: V3, tmax: f64) -> Option<(f64, V3, usize)> {
+    let mut out = [0.0f64; 5];
+    let r = ::sim::lines::ray_things(w, p[0], p[1], p[2], d[0], d[1], d[2], tmax, &mut out);
+    if r < 0 { return None; }
+    Some((out[0], [out[1], out[2], out[3]], w.things[r as usize].id as usize))
 }
-
-/// The module's walk from row `from` down: the hand-over written, the walk asked, the tallies kept, what it listed copied onto `ev`. → the row it hands back, or −1.
-fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut Vec<f64>) -> f64 {
-    let ask = crate::scene_collision::rules_panes(g);
-    debug_assert!(ask >= 0.0, "the pane's rule is not the module's to ask");
-    let bog = crate::snow_bog::snow_bog_may(g);
-    par_put(sim::items::P_DT, dt);
-    par_put(sim::items::P_FROM, from);
-    par_put(sim::items::P_ASK, ask);
-    par_put(sim::items::P_BOG, if bog { 1.0 } else { 0.0 });
-    par_put(sim::items::P_RIFLE_SHARE, rifle_item().prop_share);
-    if bog {
-        // lying snow, as the module asks it: the level's table in the box world, the rule's numbers and the roofs in force handed over
-        let roofs = crate::weather::weather_roofs_now(g);
-        debug_assert!(roofs.len() as f64 <= crate::sim_itemshome::ITEM_ROOFS, "more roofs over the snow than a walk is handed");
-        let kinds = crate::snow_bog::snow_bog_kinds(g);
-        crate::scene_box_mirror::box_mirror_snow(g, &kinds);
-        let k = &g.k.snowbog;
-        par_put(sim::items::P_SNOW_TOP, k.top);
-        par_put(sim::items::P_SNOW_BANK, k.bank_m);
-        par_put(sim::items::P_SNOW_PACKED, k.packed);
-        par_put(sim::items::P_SNOW_OLD, k.old);
-        par_put(sim::items::P_SNOW_DEAD, k.dead);
-        par_put(sim::items::P_SNOW_GRIP, k.grip);
-        par_put(sim::items::P_SNOW_STICK, k.stick);
-        par_put(sim::items::P_ROOFS, roofs.len() as f64);
-        for (i, r) in roofs.iter().enumerate() {
-            let o = sim::items::P_ROOF + i * 4;
-            par_put(o, r[0]);
-            par_put(o + 1, r[1]);
-            par_put(o + 2, r[2]);
-            par_put(o + 3, r[3]);
-        }
-    }
-    let a = sim::items::update(g.sim, g.col.mirror.slot as usize, &g.k);
-    if a != sim::items::HOST && a != sim::items::DONE {
-        panic!("the Rust module would not walk the thrown things from row {}", from);
-    }
-    let n = par_get(sim::items::P_EVENTS);
-    let t = &mut g.m.sim_itemshome.items_stepped;
-    t.walks += 1.0;
-    t.there += par_get(sim::items::P_WALKED);
-    t.rays += par_get(sim::items::P_RAYS);
-    t.thing_rays += par_get(sim::items::P_THING_RAYS);
-    t.substeps += par_get(sim::items::P_SUBSTEPS);
-    t.rested += par_get(sim::items::P_RESTED);
-    t.events += n;
-    for i in 0..(n as usize * sim::items::EV) {
-        ev.push(ev_get(i));
-    }
-    par_get(sim::items::P_ROW)
+/// the closest hit among the statics, the leaves and the furniture: how far, the face's normal, and the id of the thing of furniture plus one (0: a wall, a floor, a leaf)
+fn hit_of(d: &Walk, p: V3, dir: V3, tmax: f64) -> Option<(f64, V3, usize)> {
+    let mut out = [0.0f64; 4];
+    let k = ::sim::lines::ray_rule(d.w, p[0], p[1], p[2], dir[0], dir[1], dir[2], tmax, -1, true, &mut out, d.tune);
+    if k == ::sim::lines::RAY_HOST { panic!("a ray that is no number, from a thrown thing at {:?}", p); }
+    let st = if k >= 0 { Some((out[0], [out[1], out[2], out[3]])) } else { None };
+    if let Some((t, n, id)) = things(d.w, p, dir, st.map_or(tmax, |s| s.0)) { return Some((t, n, id + 1)); }
+    st.map(|(t, n)| (t, n, 0))
 }
-
-/// What the steps listed, done in the order it was listed: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.
-fn throwables_say(g: &mut crate::game::Game, e: &[f64]) {
-    if e.is_empty() {
-        return;
-    }
-    // (an event names its item by its row in the list as the steps walked it; what a callback does to the list since is its own)
-    let walked = g.items.items.clone();
-    let mut o = 0;
-    while o < e.len() {
-        let at = o;
-        o += sim::items::EV;
-        let it = walked[e[at + sim::items::E_ROW] as usize];
-        let what = e[at + sim::items::E_KIND];
-        if what == sim::items::EV_GONE {
-            throwables_sync(g);
-            if let Some(i) = g.items.items.iter().position(|&x| x == it) {
-                throwables_remove_at(g, i as f64);
+fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
+    match &d.snow { Some(s) => ::sim::snow::bog_of(d.w, s, x, y, z), None => 0.0 }
+}
+/// One thing's step: it ages, falls, meets the walls, the leaves and the furniture by a ray from its middle, bounces, hands the furniture a share of what it lost, and comes to rest on a floor or on a chair's seat; lying on a thing that has moved, it looks under itself and drops.
+fn step(d: &Walk, id: ItemId, it: &mut Item, dt: f64, told: &mut Vec<Told>) {
+    use ::sim::maths::{atan2, hypot2, hypot3, round_half_up};
+    use ::sim::world::{js_abs, js_max, js_min, MAX_THINGS};
+    it.age += dt;
+    it.life -= dt;
+    let mut fly = true;
+    if it.life <= 0.0 {
+        told.push(Told::Gone { it: id });
+        fly = false;
+    } else if it.carried == Some(true) {
+        fly = false;   // (in a hand: it goes where the hand goes)
+    } else if it.settled {
+        it.tumble_rate = 0.0;
+        let flat_a = round_half_up(it.tumble / m::PI) * m::PI;
+        it.tumble += (flat_a - it.tumble) * js_min(1.0, dt * 12.0);   // comes to rest lying along its axis (0 or half a turn)
+        fly = false;
+        // resting on a chair seat or a carton: stays put while that thing is still underneath, drops once it has moved out from under it
+        if it.on != 0 && (it.on as usize) <= MAX_THINGS && pose_key(d.w, it.on as usize - 1) != it.on_pose {
+            let under = things(d.w, [it.pos[0], it.pos[1] + 0.05, it.pos[2]], [0.0, -1.0, 0.0], 0.15);
+            if matches!(under, Some((_, _, thing)) if thing + 1 == it.on as usize) {
+                it.on_pose = pose_key(d.w, it.on as usize - 1);
+            } else {
+                it.settled = false;
+                it.on = 0;
+                it.vel = [0.0, 0.0, 0.0];
+                fly = true;
             }
-            continue;
         }
-        let p: V3 = [e[at + sim::items::E_P], e[at + sim::items::E_P + 1], e[at + sim::items::E_P + 2]];
-        let v: V3 = [e[at + sim::items::E_V], e[at + sim::items::E_V + 1], e[at + sim::items::E_V + 2]];
-        if what == sim::items::EV_IMPULSE {
-            // the item's lost momentum goes into the chair / carton it struck
-            let prop = g.props.all[e[at + sim::items::E_A] as usize];
-            let who = item_who(g, it);
-            crate::props::prop_system_apply_impulse(g, prop, p, v, who, None);
-        } else if let Some(b) = g.tab.item[it].on_bounce.clone() {
-            item_bounced(g, b, e[at + sim::items::E_A], p, it, v);
+    }
+    if !fly { return; }
+    let h = dt / SUB;
+    let mut s = 0.0;
+    while s < SUB && !it.settled {
+        s += 1.0;
+        it.vel[1] -= GRAVITY_NOW * h;
+        let mv = [it.vel[0] * h, it.vel[1] * h, it.vel[2] * h];
+        let len = hypot3(mv[0], mv[1], mv[2]);
+        if len < 1e-6 { continue; }
+        let il = 1.0 / len;
+        let dir = [mv[0] * il, mv[1] * il, mv[2] * il];
+        // sphere against box from the centre ray: contact happens radius/cos(incidence) before the centre would hit
+        let mut hit = hit_of(d, it.pos, dir, len + it.radius * 3.5);
+        let mut back = 0.0;
+        if let Some((t, n, _)) = hit {
+            back = it.radius / js_max(0.3, -(dir[0] * n[0] + dir[1] * n[1] + dir[2] * n[2]));
+            if t - back > len { hit = None; }
+        }
+        if let Some((t, n, prop)) = hit {
+            // place at contact, reflect
+            let t_hit = js_max(0.0, t - back);
+            it.pos = [it.pos[0] + dir[0] * t_hit, it.pos[1] + dir[1] * t_hit, it.pos[2] + dir[2] * t_hit];
+            let vn = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
+            if vn < 0.0 {
+                if prop != 0 {
+                    // the thing's lost momentum goes into the chair or carton it struck
+                    let j = vn * (1.0 + it.restitution) * (if it.kind == ItemKind::Smoke || it.kind == ItemKind::Frag { 0.35 } else if it.kind == ItemKind::Rifle { d.rifle_share } else { 0.1 });
+                    told.push(Told::Impulse { it: id, thing: prop - 1, at: it.pos, j: [n[0] * j, n[1] * j, n[2] * j] });
+                }
+                let (vn0, vn1, vn2) = (n[0] * vn, n[1] * vn, n[2] * vn);
+                let (vt0, vt1, vt2) = (it.vel[0] - vn0, it.vel[1] - vn1, it.vel[2] - vn2);
+                let speed = -vn;
+                // lying snow under it (0 = none, and the lines below are what they were)
+                let bog = if d.snow.is_some() && n[1] > 0.6 && prop == 0 { bog_at(d, it.pos[0], it.pos[1] - it.radius, it.pos[2]) } else { 0.0 };
+                let f = js_max(0.0, 1.0 - it.friction * (0.5 + 0.5 * js_abs(n[1])));
+                it.vel = [vt0 * f + vn0 * -it.restitution, vt1 * f + vn1 * -it.restitution, vt2 * f + vn2 * -it.restitution];
+                if bog > 0.0 {
+                    // … it keeps little of its slide and of its bounce
+                    let sn = d.snow.as_ref().unwrap();
+                    let up = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
+                    let (b, sl) = (1.0 - bog * sn.dead, 1.0 - bog * sn.grip);
+                    it.vel = [(it.vel[0] - n[0] * up) * sl + n[0] * (up * b), (it.vel[1] - n[1] * up) * sl + n[1] * (up * b), (it.vel[2] - n[2] * up) * sl + n[2] * (up * b)];
+                }
+                it.spin *= 0.6;
+                it.tumble_rate *= 0.45;
+                it.bounces += 1.0;
+                if hypot2(it.vel[0], it.vel[2]) > 0.3 { it.heading = atan2(it.vel[0], it.vel[2]); }
+                if speed > 0.6 { told.push(Told::Bounce { it: id, speed, at: it.pos, n }); }
+                // settle when slow on an upward-facing surface
+                if n[1] > 0.6 && js_abs(it.vel[1]) < 0.5 && hypot2(it.vel[0], it.vel[2]) < 0.35 + (if bog > 0.0 { bog * d.snow.as_ref().unwrap().stick } else { 0.0 }) {
+                    it.settled = true;
+                    it.on = prop as u32;
+                    it.on_pose = if prop != 0 { pose_key(d.w, prop - 1) } else { 0.0 };
+                    it.vel = [0.0, 0.0, 0.0];
+                    it.spin = 0.0;
+                    it.pos[1] += 0.001;
+                }
+            }
+            it.pos = [it.pos[0] + n[0] * 0.002, it.pos[1] + n[1] * 0.002, it.pos[2] + n[2] * 0.002];
+        } else {
+            it.pos = [it.pos[0] + mv[0], it.pos[1] + mv[1], it.pos[2] + mv[2]];
+        }
+        if it.pos[1] < it.radius {
+            // safety floor
+            let bog = if d.snow.is_some() { bog_at(d, it.pos[0], 0.0, it.pos[2]) } else { 0.0 };
+            it.pos[1] = it.radius;
+            if it.vel[1] < 0.0 {
+                let sp = -it.vel[1];
+                it.vel[1] *= -it.restitution;
+                it.vel[0] *= 0.7;
+                it.vel[2] *= 0.7;
+                if bog > 0.0 {
+                    let sn = d.snow.as_ref().unwrap();
+                    it.vel[1] *= 1.0 - bog * sn.dead;
+                    it.vel[0] *= 1.0 - bog * sn.grip;
+                    it.vel[2] *= 1.0 - bog * sn.grip;
+                }
+                it.bounces += 1.0;
+                if sp > 0.6 { told.push(Told::Bounce { it: id, speed: sp, at: it.pos, n: [0.0, 1.0, 0.0] }); }
+            }
+            if js_abs(it.vel[1]) < 0.5 && hypot2(it.vel[0], it.vel[2]) < 0.35 + (if bog > 0.0 { bog * d.snow.as_ref().unwrap().stick } else { 0.0 }) {
+                it.settled = true;
+                it.vel = [0.0, 0.0, 0.0];
+            }
+        }
+        it.yaw += it.spin * h;
+        it.tumble += it.tumble_rate * h;
+    }
+}
+
+/// One tick of the pool: it walks from the newest down, then what the steps told is done in order.
+pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
+    if g.items.items.is_empty() { return; }
+    let snow = if crate::snow_bog::snow_bog_may(g) {
+        // lying snow: the level's table in the box world, the rule's numbers and the roofs in force
+        let roofs = &g.weather.roof_rects;
+        debug_assert!(roofs.len() <= ::sim::snow::MAX_ROOFS, "more roofs over the snow than a walk is handed");
+        let k = &g.k.snowbog;
+        let mut roof = [0.0; ::sim::snow::MAX_ROOFS * 4];
+        for (i, r) in roofs.iter().enumerate() { roof[i * 4..i * 4 + 4].copy_from_slice(&r[..4]); }
+        Some(::sim::snow::Snow { top: k.top, bank: k.bank_m, packed: k.packed, old: k.old, dead: k.dead, grip: k.grip, stick: k.stick, roofs: roofs.len(), roof })
+    } else { None };
+    let d = Walk { w: g.tab.boxes.world(), snow, rifle_share: rifle_item().prop_share, tune: &g.k };
+    let mut told = Vec::new();
+    for &id in g.items.items.iter().rev() { step(&d, id, &mut g.tab.item[id], dt, &mut told); }
+    throwables_say(g, told);
+}
+
+/// What the steps told, done in the order they told it: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.
+fn throwables_say(g: &mut crate::game::Game, told: Vec<Told>) {
+    for t in told {
+        match t {
+            Told::Gone { it } => { if let Some(i) = g.items.items.iter().position(|&x| x == it) { throwables_remove_at(g, i as f64); } }
+            Told::Impulse { it, thing, at, j } => {
+                let prop = g.props.all[thing];
+                let who = g.tab.item[it].who;
+                crate::props::prop_system_apply_impulse(g, prop, at, j, who, None);
+            }
+            Told::Bounce { it, speed, at, n } => { if let Some(b) = g.tab.item[it].on_bounce.clone() { item_bounced(g, b, speed, at, it, n); } }
         }
     }
 }
@@ -379,9 +397,6 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
     }
 }
 
-/// Vec<BoxId> and no Tab<BoxId, Box>).
-fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
-
 /// Fill 4 to 7's magazines: half length, half width, half thickness, colour.
 const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
     (0.11, 0.016, 0.012, [0.06, 0.06, 0.065]),
@@ -400,13 +415,13 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for i in 0..g.items.items.len() {
         let it = g.items.items[i];
         // (its row, read once)
-        let (p, kind, settled, yaw, tumble, radius, fill, serial) = (item_pos(g, it), item_kind(g, it), item_settled(g, it), item_yaw(g, it), item_tumble(g, it), item_radius(g, it), item_fill(g, it), item_serial(g, it));
+        let (p, kind, settled, yaw, tumble, radius, fill, serial) = (g.tab.item[it].pos, g.tab.item[it].kind, g.tab.item[it].settled, g.tab.item[it].yaw, g.tab.item[it].tumble, g.tab.item[it].radius, g.tab.item[it].fill, g.tab.item[it].serial);
         let n0 = out.len();
         let flying = v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, tumble));
         match kind {
             ItemKind::Smoke | ItemKind::Flash => {
                 let (body, band): (V3, V3) = if kind == ItemKind::Flash {
-                    if item_fired(g, it) { ([0.03, 0.03, 0.03], [0.12, 0.11, 0.1]) } else { ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]) }
+                    if g.tab.item[it].fired { ([0.03, 0.03, 0.03], [0.12, 0.11, 0.1]) } else { ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]) }
                 } else {
                     ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06])
                 };
@@ -490,13 +505,13 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         // motion identity per part: the g-buffer reprojects the flying can through its own last transform, whatever spawned or died around it in the list
         for k in n0..out.len() {
             let b = out[k];
-            seam_box_set_mkey(g, b, item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
+            g.tab.edit(b).mkey = Some(item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
         }
     }
 }
 
 /// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.
 fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool {
-    let k = item_kind(g, x);
-    (k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && (!item_fired(g, x) || item_emit_t(g, x) > 0.0)
+    let k = g.tab.item[x].kind;
+    (k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && (!g.tab.item[x].fired || g.tab.item[x].emit_t > 0.0)
 }

@@ -24,9 +24,6 @@ pub struct RoomfightK {
     ///  the lights were free, his light) on a man behind a pane for as long as he could see him — with night vision, the whole length of a corridor
     #[k(1.5)] pub no_shot_go: f64,
     #[k(4.0)] pub no_shot_pass: f64,
-    /// how readily a defender goes to a fight next door (`rally`): × his side's chance to go each time he weighs it (FIGHT_SKILL rallyChance, 0.75 a roll). 1 = as it
-    ///  was; under 1 more of them are still in their own rooms when the team gets there; 0 = nobody leaves (the `rally` switch off). The dice are drawn either way
-    #[k(1.0)] pub rally_k: f64,
     /// a man HOLDING an arc he was given (orders.ts holdArcs: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
     ///  — the other half is the other man's; 180 = as it was (he turned to any call he had a line to, and the two of them ended facing one way)
     #[k(100.0)] pub arc_half_deg: f64,

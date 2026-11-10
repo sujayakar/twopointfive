@@ -6,6 +6,5 @@ pub mod doorthrow;
 pub mod doorway;
 pub mod handleside;
 pub mod props;
-pub mod sim_doorshome;
-pub mod sim_propshome;
+pub mod slab;
 pub mod sprintdoor;

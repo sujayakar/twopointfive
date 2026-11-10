@@ -14,12 +14,6 @@ pub enum Why {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShowWhyStats {
-    pub waves: i32,
-    pub squeezes: i32,
-    pub fists: i32,
-    pub ways: i32,
-    pub lines: i32,
-    pub holds: i32,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

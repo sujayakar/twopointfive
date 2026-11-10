@@ -14,8 +14,8 @@ How teammates fight, look around and keep quiet without being told. What each or
 - **The team goes dark.** With Sam's goggles down or nobody found, they use goggles and no light. Compromised, each man's light is his own to use.
 - **Nobody fires first.** While nobody has found the squad, no teammate starts the fight until Sam shoots or gives an order that means it.
 - **Silent is an order.** It means walking quietly, no light, easing doors, picking locks and holding fire on men who have not noticed.
-- **When Sam sneaks, they sneak.** They go low when he does and keep his pace. On a quiet mission his partner reads the light and the defenders' eyes
-  before each step.
+- **When Sam sneaks, they sneak.** They go low when he does and keep his pace. A knee his work puts him on (the wand, a lock, a body) is not that: they
+  keep what they were doing. On a quiet mission his partner reads the light and the defenders' eyes before each step.
 
 ## Where the code is
 
@@ -101,6 +101,7 @@ a loud tool is picked (`silent_tool`). A door no pick opens is booted only then 
 
 **Unseen** (`unseen_live`) needs no order: Sam low, on a wall or slow (`sam_sneaks`) and nobody found (`squad_found`). It gives `unseen_low`,
 `unseen_follow`, `unseen_step`, `unseen_holds` and a place along Sam's wall (`unseen_wall_slot`), to all but men working a door (`entering`).
+Whether he is low by his own key is `sam_low`; `kneel` keeps on him (`knee`) how he stood before his work, until he is up again.
 
 **The partner** is on only under `k.pairup.on`, which a quiet mission with a squad sets at its start (`pair_up_apply`; `quiet.rs` keeps the old switches
 in `Held`), with `k.silent.start`. `sneak_follow` walks Sam's own trail (`track`) and reads each step by the defenders' arithmetic (`exposure`,

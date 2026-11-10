@@ -19,7 +19,7 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn has_over(g: &Game, gd: GuardId) -> bool { g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some()) }
 /// S.of(m)?.post ?? m.char.pos
 fn where_of(g: &mut Game, m: GuardId) -> V3 {
-    let post = crate::orders::squad_orders_of(g, &crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
+    let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
     post.unwrap_or_else(|| pos_of(g, m))
 }
 /// where every order has `m` going, in the orders' order
@@ -82,7 +82,7 @@ pub(super) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
 }
 
 /// a man on his point: his muzzle travels to the unseen floor he has a line to that needs the least turn; false when he has none left
-pub(super) fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let (look_m, scan_rate, now) = (g.k.doortools.look_m, g.k.doortools.scan_rate, g.time);
     let c = g.gd[gd].ch;
     let (p, aim) = (g.ch[c].pos, g.ch[c].aim_yaw);
@@ -109,7 +109,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
     let row = &mut g.tab.orders_assignment[a];
     row.watch = Some([p[0] + m::sin(yaw) * 5.0, 1.1, p[2] + m::cos(yaw) * 5.0]);
     row.face = Some(yaw);
-    row.there = String::from("clearing the room");
+    row.there = "clearing the room".into();
     true
 }
 
@@ -119,9 +119,7 @@ fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64
     if d > lim { return f64::INFINITY; }
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
     let path = match crate::scene_collision::nav_grid_find_path(g, a, b, Some(3000.0), None) { Some(p) => p, None => return f64::INFINITY };
-    let (mut l, mut q) = (0.0, a);
-    for r in path { l += flat(q, r); q = r; }
-    l += flat(q, b);
+    let l = crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b);
     if l > lim { f64::INFINITY } else { l }
 }
 
@@ -207,8 +205,8 @@ fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[GuardI
     let pair = pair.unwrap_or(false);
     let mut on_door = on_door;
     let (buddy_m, buddy_pair_m) = (g.k.doortools.buddy_m, g.k.doortools.buddy_pair_m);
-    g.door_tools.away_far = false;
-    g.door_tools.away_why = String::new();
+    g.sets[g.seat].door_tools.away_far = false;
+    g.sets[g.seat].door_tools.away_why = String::new();
     let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| m != gd && !crate::condition::down(g, g.gd[m].ch)).collect();
     let sam: Vec<V3> = if crate::condition::down(g, g.pl[g.player].ch) { Vec::new() } else { vec![crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))] };
     let own = mate_of(g, &squad, gd, gd);
@@ -232,22 +230,22 @@ fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[GuardI
             }
         };
         if mate.is_none() {
-            g.door_tools.away_why = match own { Some(_) => format!("{}'s partner is busy", g.gd[gd].callsign), None => String::from("no partner free") };
+            g.sets[g.seat].door_tools.away_why = match own { Some(_) => format!("{}'s partner is busy", g.gd[gd].callsign), None => String::from("no partner free") };
             return if pair && reach(g, &squad, buddy_m, &sam, p, where_, len) { DoorToolsAway::Alone } else { DoorToolsAway::No };
         }
     }
     let base: &[GuardId] = if mate.is_some() && own.is_some() && mate != own { &squad } else { &rest };
     let others: Vec<GuardId> = base.iter().copied().filter(|&m| Some(m) != mate).collect();
-    if mate.is_some() && others.is_empty() { g.door_tools.away_why = String::from("nobody would stay behind the two"); return DoorToolsAway::No; }
+    if mate.is_some() && others.is_empty() { g.sets[g.seat].door_tools.away_why = String::from("nobody would stay behind the two"); return DoorToolsAway::No; }
     if (!others.is_empty() || !sam.is_empty()) && !reach(g, &others, buddy_pair_m, &sam, p, where_, len) {
-        g.door_tools.away_why = format!("past {} m from the rest", js::num_str(buddy_pair_m));
-        g.door_tools.away_far = true;
+        g.sets[g.seat].door_tools.away_why = format!("past {} m from the rest", js::num_str(buddy_pair_m));
+        g.sets[g.seat].door_tools.away_far = true;
         return DoorToolsAway::No;
     }
     let go: Vec<GuardId> = mate.into_iter().collect();
     if strands(g, &squad, &sam, gd, p, &go, where_, len) {
-        g.door_tools.away_why = String::from("it would leave a man by himself");
-        g.door_tools.away_far = true;
+        g.sets[g.seat].door_tools.away_why = String::from("it would leave a man by himself");
+        g.sets[g.seat].door_tools.away_far = true;
         return DoorToolsAway::No;
     }
     match mate { Some(m) => DoorToolsAway::Guard(m), None => DoorToolsAway::Alone }
@@ -302,13 +300,13 @@ fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         watch: None,
         shy: Some(None),
         thru: Some(door),
-        pace: Some(g.orders.knobs.entry),
+        pace: Some(g.sets[g.seat].orders.knobs.entry),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        light: Some(g.door_tools.lights.unwrap_or(true)),
+        light: Some(g.sets[g.seat].door_tools.lights.unwrap_or(true)),
         search: Some(true),
-        going: String::from(going),
-        there: String::from("holding the room"),
+        going: String::from(going).into(),
+        there: "holding the room".into(),
         ..Default::default()
     };
     door_tools_assign(g, op, gd, &a);
@@ -319,8 +317,8 @@ pub(super) fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: Door
     let flow_max = g.k.doortools.flow_max;
     let cells = search(g, sr).pts.len();
     if !(flow_max > 0.0) || cells as f64 <= flow_max { return true; }
-    if !g.door_tools.big_said.has(op) {
-        g.door_tools.big_said.add(op);
+    if !g.sets[g.seat].door_tools.big_said.has(op) {
+        g.sets[g.seat].door_tools.big_said.add(op);
         door_tools_beat(g, op, &format!("flow: no · a room of {} cells is looked over, not gone through (flowMax {})", cells, js::num_str(flow_max)));
     }
     false
@@ -527,12 +525,12 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
         let p1 = match two { Some(t) => t.0, None => cands[0].p };
         let mut mate: Option<GuardId> = None;
         let h = door_tools_away(g, gd, p1, &men, &mut where_, &mut len, Some(true), Some(&mut on_door as &mut dyn FnMut(&mut Game, GuardId) -> bool));
-        let why = g.door_tools.away_why.clone();
-        let was = g.door_tools.away_far;
+        let why = g.sets[g.seat].door_tools.away_why.clone();
+        let was = g.sets[g.seat].door_tools.away_far;
         if let DoorToolsAway::Guard(x) = h { mate = Some(x); }
         else if !matches!(door_tools_away(g, gd, p1, &men, &mut where_, &mut len, None, None), DoorToolsAway::Alone) {
-            for w in [why, g.door_tools.away_why.clone()] { if !w.is_empty() && !whys.contains(&w) { whys.push(w); } }
-            far = far || was || g.door_tools.away_far;
+            for w in [why, g.sets[g.seat].door_tools.away_why.clone()] { if !w.is_empty() && !whys.contains(&w) { whys.push(w); } }
+            far = far || was || g.sets[g.seat].door_tools.away_far;
             continue;
         }
         let gd_at = pos_of(g, gd);
@@ -565,9 +563,6 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             search(g, sr).yaw.delete(who);
             door_tools_send_on(g, op, who, &mut pod, "clearing the room");
         }
-        g.door_tools.stats.sent_on += 1.0;
-        g.door_tools.stats.flowed += 1.0;
-        if mate.is_some() { g.door_tools.stats.sent_pair += 1.0; }
         if search(g, sr).flow_said != Some(true) {
             search(g, sr).flow_said = Some(true);
             crate::game::game_say(g, gd, "pushing through.", None, None);
@@ -612,7 +607,6 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             let s = search(g, sr);
             s.closes = Some(s.closes.unwrap_or(0.0) + 1.0);
             s.left_at_move = f64::INFINITY;
-            g.door_tools.stats.closed_up += n as f64;
             let said = format!("close up:{} · on {}", who.join(", "), g.gd[lead].callsign);
             door_tools_beat(g, op, &said);
             return true;
@@ -716,7 +710,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         let chosen = if swap { cl.unwrap() } else { top };
         let best = chosen.p;
         let mut pod = pod_at([best[0], 0.0, best[2]], v3::yaw_to(best, mid));
-        if swap { crate::entrypoints::entry_points_swapped(g, &mut pod); }
+        if swap { crate::entrypoints::entry_points_swapped(&mut pod); }
         crate::entrypoints::entry_points_dealt(g, pod, None);
         {
             let s = search(g, sr);
@@ -725,9 +719,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
             s.left_at_move = s.left;
         }
         door_tools_send_on(g, op, gd, &mut pod, "clearing the room");
-        g.door_tools.stats.sent_on += 1.0;
         if let Some(PointMate::With(x, mut xp)) = mates.get(chosen.i).copied() {
-            g.door_tools.stats.sent_pair += 1.0;
             crate::entrypoints::entry_points_dealt(g, xp, None);
             search(g, sr).yaw.delete(x);
             door_tools_send_on(g, op, x, &mut xp, "clearing the room");
@@ -739,7 +731,6 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         }
         return true;
     }
-    if refused { g.door_tools.stats.not_sent += 1.0; }
     false
 }
 
@@ -882,7 +873,7 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
     }
     g.tab.doortools_door_op[op].phase = Phase::Enter;
     g.tab.doortools_door_op[op].t0 = t;
-    door_tools_beat(g, op, "go");
+    door_tools_beat_is(g, op, crate::doortools::Beat::Go, "go");
     let lead = g.tab.doortools_door_op[op].lead;
     crate::game::game_say(g, lead, "going in.", None, None);
 }
@@ -909,16 +900,14 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     let pods = door_tools_pods(g, door, side, Some(if n_men > 2 || big { 4.0 } else { n_men as f64 }));
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let first = door_tools_first_in(g, op, Some(pods[0].pos), None);
-    g.door_tools.led.entries += 1.0;
     if first != lead && crate::gunroles::gun_before(g, first, lead) && door_tools_first_in(g, op, Some(pods[0].pos), Some(false)) != first {
         let said = format!("first:{} · his gun is the room's", g.gd[first].callsign);
         door_tools_beat(g, op, &said);
     } else if first != lead {
-        g.door_tools.led.by_seen += 1.0;
         let said = format!("first:{} · has seen most of the room", g.gd[first].callsign);
         door_tools_beat(g, op, &said);
     }
@@ -984,22 +973,20 @@ pub(super) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pod
     let pod_apart = g.k.doortools.pod_apart;
     let (door, side) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side) };
     let mut taken: Vec<V3> = Vec::new();
-    for &o in g.door_tools.ops.iter() {
+    for &o in g.sets[g.seat].door_tools.ops.iter() {
         if o == op { continue; }
         for p in g.tab.doortools_door_op[o].pod.values() { taken.push(p.pos); }
         for q in g.tab.doortools_door_op[o].queue.iter() { taken.push(q.pod.pos); }
     }
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if g.tab.doortools_door_op[op].men.contains(&gd) { continue; }
-        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
+        if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
             let (post, arrived) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].arrived);
             if let Some(post) = post { if arrived && off_of(g, door, post, side) < 0.0 { taken.push(post); } }
         }
     }
     // (by index: the TypeScript tells a point from another by the object)
     let clear: Vec<usize> = (0..pods.len()).filter(|&i| !taken.iter().any(|&q| flat(q, pods[i].pos) < pod_apart)).collect();
-    let first = if n < pods.len() as f64 { n as usize } else { pods.len() };
-    if clear.len() < first || clear.iter().take(n as usize).enumerate().any(|(k, &i)| i != k) { g.door_tools.stats.pods_moved += 1.0; }
     if clear.len() as f64 >= n { return clear.iter().map(|&i| pods[i]).collect(); }
     let mut out: Vec<crate::entrypoints::Pod> = clear.iter().map(|&i| pods[i]).collect();
     for i in 0..pods.len() { if !clear.contains(&i) { out.push(pods[i]); } }
@@ -1007,11 +994,10 @@ pub(super) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pod
 }
 
 /// Sam's trigger: the set charge nearest him (or the one given) goes; what it did, null with none set
-pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlow> {
+pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) {
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
     let who = g.ch[g.pl[g.player].ch].id;
-    let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
-    r.map(|x| DoorToolsBlow {  })
+    crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
 }
 
 #[cfg(test)]

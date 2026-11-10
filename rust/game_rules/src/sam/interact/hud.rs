@@ -5,9 +5,6 @@ use crate::seats::SeatRef;
 use crate::view::{InteractView, ListRow, RowOpt, ThingDot, ThingKind, ThingRing};
 use alloc::{format, string::String, vec::Vec};
 
-/// the blocks the list draws before it says '+N more': the rows a tick builds, the cancel row while the selector is open, and one spare
-const MAX_ROWS: usize = 5;
-
 /// up to the first run of two spaces with something on each side: the key, and what it does
 fn key_and_words(seg: &str) -> Option<(&str, &str)> {
     let cs: Vec<(usize, char)> = seg.char_indices().collect();
@@ -68,14 +65,10 @@ fn rides(g: &Game, it: &Interactable) -> (Option<f64>, f64) {
 pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     let pl = &g.pl[seat.player];
     let (near, p) = (seat.nearby, g.ch[pl.ch].pos);
-    let hv = seat.hover.as_ref().map(|_| pl.near_sel as usize).filter(|&i| i < near.len());
-    let lead = hv.filter(|&i| { let r = &near[i]; r.kind != K::Cancel && (r.verb.is_some() || r.running == Some(true)) && !pl.sel.ring.as_ref().is_some_and(|x| x.whistle == Some(true)) });
-    let whole = !g.k.handring.on;
-    let list: Vec<usize> = if whole { (0..near.len()).collect() } else {
-        lead.into_iter().chain((0..near.len()).filter(|&i| near[i].verb.is_none() && Some(i) != lead).take(1)).collect()
-    };
-    let cap = MAX_ROWS + if list.iter().any(|&i| near[i].kind == K::Cam) { 1 } else { 0 };   // (a stuck camera's 'take it back' is one row past every row the list had before it: it is always drawn)
-    let rows = list.iter().take(cap).enumerate().map(|(at, &i)| {
+    let hv = seat.hover.as_ref().map(|_| seat.hand.near_sel as usize).filter(|&i| i < near.len());
+    let lead = hv.filter(|&i| { let r = &near[i]; r.kind != K::Cancel && (r.verb.is_some() || r.running == Some(true)) && !seat.hand.sel.ring.as_ref().is_some_and(|x| x.whistle == Some(true)) });
+    let list: Vec<usize> = lead.into_iter().chain((0..near.len()).filter(|&i| near[i].verb.is_none() && Some(i) != lead).take(1)).collect();
+    let rows = list.iter().enumerate().map(|(at, &i)| {
         let it = &near[i];
         ListRow {
             kind: thing_kind(it.kind),
@@ -89,7 +82,6 @@ pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
         }
     }).collect();
     // (under the corner only the key's own line is ever lit: a line no key gives is no choice)
-    let lit = if whole { hv.and_then(|i| list.iter().position(|&x| x == i)) } else if lead.is_some() { Some(0) } else { None };
     // (the cancel row has no thing, and a charge to blow is on his list wherever he stands: the ring stays the gun's)
     let ring = seat.hover.as_ref().filter(|h| h.kind != K::Cancel && h.kind != K::Charge).map(|h| {
         let (man, up) = rides(g, h);
@@ -106,9 +98,8 @@ pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     }).collect();
     InteractView {
         rows,
-        lit: lit.filter(|&i| i < cap).map_or(-1.0, |i| i as f64),
-        more: list.len().saturating_sub(cap) as f64,
-        open: pl.sel.open && pl.sel.ring.is_none(),
+        lit: if lead.is_some() { 0.0 } else { -1.0 },
+        open: seat.hand.sel.open && seat.hand.sel.ring.is_none(),
         ring,
         dots,
     }

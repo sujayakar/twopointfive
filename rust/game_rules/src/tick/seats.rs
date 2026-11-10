@@ -13,81 +13,50 @@ use alloc::{string::String, vec, vec::Vec};
 /// the row a second cast of the squad's code keeps in a table kept per view
 pub const CAST_KEY: PlayerId = PlayerId(u32::MAX);
 
-/// is this call inside a seat's view, and not on the bare Game. with_seat raises Game.view_depth for the length of its call
+/// is this call inside a seat's view, and not on the bare tick. with_seat raises Game.view_depth for the length of its call
 fn in_view(g: &crate::game::Game) -> bool { g.view_depth > 0 }
 
-/// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat on Game, or CAST_KEY inside a second cast.
+/// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat the pass is about, or CAST_KEY inside a second cast.
 /// (seats.ts SEAT_TABLES key by the view; the bridge writes a view's key as `view.player`, export.ts:83)
 pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
     if g.in_cast { CAST_KEY } else { seat.player }
 }
 
-/// one seat's SEAT_KEYS fields and Game's, changed over
-fn swap_set(g: &mut Game, o: &mut SeatSet) {
-    use core::mem::swap;
-    swap(&mut g.seat, &mut o.seat); swap(&mut g.player, &mut o.player); swap(&mut g.orders, &mut o.orders); swap(&mut g.door_tools, &mut o.door_tools);
-    swap(&mut g.work, &mut o.work); swap(&mut g.wall_charge, &mut o.wall_charge); swap(&mut g.aim_point, &mut o.aim_point); swap(&mut g.aim_target, &mut o.aim_target);
-    swap(&mut g.aim_guard, &mut o.aim_guard); swap(&mut g.aim_friend, &mut o.aim_friend); swap(&mut g.aim_snap, &mut o.aim_snap); swap(&mut g.hover, &mut o.hover);
-    swap(&mut g.interactables, &mut o.interactables); swap(&mut g.nearby, &mut o.nearby); swap(&mut g.act, &mut o.act); swap(&mut g.use_door, &mut o.use_door);
-    swap(&mut g.view_proj, &mut o.view_proj); swap(&mut g.threat_proximity, &mut o.threat_proximity); swap(&mut g.torch_on_t, &mut o.torch_on_t);
+/// The pass is about this seat from here on. Its man is on `g.player` for the pass; the man of the seat it was about goes back to its row.
+fn stand_on(g: &mut Game, s: SeatId) {
+    g.sets[g.seat].player = g.player;
+    g.seat = s;
+    g.player = g.sets[s].player;
 }
 
-/// INVENTED BY THE SKELETON (conventions, SEATS): a pass about another seat. That seat's SEAT_KEYS fields are put on Game for the call and
-/// taken back after; the seat that stood on Game keeps its own meanwhile. The seat already on Game runs as it stands (so a nesting is fine).
-/// For the length of the call the game is "a seat's view" (`in_view`), the first seat's too.
+/// A PASS ABOUT ANOTHER SEAT. The seat it was about comes back after; the seat already about runs as it stands (so a nesting is fine). For the length of the call the
+/// game is "a seat's view" (`in_view`), the first seat's too.
 pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    if g.seat == seat { g.view_depth += 1; let r = f(g); g.view_depth -= 1; return r; }
     let from = g.seat;
-    let mut theirs = match g.tab.cmd_seat[seat].own.take() { Some(o) => o, None => panic!("with_seat: that seat keeps no set") };
-    swap_set(g, &mut theirs);                 // Game now stands on `seat`; `theirs` holds what `from` had
-    g.tab.cmd_seat[from].own = Some(theirs);
+    stand_on(g, seat);
     g.view_depth += 1;
     let r = f(g);
     g.view_depth -= 1;
-    let mut back = g.tab.cmd_seat[from].own.take().unwrap();
-    swap_set(g, &mut back);
-    g.tab.cmd_seat[seat].own = Some(back);
+    stand_on(g, from);
     r
 }
 
 /// WHICH SEAT THIS MACHINE SHOWS, from now on: a host's own fact, told after a start and whenever it changes. The rows of a game are numbered the same on every
-/// machine (a start stands with the first seat), and this only says whose set stands on Game between ticks, for the page to read. It changes nothing of the play:
-/// a tick stands the first seat's set whichever seat is shown (`on_first_bare`).
+/// machine (a start stands with the first seat), and this only says which seat `g.seat` names between ticks, for the page to read. It changes nothing of the play:
+/// a tick is about the first seat whichever seat is shown (`on_first_bare`).
 pub fn show_seat(g: &mut crate::game::Game, seat: SeatId) {
     assert!(g.seats.contains(&seat), "a host asks to show a seat this game has not got: {:?}", seat);
     g.local_seat = Some(seat);
-    if g.seat == seat { return; }
-    let from = g.seat;
-    let mut theirs = match g.tab.cmd_seat[seat].own.take() { Some(o) => o, None => panic!("show_seat: that seat keeps no set") };
-    swap_set(g, &mut theirs);
-    g.tab.cmd_seat[from].own = Some(theirs);
+    stand_on(g, seat);
 }
 
-/// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat's set on Game and no view open (seats.ts seatsStand: inside a tick the Game's own fields of a
-/// seat's name answer the FIRST seat's). Where another seat stood on Game (a host that shows the second player), the sets are changed over and back.
+/// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat and no view open (seats.ts seatsStand: inside a tick `g.seat` answers the FIRST seat). Where another seat was
+/// shown (a host that shows the second player), it comes back after.
 pub(super) fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    let first = g.seats[0];
-    if g.seat == first { return f(g); }
     let from = g.seat;
-    let mut theirs = match g.tab.cmd_seat[first].own.take() { Some(o) => o, None => panic!("on_first_bare: the first seat keeps no set") };
-    swap_set(g, &mut theirs);
-    g.tab.cmd_seat[from].own = Some(theirs);
+    stand_on(g, g.seats[0]);
     let r = f(g);
-    let mut back = g.tab.cmd_seat[from].own.take().unwrap();
-    swap_set(g, &mut back);
-    g.tab.cmd_seat[first].own = Some(back);
-    r
-}
-
-/// EVERY SEAT'S SET IN ITS OWN ROW for the length of the call, that of the seat that stands on Game too (Game's fields of it are blank meanwhile): for who walks the sets.
-pub(super) fn parked<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    let on = g.seat;
-    let mut set = SeatSet::default();
-    swap_set(g, &mut set);
-    g.tab.cmd_seat[on].own = Some(set);
-    let r = f(g);
-    let mut back = g.tab.cmd_seat[on].own.take().unwrap();
-    swap_set(g, &mut back);
+    stand_on(g, from);
     r
 }
 
@@ -106,42 +75,18 @@ pub fn floor_room(g: &crate::game::Game) -> f64 { crate::guards::MAX_SKINNED - s
 
 // ---------------------------------------------------------------- the seams: what skeleton 5 still does not have
 
-/// seats.ts:213 `rawGame(g) !== g` with the first seat on Game: a pass over his view and a pass over the bare Game look alike here
+/// seats.ts:213 `rawGame(g) !== g` with the pass about the first seat: a pass over his view and a pass over the bare Game look alike here
 fn seam_in_first_seat_view(g: &Game) -> bool { crate::seats::in_view(g) }
 
 // ---------------------------------------------------------------- small helpers
 
-/// a later seat's record as it is stood: what Game's fields of those names hold now, with his seat
-fn set_of_game(g: &Game, s: SeatId) -> crate::seats::SeatSet {
-    crate::seats::SeatSet {
-        seat: s,
-        player: g.player,
-        orders: g.orders.clone(),
-        door_tools: g.door_tools.clone(),
-        work: g.work.clone(),
-        wall_charge: g.wall_charge.clone(),
-        aim_point: g.aim_point,
-        aim_target: g.aim_target,
-        aim_guard: g.aim_guard,
-        aim_friend: g.aim_friend,
-        aim_snap: g.aim_snap,
-        hover: g.hover.clone(),
-        interactables: g.interactables.clone(),
-        nearby: g.nearby.clone(),
-        act: g.act.clone(),
-        use_door: g.use_door,
-        view_proj: g.view_proj.clone(),
-        threat_proximity: g.threat_proximity,
-        torch_on_t: g.torch_on_t,
-    }
+/// a later seat's record as it is stood: what the first seat's holds now, with his seat
+fn set_of_game(g: &Game) -> crate::seats::SeatSet {
+    crate::seats::SeatSet { player: g.player, ..g.sets[g.seat].clone() }
 }
 /// `S[i ?? 0] ?? S[0]`
 fn seat_at(g: &Game, i: Option<f64>) -> SeatId {
     g.seats.get(i.unwrap_or(0.0) as usize).copied().unwrap_or(g.seats[0])
-}
-/// `!!gd.unit && gd.team === 'operative'`
-fn on_team(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative
 }
 /// `gd.unit?.seat ?? 0`
 fn unit_seat(g: &Game, gd: GuardId) -> f64 {
@@ -157,7 +102,7 @@ fn share_of(n: f64, lo: f64, mine: f64, all: f64) -> f64 {
 
 // ---------------------------------------------------------------- the seats
 
-/// the game's seats, made as its constructor begins. More than one: the first seat's set is Game's own fields, a later seat's is in `Seat.own`
+/// the game's seats, made as its constructor begins, each with its row of `g.sets`
 pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     let max = g.k.seats.max;
     if !(n >= 1.0 && n <= max) || n != m::floor(n) { panic!("a game is stood up with 1 to {} seats, not {}", max, n); }
@@ -171,8 +116,8 @@ pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     while i < n {
         let s = crate::cmd::seat_new(g, Some(i));
         if i != 0.0 {
-            let own = set_of_game(g, s);
-            g.tab.cmd_seat[s].own = Some(own);
+            let own = set_of_game(g);
+            assert_eq!(g.sets.push(own), s, "a seat's set stands at its seat's id");
         }
         seats.push(s);
         i += 1.0;
@@ -260,8 +205,8 @@ pub fn host_man(g: &crate::game::Game) -> PlayerId {
     crate::cmd::seat_man(g, s)
 }
 
-/// the man a writer with no man of its own names: the view's; bare, Game holds the first seat's set, so both arms are g.player
-pub fn man_here(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
+/// the man a writer with no man of its own names: the view's; bare, the pass is about the first seat, so both arms are g.player
+pub fn man_here(seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// `f` for every seat, over its view
 pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) {
@@ -295,7 +240,7 @@ pub fn seat_of_char(g: &crate::game::Game, c_2: Option<CharId>) -> Option<SeatId
 }
 
 /// … and the man himself
-pub fn man_of(g: &mut crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId> {
+pub fn man_of(g: &crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId> {
     if g.seats.len() == 1 {
         return match c_2 { Some(c) if g.pl[g.player].ch == c => Some(g.player), _ => None };
     }
@@ -388,7 +333,7 @@ pub(super) fn spot_beside(g: &mut crate::game::Game, at: V3, i: f64) -> V3 {
         let mut q = v3::copy(p);
         crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, Some(1.0));
         if m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.02
-            && !crate::scene_collision::clamp_to_world(g, &mut q, 0.3)
+            && !crate::scene_collision::clamp_to_world(&mut q, 0.3)
             && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [p[0], 0.45, p[2]], None) { return p; }
     }
     v3::copy(at)
@@ -411,7 +356,7 @@ pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut 
             let mut lead = None;
             for j in 0..g.guards.len() {
                 let gd = g.guards[j];
-                if on_team(g, gd) && g.gd[gd].unit.as_ref().and_then(|u| u.seat) == Some(index) { lead = Some(gd); break; }
+                if g.team(gd).ours() && g.gd[gd].unit.as_ref().and_then(|u| u.seat) == Some(index) { lead = Some(gd); break; }
             }
             p = match lead {
                 Some(gd) => {
@@ -499,14 +444,14 @@ pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> Se
     }
     match found {
         None => g.seats[0],
-        Some(gd) if on_team(g, gd) => seat_of(g, gd),
+        Some(gd) if g.team(gd).ours() => seat_of(g, gd),
         Some(gd) => faced_view(g, gd),
     }
 }
 
 /// the view a man of the floor is stepped over: his seat's for a teammate, the faced man's for anybody else
 pub fn view_for(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
-    if on_team(g, gd) { seat_of(g, gd) } else { faced_seat(g, gd) }
+    if g.team(gd).ours() { seat_of(g, gd) } else { faced_seat(g, gd) }
 }
 
 // ---------------------------------------------------------------- whose teammate
@@ -521,7 +466,7 @@ pub fn deal_seats(g: &mut crate::game::Game) -> bool {
     let mut has: Vec<i32> = vec![0; n];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if !on_team(g, gd) { continue; }
+        if !g.team(gd).ours() { continue; }
         roster.push(gd);
         match g.gd[gd].unit.as_ref().and_then(|u| u.seat) {
             None => fresh += 1,
@@ -559,7 +504,7 @@ pub fn in_seat(g: &crate::game::Game, s: SeatId, gd: GuardId) -> bool {
     unit_seat(g, gd) == g.tab.cmd_seat[s].index
 }
 
-/// the game handed in has one squad's orders and they are `g.orders`
+/// the game handed in has one squad's orders, the seat's
 pub fn one_book(g: &crate::game::Game) -> bool {
     g.seats.len() == 1 || g.in_cast
 }
@@ -570,7 +515,7 @@ pub fn view_of(g: &crate::game::Game, gd: GuardId) -> SeatId {
     seat_of(g, gd)
 }
 
-/// the orders that move a teammate: his seat's book, named by the man it is on Game with
+/// the orders that move a teammate: his seat's book, named by its man
 pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
     if one_book(g) { return g.player; }
     let s = seat_of(g, gd);
@@ -579,9 +524,9 @@ pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
 
 /// the order he is under, in whichever seat's book
 pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if one_book(g) { return crate::orders::squad_orders_of(g, &crate::seats::here(g), gd); }
+    if one_book(g) { return crate::orders::squad_orders_of(&crate::seats::here(g), gd); }
     let s = seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(&crate::seats::here(g), gd))
 }
 
 /// is there a squad to order at all, any seat's
@@ -600,7 +545,7 @@ pub fn team_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Gu
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if on_team(g, gd) { out.push(gd); }
+        if g.team(gd).ours() { out.push(gd); }
     }
     out
 }
@@ -611,19 +556,19 @@ pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Guar
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if on_team(g, gd) && !crate::condition::down(g, g.gd[gd].ch) { out.push(gd); }
+        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) { out.push(gd); }
     }
     out
 }
 
-/// a seat's share of what the squad brings; `g` holds the seat's set
+/// a seat's share of what the squad brings, for the seat the pass is about
 pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
     if one_book(g) { return n; }
     let me = g.tab.cmd_seat[g.seat].index;
     let (mut lo, mut mine, mut all) = (0.0, 0.0, 0.0);
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if !on_team(g, gd) { continue; }
+        if !g.team(gd).ours() { continue; }
         let s = unit_seat(g, gd);
         all += 1.0;
         if s < me { lo += 1.0; } else if s == me { mine += 1.0; }

@@ -22,12 +22,12 @@ fn charge_set(level: &str, link: &str, seed: u32, wall: [f64; 3], sam: [f64; 2])
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);   // (the mission's own issue: the squad brings charges)
     // (the house is taken: this is about what a blast leaves, and a squad shot on its way to the wall sets nothing. One stays so that the mission runs on)
     let hostiles: Vec<game::ids::GuardId> = hostiles(&p);
-    for &gd in hostiles.iter().skip(1) { game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None); }
+    for &gd in hostiles.iter().skip(1) { game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand); }
     p.sam_put(sam);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, wall, None) { panic!("seed {seed}: the wall charge was refused: {why}"); }
-    p.until(90.0, |p| !p.g.wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
-    let c = p.g.wall_charge.set[0];
+    p.until(90.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     (p, c)
 }
 
@@ -111,7 +111,7 @@ fn man_down_facing(p: &mut Play, at: [f64; 2], yaw: Option<f64>) -> game::ids::G
     p.g.ch[c].pos = [at[0], 0.0, at[1]];
     if let Some(yaw) = yaw { (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw); }   // (how he falls is the scene's: whichever way he was looking, or the way a check turned him)
     p.frame();
-    game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None);
+    game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand);
     p.run(3.0);   // (he falls, and is still)
     gd
 }
@@ -157,7 +157,7 @@ fn a_piece_does_not_come_to_rest_on_a_man_down() {
 #[test]
 fn a_piece_does_not_come_to_rest_on_a_man_at_the_walls_foot() {
     let mut bad = Vec::new();
-    for s in [1, 4, 8, 9] {
+    for s in [1, 4, 8, 9, 21] {
         for yaw in [core::f64::consts::FRAC_PI_2, -core::f64::consts::FRAC_PI_2] {
             let (mut p, c) = pass(s);
             let gd = man_down_facing(&mut p, [20.9, 9.0], Some(yaw));

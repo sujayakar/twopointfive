@@ -6,11 +6,10 @@
 use game_types::knobs::Knobs;
 use alloc::vec::Vec;
 use crate::collide;
-use crate::roles::*;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
 use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
-use crate::world::{asking, clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
+use crate::world::{asking, clamp, js_abs, js_max, js_min, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
 const PI: f64 = core::f64::consts::PI;
@@ -44,12 +43,12 @@ pub struct Crossing {
     pub into: i32,
 }
 #[inline]
-fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
-    let o = world(c.w);
-    if bi >= o.boxes as usize || o.flags[bi] & F_GLASS == 0 {
+fn sheet_box<'a>(c: &Ctx<'a>, bi: usize) -> Option<&'a [f64]> {
+    let o = c.w;
+    if bi >= o.boxes() || o.flags[bi] & F_GLASS == 0 {
         return None;
     }
-    let b: &'static [f64] = &o.rec[bi * REC..bi * REC + REC];
+    let b = o.row(bi);
     if js_min(b[R_H], b[R_H + 2]) <= THICK_GLASS_HALF {
         Some(b)
     } else {
@@ -112,8 +111,8 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
     let n = collide::gather(c.w, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, 64);
     let mut sheet = -1;
     for i in 0..n {
-        let o = world(c.w);
-        let bi = asking(c.w).list[i];
+        let o = c.w;
+        let bi = asking().list[i];
         if bi == me {
             continue;
         }
@@ -176,7 +175,7 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
     let at = mad(o, d, t);
     let to = pane_toll(c, bi, at, d, e, nth, tune)?;
     let b = sheet_box(c, bi as usize)?;
-    let te = match line_box(world(c.w), at[0], at[1], at[2], d[0], d[1], d[2], b) {
+    let te = match line_box(c.w, at[0], at[1], at[2], d[0], d[1], d[2], b) {
         Some(s) => s.1,
         None => -1.0,
     };
@@ -192,14 +191,14 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
 }
 #[inline]
 fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
-    lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, c.set, -1, true, out, tune)
+    lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, -1, true, out, tune)
 }
 /// The arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
 fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) -> bool {
     let mut any = false;
     for s in 0..panes::sheet_count(c) as usize {
         let bi = panes::sheet_bi(c, s) as usize;
-        let o = world(c.w);
+        let o = c.w;
         let b = &o.rec[bi * REC..bi * REC + REC];
         let s = match line_box(o, from[0], from[1], from[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s,
@@ -248,7 +247,7 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
             Some(b) => b,
             None => return None,
         };
-        let te = match line_box(world(c.w), at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
+        let te = match line_box(c.w, at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s.1,
             None => 0.0,
         };

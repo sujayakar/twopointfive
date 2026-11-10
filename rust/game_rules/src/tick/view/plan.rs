@@ -1,6 +1,6 @@
 //! THE SQUAD'S PLAN ON THE FLOOR, as a seat is told it: per man with a mark his way, his mark and what he watches; everything waiting on the player's key, with whether the key pressed
 //! now would send it; the throws. Only men of the seat's own squad are listed, and nothing of an enemy the team cannot see. A leg of a man's way that is not his own path is a question
-//! of the floor the HUD asks (`ask::WorldAsk::way`) and keeps by its own clock; nothing here searches.
+//! of the floor the HUD asks (`scene_collision::way_host`) and keeps by its own clock; nothing here searches.
 //!
 //! `waits_on_key` repeats the rules of the press as a reader (the pair's mark first, then the nearest set charge of a wall or a door's, then the word, the drill and the rescue's entry).
 use super::*;
@@ -93,7 +93,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let op = &g.tab.doortools_door_op[o];
         if op.word.is_some() { continue; }
         let held = op.thr.is_some() && op.phase == Phase::Thr;
-        if held || (big && (op.on_word || matches!(op.phase, Phase::Armed | Phase::Standoff | Phase::Place))) {
+        if held || (big && matches!(op.phase, Phase::Armed | Phase::Standoff | Phase::Place)) {
             let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
             let why = if held { WaitWhy::Thr } else if op.kind == crate::doortools::DoorToolKind::Charge { WaitWhy::Charge } else { WaitWhy::Tool };
             let word = men.iter().any(|m| addr.contains(m));
@@ -103,9 +103,9 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     }
     if big {
         for &gd in squad.iter() {
-            let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+            let Some(a) = crate::orders::squad_orders_of(seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
-            if !crate::condition::down(g, g.gd[gd].ch) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
+            if !crate::condition::down(g, g.gd[gd].ch) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.at == crate::orders::At::Stacked {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
             }
         }
@@ -157,17 +157,17 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let wall_first = wall.is_some() && !t_set.iter().any(|&c| door_d(c) < wall_d);
         let reaches = up && !pair_first && (!wall_first || t_set.is_empty());   // the press gets as far as the door tools
         let any_word = by.iter().any(|e| e.word);
-        let row_key = s.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(g.k.doortools.blow_key.as_str())));   // a menu up with a row on the key: the key IS that row
+        let row_key = s.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].word));   // a menu up with a row on the key: the key IS that row
         let early = big && t.ops.iter().any(|&o| {
             let op = &g.tab.doortools_door_op[o];
             op.thr.as_ref().is_some_and(|th| matches!(th.first, Some(crate::doortools::ThresholdFirst::Can | crate::doortools::ThresholdFirst::Burst))) && op.men.iter().any(|m| addr.contains(m))
         });
-        let last = reaches && !any_word && !early && !row_key && !s.menu.as_ref().is_some_and(|m| m.word_row) && t_set.is_empty() && w_set.is_empty();   // … and past them all, to the rescue
+        let last = reaches && !any_word && !early && !row_key && t_set.is_empty() && w_set.is_empty();   // … and past them all, to the rescue
         let drill_now = if any_word { drill_men.iter().any(|m| addr.contains(m)) } else { t_set.is_empty() && w_set.is_empty() };   // (the drill reads the key after them)
         // (every man of it on his place, his feet there: a gun still coming round does not put the cap out, and none taken off it by a fight)
         let set = |men: &[GuardId]| men.iter().all(|&m| {
             if crate::condition::down(g, g.gd[m].ch) { return true; }
-            let Some(a) = crate::orders::squad_orders_of(g, seat, m) else { return true };
+            let Some(a) = crate::orders::squad_orders_of(seat, m) else { return true };
             let a = &g.tab.orders_assignment[a];
             a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| flat(g.ch[g.gd[m].ch].pos, p) < 0.5))
         });
@@ -251,7 +251,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     for &gd in squad.iter() {
         let m = &g.gd[gd];
         if g.cond[m.ch].down { continue; }
-        let Some(aid) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+        let Some(aid) = crate::orders::squad_orders_of(seat, gd) else { continue };
         let a = &g.tab.orders_assignment[aid];
         let Some(post) = a.post else { continue };
         let mut age = crate::m::max(0.0, g.time - a.t0);

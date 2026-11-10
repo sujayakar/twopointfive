@@ -22,7 +22,7 @@ The rules' half, in `rust/`:
 | `audio_iface.rs` | the calls a rule makes: `game_audio_like_play`, `game_audio_like_footstep`, `game_audio_like_rain`; `PlayOpts` |
 | `out_events.rs` | what a tick tells its host (`OutEvent`) |
 | `floor.rs` | what is underfoot; `tread`, one footfall for the mixer and the hearing rule alike |
-| `scene_collision.rs` | `sound_paths_propagate` for the rules, `heard_shared_by` for a question that changes nothing, `Propagation` |
+| `scene_collision.rs` | `sound_paths_propagate` for the rules, `heard_by` for a question that changes nothing, `Propagation` |
 | `rust/sim/src/hear.rs` | the two halves of a sound's path: `direct` and `route` |
 | `ask.rs` | `hear_kept`, the mixer's question, reached by `face_hear` in `rust/game_face/src/ask.rs` |
 | `game/restart.rs` | `game_roll_tick` and `game_on_prop_event`: furniture's noise, the chair's voice |
@@ -62,7 +62,7 @@ row once (`Played`), so a tick run again does not sound twice, and calls `AudioE
   the straight distance.
 - Otherwise `route` walks the floor (`find_path`, from listener to source). The sound seems to come from the last waypoint the listener still has a straight
   line to, at the path's whole length (`apparent`). Muffle is 0.35, or 0.85 if a shut leaf lies across the way. A leaf is `sound_seal` while nearly
-  shut (`SOUND_SEAL` in `rust/sim/src/doors.rs`).
+  shut (`SOUND_SEAL` in `doors/step.rs`).
 
 `carry` is what the rules take from it. Whole glass stops a sound and a hole lets it through, where the level's pane rule is up. Rules ask through
 `hear_path` in `weather.rs`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:

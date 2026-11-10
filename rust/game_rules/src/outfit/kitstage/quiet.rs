@@ -5,7 +5,6 @@ use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::plan::KIT_PLAN;
 use super::types::*;
 use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
-use crate::doors::door_off;
 use crate::game::{Game, SlotKind};
 use crate::ids::*;
 use crate::m;
@@ -226,13 +225,13 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
         g.tab.fixture[p].base_emissive = e;
     }
 }
-pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage, b: &Beat) {
+pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage) {
     life_off(g, st, true);
-    let hinge = st.door.filter(|&d| !door_off(g, d)).map(|d| g.dr[d].def.hinge);
+    let hinge = st.door.filter(|&d| !g.dr[d].leaf.off).map(|d| g.dr[d].def.hinge);
     let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
-    st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, s: 0.0, how: "", moved: 0.0, pool: false });
+    st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, moved: 0.0 });
     st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;
@@ -249,13 +248,12 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
     let feet = g.ch[g.pl[pl].ch].pos;
     st.a.stow_t = now;
     let mut last = st.a.cost_last.unwrap_or_default();
-    last.s = el;
     last.moved = m::max(last.moved, flat(feet, st.a.cost_feet));
     if st.a.asked.is_none() && !a.done {
         g.pl[pl].crouch = false;
         if a.open {
-            if let Some(d) = st.door.filter(|&d| !door_off(g, d)) {
-                crate::doors::door_set_locked(g, d, false);
+            if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) {
+                g.dr[d].leaf.locked = false;
                 let f = at(st, [0.0, 1.0, 0.0]);
                 let id = g.ch[g.pl[pl].ch].id;
                 crate::doors::doors_crack(g, d, f, id, st.a.step_dt, None, Some(c.swing), Some(c.wide_deg * R));
@@ -267,17 +265,15 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
                     st.a.cost_pool = Some((i, e));
                     g.tab.fixture[p].base_intensity = i * a.pool;
                     g.tab.fixture[p].base_emissive = [e[0] * a.pool, e[1] * a.pool, e[2] * a.pool];
-                    last.pool = true;
                 } }
             }
             last.up = true;
         }
-        if let Some(d) = st.door.filter(|&d| !door_off(g, d)) { last.leaf = m::max(last.leaf, m::abs(crate::doors::door_angle(g, d) - st.leaf_shut)); }
+        if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) { last.leaf = m::max(last.leaf, m::abs(g.dr[d].leaf.angle - st.leaf_shut)); }
         st.a.cost_last = Some(last);
         return true;
     }
     if !a.done { st.a.cost_cuts += 1; }
-    last.how = if a.done { "done" } else { "cut" };
     st.a.cost_last = Some(last);
     cost_off(g, st);
     super::stage::quiet_inside(g, st, QK.inside, 1.0);
@@ -333,7 +329,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
     let a = idle_at(now - st.a.life_t);
     let Some(l) = st.a.life_lamp.filter(|_| !a.done) else { life_off(g, st, false); return };
     let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
-    let way = if st.door.map_or(false, |d| !door_off(g, d)) { st.latch } else { -sg };
+    let way = if st.door.map_or(false, |d| !g.dr[d].leaf.off) { st.latch } else { -sg };
     let h = st.a.life_home;
     let i = (if st.a.life_hung { QK.own.intensity * QK.idle.gain * a.env } else { QK.own.intensity * st.a.blade }) * a.lit;
     let r = &mut g.tab.light[l];

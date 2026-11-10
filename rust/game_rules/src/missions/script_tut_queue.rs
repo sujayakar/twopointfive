@@ -125,14 +125,14 @@ fn up(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFr
 }
 
 fn until_back() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_BACK }, Some("the back door opens"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_BACK })
 }
 fn until_front() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_FRONT }, Some("the front door opens"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_FRONT })
 }
 /// (tut-queue.script.ts gun's too)
 fn too() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_TOO }, Some("the back door opens too"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_TOO })
 }
 
 pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGunFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
@@ -145,8 +145,8 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
     loop {
         match f.at {
             0 => {
-                f.m = crate::director::director_beat_unit(g, r, GUNNER);
-                f.n = crate::director::director_beat_unit(g, r, MATE);
+                f.m = crate::director::director_beat_unit(g, GUNNER);
+                f.n = crate::director::director_beat_unit(g, MATE);
                 if up(g, r, f).is_empty() { return Ok(None); }
                 if alive(g, r, &f.m) {
                     let m = f.m.clone().unwrap();
@@ -171,8 +171,8 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                     };
                     crate::director::director_beat_order(g, r, b, &n, &o)?;
                 }
-                f.gone = Some(crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_GONE }, Some("the hall is down")));
-                f.hit = Some(crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_HIT }, Some("one of them is hit through a wall")));
+                f.gone = Some(crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_GONE }));
+                f.hit = Some(crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_HIT }));
                 f.at = 1;
                 return Ok(Some(crate::director::director_beat_any(vec![until_back(), until_front(), f.gone.clone().unwrap(), f.hit.clone().unwrap()])));
             }
@@ -180,9 +180,6 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                 f.r = Some(got.clone());
                 let index = got.index;
                 let laid = crate::director::director_query_signalled(g, r, "lesson:breach");
-                let which = ["the back door", "the front door", "both down", "a man hit"][index as usize];
-                let what = format!("the hall's wait ends: {}{}", which, if laid { ", a stack on each door" } else { "" });
-                crate::director::director_beat_note(g, b, &what, None);
                 f.alone = index == 1.0 && !laid;
                 if index == 1.0 && laid {
                     if alive(g, r, &f.m) {
@@ -198,7 +195,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             2 => {
                 if !is_open(g, back)? {
-                    let wait = crate::director::director_beat_wait(g, r, BACK_SECS, None)?;
+                    let wait = crate::director::director_beat_wait(g, r, BACK_SECS)?;
                     f.at = 3;
                     return Ok(Some(crate::director::director_beat_any(vec![too(), wait, f.gone.clone().unwrap()])));
                 }
@@ -210,7 +207,6 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             4 => {
                 if f.alone {
-                    crate::director::director_beat_note(g, b, "one stack, alone: the gun is laid on its doorway", None);
                     if alive(g, r, &f.n) {
                         let n = f.n.clone().unwrap();
                         let o = OrderPatch2 {
@@ -232,17 +228,17 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                 if f.k < ALONE_BURSTS && alive(g, r, &f.m) && !is_open(g, back)? {
                     let m = f.m.clone().unwrap();
                     let burst = crate::director::director_beat_burst(g, r, b, &m, RunBurstsItemAt::Mark(doorway.clone()), 6.0, Some(0.09), Some(0.03))?;
-                    let wait = crate::director::director_beat_wait(g, r, 1.4, None)?;
+                    let wait = crate::director::director_beat_wait(g, r, 1.4)?;
                     f.at = 6;
                     return Ok(Some(crate::director::director_beat_any(vec![burst, wait, f.gone.clone().unwrap()])));
                 }
                 for u in up(g, r, f).iter() {
-                    crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
                 }
                 return Ok(None);
             }
             6 => {
-                let wait = crate::director::director_beat_wait(g, r, 0.35, None)?;
+                let wait = crate::director::director_beat_wait(g, r, 0.35)?;
                 f.at = 7;
                 return Ok(Some(crate::director::director_beat_any(vec![wait, f.gone.clone().unwrap()])));
             }
@@ -251,12 +247,12 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                 f.at = 5;
             }
             8 => {
-                crate::director::director_beat_signal(g, r, b, "done:turned", None);
+                crate::director::director_beat_signal(g, r, "done:turned");
                 if f.r.as_ref().unwrap().index < 2.0 {
                     if alive(g, r, &f.m) {
                         let m = f.m.clone().unwrap();
                         let burst = crate::director::director_beat_burst(g, r, b, &m, RunBurstsItemAt::Mark(jamb.clone()), 4.0, Some(0.1), Some(0.02))?;
-                        let wait = crate::director::director_beat_wait(g, r, 1.0, None)?;
+                        let wait = crate::director::director_beat_wait(g, r, 1.0)?;
                         f.at = 9;
                         return Ok(Some(crate::director::director_beat_any(vec![burst, wait, f.gone.clone().unwrap()])));
                     }
@@ -266,7 +262,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                 }
             }
             9 => {
-                let wait = crate::director::director_beat_wait(g, r, LATE_SECS, None)?;
+                let wait = crate::director::director_beat_wait(g, r, LATE_SECS)?;
                 f.at = 10;
                 return Ok(Some(crate::director::director_beat_any(vec![wait, f.gone.clone().unwrap()])));
             }
@@ -281,7 +277,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                         ..Default::default()
                     };
                     crate::director::director_beat_order(g, r, b, &n, &o)?;
-                    let wait = crate::director::director_beat_wait(g, r, 0.3, None)?;
+                    let wait = crate::director::director_beat_wait(g, r, 0.3)?;
                     f.at = 11;
                     return Ok(Some(crate::director::director_beat_any(vec![wait, f.gone.clone().unwrap()])));
                 }
@@ -289,7 +285,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             11 => {
                 for u in up(g, r, f).iter() {
-                    crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
                 }
                 return Ok(None);
             }
@@ -299,7 +295,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// The 'gun' beat's c.until tests.
-pub(super) fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
     let (front, back) = {
         let v = crate::script_tut_queue::tut_queue_vars(g, r);
         (v.front.clone().unwrap(), v.back.clone().unwrap())
@@ -324,7 +320,7 @@ fn left(g: &mut Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec
 
 /// (tut-queue.script.ts gates' one)
 fn one() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_ONE }, Some("one of them is left"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_ONE })
 }
 
 /// Are they all down or fled, or is the last one now running? (tut-queue.script.ts gates' broke)
@@ -333,8 +329,6 @@ fn broke(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::s
     if l.is_empty() { return Ok(true); }
     if l.len() > 1 || f.off { return Ok(false); }
     if crate::director::director_beat_rout(g, r, b, &l[0])? {
-        let what = format!("{} is the last: he drops it and runs", l[0].callsign);
-        crate::director::director_beat_note(g, b, &what, None);
         return Ok(true);
     }
     f.off = true;
@@ -384,7 +378,7 @@ fn walk_on(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, men: &[crate::
 }
 
 /// One resume of the beat 'gates': a resume point a yield.
-pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame) -> Result<Option<crate::director::Cond>, String> {
     let v = crate::script_tut_queue::tut_queue_vars(g, r).clone();
     let road_gate = v.road_gate.as_ref().unwrap();
     let back_gate = v.back_gate.as_ref().unwrap();
@@ -394,8 +388,8 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
     match f.at {
         0 => {
             for d in [road_gate, back_gate, track_gate] { crate::director::director_beat_door_lock(g, d, true)?; }
-            f.road = ROAD.iter().map(|cs| crate::director::director_beat_unit(g, r, cs)).collect();
-            f.lane = LANE.iter().map(|cs| crate::director::director_beat_unit(g, r, cs)).collect();
+            f.road = ROAD.iter().map(|cs| crate::director::director_beat_unit(g, cs)).collect();
+            f.lane = LANE.iter().map(|cs| crate::director::director_beat_unit(g, cs)).collect();
             for i in 0..f.road.len() {
                 if alive(g, r, &f.road[i]) {
                     let o = crate::director::OrderPatch2 {
@@ -417,7 +411,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 }
             }
             f.at = 1;
-            Ok(Some(crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Signal, Some("lesson:gates"), None)))
+            Ok(Some(crate::director::director_beat_on(g, r, crate::director::EventViewKind::Signal, Some("lesson:gates"), None)))
         }
         1 => {
             let mut men = Vec::new();
@@ -430,29 +424,29 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 crate::director::director_beat_door_open(g, d, None, Some(true))?;
             }
             f.at = 2;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.8, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.8)?))
         }
         2 => {
             walk(g, r, b, &f.road, [35.0, 10.0], &v.road_in, post_a)?;
             walk(g, r, b, &f.lane, [22.0, 5.0], &v.lane_in, post_b)?;
-            let inside = crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_INSIDE }, Some("they are inside their gates"));
-            let wait = crate::director::director_beat_wait(g, r, 25.0, None)?;
+            let inside = crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_INSIDE });
+            let wait = crate::director::director_beat_wait(g, r, 25.0)?;
             f.at = 3;
             Ok(Some(crate::director::director_beat_any(vec![inside, one(), wait])))
         }
         3 => {
-            crate::director::director_beat_signal(g, r, b, "done:gates", None);
+            crate::director::director_beat_signal(g, r, "done:gates");
             if broke(g, r, b, f)? { return Ok(None); }
-            let wait = crate::director::director_beat_wait(g, r, GATE_SECS, None)?;
+            let wait = crate::director::director_beat_wait(g, r, GATE_SECS)?;
             f.at = 4;
             Ok(Some(crate::director::director_beat_any(vec![one(), wait])))
         }
         4 => {
             if broke(g, r, b, f)? { return Ok(None); }
             for u in left(g, r, &f.men).iter() {
-                crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
             }
-            let wait = crate::director::director_beat_wait(g, r, ON_SECS, None)?;
+            let wait = crate::director::director_beat_wait(g, r, ON_SECS)?;
             f.at = 5;
             Ok(Some(crate::director::director_beat_any(vec![one(), wait])))
         }
@@ -460,16 +454,15 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
             if broke(g, r, b, f)? { return Ok(None); }
             walk_on(g, r, b, &f.men, &f.road, &v.road_on, post_a)?;
             walk_on(g, r, b, &f.men, &f.lane, &v.lane_on, post_b)?;
-            crate::director::director_beat_note(g, b, "nobody has them yet: they walk on into the yard", None);
-            let open = crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_OPEN }, Some("they are in the open"));
-            let wait = crate::director::director_beat_wait(g, r, 12.0, None)?;
+            let open = crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_OPEN });
+            let wait = crate::director::director_beat_wait(g, r, 12.0)?;
             f.at = 6;
             Ok(Some(crate::director::director_beat_any(vec![open, one(), wait])))
         }
         6 => {
             if broke(g, r, b, f)? { return Ok(None); }
             for u in left(g, r, &f.men).iter() {
-                crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
             }
             f.at = 7;
             Ok(Some(one()))
@@ -483,7 +476,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// The 'gates' beat's c.until tests.
-pub(super) fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
     match id {
         GATES_INSIDE | GATES_OPEN => {
             for u in left(g, r, &f.men).iter() {

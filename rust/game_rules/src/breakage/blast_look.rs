@@ -50,16 +50,10 @@ fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear();  }
         return;
     }
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_look.state.has(key) {
         if set.is_empty() { return; }
-        g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 });
-    }
-    let time = g.time;
-    {
-        let st = g.m.blast_look.state.get_mut(key).unwrap();
-        if time < st.last {  }   // (the clock went back: a load / a restart)
-        st.last = time;
+        g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false });
     }
     // charges gone from the list since last frame: BLOWN (the flash detonateStun lit for it is burning at its stun point) or given back (no flash)
     let mut i = g.m.blast_look.state.get(key).unwrap().seen.len();
@@ -114,7 +108,7 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
     /// a piece of the firing line: never thinner than is seen
     fn wire(g: &mut Game, out: &mut Vec<AnyBoxId>, k: &CHARGELOOK, yaw: f64, flags: f64, c: V3, h: V3, emissive: V3) {
         bx(g, out, yaw, flags, c, h, k.wire_albedo, emissive);
-        crate::thinline::thin_note(g, out[out.len() - 1], k.wire / 2.0, k.wire_px / 2.0, emissive[0], emissive[1], emissive[2]);
+        crate::thinline::thin_note(g, out[out.len() - 1], k.wire / 2.0, k.wire_px / 2.0);
     }
     let spill = |albedo: V3, lamp: V3, kk: f64| -> V3 { [albedo[0] * lamp[0] * kk, albedo[1] * lamp[1] * kk, albedo[2] * lamp[2] * kk] };
     // the lamp on the slab's head: dark, and lit for blinkOn of every blinkEvery since it was set
@@ -191,7 +185,7 @@ fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 })
+    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false })
 }
 
 /// this module's own dice: a counter of its own through a hash
@@ -226,8 +220,8 @@ fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        if t::item_kind(g, it) != t::ItemKind::Flash || (t::item_age(g, it) == 0.0) != born { continue; }
-        let p = t::item_pos(g, it);
+        if g.tab.item[it].kind != t::ItemKind::Flash || (g.tab.item[it].age == 0.0) != born { continue; }
+        let p = g.tab.item[it].pos;
         if near([p[0], p[1] + h, p[2]], at, 0.02) { return true; }
     }
     false
@@ -252,9 +246,9 @@ fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::b
         let sg = m::sign(off);
         let th = g.dr[d].def.closed_dir;
         let into: V3 = [-m::sin(th) * sg, 0.0, m::cos(th) * sg];
-        let slab = if crate::doors::door_off(g, d) { crate::doors::door_slab(g, d) } else { None };
+        let slab = if g.dr[d].leaf.off { g.dr[d].slab } else { None };
         let Some(sl) = slab else {
-            let still = m::abs(crate::doors::door_angle(g, d)) < 0.05 && m::abs(crate::doors::door_vel(g, d)) < 0.01;
+            let still = m::abs(g.dr[d].leaf.angle) < 0.05 && m::abs(g.dr[d].leaf.vel) < 0.01;
             return if still { Some(DoorChargeAt { into, from: at, rest: at }) } else { None };
         };
         let gone = (sl.p[0] - at[0]) * into[0] + (sl.p[2] - at[2]) * into[2];
@@ -278,7 +272,7 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;
     for x in seen.iter() {
         if set.contains(&x.c) { continue; }

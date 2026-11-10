@@ -6,8 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
-fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Is the fixture lit, as it stands.
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
@@ -87,7 +85,7 @@ fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64)
     g.fog_of_war.span_z = 0.0;
     let mut k = i as usize;
     while k < j as usize {
-        let q = bx(g, list[k]);
+        let q = &g.tab[list[k].into()];
         let (h, yaw) = (q.h, q.yaw);
         k += 1;
         if let Some((l, x, z)) = long_side(h, yaw, best) {
@@ -128,8 +126,8 @@ fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[Fram
     if ghost.len() != j - i { return false; }
     let mut k = i;
     while k < j {
-        let (sc, sy, sr) = { let s = bx(g, list[k]); (s.c, s.yaw, s.rot) };
-        let (qc, qy, qr) = { let q = bx(g, ghost[k - i]); (q.c, q.yaw, q.rot) };
+        let (sc, sy, sr) = { let s = &g.tab[list[k].into()]; (s.c, s.yaw, s.rot) };
+        let (qc, qy, qr) = { let q = &g.tab[ghost[k - i].into()]; (q.c, q.yaw, q.rot) };
         k += 1;
         if !(m::abs(sc[0] - qc[0]) + m::abs(sc[1] - qc[1]) + m::abs(sc[2] - qc[2]) < THING_EPS && m::abs(sy - qy) < THING_EPS) { return false; }
         if let (Some(a), Some(b)) = (sr, qr) {
@@ -163,7 +161,7 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
         }
         g.fog_of_war.our_chunks.add(crate::Num(k));
         if let Some(mate) = mate {
-            if bx(g, mate).mkey.is_some() {
+            if g.tab.boxes[mate].mkey.is_some() {
                 let mk = thing_key_of(g, mate.into());
                 g.fog_of_war.our_chunks.add(crate::Num(mk));
             }
@@ -202,7 +200,7 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
             i += 1;
             continue;
         }
-        let (mkey, owner, c) = { let q = bx(g, b); (q.mkey, q.owner, q.c) };
+        let (mkey, owner, c) = { let q = &g.tab[b]; (q.mkey, q.owner, q.c) };
         if mkey.is_none() {
             if prime || (ours && owner != 0.0 && g.engine.lights.fog_team.owners.has(crate::Num(owner))) || fog_of_war_cell_seen_at(g, c[0], c[2]) {
                 out.push(b);
@@ -219,12 +217,12 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
             continue;
         }
         let mut j = i + 1;
-        while j < n && bx(g, list[j]).mkey.is_some() && thing_key_of(g, list[j]) == tk { j += 1; }
+        while j < n && g.tab[list[j].into()].mkey.is_some() && thing_key_of(g, list[j]) == tk { j += 1; }
         let mut x = 0.0;
         let mut z = 0.0;
         let mut k = i;
         while k < j {
-            let c = bx(g, list[k]).c;
+            let c = g.tab[list[k].into()].c;
             x += c[0];
             z += c[2];
             k += 1;
@@ -312,7 +310,7 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
 
 /// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.
 pub fn fog_of_war_seen(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     g.fog_of_war.recs.get(gd).map_or(false, |r| r.seen)
 }
 
@@ -329,7 +327,7 @@ pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::
 
 /// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.
 pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
     if r.seen || (crate::condition::down(g, g.gd[gd].ch) && r.body) { return true; }
     let since = g.time - r.t;
@@ -354,7 +352,7 @@ pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark>
     let mut out = Vec::new();
     if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
     for &gd in g.guards.iter() {
-        if crate::condition::down(g, g.gd[gd].ch) || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !g.team(gd).theirs() || !fog_of_war_hides(g, gd) { continue; }
         let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
         let Some(at) = r.at else { continue };
         let age = g.time - r.t;

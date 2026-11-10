@@ -27,7 +27,7 @@ fn hash01(n: f64) -> f64 {
 
 /// The man's own stature (1 for a player's man, and for everybody with no cast loaded).
 fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
-    if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
+    if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
     let name = g.tab.anim_gltf_cast_variant[v].name.clone();
@@ -37,7 +37,7 @@ fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 
 /// Two bodies that must meet: he is in a player's arm, or is the body one hauls.
 fn paired(g: &crate::game::Game, c_2: CharId) -> bool {
-    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging { if g.gd[d].ch == c_2 { return true; } } }
+    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging() { if g.gd[d].ch == c_2 { return true; } } }
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     match rec { Some(r) => g.gd[r].held.is_some(), None => false }
 }
@@ -78,12 +78,12 @@ pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId
         let owner = g.tab[b].owner;
         let c = if any && js::truthy(owner) { g.m.stature.by_id[(js::to_i32(owner) & 0xff) as usize] } else { None };
         let Some(c) = c else {   // (a box that outlives the frame, a row of Game.fx, whose man is back at 1)
-            let x = &mut g.tab[b]; if x.dc.is_some() { x.dc = None; x.dh = None; }
+            if g.tab[b].dc.is_some() { let mut x = g.tab.edit(b); x.dc = None; x.dh = None; }
             continue;
         };
         let s = stature_of(g, c); let (bc, bh) = { let x = &g.tab[b]; (x.c, x.h) };
         let dc = drawn_point(g, c, bc, Some(s));
-        let x = &mut g.tab[b]; x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
+        let mut x = g.tab.edit(b); x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
     }
     if any { for x in g.m.stature.by_id.iter_mut() { *x = None; } }
 }

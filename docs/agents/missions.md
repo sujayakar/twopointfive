@@ -151,5 +151,5 @@ Native tests in `rust/game_start/tests/`:
 ## Not seen
 
 - **The other ways in** have stood only natively: nobody has played one on a GPU.
-- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level.
+- **Left over:** `rails.sky` is on no level.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.
