@@ -404,7 +404,6 @@ fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
     let own = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && g.ch[man.ch].alive
         && man.held.is_none()
-        && man.civ.is_none()
         && man.script.is_none()
         && man.body_duty.is_none()
         && !crate::condition::is_blind(g, man.ch)

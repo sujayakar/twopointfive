@@ -33,7 +33,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `gunwall.rs` | a raised gun comes down at a wall, for every man |
 | `gunslots.rs`, `gunroles.rs` | the picks a card offers, a teammate's sidearm when dry; what a teammate's gun is for |
 | `slotsetup.rs` | the setup a gun's digit opens |
-| `launcher.rs`, `he40.rs`, `shotgun.rs` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
+| `flight.rs`, `launcher.rs`, `he40.rs`, `shotgun.rs` | a thing off a tube in flight (`leg`), a blunt one at a man (`struck`); sponge round; 40 mm; a shell's pellets, a lock taken with them |
 | `throwables/`, `throwplan.rs`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
 | `kit/`, `kitload.rs`, `loadout/`, `issue.rs`, `gear.rs` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
 | `bigkit.rs`, `packside.rs`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
@@ -112,7 +112,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
   reloads.
 - **A gun comes down at a wall** and no round goes (`gun_walled`), but the breaching shotgun laid on a lock stays up and fires (`breach_aim`). An AI
   man in a fight (`fight_s`) lowers only a gun standing in the panel; Sam's test is always the calm one.
-- **No ring on a friend** (`friend_no_snap`), and an enemy behind a friend under the cursor is not ringed through him.
+- **No ring on a friend** (`friend`), and an enemy behind a friend under the cursor is not ringed through him.
 - **Off a friend out of a fight** (`sam_off_friend`, `friends_in_fight`) the gun comes down, for a hostage in a rescue too. In a fight it stays up.
   Any round of his can hit a friend, as an enemy's can.
 - **A teammate does not press with a friend where his round could go** (`friend_in_cone`, `ff_unpressed`), and waits out Sam's lane of fire or finds a

@@ -107,7 +107,7 @@ pub fn noise_at(g: &mut Game, by: CharId, level: f64) {
 
 /// This man is at least this loud.
 pub fn louder(g: &mut Game, c: CharId, level: f64) {
-    if let Some(pl) = crate::seats::man_of(g, Some(c)) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+    if let crate::character::Who::Player(pl) = g.ch[c].who { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
 }
 
 /// A noise where a man something found stands, laid on whoever sent the thing.
