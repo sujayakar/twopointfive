@@ -115,6 +115,10 @@ seats room-clear-four
 seats compound-four
 seats depot-four
 par killhouse-four
+steps night-breach doors
+steps depot-four bangs
+steps compound-four doors
+steps rescue-registry push
 level file
 played night-breach
 played room-clear-pair
