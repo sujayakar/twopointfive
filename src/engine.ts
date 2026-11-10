@@ -20,7 +20,7 @@ import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, 
 import { buildWallRaster, wallRasterHandOnSteps, rasterRect, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob, type ReachOnly } from './render/reach';
 import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
 import { PLAN_PACE } from './render/planPace';
-import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
+import { MeshShadows } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
 import { Particles } from './render/particles';
@@ -840,7 +840,7 @@ export class Engine {
     const ts = (n: string) => timer.pass(n);
     this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
-    if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
+    if (meshOn) { if (this.meshShadows!.plan(this.world.charCount)) this.meshShadows!.encode(enc, ts('mesh')); else timer.idle('mesh'); }   // skin + refit the tree of every listed character who has moved from this frame's joint matrices — before the cascades, the first pass that traces
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);

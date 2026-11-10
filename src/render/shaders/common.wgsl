@@ -569,7 +569,7 @@ fn occludedCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> bool {
 /** the proxy's outward normal at a point p on it (traceClosest / traceClosestMesh tails) */
 fn proxyNormal(p: vec3f, cp: Capsule) -> vec3f { return roundConeNormal(p, cp.a, cp.b, cp.r, coneRb(cp)); }
 
-// ---- mesh-traced character shadows (FLAG_MESH_SHADOWS; data written by render/meshShadows.ts every frame the flag is up, layout described there;
+// ---- mesh-traced character shadows (FLAG_MESH_SHADOWS; data written by render/meshShadows.ts, a man's in every frame he moves in; layout described there;
 // meshLoad() and MESH_MAX_CHARS come from the scene prelude). The CPU twin of every function here is render/meshbvh.ts (triHit / bvhAnyHit):
 // same tolerances, same visiting order.
 const MESH_EPS_UV: f32 = 1e-5;    // barycentric slack: triangles are this much fat at their edges, so a ray through a shared edge cannot slip between both
@@ -594,9 +594,8 @@ fn meshTri(c0: u32, ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
 // leaf tests its ≤ 4 triangles. ANY hit ends it: returns that triangle's t (a real blocker in (MESH_TMIN, tmax], not necessarily the nearest),
 // or −1. Links only ever point forward, so a well-formed tree ends within N steps; `it` caps a malformed one at N regardless.
 fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 {
-  let hd = meshLoad(0u);                        // (N, NODE_BASE, TRI_BASE, T)
-  let N = hd.x;
-  let nb = hd.y + k * N * 2u; let tb = hd.z + k * hd.w * 3u;
+  let hd = meshLoad(k);                         // (his tree's nodes, where they begin, where its corners begin, its triangles)
+  let N = hd.x; let nb = hd.y; let tb = hd.z;
   var i = 0u; var it = 0u;
   loop {
     if (i >= N || it >= N) { break; }
