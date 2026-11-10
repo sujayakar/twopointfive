@@ -118,75 +118,19 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if cl!(g).stage == ClearStage::Done { return false; }
     if !g.guards.contains(&a) || b.map_or(false, |b| !g.guards.contains(&b)) { cl!(g).stage = ClearStage::Done; return false; }
     if !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || crate::seats::all_down(g) { clearing_cancel(g); return false; }
-    { let c = cl!(g); c.t += dt; c.total += dt; }
+    let c = cl!(g);
+    c.t += dt;
+    c.total += dt;
     if crate::condition::down(g, g.gd[a].ch) || b.map_or(false, |b| crate::condition::down(g, g.gd[b].ch)) {
-        if cl!(g).stage != ClearStage::Muster {
-            let dead = if crate::condition::down(g, g.gd[a].ch) { a } else { b.unwrap() };
-            let left = if dead == a { b } else { Some(a) };
-            if let Some(left) = left {
-                if !crate::condition::down(g, g.gd[left].ch) {
-                    end_guard_script(g, left, Some(crate::game::GuardState::Suspicious));
-                    crate::mind::raise(g, left, 0.6, "squad");
-                    let at = g.ch[g.gd[dead].ch].pos;
-                    crate::belief::word(g, left, at);
-                    g.gd[left].react_t = 0.7;
-                    g.gd[left].search_t = 0.0;
-                    crate::game::game_say(g, left, "hey — you with me? …say something.", None, None);
-                }
-            }
-        }
+        if cl!(g).stage != ClearStage::Muster { mate_finds_him_down(g, a, b); }
         cl!(g).stage = ClearStage::Done;
         return false;
     }
     if cl!(g).stage == ClearStage::Muster { return clearing_muster(g); }
-
-    let mut worst: Option<Perceive> = None;
-    let mut fix: Option<V3> = None;
-    let mut top = -1.0;
     let men = clearing_men(g);
-    for (i, &gd) in men.iter().enumerate() {
-        let before = cl!(g).aw[i];
-        let r = perceive(g, gd, before);
-        cl!(g).aw[i] = g.gd[gd].awareness;
-        if let Some(r) = r {
-            if worst.map_or(true, |w| rank(r) > rank(w)) { worst = Some(r); }
-            if g.gd[gd].awareness > top && g.gd[gd].last_known.is_some() { top = g.gd[gd].awareness; fix = g.gd[gd].last_known; }
-        }
-    }
-    if worst.is_none() {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let o = g.guards[i];
-            i += 1;
-            if o != a && Some(o) != b && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].last_known.is_some() { worst = Some(Perceive::Alert); fix = g.gd[o].last_known; break; }
-        }
-    }
-    if worst == Some(Perceive::Alert) {
-        for &gd in &men { let to = fix.or(g.gd[gd].last_known); break_off(g, gd, 0.9, to); }
-        cl!(g).stage = ClearStage::Done;
-        return false;
-    }
-    if worst == Some(Perceive::Body) {
-        for &gd in &men {
-            end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
-            crate::mind::raise(g, gd, 0.5, "squad");
-            if let Some(f) = fix { crate::belief::word(g, gd, f); }
-            g.gd[gd].react_t = 0.6;
-            g.gd[gd].search_t = 0.0;
-        }
-        cl!(g).stage = ClearStage::Done;
-        return false;
-    }
-    if worst.is_some() {
-        let to = fix.or(g.gd[a].last_known);
-        break_off(g, a, SUSPECT + 0.05, to);
-        if let Some(b) = b {
-            end_guard_script(g, b, Some(crate::game::GuardState::Suspicious));
-            crate::mind::raise(g, b, SUSPECT, "squad");
-            if let Some(f) = fix { crate::belief::word(g, b, f); }
-            g.gd[b].react_t = 1.2;
-            g.gd[b].search_t = 0.0;
-        }
+    let news = what_they_made_of_the_frame(g, &men);
+    if let Some(worst) = news.worst {
+        breaks_off_on_the_news(g, &men, worst, news.fix);
         cl!(g).stage = ClearStage::Done;
         return false;
     }
@@ -206,65 +150,170 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         return false;
     }
     match cl!(g).stage {
-        ClearStage::Approach => {
-            if clearing_read_doors(g) { return true; }
-            let (bounds, stack0) = { let p = cl!(g).cur.as_ref().unwrap(); (p.bounds, p.stack[0]) };
-            for (i, &gd) in men.iter().enumerate() {
-                loop {
-                    let pos = g.ch[g.gd[gd].ch].pos;
-                    let w = &mut cl!(g).wps[i];
-                    if !(w.len() > 1 && flat(pos, w[0]) < SETTLE + 0.5) { break; }
-                    w.remove(0);
-                    let goal = w[0];
-                    order(g, gd, OrderPatch { goal: Some(Some(goal)), ..Default::default() });
-                }
-            }
-            let apos = g.ch[g.gd[a].ch].pos;
-            let bpos = b.map(|b| g.ch[g.gd[b].ch].pos);
-            let (wa_len, wb_len, wa_end, wb_end) = {
-                let c = cl!(g);
-                (c.wps[0].len(), c.wps[1].len(), c.wps[0].last().copied(), c.wps[1].last().copied())
-            };
-            let da = flat(apos, wa_end.unwrap());
-            let db = match bpos { Some(p) => flat(p, wb_end.unwrap()), None => 0.0 };
-            if let Some(bg) = b {
-                if g.gd[bg].script.is_some() {
-                    let gap = flat(apos, bpos.unwrap());
-                    let ahead = wb_len < wa_len || (wb_len == wa_len && db < da - 0.6);
-                    let speed = APPROACH_SPEED * (if ahead || gap < 1.3 { 0.5 } else if gap > 4.5 { 1.3 } else if gap > 2.8 { 1.1 } else { 0.94 });
-                    g.gd[bg].script.as_mut().unwrap().speed = Some(speed);
-                }
-            }
-            let out = wa_len <= 1 && !in_bounds(apos, bounds, Some(0.35)) && bpos.map_or(true, |p| !in_bounds(p, bounds, Some(0.35)));
-            let c = cl!(g);
-            if da < 0.9 && c.t_near.is_nan() { c.t_near = c.t; }
-            let (t, t_near, eta) = (c.t, c.t_near, c.eta);
-            if out && ((da < 0.9 && (db < 1.0 || t > t_near + 3.5)) || (t > eta && flat(apos, stack0) < 5.0)) {
-                clearing_start_drill(g);
-            } else if t > eta {
-                let text = format!("can't get to the {} — leave it", plan_name(cl!(g).cur.as_ref()));
-                clearing_say(g, &text, None);
-                return clearing_next_room(g, Some(false));
-            }
+        ClearStage::Approach => on_the_approach(g, &men),
+        ClearStage::Drill => in_the_drill(g, dt),
+        _ => true,
+    }
+}
+
+/// A man of the pair is down: the other, on his feet, goes over to looking for whoever did it.
+fn mate_finds_him_down(g: &mut Game, a: GuardId, b: Option<GuardId>) {
+    let dead = if crate::condition::down(g, g.gd[a].ch) { a } else { b.unwrap() };
+    let left = if dead == a { b } else { Some(a) };
+    let Some(left) = left else { return };
+    if crate::condition::down(g, g.gd[left].ch) { return; }
+    end_guard_script(g, left, Some(crate::game::GuardState::Suspicious));
+    crate::mind::raise(g, left, 0.6, "squad");
+    let at = g.ch[g.gd[dead].ch].pos;
+    crate::belief::word(g, left, at);
+    g.gd[left].react_t = 0.7;
+    g.gd[left].search_t = 0.0;
+    crate::game::game_say(g, left, "hey — you with me? …say something.", None, None);
+}
+
+/// The worst of what the pair perceived this frame, and where.
+#[derive(Clone, Copy)]
+struct News {
+    worst: Option<Perceive>,
+    fix: Option<V3>,
+}
+
+/// Each man's own senses, the worst of them winning and the surest man's fix; with nothing of their own, any other man in a fight is alert news too.
+fn what_they_made_of_the_frame(g: &mut Game, men: &[GuardId]) -> News {
+    let (a, b) = { let c = cl!(g); (c.a, c.b) };
+    let mut worst: Option<Perceive> = None;
+    let mut fix: Option<V3> = None;
+    let mut top = -1.0;
+    for (i, &gd) in men.iter().enumerate() {
+        let before = cl!(g).aw[i];
+        let r = perceive(g, gd, before);
+        cl!(g).aw[i] = g.gd[gd].awareness;
+        if let Some(r) = r {
+            if worst.map_or(true, |w| rank(r) > rank(w)) { worst = Some(r); }
+            if g.gd[gd].awareness > top && g.gd[gd].last_known.is_some() { top = g.gd[gd].awareness; fix = g.gd[gd].last_known; }
         }
-        ClearStage::Drill => {
-            let d = {
-                let c = cl!(g);
-                c.t_drill += dt;
-                c.drill.unwrap()
-            };
-            let t_drill = cl!(g).t_drill;
-            room_clear_tick(g, d, t_drill, dt);
-            if !room_clear_intact(g, d) { clearing_cancel(g); return false; }
-            let phase = g.tab.squad_room_clear[d].phase;
-            if (phase == RoomClearPhase::Stack && t_drill > 1.3) || phase == RoomClearPhase::Breach { clearing_read_doors(g); }
-            let complete = room_clear_complete(g, d);
-            if complete || t_drill > DRILL_CAP {
-                let cleared = complete || g.tab.squad_room_clear[d].phase == RoomClearPhase::Resolve;
-                return clearing_next_room(g, Some(cleared));
-            }
+    }
+    if worst.is_some() { return News { worst, fix }; }
+    let mut i = 0;
+    while i < g.guards.len() {
+        let o = g.guards[i];
+        i += 1;
+        if o != a && Some(o) != b && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].last_known.is_some() {
+            return News { worst: Some(Perceive::Alert), fix: g.gd[o].last_known };
         }
-        _ => {}
+    }
+    News { worst, fix }
+}
+
+/// The job is off: alert, both go; a body, both go to it; a suspicion, the point man goes and his mate gets the word.
+fn breaks_off_on_the_news(g: &mut Game, men: &[GuardId], worst: Perceive, fix: Option<V3>) {
+    match worst {
+        Perceive::Alert => for &gd in men { let to = fix.or(g.gd[gd].last_known); break_off(g, gd, 0.9, to); },
+        Perceive::Body => for &gd in men {
+            end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
+            crate::mind::raise(g, gd, 0.5, "squad");
+            if let Some(f) = fix { crate::belief::word(g, gd, f); }
+            g.gd[gd].react_t = 0.6;
+            g.gd[gd].search_t = 0.0;
+        },
+        Perceive::Suspicious => {
+            let (a, b) = { let c = cl!(g); (c.a, c.b) };
+            let to = fix.or(g.gd[a].last_known);
+            break_off(g, a, SUSPECT + 0.05, to);
+            let Some(b) = b else { return };
+            end_guard_script(g, b, Some(crate::game::GuardState::Suspicious));
+            crate::mind::raise(g, b, SUSPECT, "squad");
+            if let Some(f) = fix { crate::belief::word(g, b, f); }
+            g.gd[b].react_t = 1.2;
+            g.gd[b].search_t = 0.0;
+        }
+    }
+}
+
+/// How the pair stands on the walk to the stack.
+#[derive(Clone, Copy)]
+struct OnTheWalk {
+    apos: V3,
+    bpos: Option<V3>,
+    wa_len: usize,
+    wb_len: usize,
+    /// metres to each man's end mark
+    da: f64,
+    db: f64,
+}
+
+/// They read the doors they pass and walk to their marks. Both near enough and out of the room: the drill. Too long and not near the stack: they leave this room.
+fn on_the_approach(g: &mut Game, men: &[GuardId]) -> bool {
+    if clearing_read_doors(g) { return true; }
+    let (bounds, stack0) = { let p = cl!(g).cur.as_ref().unwrap(); (p.bounds, p.stack[0]) };
+    for (i, &gd) in men.iter().enumerate() { passes_his_waypoints(g, i, gd); }
+    let w = how_the_pair_stands(g);
+    second_man_keeps_his_gap(g, &w);
+    let out = w.wa_len <= 1 && !in_bounds(w.apos, bounds, Some(0.35)) && w.bpos.map_or(true, |p| !in_bounds(p, bounds, Some(0.35)));
+    let c = cl!(g);
+    if w.da < 0.9 && c.t_near.is_nan() { c.t_near = c.t; }
+    let (t, t_near, eta) = (c.t, c.t_near, c.eta);
+    if out && ((w.da < 0.9 && (w.db < 1.0 || t > t_near + 3.5)) || (t > eta && flat(w.apos, stack0) < 5.0)) {
+        clearing_start_drill(g);
+    } else if t > eta {
+        let text = format!("can't get to the {} — leave it", plan_name(cl!(g).cur.as_ref()));
+        clearing_say(g, &text, None);
+        return clearing_next_room(g, Some(false));
+    }
+    true
+}
+
+/// Intermediate waypoints are passed on the fly; each new one is his goal.
+fn passes_his_waypoints(g: &mut Game, i: usize, gd: GuardId) {
+    loop {
+        let pos = g.ch[g.gd[gd].ch].pos;
+        let w = &mut cl!(g).wps[i];
+        if !(w.len() > 1 && flat(pos, w[0]) < SETTLE + 0.5) { return; }
+        w.remove(0);
+        let goal = w[0];
+        order(g, gd, OrderPatch { goal: Some(Some(goal)), ..Default::default() });
+    }
+}
+
+fn how_the_pair_stands(g: &mut Game) -> OnTheWalk {
+    let (a, b) = { let c = cl!(g); (c.a, c.b) };
+    let apos = g.ch[g.gd[a].ch].pos;
+    let bpos = b.map(|b| g.ch[g.gd[b].ch].pos);
+    let (wa_len, wb_len, wa_end, wb_end) = {
+        let c = cl!(g);
+        (c.wps[0].len(), c.wps[1].len(), c.wps[0].last().copied(), c.wps[1].last().copied())
+    };
+    let da = flat(apos, wa_end.unwrap());
+    let db = match bpos { Some(p) => flat(p, wb_end.unwrap()), None => 0.0 };
+    OnTheWalk { apos, bpos, wa_len, wb_len, da, db }
+}
+
+/// #2 slows when he is ahead or too close and hurries when he has dropped back.
+fn second_man_keeps_his_gap(g: &mut Game, w: &OnTheWalk) {
+    let Some(bg) = cl!(g).b else { return };
+    if g.gd[bg].script.is_none() { return; }
+    let gap = flat(w.apos, w.bpos.unwrap());
+    let ahead = w.wb_len < w.wa_len || (w.wb_len == w.wa_len && w.db < w.da - 0.6);
+    let speed = APPROACH_SPEED * (if ahead || gap < 1.3 { 0.5 } else if gap > 4.5 { 1.3 } else if gap > 2.8 { 1.1 } else { 0.94 });
+    g.gd[bg].script.as_mut().unwrap().speed = Some(speed);
+}
+
+/// The drill runs on its own clock; they read the doors while they stack and breach; finished or over its cap, on to the next room.
+fn in_the_drill(g: &mut Game, dt: f64) -> bool {
+    let d = {
+        let c = cl!(g);
+        c.t_drill += dt;
+        c.drill.unwrap()
+    };
+    let t_drill = cl!(g).t_drill;
+    room_clear_tick(g, d, t_drill, dt);
+    if !room_clear_intact(g, d) { clearing_cancel(g); return false; }
+    let phase = g.tab.squad_room_clear[d].phase;
+    if (phase == RoomClearPhase::Stack && t_drill > 1.3) || phase == RoomClearPhase::Breach { clearing_read_doors(g); }
+    let complete = room_clear_complete(g, d);
+    if complete || t_drill > DRILL_CAP {
+        let cleared = complete || g.tab.squad_room_clear[d].phase == RoomClearPhase::Resolve;
+        return clearing_next_room(g, Some(cleared));
     }
     true
 }
