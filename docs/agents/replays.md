@@ -60,7 +60,7 @@ what the machine kept (`Kept`'s text), and the length and hash of each character
 them. Nothing of the picture is on it.
 
 **Recording.** `DrawGame.step` writes any waiting commands, writes the hand, steps, and every `MARKS.every` ticks writes a mark and figures. A mark is
-the die's count and a hash of the block's parts' hashes. Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
+the die's count, a hash of the block's parts' hashes and one of every part's (`state_words`). Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
 when the mission's run number changes. A panic, or `TAPE_MOST` bytes, ends the tape.
 
 **Saves are on the tape by being input.** F5 is a key in the hand and a load is a command, and the save controller takes its turn in the step
