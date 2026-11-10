@@ -140,7 +140,7 @@ fn face_cast(g: &Game, ox: f64, oz: f64, n: V3, y: f64, tol: f64) -> Option<crat
 }
 
 /// The static face lying in the plane (n, d) at station u along t, if fit to lean on: that knee-height box's extent along t.
-fn face_at(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Option<[f64; 2]> {
+fn face_at(g: &crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Option<[f64; 2]> {
     const OFF: f64 = 0.3;
     let (ox, oz) = (t[0] * u + n[0] * (d + OFF), t[2] * u + n[2] * (d + OFF));
     let knee = face_cast(g, ox, oz, n, KNEE_Y, COPLANAR)?;
@@ -154,7 +154,7 @@ fn face_at(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Option<[f
 }
 
 /// The whole run of wall through station u0, or only `look` either side of it.
-fn trace_face(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u0: f64, look: Option<f64>) -> Option<[f64; 2]> {
+fn trace_face(g: &crate::game::Game, n: V3, d: f64, t: V3, u0: f64, look: Option<f64>) -> Option<[f64; 2]> {
     let look = look.unwrap_or(m::INF);
     let mut seg: Option<[f64; 2]> = None;
     for du in [0.0, -0.21, 0.21, -BODY_R, BODY_R] {
@@ -231,7 +231,7 @@ fn clear_of_props(g: &crate::game::Game, q: &mut V3, r: f64) -> bool {
 struct WallCand { n: V3, d: f64, score: f64 }
 
 /// What Q would take hold of from here: the nearest fit face in reach with room for the body.
-fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mut crate::player::FindWallWhy>, only: Option<V3>) -> Option<crate::player::FindWall> {
+fn find_wall(g: &crate::game::Game, quick: Option<bool>, why: Option<&mut crate::player::FindWallWhy>, only: Option<V3>) -> Option<crate::player::FindWall> {
     let quick = quick.unwrap_or(false);
     let mut why = why;
     let pl = g.player;
@@ -514,7 +514,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].hands_full()
-        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].hand.throw_held || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
@@ -562,8 +562,7 @@ pub fn throw_rest(g: &Game, pl: PlayerId) -> Option<crate::player::ThrowRest> {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
-    if !(g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
-    let kind = g.pl[pl].held_kind;
+    let kind = can_in_hand(g, pl)?;
     let rest = crate::frag::rest_of_throw(g, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
