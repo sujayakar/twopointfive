@@ -91,9 +91,6 @@ fn low_pace(g: &Game, v: f64, is_low: bool) -> f64 {
 fn idx(k: f64, off: f64) -> i64 {
     (k - off) as i64
 }
-fn straight(g: &Game, p: V3, q: V3) -> bool {
-    !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None)
-}
 /// His posture in a mode: low with Sam; low whenever he waits, crosses or backs off, and after a back-off until he has moved on.
 fn crouch_out(man: &Man, low: bool, mode: Mode) -> bool {
     low || mode == Mode::Wait || mode == Mode::Cross || mode == Mode::Back || man.hid_i >= 0.0
@@ -124,10 +121,6 @@ fn ex(g: &mut Game, w: &mut Way, t: &mut [Crumb], k: i64, lo: bool) -> Exp {
 fn near_other(g: &Game, w: &Way, q: V3) -> bool {
     w.others.iter().any(|o| dist_xz(g.ch[g.gd[*o].ch].pos, q) < 0.7)
 }
-/// The sign of the turn from p to q to r on the floor (funnel's `o`).
-fn turn(px: f64, pz: f64, qx: f64, qz: f64, rx: f64, rz: f64) -> f64 {
-    (qx - px) * (rz - pz) - (qz - pz) * (rx - px)
-}
 /// In a door's funnel: some defender's eye, inside its reach, that would gain on a man at `q`, with the flat line to `q` through the frame's opening.
 fn funnel(g: &mut Game, w: &Way, q: V3, doors: &[DoorId], pad: f64, lit: &mut dyn FnMut(&mut Game) -> f64, lo: bool) -> bool {
     for &h in w.eyes.iter() {
@@ -146,8 +139,8 @@ fn funnel(g: &mut Game, w: &Way, q: V3, doors: &[DoorId], pad: f64, lit: &mut dy
             let az = hinge[1] - cz * pad;
             let bx = ax + cx * (width + 2.0 * pad);
             let bz = az + cz * (width + 2.0 * pad);
-            if turn(e[0], e[2], q[0], q[2], ax, az) * turn(e[0], e[2], q[0], q[2], bx, bz) <= 0.0
-                && turn(ax, az, bx, bz, e[0], e[2]) * turn(ax, az, bx, bz, q[0], q[2]) <= 0.0
+            if crate::doorpath::cross(e[0], e[2], q[0], q[2], ax, az) * crate::doorpath::cross(e[0], e[2], q[0], q[2], bx, bz) <= 0.0
+                && crate::doorpath::cross(ax, az, bx, bz, e[0], e[2]) * crate::doorpath::cross(ax, az, bx, bz, q[0], q[2]) <= 0.0
             {
                 return true;
             }
@@ -194,7 +187,7 @@ fn side_ok(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool, deep: f64) -> bo
     if dist_xz(q, g.seat_pos(&crate::seats::here(g))) < g.k.sneak.stand_near + 0.3 { return false; }
     if near_other(g, w, q) { return false; }
     if g.doors.list.iter().any(|d| dist_xz(q, g.dr[*d].frame_centre) < 1.0) { return false; }
-    if dist_xz(p, q) > 0.3 && (!straight(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
+    if dist_xz(p, q) > 0.3 && (crate::scene_collision::low_blocked(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
     let c = t[w.i as usize].p;
     if dist_xz(q, c) > 2.7 || !unseen_at(g, w, q, lo) { return false; }
     let side_stop = g.k.sneak.side_stop;
@@ -655,7 +648,7 @@ fn lay(g: &Game, man: &mut Man, t: &[Crumb], p: V3, i: i64, to: i64) -> V3 {
             k -= 1;
         }
     }
-    man.way = if !path.is_empty() && straight(g, p, path[0]) { Some(path) } else { None };
+    man.way = if !path.is_empty() && !crate::scene_collision::low_blocked(g, p, path[0]) { Some(path) } else { None };
     goal
 }
 
@@ -738,7 +731,7 @@ fn further_on(g: &Game, t: &[Crumb], p: V3, i: i64) -> i64 {
     (i + 1..t.len() as i64).rev().find(|&k| {
         let c = t[k as usize].p;
         let d = dist_xz(p, c);
-        d < 0.5 || (d < 0.9 && k - i > 12 && straight(g, p, c))
+        d < 0.5 || (d < 0.9 && k - i > 12 && !crate::scene_collision::low_blocked(g, p, c))
     }).unwrap_or(i)
 }
 

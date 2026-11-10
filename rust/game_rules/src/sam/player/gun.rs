@@ -6,11 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// a gun's row of WEAPONS (TypeScript: `gun.def`, the object itself)
-fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(def).unwrap()
-}
-
 // ------------------------------------------------------------ the sums
 
 /// how long his line hangs over him before the man answers
@@ -133,7 +128,7 @@ fn footfall_on(p: &mut crate::game::Player, time: f64, travel: f64, owe: f64, dt
 /// what the selected slot puts in his hand, for the HUD line
 pub(super) fn item_name(g: &crate::game::Game, pl: PlayerId) -> String {
     match g.pl[pl].slot {
-        crate::game::SlotKind::Pistol => { let def = g.fa[g.pl[pl].pistol].def; def_of(g, def).short.clone() }
+        crate::game::SlotKind::Pistol => { let def = g.fa[g.pl[pl].pistol].def; g.weapon(def).short.clone() }
         crate::game::SlotKind::Smoke => String::from("smoke canister"),
         crate::game::SlotKind::Flash => String::from("stun canister"),
         crate::game::SlotKind::Frag => String::from("frag grenade"),
@@ -145,7 +140,7 @@ pub(super) fn item_name(g: &crate::game::Game, pl: PlayerId) -> String {
 pub(super) fn rifle_name(g: &crate::game::Game, pl: PlayerId) -> String {
     let rifle = g.pl[pl].rifle;
     let def = g.fa[rifle].def;
-    let short = def_of(g, def).short.clone();
+    let short = g.weapon(def).short.clone();
     let mode = g.fa[rifle].mode.as_str().to_uppercase();
     let att = crate::weapons::rifle_attachment(g, rifle);
     let tail = match att {
@@ -263,7 +258,7 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
     let pl = g.player;
     let (c, pistol, rifle) = (g.pl[pl].ch, g.pl[pl].pistol, g.pl[pl].rifle);
     let (pistol_def, rifle_def) = (g.fa[pistol].def, g.fa[rifle].def);
-    let pellets = def_of(g, rifle_def).pellets.is_some();
+    let pellets = g.weapon(rifle_def).pellets.is_some();
     {
         let an = &mut g.ch[c].anim;
         an.long_gun = in_hands;
@@ -275,7 +270,7 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
     crate::gunreload::feed_deal(g, c, if in_hands { Some(rifle) } else { None }, None);
     let into = g.ch[c].gun_look;
     let (held, other) = if in_hands { (rifle_def, pistol_def) } else { (pistol_def, rifle_def) };
-    let (held, other) = (def_of(g, held).clone(), def_of(g, other).clone());
+    let (held, other) = (g.weapon(held).clone(), g.weapon(other).clone());
     let look = crate::gunlook::gun_look_of(g, into, Some(&held), Some(&other), None);
     g.ch[c].gun_look = look;
     let own = if in_hands { g.ch[c].gun_look.and_then(|l| l.hand) } else { None };
@@ -289,7 +284,7 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
         let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(id, None), None => None };
         g.ch[c].muzzle_ahead = match ahead { Some(a) => a, None => crate::rig_props::sc20k_muzzle_ahead(None) };
     } else {
-        g.ch[c].muzzle_ahead = def_of(g, pistol_def).muzzle_ahead;
+        g.ch[c].muzzle_ahead = g.weapon(pistol_def).muzzle_ahead;
     }
 }
 
@@ -322,7 +317,7 @@ fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })
-fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {
+pub(crate) fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {
     crate::weapons::WeaponDefReload { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, shell: r.shell, exact: Some(r.exact) }
 }
 
@@ -346,7 +341,7 @@ pub(super) fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>,
     if crate::character::anim_kit_busy(g, c) || g.pl[pl].equip_t > 0.0 { return false; }
     if crate::game::player_pistol_up(g, pl) && !sprinting && g.pl[pl].wall.is_none() {
         let plan = crate::kitanim::kit_reload(g, gun, false);
-        let row = match plan { Some(p) => p.row, None => { let def = g.fa[gun].def; def_of(g, def).reload.clone() } };
+        let row = match plan { Some(p) => p.row, None => { let def = g.fa[gun].def; g.weapon(def).reload.clone() } };
         let fill = crate::gunreload::feed_plan(g, gun, row, None).and_then(|f| f.drop).unwrap_or(0.0);
         let ev = crate::weapons::ReloadEvents::Pistol { ch: c, fill };
         if crate::weapons::firearm_start_reload(g, gun, Some(&ev), plan.map(|p| p.row), None, None) {
@@ -370,7 +365,7 @@ pub(super) fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>,
         }
         let plan = if sp.is_some() { None } else { crate::kitanim::kit_reload(g, rifle, true) };
         let beat = match &sp { Some(s) => Some(shell_row_as_weapon_row(&s.row)), None => plan.map(|p| p.row) };
-        let row = match beat { Some(r) => r, None => def_of(g, def).reload.clone() };
+        let row = match beat { Some(r) => r, None => g.weapon(def).reload.clone() };
         let asked = sp.as_ref().map(|s| crate::gunreload::FeedPlanShells { n: s.n, pull: s.pull });
         let fp = crate::gunreload::feed_plan(g, rifle, row, asked);
         let ev = crate::weapons::ReloadEvents::Rifle { ch: c, feed: fp.as_ref().map(feed_for_events) };
@@ -387,7 +382,7 @@ pub(super) fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>,
                     crate::kitanim::kit_reload_note(g, p.kind);
                 }
                 None => {
-                    let r = def_of(g, def).reload.clone();
+                    let r = g.weapon(def).reload.clone();
                     let b = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: if rack_it { r.rack.map(Some) } else { Some(None) }, keep: None, hand: None, exact: r.exact };
                     crate::character::anim_reload(g, c, Some(r.dur), Some(b));
                 }

@@ -2,7 +2,8 @@
 //! of doing nothing, and the step must still be up (a line moves on when the thing is done, never on a timer); what a player would do for it (`road.rs` and the rest: one file a tutorial); and the
 //! step must have gone by. After the last: no row of the lesson's on the objective, and the run ends. A script reads the game to time a press and find a thing on the picture, and never reads
 //! which step is up to act beyond what a person reads off the screen. He is as mortal as a player.
-use crate::player::{at, flat, Feet, Player, Script, Scripted, Walk, LEFT, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Feet, Player, Script, Scripted, Walk, LEFT, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -296,7 +297,7 @@ impl Bot {
             if self.rounds() == 0.0 && !self.reloading() { self.press("KeyR", 1).await; continue; }
             let me = self.pos();
             let list = who.map_or_else(|| self.foes(), |w| w.to_vec());
-            let x = list.into_iter().filter(|&y| self.up(y) && self.line(y)).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me)));
+            let x = list.into_iter().filter(|&y| self.up(y) && self.line(y)).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me)));
             let Some(x) = x else { idle().await; continue };
             if self.me(|p| p.slot) == SlotKind::Pistol {
                 // (a round a press, once the gun has come round to the cursor: the aim has weight)
@@ -328,7 +329,7 @@ impl Bot {
         if self.row(kind, verb, aim).await { self.say(format!("  the row: {} > {}", kind.as_str(), verb.as_str())); return true; }
         if kind == InteractableKind::Guard && verb == Verb::Grab && !self.holding() {
             let me = self.pos();
-            let near = self.men().into_iter().filter(|&x| self.up(x) && self.ask(|g| g.gd[x].civ.is_none()) && flat(me, self.man_at(x)) < 4.0).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me)));
+            let near = self.men().into_iter().filter(|&x| self.up(x) && self.ask(|g| g.gd[x].civ.is_none()) && dist_xz(me, self.man_at(x)) < 4.0).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me)));
             if let Some(x) = near {
                 for i in 0..300 {
                     if self.holding() { break; }
@@ -359,9 +360,9 @@ impl Bot {
         self.crouch(true).await;
         if let Some(v) = via { self.to(v, 40.0).await; }
         self.to_near(self.behind(x, 1.6), 20.0, 0.25).await;
-        self.nudge(self.behind(x, 0.8), 6.0, || flat(self.pos(), self.man_at(x)) < 0.92).await;
+        self.nudge(self.behind(x, 0.8), 6.0, || dist_xz(self.pos(), self.man_at(x)) < 0.92).await;
         self.ticks(6).await;
-        flat(self.pos(), self.man_at(x)) < 1.05
+        dist_xz(self.pos(), self.man_at(x)) < 1.05
     }
     /// the enemy has not caught him: said by the chronicle and the man's own state
     pub async fn unseen(&self, n0: usize, x: GuardId, place: &str) {

@@ -10,13 +10,6 @@ use alloc::{string::String, vec, vec::Vec};
 use crate::Num;
 use crate::scene_collision::{nav_grid_idx, nav_grid_is_blocked};
 
-/// a Map's key: the language's Map holds −0 and 0 as one key, `Num` tells them apart by bits
-#[inline]
-fn key(i: f64) -> Num { Num(i + 0.0) }
-
-/// Distance in plan.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// a nav cell on the grid and not blocked
 fn free(g: &mut Game, x: f64, z: f64) -> bool {
     let (w, h) = (g.col.nav.w, g.col.nav.h);
@@ -27,7 +20,7 @@ fn free(g: &mut Game, x: f64, z: f64) -> bool {
 
 /// a cell of the space: no door's frame and no leafless opening's line
 fn inner(i: f64, dc: &JsMap<Num, DoorId>, line_of: &JsMap<Num, CoverOpeningId>) -> bool {
-    !dc.has(key(i)) && !line_of.has(key(i))
+    !dc.has(crate::Num(i + 0.0)) && !line_of.has(crate::Num(i + 0.0))
 }
 
 /// The space round `p` and its ways out; pure, draws no dice. `reach`: metres of walking followed; `hint`: whose side, with `p` on a line; `ring`:
@@ -42,7 +35,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
     let mut line_of: JsMap<Num, CoverOpeningId> = JsMap::new();
     for &o in opens.iter() {
         let (o_at, o_n, o_half, o_door) = { let q = &g.tab.cover_opening[o]; (q.at, q.n, q.half, q.door) };
-        if o_door.is_some() || flat(o_at, p) > reach + 3.0 { continue; }
+        if o_door.is_some() || v3::dist_xz(o_at, p) > reach + 3.0 { continue; }
         let (tx, tz, w_) = (-o_n[1], o_n[0], m::max(0.0, o_half - 0.34));
         let k = m::ceil(w_ / cs) + 1.0;
         let mut a = -k;
@@ -51,7 +44,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             let z = o_at[2] + tz * a * cs * 0.5;
             if !(m::abs(a * cs * 0.5) > w_ + 1e-6 || nav_grid_is_blocked(g,x, z)) {
                 let i = nav_grid_idx(g,m::floor(x / cs), m::floor(z / cs));
-                line_of.set(key(i), o);
+                line_of.set(crate::Num(i + 0.0), o);
             }
             a += 1.0;
         }
@@ -88,27 +81,27 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
     let mut steps: JsMap<Num, f64> = JsMap::new();
     let mut cells: Vec<f64> = vec![nav_grid_idx(g,sx, sz)];
     let mut edge: JsMap<CoverOpeningId, f64> = JsMap::new(); // the space's cell by each way's line, the first met
-    steps.set(key(cells[0]), 0.0);
+    steps.set(crate::Num(cells[0] + 0.0), 0.0);
     let mut qi = 0;
     while qi < cells.len() {
         let c = cells[qi];
         let x = js::rem(c, w);
         let z = js::to_i32(c / w) as f64;
-        let s = *steps.get(key(c)).unwrap();
+        let s = *steps.get(crate::Num(c + 0.0)).unwrap();
         for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
             let (nx, nz) = (x + dx, z + dz);
             if !free(g, nx, nz) { continue; }
             let n = nav_grid_idx(g,nx, nz);
-            let o = match dc.get(key(n)) {
+            let o = match dc.get(crate::Num(n + 0.0)) {
                 Some(&d) => opens.iter().copied().find(|&q| g.tab.cover_opening[q].door == Some(d)),
-                None => line_of.get(key(n)).copied(),
+                None => line_of.get(crate::Num(n + 0.0)).copied(),
             };
             if let Some(o) = o {
                 if !edge.has(o) { edge.set(o, c); }
                 continue;
             }
-            if s >= max || steps.has(key(n)) { continue; }
-            steps.set(key(n), s + 1.0);
+            if s >= max || steps.has(crate::Num(n + 0.0)) { continue; }
+            steps.set(crate::Num(n + 0.0), s + 1.0);
             cells.push(n);
         }
         qi += 1;
@@ -152,7 +145,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             Some(d) => shut && g.dr[d].leaf.locked && g.dr[d].leaf.latched && crate::doors::doors_locked_out(g, d, [ex, 0.0, ez], Some(ring)),
             None => false,
         };
-        ways.push(RoomWay { o, in_n, beyond, far_known, shut, locked, dist: flat(o_at, p) });
+        ways.push(RoomWay { o, in_n, beyond, far_known, shut, locked, dist: v3::dist_xz(o_at, p) });
     }
     let tab = &g.tab.cover_opening;
     js::sort_by(&mut ways, |a, b| js::or(a.dist - b.dist, if tab[a.o].id < tab[b.o].id { -1.0 } else { 1.0 }));
@@ -194,6 +187,6 @@ mod tests {
     /// A cell's number on the grid is one key whichever sign its nought has.
     #[test]
     fn a_map_key_holds_minus_zero_as_zero() {
-        assert!(key(-0.0) == key(0.0));
+        assert!(crate::Num(-0.0 + 0.0) == crate::Num(0.0 + 0.0));
     }
 }

@@ -5,8 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
-
 fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
@@ -176,7 +174,7 @@ fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let turned = s.yaw - (70.0 * u + 20.0 * v) * DEG;
     g.tab.item[it].heading = turned;
     g.tab.item[it].yaw = turned;
-    g.tab.item[it].tumble = lerp(lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG;
+    g.tab.item[it].tumble = v3::lerp(v3::lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG;
 }
 
 /// Let go of: it falls from where it is with the pair's own motion and a little push out to that man's right; never from inside a wall. The throw's fall is
@@ -305,6 +303,6 @@ mod tests {
         assert_eq!(sstep(0.26, 0.35, 0.9), 1.0);
         assert_eq!(sstep(0.25, 0.75, 0.5), 0.5);
         assert!(sstep(0.2, 0.4, 0.21) < 0.05 && sstep(0.2, 0.4, 0.39) > 0.95, "it starts and ends slowly");
-        assert_eq!((lerp(-40.0, 25.0, 0.0), lerp(-40.0, 25.0, 1.0), lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
+        assert_eq!((v3::lerp(-40.0, 25.0, 0.0), v3::lerp(-40.0, 25.0, 1.0), v3::lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
     }
 }

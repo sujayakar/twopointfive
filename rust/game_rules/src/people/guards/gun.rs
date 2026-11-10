@@ -16,11 +16,6 @@ fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&Game, f64) -> bool + 'b)>)
     }
 }
 
-/// A gun's row, as a copy: a call on it lends g beside it. Nothing here writes a row.
-fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
-}
-
 // ------------------------------------------------------------ the guards' collision
 
 /// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place.
@@ -402,7 +397,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     crate::character::anim_reload(g, c, None, None);
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
-    let def = def_row(g, w);
+    let def = g.weapon(g.fa[w].def).clone();
     if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
@@ -415,7 +410,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     let rr = crate::weapons::firearm_reload_row(g, w);
     let before = rr.dur - g.gd[gd].reload_t;
     g.gd[gd].reload_t -= dt;
-    let def = def_row(g, w);
+    let def = g.weapon(g.fa[w].def).clone();
     let drop = crate::gunreload::feed_drop(&def);
     let c = g.gd[gd].ch;
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };

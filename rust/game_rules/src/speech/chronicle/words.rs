@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 type Data = JsMap<String, Option<ChronEventDataValue>>;
 
 /// A field of a row: absent and undefined are one.
-fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
+pub(super) fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
     d.get(String::from(k)).and_then(|v| v.as_ref())
 }
 

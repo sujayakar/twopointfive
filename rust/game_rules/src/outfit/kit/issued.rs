@@ -13,8 +13,6 @@ const CARDS: usize = KIT_MEMBERS as usize;
 
 /// `issuing` as a condition (true and 'own' both hold)
 fn issuing_on(g: &Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
-/// `WEAPONS[w]`, a copy to hand on while `g` is lent
-fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> crate::weapons::WeaponDef { g.m.weapons.weapons.get(w).unwrap().clone() }
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
 fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.m.weapons.weapons.get(w).unwrap().cls == crate::weapons::WeaponClass::Pistol }
 /// `SUITS[s].tint`
@@ -264,7 +262,7 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
 /// kitPlayer's `mine`: the gun your card picks for this slot.
 fn mine(g: &Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
     if let Some(d) = kit_slot_def(g, m, slot) { return d; }
-    weapon_row(g, w)
+    g.weapon(w).clone()
 }
 
 /// Nobody came with you: the counts the door tools and the wall charge spend are your card's.
@@ -361,7 +359,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         if changed && gun != g.fa[g.gd[gd].weapon].def && g.m.weapons.weapons.get(gun).unwrap().enabled {
             let route = g.gd[gd].route;
             g.tab.route[route].weapon = Some(gun);
-            let def = weapon_row(g, gun);
+            let def = g.weapon(gun).clone();
             let fresh = crate::weapons::firearm_new(g, &def);
             g.gd[gd].weapon = fresh;
             g.gd[gd].reload_t = -1.0;

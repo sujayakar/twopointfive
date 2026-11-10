@@ -68,7 +68,7 @@ fn lost(g: &Game) -> f64 {
 }
 
 /// rounds and throws so far this mission (the mission's own tally and the chronicle's count: both fresh with the mission)
-fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
+pub(super) fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
 
 /// every seat's mark as the clock is armed, in seat order: where its man stands and its log's last row. The first seat's is the staging's own
 /// mark (where the room clear stood him), so a man the staging is still walking to his mark has not "moved"

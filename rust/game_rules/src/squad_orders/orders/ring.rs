@@ -8,9 +8,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the frame's input: what the order input takes out of it
 
-pub(super) fn pressed_has(g: &Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.has(String::from(code))
-}
 fn pressed_delete(g: &mut Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.delete(String::from(code))
 }
@@ -40,10 +37,6 @@ fn swallow_if_seat(g: &mut Game, input: InputId) {
 
 // ---------------------------------------------------------------- small readings
 
-/// a string as a condition: `!!s` of `string | null | undefined`
-fn text(s: &Option<String>) -> bool {
-    s.as_ref().is_some_and(|x| !x.is_empty())
-}
 /// `v[i] ?? -1`
 fn seat_at(v: &[f64], i: f64) -> f64 {
     v.get(i as usize).copied().unwrap_or(-1.0)
@@ -140,7 +133,7 @@ fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_
 /// The press goes on: let go it is a tap; a digit, or the hold over, puts the ring up on what the press was on.
 fn key_still_held(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, p: &SquadOrdersCmdPress) -> bool {
     let key = g.k.cmdring.key.clone();
-    if pressed_has(g, input, "Blur") || pressed_has(g, input, "Paused") { g.sets[g.seat].orders.cmd_press = None; return false; }
+    if crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused") { g.sets[g.seat].orders.cmd_press = None; return false; }
     if !crate::input::input_down(g, input, &key) {
         g.sets[g.seat].orders.cmd_press = None;
         let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g, &crate::seats::here(g));
@@ -191,7 +184,7 @@ struct RingHand {
 /// The frame's keys are the ring's while it is up: taken out of the input, the digits and the wheel all of them.
 fn hand_this_frame(g: &mut Game, input: InputId) -> RingHand {
     let back = crate::backkey::back_take(g, input);
-    let blur = pressed_has(g, input, "Blur") || pressed_has(g, input, "Paused");
+    let blur = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
     let rmb = crate::input::input_rmb_hit(g, input);
     if rmb { clicked_off(g, input, 4); }
     let lmb = crate::input::input_lmb_hit(g, input);
@@ -331,7 +324,7 @@ fn give_the_lit_wedge(g: &mut Game) {
 fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
     let mut d = 1.0;
     while d <= g.k.cmdring.wedges {
-        if pressed_has(g, input, &format!("Digit{}", d as i32)) { return true; }
+        if crate::input::input_hit(g, input, &format!("Digit{}", d as i32)) { return true; }
         d += 1.0;
     }
     false
@@ -421,7 +414,7 @@ pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Opt
         return SquadOrdersSeats { row, more: 0.0, over: s_over, same };
     }
     // a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
-    if text(&m.quick) {
+    if super::truthy_str(&m.quick) {
         for d in 2..=wedges {
             let i = s_row[d];
             if i >= 0.0 && d as f64 != s_more && m.words.get(i as usize) == m.quick.as_ref() {
@@ -547,7 +540,7 @@ fn squad_orders_ring_keys(g: &crate::game::Game) -> f64 {
     for d in 1..=wedges {
         let at = d as usize;
         let on = d as f64 == seat.more || if !ring_more(Some(r)) && d == 1 {
-            text(&menu.quick)
+            super::truthy_str(&menu.quick)
         } else {
             seat.row[at] >= 0.0 && (seat.row[at] as usize) < menu.rows.len()
         };

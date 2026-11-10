@@ -9,9 +9,6 @@ use alloc::{string::String, vec, vec::Vec};
 
 use crate::ask::Over;
 
-#[inline]
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
 // ---------------------------------------------------------------- the book
 
 /// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at
@@ -65,7 +62,7 @@ fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];
         let width = g.dr[o].def.width;
-        if flat(a, g.dr[o].frame_centre) > width + 1.5 { continue; }
+        if v3::dist_xz(a, g.dr[o].frame_centre) > width + 1.5 { continue; }
         let pa = crate::doortools::off_of(g, o, a, 1.0);
         let pb = crate::doortools::off_of(g, o, b, 1.0);
         if (pa > ON_LINE && pb > ON_LINE) || (pa < -ON_LINE && pb < -ON_LINE) { continue; }
@@ -79,9 +76,6 @@ fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
 /// nav.idx(x, z)
 #[inline]
 fn nav_idx(g: &Game, x: f64, z: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, x, z) }
-/// nav.isBlocked(x, z)
-#[inline]
-fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// a cell on the grid and not blocked
 fn cell_free(g: &Game, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
@@ -146,7 +140,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
             let b = crate::doortools::off_of(g, d, c, side);
             let a = crate::doortools::along_of(g, d, c);
             if b < 0.05 || b > 1.8 || a < -0.3 || a > w + 0.3 { continue; }
-            let s = flat(c, front) + (if crate::scene_collision::solid_blocked(g, [front[0], 0.45, front[2]], [c[0], 0.45, c[2]], None) { 10.0 } else { 0.0 });
+            let s = v3::dist_xz(c, front) + (if crate::scene_collision::solid_blocked(g, [front[0], 0.45, front[2]], [c[0], 0.45, c[2]], None) { 10.0 } else { 0.0 });
             if s < best { best = s; seed = i; }
         }
     }
@@ -214,7 +208,7 @@ fn on_floor_over(g: &Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> b
     let s = steps_to(g, over, f, p);
     if !(s >= 0.0) { return false; }
     let mid = centre(g, f.seed);
-    s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * flat(mid, p)
+    s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * v3::dist_xz(mid, p)
 }
 
 /// is `p` on the floor of that face of `d`: true for a face with no floor at all
@@ -244,7 +238,7 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
         if crate::condition::down(g, g.gd[man].ch) { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if flat(post, q) < SAME_M && flat(g.ch[g.gd[man].ch].pos, post) < 0.6 { return true; }
+        if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 { return true; }
     }
     false
 }
@@ -256,8 +250,6 @@ fn furnished(g: &crate::game::Game, d: DoorId, q: V3) -> bool {
 
 // ---------------------------------------------------------------- THE RULE
 
-/// nothing solid between two places, at knee height
-fn sees(g: &Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
 /// off the opening's own lane
 fn off_lane(g: &Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
 /// the hand of the opening a place is on
@@ -287,8 +279,8 @@ fn anothers(g: &Game, d: DoorId, q: V3) -> bool { crate::doorway::before_another
 fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
     on_floor(g, x.f, q)
         && !anothers(g, x.d, q)
-        && flat(q, x.c) >= x.min_m
-        && !x.used.iter().any(|o| flat(*o, q) < apart)
+        && v3::dist_xz(q, x.c) >= x.min_m
+        && !x.used.iter().any(|o| v3::dist_xz(*o, q) < apart)
         && !crate::doorway::doorway_stand(g, q)
         && !(x.glass && crate::orders::squad_orders_behind_glass(g, x.d, x.side, q))
         && !(x.shy && furnished(g, x.d, q))
@@ -328,7 +320,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                 let k = k as f64;
                 let a = if hand > 0.0 { -jamb_past - k * file_gap } else { w + jamb_past + k * file_gap };
                 let p = crate::doortools::door_pt(g, d, a, jamb_out, side, None);
-                if nav_blocked(g, p[0], p[2]) || !sees(g, front, p) { break; }   // (the wall, or the floor, runs out)
+                if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || crate::scene_collision::low_blocked(g, front, p) { break; }   // (the wall, or the floor, runs out)
                 if fix_fits(g, &x, p, s.apart) {
                     let (face, stack_side) = on_wall(th, side, -hand);
                     got = Some(Got { pos: p, face, stack_side: Some(stack_side), group: if pp.group.is_none() { None } else if hand > 0.0 { Some(1.0) } else { Some(0.0) } });
@@ -338,7 +330,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             if got.is_none() {
                 let mut file: Vec<crate::orders::StackPost> = Vec::new();
                 for j in 0..out.len() { if j != i && !bad[j] && hand_of(g, d, w, out[j].pos) == hand { file.push(out[j]); } }
-                js::sort_by(&mut file, |a, b| flat(a.pos, pp.pos) - flat(b.pos, pp.pos));
+                js::sort_by(&mut file, |a, b| v3::dist_xz(a.pos, pp.pos) - v3::dist_xz(b.pos, pp.pos));
                 for mm in file {
                     let mut prev = mm.pos;
                     for k in 1..=3 {
@@ -346,7 +338,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                         let along = crate::doortools::along_of(g, d, mm.pos);
                         let off = crate::doortools::off_of(g, d, mm.pos, side);
                         let p = crate::doortools::door_pt(g, d, along, off + k as f64 * file_gap, side, None);
-                        if nav_blocked(g, p[0], p[2]) || !sees(g, prev, p) { break; }
+                        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || crate::scene_collision::low_blocked(g, prev, p) { break; }
                         prev = p;
                         if fix_fits(g, &x, p, s.apart) && off_lane(g, d, w, p) {
                             got = Some(Got { pos: p, face: v3::yaw_to(p, c), stack_side: Some(mm.stack_side), group: mm.group });
@@ -372,7 +364,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                     if steps > s.walk_m || steps >= bs { break; }
                     let p = centre(g, cc);
                     if crate::doortools::off_of(g, d, p, side) < jamb_out - 0.1 || !off_lane(g, d, w, p) || !fix_fits(g, &x, p, s.apart) || !clear_of_props(g, p) { continue; }
-                    let score = steps + (if sees(g, front, p) { 0.0 } else { 3.0 });
+                    let score = steps + (if !crate::scene_collision::low_blocked(g, front, p) { 0.0 } else { 3.0 });
                     if score < bs { bs = score; q = Some(p); }
                 }
                 if let Some(q) = q {
@@ -451,7 +443,7 @@ fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
         let mut dx = -n;
         while dx <= n {
             let q = [(cx + dx + 0.5) * cell, 0.0, (cz + dz + 0.5) * cell];
-            if flat(q, c) <= view_far && !nav_blocked(g, q[0], q[2]) {
+            if v3::dist_xz(q, c) <= view_far && !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
                 let face = if crate::doortools::off_of(g, d, q, 1.0) >= 0.0 { 1.0 } else { -1.0 };
                 if face != side { l.push(q); }
             }
@@ -501,8 +493,8 @@ fn cands_of(g: &mut Game, r: &mut ViewDeal, h: f64) {
         if !crate::scene_collision::solid_blocked(g, p0, p1, None) { break; }
         for off in [jamb_out, s.view_off] {
             let q = crate::doortools::door_pt(g, d, a, off, side, None);
-            if !nav_blocked(g, q[0], q[2]) && on_floor(g, r.f, q) && !crate::scene_collision::solid_blocked(g, r.front, [q[0], 0.45, q[2]], None) && !crate::doorway::doorway_stand(g, q)
-                && !r.taken.iter().any(|o| flat(*o, q) < s.apart) && !in_view(g, d, r.far, q) && !furnished(g, d, q) {
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && on_floor(g, r.f, q) && !crate::scene_collision::solid_blocked(g, r.front, [q[0], 0.45, q[2]], None) && !crate::doorway::doorway_stand(g, q)
+                && !r.taken.iter().any(|o| v3::dist_xz(*o, q) < s.apart) && !in_view(g, d, r.far, q) && !furnished(g, d, q) {
                 let glass = crate::orders::squad_orders_behind_glass(g, d, side, q);
                 l.push((q, glass));
             }
@@ -520,7 +512,7 @@ fn view_place(g: &mut Game, r: &mut ViewDeal, i: usize, h: f64, fixed: &[V3]) ->
     for shy in [true, false] {
         for &(q, glass) in list {
             if shy && glass { continue; }
-            if fixed.iter().any(|o| flat(*o, q) < view_apart) { continue; }
+            if fixed.iter().any(|o| v3::dist_xz(*o, q) < view_apart) { continue; }
             let mut keeps = true;
             for way in &r.keeps[i] { if crate::rearwatch::rear_sees(g, q, way.o, way.front).is_none() { keeps = false; break; } }
             if keeps { return Some(q); }
@@ -560,34 +552,34 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             let Some(a) = a else { continue };
             if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
-            if flat(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
+            if v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
         }
-        let loose: Vec<usize> = (0..posts.len()).filter(|i| !stood.iter().any(|q| flat(*q, posts[*i].pos) < SAME_M)).collect();
+        let loose: Vec<usize> = (0..posts.len()).filter(|i| !stood.iter().any(|q| v3::dist_xz(*q, posts[*i].pos) < SAME_M)).collect();
         // only a place this rule could have dealt: by the door's own wall, no further along it than the rule reaches
         let mut mine: Vec<V3> = Vec::new();
         for &q in &stood {
             if crate::doortools::off_of(g, d, q, side) < jamb_out + 0.5
                 && m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) <= w / 2.0 + s.view_past + 0.05
-                && !posts.iter().any(|pp| flat(pp.pos, q) < SAME_M) {
+                && !posts.iter().any(|pp| v3::dist_xz(pp.pos, q) < SAME_M) {
                 mine.push(q);
             }
         }
-        js::sort_by(&mut mine, |p, q| flat(*p, c) - flat(*q, c));
+        js::sort_by(&mut mine, |p, q| v3::dist_xz(*p, c) - v3::dist_xz(*q, c));
         if !loose.is_empty() {
             for &q in &mine {
-                if nav_blocked(g, q[0], q[2]) || !on_floor(g, &f, q) || crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None) || crate::doorway::doorway_stand(g, q)
-                    || taken.iter().any(|o| flat(*o, q) < s.apart) || in_view(g, d, &far, q) { continue; }
-                let stands = (0..posts.len()).filter(|i| !loose.contains(i)).any(|i| flat(posts[i].pos, q) < s.apart);
-                if stands || pre.values().any(|o| flat(*o, q) < s.apart) { continue; }
+                if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || !on_floor(g, &f, q) || crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None) || crate::doorway::doorway_stand(g, q)
+                    || taken.iter().any(|o| v3::dist_xz(*o, q) < s.apart) || in_view(g, d, &far, q) { continue; }
+                let stands = (0..posts.len()).filter(|i| !loose.contains(i)).any(|i| v3::dist_xz(posts[i].pos, q) < s.apart);
+                if stands || pre.values().any(|o| v3::dist_xz(*o, q) < s.apart) { continue; }
                 let h = hand_of(g, d, w, q);
                 let mut free: Vec<(usize, f64)> = Vec::new();
                 for &i in &loose { if !pre.has(i) { free.push((i, if hand_of(g, d, w, posts[i].pos) == h { 0.0 } else { 1.0 })); } }
-                js::sort_by(&mut free, |x, y| js::or(x.1 - y.1, flat(posts[x.0].pos, q) - flat(posts[y.0].pos, q)));
+                js::sort_by(&mut free, |x, y| js::or(x.1 - y.1, v3::dist_xz(posts[x.0].pos, q) - v3::dist_xz(posts[y.0].pos, q)));
                 let Some(&(u, _)) = free.first() else { break };
                 // nor a body's width from a dealt mark that will stand where it is
                 let mut crowded = false;
                 for &j in &loose {
-                    if j != u && !pre.has(j) && flat(posts[j].pos, q) < s.apart && !in_view(g, d, &far, posts[j].pos) { crowded = true; break; }
+                    if j != u && !pre.has(j) && v3::dist_xz(posts[j].pos, q) < s.apart && !in_view(g, d, &far, posts[j].pos) { crowded = true; break; }
                 }
                 if crowded { continue; }
                 pre.set(u, q);
@@ -603,7 +595,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
         let mut hs: Vec<f64> = Vec::new();
         for &man in men {
             let p = g.ch[g.gd[man].ch].pos;
-            if crate::doortools::off_of(g, d, p, side) > 0.0 && flat(p, c) <= s.view_men {
+            if crate::doortools::off_of(g, d, p, side) > 0.0 && v3::dist_xz(p, c) <= s.view_men {
                 let a = crate::doortools::along_of(g, d, p);
                 hs.push(if a >= w + s.view_out { 1.0 } else if a <= -s.view_out { -1.0 } else { 0.0 });
             }
@@ -614,7 +606,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             for i in 0..posts.len() {
                 if hand_of(g, d, w, at(i)) == h && m::abs(crate::doortools::along_of(g, d, at(i)) - w / 2.0) < w / 2.0 + s.view_past + 1.0 { mine.push(i); }
             }
-            js::sort_by(&mut mine, |a, b| flat(at(*a), c) - flat(at(*b), c));
+            js::sort_by(&mut mine, |a, b| v3::dist_xz(at(*a), c) - v3::dist_xz(at(*b), c));
             let mut over = mine.len() as i32 - room;
             for &i in &mine {
                 if over <= 0 { break; }
@@ -640,7 +632,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let mut r = ViewDeal { d, side, w, jamb_out, jamb_past, front, f: &f, far: &far, taken, keeps: &keeps, posts, seen: &seen, across: &across, cands: [None, None] };
     // dealt nearest the frame first. A place with nowhere to go STAYS and stands in the others' way: the deal is run again with it standing
     let mut order: Vec<usize> = (0..posts.len()).filter(|i| moved[*i]).collect();
-    js::sort_by(&mut order, |a, b| flat(posts[*a].pos, c) - flat(posts[*b].pos, c));
+    js::sort_by(&mut order, |a, b| v3::dist_xz(posts[*a].pos, c) - v3::dist_xz(posts[*b].pos, c));
     let mut stay: JsSet<usize> = JsSet::new();
     let mut got: JsMap<usize, Dealt>;
     loop {
@@ -692,7 +684,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     // the door has one opener, the man nearest its frame
     if led {
         let mut best = 0;
-        for i in 1..out.len() { if flat(out[i].pos, c) < flat(out[best].pos, c) { best = i; } }
+        for i in 1..out.len() { if v3::dist_xz(out[i].pos, c) < v3::dist_xz(out[best].pos, c) { best = i; } }
         for i in 0..out.len() { out[i].lead = i == best; }
     }
     Some(out)
@@ -772,9 +764,9 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
 fn next_fits(g: &Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_c: V3, front: V3, used: &[V3], min_m: f64, shy: bool, q: V3) -> bool {
     let s = g.k.stackroom;
     on_floor(g, floor, q)
-        && flat(q, c) <= s.next_m
-        && flat(q, d_c) >= min_m
-        && !used.iter().any(|u| flat(*u, q) < s.apart)
+        && v3::dist_xz(q, c) <= s.next_m
+        && v3::dist_xz(q, d_c) >= min_m
+        && !used.iter().any(|u| v3::dist_xz(*u, q) < s.apart)
         && !crate::doorway::doorway_stand(g, q)
         && !crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None)
         && !(shy && furnished(g, d, q))

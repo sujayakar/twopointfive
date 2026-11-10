@@ -21,13 +21,10 @@ fn row_data(pairs: Vec<(&str, ChronEventDataValue)>) -> RowData {
     for (k, v) in pairs { d.set(String::from(k), Some(v)); }
     d
 }
-fn data_get<'a>(d: &'a RowData, k: &str) -> Option<&'a ChronEventDataValue> {
-    d.get(String::from(k)).and_then(|v| v.as_ref())
-}
 fn data_set(d: &mut RowData, k: &str, v: ChronEventDataValue) { d.set(String::from(k), Some(v)); }
 /// `Number(row.data[k])`; the merged counters are only ever numbers (a text is never written under those keys)
 fn data_number(d: &RowData, k: &str) -> f64 {
-    match data_get(d, k) {
+    match super::words::field(d, k) {
         Some(ChronEventDataValue::Num(x)) => *x,
         Some(ChronEventDataValue::Bool(b)) => if *b { 1.0 } else { 0.0 },
         _ => f64::NAN,
@@ -35,7 +32,7 @@ fn data_number(d: &RowData, k: &str) -> f64 {
 }
 /// `String(row.data[k])`
 fn data_string(d: &RowData, k: &str) -> String {
-    match data_get(d, k) {
+    match super::words::field(d, k) {
         Some(ChronEventDataValue::Text(s)) => s.clone(),
         Some(ChronEventDataValue::Num(x)) => js::num_str(*x),
         Some(ChronEventDataValue::Bool(b)) => String::from(if *b { "true" } else { "false" }),
@@ -78,7 +75,7 @@ fn without_the(s: &str) -> String { String::from(s.strip_prefix("the ").unwrap_o
 /// Chronicle.add's caps: true = refused, and counted
 fn refused(c: &mut Chronicle, chatter: &JsSet<ChronKind>, kind: ChronKind, data: &RowData) -> bool {
     let n = c.events.len() as f64;
-    let load = matches!(data_get(data, "what"), Some(ChronEventDataValue::Text(s)) if s == "load");
+    let load = matches!(super::words::field(data, "what"), Some(ChronEventDataValue::Text(s)) if s == "load");
     if n >= MAX_EVENTS || (n >= SOFT_EVENTS && (chatter.has(kind) || (kind == ChronKind::Checkpoint && !load))) {
         c.dropped += 1.0;
         return true;
@@ -106,7 +103,7 @@ fn recent_at(c: &Chronicle, kind: ChronKind, key_name: &str, key: &ChronicleRece
         let e = &ev[i];
         if t - e.t > win { return None; }
         if e.kind == kind {
-            let same = match (data_get(&e.data, key_name), key) {
+            let same = match (super::words::field(&e.data, key_name), key) {
                 (Some(ChronEventDataValue::Text(a)), ChronicleRecentKey::Text(b)) => a == b,
                 (Some(ChronEventDataValue::Num(a)), ChronicleRecentKey::Num(b)) => a == b,
                 _ => false,
@@ -187,8 +184,6 @@ fn live_row_n(g: &mut Game, kind: ChronKind, count: ChronCountKey, data: RowData
     let at = add_row(g, t, kind, p, data)?;
     Some(g.chronicle.events[at].clone())
 }
-fn man_callsign(g: &Game, gd: GuardId) -> String { g.gd[gd].callsign.clone() }
-fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
 // ------------------------------------------------------------ rooms
 
@@ -284,7 +279,7 @@ pub fn chron_objective(g: &mut crate::game::Game, text: &str, pos: Option<V3>) -
 /// An alert man has eyes on him afresh; seen again once they know counts as seenUp.
 pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<crate::chronicle::ChronEvent> {
     let lvl = g.escalation;
-    let who = match by { Some(b) => man_callsign(g, b), None => String::from("a guard") };
+    let who = match by { Some(b) => g.gd[b].callsign.clone(), None => String::from("a guard") };
     let data = row_data(vec![("by", tx(&who)), ("lvl", num(lvl))]);
     if lvl >= 1.0 { live_row_n(g, ChronKind::Spotted, ChronCountKey::SeenUp, data, None) } else { live_row(g, ChronKind::Spotted, data, None) }
 }
@@ -292,8 +287,8 @@ pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<c
 /// A man went to 'alert': who, and what did it.
 pub fn chron_contact(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let cause = match g.gd[gd].witness.alerted_by { Some(c) => c.as_str(), None => "radio" };
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("cause", tx(cause))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone())), ("cause", tx(cause))]);
+    let p = g.pos_of(gd);
     live_row_n(g, ChronKind::Contact, ChronCountKey::Contacts, data, Some(p))
 }
 
@@ -306,7 +301,7 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
     let t = now_of(g);
     let awareness = g.gd[gd].awareness;
     let react = if awareness >= 0.85 { "alerted" } else if awareness >= 0.3 { "investigates" } else { "pricks up" };
-    let callsign = man_callsign(g, gd);
+    let callsign = g.gd[gd].callsign.clone();
     let key = ev.serial;
     let bound = chronicle_heard_row(g, key).map(|at| *at);
     let at = match bound {
@@ -366,15 +361,15 @@ fn heard_what(e: crate::game::GameEvent) -> String {
 
 /// The alert chase is over without him.
 pub fn chron_lost(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone()))]);
+    let p = g.pos_of(gd);
     live_row(g, ChronKind::Lost, data, Some(p))
 }
 
 /// He gives the search up.
 pub fn chron_calm(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone()))]);
+    let p = g.pos_of(gd);
     live_row(g, ChronKind::Calm, data, Some(p))
 }
 
@@ -405,8 +400,8 @@ fn clip_line(text: &str) -> String {
 /// A line over the guards' net, the routine radio check excepted.
 pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option<crate::chronicle::ChronEvent> {
     if is_radio_check(text) { return None; }
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("text", ChronEventDataValue::Text(clip_line(text)))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone())), ("text", ChronEventDataValue::Text(clip_line(text)))]);
+    let p = g.pos_of(gd);
     live_row_n(g, ChronKind::Radio, ChronCountKey::Radio, data, Some(p))
 }
 
@@ -432,7 +427,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, into_man: bool, hit_p
     let into = if near { format!("past {}", nearest) } else { String::from("geometry") };
     let prev = recent_at(&g.chronicle, ChronKind::Shot, "into", &ChronicleRecentKey::Text(into.clone()), t, SHOT_MERGE_SECS);
     if let Some(at) = prev {
-        let same = matches!(data_get(&g.chronicle.events[at].data, "weapon"), Some(ChronEventDataValue::Text(w)) if w == weapon);
+        let same = matches!(super::words::field(&g.chronicle.events[at].data, "weapon"), Some(ChronEventDataValue::Text(w)) if w == weapon);
         if same {
             let n = js::or(data_number(&g.chronicle.events[at].data, "n"), 1.0) + 1.0;
             data_set(&mut g.chronicle.events[at].data, "n", num(n));
@@ -489,15 +484,15 @@ pub fn chron_thrown(g: &mut crate::game::Game, kind: &str) -> Option<crate::chro
 
 /// A man taken into the arm.
 pub fn chron_grab(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone()))]);
+    let p = g.pos_of(gd);
     live_row_n(g, ChronKind::Grab, ChronCountKey::Grabs, data, Some(p))
 }
 
 /// One exchange: who, the stage, the useful thing's kind if he gave one.
 pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&str>, stage: f64) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
-    let callsign = man_callsign(g, gd);
+    let callsign = g.gd[gd].callsign.clone();
     let civ = g.gd[gd].civ;
     if civ.is_none() { g.chronicle.questioned.add(callsign.clone()); }
     if matches!(kind, Some(k) if !k.is_empty()) { g.chronicle.counts.intel += 1.0; }
@@ -507,22 +502,22 @@ pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&
         pairs.push(("she", tx(&g.cv[c].she)));
         pairs.push(("her", tx(&g.cv[c].her)));
     }
-    let p = man_pos(g, gd);
+    let p = g.pos_of(gd);
     live_row(g, ChronKind::Interrogated, row_data(pairs), Some(p))
 }
 
 /// A fresh key off a questioned man's belt.
 pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
-    let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
-    let p = man_pos(g, gd);
+    let data = row_data(vec![("who", tx(&g.gd[gd].callsign.clone()))]);
+    let p = g.pos_of(gd);
     live_row(g, ChronKind::KeyTaken, data, Some(p))
 }
 
 /// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').
 pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, with: crate::game::With) -> Option<crate::chronicle::ChronEvent> {
     use crate::game::{DownKind, With};
-    let who = ("who", tx(&man_callsign(g, gd)));
-    let p = man_pos(g, gd);
+    let who = ("who", tx(&g.gd[gd].callsign.clone()));
+    let p = g.pos_of(gd);
     if how != DownKind::Shot { return live_row(g, ChronKind::Ko, row_data(vec![who, ("method", tx(with.method(how)))]), Some(p)); }
     let weapon = match with {
         With::Blast(w) => return live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)),
@@ -543,7 +538,7 @@ pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -
     let c = g.gd[body].ch;
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
     let breathing = match g.gd[body].down_kind { Some(k) => k != crate::game::DownKind::Shot, None => false };
-    let pairs = vec![("who", tx(&man_callsign(g, body))), ("by", tx(&man_callsign(g, by))), ("breathing", yes(breathing))];
+    let pairs = vec![("who", tx(&g.gd[body].callsign.clone())), ("by", tx(&g.gd[by].callsign.clone())), ("breathing", yes(breathing))];
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))
 }
 

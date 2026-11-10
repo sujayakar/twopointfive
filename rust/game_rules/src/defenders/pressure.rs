@@ -23,7 +23,6 @@ fn alive(g: &Game, d: RoomfightDefId) -> bool { !crate::condition::down(g, g.gd[
 fn cell_of(g: &Game, p: V3) -> f64 { let cell = g.col.nav.cell; crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell)) }
 // ---- small reads
 fn df(g: &Game, d: RoomfightDefId) -> &crate::roomfight::Def { &g.tab.roomfight_def[d] }
-fn gd_of(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
 fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd }
 fn in_cells(g: &Game, t: RoomfightRoomId, cell: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(cell)) }
 
@@ -31,7 +30,7 @@ fn in_cells(g: &Game, t: RoomfightRoomId, cell: f64) -> bool { g.tab.roomfight_r
 fn someone_at(g: &Game, d: RoomfightDefId, p: V3) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
-        if x != d && alive(g, x) && dist_xz(g.pos_of(gd_of(g, x)), p) < 0.9 { return true; }
+        if x != d && alive(g, x) && dist_xz(g.pos_of(g.tab.roomfight_def[x].gd), p) < 0.9 { return true; }
     }
     false
 }
@@ -74,7 +73,7 @@ struct Going {
 
 /// the last man up in a room does not die at his post: two of the enemy in view, or the team's boots at one door on a floor gone loud, and after his own beat he gives the room up through another.
 fn last_man(g: &mut Game, d: RoomfightDefId) {
-    let gd = gd_of(g, d);
+    let gd = g.tab.roomfight_def[d].gd;
     if !alone_and_free_to_go(g, d) { state_of(g).last.delete(d); return; }
     let r = df(g, d).room.unwrap();
     let Some(going) = why_he_goes(g, d, r) else { state_of(g).last.delete(d); return };
@@ -105,7 +104,7 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
 
 /// At his post in a small room, alone of his side in it, nobody's arm on him, his wits about him, settled a while. (lostAt ahead of the clock = somebody holds him to his room)
 fn alone_and_free_to_go(g: &mut Game, d: RoomfightDefId) -> bool {
-    let gd = gd_of(g, d);
+    let gd = g.tab.roomfight_def[d].gd;
     let mode_free = crate::roomfight::DefMode::Free;
     let room = df(g, d).room;
     crate::roomfight::at_post(g, d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
@@ -117,7 +116,7 @@ fn alone_and_free_to_go(g: &mut Game, d: RoomfightDefId) -> bool {
 
 /// Two of them in his eyes; else the team's boots at one of his room's doors, on a floor gone loud.
 fn why_he_goes(g: &mut Game, d: RoomfightDefId, r: RoomfightRoomId) -> Option<Going> {
-    let gd = gd_of(g, d);
+    let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].state == crate::game::GuardState::Alert && g.time - g.gd[gd].last_seen_t < 1.5 {
         let threat = g.gd[gd].sight_pos;
         return if two_of_them_in_his_eyes(g, gd) { Some(Going { why: LastWhy::Seen, threat, shut: None }) } else { None };
@@ -147,7 +146,7 @@ fn two_of_them_in_his_eyes(g: &mut Game, gd: GuardId) -> bool {
 
 /// The door of his room the boots come to him through from outside it, listened for four times a second and believed for three.
 fn door_the_boots_are_at(g: &mut Game, d: RoomfightDefId, r: RoomfightRoomId) -> Option<usize> {
-    let gd = gd_of(g, d);
+    let gd = g.tab.roomfight_def[d].gd;
     if !state_of(g).ear.has(d) { state_of(g).ear.set(d, StateEarValue { t: -1.0, i: -1.0, at: -100.0 }); }
     let mut e = *state_of(g).ear.get(d).unwrap();
     if g.time - e.t > 0.25 {
@@ -173,7 +172,7 @@ fn door_the_boots_are_at(g: &mut Game, d: RoomfightDefId, r: RoomfightRoomId) ->
 /// Of his room's doors he can use, the one with the shortest walk to a place beyond it that does not go toward them.
 fn best_door_out(g: &Game, d: RoomfightDefId, r: RoomfightRoomId, going: Going) -> Option<(V3, DoorId, f64)> {
     let Going { threat, shut, .. } = going;
-    let c_pos = g.pos_of(gd_of(g, d));
+    let c_pos = g.pos_of(g.tab.roomfight_def[d].gd);
     let entries: Vec<crate::roomfight::Entry> = g.tab.roomfight_room[r].entries.clone();
     let mut best: Option<(V3, DoorId, f64)> = None;
     for (i, e) in entries.iter().enumerate() {
@@ -209,7 +208,7 @@ fn free_spot_beyond(g: &Game, d: RoomfightDefId, r: RoomfightRoomId, e: &crate::
 /// a last man out of his room, this frame. True = done with him. `o` is lent by pressTick, out of st.outs for the call.
 fn tick_out(g: &mut Game, o: &mut Out) -> bool {
     let d = o.def;
-    let gd = gd_of(g, d);
+    let gd = g.tab.roomfight_def[d].gd;
     if !alive(g, d) || !g.fight.defs.contains(&d) { return true; }
     if o.moving {
         match crate::roomfight::leg_ended(g, d, crate::owner::by::OUT) {
@@ -224,7 +223,7 @@ fn tick_out(g: &mut Game, o: &mut Out) -> bool {
         let mut told = 0;
         let defs: Vec<RoomfightDefId> = g.fight.defs.clone();
         for &x in &defs {
-            if !(x != d && alive(g, x) && crate::roomfight::at_post(g, x) && df(g, x).room == room && dist_xz(g.pos_of(gd_of(g, x)), here) < 12.0) { continue; }
+            if !(x != d && alive(g, x) && crate::roomfight::at_post(g, x) && df(g, x).room == room && dist_xz(g.pos_of(g.tab.roomfight_def[x].gd), here) < 12.0) { continue; }
             let i = match (df(g, x).room, o.door) {
                 (Some(r), Some(door)) => g.tab.roomfight_room[r].entries.iter().position(|e| e.door == door),
                 _ => None,

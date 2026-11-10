@@ -40,7 +40,7 @@ impl Kept {
                 "hard" => out.difficulty = Some(v.bool().ok_or_else(|| wrong("yes or no"))?),
                 "levers" => for (key, rung) in members(v).ok_or_else(|| wrong("record"))? {
                     let rung = rung.str().ok_or_else(|| wrong("record of words"))?;
-                    if let Some(key) = lever(key) { out.levers.push((key, String::from(rung))); }
+                    if let Some(key) = game::start_list::lever_key(key) { out.levers.push((key, String::from(rung))); }
                 },
                 "cards" => out.cards = Some(String::from(v.str().ok_or_else(|| wrong("text"))?)),
                 "quietFog" => out.quiet_fog = Some(String::from(v.str().ok_or_else(|| wrong("word"))?)),
@@ -55,7 +55,6 @@ impl Kept {
 }
 
 fn members(j: &Json) -> Option<&[(String, Json)]> { if matches!(j, Json::Obj(..)) { Some(j.members()) } else { None } }
-fn lever(key: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == key) }
 
 /// the name the cards are kept under
 pub const KIT: &str = "twopointsix.kit";

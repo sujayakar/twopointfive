@@ -154,7 +154,7 @@ fn eye_round_the_corner(g: &mut Game, gd: GuardId, p: &mut crate::lanes::Peek) -
     if dl > 0.05 && p.line_t < 0.0 {
         let lean = g.k.lanes.peek_lean;
         let out: V3 = [eye[0] + dx / dl * lean, eye[1], eye[2] + dz / dl * lean];
-        let eye = if !solid_blocked(g, eye, out) { out } else { eye };
+        let eye = if !crate::scene_collision::solid_blocked(g, eye, out, None) { out } else { eye };
         p.eye = Some(eye);
         if let Some(r) = s(g).peek.get_mut(gd) { r.eye = Some(eye); }
         return eye;
@@ -182,7 +182,7 @@ fn they_are_still_on_it(g: &mut Game, o: Out, seen: V3) {
 /// Has he a line to every one of the lane's gun spots.
 fn every_gun_spot_in_line(g: &Game, l: LanesLaneId, eye: V3) -> bool {
     let guns = g.tab.lanes_lane[l].guns.clone();
-    guns.iter().all(|&q| !seg_blocked(g, eye, [q[0], 1.4, q[2]]))
+    guns.iter().all(|&q| !crate::scene_collision::segment_blocked(g, eye, [q[0], 1.4, q[2]], None, None, None))
 }
 
 /// Far enough: he looks from here.
@@ -263,7 +263,7 @@ pub(super) fn mouth_of(g: &crate::game::Game, l: LanesLaneId, p: V3) -> V3 {
     }
     if near.is_empty() { return g.tab.lanes_lane[l].at; }
     let eye: V3 = [p[0], 1.5, p[2]];
-    for &(_, x, z) in near.iter() { if !solid_blocked(g, eye, [x, 1.0, z]) { return [x, 0.0, z]; } }
+    for &(_, x, z) in near.iter() { if !crate::scene_collision::solid_blocked(g, eye, [x, 1.0, z], None) { return [x, 0.0, z]; } }
     [near[0].1, 0.0, near[0].2]
 }
 

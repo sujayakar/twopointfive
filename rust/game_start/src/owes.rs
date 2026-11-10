@@ -4,7 +4,7 @@
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use game::game::{Game, GuardState, MissionStage};
+use game::game::{Game, GuardState};
 use game::ids::{DoorId, GuardId};
 
 /// metres in a tick nobody walks: more than this with no word for it is a man popping
@@ -42,8 +42,6 @@ pub struct Owes {
     run: Option<u32>,
 }
 
-fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
-fn flat(a: [f64; 3], b: [f64; 3]) -> f64 { game::m::hyp2(a[0] - b[0], a[2] - b[2]) }
 fn number(p: [f64; 3]) -> bool { p.iter().all(|v| v.is_finite()) }
 
 impl Owes {
@@ -64,14 +62,14 @@ impl Owes {
         self.doors_owe(g, t);
         self.alarm_owes(g, t);
         self.tracers_owe(g, t);
-        let r = rank(g.mission.stage);
+        let r = game::savestate::control::rank(g.mission.stage);
         if let Some(was) = self.stage { if r < was { self.fault("stage", "the mission", t, format!("the stage went back to {}", g.mission.stage.as_str())); } }
         self.stage = Some(r);
         self.overlaps(g, t);
     }
     fn in_a_box(&mut self, g: &mut Game, who: &str, at: [f64; 3], r: f64, y1: f64, t: f64) {
         let mut q = at;
-        if game::scene_collision::collide_circle(g, &mut q, r, 0.3, y1, Some(1.0)) && flat(q, at) > IN_BOX { self.fault("in a box", who, t, format!("{:.2} m inside a static box at ({:.2}, {:.2})", flat(q, at), at[0], at[2])); }
+        if game::scene_collision::collide_circle(g, &mut q, r, 0.3, y1, Some(1.0)) && game::v3::dist_xz(q, at) > IN_BOX { self.fault("in a box", who, t, format!("{:.2} m inside a static box at ({:.2}, {:.2})", game::v3::dist_xz(q, at), at[0], at[2])); }
     }
     fn on_the_level(&mut self, who: &str, p: [f64; 3], t: f64) {
         if !number(p) { self.fault("no number", who, t, format!("stands at {:?}", p)); return; }
@@ -83,7 +81,7 @@ impl Owes {
         let (p, down) = (g.ch[g.pl[pl].ch].pos, game::condition::down(g, g.pl[pl].ch));
         self.on_the_level("Sam", p, t);
         if !number(p) { return; }
-        if let (Some(was), false) = (self.sam, down) { if flat(was, p) > POP { self.fault("popped", "Sam", t, format!("{:.2} m in a tick", flat(was, p))); } }
+        if let (Some(was), false) = (self.sam, down) { if game::v3::dist_xz(was, p) > POP { self.fault("popped", "Sam", t, format!("{:.2} m in a tick", game::v3::dist_xz(was, p))); } }
         self.sam = Some(p);
         if !down { self.in_a_box(g, "Sam", p, 0.22, 1.4, t); }
     }
@@ -106,12 +104,12 @@ impl Owes {
                 None => { self.men.push((gd, Track { at: p, up, mark: p, mark_t: t, want_t: t, wanted: false, said_t: -100.0, short: false })); continue; }
             };
             let was = self.men[k].1;
-            if up && was.up && flat(was.at, p) > POP { self.fault("popped", &who, t, format!("{:.2} m in a tick, from ({:.2}, {:.2}) to ({:.2}, {:.2})", flat(was.at, p), was.at[0], was.at[2], p[0], p[2])); }
+            if up && was.up && game::v3::dist_xz(was.at, p) > POP { self.fault("popped", &who, t, format!("{:.2} m in a tick, from ({:.2}, {:.2}) to ({:.2}, {:.2})", game::v3::dist_xz(was.at, p), was.at[0], was.at[2], p[0], p[2])); }
             if was.up && !up && self.by_the_team(g, gd) { self.friendly += 1; }
             let (wants, short) = self.under_order(g, gd, p, t);
             let m = &mut self.men[k].1;
             (m.at, m.up) = (p, up);
-            if flat(p, m.mark) > STUCK_M { (m.mark, m.mark_t) = (p, t); }
+            if game::v3::dist_xz(p, m.mark) > STUCK_M { (m.mark, m.mark_t) = (p, t); }
             if !wants || !m.wanted { m.want_t = t; }
             m.wanted = wants;
             let gave_up = short && !m.short;
@@ -132,7 +130,7 @@ impl Owes {
         let h = &g.gd[gd];
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
         let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
-        let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
+        let off_it = !a.arrived && a.post.is_some_and(|q| game::v3::dist_xz(p, q) > 0.6);
         (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there.at == game::orders::At::StoppedShort)
     }
     fn overlaps(&mut self, g: &Game, t: f64) {
@@ -142,7 +140,7 @@ impl Owes {
         for a in 0..team.len() { for b in a + 1..team.len() {
             let key = (team[a].0, team[b].0);
             let at = self.pairs.iter().position(|p| p.0 == key);
-            if flat(team[a].1, team[b].1) >= OVERLAP_M { if let Some(k) = at { if t - self.pairs[k].2 > STUCK_AGAIN { self.pairs.swap_remove(k); } else { self.pairs[k].1 = f64::INFINITY; } } continue; }
+            if game::v3::dist_xz(team[a].1, team[b].1) >= OVERLAP_M { if let Some(k) = at { if t - self.pairs[k].2 > STUCK_AGAIN { self.pairs.swap_remove(k); } else { self.pairs[k].1 = f64::INFINITY; } } continue; }
             match at {
                 None => self.pairs.push((key, t, -100.0)),
                 Some(k) => {

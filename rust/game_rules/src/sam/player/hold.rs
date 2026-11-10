@@ -13,11 +13,6 @@ macro_rules! hold {
     };
 }
 
-/// JavaScript's `s.length`: UTF-16 units, not bytes (Sam's lines hold dashes and arrows)
-fn js_len(s: &str) -> f64 {
-    s.encode_utf16().count() as f64
-}
-
 /// `g.events.push({ kind: 'prop', pos, time, loud: false, level, who: <Sam's body> })`, and `pl.noise` raised to it: what the room hears of a hold's beat
 fn prop_noise(g: &mut Game, pos: V3, level: f64) {
     let p = g.player;
@@ -630,7 +625,7 @@ fn say_after(g: &mut crate::game::Game) {
 pub fn say_over_sam(g: &mut Game, text: &str, time: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
-    g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js_len(text)), radio: false });
+    g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js::utf16_len(text)), radio: false });
     let at = v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
 }
@@ -816,7 +811,7 @@ fn ask_held(g: &mut crate::game::Game) {
     } else {
         crate::dialogue::sam_line_for(g, gd, h.variant, None).text
     };
-    let dur = sam_beat(js_len(&text));
+    let dur = sam_beat(js::utf16_len(&text));
     let time = g.time;
     g.pl[p].bubble = Some(crate::game::PlayerBubble { text: text.clone(), t: time, dur, radio: false });
     {
@@ -991,7 +986,7 @@ mod tests {
     /// How long Sam's line hangs goes by its letters: a dash or an arrow in it is one, not its bytes.
     #[test]
     fn a_line_is_counted_in_letters_not_bytes() {
-        assert_eq!(js_len("you ▸ — é"), 9.0);
+        assert_eq!(js::utf16_len("you ▸ — é"), 9.0);
     }
 
     #[test]

@@ -10,27 +10,15 @@ use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- panels and contact
 
-fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => or }
-}
-
 /// `c.bones.headTop?.[1] ?? c.pos[1] + over`: the crown's height.
 fn crown_or(g: &Game, c: CharId, over: f64) -> f64 {
     match g.ch[c].bones.get(crate::character::Bone::HeadTop) { Some(p) => p[1], None => g.ch[c].pos[1] + over }
 }
 
-/// A weapon's row (`gd.weapon.def`).
-fn row(g: &Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(def).unwrap()
-}
-
 /// `W.drop`, as dropFromHand's kind.
 fn drop_kind(g: &Game, def: crate::weapons::WeaponId) -> DropFromHandKind {
-    match row(g, def).drop { crate::slotsetup::SetupGun::Pistol => DropFromHandKind::Pistol, crate::slotsetup::SetupGun::Rifle => DropFromHandKind::Rifle }
+    match g.weapon(def).drop { crate::slotsetup::SetupGun::Pistol => DropFromHandKind::Pistol, crate::slotsetup::SetupGun::Rifle => DropFromHandKind::Rifle }
 }
-
-/// `a | b` of two box flags.
-fn flags_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 /// The pistol poked out through a panel: gun shoulder and muzzle on opposite sides of one.
 pub fn arm_through(g: &crate::game::Game, c_2: CharId) -> bool {
@@ -39,7 +27,7 @@ pub fn arm_through(g: &crate::game::Game, c_2: CharId) -> bool {
 
 /// His gun shoulder.
 pub fn shoulder(g: &Game, c: CharId) -> V3 {
-    bone_or(g, c, crate::character::Bone::UpperArmR, v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]))
+    g.ch[c].bone_or(crate::character::Bone::UpperArmR, 1.4)
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.
@@ -65,7 +53,7 @@ fn contact_clear(g: &crate::game::Game, a: CharId, b: CharId) -> bool {
     if v3::dist_xz(g.ch[a].pos, g.ch[b].pos) > 1.2 { return true; }
     let from = v3::add(g.ch[a].pos, [0.0, 1.1, 0.0]);
     let or = g.ch[b].pos;
-    let h = bone_or(g, b, crate::character::Bone::Hips, or);
+    let h = g.ch[b].bone(crate::character::Bone::Hips).unwrap_or(or);
     let to: V3 = [h[0], 1.1, h[2]];
     !solid_between(g, from, to)
 }
@@ -81,7 +69,7 @@ pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, c
         // fireWeapon's own test: nothing solid nearer along the bore than his middle, no panel between the two chests
         Some(BodyHitContact::Muzzle { st0_t, muzzle, glass_arm, shooter }) => {
             let or = g.ch[c_2].pos;
-            let h = bone_or(g, c_2, crate::character::Bone::Hips, or);
+            let h = g.ch[c_2].bone(crate::character::Bone::Hips).unwrap_or(or);
             let nearer = match st0_t { None => true, Some(t0) => t0 > m::hyp2(h[0] - muzzle[0], h[2] - muzzle[2]) };
             nearer && (glass_arm || contact_clear(g, shooter, c_2))
         }
@@ -130,7 +118,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         let torch = h == crate::guards::InHand::Torch;
         let kind = if torch { DropFromHandKind::Torch } else { drop_kind(g, w) };
         let along = if torch { g.gd[gd].beam_dir } else { g.ch[c].gun_dir };
-        let suppressed = h == crate::guards::InHand::Weapon && row(g, w).suppressed;
+        let suppressed = h == crate::guards::InHand::Weapon && g.weapon(w).suppressed;
         let it = drop_from_hand(g, c, kind, along, if quiet { [0.0, 0.0, 0.0] } else { dir }, Some(suppressed), Some(quiet), None);
         g.gd[gd].dropped = Some(it);
     }
@@ -143,7 +131,7 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
     let quiet = quiet.unwrap_or(false);
     let h = match from {
         Some(f) => f,
-        None => { let or = v3::add(g.ch[c_2].pos, [0.0, 1.0, 0.0]); bone_or(g, c_2, crate::character::Bone::HandR, or) }
+        None => { let or = v3::add(g.ch[c_2].pos, [0.0, 1.0, 0.0]); g.ch[c_2].bone(crate::character::Bone::HandR).unwrap_or(or) }
     };
     let vel = g.ch[c_2].vel;
     let r0 = crate::dice::draw_body(g, "combat::drop_from_hand#1", c_2);
@@ -204,7 +192,7 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
             let def = g.fa[gun].def;
             let kind = drop_kind(g, def);
             let along = g.ch[c].gun_dir;
-            let suppressed = row(g, def).suppressed;
+            let suppressed = g.weapon(def).suppressed;
             drop_from_hand(g, c, kind, along, from_dir, Some(suppressed), None, None);
             if gun == rifle { g.pl[p].rifle_gone = true; }
         }
@@ -353,7 +341,7 @@ fn guard_props(g: &crate::game::Game, gd: GuardId, out: &mut Carried) -> Option<
     let slung_out = g.gd[gd].slung.as_ref().filter(|s| s.out).map(|s| s.own);
     if let (crate::kit::BigTool::Shotgun, true, Some(own)) = (big, alive, slung_out) {
         let def = g.fa[own].def;
-        let weapon = match row(g, def).rig {
+        let weapon = match g.weapon(def).rig {
             crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
             crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
             _ => None,
@@ -404,7 +392,7 @@ impl Carries {
         let side = crate::char_look::side_of_team(g.team(gd), Some(g.gd[gd].trained));
         let out = if side == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
         let kit_pistol = crate::kit::kit_pistol(g, gd);
-        let as_pistol = kit_pistol && row(g, g.fa[g.gd[gd].weapon].def).rig == crate::weapons::WeaponDefRig::Pistol;
+        let as_pistol = kit_pistol && g.weapon(g.fa[g.gd[gd].weapon].def).rig == crate::weapons::WeaponDefRig::Pistol;
         Carries { c: g.gd[gd].ch, rig: crate::guards::rig_of(g, gd), kit_pistol, as_pistol, holster_out: if js::truthy(out) { Some(out) } else { None } }
     }
     fn carbine(&self) -> bool { self.rig == crate::rig_props::RigWeapon::Carbine }
@@ -556,7 +544,7 @@ pub fn laser_reach(g: & crate::game::Game, c_2: CharId, self_: Option<GuardId>, 
     if !dir[0].is_finite() || v3::len(dir) < 0.5 { return None; }
     let mut l = 30.0;
     let flags = crate::scene_boxes::box_flag();
-    let skip = flags_or(flags.no_shadow, flags.glass);
+    let skip = js::or_bits(flags.no_shadow, flags.glass);
     let owner = (js::to_i32(g.ch[c_2].id) & 0xff) as f64;
     let wh = crate::scene_boxes::box_world_raycast(g, from, dir, Some(l), Some(skip), Some(owner), None);
     if let Some(h) = &wh { l = h.t; }
@@ -597,7 +585,7 @@ pub fn beam_boxes(from: V3, dir: V3, l: f64, out: &mut Carried, dot: bool, ir: b
     let x = v3::normalize(v3::cross(up, dir));
     let y = v3::cross(dir, x);
     let flags = crate::scene_boxes::box_flag();
-    let box_flags = flags_or(flags.no_shadow, flags.dynamic);
+    let box_flags = js::or_bits(flags.no_shadow, flags.dynamic);
     let line = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
         h: [HW, HW, l / 2.0],

@@ -55,11 +55,6 @@ fn st_row(g: &mut Game, pl: PlayerId) -> &mut crate::showwhy::State {
     g.m.showwhy.states.get_mut(pl).unwrap()
 }
 
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// His words are over him this frame, asked of the bubble's clock.
 fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].bubble {
@@ -230,14 +225,14 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
     let door = g.dr[g.tab.doortools_door_op[op].door].frame_centre;
-    let d0 = flat(pos, door);
+    let d0 = v3::dist_xz(pos, door);
     for &o in &g.tab.doortools_door_op[op].men {
         if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         let o_pos = g.ch[g.gd[o].ch].pos;
-        let d = flat(pos, o_pos);
-        if d < 0.3 || d > reach || flat(o_pos, door) > d0 - 0.1 {
+        let d = v3::dist_xz(pos, o_pos);
+        if d < 0.3 || d > reach || v3::dist_xz(o_pos, door) > d0 - 0.1 {
             continue;
         }
         if m::abs(v3::wrap_angle(m::atan2(o_pos[0] - pos[0], o_pos[2] - pos[2]) - yaw)) < 1.0 {
@@ -289,7 +284,7 @@ fn stacks(g: &mut crate::game::Game) {
             let mut file: Vec<(GuardId, f64)> = Vec::new();
             for &man in &g.tab.doortools_door_op[op].men {
                 if man != lead && !crate::condition::down(g, g.gd[man].ch) {
-                    file.push((man, flat(g.ch[g.gd[man].ch].pos, door)));
+                    file.push((man, v3::dist_xz(g.ch[g.gd[man].ch].pos, door)));
                 }
             }
             js::sort_by(&mut file, |a, b| b.1 - a.1);
@@ -489,7 +484,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 && t >= lag_t
                 && g.pl[pl].sprinting
                 && !crate::condition::down(g, g.pl[pl].ch)
-                && flat(g.ch[c].pos, g.ch[pc].pos) > k.lag_m
+                && v3::dist_xz(g.ch[c].pos, g.ch[pc].pos) > k.lag_m
             {
                 owe(g.m.showwhy.mem.get_mut(gd).unwrap(), LINE_LAG, Why::Hurt, t + 3.0);
             }
@@ -599,6 +594,6 @@ mod tests {
     /// A FAILURE MEANS: a man on the floor above counts as far off: every range here is on the floor.
     #[test]
     fn a_range_is_on_the_floor() {
-        assert_eq!(flat([0.0, 0.0, 0.0], [3.0, 9.0, 4.0]), 5.0);
+        assert_eq!(v3::dist_xz([0.0, 0.0, 0.0], [3.0, 9.0, 4.0]), 5.0);
     }
 }

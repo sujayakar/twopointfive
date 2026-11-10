@@ -35,7 +35,7 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
 
 /// `smoke.emit`: the game's own smoke where it keeps one, then the event for the host's solver (the gas of a shot, a stun's jets and trails, the can's
 /// vent: the solver is the host's and hears of them the way it hears of a holed wall's puff).
-fn smoke_emit(g: &mut Game, e: &Emitter) {
+pub(crate) fn smoke_emit(g: &mut Game, e: &Emitter) {
     crate::smoke_types::smoke_system_like_emit(g, e);
     crate::out_events::push_smoke_system_like_emit(g, e);
 }

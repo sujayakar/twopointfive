@@ -14,8 +14,6 @@ pub(super) fn ctx_tokens_map(t: &crate::dialogue::DialogueCtxTokens) -> JsMap<St
     o
 }
 
-fn st(s: &str) -> String { String::from(s) }
-
 // ---------------------------------------------------------------- axes
 
 /// Agitation to its band.
@@ -187,26 +185,26 @@ fn written(kind: IntelKind, by: &str) -> Option<&'static str> {
 pub(super) fn intel_text(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> String {
     let (t, k) = (t.as_str(), k.as_str());
     let of = |by: &str| written(kind, by);
-    st(of(&format!("{t}:{k}")).or_else(|| of(t)).or_else(|| of(&format!("*:{k}"))).or_else(|| of("*")).unwrap_or(""))
+    String::from(of(&format!("{t}:{k}")).or_else(|| of(t)).or_else(|| of(&format!("*:{k}"))).or_else(|| of("*")).unwrap_or(""))
 }
 
 /// The script's own or the shape-voiced variant of `kind`, or None when none is written.
 pub(super) fn shaped_intel_text(kind: IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
     let shape = sc.shape.as_str();
     let of = |by: &str| written(kind, by);
-    of(&format!("sc:{}", sc.id)).or_else(|| of(&format!("{shape}:{}", t.as_str()))).or_else(|| of(shape)).map(st)
+    of(&format!("sc:{}", sc.id)).or_else(|| of(&format!("{shape}:{}", t.as_str()))).or_else(|| of(shape)).map(String::from)
 }
 
 /// The checker's own words when he is the man walking the silent colleague's route.
 pub(super) fn check_on_self() -> String {
-    st(crate::dialogue::CHECKON_SELF_NOW)
+    String::from(crate::dialogue::CHECKON_SELF_NOW)
 }
 
 /// What goes in front of a given fact.
 pub(super) fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
     match t {
-        crate::game::Temperament::Hard => st("…Fine. "),
-        crate::game::Temperament::Steady if k == Knowledge::Saw || k == Knowledge::SawHurt => st("…All right. "),
+        crate::game::Temperament::Hard => String::from("…Fine. "),
+        crate::game::Temperament::Steady if k == Knowledge::Saw || k == Knowledge::SawHurt => String::from("…All right. "),
         _ => String::new(),
     }
 }
@@ -216,18 +214,18 @@ pub(super) fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowle
 fn run_on_text(lead: &str, fact: &str) -> String {
     let mut back = lead.chars().rev();
     let runs = back.next() == Some(' ') && matches!(back.next(), Some('a'..='z') | Some('—'));
-    if !runs { return st(fact); }
+    if !runs { return String::from(fact); }
     if let Some(after) = fact.strip_prefix('I') {
         // \b after the I: JavaScript's \w is ASCII only, with no `u` flag.
-        if !matches!(after.chars().next(), Some(c) if c.is_ascii_alphanumeric() || c == '_') { return st(fact); }
+        if !matches!(after.chars().next(), Some(c) if c.is_ascii_alphanumeric() || c == '_') { return String::from(fact); }
     }
     for name in ["{Checker}", "{Checked}", "{Missing}", "{Partner}", "{Victim}", "{Caller}", "{Body}"] {
-        if fact.starts_with(name) { return st(fact); }
+        if fact.starts_with(name) { return String::from(fact); }
     }
     let (brace, rest) = match fact.strip_prefix('{') { Some(r) => ("{", r), None => ("", fact) };
     match rest.chars().next() {
         Some(c) if c.is_ascii_uppercase() => format!("{}{}{}", brace, c.to_ascii_lowercase(), &rest[1..]),
-        _ => st(fact),
+        _ => String::from(fact),
     }
 }
 
@@ -247,7 +245,7 @@ mod tests {
     const TS: [Temperament; 3] = [Temperament::Steady, Temperament::Nervy, Temperament::Hard];
     const KS: [Knowledge; 5] = [Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw, Knowledge::SawHurt];
 
-    fn script(id: &str, shape: ShapeKey) -> crate::dialogue::ShapedIntelTextSc { crate::dialogue::ShapedIntelTextSc { id: st(id), shape } }
+    fn script(id: &str, shape: ShapeKey) -> crate::dialogue::ShapedIntelTextSc { crate::dialogue::ShapedIntelTextSc { id: String::from(id), shape } }
 
     /// A FAILURE MEANS: a man gives a fact in silence: some temper or knowledge has no words for it.
     #[test]
@@ -309,7 +307,7 @@ mod tests {
     /// A FAILURE MEANS: a nameless man speaks as a named one, or the office's words are heard away from the office.
     #[test]
     fn said_text_takes_the_first_that_applies() {
-        let l = SaidTextL { text: st("t"), away: Some(st("a")), bare: Some(st("b")) };
+        let l = SaidTextL { text: String::from("t"), away: Some(String::from("a")), bare: Some(String::from("b")) };
         let mut ctx = DialogueCtx::default();
         assert_eq!(said_of(&l, &ctx), "a");
         ctx.facts.office = Some(false);
@@ -318,7 +316,7 @@ mod tests {
         assert_eq!(said_of(&l, &ctx), "t");
         ctx.nameless = Some(true);
         assert_eq!(said_of(&l, &ctx), "b");
-        let l2 = SaidTextL { text: st("t"), away: Some(st("")), bare: Some(st("")) };
+        let l2 = SaidTextL { text: String::from("t"), away: Some(String::from("")), bare: Some(String::from("")) };
         ctx.facts.office = None;
         assert_eq!(said_of(&l2, &ctx), "t");
     }
@@ -334,6 +332,6 @@ mod tests {
         assert!(why.is_empty());
         add(&mut a, &mut why, 0.22, "floor");
         add(&mut a, &mut why, -0.12, "held");
-        assert_eq!(why, vec![st("floor +0.22"), st("held -0.12")]);
+        assert_eq!(why, vec![String::from("floor +0.22"), String::from("held -0.12")]);
     }
 }

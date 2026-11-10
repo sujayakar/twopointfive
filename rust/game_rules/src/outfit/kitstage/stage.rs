@@ -104,14 +104,10 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
     }
     g.kit_stage = Some(st);
     if n > 0 {
-        box_changed(g);
+        g.boxes_changed();
         let _ = crate::scene_collision::nav_grid_rebake(g, x0, z0, x1, z1);
         crate::scene_collision::sound_paths_invalidate(g);
     }
-}
-/// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
-fn box_changed(g: &mut Game) {
-    g.engine.world.geom_serial += 1.0;
 }
 pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
     for &i in hidden { if let Some(&p) = g.props.all.get(i) { crate::props::prop_system_remove(g, p); } }
@@ -338,7 +334,7 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
             let mut b = g.tab.boxes.edit(b);
             b.flags = (js::to_i32(b.flags) & !np) as f64;
         }
-        if any { box_changed(g); }
+        if any { g.boxes_changed(); }
     }
 
     // THE MEN: the open card's man first, on the plan's places

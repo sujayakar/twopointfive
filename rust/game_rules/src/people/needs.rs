@@ -47,13 +47,10 @@ fn clear_stall(g: &mut Game, gd: GuardId) {
 fn text(s: &str) -> Option<ChronicleDataValue> {
     Some(ChronicleDataValue::Text(String::from(s)))
 }
-fn key(s: &str) -> String {
-    String::from(s)
-}
 
 /// Where a need is answered on this level, or None.
 fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
-    if !g.level.own_places() { return need_spots().get(key(kind.as_str())).cloned(); }
+    if !g.level.own_places() { return need_spots().get(String::from(kind.as_str())).cloned(); }
     let s = g.level.needs().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
         NeedKind::Smoke => n.smoke.as_ref(),
@@ -133,7 +130,7 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
             continue;
         }
         let ks = k.as_str();
-        let [lo, hi] = *fill_min().get(key(ks)).unwrap();
+        let [lo, hi] = *fill_min().get(String::from(ks)).unwrap();
         let l0 = level0();
         mem(g, gd).needs.push(Need {
             kind: k,
@@ -177,38 +174,38 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 /// Why a trip under way must be broken off now, or None.
 fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
-        return Some(key("switched off"));
+        return Some(String::from("switched off"));
     }
     if crate::condition::down(g, g.gd[gd].ch) {
-        return Some(key("down"));
+        return Some(String::from("down"));
     }
     if !g.ai_enabled {
-        return Some(key("AI off"));
+        return Some(String::from("AI off"));
     }
     if g.aside {
-        return Some(key("nobody plays"));
+        return Some(String::from("nobody plays"));
     }
     if g.qrf.state != crate::qrf::QrfState::Idle {
-        return Some(key("the response team"));
+        return Some(String::from("the response team"));
     }
     if crate::seats::all_down(g) {
-        return Some(key("target down"));
+        return Some(String::from("target down"));
     }
     if crate::guards::escalation_of(g) > 0.0 {
-        return Some(key("the floor went up"));
+        return Some(String::from("the floor went up"));
     }
     if g.alarm.episode {
-        return Some(key("an alarm"));
+        return Some(String::from("an alarm"));
     }
     if g.light_home.mains.active {
-        return Some(key("the lights went"));
+        return Some(String::from("the lights went"));
     }
     let x = &g.gd[gd];
     if x.held.is_some() {
-        return Some(key("grabbed"));
+        return Some(String::from("grabbed"));
     }
     if x.body_duty.is_some() {
-        return Some(key("a body"));
+        return Some(String::from("a body"));
     }
     if let Some(task) = x.task.as_ref() {
         let kind = match task {
@@ -218,22 +215,22 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
         return Some(format!("an errand ({})", kind));
     }
     if x.script.is_some() {
-        return Some(key("orders"));
+        return Some(String::from("orders"));
     }
     if x.hold || x.pinned {
-        return Some(key("held by a script"));
+        return Some(String::from("held by a script"));
     }
     if x.leader.is_some() || x.post.is_some() {
-        return Some(key("lockdown duty"));
+        return Some(String::from("lockdown duty"));
     }
     if x.state != GuardState::Patrol {
-        return Some(if x.state == GuardState::Alert { key("contact") } else { format!("went {}", x.state.as_str()) });
+        return Some(if x.state == GuardState::Alert { String::from("contact") } else { format!("went {}", x.state.as_str()) });
     }
     if x.awareness >= CALM_AWARENESS {
-        return Some(key("heard something"));
+        return Some(String::from("heard something"));
     }
     if !g.guards.contains(&gd) {
-        return Some(key("reset"));
+        return Some(String::from("reset"));
     }
     None
 }
@@ -400,8 +397,8 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
         }
     } else {
         let mut d = break_note(g, gd, t.kind, "cancelled");
-        d.set(key("why"), text(why));
-        d.set(key("phase"), text(t.phase.as_str()));
+        d.set(String::from("why"), text(why));
+        d.set(String::from("phase"), text(t.phase.as_str()));
         let at = g.ch[c].pos;
         crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
     }
@@ -452,13 +449,13 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
     if let Some(p) = p {
         t.partner = Some(p);
         t.reply_at = g.time + g.k.needs.reply_after;
-        let own = if quiet { lines.announce_own.get(key(kind)) } else { None };
-        let pool: Vec<String> = own.or_else(|| lines.announce.get(key(kind))).or_else(|| lines.announce.get(key("coffee"))).unwrap().clone();
+        let own = if quiet { lines.announce_own.get(String::from(kind)) } else { None };
+        let pool: Vec<String> = own.or_else(|| lines.announce.get(String::from(kind))).or_else(|| lines.announce.get(String::from("coffee"))).unwrap().clone();
         t.line = pick_line(g, &pool, gd, "announce");
         crate::game::game_say(g, gd, &t.line, None, None);
     } else {
-        let own = if quiet { lines.short_own.get(key(kind)) } else { None };
-        let short: String = own.or_else(|| lines.short.get(key(kind))).cloned().unwrap_or_else(|| key(kind));
+        let own = if quiet { lines.short_own.get(String::from(kind)) } else { None };
+        let short: String = own.or_else(|| lines.short.get(String::from(kind))).cloned().unwrap_or_else(|| String::from(kind));
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
         crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
@@ -608,9 +605,9 @@ fn set_off(g: &mut Game, f: TripFrame) {
     let spot_pos = trip!(g, gd).spot.pos;
     crate::guards::go_to(g, gd, spot_pos, Some(true));
     let mut d = break_note(g, gd, kind, "left");
-    d.set(key("to"), text(&trip!(g, gd).spot.name));
+    d.set(String::from("to"), text(&trip!(g, gd).spot.name));
     if g.level.own_places() {
-        d.set(key("own"), Some(ChronicleDataValue::Num(1.0)));
+        d.set(String::from("own"), Some(ChronicleDataValue::Num(1.0)));
     }
     let at = g.ch[c].pos;
     crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
@@ -619,9 +616,9 @@ fn set_off(g: &mut Game, f: TripFrame) {
 /// The chronicle's row of a break: who, which need, and what just happened.
 fn break_note(g: &Game, gd: GuardId, kind: NeedKind, what: &str) -> JsMap<String, Option<ChronicleDataValue>> {
     let mut d = JsMap::new();
-    d.set(key("who"), text(&g.gd[gd].callsign));
-    d.set(key("kind"), text(kind.as_str()));
-    d.set(key("what"), text(what));
+    d.set(String::from("who"), text(&g.gd[gd].callsign));
+    d.set(String::from("kind"), text(kind.as_str()));
+    d.set(String::from("what"), text(what));
     d
 }
 
@@ -740,7 +737,7 @@ fn trip_over(g: &mut Game, f: TripFrame) {
     let line = pick_line(g, &back, gd, "back");
     crate::game::game_say(g, gd, &line, None, None);
     let mut d = break_note(g, gd, kind, "back");
-    d.set(key("away"), Some(ChronicleDataValue::Num(away)));
+    d.set(String::from("away"), Some(ChronicleDataValue::Num(away)));
     let at = g.ch[c].pos;
     crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
 }

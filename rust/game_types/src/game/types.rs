@@ -1311,8 +1311,22 @@ impl Game {
     pub fn pos_of(&self, gd: GuardId) -> V3 { self.ch[self.gd[gd].ch].pos }
     /// where a seat's own man stands
     pub fn seat_pos(&self, seat: &crate::seats::SeatRef) -> V3 { self.ch[self.pl[seat.player].ch].pos }
+    /// where a player's man stands
+    pub fn player_pos(&self, p: PlayerId) -> V3 { self.ch[self.pl[p].ch].pos }
     /// his body's number
     pub fn char_id(&self, gd: GuardId) -> f64 { self.ch[self.gd[gd].ch].id }
+    /// the body's number of a seat's own man
+    pub fn seat_id(&self, seat: &crate::seats::SeatRef) -> f64 { self.ch[self.pl[seat.player].ch].id }
+    /// a gun's row
+    pub fn weapon(&self, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef { self.m.weapons.weapons.get(w).unwrap() }
+    /// a box of the level has moved, come or gone: what was worked out from the boxes is worked out again
+    pub fn boxes_changed(&mut self) { self.engine.world.geom_serial += 1.0; }
+    /// a box by its number in the level's list, if it has one
+    pub fn box_at(&self, i: f64) -> Option<BoxId> {
+        let ix = i as usize;
+        if ix as f64 != i { return None; }
+        self.col.boxes.get(ix).copied()
+    }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }

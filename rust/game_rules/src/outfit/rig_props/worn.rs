@@ -125,11 +125,6 @@ pub fn carbine_muzzle_ahead(rig: Option<crate::rig_props::Rig>) -> f64 {
     muzzle_ahead_of(rig.carbine.adj, rig.carbine.muzzle)
 }
 
-/// The frame every group adjustment starts from: the origin and the unit axes.
-fn unit_frame() -> Frame {
-    Frame { o: [0.0, 0.0, 0.0], x: [1.0, 0.0, 0.0], y: [0.0, 1.0, 0.0], z: [0.0, 0.0, 1.0] }
-}
-
 /// A direction in the frame's axes as a unit vector (longGripOf's `dirIn`).
 fn dir_in(f: &Frame, d: V3) -> V3 {
     v3::normalize(v3::mad(v3::mad(v3::scale(f.x, d[0]), f.y, d[1]), f.z, d[2]))
@@ -137,7 +132,7 @@ fn dir_in(f: &Frame, d: V3) -> V3 {
 
 /// A long gun's support-hand grip (gripL through the group adj) in the trigger hand's gun frame.
 pub(super) fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate::rig_props::LongGripOfG) -> crate::character::AnimLongGrip {
-    let f = apply_adj(unit_frame(), group_adj);
+    let f = apply_adj(super::long_guns::unit_frame(), group_adj);
     crate::character::AnimLongGrip {
         wrist: v3::mad(v3::mad(v3::mad(f.o, f.x, g_2.off[0]), f.y, g_2.off[1]), f.z, g_2.off[2]),
         fingers: dir_in(&f, g_2.fingers),
@@ -147,7 +142,7 @@ pub(super) fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate:
 
 /// Metres ahead of the wrist along the bore to the far end of a long gun's foremost part.
 pub(super) fn muzzle_ahead_of(group_adj: Option<crate::rig_props::Adj>, part: crate::rig_props::Seg) -> f64 {
-    let f = apply_adj(apply_adj(unit_frame(), group_adj), part.adj);
+    let f = apply_adj(apply_adj(super::long_guns::unit_frame(), group_adj), part.adj);
     v3::mad(f.o, f.z, part.l1)[2]
 }
 
@@ -184,11 +179,6 @@ pub fn sling_front_hand(s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>
 }
 
 // ---------------------------------------------------------------- the boxes he carries (the frame's dynamic list: the picture)
-
-/// One of his bones, none before his first update.
-fn bone(g: &crate::game::Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
-    g.ch[c].bones.get(b).copied()
-}
 
 /// `id as WeaponId`: every gun model is a weapon row of the same word.
 fn weapon_of(id: crate::weapons::GunModelId) -> crate::weapons::WeaponId {
@@ -241,7 +231,7 @@ fn mix_adj(a: Option<crate::rig_props::Adj>, b: Option<crate::rig_props::Adj>, k
 
 /// The gun group's frame as the hand itself has it (bore wrist to knuckles, top the thumb side), `roll` of the way from the usual frame.
 pub(super) fn kit_gun_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::KitGunFrameP, g_2: crate::rig_props::Frame, roll: f64) -> crate::rig_props::Frame {
-    let kn = bone(g, c_2, crate::character::Bone::FingerR);
+    let kn = g.ch[c_2].bone(crate::character::Bone::FingerR);
     let kn = match kn {
         Some(kn) if roll > 0.0 => kn,
         _ => return g_2,
@@ -261,7 +251,7 @@ pub(super) fn kit_gun_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: cra
 /// A magazine in the support hand: one dark box up out of the fist; `own` / `col` give a gun's own feed its extents and colour.
 pub fn mag_box_l(g: &crate::game::Game, c_2: CharId, out: &mut Carried, kind: crate::slotsetup::SetupGun, fit: Option<bool>, own: Option<V3>, col: Option<V3>) {
     let fit = fit.unwrap_or(false);
-    let (a, b) = (bone(g, c_2, crate::character::Bone::HandL), bone(g, c_2, crate::character::Bone::FingerL));
+    let (a, b) = (g.ch[c_2].bone(crate::character::Bone::HandL), g.ch[c_2].bone(crate::character::Bone::FingerL));
     let (a, b) = match (a, b) {
         (Some(a), Some(b)) => (a, b),
         _ => return,
@@ -318,7 +308,7 @@ pub fn rig_boxes(g: &crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
 
 /// His kit, the big slot's tool apart: Sam's three slots, or a guard's torch, pistol or long gun.
 fn kit_boxes(g: &crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpts, out: &mut Carried, rig: crate::rig_props::Rig) {
-    let hand = bone(g, c_2, crate::character::Bone::HandR);
+    let hand = g.ch[c_2].bone(crate::character::Bone::HandR);
     out.owner = owner_of(g, c_2);
     let cols = col();
     if !o.is_guard {
@@ -472,9 +462,9 @@ fn player_pistol(g: &crate::game::Game, c_2: CharId, o: RigOpts, out: &mut Carri
         if fit {
             f = fit_frame(f, gripfit().pistol);
         }
-        let th = bone(g, c_2, crate::character::Bone::ThighR);
-        let kn = bone(g, c_2, crate::character::Bone::ShinR);
-        let hp = bone(g, c_2, crate::character::Bone::Hips);
+        let th = g.ch[c_2].bone(crate::character::Bone::ThighR);
+        let kn = g.ch[c_2].bone(crate::character::Bone::ShinR);
+        let hp = g.ch[c_2].bone(crate::character::Bone::Hips);
         if let (Some(th), Some(kn), Some(hp)) = (th, kn, hp) {
             if kit.pistol.unwrap_or(0.0) > 0.0 {
                 let fwd = crate::character::character_forward(g, c_2);
@@ -615,9 +605,9 @@ pub(super) fn model_in_hands(g: &crate::game::Game, c_2: CharId, id_2: crate::we
 
 /// The sidearm in a thigh holster: the drawn gun's part boxes hung on the leg's frame.
 pub fn holster_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, parts: crate::rig_props::HolsterBoxesParts, holster_rig: Option<crate::rig_props::RigHolster>) {
-    let th = bone(g, c_2, crate::character::Bone::ThighR);
-    let kn = bone(g, c_2, crate::character::Bone::ShinR);
-    let hp = bone(g, c_2, crate::character::Bone::Hips);
+    let th = g.ch[c_2].bone(crate::character::Bone::ThighR);
+    let kn = g.ch[c_2].bone(crate::character::Bone::ShinR);
+    let hp = g.ch[c_2].bone(crate::character::Bone::Hips);
     let (th, kn, hp) = match (th, kn, hp) {
         (Some(th), Some(kn), Some(hp)) => (th, kn, hp),
         _ => return,
@@ -661,7 +651,7 @@ pub fn holster_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, part
 
 /// The combat knife in the right fist: four traced boxes with his owner byte; where it ends up is the hand's doing.
 fn knife_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, k: Option<crate::rig_props::RigKnife>) {
-    let hand = match bone(g, c_2, crate::character::Bone::HandR) {
+    let hand = match g.ch[c_2].bone(crate::character::Bone::HandR) {
         Some(hand) => hand,
         None => return,
     };
@@ -699,7 +689,7 @@ fn sheath_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, full: Opt
 fn held_can_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Carried, k: Option<crate::rig_props::RigCan>, fit: Option<bool>, left: Option<bool>) {
     use crate::game::ThrowKind;
     let (fit, left) = (fit.unwrap_or(false), left.unwrap_or(false));
-    let hand = bone(g, c_2, if left { crate::character::Bone::HandL } else { crate::character::Bone::HandR });
+    let hand = g.ch[c_2].bone(if left { crate::character::Bone::HandL } else { crate::character::Bone::HandR });
     let hand = match hand {
         Some(hand) => hand,
         None => return,
@@ -738,7 +728,7 @@ pub fn free_can_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::game::Thr
 
 /// The guards' carbine: eleven boxes off the right hand, or a model of its own in the group's frame; `at` is the frame when it is somewhere other than his hands.
 pub(super) fn carbine_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, c_3: crate::rig_props::RigCarbine, lens: V3, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) {
-    let hand = match bone(g, c_2, crate::character::Bone::HandR) {
+    let hand = match g.ch[c_2].bone(crate::character::Bone::HandR) {
         Some(hand) => hand,
         None => return,
     };

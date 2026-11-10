@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes
-fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
+pub(super) fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
 }
 /// `h.state !== 'dead' && !h.fled`

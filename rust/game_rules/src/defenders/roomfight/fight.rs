@@ -158,9 +158,6 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     out
 }
 
-/// `g.col.segmentBlocked(a, b)`
-pub(super) fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
-
 
 /// a man off `g.guards` by his body's number (`g.guards.find(x => x.char.id === e.who)`)
 pub(super) fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { let w = who?; g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == w) }
@@ -262,7 +259,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
         let k = 0.35 / d; let at: V3 = [fc[0] + (op[0] - fc[0]) * k, 1.1, fc[2] + (op[2] - fc[2]) * k];
         let pr = crate::weather::hear_path(g, at, v3::add(op, [0.0, 1.5, 0.0]), None);
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.05) { continue; }
-        let eye = g.ch[oc].bone_or(crate::character::Bone::Head, 1.65); if seg_blocked(g, eye, at) { continue; }
+        let eye = g.ch[oc].bone_or(crate::character::Bone::Head, 1.65); if crate::scene_collision::segment_blocked(g, eye, at, None, None, None) { continue; }
         if let Some(a) = crate::seats::order_of(g, og) {
             let A = &g.tab.orders_assignment[a];
             if let (true, Some(ad), false, Some(aw)) = (A.arrived, A.door, A.spare.unwrap_or(false), A.watch) {

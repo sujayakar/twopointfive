@@ -23,11 +23,6 @@ fn un(x: Option<f64>) -> f64 {
 fn truthy_opt(x: Option<f64>) -> bool {
     x.map_or(false, js::truthy)
 }
-/// `!!x` of an optional boolean.
-#[inline]
-fn yes(x: Option<bool>) -> bool {
-    x == Some(true)
-}
 /// `(w.owed ?? 0) | (input.clicked & 5)`: the buttons kept are a word of bits in a number's clothes.
 #[inline]
 fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
@@ -70,7 +65,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::gunwall::gun_wall_is(g, c) { return true; }
     if let Some(w) = g.pl[p].wall {
         if w.kind == Some(WallHoldKind::Stack) {
-            if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
+            if w.lean_want == Some(true) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
             } else if w.settle >= 1.0 && stack_in_way(g, p, seat.aim_point) {
                 return true;
@@ -130,7 +125,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
     }
     let w0 = g.pl[p].wall.unwrap();
     let was = un(w0.up) > 0.0;
-    let up = if pull || (yes(w0.lean_want) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
+    let up = if pull || (w0.lean_want == Some(true) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
     w!(g, p).up = Some(up);
     if up <= 0.0 {
         let w = w!(g, p);
@@ -174,9 +169,9 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
         && edge != 0.0
         && dir != -edge
         && !crate::weapons::firearm_reloading(g, rifle)
-        && (yes(w0.lean_want) || m::abs(w0.v) < 0.05)
+        && (w0.lean_want == Some(true) || m::abs(w0.v) < 0.05)
     {
-        let kept_out = yes(w0.lean_want);
+        let kept_out = w0.lean_want == Some(true);
         let mut ap = g.sets[g.seat].aim_point;
         let u_end = if edge > 0.0 { w0.hi } else { w0.lo };
         if ap[1] > ws.lean_over_y && g.sets[g.seat].aim_guard.is_none() {
@@ -247,7 +242,7 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
         w!(g, p).lean_dwell = Some(0.0);
     }
     let w = w!(g, p);
-    let out = yes(w.lean_want);
+    let out = w.lean_want == Some(true);
     w.lean_out_t = Some(if out { un(w.lean_out_t) + dt } else { 0.0 });
     let l = v3::clamp(un(w.lean) + (if out { dt / ws.lean_out } else { -dt / ws.lean_back }), 0.0, 1.0);
     w.lean = Some(l);
@@ -294,7 +289,7 @@ fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let ws = g.k.wallsnap;
     let (n, t) = (w0.n, w0.along);
     let po = g.tab.camera[cam].peek_offset.unwrap_or([0.0, 0.0, 0.0]);
-    let out = truthy_opt(w0.lean) || yes(w0.lean_want) || truthy_opt(w0.lean_off);
+    let out = truthy_opt(w0.lean) || w0.lean_want == Some(true) || truthy_opt(w0.lean_off);
     if !out || w0.cam_along.is_none() {
         w!(g, p).cam_along = Some(w0.side * ws.cam_side * (1.0 - w0.peek));
     }
@@ -627,15 +622,15 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     if t >= 0.28 && !crate::condition::down(g, g.gd[gd].ch) {
         let was_alert = g.gd[gd].state == crate::game::GuardState::Alert;
         let noise = if let Some(kind) = td.kind {
-            crate::close::close_noise(g, kind, yes(td.alert))
+            crate::close::close_noise(g, kind, td.alert == Some(true))
         } else {
             crate::close::close_noise(g, crate::close::CloseKind::Behind, was_alert)
         };
-        let level = noise + (if yes(td.loud) { g.k.close.rmb_loud } else { 0.0 });
+        let level = noise + (if td.loud == Some(true) { g.k.close.rmb_loud } else { 0.0 });
         if td.kind.is_some() && crate::close::close_seated(g, gd) { crate::close::close_unseat(g, gd, None); }
-        crate::takedown::take_fall(g, gd, td.kind, yes(td.lethal), None);
+        crate::takedown::take_fall(g, gd, td.kind, td.lethal == Some(true), None);
         let way: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
-        if yes(td.lethal) {
+        if td.lethal == Some(true) {
             crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), crate::game::With::Knife);
             let now = g.time;
             let victim = g.gd[gd].callsign.clone();

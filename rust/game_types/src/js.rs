@@ -264,6 +264,26 @@ pub fn to_u32(x: f64) -> u32 {
     let m = t - prim::floor(t / 4294967296.0) * 4294967296.0;
     m as u32
 }
+/// `x | bits` on flags kept as numbers
+#[inline]
+pub fn or_bits(x: f64, bits: f64) -> f64 {
+    (to_i32(x) | to_i32(bits)) as f64
+}
+/// `(x & bits) !== 0` on flags kept as numbers
+#[inline]
+pub fn has_bits(x: f64, bits: i32) -> bool {
+    (to_i32(x) & bits) != 0
+}
+/// a pattern's `\w`
+#[inline]
+pub fn is_word(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+/// `s.length`
+#[inline]
+pub fn utf16_len(s: &str) -> f64 {
+    s.encode_utf16().count() as f64
+}
 /// a number as a condition: `if (x)`, `!x`: 0, −0 and NaN are false
 #[inline]
 pub fn truthy(x: f64) -> bool {

@@ -16,7 +16,7 @@ pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
 }
 
 /// The wall's thickness.
-pub(super) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
+pub(crate) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
     let h = g.tab.boxes[w.box_].h;
     2.0 * (if w.along_x { h[2] } else { h[0] })
 }
@@ -66,7 +66,7 @@ pub(super) fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::
 }
 
 /// Is the wall charge live in this game right now: the walls' switch, chaos above 0.
-pub(super) fn wall_charge_on(g: &crate::game::Game) -> bool {
+pub(crate) fn wall_charge_on(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 

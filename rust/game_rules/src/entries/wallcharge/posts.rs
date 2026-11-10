@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
-fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
-fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn free(g: &mut Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
-fn clear(g: &Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 fn box_ch(g: &Game, b: BoxId) -> (V3, V3) { let r = &g.tab.boxes[b]; (r.c, r.h) }
 /// the box of the wall as authored, by the engine's id, else the spot's own (`g.col.boxes[wall] ?? W.box`)
 fn box_of_wall(g: &Game, w: &WallSpot, wall: f64) -> BoxId { if wall >= 0.0 { g.col.boxes.get(wall as usize).copied().unwrap_or(w.box_) } else { w.box_ } }
@@ -195,7 +189,7 @@ pub fn wall_charge_spot(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
         crate::orders::OrderTarget::Floor(f) => match &f.wall { Some(w) => w, None => return None },
         _ => return None,
     };
-    let sam = sam_pos(g, &crate::seats::here(g));
+    let sam = g.seat_pos(&crate::seats::here(g));
     let c = g.tab.boxes[w.box_].c;
     let perp = if w.along_x { sam[2] - c[2] } else { sam[0] - c[0] };
     let mut q = w.clone();
@@ -235,7 +229,7 @@ pub fn wall_charge_set_spot(g: &mut crate::game::Game, w: &crate::wallcharge::Wa
     for strict in [true, false] {
         for du in [0.0, 0.3, -0.3] {
             let q = wall_pt(g, w, du, set_off, None);
-            if free(g, q) && !(strict && wall_charge_in_frame(g, q, None)) { return Some(q); }
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !(strict && wall_charge_in_frame(g, q, None)) { return Some(q); }
         }
     }
     None
@@ -248,7 +242,7 @@ pub fn wall_charge_far_floor(g: &mut crate::game::Game, w: &crate::wallcharge::W
     for d in [0.5, 0.8] {
         for du in [0.0, 0.4, -0.4] {
             let q = wall_pt(g, w, du, -(t + d), None);
-            if free(g, q) { return Some(q); }
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { return Some(q); }
         }
     }
     if furn { wall_charge_mouth_after(g, w) } else { None }
@@ -264,7 +258,7 @@ fn through(g: &mut Game, w: &WallSpot, s: &Mouth, du: f64) -> Option<V3> {
     let (n0, n1) = (wall_pt(g, w, du, 0.35, None), wall_pt(g, w, du, 0.35 + cell, None));
     let (mid, behind) = (wall_pt(g, w, du, -t / 2.0, None), wall_pt(g, w, du, -(t + m::max(0.05, s.mouth_in - cell)), None));
     let ok = wall_charge_floor_after(g, w, m_, half, n0, wall, None, &s.mouth, None)
-        && (free(g, n0) || free(g, n1))
+        && (!crate::scene_collision::nav_grid_is_blocked(g, n0[0], n0[2]) || !crate::scene_collision::nav_grid_is_blocked(g, n1[0], n1[2]))
         && wall_charge_floor_after(g, w, m_, half, mid, wall, s.first.clone(), &s.mouth, Some(&mut |g: &mut Game, i: f64| crate::furnblast::furniture_mouth_would_take(g, i, zone, None)))
         && wall_charge_floor_after(g, w, m_, half, behind, wall, s.first.clone(), &s.mouth, Some(&mut |g: &mut Game, i: f64| crate::furnblast::furniture_mouth_would_take(g, i, zone, None)))
         && wall_charge_floor_after(g, w, m_, half, far, wall, s.first.clone(), &s.mouth, Some(&mut |g: &mut Game, i: f64| crate::furnblast::furniture_mouth_would_take(g, i, zone, None)));
@@ -315,7 +309,7 @@ fn wall_charge_mouth_after(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
 fn wall_charge_floor_after(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, m: f64, half: f64, q: V3, wall: f64, first: Option<crate::furnblast::BlastFirst>, mouth: &[V3], goes: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) -> bool {
     use crate::m as mm;
     let mut goes = goes;
-    if free(g, q) { return true; }
+    if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { return true; }
     let mut near: Vec<i32> = vec![0; 48];
     let n = crate::scene_collision::nav_grid_cell_blockers(g, q[0], q[2], &mut near);
     if n <= 0.0 { return false; }
@@ -344,7 +338,7 @@ fn wall_charge_floor_after(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
 /// In a doorway: no place for a man to wait or to hold from.
 pub(super) fn wall_charge_in_frame(g: &crate::game::Game, q: V3, m: Option<f64>) -> bool {
     let m = m.unwrap_or(g.k.wallcharge.off_frame);
-    m > 0.0 && g.doors.list.iter().any(|d| flat(q, g.dr[*d].frame_centre) < m)
+    m > 0.0 && g.doors.list.iter().any(|d| v3::dist_xz(q, g.dr[*d].frame_centre) < m)
 }
 
 /// The wall is already open at the foot of a post `du` along it from the charge.
@@ -368,14 +362,14 @@ fn wall_charge_open_foot(g: &crate::game::Game, w: &crate::wallcharge::WallSpot,
 fn wall_charge_standoff_posts(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, n: f64, spot: Option<V3>, old: Option<bool>) -> Option<Vec<V3>> {
     let spot = match spot { Some(s) => s, None => { let o = g.k.wallcharge.set_off; wall_pt(g, w, 0.0, o, None) } };
     let old = old.unwrap_or(false);
-    let (sam, at) = (sam_pos(g, &crate::seats::here(g)), wall_pt(g, w, 0.0, 0.0, None));
+    let (sam, at) = (g.seat_pos(&crate::seats::here(g)), wall_pt(g, w, 0.0, 0.0, None));
     if !old {
         if let Some(out) = wall_charge_safe_posts(g, w, n, spot, None, None) { return Some(out); }
     }
     let (post_off, file_gap, clear_m) = (g.k.wallcharge.post_off, g.k.wallcharge.file_gap, g.k.wallcharge.clear_m);
     let (standoff, back_m) = (g.k.wallcharge.standoff.clone(), g.k.wallcharge.back_m.clone());
     let reach = if clear_m > 0.0 { g.k.walls.blast.radius * g.k.walls.blast.port_k + 0.25 + clear_m } else { 0.0 };
-    let room = |out: &Vec<V3>, q: V3| !out.iter().any(|o| flat(*o, q) < 0.8) && flat(q, sam) >= 0.7;
+    let room = |out: &Vec<V3>, q: V3| !out.iter().any(|o| v3::dist_xz(*o, q) < 0.8) && v3::dist_xz(q, sam) >= 0.7;
     for &min in &standoff {
         for strict in [true, false] {
             let mut out: Vec<V3> = Vec::new();
@@ -386,7 +380,7 @@ fn wall_charge_standoff_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                 let top = lo + n * file_gap + 0.5;
                 while s <= top {
                     let q = wall_pt(g, w, dir * s, post_off, None);
-                    if !free(g, q) || !clear(g, prev, q) { break; }
+                    if !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
                     prev = q;
                     if s + 1e-6 >= next && !(strict && (wall_charge_in_frame(g, q, None) || wall_charge_open_foot(g, w, dir * s))) { runs[ri].push(q); next = s + file_gap; }
                     s += 0.45;
@@ -408,12 +402,12 @@ fn wall_charge_standoff_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                     for &d in &back_m {
                         if out.len() as f64 >= n { break; }
                         let q: V3 = [at[0] + dx * d, 0.0, at[2] + dz * d];
-                        if free(g, q) && clear(g, spot, q) && flat(q, at) >= min && wall_off(g, w, q) > 0.3 && room(&out, q) && !(strict && wall_charge_in_frame(g, q, None)) { out.push(q); }
+                        if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, spot, q) && v3::dist_xz(q, at) >= min && wall_off(g, w, q) > 0.3 && room(&out, q) && !(strict && wall_charge_in_frame(g, q, None)) { out.push(q); }
                     }
                 }
             }
             if out.len() as f64 >= n {
-                js::sort_by(&mut out, |a, b| flat(*a, spot) - flat(*b, spot));
+                js::sort_by(&mut out, |a, b| v3::dist_xz(*a, spot) - v3::dist_xz(*b, spot));
                 return Some(out);
             }
         }
@@ -432,7 +426,7 @@ fn way(g: &mut Game, spot: V3, q: V3, cap: f64, room0: f64) -> f64 {
     let path = match crate::scene_collision::nav_grid_find_path(g, spot, q, Some(4000.0), None) { Some(p) => p, None => return -1.0 };
     let (mut len, mut a, mut held) = (0.0, spot, true);
     for b in path {
-        let l = flat(a, b);
+        let l = v3::dist_xz(a, b);
         let n = m::max(1.0, m::ceil(l / 0.5));
         let mut i = 1.0;
         while i <= n && held {
@@ -478,7 +472,7 @@ fn walk_kept(g: &mut Game, spot: V3, q: V3, cap: f64, room0: f64, kept: Option<&
 fn reach_kept(g: &mut Game, gd: GuardId, to: V3, menu: bool) -> Option<String> {
     if !menu { return crate::orders::squad_orders_reach(g, gd, to); }
     let cs = g.col.nav.cell;
-    let (id, p) = (g.ch[g.gd[gd].ch].id, man_pos(g, gd));
+    let (id, p) = (g.ch[g.gd[gd].ch].id, g.pos_of(gd));
     let key = format!("r|{}|{},{}|{},{}", id, m::floor(p[0] / cs), m::floor(p[2] / cs), to[0], to[2]);
     let have = g.sets[g.seat].wall_charge.walks.as_ref().and_then(|k| k.map.get(key.clone()).cloned());
     if let Some(WallChargeWalkAnswer::Reach { why }) = have {  return why; }
@@ -497,7 +491,7 @@ fn covered(g: &Game, over: &Over, src: V3, open: f64, p: V3) -> bool {
 /// The safe stand-off: n marks out of the blast, the shortest walk back first; None: the floor has not n of them.
 pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, n: f64, spot: V3, can: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, kept: Option<&mut crate::wallcharge::WallChargeKept>) -> Option<Vec<V3>> {
     let (mut can, mut kept) = (can, kept);
-    let (sam, at) = (sam_pos(g, &crate::seats::here(g)), wall_pt(g, w, 0.0, 0.0, None));
+    let (sam, at) = (g.seat_pos(&crate::seats::here(g)), wall_pt(g, w, 0.0, 0.0, None));
     let r = safe_radius(g, w);
     let (post_off, file_gap, hide) = (g.k.wallcharge.post_off, g.k.wallcharge.file_gap, g.k.wallcharge.safe_hide_m);
     let cap = m::min(g.k.wallcharge.safe_walk_m, g.k.wallcharge.safe_back_m);
@@ -511,7 +505,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
         let top = r.standoff + n * file_gap + 0.5;
         while s <= top {
             let q = wall_pt(g, w, dir * s, post_off, None);
-            if !free(g, q) || !clear(g, prev, q) { break; }
+            if !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
             prev = q;
             if s + 1e-6 >= next && !wall_charge_in_frame(g, q, None) && !wall_charge_open_foot(g, w, dir * s) && ours(g, q, room0) { pool.push((q, None)); next = s + file_gap; }
             s += 0.45;
@@ -525,7 +519,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
             let (dx, dz) = ((nx * cs - nz * sn) / l, (nx * sn + nz * cs) / l);
             for d in [0.1, 1.0, 1.9] {
                 let q: V3 = [at[0] + dx * (r.standoff + d), 0.0, at[2] + dz * (r.standoff + d)];
-                if free(g, q) && clear(g, spot, q) && wall_off(g, w, q) > 0.3 && !wall_charge_in_frame(g, q, None) && ours(g, q, room0) { fan.push(q); }
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, spot, q) && wall_off(g, w, q) > 0.3 && !wall_charge_in_frame(g, q, None) && ours(g, q, room0) { fan.push(q); }
             }
         }
     }
@@ -541,20 +535,20 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
             while z <= hide + 1e-6 {
                 let q: V3 = [at[0] + x, 0.0, at[2] + z];
                 z += 0.9;
-                let d = flat(q, at);
-                if d < lo || d > hide || !free(g, q) || wall_off(g, w, q) <= 0.3 || wall_charge_in_frame(g, q, None) || !ours(g, q, room0) { continue; }
+                let d = v3::dist_xz(q, at);
+                if d < lo || d > hide || !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || wall_off(g, w, q) <= 0.3 || wall_charge_in_frame(g, q, None) || !ours(g, q, room0) { continue; }
                 // (a place is good if the charge's own line to it is cut, and to a step off it every way there is floor)
                 let mut good = covered(g, &statics, src, open, q);
                 for (dx, dz) in [(0.4, 0.0), (-0.4, 0.0), (0.0, 0.4), (0.0, -0.4)] {
                     if !good { break; }
                     let p: V3 = [q[0] + dx, 0.0, q[2] + dz];
-                    good = !free(g, p) || covered(g, &statics, src, open, p);
+                    good = !!crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || covered(g, &statics, src, open, p);
                 }
                 if good { hid.push(q); }
             }
             x += 0.9;
         }
-        js::sort_by(&mut hid, |a, b| flat(*a, spot) - flat(*b, spot));
+        js::sort_by(&mut hid, |a, b| v3::dist_xz(*a, spot) - v3::dist_xz(*b, spot));
         let mut late: Vec<V3> = Vec::new();
         for pass in [0, 1] {
             let (mut walks, mut tries) = (0.0, 0.0);
@@ -565,7 +559,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                     if pass == 0 { late.extend_from_slice(&list[k..]); }
                     break;
                 }
-                if pool.iter().any(|o| flat(o.0, q) < 0.8) { continue; }
+                if pool.iter().any(|o| v3::dist_xz(o.0, q) < 0.8) { continue; }
                 if pass == 0 && wall_charge_fire_any(g, &mut fire, q) { late.push(q); continue; }
                 tries += 1.0;
                 let len = walk_kept(g, spot, q, cap, room0, kept.as_deref_mut());
@@ -573,8 +567,8 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
             }
         }
     }
-    js::sort_by(&mut pool, |a, b| a.1.unwrap_or_else(|| flat(a.0, spot)) - b.1.unwrap_or_else(|| flat(b.0, spot)));
-    js::sort_by(&mut fan, |a, b| flat(*a, spot) - flat(*b, spot));
+    js::sort_by(&mut pool, |a, b| a.1.unwrap_or_else(|| v3::dist_xz(a.0, spot)) - b.1.unwrap_or_else(|| v3::dist_xz(b.0, spot)));
+    js::sort_by(&mut fan, |a, b| v3::dist_xz(*a, spot) - v3::dist_xz(*b, spot));
     let mut all: Vec<(V3, f64)> = Vec::with_capacity(pool.len() + fan.len());
     for q in pool.iter().map(|o| o.0).chain(fan.iter().copied()) {
         let s = wall_charge_fire_score(g, &mut fire, q);
@@ -584,7 +578,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
     let mut out: Vec<V3> = Vec::new();
     for (q, _) in all {
         if out.len() as f64 >= n { break; }
-        if !out.iter().any(|o| flat(*o, q) < 0.8) && flat(q, sam) >= 0.7 {
+        if !out.iter().any(|o| v3::dist_xz(*o, q) < 0.8) && v3::dist_xz(q, sam) >= 0.7 {
             let may = match can.as_mut() { Some(f) => f(g, q), None => true };
             if may { out.push(q); }
         }
@@ -632,7 +626,7 @@ pub fn wall_charge_blast_share(g: &crate::game::Game, w: &crate::wallcharge::Wal
     let r = match r { Some(r) => r, None => safe_radius(g, w) };
     let leaves = leaves.unwrap_or(true);
     let at = wall_pt(g, w, 0.0, 0.0, None);
-    let d = flat(p, at);
+    let d = v3::dist_xz(p, at);
     let t = thick(g, w);
     if d >= r.reach || wall_off(g, w, p) < -t / 2.0 { return 0.0; }
     let (a, b): (V3, V3) = (wall_pt(g, w, 0.0, 0.5, Some(1.1)), [p[0], 1.1, p[2]]);
@@ -663,7 +657,7 @@ fn out_of_all(g: &mut Game, q: V3) -> bool {
 }
 
 fn free_mark(g: &mut Game, q: V3, taken: &[V3], others: &[GuardId]) -> bool {
-    !taken.iter().any(|o| flat(*o, q) < 0.8) && !others.iter().any(|m_| flat(man_pos(g, *m_), q) < 0.6) && out_of_all(g, q)
+    !taken.iter().any(|o| v3::dist_xz(*o, q) < 0.8) && !others.iter().any(|m_| v3::dist_xz(g.pos_of(*m_), q) < 0.6) && out_of_all(g, q)
 }
 
 /// A follower's place is in the blast of a set charge: the stand-off mark he walks to instead. None: clear, no mark, or nothing set.
@@ -697,7 +691,7 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     let c = c?;
     if let Some(none) = g.sets[g.seat].wall_charge.away_none.get(gd).copied() { if t >= none && t - none < 1.0 { return None; } }
     g.sets[g.seat].wall_charge.away_none.delete(gd);
-    let p = man_pos(g, gd);
+    let p = g.pos_of(gd);
     let mut taken: Vec<V3> = Vec::new();
     for (m_, a) in g.sets[g.seat].wall_charge.away.iter() { if m_ != gd { taken.push(a.at); } }
     for op in g.sets[g.seat].wall_charge.ops.iter() { for q in g.tab.wallcharge_wall_op[*op].post.values() { taken.push(*q); } }
@@ -720,7 +714,7 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     let mut at: Option<V3> = None;
     let mut all: Vec<V3> = Vec::new();
     for o in g.sets[g.seat].wall_charge.set.clone() { r_of(g, o); all.extend_from_slice(&g.sets[g.seat].wall_charge.away_marks.get(o).unwrap().marks); }
-    js::sort_by(&mut all, |a, b| flat(p, *a) - flat(p, *b));
+    js::sort_by(&mut all, |a, b| v3::dist_xz(p, *a) - v3::dist_xz(p, *b));
     for q in all {
         if free_mark(g, q, &taken, &others) && crate::orders::squad_orders_reach(g, gd, q).is_none() { at = Some(q); break; }
     }
@@ -736,7 +730,7 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
             if at.is_some() || l <= 0.2 { continue; }
             for d in [0.0, 0.9, 1.8] {
                 let q: V3 = [w_[0] + dx / l * (r.standoff + d), 0.0, w_[2] + dz / l * (r.standoff + d)];
-                if free(g, q) && crate::scene_collision::nav_grid_walkable(g, p, q) && !wall_charge_in_frame(g, q, None) && free_mark(g, q, &taken, &others) { at = Some(q); break; }
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && crate::scene_collision::nav_grid_walkable(g, p, q) && !wall_charge_in_frame(g, q, None) && free_mark(g, q, &taken, &others) { at = Some(q); break; }
             }
         }
     }
@@ -754,11 +748,11 @@ pub fn wall_charge_too_close_of(g: &crate::game::Game, seat: &crate::seats::Seat
     let r = safe_radius(g, &w);
     let mut out = Vec::new();
     if !crate::condition::down(g, g.pl[seat.player].ch) {
-        let p = sam_pos(g, seat);
+        let p = g.seat_pos(seat);
         if wall_charge_blast_share(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(String::from("you")); }
     }
     for gd in crate::orders::squad_orders_men(g, seat, None, None) {
-        let p = man_pos(g, gd);
+        let p = g.pos_of(gd);
         if wall_charge_blast_share(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(g.gd[gd].callsign.clone()); }
     }
     out
@@ -785,12 +779,12 @@ fn wall_charge_behind_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_
     let stun_m = g.k.doortools.stun_m;
     let mut out = Vec::new();
     {
-        let p = sam_pos(g, seat);
-        if !crate::condition::down(g, g.pl[seat.player].ch) && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
+        let p = g.seat_pos(seat);
+        if !crate::condition::down(g, g.pl[seat.player].ch) && wall_off(g, &w, p) < -t / 2.0 && v3::dist_xz(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
     }
     for gd in crate::orders::squad_orders_men(g, seat, None, None) {
-        let p = man_pos(g, gd);
-        if wall_off(g, &w, p) < -t / 2.0 && flat(p, at) <= stun_m && lined(g, &w, t, p) { out.push(g.gd[gd].callsign.clone()); }
+        let p = g.pos_of(gd);
+        if wall_off(g, &w, p) < -t / 2.0 && v3::dist_xz(p, at) <= stun_m && lined(g, &w, t, p) { out.push(g.gd[gd].callsign.clone()); }
     }
     out
 }
@@ -816,8 +810,8 @@ fn wall_charge_in_blast(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, 
     let (stun_m, mate_m) = (g.k.doortools.stun_m, g.k.wallcharge.mate_m);
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if men.contains(&gd) { continue; }
-        let p = man_pos(g, gd);
-        let (d, chest): (f64, V3) = (flat(p, at), [p[0], 1.1, p[2]]);
+        let p = g.pos_of(gd);
+        let (d, chest): (f64, V3) = (v3::dist_xz(p, at), [p[0], 1.1, p[2]]);
         if wall_off(g, w, p) < -t {
             if d < stun_m && !crate::scene_collision::solid_blocked(g, inn, chest, None) { return Some(format!("{} is behind that wall.", g.gd[gd].callsign)); }
         } else if d < mate_m && !crate::scene_collision::solid_blocked(g, out, chest, None) {
@@ -850,7 +844,7 @@ pub(super) fn wall_charge_plan(g: &mut crate::game::Game, w: &crate::wallcharge:
     let spot = match wall_charge_set_spot(g, w) { Some(s) => s, None => return text("no room at that wall.") };
     if wall_charge_far_floor(g, w, None).is_none() { return text("no floor behind it."); }
     let mut sorted = men.to_vec();
-    { let by = |a: &GuardId, b: &GuardId| flat(man_pos(g, *a), spot) - flat(man_pos(g, *b), spot); js::sort_by(&mut sorted, by); }
+    { let by = |a: &GuardId, b: &GuardId| v3::dist_xz(g.pos_of(*a), spot) - v3::dist_xz(g.pos_of(*b), spot); js::sort_by(&mut sorted, by); }
     let lead = sorted[0];
     let rest: Vec<GuardId> = men.iter().copied().filter(|m_| *m_ != lead).collect();
     let n = men.len() as f64;

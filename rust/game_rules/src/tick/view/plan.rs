@@ -16,8 +16,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy)]
 struct For { own: bool, reading: bool }
 
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-fn floor(p: V3) -> V3 { [p[0], 0.0, p[2]] }
 fn id_of(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 
 /// 'Red Two' is R2, 'Blue One' B1, 'Kestrel' K
@@ -214,11 +212,11 @@ impl<'a, 'g> Waiting<'a, 'g> {
             let door = g.tab.doortools_set_charge[c].door;
             !ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.kind == crate::doortools::DoorToolKind::Charge && op.door == door && op.word.is_some_and(|w| g.tab.doortools_word[w].go1.is_nan()) })
         }).collect();
-        let door_d = |c: ChargeId| flat(g.dr[g.tab.doortools_set_charge[c].door].frame_centre, sam);
+        let door_d = |c: ChargeId| v3::dist_xz(g.dr[g.tab.doortools_set_charge[c].door].frame_centre, sam);
         let near = free.iter().copied().reduce(|a, b| if door_d(b) < door_d(a) { b } else { a });
         let wall_foot = |c: WallChargeId| crate::wallcharge::wall_pt(g, &g.tab.wallcharge_set_wall_charge[c].wall, 0.0, 0.0, None);
-        let wall = self.walls.iter().copied().reduce(|a, b| if flat(wall_foot(b), sam) < flat(wall_foot(a), sam) { b } else { a });
-        let wall_d = wall.map_or(f64::INFINITY, |c| flat(wall_foot(c), sam));
+        let wall = self.walls.iter().copied().reduce(|a, b| if v3::dist_xz(wall_foot(b), sam) < v3::dist_xz(wall_foot(a), sam) { b } else { a });
+        let wall_d = wall.map_or(f64::INFINITY, |c| v3::dist_xz(wall_foot(c), sam));
         let wall_first = wall.is_some() && !self.charges.iter().any(|&c| door_d(c) < wall_d);
         let reaches = up && !pair_first && (!wall_first || self.charges.is_empty());   // the press gets as far as the door tools
         let any_word = self.by.iter().any(|e| e.word);
@@ -238,7 +236,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
             if self.down(m) { return true; }
             let Some(a) = crate::orders::squad_orders_of(self.seat, m) else { return true };
             let a = &self.g.tab.orders_assignment[a];
-            a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| flat(self.g.ch[self.g.gd[m].ch].pos, p) < 0.5))
+            a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| v3::dist_xz(self.g.ch[self.g.gd[m].ch].pos, p) < 0.5))
         })
     }
     /// the bar across each doorway
@@ -279,10 +277,10 @@ fn way_of(g: &Game, gd: GuardId, a: &crate::orders::Assignment, mark: V3) -> Pla
     stops.push(mark);
     // his own path, where it is this order's and runs all the way (a one-point side step to get unstuck is not his way)
     let own = match (m.path_goal, m.path.last()) {
-        (Some(goal), Some(&end)) if m.path_i < m.path.len() && (flat(goal, stops[0]) < 0.9 || flat(goal, a.goal) < 0.9) && flat(end, goal) < 1.2 => Some(m.path[m.path_i..].to_vec()),
+        (Some(goal), Some(&end)) if m.path_i < m.path.len() && (v3::dist_xz(goal, stops[0]) < 0.9 || v3::dist_xz(goal, a.goal) < 0.9) && v3::dist_xz(end, goal) < 1.2 => Some(m.path[m.path_i..].to_vec()),
         _ => None,
     };
-    PlanWay { from: floor(p), own, stops }
+    PlanWay { from: crate::v3::on_floor(p), own, stops }
 }
 
 /// a seat's plan: its men's marks, what waits on its key, its throws, and, for its own player alone, who a menu is for
@@ -301,8 +299,8 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     throws_plan(g, seat, who, paired, &squad, &mut out.throws);
     if who.own {
         if let Some(menu) = &s.menu {
-            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
-            if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(floor(g.ch[g.pl[seat.player].ch].pos)); }
+            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: crate::v3::on_floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
+            if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(crate::v3::on_floor(g.ch[g.pl[seat.player].ch].pos)); }
         }
     }
     out
@@ -348,10 +346,10 @@ fn man_plan(g: &Game, seat: &SeatRef, paired: bool, gd: GuardId, told: Option<&[
     }
     if a.foe.is_some_and(|f| !crate::fogofwar::fog_of_war_seen(g, f)) { return None; }   // (a mark taken from a man the team cannot see would walk the picture to him)
     // a step off the mark that the order's own goal names: that is where he will stand
-    let mark = floor(if a.via.is_empty() && flat(a.goal, post) > 0.05 { a.goal } else { post });
+    let mark = crate::v3::on_floor(if a.via.is_empty() && v3::dist_xz(a.goal, post) > 0.05 { a.goal } else { post });
     let off = a.yield_t >= 0.0;
     let c = &g.ch[m.ch];
-    let there = !off && flat(c.pos, mark) < 0.45;
+    let there = !off && v3::dist_xz(c.pos, mark) < 0.45;
     let walking = !off && !there;
     let (aim, watch, on_door) = man_looks(g, a, c, mark, there, walking);
     Some(PlanMan {
@@ -369,7 +367,7 @@ fn man_plan(g: &Game, seat: &SeatRef, paired: bool, gd: GuardId, told: Option<&[
 fn man_looks(g: &Game, a: &crate::orders::Assignment, c: &crate::character::Character, mark: V3, there: bool, walking: bool) -> (Option<f64>, Option<V3>, bool) {
     let fit_watch = a.fit.as_ref().and_then(|f| f.watch);
     let raw = a.watch.or(fit_watch);
-    let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| flat(w, g.dr[d].frame_centre) < 1.5));
+    let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| v3::dist_xz(w, g.dr[d].frame_centre) < 1.5));
     let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == crate::orders::rows::cover::ORDER.id || a.order == crate::orders::rows::movethere::ORDER.id || a.order == crate::orders::rows::hold::ORDER.id));
     let (mut aim, mut watch): (Option<f64>, Option<V3>) = (None, None);
     if there {
@@ -377,11 +375,11 @@ fn man_looks(g: &Game, a: &crate::orders::Assignment, c: &crate::character::Char
         if let Some(w) = told { if ang_diff(v3::yaw_to(c.pos, w), c.aim_yaw) < 0.4 { watch = Some(w); } }
     } else if walking {
         match told {
-            Some(w) if flat(mark, w) > 0.3 => { aim = Some(v3::yaw_to(mark, w)); watch = Some(w); }
+            Some(w) if v3::dist_xz(mark, w) > 0.3 => { aim = Some(v3::yaw_to(mark, w)); watch = Some(w); }
             _ => if a.foe.is_none() { aim = a.fit.as_ref().map(|f| f.face).or(a.face); },
         }
     }
-    if watch.is_some_and(|w| flat(mark, w) > g.k.plan.sight_m) { watch = None; }
+    if watch.is_some_and(|w| v3::dist_xz(mark, w) > g.k.plan.sight_m) { watch = None; }
     (aim, watch, on_door)
 }
 
@@ -391,11 +389,11 @@ fn throws_plan(g: &Game, seat: &SeatRef, who: For, paired: bool, squad: &[GuardI
         if t.kind == ThrowKind::Shell || t.points.len() < 2 || (t.preview && !who.own) { continue; }
         let Some(&gd) = squad.iter().find(|&&m| id_of(g, m) == t.man) else { continue };
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        let walk = match &t.walk { Some(w) if w.len() > 1 => w.iter().map(|&q| floor(q)).collect(), _ => Vec::new() };
+        let walk = match &t.walk { Some(w) if w.len() > 1 => w.iter().map(|&q| crate::v3::on_floor(q)).collect(), _ => Vec::new() };
         let end = t.points[t.points.len() - 1];
         let mut arc = t.points.clone();
-        if flat(end, t.land) > 0.1 { arc.push(floor(t.land)); }
-        out.push(PlanThrow { man: t.man, tag: plan_tag(&g.gd[gd].callsign), tone: tone_of(g, paired, gd), kind: t.kind, preview: t.preview, from: floor(t.from), walk, arc, land: floor(t.land), reach: if t.kind == ThrowKind::Frag { t.kill } else { 0.0 } });
+        if v3::dist_xz(end, t.land) > 0.1 { arc.push(crate::v3::on_floor(t.land)); }
+        out.push(PlanThrow { man: t.man, tag: plan_tag(&g.gd[gd].callsign), tone: tone_of(g, paired, gd), kind: t.kind, preview: t.preview, from: crate::v3::on_floor(t.from), walk, arc, land: crate::v3::on_floor(t.land), reach: if t.kind == ThrowKind::Frag { t.kill } else { 0.0 } });
     }
 }
 

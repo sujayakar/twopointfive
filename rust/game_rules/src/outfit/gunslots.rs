@@ -6,11 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// WEAPONS[w]: every WeaponId has its row.
-fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(w).unwrap()
-}
-
 /// The pick of that id, or None.
 fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)
@@ -20,7 +15,7 @@ fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
 pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     for p in picks() {
-        if p.slot == slot && [p.can, p.bare].iter().any(|w| w.map_or(false, |w| weapon_row(g, w).enabled)) {
+        if p.slot == slot && [p.can, p.bare].iter().any(|w| w.map_or(false, |w| g.weapon(w).enabled)) {
             ids.push(p.id);
         }
     }
@@ -32,7 +27,7 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
 pub(super) fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
-    order.into_iter().flatten().find(|&w| weapon_row(g, w).enabled)
+    order.into_iter().flatten().find(|&w| g.weapon(w).enabled)
 }
 
 /// The pick's name on its tile: its row's short name.
@@ -40,7 +35,7 @@ pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) ->
     let suppressed = suppressed.unwrap_or(true);
     if id_2 == NO_PRIMARY { return String::from("none"); }
     match pick_row(g, id_2, suppressed) {
-        Some(w) => weapon_row(g, w).short.clone(),
+        Some(w) => g.weapon(w).short.clone(),
         None => String::from(id_2),
     }
 }
@@ -51,7 +46,7 @@ pub(super) fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit:
         Some(w) => w,
         None => pick_row(g, id_2, false)?,
     };
-    Some(match weapon_row(g, w).cls {
+    Some(match g.weapon(w).cls {
         crate::weapons::WeaponClass::Pistol => crate::kit::KitWeapon::Pistol,
         crate::weapons::WeaponClass::Shotgun => crate::kit::KitWeapon::Shotgun,
         _ => crate::kit::KitWeapon::Rifle,
@@ -62,10 +57,10 @@ pub(super) fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit:
 pub(super) fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
     g.gd[gd].second = None;
     let Some(row) = row else { return };
-    if !weapon_row(g, row).enabled { return; }
+    if !g.weapon(row).enabled { return; }
     let in_hand = g.gd[gd].weapon;
     if row == g.fa[in_hand].def { return; }
-    let def = weapon_row(g, row).clone();
+    let def = g.weapon(row).clone();
     let gun = crate::weapons::firearm_new(g, &def);
     g.gd[gd].second = Some(crate::game::GuardSecond { gun, id: row, ahead: def.muzzle_ahead, out: false, t: -100.0, lock: -100.0, shots: 0.0 });
 }
@@ -138,7 +133,7 @@ pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props:
     let s = g.gd[gd].second?;
     if !s.out || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let def = g.fa[s.gun].def;
-    match weapon_row(g, def).rig {
+    match g.weapon(def).rig {
         crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
         crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
         _ => None,
@@ -153,7 +148,7 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     if !s.out {
         if dt > 0.0 && g.time < s.lock {
             let w = g.gd[gd].weapon;
-            let def = weapon_row(g, g.fa[w].def).clone();
+            let def = g.weapon(g.fa[w].def).clone();
             let now = g.time - (s.lock - def.reload.dur - g.k.gunslots.back);
             let c = g.gd[gd].ch;
             crate::gunreload::feed_tick(g, c, &def, now - dt, now, None, None);
@@ -178,7 +173,7 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let side = g.gd[gd].second.unwrap().gun;
     crate::weapons::firearm_rearm(g, side);
     let w = g.gd[gd].weapon;
-    let def = weapon_row(g, g.fa[w].def).clone();
+    let def = g.weapon(g.fa[w].def).clone();
     let row = def.reload;
     let lock = g.time + row.dur + g.k.gunslots.back;
     g.gd[gd].second.as_mut().unwrap().lock = lock;
