@@ -10,3 +10,4 @@
 - A hole: what is faced with whole things loses those whose middle is in the ring (mesh/knock.ts); the boxes behind break as they do; the rim is toothed by itself.
 - The section: meshes are cut by a discard, and box cores make the cap.
 - Trap: bit 7 of a piece's flags is BROKEN; a mesh and its stand-in share bit 6 (a mesh's count of curves is 3).
+- **On a Mac** (Metal 3, 10 November, two runs, ten views, 1080p at 0.75): drawn fine, traced in boxes +0.2 to +2.2 ms (1.0 in the mean) on 15 to 22; rays on the fine +3.3 to +15.8 (8.3). From run to run boxes part by up to 0.5, what fine adds by up to 0.8.
