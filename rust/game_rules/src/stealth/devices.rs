@@ -485,7 +485,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let door_at = crate::doors::door_pos(g, d);
     let in_reach = m::min(v3::dist_xz(door_at, p), v3::dist_xz(g.dr[d].frame_centre, p)) < PAD_REACH + 0.25;
     let k = match pad {
-        Some(k) if !crate::condition::down(g, g.pl[pl].ch) && in_reach && g.pl[pl].holding().is_none() && g.pl[pl].takedown().is_none() => k,
+        Some(k) if !crate::condition::down(g, g.pl[pl].ch) && in_reach => k,
         _ => { g.pl[pl].coding_over(); return; }
     };
     if !crate::doors::doors_locked_out(g, d, p, None) { g.pl[pl].coding_over(); return; }

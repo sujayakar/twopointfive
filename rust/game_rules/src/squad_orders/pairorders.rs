@@ -426,7 +426,7 @@ fn pair_orders_hands_summary(g: &mut Game) { g.pair.hands_was = crate::seats::me
 /// this seat's man and this seat's jobs, standing on the seat
 fn pair_orders_mine(g: &mut Game) {
     let pl = g.player;
-    let hands = g.pl[pl].takedown().is_some() || g.pl[pl].holding().is_some();
+    let hands = g.pl[pl].on_a_man();
     if hands && !g.pl[pl].pair_hands_was { pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Hands)); }
     g.pl[pl].pair_hands_was = hands;
     let mut at = 0;

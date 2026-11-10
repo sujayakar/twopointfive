@@ -77,7 +77,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             c: p.ch,
             pl: Some(pl),
             gd: None,
-            can: !g.cond[p.ch].down && p.dragging().is_none() && p.holding().is_none() && p.kick().is_none() && p.picking().is_none() && p.wanding().is_none() && p.takedown().is_none(),
+            can: !g.cond[p.ch].down && p.tow.is_none() && !p.planted(),
             right_free: p.holstered,
         });
     }

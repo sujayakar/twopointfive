@@ -267,7 +267,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
 
     // the grab and the takedown, with one gate
     {
-        let free = g.pl[pl].takedown().is_none() && !crate::condition::down(g, g.pl[pl].ch) && g.pl[pl].holding().is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) && g.pl[pl].breaker_move().is_none();
+        let free = !g.pl[pl].planted() && !crate::condition::down(g, g.pl[pl].ch) && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
         let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g, &crate::seats::here(g)) } else { None };
         let reach_guard: Option<GuardId> = in_reach.as_ref().and_then(|r| r.guard);
         let choke_on = match reach_guard {
@@ -360,7 +360,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let pos = g.ch[pc].pos;
         let dp = crate::doors::door_pos(g, d);
         let in_reach = m::min(v3::dist_xz(dp, pos), v3::dist_xz(g.dr[d].frame_centre, pos)) < crate::doors::DOORS_USE_REACH + 0.25
-            && !crate::condition::down(g, g.pl[pl].ch) && g.pl[pl].holding().is_none() && g.pl[pl].takedown().is_none() && g.pl[pl].kick().is_none();
+            && !crate::condition::down(g, g.pl[pl].ch);
         let keys = g.pl[pl].keys.clone();
         if !in_reach || crate::doors::doors_locked_out(g, d, pos, Some(&keys)) {
             g.pl[pl].easing_over();
@@ -409,7 +409,7 @@ fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::Doo
     }
     if let Some(d) = own.and_then(|o| o.blocked_by) {
         let p = &g.pl[pl];
-        if p.sprinting && p.kick().is_none() && p.picking().is_none() && p.coding().is_none() && p.takedown().is_none() && p.holding().is_none() {
+        if p.sprinting && !p.planted() {
             let u = crate::doors::door_dir(g, d);
             let (pos, vel) = (g.ch[pc].pos, g.ch[pc].vel);
             let into = -(-u[1] * vel[0] + u[0] * vel[2]) * crate::doors::doors_side(g, d, pos);

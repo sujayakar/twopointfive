@@ -181,7 +181,7 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
         let f = breaker_face(g, p);
         return Some(SamWork { kind: SamWorkKind::Breaker, p: f.p, n: f.n, at: None });
     }
-    if g.mission.stage == crate::game::MissionStage::Drive && g.mission.drive_t >= 0.0 {
+    if g.pl[pl].taking().is_some() {
         let f = rack_face(g, p);
         return Some(SamWork { kind: SamWorkKind::Drive, p: f.p, n: f.n, at: None });
     }
@@ -207,9 +207,6 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     let bp = g.level.breaker.pos;
     let c = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch)
-        || g.pl[pl].holding().is_some()
-        || g.pl[pl].takedown().is_some()
-        || g.pl[pl].dragging().is_some()
         || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
         || v3::dist_xz(bp, g.ch[c].pos) > 1.6
         || (g.light_home.mains.active && g.light_home.mains.permanent)
@@ -243,9 +240,7 @@ pub(super) fn sam_work_let_go(g: &mut crate::game::Game, w: crate::handwork::Sam
     match w.kind {
         SamWorkKind::Breaker => return false,
         SamWorkKind::Switch => crate::lightswitch::switch_let_go(g),
-        SamWorkKind::Drive => crate::mission::cancel_drive(g),
-        SamWorkKind::Door => { crate::doortools::door_tools_cancel_sam(g); }
-        SamWorkKind::Wall => { crate::wallcharge::wall_charge_cancel(g); }
+        SamWorkKind::Drive | SamWorkKind::Door | SamWorkKind::Wall => crate::deed::put_down(g, g.player),
     }
     true
 }
@@ -291,10 +286,9 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
         crate::character::anim_work_after(g, c, stow);
         return;
     }
-    if g.mission.drive_t < 0.0 { return; }
+    let Some(&t) = g.pl[pl].taking() else { return };
     let pos = g.ch[c].pos;
     let f = rack_face(g, pos);
-    let t = g.mission.drive_t;
     let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { hand, ..Default::default() };
     work_at(g, c, crate::character::WorkKind::Take, f.p, f.n, t, secs, Some(&more));

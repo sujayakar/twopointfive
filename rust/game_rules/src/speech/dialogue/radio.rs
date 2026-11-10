@@ -55,8 +55,7 @@ fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 /// Nobody is fighting, and Sam's mouth and hands are free.
 fn radio_clear(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     !g.guards.iter().any(|&x| g.gd[x].state == crate::game::GuardState::Alert)
-        && g.pl[seat.player].holding().is_none()
-        && g.pl[seat.player].takedown().is_none()
+        && !g.pl[seat.player].on_a_man()
 }
 
 /// Sound a beat now (no delay) or queue it `delay` seconds out. False if it will never sound. The variant is dealt off the beat and the run's start.

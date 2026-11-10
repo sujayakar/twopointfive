@@ -49,7 +49,6 @@ pub struct WallCharge {
     pub player: Option<PlayerId>,
     pub roster: Vec<GuardId>,
     pub alone: f64,
-    pub sam: Option<crate::wallcharge::WallChargeSam>,
     pub offered: Option<crate::wallcharge::WallSpot>,
     pub carried: Option<f64>,
     pub brought: Option<f64>,

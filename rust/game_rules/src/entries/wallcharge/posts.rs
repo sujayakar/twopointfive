@@ -78,7 +78,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
     g.sets[g.seat].wall_charge.ops = Vec::new();
     g.sets[g.seat].wall_charge.done = Vec::new();
     g.sets[g.seat].wall_charge.set = Vec::new();
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[g.player].wall_work_over();
     g.sets[g.seat].wall_charge.offered = None;
     g.sets[g.seat].wall_charge.alone = 0.0;
     let n = match g.k.wallcharge.carried { None => None, Some(c) => Some(crate::seats::seat_share(g, c)) };
@@ -96,7 +96,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
 fn wall_charge_stop(g: &mut crate::game::Game) {
     for op in g.sets[g.seat].wall_charge.ops.clone() { wall_charge_end(g, op); }
     for c in core::mem::take(&mut g.sets[g.seat].wall_charge.set) { wall_charge_give_back(g, c); }
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[g.player].wall_work_over();
     g.sets[g.seat].wall_charge.marker = None;
     g.sets[g.seat].wall_charge.walks = None;
 }

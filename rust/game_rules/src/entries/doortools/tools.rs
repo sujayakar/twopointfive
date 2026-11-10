@@ -265,7 +265,7 @@ pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> Strin
 /// The face of this door the player could set a charge on by hand right now (None: none).
 fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
     let pl = g.player;
-    if g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.dr[d].leaf.off || g.dr[d].def.steel == Some(true)
+    if g.pl[pl].tow.is_some() || g.pl[pl].holding().is_some() || g.dr[d].leaf.off || g.dr[d].def.steel == Some(true)
         || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() || charge_order_on(g, &crate::seats::here(g), d) { return None; }
     door_tools_sync(g);
     if g.sets[g.seat].door_tools.charges <= 0.0 { return None; }
@@ -331,14 +331,6 @@ pub fn door_tools_sam_progress(g: &crate::game::Game, seat: &crate::seats::SeatR
     match g.pl[pl].charging() { Some(s) => v3::clamp((g.time - s.t0) / g.k.doortools.set_secs, 0.0, 1.0), None => 0.0 }
 }
 
-/// Let go of it: nothing was spent (true: there was one).
-pub fn door_tools_cancel_sam(g: &mut crate::game::Game) -> bool {
-    let pl = g.player;
-    if g.pl[pl].charging().is_none() { return false; }
-    g.pl[pl].charging_over();
-    true
-}
-
 /// Each frame: the row performed starts it; his hands on it for setSecs set it; anything that takes him off it breaks it off.
 pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let pl = g.player;
@@ -350,7 +342,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let s = match g.pl[pl].charging().copied() {
         Some(s) => s,
         None => {
-            if !mine || crate::wallcharge::wall_charge_setting(&crate::seats::here(g)) { return; }
+            if !mine { return; }
             let d = act_door.unwrap();
             let side = match door_tools_sam_face(g, d) { Some(x) => x, None => return };
             let p = g.ch[g.pl[pl].ch].pos;
@@ -362,11 +354,11 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let d = s.door;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].takedown().is_some() || g.pl[pl].kick().is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting
         || g.dr[d].leaf.off || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
         || charge_order_on(g, &crate::seats::here(g), d)
         || off_of(g, d, p, s.side) <= 0.0 || flat(p, s.at) > SAM_SHIFT || (act_some && !(mine && act_door == Some(d))) {
-        door_tools_cancel_sam(g);
+        g.pl[pl].charging_over();
         return;
     }
     if crate::workstow::sam_stowing(g, &crate::seats::here(g)) {

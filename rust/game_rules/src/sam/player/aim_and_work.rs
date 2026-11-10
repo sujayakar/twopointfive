@@ -44,7 +44,7 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
 /// The 'pick the lock' row: drop what the hands were doing and start working the lock.
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || g.pl[pl].kick().is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() {
         return;
     }
     if g.dr[d].def.steel.unwrap_or(false) {
@@ -107,10 +107,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64) {
 pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || g.pl[pl].kick().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].wanding().is_some() {
-        return;
-    }
-    if g.pl[pl].coding().is_some() || g.pl[pl].door_move().is_some() || g.pl[pl].breaker_move().is_some() || g.mission.drive_t >= 0.0 || crate::handwork::sam_work(g).is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || crate::handwork::sam_work(g).is_some() {
         return;
     }
     if !crate::wand::wand_offered(g, pl, d) {
@@ -276,7 +273,7 @@ pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crat
 /// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript: the write goes to that owner, by the kind of work.
 fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork::SamWorkKind, dx: f64, dz: f64) {
     let at = match kind {
-        crate::handwork::SamWorkKind::Wall => g.sets[g.seat].wall_charge.sam.as_mut().map(|s| &mut s.at),
+        crate::handwork::SamWorkKind::Wall => g.pl[pl].wall_work_mut().map(|s| &mut s.at),
         crate::handwork::SamWorkKind::Door => g.pl[pl].charging_mut().map(|s| &mut s.at),
         _ => None,
     };
@@ -291,7 +288,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     let run = run.unwrap_or(false);
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].kick().is_some() || crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || crate::character::anim_kicking(g, c) {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || crate::character::anim_kicking(g, c) {
         return;
     }
     if g.pl[pl].crouch && !can_stand(g) {

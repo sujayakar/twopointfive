@@ -32,11 +32,10 @@ pub fn hands_free(g: &mut Game) {
     g.pl[pl].sprinting = false;
 }
 
-/// The hurt man's hands come off what he does on his knees at a door: the lock, the look under it. True: they were on it.
-pub fn shaken_off(g: &mut Game, pl: PlayerId) -> bool {
-    if !matches!(g.pl[pl].deed, Some(Deed::Pick(_) | Deed::Wand(_))) { return false; }
+/// The hurt man's hands come off what he does on his knees at a door: the lock, the look under it.
+pub fn shaken_off(g: &mut Game, pl: PlayerId) {
+    if !matches!(g.pl[pl].deed, Some(Deed::Pick(_) | Deed::Wand(_))) { return; }
     put_down(g, pl);
     let his = crate::seats::seat_of_man(g, pl);
     g.sets[his].hand.f_held = true;
-    true
 }

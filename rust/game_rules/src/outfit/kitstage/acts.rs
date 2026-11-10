@@ -1416,7 +1416,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     let pl = g.player;
     st.a.cuts += 1;
     if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.sets[g.seat].hand.throw_held = false; }
-    if b.man.is_none() && g.pl[pl].charging().is_some() { crate::doortools::door_tools_cancel_sam(g); }
+    if b.man.is_none() { g.pl[pl].charging_over(); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
     if b.field == "frags" && b.mark_t.is_nan() && (g.sets[g.seat].door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }

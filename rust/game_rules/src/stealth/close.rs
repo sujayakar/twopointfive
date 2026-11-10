@@ -289,9 +289,9 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     let now = g.time;
     let o = { let s = state_of(g); if s.t == now { s.best.clone() } else { None } };
     let o = match o { Some(o) if o.can => o, _ => return None };
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding().is_some() || g.pl[pl].takedown().is_some() || g.pl[pl].dragging().is_some() || g.pl[pl].kick().is_some() || g.pl[pl].picking().is_some() || g.pl[pl].wanding().is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].tow.is_some() || g.pl[pl].planted()
         || crate::game::player_rifle_up(g, pl) || (crate::game::player_canister_sel(g, pl).is_some() && !g.pl[pl].holstered) { return None; }
-    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding().is_some() { return None; }
+    if crate::handwork::sam_work(g).is_some() { return None; }
     if g.pl[pl].wall.is_some() { return None; }
     let c = g.gd[o.guard].ch;
     let neck = g.ch[c].bones.get(Bone::Neck).or_else(|| g.ch[c].bones.get(Bone::Head)).copied();
@@ -309,9 +309,9 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
 
 /// Who holds the mode now: the nearest living man in range with nothing solid between.
 fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding().is_some() || g.pl[pl].dragging().is_some() || g.pl[pl].kick().is_some() || g.pl[pl].picking().is_some() || g.pl[pl].wanding().is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].tow.is_some() || (g.pl[pl].planted() && g.pl[pl].takedown().is_none())
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
-    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding().is_some() { return None; }
+    if crate::handwork::sam_work(g).is_some() { return None; }
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     let mut best: Option<GuardId> = None;

@@ -37,7 +37,7 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
     g.pl[pl].work_stow = None;
     if !s.drew || !g.pl[pl].holstered { return; }
     let p = &g.pl[pl];
-    if g.cond[p.ch].down || p.holding().is_some() || p.takedown().is_some() || p.dragging().is_some() || p.picking().is_some() || p.wanding().is_some() {
+    if g.cond[p.ch].down || p.hands_full() {
         return;
     }
     if let Some(w) = g.pl[pl].wall.as_mut() {

@@ -694,7 +694,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         }) };
     {
         let (st, pl) = (g.gd[gd].state, &g.pl[p]);
-        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.holding().is_some() || pl.takedown().is_some() || pl.kick().is_some() || pl.picking().is_some() || pl.wanding().is_some() {
+        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.planted() {
             return;
         }
     }
