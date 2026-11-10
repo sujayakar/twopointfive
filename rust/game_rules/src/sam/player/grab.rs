@@ -162,7 +162,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseKind>
     crate::chronicle::chron_grab(g, gd);
 }
 
-/// The man grabbed is cut off from all he was at: his words, his part in a clearing, his script, his way; what lit it falls from his hand.
+/// The man grabbed is cut off from all he was at: his words, his part in a clearing, his script, his way, and the flashlight in his hand.
 fn cut_off(g: &mut Game, gd: GuardId) {
     let now = g.time;
     if g.gd[gd].bubble.as_ref().is_some_and(|b| now - b.t < b.dur) { g.gd[gd].bubble = None; }
@@ -210,7 +210,7 @@ fn leaves_clearing(g: &mut Game, gd: GuardId) {
 }
 
 /// He has nowhere to go: a whole new path, so its serial moves, and the goal is no longer the standoff's own point.
-fn lose_path(g: &mut Game, gd: GuardId) {
+pub(super) fn lose_path(g: &mut Game, gd: GuardId) {
     let m_ = &mut g.gd[gd];
     m_.path = Vec::new();
     m_.path_serial = m_.path_serial.wrapping_add(1);

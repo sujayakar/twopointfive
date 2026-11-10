@@ -211,7 +211,7 @@ fn buys_line(g: &Game, p: PlayerId, w: &crate::player::WallHold, at: V3, there: 
     let r = m::min(1.0, g.k.wallsnap.lean_clear_m / m::max(d, 1e-3));
     d >= 0.2 && !crate::scene_collision::shot_blocked(g, a, [a[0] + (at[0] - a[0]) * r, h + (at[1] - h) * r, a[2] + (at[2] - a[2]) * r], None, None)
 }
-/// The least further step from which his rifle, and the start of its round's way, are clear of the corner; 0: none is.
+/// The least further step from which his rifle, and the start of its round's way, are clear of the corner; 0: none is, or none is needed.
 fn gun_needs(g: &Game, p: PlayerId, w: &crate::player::WallHold, at: V3, there: f64) -> f64 {
     let ws = g.k.wallsnap;
     let c = g.pl[p].ch;

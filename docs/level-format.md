@@ -436,7 +436,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 | loaded, reload, following | none | he has loaded, is reloading, or all are falling in |
 | launcher | `on`, `fired` | that rifle attachment is up, and has just fired if said |
 | burst | `n` (default 3) | so many rounds in an automatic burst |
-| threw | `kind`, `quick`, `area` | a throw of that kind, and into the area if said |
+| threw | `kind`, `area` | a throw of that kind, and into the area if said |
 | orderTo | `who` | the orders menu is on that man or pair |
 | stackOn | `door`, `who`, `set` | those men are stacked on the door, and arrived if `set` |
 | pairsOn | `doors` | the pairs stand on so many doors |

@@ -694,7 +694,6 @@ pub struct Player {
     #[is(2.0)] pub flashbangs: f64,
     #[is(2.0)] pub frags: f64,
     #[is(crate::game::SlotKind::Pistol)] pub slot: crate::game::SlotKind,
-    #[is(crate::game::ThrowKind::Smoke)] pub throw_kind: crate::game::ThrowKind,
     #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
