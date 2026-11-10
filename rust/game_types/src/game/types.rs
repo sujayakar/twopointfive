@@ -747,6 +747,8 @@ pub struct Player {
     pub easing: Option<DoorId>,
     pub ease_stall_t: f64,
     pub ease_best: f64,
+    /// he is low because his hands' work put him there, not by his own key
+    pub knee: Option<crate::player::Knee>,
     pub picking: Option<DoorId>,
     pub kick: Option<crate::game::PlayerKick>,
     pub f_held: bool,
