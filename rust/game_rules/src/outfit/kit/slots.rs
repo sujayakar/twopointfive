@@ -306,15 +306,6 @@ pub(super) fn cost_of(m: &crate::kit::MemberKit, t: &crate::kit::SlotTable) -> f
     used
 }
 
-/// The teammates who come, of five cards; copies, since the only readers only read.
-pub(super) fn coming(cards: &[crate::kit::MemberKit], n: f64) -> Vec<crate::kit::MemberKit> {
-    let end = (1 + n as usize).min(cards.len());
-    if end <= 1 {
-        return Vec::new();
-    }
-    cards[1..end].to_vec()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,7 +357,7 @@ mod tests {
 
     #[test]
     fn a_big_thing_fills_no_pouch() {
-        let it = SlotItem { id: String::from("hammer"), pouches: 2.0, max: vec![1.0], squad_max: None, big: Some(true), holds: None };
+        let it = SlotItem { id: String::from("hammer"), pouches: 2.0, max: vec![1.0], big: Some(true), holds: None };
         assert_eq!(price_of(Some(&it)), 0.0);
         assert_eq!(pouches_of(Some(&it), 1.0), 0.0);
         assert_eq!(price_of(None), 0.0);
@@ -409,16 +400,6 @@ mod tests {
         assert!(!int(Some(&KitValue::Num(f64::INFINITY)), 0.0));
         assert!(!int(Some(&KitValue::Text(String::from("3"))), 0.0));
         assert!(!int(None, 0.0));
-    }
-
-    #[test]
-    fn the_men_who_come_are_a_slice_past_you() {
-        let cards = issued();
-        assert_eq!(coming(&cards, 0.0).len(), 0);
-        assert_eq!(coming(&cards, 2.0).len(), 2);
-        assert_eq!(coming(&cards, 2.0)[0].bangs, 2.0);
-        assert_eq!(coming(&cards, 9.0).len(), 4);
-        assert_eq!(coming(&[], 2.0).len(), 0);
     }
 
     #[test]

@@ -153,7 +153,7 @@ const CSS = `
 #missions.one #loadout .lo-noteline { flex-wrap: wrap; gap: 3px 22px; margin: 8px 0 0; padding-left: 113px; }   /* (a narrow window: what the squad carries drops under the note, nothing runs off the sheet) */
 #missions.one #loadout .lo-note { flex: 0 1 auto; min-height: 0; font-size: 12px; color: var(--m-soft); }
 #missions.one #loadout .lo-note:empty, #missions.one #loadout .lo-note:not(.off) { display: none; }   /* (only a refused step is said) */
-#missions.one #loadout .lo-pool, #missions.one #loadout .lo-squadp { margin: 0; white-space: normal; font: 12px/1.45 var(--m-font); letter-spacing: 0; color: var(--m-dim); }
+#missions.one #loadout .lo-pool { margin: 0; white-space: normal; font: 12px/1.45 var(--m-font); letter-spacing: 0; color: var(--m-dim); }
 #missions.one #loadout .lo-slots { gap: 8px; margin: 16px 0 0; padding: 0; border: 0; border-radius: 0; }
 #missions.one #loadout .lo-slot { grid-template-columns: minmax(0, 1fr); column-gap: 0; padding: 9px 11px 9px 12px; border: 0; border-left: 3px solid rgba(var(--m-edge),0.4); border-radius: 0; background: rgba(var(--m-edge),0.06); box-shadow: none; color: var(--m-dim); }
 #missions.one #loadout .lo-slot.p-you { border-left-color: var(--m-text); color: var(--m-dim); }

@@ -57,7 +57,6 @@ impl Thing {
 pub struct SlotTable {
     pub pouches: Vec<f64>,
     pub big: Vec<f64>,
-    pub squad: Option<f64>,
     pub items: JsMap<crate::kit::Thing, crate::kit::SlotItem>,
     pub loadouts: Vec<crate::kit::SlotLoadout>,
 }
@@ -67,7 +66,6 @@ pub struct SlotItem {
     pub id: String,
     pub pouches: f64,
     pub max: Vec<f64>,
-    pub squad_max: Option<f64>,
     pub big: Option<bool>,
     pub holds: Option<f64>,
 }
@@ -308,13 +306,6 @@ pub struct KitCost {
 pub struct KitCostBig {
     pub used: f64,
     pub total: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadCost {
-    pub used: f64,
-    pub total: f64,
-    pub free: f64,
 }
 
 #[derive(Clone, Debug)]

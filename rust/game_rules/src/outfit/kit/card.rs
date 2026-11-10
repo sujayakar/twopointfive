@@ -297,7 +297,6 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
     let mut rows = Vec::new();
     for r in seq(g, &all, &m) { rows.push(card_row(g, i, &r, &mut m, &mut issued, &load, on)); }
     let cost = kit_cost(g, i, Some(&m));
-    let squad = if i > 0.0 && i <= kit_team(g, None) { squad_cost(g, None, None) } else { None };
     let (mut worn, mut paste_why) = (false, String::new());
     if let Some(c) = clip {
         let p = kit_paste_peek(g, i, c);
@@ -312,7 +311,6 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
         changed: kit_changed(g, i),
         pouches: CardPouches { used: cost.used, total: cost.total },
         big: CardPouches { used: cost.big.used, total: cost.big.total },
-        squad: squad.map(|s| CardPouches { used: s.used, total: s.total }),
         load: CardLoad { mob: load.mob, con: load.con },
         load_issued: CardLoad { mob: load_issued.mob, con: load_issued.con },
         rows,

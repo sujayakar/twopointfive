@@ -96,7 +96,7 @@ pub fn read(g: &mut Game, text: &str) {
     let stealth = if j.get("stealth").bool() == Some(true) { j.get("members").at(0) } else { j.get("stealth") };
     if let Some(f) = fields(stealth) { kit::kit_stealth_set(g, Some(&f)); }
     let mut cards = g.m.kit.kit.members.clone();
-    let left = kit::kit_fit_all(g, &mut cards, None, None);
+    let left = kit::kit_fit_all(g, &mut cards);
     g.m.kit.kit.members = cards;
     for (i, what) in left.iter().enumerate() {
         if what.is_empty() { continue; }
