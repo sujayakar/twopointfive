@@ -26,9 +26,9 @@ fn hidden(x: vec3f, r: f32, prev: bool) -> bool {
   var far = 1e9; for (var y = i0.y; y <= i1.y; y++) { for (var xx = i0.x; xx <= i1.x; xx++) { far = min(far, textureLoad(hzb, vec2i(xx, y), lod).x); } } return 0.25 / near < far;
 }
 fn slotOut(l: Local, cluster: u32) {
-  let s = atomicAdd(&n[N_SLOTS], 1u); if (s >= meshK.most) { atomicStore(&n[N_FULL], 1u); return; } let a = mrow(l.mesh); let b = mrow(l.mesh + 1u); let rec = mrowU(bitcast<u32>(b.w) + cluster); let tris = mrowU(l.mesh + 2u).x + cluster * 32u;
+  let s = atomicAdd(&n[N_SLOTS], 1u); if (s >= meshK.most) { atomicStore(&n[N_FULL], 1u); return; } let a = mrow(l.mesh); let bu = mrowU(l.mesh + 1u); let b = asF(bu); let rec = mrowU(bu.w + cluster); let tris = mrowU(l.mesh + 2u).x + cluster * 32u;
   let o = outward(l, a.xyz); let X = outward(l, a.xyz + vec3f(b.x * 65536.0, 0.0, 0.0)) - o; let Y = outward(l, a.xyz + vec3f(0.0, b.y * 65536.0, 0.0)) - o; let Z = outward(l, a.xyz + vec3f(0.0, 0.0, b.z * 65536.0)) - o;
-  slots[s * 4u] = vec4f(X / 65536.0, o.x); slots[s * 4u + 1u] = vec4f(Y / 65536.0, o.y); slots[s * 4u + 2u] = vec4f(Z / 65536.0, o.z); slots[s * 4u + 3u] = bitcast<vec4f>(vec4u(rec.x, tris, (l.piece << 11u) | l.child, (cluster << 8u) | rec.y)); atomicAdd(&n[N_TRIS], rec.y);
+  slots[s * 4u] = bitcast<vec4u>(vec4f(X / 65536.0, o.x)); slots[s * 4u + 1u] = bitcast<vec4u>(vec4f(Y / 65536.0, o.y)); slots[s * 4u + 2u] = bitcast<vec4u>(vec4f(Z / 65536.0, o.z)); slots[s * 4u + 3u] = vec4u(rec.x, tris, (l.piece << 11u) | l.child, (cluster << 8u) | rec.y); atomicAdd(&n[N_TRIS], rec.y);
 }
 /** a child of every placed object, its mesh's top put on the list */
 @compute @workgroup_size(64) fn seed(@builtin(global_invocation_id) id: vec3u) {
@@ -42,11 +42,11 @@ fn slotOut(l: Local, cluster: u32) {
   let count = min(atomicLoad(&n[meshK.round]), meshK.queue) * 8u;
   for (var i = id.x; i < count; i += groups.x * 64u) {
     let q = listA[i >> 3u]; let many = q.y & 15u; if ((i & 7u) >= many) { continue; } let at = (q.y >> 4u) + (i & 7u) * 5u; let l = localOf(q.x >> 11u, q.x & 2047u);
-    let e = mrow(at + 2u); let lod = mrow(at + 1u); if (!shown(l, e.x, lod)) { continue; } let kids = bitcast<vec4u>(e).w; let b = mrow(at); let x = outward(l, b.xyz); let r = b.w * l.scale; if (!inside(x, r)) { continue; }
-    if (kids != 0u) { let j = atomicAdd(&n[meshK.round + 1u], 1u); if (j >= meshK.queue) { atomicStore(&n[N_FULL], 1u); continue; } listB[j] = vec2u(q.x, (bitcast<vec4u>(e).z << 4u) | kids); continue; }
+    let eu = mrowU(at + 2u); let e = asF(eu); let lod = mrow(at + 1u); if (!shown(l, e.x, lod)) { continue; } let kids = eu.w; let b = mrow(at); let x = outward(l, b.xyz); let r = b.w * l.scale; if (!inside(x, r)) { continue; }
+    if (kids != 0u) { let j = atomicAdd(&n[meshK.round + 1u], 1u); if (j >= meshK.queue) { atomicStore(&n[N_FULL], 1u); continue; } listB[j] = vec2u(q.x, (eu.z << 4u) | kids); continue; }
     if (shown(l, e.y, mrow(at + 3u))) { continue; }
     let cone = mrow(at + 4u); if (meshK.cone > 0.5 && cone.w <= 1.0) { let v = b.xyz - l.cam; if (dot(v, cone.xyz) >= cone.w * length(v) + b.w) { continue; } }
-    let cluster = bitcast<vec4u>(e).z; if (meshK.hide > 0.5 && hidden(x, r, true)) { let j = atomicAdd(&n[N_HID], 1u); if (j < meshK.most) { again[j] = vec4u(q.x, cluster, at, 0u); continue; } }
+    let cluster = eu.z; if (meshK.hide > 0.5 && hidden(x, r, true)) { let j = atomicAdd(&n[N_HID], 1u); if (j < meshK.most) { again[j] = vec4u(q.x, cluster, at, 0u); continue; } }
     slotOut(l, cluster);
   }
 }
