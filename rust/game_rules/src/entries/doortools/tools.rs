@@ -17,7 +17,7 @@ fn post_or_pos(g: &Game, op: DoorOpId, m: GuardId) -> V3 {
     match g.tab.doortools_door_op[op].post.get(m) { Some(p) => p.pos, None => g.pos_of(m) }
 }
 /// DOORTOOLS.blowKey.replace('Key', '')
-pub(super) fn key_word(g: &Game) -> String { g.k.doortools.blow_key.replacen("Key", "", 1) }
+pub(crate) fn blow_letter(g: &Game) -> String { g.k.doortools.blow_key.replacen("Key", "", 1) }
 fn by_sam(g: &Game, c: ChargeId) -> bool { g.tab.doortools_set_charge[c].by == crate::ownblow::SAM_BY }
 /// this.ops.some(o => o.kind === 'charge' && o.door === d)
 fn charge_order_on(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> bool {
@@ -271,7 +271,7 @@ fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
 /// A door's rows: a set charge is said on the door's own line; else, in reach with free hands, 'set a charge'.
 pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Interactable, d: DoorId, verbs: &mut Vec<crate::game::Interactable>, free: bool) {
     let c = door_tools_charge_on(g, &crate::seats::here(g), d);
-    let key = key_word(g);
+    let key = blow_letter(g);
     let f = crate::ownblow::blow_key_word(false, &key);
     if let Some(c) = c {
         let close = door_tools_close_words(g, c);

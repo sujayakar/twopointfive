@@ -32,7 +32,7 @@ pub(super) fn weapon_def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponDef 
 }
 
 /// `s.over === O.ov`: only this module ever puts an overlay on a script, and each man has one Op
-pub(crate) fn over_is_mine(g: &Game, gd: GuardId) -> bool {
+pub(crate) fn has_over(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
@@ -295,7 +295,7 @@ fn nobody_in_sight(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, blind: b
         room_fight_point(g, o, to, dt, speed);
     } else if !blind && crate::coverfire::cover_op(g, o, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed)) {
         // a man he knows is behind something breakable: his rounds go into it
-    } else if over_is_mine(g, gd) {
+    } else if has_over(g, gd) {
         if g.time - g.tab.roomfight_op[o].lost_at > 0.5 || (g.tab.roomfight_op[o].fell == Some(true) && crate::doortools::door_tools_owes_corner(g, &crate::seats::here(g), gd)) {
             room_fight_restore(g, o);
         } else if dist_xz(g.ch[c].pos, g.tab.roomfight_op[o].aim) < 2.5 { // the half second his gun stays where the man was: a BEARING

@@ -7,10 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- private helpers
-
-// ---------------------------------------------------------------- the switch
-
 // ---------------------------------------------------------------- the work pose
 
 /// Feed one man's work pose for this frame.

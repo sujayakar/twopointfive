@@ -601,10 +601,8 @@ fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: cra
     g.door_path.walks.delete(w.gd);
     if why == crate::doorpath::DoorPathDropWhy::GaveUp {
         // (the line under him was this walk's own: left there, goTo sees its goal met and never plans)
-        crate::game::guard_set_path(g, w.gd, Vec::new());
         let man = &mut g.gd[w.gd];
-        man.path_goal = None;
-        man.path_goal_orbit = false;
+        man.drop_path();
     }
     let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), w.gd) else { return };
     let Some(post) = g.tab.orders_assignment[a].post else { return };
@@ -770,11 +768,10 @@ fn path_ahead(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk) -> (V3, 
     let arr: Vec<V3> = if near || cs >= tot { vec![last] } else { vec![carrot, last] };
     let (first, n) = (arr[0], arr.len() as f64);
     let goal = g.gd[gd].script.unwrap().goal.unwrap();
-    crate::game::guard_set_path(g, gd, arr);
+    g.gd[gd].set_path(arr);
     let man = &mut g.gd[gd];
     man.path_i = 0;
-    man.path_goal = Some([goal[0], goal[1], goal[2]]);
-    man.path_goal_orbit = false;
+    man.set_path_goal(Some([goal[0], goal[1], goal[2]]));
     w.arr = Some(man.path_serial);
     w.arr_n = n;
     (carrot, first)

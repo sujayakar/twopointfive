@@ -201,12 +201,7 @@ pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
 
 /// `issue` of 'hold in the dark'
 pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = match t {
-        crate::orders::OrderTarget::Floor(f) => f.at,
-        crate::orders::OrderTarget::Door(f) => f.at,
-        crate::orders::OrderTarget::None(f) => f.at,
-        crate::orders::OrderTarget::Foe(f) => f.at,
-    };
+    let at = t.at();
     let sc = g.pl[g.player].ch;
     let sam = g.ch[sc].pos;
     let face = if v3::dist_xz(sam, at) > 0.3 { v3::yaw_to(sam, at) } else { g.ch[sc].body_yaw };

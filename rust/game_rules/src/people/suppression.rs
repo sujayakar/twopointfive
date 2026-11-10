@@ -362,10 +362,8 @@ fn pinned_says_so(g: &mut Game, gd: GuardId, friendly: bool) {
 
 /// `gd.path = []; gd.pathGoal = null; gd.stallRef = null`: a whole write of his path (Guard.path_serial), and a goal the standoff did not lay.
 fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
     let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 

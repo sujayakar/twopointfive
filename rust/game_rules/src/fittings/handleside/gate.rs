@@ -322,7 +322,7 @@ fn walks_by(g: &mut Game, gd: GuardId, k: usize, through: &[V3]) {
     while rest.len() > 1 && v3::dist_xz(rest[0], last) < 0.7 { rest.remove(0); }   // the walk's own first step beyond the frame is this one
     let mut path = through.to_vec();
     path.extend(rest);
-    crate::game::guard_set_path(g, gd, path);
+    g.gd[gd].set_path(path);
     g.gd[gd].path_i = 0;
 }
 

@@ -67,7 +67,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let raised = g.ch[c].anim.upper == crate::character::UpperMode::Aim
         || (crate::game::player_rifle_up(g, p) && g.ch[c].anim.long_stance == Some(crate::character::LongStance::Shoulder));
     if !raised { return false; }
-    let a = g.ch[c].bone_or(crate::character::Bone::UpperArmR, 1.4);
+    let a = crate::combat::shoulder(g, c);
     let muzzle = g.ch[c].muzzle;
     crate::gunwall::wood_between(g, a, muzzle)
 }

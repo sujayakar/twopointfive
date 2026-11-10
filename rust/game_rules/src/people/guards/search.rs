@@ -385,8 +385,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
         if !crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) {
             g.gd[gd].path.insert(path_i, cand);   // (in place: the same path to anyone holding it, so path_serial stays)
         } else if let Some(goal) = g.gd[gd].path_goal {
-            g.gd[gd].path_goal = None;
-            g.gd[gd].path_goal_orbit = false;   // (the back-off's own point is gone: goTo lays a copy)
+            g.gd[gd].set_path_goal(None);   // (the back-off's own point is gone: goTo lays a copy)
             go_to(g, gd, goal, Some(true));
         }
         g.gd[gd].stuck_t = 0.0;

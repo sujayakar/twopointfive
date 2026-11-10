@@ -29,7 +29,7 @@ fn free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
     // (`+ 0.0`: a Map's key is the same for −0 and 0, Num's is by bits)
-    g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num(i + 0.0))
+    g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num::of(i))
 }
 
 /// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.

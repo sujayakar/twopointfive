@@ -310,9 +310,9 @@ pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<
 
 /// segmentBlocked with nothing passed: the solid test.
 pub fn solid_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>) -> bool { solid_blocked_over(g, &Over::OWN, a, b, shrink) }
-/// anything solid between two places, asked at knee height
+/// anything solid between two places, a door's leaf too, asked at knee height
 pub fn low_blocked(g: &Game, a: V3, b: V3) -> bool { solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
-/// a wall, a sill or a pane between two places, asked at knee height: the level's statics alone
+/// a wall, a sill or a pane between two places, asked at knee height: the level's statics alone, no door's leaf
 pub fn low_walled(g: &Game, a: V3, b: V3) -> bool { solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 /// …of the world as the question takes it
 pub fn solid_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>) -> bool { segment_blocked_over(g, over, a, b, shrink, Some(0.0)) }

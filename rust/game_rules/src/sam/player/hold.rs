@@ -889,7 +889,7 @@ pub(super) fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     unhook(g, gd);
     g.gd[gd].speed = 0.0;
     g.ch[hc].vel = [0.0, 0.0, 0.0];
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     g.ch[hc].aim_pitch = 0.0;

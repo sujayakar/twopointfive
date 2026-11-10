@@ -18,12 +18,8 @@ fn find_path(g: &Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::L
     }
 }
 
-/// a cell's number as a key of a lane's floor (a Set has −0 and 0 as one key, `Num` by its bits)
-pub(super) fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
 /// the middle of cell `i`
 fn cell_mid(cell: f64, w: f64, i: f64) -> V3 { [(js::rem(i, w) + 0.5) * cell, 0.0, (js::to_i32(i / w) as f64 + 0.5) * cell] }
-/// `g.say(gd, text, true)`
-pub(super) fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn goal_of(g: &Game, gd: GuardId) -> Option<V3> { g.gd[gd].script.as_ref().and_then(|s| s.goal) }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
 fn aim_at(g: &mut Game, gd: GuardId, at: V3) { crate::squad::order(g, gd, crate::squad::OrderPatch { aim_at: Some(Some(at)), ..Default::default() }); }
@@ -433,7 +429,7 @@ pub(super) fn back_out(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId) -
     held_on(g, gd, crate::lanes::StateHeldValue { lane: id, t: now, look, aimed: false, at: spot });
     g.gd[gd].drop_path();
     crate::roomfight::run(g, d, spot, None, 0.3, crate::owner::by::LANE);
-    if now - s(g).said_t > 4.0 { s(g).said_t = now; say_net(g, gd, "get back — out of their line!"); }
+    if now - s(g).said_t > 4.0 { s(g).said_t = now; crate::game::game_say(g, gd, "get back — out of their line!", Some(true), None); }
     true
 }
 
@@ -532,7 +528,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
 ///  the first man sent round says so
 fn round_shout(g: &mut Game, gd: GuardId) {
     let text = "going around — keep them looking your way!";
-    say_net(g, gd, text);
+    crate::game::game_say(g, gd, text, Some(true), None);
     s(g).said_t = g.time;
 }
 
@@ -573,7 +569,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let x = &mut g.tab.lanes_lane[l];
     x.can = Some(crate::lanes::LaneCan { t: now, land: sol.land });
     x.stun_at = now + gap;
-    say_net(g, best, "bang out — on me!");
+    crate::game::game_say(g, best, "bang out — on me!", Some(true), None);
     s(g).said_t = g.time;
 }
 
@@ -633,7 +629,7 @@ fn bangs(g: &mut crate::game::Game) {
                 crate::belief::word(g, gd, from);
                 let fast = g.k.lanes.push_fast;
                 crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
-                if first { first = false; say_net(g, gd, "they're blind — go, go!"); s(g).said_t = g.time; }
+                if first { first = false; crate::game::game_say(g, gd, "they're blind — go, go!", Some(true), None); s(g).said_t = g.time; }
             }
         }
     }
@@ -750,7 +746,7 @@ fn stepper(g: &mut crate::game::Game, l: LanesLaneId, skip: Option<&JsSet<GuardI
                     a = w;
                 }
                 let i = match hit { Some(x) => cell_at(g, x), None => -1.0 };
-                if hit.is_some() && i >= 0.0 && g.tab.lanes_lane[l].cells.as_ref().map_or(false, |c| c.has(cell_key(i))) && run >= 0.3 {
+                if hit.is_some() && i >= 0.0 && g.tab.lanes_lane[l].cells.as_ref().map_or(false, |c| c.has(crate::Num::of(i))) && run >= 0.3 {
                     mouth = cell_mid(g.col.nav.cell, g.col.nav.w, i);
                     d = m::max(0.3, dist_xz(p, mouth));
                     len = run;
@@ -809,7 +805,7 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
                 let (at, now) = (g.pos_of(gd), g.time);
                 held_on(g, gd, crate::lanes::StateHeldValue { lane: id, t: now, look, aimed: true, at });
             }
-            if g.time - s(g).said_t > 2.0 { s(g).said_t = g.time; say_net(g, gd, "set — I've got an angle on them!"); }
+            if g.time - s(g).said_t > 2.0 { s(g).said_t = g.time; crate::game::game_say(g, gd, "set — I've got an angle on them!", Some(true), None); }
             let x = g.tab.lanes_lane[l].pin_at;
             g.tab.lanes_lane[l].pin_at = m::max(x, g.time + 1.5);
         }
@@ -932,7 +928,7 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
     let spread = g.k.lanes.pin_spread;
     if on && g.time >= fr.next && !g.gd[gd].muzzle_down && !crate::guards::round_past_colleague(g, gd, at, None, Some(spread * 0.75)) && crate::weapons::firearm_fire(g, w) {
         crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), ..Default::default() }));
-        if fr.n == g.k.lanes.pin_rounds && g.tab.lanes_lane[l].pin_n == 1.0 { s(g).said_t = g.time; say_net(g, gd, "putting fire on them!"); }
+        if fr.n == g.k.lanes.pin_rounds && g.tab.lanes_lane[l].pin_n == 1.0 { s(g).said_t = g.time; crate::game::game_say(g, gd, "putting fire on them!", Some(true), None); }
         fr.n -= 1.0;
         let cd = g.weapon(g.fa[w].def).cd;
         fr.next = g.time + m::max(g.k.lanes.pin_every, cd);
@@ -1133,5 +1129,5 @@ mod tests {
         assert_eq!(cell_mid(0.5, 10.0, 23.0), [1.75, 0.0, 1.25]);
     }
     #[test]
-    fn a_key_of_minus_zero_is_zero() { assert!(cell_key(-0.0) == crate::Num(0.0)); }
+    fn a_key_of_minus_zero_is_zero() { assert!(crate::Num::of(-0.0) == crate::Num(0.0)); }
 }

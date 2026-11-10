@@ -30,10 +30,6 @@ fn spare_of(g: &Game, a: OrdersAssignmentId) -> bool {
 fn pin_row(g: &Game, key: PlayerId, m: GuardId) -> Option<RearPin> {
     g.m.rearwatch.books.get(key).unwrap().pins.get(m).copied()
 }
-fn is_pre(p: crate::doortools::Phase) -> bool {
-    use crate::doortools::Phase;
-    matches!(p, Phase::Stack | Phase::Ready | Phase::Place | Phase::Standoff | Phase::Armed)
-}
 fn is_going(p: crate::doortools::Phase) -> bool {
     use crate::doortools::Phase;
     matches!(p, Phase::Kick | Phase::Toss | Phase::Fuse | Phase::Wait | Phase::Enter)
@@ -305,7 +301,7 @@ fn door_tool_stacks(g: &mut Game, key: PlayerId) -> (Vec<Group>, JsSet<GuardId>)
             let r = &g.tab.doortools_door_op[op];
             (r.door, r.side, r.phase)
         };
-        let (cands, going) = if is_pre(phase) {
+        let (cands, going) = if crate::doortools::is_pre(phase) {
             (before_the_door(g, key, op, &men), false)
         } else if carries(g, op) && is_going(phase) {
             (as_the_door_goes(g, key, op, &men), true)

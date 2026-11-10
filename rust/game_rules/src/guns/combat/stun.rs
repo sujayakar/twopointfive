@@ -148,4 +148,3 @@ pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p
     );
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
 }
-

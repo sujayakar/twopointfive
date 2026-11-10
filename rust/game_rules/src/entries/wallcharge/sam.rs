@@ -160,7 +160,7 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
     if W.set.is_empty() { return out; }
     let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
+    let f = crate::doortools::blow_letter(g);
     let p = g.seat_pos(seat);
     for own in [false, true] {
         let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
@@ -180,7 +180,7 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut cr
     g.sets[g.seat].wall_charge.marker = None;
     if !wall_charge_on(g) || !g.sets[g.seat].wall_charge.seated { return; }
     let pl = g.player;
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
+    let f = crate::doortools::blow_letter(g);
     let key = crate::ownblow::blow_key_word(false, &f);
     let sam_wall = g.pl[pl].wall_work().map(|s| s.wall.clone());
     let wall = match sam_wall {

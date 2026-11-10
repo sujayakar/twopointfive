@@ -36,10 +36,7 @@ fn fresh() -> crate::tactics::TState {
 /// `m.path = []; m.pathGoal = null; m.stallRef = null`: a fresh leg; a whole new path is a new serial, and the standoff's point is no longer his goal.
 fn fresh_leg(g: &mut Game, m: GuardId) {
     let o = &mut g.gd[m];
-    o.path = Vec::new();
-    o.path_serial = o.path_serial.wrapping_add(1);
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 

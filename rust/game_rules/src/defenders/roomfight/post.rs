@@ -153,9 +153,8 @@ pub fn loose_at(g: &mut Game, d: RoomfightDefId, at: V3) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
     crate::mind::raise(g, gd, 0.92, "roomfight");
     if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
-    crate::game::guard_set_path(g, gd, Vec::new());
     let man = &mut g.gd[gd];
-    man.path_goal = None; man.path_goal_orbit = false;
+    man.drop_path();
 }
 
 /// a man on a leg files his own boots, so the team's ears get them: `last`, when he last did

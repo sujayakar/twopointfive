@@ -151,9 +151,7 @@ fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "doorthrow");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, startle);
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         let weapon = g.gd[gd].weapon;
         g.fa[weapon].burst = None;

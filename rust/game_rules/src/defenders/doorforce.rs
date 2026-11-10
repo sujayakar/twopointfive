@@ -20,14 +20,6 @@ fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
     crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
 
-/// `gd.path = []; gd.pathGoal = null`: a whole write of his path (Guard.path_serial) and no goal, so none the standoff laid.
-fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
-}
-
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
     let now = g.time;
@@ -436,7 +428,7 @@ fn boots_it_or_leaves_it(g: &mut Game, gd: GuardId, b: &Belief, pos: V3, dt: f64
     }
     man!(g, gd).kick = Some(Kick { door: d, spot: spot.pos, yaw: spot.yaw, phase: KickPhase::Walk, t0: time, set_t: 0.0 });
     state!(g).kickers.set(d, gd);
-    clear_walk(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     let line = alloc::format!("{} goes to boot {}", g.gd[gd].callsign, g.dr[d].def.name);
     log(g, &line);
@@ -531,7 +523,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
     let s = state!(g);
     if s.kickers.get(d) == Some(&gd) { s.kickers.delete(d); }
     man!(g, gd).kick = None;
-    clear_walk(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if !believes {
         if let Some(b) = b { set_fix(g, gd, b.at); }
@@ -566,7 +558,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
             let k = man!(g, gd).kick.as_mut().unwrap();
             k.phase = KickPhase::Set;
             k.set_t = time;
-            clear_walk(g, gd);
+            g.gd[gd].drop_path();
         } else if arrived {
             return kick_end(g, gd, d, b, Some("no way to the spot"), false);
         }
@@ -693,7 +685,7 @@ mod tests {
         row.on = Some(Stand { door: d, ..Stand::default() });
         state_of(g).kickers.set(d, gd);
         g.gd[gd].path = vec![[1.0, 0.0, 1.0]];
-        crate::guards::guard_set_path_goal(g, gd, Some([1.0, 0.0, 1.0]));
+        g.gd[gd].set_path_goal(Some([1.0, 0.0, 1.0]));
         g.gd[gd].stall_ref = Some([1.0, 0.0, 1.0]);
         (gd, b)
     }
