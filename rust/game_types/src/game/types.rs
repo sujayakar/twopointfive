@@ -359,7 +359,7 @@ pub struct Game {
     #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
-    pub falls: crate::sim_fallshome::FallStore,
+    pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
@@ -1428,9 +1428,6 @@ pub struct Mods {
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_fallshome: crate::sim_fallshome::SimFallshomeMod,
     pub edge_look: crate::edge_look::EdgeLookMod,
     pub wallbreak: crate::wallbreak::WallbreakMod,
     pub furnblast: crate::furnblast::FurnblastMod,
