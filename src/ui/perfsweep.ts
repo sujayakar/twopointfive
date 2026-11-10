@@ -61,7 +61,7 @@ export const SWEEP_ROWS: SweepRow[] = [
   { id: 'secMinE', label: 'light cache: no shadow ray under 0.02 W/m²', set: { secMinE: 0.02 } },
   { id: 'held2', label: 'held-light rays 2', set: { heldRays: 2 } },
   { id: 'held0', label: 'held-light rays off', set: { heldRays: 0 } },
-  { id: 'meshNear', label: 'mesh shadows off', set: { meshShadows: false, meshShadowsNear: false } },
+  { id: 'meshNear', label: 'mesh shadows off (over a frozen world: the rays\' share alone, nobody\'s tree is made)', set: { meshShadows: false, meshShadowsNear: false } },
   { id: 'reflect', label: 'reflections off', set: { rtReflect: false } },
   { id: 'sharp', label: 'sharp direct off', set: { sharpDirect: false, sharpDecouple: false, gbaa: false } },
   { id: 'volK', label: 'beams and smoke: 2 lights a step', set: { volLightCap: 2 }, or: { label: 'beams and smoke: 4 lights a step', set: { volLightCap: 4 } } },   // (medium, low and very low run two already: there the row prices high's four)

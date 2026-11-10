@@ -421,7 +421,7 @@ export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {
 
 export interface SceneBuffers {
   frame: GPUBuffer; boxGeo: GPUBuffer; boxMat: GPUBuffer; gridCells: GPUBuffer; gridItems: GPUBuffer; sceneInfo: GPUBuffer; lights: GPUBuffer; smoke: GPUBuffer; smokeAtlasView: GPUTextureView; lightReach: GPUBuffer; linSamp: GPUSampler; capsules: GPUBuffer;
-  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 32-byte storage buffer of zeros while none is attached (a zero header is an empty tree); ignored when !meshBinding.enabled */
+  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 128-byte storage buffer of zeros while none is attached (zero headers are empty trees); ignored when !meshBinding.enabled */
   mesh: GPUBuffer;
   /** the smoke's page texture (smoke/smoke.ts; engine.ts has a 1³ stand-in until a solver is attached) */
   smokePage: GPUTextureView;
