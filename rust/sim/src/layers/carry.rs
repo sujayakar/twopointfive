@@ -21,7 +21,7 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> u32 {
         let (hand_r, hand_l) = (role(HAND_R), role(HAND_L));
         let (chest, pr0, pl0, rr0) = (fk.at(role(SPINE3)), fk.at(hand_r), fk.at(hand_l), fk.rot(hand_r));
         // the clip's bore axis as posed on this spine
-        let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), pr0));
+        let g0 = v3::normalize(v3::sub(fk.at(role(MIDDLE1_R)), pr0));
         // where the gun goes: sway (a slow figure of eight, millimetres) and the kick's pump
         let pump = if kick_t >= 0.0 { 0.05 * bump(kick_t, 0.15, 0.36, 0.5, 0.85) } else { 0.0 };
         let (fwd, up, side) = (st_fwd - pump, st_up + 0.004 * sin(t * 2.1) + 0.02 * pump, st_side + 0.005 * sin(t * 1.3 + 0.6));
@@ -30,11 +30,11 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> u32 {
         let turn = grip_turn(&g0, &rr0, &gd, &AY, &grip_up);
         let pr = [chest[0] + side, chest[1] + up, chest[2] + fwd];
         // the support wrist relative to the gun wrist, turned with the gun
-        let grip = q_rotate(&turn, &sub3(pl0, pr0));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &pr, Some(&[-0.12 - 0.6 * (1.0 - tuck), -1.0, -0.5]), 0.4 + 0.55 * tuck, Some(&q_mul(&turn, &rr0)), false);
+        let grip = quat::rotate(turn, v3::sub(pl0, pr0));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &pr, Some(&[-0.12 - 0.6 * (1.0 - tuck), -1.0, -0.5]), 0.4 + 0.55 * tuck, Some(&quat::mul(turn, rr0)), false);
         // (from where the gun hand actually got to: the hands must not part; the support wrist's rotation read as the solve left the bones)
-        let (pl, rl0) = (add3(fk.at(hand_r), grip), fk.rot(hand_l));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &pl, Some(&[0.2 + 0.6 * (1.0 - tuck), -1.0, -0.35]), 0.4 + 0.5 * tuck, Some(&q_mul(&turn, &rl0)), true);
+        let (pl, rl0) = (v3::add(fk.at(hand_r), grip), fk.rot(hand_l));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &pl, Some(&[0.2 + 0.6 * (1.0 - tuck), -1.0, -0.35]), 0.4 + 0.5 * tuck, Some(&quat::mul(turn, rl0)), true);
         RAN | RAN_ALL
     })
     .unwrap_or(0);
@@ -183,7 +183,7 @@ fn as_carried(an: &Anim, o: &mut LongArms) {
 fn clip_bore(fk: &mut Fk, hand_r: usize, o: &mut LongArms) {
     let (chest, pr0, rr0) = (fk.at(role(SPINE3)), fk.at(hand_r), fk.rot(hand_r));
     // the clip's bore as posed on this spine
-    let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), pr0));
+    let g0 = v3::normalize(v3::sub(fk.at(role(MIDDLE1_R)), pr0));
     *o = LongArms { chest, rr0, g0, ..*o };
 }
 
@@ -195,11 +195,11 @@ fn bore(ch: &[f64; LC_COUNT], o: &mut LongArms) {
     let pitch = clamp((ch[LC_PITCH] + 0.8 * sway * sin(t * 1.7 + 1.1) + mvs_climb) * DEGR + aim_pitch * (ch[LC_AIM_K] - 0.35 * aim), -1.35, 1.35);
     let cp = cos(pitch);
     let dd = [sin(yaw) * cp, sin(pitch), cos(yaw) * cp];
-    let rr = q_mul(&grip_turn(&g0, &rr0, &dd, &AY, &grip_up), &rr0);
+    let rr = quat::mul(grip_turn(&g0, &rr0, &dd, &AY, &grip_up), rr0);
     // the gun's own frame about that bore: y up out of the receiver, x to the figure's left
-    let flat = mad3(AY, dd, -dd[1]);
-    let yw = if len3(&flat) > 1e-4 { normalize(flat) } else { [cos(yaw), 0.0, -sin(yaw)] };
-    let xw = cross3(&yw, &dd);
+    let flat = v3::mad(AY, dd, -dd[1]);
+    let yw = if v3::len(flat) > 1e-4 { v3::normalize(flat) } else { [cos(yaw), 0.0, -sin(yaw)] };
+    let xw = v3::cross(yw, dd);
     *o = LongArms { sway, dd, rr, yw, xw, ..*o };
 }
 
@@ -282,9 +282,9 @@ fn swing(ch: &[f64; LC_COUNT], o: &mut LongArms) {
 /// The hand's point, back by the kick.
 fn hand_point(o: &mut LongArms) {
     let LongArms { mvs_back, chest, dd, off, .. } = *o;
-    let mut pr = add3(chest, off);
+    let mut pr = v3::add(chest, off);
     if mvs_back > 1e-5 {
-        pr = mad3(pr, dd, -mvs_back);
+        pr = v3::mad(pr, dd, -mvs_back);
     }
     *o = LongArms { pr, ..*o };
 }
@@ -311,25 +311,25 @@ fn solve(rig: &Rig, hand_r: usize, hand_l: usize, o: &LongArms, d: &mut [S], fk:
     let (up_r, fore_r, up_l, fore_l) = (role(UPPER_ARM_R), role(FOREARM_R), role(UPPER_ARM_L), role(FOREARM_L));
     two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&pole_r), pw, Some(&rr), false);
     // from where the trigger hand actually got to
-    let pl = add3(fk.at(hand_r), in_gun(o, &g_wrist));
+    let pl = v3::add(fk.at(hand_r), in_gun(o, &g_wrist));
     two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &pl, Some(&pole_l), pw, Some(&rl), true);
-    sub3(fk.at(hand_l), pl)
+    v3::sub(fk.at(hand_l), pl)
 }
 
 /// Out of the support arm's reach the gun comes back to where it can be held, at once, and is let out again over half a second.
 fn hold_within_reach(lg: &mut game_types::character::AnimLg, d: &mut [S], fk: &mut Fk, rig: &Rig, hand_r: usize, hand_l: usize, o: &LongArms) {
     let LongArms { dt, keep, pr, .. } = *o;
     let mut pull = [lg.pull[0], lg.pull[1], lg.pull[2]];
-    let m = solve(rig, hand_r, hand_l, o, d, fk, add3(pr, pull));
-    if len3(&m) > 5e-4 {
+    let m = solve(rig, hand_r, hand_l, o, d, fk, v3::add(pr, pull));
+    if v3::len(m) > 5e-4 {
         // still short with what is held: take up the rest now (capped), and pose there
         pull = [pull[0] + m[0], pull[1] + m[1], pull[2] + m[2]];
-        let l = len3(&pull);
+        let l = v3::len(pull);
         if l > LONG_PULL_MAX {
             let kk = LONG_PULL_MAX / l;
             pull = [pull[0] * kk, pull[1] * kk, pull[2] * kk];
         }
-        solve(rig, hand_r, hand_l, o, d, fk, add3(pr, pull));
+        solve(rig, hand_r, hand_l, o, d, fk, v3::add(pr, pull));
     } else if keep {
         // reached: let a little out for next frame
         let kk = exp(-2.0 * dt);
@@ -356,8 +356,8 @@ pub fn torch_up(g: usize, an: &Anim, e: f64) -> u32 {
         fk_run(rig, d, fk.rot, fk.pos);
         let (sh, live0, rot0) = (fk.at(role(UPPER_ARM_R)), fk.at(role(HAND_R)), fk.rot(role(HAND_R)));
         let wrist = [sh[0] - 0.07, sh[1] + 0.04, sh[2] + 0.22];
-        let r = nlerp(&rot0, &hand_rot(&fix_r, [0.0, 0.92, 0.38], [-1.0, 0.1, 0.0]), e);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &wrist, e), Some(&[-0.3, -1.0, 0.0]), e, Some(&r), false);
+        let r = quat::nlerp(rot0, hand_rot(&fix_r, [0.0, 0.92, 0.38], [-1.0, 0.1, 0.0]), e);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::lerp3(live0, wrist, e), Some(&[-0.3, -1.0, 0.0]), e, Some(&r), false);
     });
     ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
     if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {

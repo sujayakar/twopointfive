@@ -37,7 +37,7 @@ pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &K
             turn(d, rig, hd, q_pitch(-lean * 0.6));
         }
         if abs(sway) + abs(roll) > 1e-5 {
-            let q = |kk: f64| q_mul(&q_yaw(sway * kk), &q_roll(roll * kk));
+            let q = |kk: f64| quat::mul(q_yaw(sway * kk), q_roll(roll * kk));
             turn(d, rig, s2, q(0.45));
             turn(d, rig, s3, q(0.55));
             turn(d, rig, nk, q_yaw(-sway * 0.4));
@@ -48,11 +48,11 @@ pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &K
             turn(d, rig, hd, q_pitch(-chin * 0.6));
         }
         if rock > 1e-4 || sho > 1e-4 {
-            let q = |kk: f64| q_mul(&q_yaw(-sho * DEGR * w * kk), &q_pitch(-rock * DEGR * w * kk));
+            let q = |kk: f64| quat::mul(q_yaw(-sho * DEGR * w * kk), q_pitch(-rock * DEGR * w * kk));
             turn(d, rig, s2, q(0.4));
             turn(d, rig, s3, q(0.6));
             // the head keeps most of its line, and is jarred back off the stock
-            let hq = |kk: f64| q_mul(&q_yaw(sho * 0.6 * DEGR * w * kk), &q_pitch((rock * 0.6 - head) * DEGR * w * kk));
+            let hq = |kk: f64| quat::mul(q_yaw(sho * 0.6 * DEGR * w * kk), q_pitch((rock * 0.6 - head) * DEGR * w * kk));
             turn(d, rig, nk, hq(0.4));
             turn(d, rig, hd, hq(0.6));
         }
@@ -96,10 +96,10 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
                     // the twist about it off square, the share of it to take out
                     let ty = atan2(cr[0] * un[0] + cr[1] * un[1] + cr[2] * un[2], rf[0] * sp[0] + rf[1] * sp[1] + rf[2] * sp[2]) * hold * lv;
                     if abs(ty) > 1e-4 {
-                        turn(d, rig, s1, axis_angle(&un, -ty * 0.3));
-                        turn(d, rig, s2, axis_angle(&un, -ty * 0.35));
-                        turn(d, rig, s3, axis_angle(&un, -ty * 0.35));
-                        turn(d, rig, nk, axis_angle(&un, ty));
+                        turn(d, rig, s1, quat::axis_angle(un, -ty * 0.3));
+                        turn(d, rig, s2, quat::axis_angle(un, -ty * 0.35));
+                        turn(d, rig, s3, quat::axis_angle(un, -ty * 0.35));
+                        turn(d, rig, nk, quat::axis_angle(un, ty));
                     }
                 }
             }
@@ -129,8 +129,8 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
             turn(d, rig, hd, q_pitch(-lean * 0.6));
         }
         if abs(hy) + abs(hp) + abs(hr) > 1e-5 {
-            turn(d, rig, nk, q_mul(&q_yaw(hy * 0.4), &q_pitch(hp * 0.4)));
-            turn(d, rig, hd, q_mul(&q_roll(hr), &q_mul(&q_yaw(hy * 0.6), &q_pitch(hp * 0.6))));
+            turn(d, rig, nk, quat::mul(q_yaw(hy * 0.4), q_pitch(hp * 0.4)));
+            turn(d, rig, hd, quat::mul(q_roll(hr), quat::mul(q_yaw(hy * 0.6), q_pitch(hp * 0.6))));
         }
         ran
     })
@@ -219,8 +219,8 @@ pub fn stance_body(g: usize, an: &Anim, w: f64, speed: f64, stand: f64) -> u32 {
         turn(d, rig, s2, q_pitch(lean * 0.35));
         turn(d, rig, s3, q_pitch(lean * 0.2));
         let (hp, hy, unl) = (s_hp * DEGR * w, s_hy * DEGR * w, lean + drop * 40.0 * DEGR);
-        turn(d, rig, nk, q_mul(&q_yaw(hy * 0.4), &q_pitch(-unl * 0.4 + hp * 0.4)));
-        turn(d, rig, hd, q_mul(&q_yaw(hy * 0.6), &q_pitch(-unl * 0.6 + hp * 0.6)));
+        turn(d, rig, nk, quat::mul(q_yaw(hy * 0.4), q_pitch(-unl * 0.4 + hp * 0.4)));
+        turn(d, rig, hd, quat::mul(q_yaw(hy * 0.6), q_pitch(-unl * 0.6 + hp * 0.6)));
         if replant {
             fk.part(rig, d, list(FK_LEGS));
             two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.6, Some(&rl), false);
@@ -315,7 +315,7 @@ fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64) -> 
                 set_ch(d, i, 1, y);
                 set_ch(d, i, 2, z);
             } else {
-                let q = q_mul(&own_rot(d, i), &axis_angle(&[s[2], s[3], s[4]], s[5] * kk));
+                let q = quat::mul(own_rot(d, i), quat::axis_angle([s[2], s[3], s[4]], s[5] * kk));
                 set_own_rot(d, i, &q);
             }
         }
@@ -407,7 +407,7 @@ pub fn soft_knees(g: usize, at: usize, w: f64) -> u32 {
         let mut cur = false;
         for (thigh, shin, foot) in [(role(THIGH_L), role(SHIN_L), role(FOOT_L)), (role(THIGH_R), role(SHIN_R), role(FOOT_R))] {
             let (ph, pk, pa) = (fk.at(thigh), fk.at(shin), fk.at(foot));
-            let (l, dd) = (dist3(&ph, &pk) + dist3(&pk, &pa), dist3(&ph, &pa));
+            let (l, dd) = (v3::dist(ph, pk) + v3::dist(pk, pa), v3::dist(ph, pa));
             let r = dd / l;
             if r <= SOFT_KNEE.from {
                 continue;
@@ -559,7 +559,7 @@ pub fn toes_up(g: usize, an: &Anim, w: f64) -> u32 {
             if t[1] >= floor_y - 1e-4 {
                 continue;
             }
-            let dv = sub3(t, a);
+            let dv = v3::sub(t, a);
             let (l, dy) = (hypot3(dv[0], dv[1], dv[2]), floor_y - a[1]);
             if l < 1e-4 || abs(dy) >= l {
                 continue;
@@ -580,10 +580,10 @@ pub fn toes_up(g: usize, an: &Anim, w: f64) -> u32 {
             }
             let r = sqrt(l * l - dy * dy);
             let (to, il) = ([hx / hl * r, dy, hz / hl * r], 1.0 / l);
-            let q = slerp(&[0.0, 0.0, 0.0, 1.0], &from_to(&[dv[0] * il, dv[1] * il, dv[2] * il], &[to[0] * il, to[1] * il, to[2] * il]), clamp(w, 0.0, 1.0));
+            let q = quat::slerp([0.0, 0.0, 0.0, 1.0], quat::from_to([dv[0] * il, dv[1] * il, dv[2] * il], [to[0] * il, to[1] * il, to[2] * il]), clamp(w, 0.0, 1.0));
             let par = rig.parent[foot];
             let up = if par >= 0 { fk.rot(par as usize) } else { [0.0, 0.0, 0.0, 1.0] };
-            set_model_rot(d, foot, &q_mul(&q, &fk.rot(foot)), &up);
+            set_model_rot(d, foot, &quat::mul(q, fk.rot(foot)), &up);
         }
         RAN | RAN_ALL
     })
@@ -686,7 +686,7 @@ pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64) -> u32 {
                 fk_run(rig, d, fk.rot, fk.pos);
                 turn(d, rig, role(SPINE3), q_pitch((10.0 + 1.5 * br) * DEGR * s));
                 turn(d, rig, role(NECK), q_pitch(17.0 * DEGR * s));
-                turn(d, rig, role(HEAD), q_mul(&q_pitch((25.0 + br) * DEGR * s), &q_roll(8.0 * DEGR * s)));
+                turn(d, rig, role(HEAD), quat::mul(q_pitch((25.0 + br) * DEGR * s), q_roll(8.0 * DEGR * s)));
                 RAN | RAN_ALL
             })
             .unwrap_or(0);
