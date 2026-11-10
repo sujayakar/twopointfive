@@ -136,7 +136,10 @@ fn tileRecIndex(t: vec2u, dims: vec2u) -> u32 { let tilesX = (dims.x + 7u) >> 3u
 fn tileDark(bel: vec2u, s: u32) -> bool { return ((bel[s >> 5u] >> (s & 31u)) & 1u) != 0u; }
 
 fn fwdSlot(p: u32) -> u32 { return (ru.fwd[p >> 4u][(p >> 2u) & 3u] >> ((p & 3u) * 8u)) & 255u; }
-fn invSlot(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
+fn invByte(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
+/** last frame's slot of the light now in slot s, or 255; and whether its record is last frame's word for word (what it gives a point now is what it gave it then) */
+fn invSlot(s: u32) -> u32 { let b = invByte(s); return select(b & 63u, 255u, b == 255u); }
+fn sameLight(s: u32) -> bool { let b = invByte(s); return (TRY & 1u) != 0u && b != 255u && (b & 64u) != 0u; }
 
 // ---- reservoir texel: 64 bits per class + a 12-bit view-depth signature split over the two ----
 //   word A: slot 6 | M 5 | Vq 3 | iu 4 | iv 4 | hint 4 | depth6 6      word B: W f16 | p̂ log-12 | 3 darkSlot (low 3 in class 0's word, high 3 in class 1's) | valid 1 (bit 31)
@@ -444,8 +447,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         // a cone that swept off the pixel, a dimmed panel let go at once; a light that did not reach here last frame (the cone just arrived) keeps its confidence
         // (symmetric: a light that JUMPED up — a fluorescent restrike's strokes go 5 % ↔ 100 % frame to frame — is as badly represented by the history as one that dropped;
         // one-sided, the up-strokes came through at half weight for a frame)
-        let lp = ru.prevLights[rSlot(twA)];
-        let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok);
+        let as_was = sameLight(curT[c]);   // (then its target here is last frame's, and its power)
+        var lp: Light; if (as_was) { pPT[c] = pT[c]; } else { lp = ru.prevLights[rSlot(twA)]; let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok); }
         if (pPT[c] > 0.0) {
           // The ratio that cuts confidence is the GEOMETRIC one — each target ÷ its light's power at the time (common.wgsl lightPower: the luminance of the uploaded colour = colour × intensity):
           // a light that only dimmed, brightened or changed hue (a fluorescent's dropout strokes every other frame, a restrike's 5 % ↔ 100 %, the lightning's decay)
@@ -454,7 +457,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
           // tube. A cone that swept off the pixel or a lamp that moved still lets go as before.
           var r = pT[c] / pPT[c];
-          { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
+          if (!as_was) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
@@ -618,7 +621,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         let slot = select(pickF[c], pickG[c], j == 1u); let pj = select(pF[c], pG[c], j == 1u);
         // its target LAST frame at this point: the same light as it was then (new this frame → 0 → it enters at full weight)
         var pPrev = 0.0;
-        if (M_t > 0.0) { let ps = invSlot(slot); if (ps != 255u) { let evp = evalLightDirect(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
+        if (M_t > 0.0) { let ps = invSlot(slot); if (sameLight(slot)) { pPrev = pj; } else if (ps != 255u) { let evp = evalLightDirect(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
         let wj = pj / (M_t * pPrev + Mf * pj) * Vj * Wf[c];        // m_j × p̂_c(x_j)·W_j (= Wf exactly: W_j = 1 / p(x_j) = Wf / p̂ over the set the draw ranged over) × V
         if (wj > 0.0) { wsum += wj; col += hueOf(slot) * wj; if (tileDark(bel, slot) || slot + 1u == darkSlot) { wOut += wj; colOut += hueOf(slot) * wj; } }   // (HUE SPLIT: a fresh sample of its own darkSlot light / a light the tile calls dark)
         if (rnd() * wsum < wj) { ySlot = slot; yUv = select(uvF[c], uvG[c], j == 1u); yV = Vj; yP = pj; }
@@ -663,7 +666,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
                 if (cs != 255u && qW > 0.0 && qPh > 0.0) {
                   // p̂_c(x_i): the neighbour's light at OUR point now; p̂_i(y_c): our light at ITS point (its stored p̂ is p̂_i(x_i))
                   var tq: array<f32, 2>;   // (both through ONE targetAt call, p̂_c(x_i) first: DXC — Chrome's compiler on Windows — inlines each call it meets)
-                  for (var q = 0u; q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
+                  let known = select(select(select(0.0, pG[c], cs == pickG[c]), pF[c], cs == pickF[c]), pT[c], cs == curT[c] && pT[c] > 0.0);   // (its target here is one this pixel has worked out: the same light at the same point)
+                  if ((TRY & 8u) != 0u) { tq[0] = known; }
+                  for (var q = select(0u, 1u, (TRY & 8u) != 0u && known > 0.0); q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
                   let pcx = tq[0]; let piy = tq[1];
                   let Mi = min(rM(qa), mCap);
                   mc += (Mck * yP) / (Mi * piy + Mck * yP + 1e-12) / kf;

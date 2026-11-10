@@ -44,12 +44,18 @@ struct VOut { @builtin(position) pos: vec4f, @location(0) uv: vec2f };
   return o;
 }
 
-fn linearDepth(d: f32, pix: vec2f) -> f32 { return distance(worldFromDepth(pix, d), frame.camPos); }
+fn linearDepth(d: f32, pix: vec2f) -> f32 {
+  if ((TRY & 32u) != 0u) {
+    let n = pix * frame.invScreen; let x = n.x * 2.0 - 1.0; let y = 1.0 - n.y * 2.0; let M = frame.invViewProj;
+    let w = M[2].w * d + M[3].w; let F = (M[3].xyz - frame.camPos * M[3].w); return length(M[0].xyz * x + M[1].xyz * y + F) / w;
+  }
+  return distance(worldFromDepth(pix, d), frame.camPos);
+}
 
 /// a guide's normal: the g-buffer's — on the look page (look.wgsl) the box's own FACE where the look tilted it, so every weight below is the one it always was
 fn geoN(p: vec2i) -> vec3f {
   let n = textureLoad(gNormal, p, 0).xyz * 2.0 - 1.0;
-  if (textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK'S OWN LINE
+  if ((TRY & 16u) == 0u && textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK'S OWN LINE
   return n;
 }
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
@@ -343,9 +349,9 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
 }
 fn paneLight(X: vec3f, n: vec3f) -> vec3f {
   var best = vec3f(0.0); var bestW = 0.0; var bestL = vec3f(0.0); var bestD = 0.0; var bestI = -1; var rest = vec3f(0.0);
-  for (var i = 0u; i < frame.numLights; i++) {
+  var at = lightsAt(X);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
-    if (!lightReaches(i, X)) { continue; }
     let ev = evalLight(li, X, vec3f(0.0));
     if (!ev.ok) { continue; }
     let E = ev.E * abs(dot(n, ev.L));
@@ -396,8 +402,8 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
   let NdotV = clamp(dot(Ns, V), 0.05, 1.0);
   let a = rough * rough;
   var sumS = vec3f(0.0); var sumB = vec3f(0.0); var UdS = vec3f(0.0); var UdB = vec3f(0.0);
-  for (var i = 0u; i < frame.numLights; i++) {
-    if (!lightReaches(i, P)) { continue; }
+  var at = lightsAt(P);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
     let ev = evalLight(li, P, vec3f(0.0));                 // square-on irradiance (no receiver cosine)
     if (!ev.ok) { continue; }
@@ -492,12 +498,8 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   }
   if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }   // no light of either class reaches the stencil (deep shade, under a roof): vis below is exactly 0 — the loop is not walked
   var U = vec2f(0.0); var Q = vec2f(0.0); var gS = vec3f(0.0); var gB = vec3f(0.0);
-  for (var i = 0u; i < min(frame.numLights, 64u); i++) {
-    // THE LAMP'S OWN RANGE FIRST: evalLight's first exit (common.wgsl evalLightRaw, `dist > li.range`), in its own arithmetic and from the lamp's own three fields,
-    // before the reach table is read. Most of a level's lamps are out of range of a snow pixel, and the table's read was what a lamp cost here that gave nothing
-    // (timed 11-05). The same lamps pass as before: one this line drops, evalLight was about to
-    if ((lights[i].kind & 255u) != 2u) { let dq = lights[i].pos - P; if (sqrt(dot(dq, dq)) > lights[i].range) { continue; } }   // (255: lightKind's own mask; 2 = directional, which has no range)
-    if (!lightReaches(i, P)) { continue; }
+  var at = lightsAt(P);   // (most of a level's lamps are out of range of a snow pixel: timed 11-05)
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
     let ev = evalLight(li, P, vec3f(0.0));                 // square-on irradiance (no receiver cosine)
     if (!ev.ok) { continue; }

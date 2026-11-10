@@ -282,26 +282,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let A = ro + rd * t0; let B = ro + rd * t1;
         let onMask = ivM[ii];                                                             // the domains a point ON this stretch can lie in (exact) …
         let nearMask = smokeDomainsNear(min(A, B), max(A, B), 0.75);                     // … and those a self-shadow tap (≤ 0.7 m off it toward a light) can
-        // shortlist for THIS stretch, strongest bound first. Exact culls: out of range of the whole stretch, too dim to reach the 0.03 floor anywhere on it (the
-        // bound the march always used, from the light's closest approach to [t0, t1]), a spot whose cone the stretch never enters, a panel the stretch lies
-        // entirely behind — none of those can pass evalLight at any step. Then the 16 largest bounds, sorted (insertion; ≤ 16 entries, once per stretch).
-        var cand: array<u32, 16>; var cb: array<f32, 16>; var nc = 0u;
-        for (var i = 0u; i < frame.numLights; i++) {
-          let li = lights[i]; let mc = max3(li.color); let kind = lightKind(li);
-          var bound = mc;
-          if (kind != 2u) {
-            let tc = clamp(dot(li.pos - ro, rd), t0, t1); let dv = ro + rd * tc - li.pos; let d2 = dot(dv, dv);
-            if (d2 > li.range * li.range) { continue; }
-            bound = mc / max(d2, li.radius * li.radius);
-            if (bound < 0.03) { continue; }
-            if (kind == 1u && li.cosOuter > 0.0) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); if (max(ci.x, t0) >= min(ci.y, t1)) { continue; } }   // (coneInterval squares the cone test: exact for half-angles under 90° — every spot there is — so wider ones are simply not culled)
-            else if (kind == 3u) { if (dot(A - li.pos, li.dir) <= 0.0 && dot(B - li.pos, li.dir) <= 0.0) { continue; } }
-          } else if (bound < 0.03) { continue; }
-          if (nc == 16u && bound <= cb[15]) { continue; }
-          var p = min(nc, 15u);
-          while (p > 0u && cb[p - 1u] < bound) { cb[p] = cb[p - 1u]; cand[p] = cand[p - 1u]; p--; }
-          cb[p] = bound; cand[p] = i; nc = min(nc + 1u, 16u);
-        }
+        var cand: array<u32, 16>; var cb: array<f32, 16>; var nc = 0u; var listed = false;   // the stretch's shortlist, made at the first step with smoke in it: most stretches of a domain hold none
         let span = t1 - t0;
         if (span <= 0.0 || rayBudget == 0u) { continue; }                                        // (a grazing hit: nothing to walk; or the ray's steps are spent — what is left lies behind the smoke already walked)
         let stepVox = select(1.5, f32(frame.volCfg.z) * 0.1, frame.volCfg.z > 0u);   // march step in voxels of the stretch's own domain (1.5 as ever; the cheaper tiers walk coarser: volCfg.z tenths)
@@ -321,6 +302,28 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           if ((s % every) == 0u) { validBits = 0u; }                                             // every light's shadow answer is at most `every` steps old, lit steps or not
           let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);
           if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; t += f32(hop + 1u) * dt; continue; } }
+          if (!listed && (dens > 0.002 || (TRY & 4u) == 0u)) {
+            listed = true;
+            // shortlist for THIS stretch, strongest bound first. Exact culls: out of range of the whole stretch, too dim to reach the 0.03 floor anywhere on it (the
+            // bound the march always used, from the light's closest approach to [t0, t1]), a spot whose cone the stretch never enters, a panel the stretch lies
+            // entirely behind — none of those can pass evalLight at any step. Then the 16 largest bounds, sorted (insertion; ≤ 16 entries, once per stretch).
+            for (var i = 0u; i < frame.numLights; i++) {
+              let li = lights[i]; let mc = max3(li.color); let kind = lightKind(li);
+              var bound = mc;
+              if (kind != 2u) {
+                let tc = clamp(dot(li.pos - ro, rd), t0, t1); let dv = ro + rd * tc - li.pos; let d2 = dot(dv, dv);
+                if (d2 > li.range * li.range) { continue; }
+                bound = mc / max(d2, li.radius * li.radius);
+                if (bound < 0.03) { continue; }
+                if (kind == 1u && li.cosOuter > 0.0) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); if (max(ci.x, t0) >= min(ci.y, t1)) { continue; } }   // (coneInterval squares the cone test: exact for half-angles under 90° — every spot there is — so wider ones are simply not culled)
+                else if (kind == 3u) { if (dot(A - li.pos, li.dir) <= 0.0 && dot(B - li.pos, li.dir) <= 0.0) { continue; } }
+              } else if (bound < 0.03) { continue; }
+              if (nc == 16u && bound <= cb[15]) { continue; }
+              var p = min(nc, 15u);
+              while (p > 0u && cb[p - 1u] < bound) { cb[p] = cb[p - 1u]; cand[p] = cand[p - 1u]; p--; }
+              cb[p] = bound; cand[p] = i; nc = min(nc + 1u, 16u);
+            }
+          }
           if (dens > 0.002) {
             let sigT = dens * 6.0;
             let sigS = sigT * 0.92;
@@ -424,10 +427,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       let i = bI[q]; if (i < 32u) { selLo |= 1u << i; } else { selHi |= 1u << (i - 32u); }
       bN[q] = clamp(u32(1.5 * f32(frame.volSteps) * bS[q] / max(sumS, 1e-9) + 0.5), 4u, frame.volSteps);
     }
-    for (var i = 0u; i < frame.numLights; i++) {
-      if (((select(selHi, selLo, i < 32u) >> (i & 31u)) & 1u) == 0u) { continue; }   // not among this ray's K
+    var sel = vec2u(selLo, selHi);   // this ray's K, and the sun
+    for (var i = nextLight(&sel); i < 64u; i = nextLight(&sel)) {
       let li = lights[i];
-      if (li.volumetric <= 0.0) { continue; }
       // ONE MARCH for the sun and for a lamp (the compile: DXC — Chrome's compiler on Windows — inlines each call it meets; the two marches were two copies of the shadow
       // ray, the smoke on it and the haze): set up per kind, then the same steps, statement for statement as each was.
       let dirL = lightKind(li) == 2u;
