@@ -4,12 +4,12 @@ import type { V3, Rot } from '../math';
 
 /** a level a ray may meet: the most it stands off the finest (metres at scale 1), how many triangles, and how much its normals no longer say (mean of 1 − cos) */
 export interface Level { error: number; /** the same as it is seen, by which the raster picks */ seen: number; triangles: number; spread: number; root: number }
-export interface Packed { header: number; levels: Level[]; clusters: number; triangles: number; ball: Ball; mn: V3; mx: V3; depth: number }
+export interface Packed { /** how deep the deepest of its trees is */ stack: number; header: number; levels: Level[]; clusters: number; triangles: number; ball: Ball; mn: V3; mx: V3; depth: number }
 /** one mesh somewhere in an object: child = scale⁻¹ · rotᵀ · (object − at) */
 export interface Child { mesh: Packed; at: V3; rot: Rot; scale: number; tint: V3 }
 /** an object: levels fine to coarse, each a list of children. Most have one level of one child; a floor's are its pebbles, and their relief as one mesh */
 export interface ObjectLevel { error: number; children: Child[] }
-export interface PackedObject { cls: number; row: number; levels: ObjectLevel[]; mn: V3; mx: V3; most: number }
+export interface PackedObject { /** what a walk of it may have to remember */ stack: number; cls: number; row: number; levels: ObjectLevel[]; mn: V3; mx: V3; most: number }
 
 /** rows of an entry; how wide the picking tree is; how many levels rays get; triangles in a leaf of their trees */
 /** children an object may have: eleven bits where picks are packed (meshpick.wgsl, first hit) */
@@ -59,6 +59,7 @@ function lay(s: Store, node: TreeNode, kind: string, what: (first: number, count
   return s.base + at;
 }
 /** so many triangles, or children, from the first on (a node's own row is told from it by its top bit) */
+const deep = (n: TreeNode): number => n.a && n.b ? 1 + Math.max(deep(n.a), deep(n.b)) : 0;
 const leaf = (first: number, count: number) => (0x80000000 | (first << 4) | count) >>> 0;
 
 /** a whole mesh: vertices, triangles, what the raster picks clusters by, and a tree for each level a ray may ask for */
@@ -67,13 +68,13 @@ export function packMesh(s: Store, d: Dag): Packed {
   for (const c of d.clusters) for (const v of c.tri) for (let k = 0; k < 3; k++) { const p = P.pos[v * 3 + k]!; if (p < mn[k]!) mn[k] = p; if (p > mx[k]!) mx[k] = p; }
   const st = mn.map((v, k) => Math.max(1e-9, (mx[k]! - v) / 65535)) as V3, header = s.take(4 + RATIOS, 'headers'), q = (v: number, k: number) => Math.round((P.pos[v * 3 + k]! - mn[k]!) / st[k]!), at = (v: number, k: number) => mn[k]! + q(v, k) * st[k]!;
   // ---- each cluster: its triangles in the order of a small tree over them, its vertices once each (triangle i begins with a vertex that begins no other, so that one number tells a triangle)
-  const n = d.clusters.length, rec = s.take(n, 'clusters'), idx = s.take(n * CLUSTER / 4, 'triangles'), sub: number[] = [], subBox: Float64Array[] = [], cone: Float64Array[] = [];
+  const n = d.clusters.length, rec = s.take(n, 'clusters'), idx = s.take(n * CLUSTER / 4, 'triangles'), sub: number[] = []; let under = 0, over = 0; const subBox: Float64Array[] = [], cone: Float64Array[] = [];
   const local = new Int32Array(P.n).fill(-1), vx = new Float64Array(256), vy = new Float64Array(256), vz = new Float64Array(256), uses = new Int32Array(256), begins = new Int32Array(256), of = new Int32Array(256), L = new Int32Array(CLUSTER * 3), boxes = new Float64Array(CLUSTER * 6), fn = new Float64Array(CLUSTER * 3);
   d.clusters.forEach((c, ci) => {
     const m = c.tri.length / 3; let nv = 0;
     for (let i = 0; i < m * 3; i++) { const g = c.tri[i]!; let v = local[g]!; if (v < 0) { v = local[g] = nv++; of[v] = g; uses[v] = 0; begins[v] = -1; vx[v] = at(g, 0); vy[v] = at(g, 1); vz[v] = at(g, 2); } L[i] = v; uses[v]!++; }
     for (let t = 0; t < m; t++) { const i = L[t * 3]!, j = L[t * 3 + 1]!, k = L[t * 3 + 2]!, o = t * 6; boxes[o] = Math.min(vx[i]!, vx[j]!, vx[k]!) - st[0] * 0.01; boxes[o + 1] = Math.min(vy[i]!, vy[j]!, vy[k]!) - st[1] * 0.01; boxes[o + 2] = Math.min(vz[i]!, vz[j]!, vz[k]!) - st[2] * 0.01; boxes[o + 3] = Math.max(vx[i]!, vx[j]!, vx[k]!) + st[0] * 0.01; boxes[o + 4] = Math.max(vy[i]!, vy[j]!, vy[k]!) + st[1] * 0.01; boxes[o + 5] = Math.max(vz[i]!, vz[j]!, vz[k]!) + st[2] * 0.01; }
-    const tr = tree(boxes, m, LEAF); subBox.push(tr.root.box); sub.push(lay(s, tr.root, 'ray trees', (f, k) => leaf(ci * CLUSTER + f, k)));
+    const tr = tree(boxes, m, LEAF); subBox.push(tr.root.box); under = Math.max(under, deep(tr.root)); sub.push(lay(s, tr.root, 'ray trees', (f, k) => leaf(ci * CLUSTER + f, k)));
     // who begins which triangle: greedily, the vertex with the fewest triangles left. Those that begin one come first, in the triangles' order; a triangle left without gets a copy
     const list: number[] = [], first = new Uint8Array(m), slot = new Int32Array(nv).fill(-1);
     for (let t = 0; t < m; t++) { const q = tr.order[t]! * 3; let best = -1, least = 1e9; for (let k = 0; k < 3; k++) { const v = L[q + k]!; if (begins[v]! < 0 && uses[v]! < least) { least = uses[v]!; best = k; } } for (let k = 0; k < 3; k++) uses[L[q + k]!]!--; if (best >= 0) { begins[L[q + best]!] = t; slot[L[q + best]!] = t; } else best = 0; first[t] = best; list.push(L[q + best]!); }
@@ -106,17 +107,17 @@ export function packMesh(s: Store, d: Dag): Packed {
   const index = new Map(d.clusters.map((c, i) => [c, i])), levels: Level[] = [];
   for (let k = 0; k < RATIOS; k++) {
     const e = k === 0 ? 0 : errorFor(d, d.triangles / 2 ** k); const cs = cutAt(d, e), tris = cs.reduce((a, c) => a + c.tri.length / 3, 0); if (k > 0 && tris > levels[levels.length - 1]!.triangles * 0.8) continue;
-    const at = cs.map(c => index.get(c)!), boxes = new Float64Array(cs.length * 6); at.forEach((c, i) => boxes.set(subBox[c]!, i * 6)); const tr = tree(boxes, cs.length, 1), root = lay(s, tr.root, 'ray trees', f => sub[at[tr.order[f]!]!]!);
+    const at = cs.map(c => index.get(c)!), boxes = new Float64Array(cs.length * 6); at.forEach((c, i) => boxes.set(subBox[c]!, i * 6)); const tr = tree(boxes, cs.length, 1); over = Math.max(over, deep(tr.root)); const root = lay(s, tr.root, 'ray trees', f => sub[at[tr.order[f]!]!]!);
     let sp = 0, sn = 0; for (const c of cs) for (const v of c.tri) { sp += P.spread[v]!; sn++; }
     levels.push({ error: Math.max(...cs.map(c => c.apart)), seen: e, triangles: tris, spread: sp / sn, root });
   }
   const h = header * 4, whole = around(d.clusters.filter(c => c.level === 0).map(c => c.bound)); s.f.set(mn, h); s.u[h + 3] = levels.length; s.f.set(st, h + 4); s.u[h + 7] = s.base + rec; s.u[h + 8] = s.base + idx; s.u[h + 9] = s.base + top; s.u[h + 10] = tops.length; s.u[h + 11] = n; s.f.set([whole.x, whole.y, whole.z, whole.r], h + 12);
   levels.forEach((l, i) => { s.f[h + 16 + i * 4] = l.error; s.u[h + 17 + i * 4] = l.root; s.f[h + 18 + i * 4] = l.seen; s.f[h + 19 + i * 4] = l.spread; });
-  return { header: s.base + header, levels, clusters: n, triangles: d.triangles, ball: whole, mn, mx, depth: deepest };
+  return { stack: under + over, header: s.base + header, levels, clusters: n, triangles: d.triangles, ball: whole, mn, mx, depth: deepest };
 }
 /** an object: its children's rows, a tree over each level's, and its header */
 export function packObject(s: Store, levels: ObjectLevel[], /** what its light is measured with (wgsl/mesh.wgsl, meshKind) */ cls = 0, /** the width from which a ray meets cells in its place (0: never) */ gone = 0): PackedObject {
-  const header = s.take(3 + levels.length, 'objects'), mn: V3 = [1e30, 1e30, 1e30], mx: V3 = [-1e30, -1e30, -1e30]; let bits = 7, most = 0, start = 0; const total = levels.reduce((a, l) => a + l.children.length, 0), kids = s.take(total * 4, 'children');
+  const header = s.take(3 + levels.length, 'objects'), mn: V3 = [1e30, 1e30, 1e30], mx: V3 = [-1e30, -1e30, -1e30]; let bits = 7, most = 0, start = 0, stack = 0; const total = levels.reduce((a, l) => a + l.children.length, 0), kids = s.take(total * 4, 'children');
   for (const l of levels) for (const c of l.children) while ((1 << (bits - 7)) < c.mesh.clusters) bits++;
   levels.forEach((l, li) => {
     const n = l.children.length, boxes = new Float64Array(n * 6);
@@ -126,9 +127,9 @@ export function packObject(s: Store, levels: ObjectLevel[], /** what its light i
       for (let a = 0; a < 3; a++) { let lo = c.at[a]!, hi = c.at[a]!; for (let b = 0; b < 3; b++) { const m = c.rot[b]![a]! * c.scale, p = m * c.mesh.mn[b]!, r = m * c.mesh.mx[b]!; lo += Math.min(p, r); hi += Math.max(p, r); } boxes[i * 6 + a] = lo; boxes[i * 6 + 3 + a] = hi; if (lo < mn[a]!) mn[a] = lo; if (hi > mx[a]!) mx[a] = hi; }
     });
     // (leaves name children by where they lie: laid again in the tree's order)
-    const tr = tree(boxes, n, 2), was = s.u.slice((kids + start * 4) * 4, (kids + (start + n) * 4) * 4); tr.order.forEach((src, i) => s.u.set(was.subarray(src * 16, src * 16 + 16), (kids + (start + i) * 4) * 4)); const first = start, root = lay(s, tr.root, 'ray trees', (f, k) => leaf(first + f, k));
+    const tr = tree(boxes, n, 2), was = s.u.slice((kids + start * 4) * 4, (kids + (start + n) * 4) * 4); tr.order.forEach((src, i) => s.u.set(was.subarray(src * 16, src * 16 + 16), (kids + (start + i) * 4) * 4)); const first = start, root = lay(s, tr.root, 'ray trees', (f, k) => leaf(first + f, k)); stack = Math.max(stack, deep(tr.root) + 2 + Math.max(...l.children.map(c => c.mesh.stack)));
     const h = (header + 3 + li) * 4; s.f[h] = l.error; s.u[h + 1] = root; s.u[h + 2] = first; s.u[h + 3] = n; start += n; most = Math.max(most, n);
   });
   const h = header * 4; s.u[h] = levels.length; s.u[h + 1] = bits; s.u[h + 2] = s.base + kids; s.u[h + 3] = total; s.f[h + 8] = gone; s.u[h + 9] = cls; s.f.set([(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2], h + 4);
-  if (total > CHILDREN || total > 1 << (31 - bits)) throw new Error('too many children'); return { cls, row: s.base + header, levels, mn, mx, most };
+  if (total > CHILDREN || total > 1 << (31 - bits)) throw new Error('too many children'); return { stack, cls, row: s.base + header, levels, mn, mx, most };
 }

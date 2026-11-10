@@ -1,7 +1,7 @@
 // WHAT A LEVEL LOST OF ITS SHAPE, AS LIGHT. The same looks at the finest mesh, lit and hidden as it is, and at what is drawn in its place for pixels so wide, lit by rays as wide as the picture's: fifteen suns
 // (five heights, three ways round), one ray to all round, and what that ray lands on sends of each sun. Sums go out; what one is of the other is the table (mesh/lost.ts).
 // Twice: the second time what a wide ray lands on sends what the first found, as it will.
-struct LostK { tau: f32, rays: f32, kinds: u32, round: u32, pad: vec4u, at: array<vec4u, 16> };
+struct LostK { tau: f32, rays: f32, kinds: u32, round: u32, pad: vec4u, at: array<vec4u, 40> };
 const NEAR = 0.7;                                                   // farther than this things are somebody else's shade
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) li: u32) {
   let c = g.x; let up = c % LOST_UP; let pi = (c / LOST_UP) % LOST_PX; let kind = c / (LOST_UP * LOST_PX); let px = 0.00025 * exp2(f32(pi)); let lu = lostK.at[kind * 2u]; let hu = lostK.at[kind * 2u + 1u]; let lo = asF(lu); let hi = asF(hu); let level = lu.w; let cls = hu.w;
@@ -9,7 +9,7 @@ const NEAR = 0.7;                                                   // farther t
   for (var s = 0u; s < 4u; s++) {
     rngState = pcg(li + 64u * (s + 4u * (lostK.round + g.y + 64u * c))); let r3 = vec3f(rnd(), rnd(), rnd()); let turn = rnd() * 6.2832; let sy = array<f32, 3>(0.342, 0.707, 0.966)[up]; let V = vec3f(cos(turn) * sqrt(1.0 - sy * sy), sy, sin(turn) * sqrt(1.0 - sy * sy)); let ro = mix(lo.xyz, hi.xyz, r3) + V * 4.0; let seed = rngState;
     for (var side = 0u; side < 2u; side++) {
-      let fine = side == 0u; rngState = seed; foot(0.0, 0.0); meshFoot = 0.0; meshError = select(lostK.tau * px, 0.0, fine); meshObject = select(level, 0u, fine); meshDrawn = !fine; let h = nearest(ro, -V, 1e-3, 30.0, 0u, 1e9); meshObject = 0u; meshDrawn = false; meshError = 0.0; if (h.piece == NOTHING) { continue; } let mine = (pieces[h.piece].flags & MESH) != 0u && mrowU(pieces[h.piece].planes + 2u).y == cls; if (!mine && cls != 0u) { continue; }      /* (the ground that shows between stones is part of their floor) */
+      let fine = side == 0u; rngState = seed; foot(0.0, 0.0); meshFoot = 0.0; meshError = select(lostK.tau * px, 0.0, fine); meshObject = select(level, 0u, fine); meshDrawn = !fine; let h = nearest(ro, -V, 1e-3, 30.0, 0u, 1e9); meshObject = 0u; meshDrawn = false; meshError = 0.0; if (h.piece == NOTHING) { continue; } let mine = isMesh(pieces[h.piece].flags) && mrowU(pieces[h.piece].planes + 2u).y == cls; if (!mine && cls != 0u) { continue; }      /* (the ground that shows between stones is part of their floor) */
       F[32u + side] += 1.0;
       var q = surfaceAt(ro, -V, h, px); if (dot(q.n, V) < 0.03) { q.n = normalize(q.n + V * (0.05 - dot(q.n, V))); } let x = select(ro - V * h.t, q.x, fine); let m = lum(q.albedo) / PI; meshFoot = select(lostK.rays, 0.0, fine);
       for (var k = 0u; k < 15u; k++) {

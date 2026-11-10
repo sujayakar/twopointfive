@@ -18,6 +18,13 @@ export function ruled(s: number, o: { cells?: boolean } = {}) {
 }
 function swap(code: string, a: string, b: string) { if (!code.includes(a)) throw new Error('the reference has no ' + a); return code.replace(a, () => b); }
 export const rulePath = (name: string, edit: (c: string) => string): Method => { const m = pathTracer({ bounces: 40, name, edit }), was = m.stages; m.stages = function (lab: Lab) { return was.call(this, lab).map(s => s.name === 'reference' ? { ...s, dice: true } : s); }; return m; };
+/** from the second surface on, every surface is as the kept light takes it: one even matte that sends back all it returns (or only its matte's share, or only without its bumps) */
+const evenly = (how: 'all' | 'matte' | 'flat') => (code: string) => {
+  let c = swap(code, 'let glossy = s.rough < 0.25;', how === 'flat' ? 'if (depth > 0u && !water) { s.n = s.ng; } let glossy = s.rough < 0.25;' : `lamb = depth > 0u && !water && !any(s.through > vec3f(0.0)); if (lamb) { let r = ${how === 'all' ? 'returnsAll(s)' : 'matteOf(s) * matteMean(s.kind, s.albedo)'}; s.albedo = r; s.metal = 0.0; s.f0 = 0.0; s.rough = 1.0; s.kind = 0u; s.n = s.ng; V = s.n; } let glossy = s.rough < 0.25;`);
+  if (how !== 'flat') { c = c.replaceAll('fresnel(coatF0(s), ', 'fres(s, ').replace('if (q == 0u || !glossy) { f += coatOf', 'if ((q == 0u || !glossy) && !lamb) { f += coatOf'); c = swap(c, '0.08, 0.92), 1.0, wm < 1e-4);', '0.08, 0.92), select(1.0, 0.0, lamb), wm < 1e-4 || lamb);'); }
+  return swap(c, '/** lamps at a surface:', 'var<private> lamb = false; fn fres(s: Surf, c: f32) -> vec3f { return select(fresnel(coatF0(s), c), vec3f(0.0), lamb); }\nfn returnsAll(s: Surf) -> vec3f { let f = coatF0(s); let r = s.rough; let a = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(0.0476 * exp(-3.55 * r * r)); let lf = lum(f); return matteOf(s) * matteMean(s.kind, s.albedo) * (1.0 - lf - (1.0 - lf) / 21.0) + a; }\n/** lamps at a surface:');
+};
 export const ruleMethods: Record<string, () => Method> = {
+  ...Object.fromEntries((['all', 'matte', 'flat'] as const).map(h => [`even${h}ref`, () => rulePath(`even${h}ref`, evenly(h))])),
   ...Object.fromEntries([1, 0.5, 0.25, 0.125, 0.0625].flatMap(s => [[`rule${s}ref`, () => rulePath(`rule${s}ref`, ruled(s))], [`gone${s}ref`, () => rulePath(`gone${s}ref`, ruled(s, { cells: false }))]])),
 };
