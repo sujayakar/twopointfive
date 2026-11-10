@@ -289,8 +289,8 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
     for own in [true, false] {
         let mut i = 0;
         while i < seat.orders.owners.len() {
-            if nightbreach_owns(g, gd) == own {
-                if let Some(s) = nightbreach_status(g, gd) {
+            if crate::mission::has(g, gd) == own {
+                if let Some(s) = crate::mission::doing(g, gd) {
                     if !s.is_empty() { return s; }
                 }
             }
@@ -389,7 +389,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
     while i < seat.orders.owners.len() {
-        if nightbreach_owns(g, gd) { return None; }
+        if crate::mission::has(g, gd) { return None; }
         i += 1;
     }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);

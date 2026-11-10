@@ -319,6 +319,13 @@ fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, w
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }
 }
 
+/// Its entry's doors, while they are held for the second word, each with the men at it.
+pub fn rescue_waits(g: &crate::game::Game) -> Vec<(DoorId, Vec<GuardId>)> {
+    if !crate::rescue::rescue_up(g) || g.rescue.result.is_some() { return Vec::new(); }
+    let Some(entry) = g.rescue.entry.as_ref().filter(|e| !g.tab.doortools_door_gate[e.gate].go) else { return Vec::new() };
+    entry.ops.iter().filter(|e| e.ended.is_none()).map(|e| { let op = &g.tab.doortools_door_op[e.op]; (op.door, op.men.clone()) }).collect()
+}
+
 /// How it ended, for the run's card.
 pub fn rescue_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     g.rescue.result.as_ref().map(|r| if r.state == RescueResultState::Rescued { (true, "RESCUED", r.why.clone()) } else { (false, "LOST", r.why.clone()) })
