@@ -23,7 +23,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
     let yaw = v3::yaw_of(g.ch[g.gd[gd].ch].gun_dir);
     let strip = Strip { t: 0.0, kind, supp, at, item: None, rap: variant == crate::character::HoldVariant::Gun, gone: false, yaw };
     put_strip(g, pl, strip);
-    if leads(g, Some(strip)) { g.pl[pl].catch_due = Some(g.time + g.k.hold.first.catch); }
+    if leads(g, Some(strip)) { g.sets[g.seat].hand.catch_due = Some(g.time + g.k.hold.first.catch); }
 }
 
 /// The grab's first voice: the strip is heard first when the disarm leads. Its rate is pinned.
@@ -73,10 +73,10 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     // the catch's voice as the arm lands, or now if the hold or the move ended first: a grab is never silent
-    if let Some(due) = g.pl[pl].catch_due {
+    if let Some(due) = g.sets[g.seat].hand.catch_due {
         let not_grab = match h.as_ref() { Some(h) => h.phase != crate::character::HoldPhase::Grab, None => false };
         if h.is_none() || s0.is_none() || g.time >= due || not_grab {
-            g.pl[pl].catch_due = None;
+            g.sets[g.seat].hand.catch_due = None;
             let c = match h.as_ref() { Some(h) => g.gd[h.g].ch, None => pl_ch };
             let at = v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]);
             crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));

@@ -190,7 +190,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             && hold!(g, p).swap_t >= k.swap
             && (crate::input::input_hit(g, input, "KeyE") || crate::input::input_hit(g, input, if gun { crate::handslot::HANDSLOT_KEY } else { "Digit1" }))
             && !crate::game::player_choosing(g, p)
-            && g.pl[p].sel.down_t < 0.0
+            && g.sets[g.seat].hand.sel.down_t < 0.0
         {
             swap_hold(g);
             gun = hold!(g, p).variant == crate::character::HoldVariant::Gun;

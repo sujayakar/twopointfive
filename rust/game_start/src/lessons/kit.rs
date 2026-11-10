@@ -49,7 +49,7 @@ const WALL_MARK: V3 = [30.95, 1.1, 6.6];
 const FRAG_AT: V3 = [29.6, 0.05, 19.8];
 const YARD_FROM: V3 = [23.8, 0.02, 19.75];
 
-fn own_ring(b: &Bot) -> bool { b.me(|p| p.sel.open && p.sel.ring.is_some()) }
+fn own_ring(b: &Bot) -> bool { b.seen(|_, s| s.hand.sel.open && s.hand.sel.ring.is_some()) }
 fn last_two(b: &Bot) -> Vec<GuardId> { b.named(&["Brandt", "Marsh"]) }
 /// the command key HELD on a point until the squad's ring is up, then the digits the line that is up names, in order
 async fn ring(b: &Bot, p: V3) -> bool {

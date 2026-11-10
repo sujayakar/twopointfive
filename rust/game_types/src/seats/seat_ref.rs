@@ -27,6 +27,7 @@ pub struct SeatRef<'a> {
     pub nearby: &'a Vec<Interactable>,
     pub act: &'a Option<Interactable>,
     pub view_proj: &'a Option<crate::game::GameViewProj>,
+    pub hand: &'a crate::seats::SeatHand,
 }
 
 /// the seat a pass is about
@@ -40,6 +41,6 @@ pub fn seat(g: &Game, s: SeatId) -> SeatRef<'_> {
     SeatRef {
         id: s, player: if g.seat == s { g.player } else { o.player }, orders: &o.orders, door_tools: &o.door_tools, work: &o.work, wall_charge: &o.wall_charge,
         aim_point: o.aim_point, aim_target: o.aim_target, aim_guard: o.aim_guard, aim_snap: o.aim_snap,
-        hover: &o.hover, interactables: &o.interactables, nearby: &o.nearby, act: &o.act, view_proj: &o.view_proj,
+        hover: &o.hover, interactables: &o.interactables, nearby: &o.nearby, act: &o.act, view_proj: &o.view_proj, hand: &o.hand,
     }
 }

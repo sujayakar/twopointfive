@@ -587,8 +587,8 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
         crate::close::close_took(crate::close::CloseTookWhat::Take);
     }
     throw_off(g, p);
-    g.pl[p].throw_held = false;
-    g.pl[p].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[p].pending_throw = None;
     g.gd[gd].speed = 0.0;
     g.ch[gc].vel = [0.0, 0.0, 0.0];
@@ -721,8 +721,8 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     g.ch[c].anim.reverse = false;
     cancel_reloads(g, p);
     throw_off(g, p);
-    g.pl[p].throw_held = false;
-    g.pl[p].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[p].easing = None;
     // him: whatever he was saying is cut off
     if let Some(bub) = g.gd[gd].bubble.clone() {

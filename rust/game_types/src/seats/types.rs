@@ -1,11 +1,29 @@
 //! The types of `seats`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ViewOfBodyC {
     pub id: f64,
+}
+
+/// What a seat's hand is doing: the keys held, what it is choosing, and what the fingers are waiting on. A fresh man starts them again.
+#[derive(Clone, Debug, ToBytes, Blank)]
+pub struct SeatHand {
+    pub near_sel: i32,
+    #[is(String::from(""))] pub near_key: String,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
+    pub setup: Option<crate::game::PlayerSetup>,
+    pub setup_key: Option<crate::game::PlayerSetupKey>,
+    pub f_held: bool,
+    pub aim_held: bool,
+    pub throw_held: bool,
+    pub throw_eaten: bool,
+    pub throw_preview: Option<crate::throwables::ThrowSolution>,
+    pub friend_low: bool,
+    #[is(-10.0)] pub friend_t: f64,
+    pub catch_due: Option<f64>,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -32,6 +50,7 @@ pub struct SeatSet {
     pub view_proj: Option<crate::game::GameViewProj>,
     pub threat_proximity: f64,
     pub torch_on_t: f64,
+    pub hand: SeatHand,
 }
 impl Default for SeatSet {
     fn default() -> Self {
@@ -55,6 +74,7 @@ impl Default for SeatSet {
             view_proj: None,
             threat_proximity: 0.0,
             torch_on_t: -100.0,
+            hand: SeatHand::blank(),
         }
     }
 }

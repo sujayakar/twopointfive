@@ -464,8 +464,8 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     }
     p.coding = Some(d);
     p.code_t = 0.0;
-    p.f_held = true;
     p.hand_wait = 0.0;
+    g.sets[g.seat].hand.f_held = true;
     true
 }
 /// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.

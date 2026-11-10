@@ -72,14 +72,14 @@ pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64)
         && !friends_in_fight(g, &crate::seats::here(g));
     let o = if live { friend_in_sams_line(g, c_2).or_else(|| friend_under_cursor(g, c_2)) } else { None };
     if o.is_some() {
-        if !g.pl[pl].friend_low { g.stats.friends.lowered += 1; }
-        g.pl[pl].friend_low = true;
-        g.pl[pl].friend_t = g.time;
-    } else if g.pl[pl].friend_low && (!live || !(g.time - g.pl[pl].friend_t >= 0.0 && g.time - g.pl[pl].friend_t <= g.k.friends.up_secs)) {
-        g.pl[pl].friend_low = false;
+        if !g.sets[g.seat].hand.friend_low { g.stats.friends.lowered += 1; }
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
+    } else if g.sets[g.seat].hand.friend_low && (!live || !(g.time - g.sets[g.seat].hand.friend_t >= 0.0 && g.time - g.sets[g.seat].hand.friend_t <= g.k.friends.up_secs)) {
+        g.sets[g.seat].hand.friend_low = false;
     }
-    if g.pl[pl].friend_low { g.stats.friends.lowered_s += dt; }
-    if g.pl[pl].friend_low {
+    if g.sets[g.seat].hand.friend_low { g.stats.friends.lowered_s += dt; }
+    if g.sets[g.seat].hand.friend_low {
         match o {
             Some(o) => Some(crate::friends::SamOffFriend::Guard(o)),
             None => None,
@@ -153,48 +153,45 @@ mod tests {
     #[test]
     fn a_gun_not_up_is_up_again_at_once() {
         let (mut g, c) = lone_player();
-        let p = g.player;
         assert!(not_lowered(sam_off_friend(&mut g, c, false, 0.016)));
-        assert!(!g.pl[p].friend_low);
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        assert!(!g.sets[g.seat].hand.friend_low);
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         assert!(not_lowered(sam_off_friend(&mut g, c, false, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn the_floor_going_loud_ends_the_beat_at_once() {
         let (mut g, c) = lone_player();
         let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         g.pl[p].last_fire_t = g.time;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn the_beat_runs_out_past_up_secs_and_on_a_clock_gone_back() {
         let (mut g, c) = lone_player();
-        let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time - g.k.friends.up_secs - 0.01;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time - g.k.friends.up_secs - 0.01;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time + 1.0;
+        assert!(!g.sets[g.seat].hand.friend_low);
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time + 1.0;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn inside_the_beat_the_gun_stays_down_for_nobody_and_the_seconds_count() {
         let (mut g, c) = lone_player();
-        let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         assert!(sam_off_friend(&mut g, c, true, 0.25).is_none());
-        assert!(g.pl[p].friend_low);
+        assert!(g.sets[g.seat].hand.friend_low);
         assert_eq!(g.stats.friends.lowered_s, 0.25);
         assert_eq!(g.stats.friends.lowered, 0);
     }

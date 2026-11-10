@@ -65,8 +65,8 @@ fn rides(g: &Game, it: &Interactable) -> (Option<f64>, f64) {
 pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     let pl = &g.pl[seat.player];
     let (near, p) = (seat.nearby, g.ch[pl.ch].pos);
-    let hv = seat.hover.as_ref().map(|_| pl.near_sel as usize).filter(|&i| i < near.len());
-    let lead = hv.filter(|&i| { let r = &near[i]; r.kind != K::Cancel && (r.verb.is_some() || r.running == Some(true)) && !pl.sel.ring.as_ref().is_some_and(|x| x.whistle == Some(true)) });
+    let hv = seat.hover.as_ref().map(|_| seat.hand.near_sel as usize).filter(|&i| i < near.len());
+    let lead = hv.filter(|&i| { let r = &near[i]; r.kind != K::Cancel && (r.verb.is_some() || r.running == Some(true)) && !seat.hand.sel.ring.as_ref().is_some_and(|x| x.whistle == Some(true)) });
     let list: Vec<usize> = lead.into_iter().chain((0..near.len()).filter(|&i| near[i].verb.is_none() && Some(i) != lead).take(1)).collect();
     let rows = list.iter().enumerate().map(|(at, &i)| {
         let it = &near[i];
@@ -99,7 +99,7 @@ pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     InteractView {
         rows,
         lit: if lead.is_some() { 0.0 } else { -1.0 },
-        open: pl.sel.open && pl.sel.ring.is_none(),
+        open: seat.hand.sel.open && seat.hand.sel.ring.is_none(),
         ring,
         dots,
     }
