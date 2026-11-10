@@ -86,6 +86,7 @@ pub fn smoke_budget(g: &crate::game::Game) -> f64 {
 pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
     let n = sim::bricks::beat(g.sim, dt);
     if n == 0 {
+        crate::scene_collision::grid_ahead(g);
         return;
     }
     let s = g.k.sense.smoke;

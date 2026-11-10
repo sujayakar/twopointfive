@@ -15,8 +15,10 @@
 //!
 //! WHAT IS STATE: the five numbers a metre, the lamps' word, where the sweep is (bricks.rs O_GLOW_…: a part of the game's block). WHAT IS MADE AGAIN from the
 //! box world as it stands, a table a world: which half metres have a roof, where each metre's lines end among the statics, and which metres are one place. A static that is
-//! written makes them again round it (`fresh` compares the rows themselves, so who wrote them, and how often, is nothing to it): what a sweep works out
-//! is of the statics and the leaves as they are when it comes by, whether the table was kept or made that moment. The leaves are asked at the sweep.
+//! written is marked on the plan (`fresh` compares the rows themselves, so who wrote them, and how often, is nothing to it), and the lines that pass a mark are
+//! followed again, those and no more: what a sweep works out is of the statics and the leaves as they are when it comes by, whether the table was kept or made that
+//! moment. Between steps some of what the next ones want is made ahead (`ahead`), so that a blown wall costs no tick the whole of its room's lines. The leaves are
+//! asked at the sweep.
 //!
 //! WHAT IT LEAVES OUT, named: a lamp somebody carries (it moves faster than a sweep), a flash, the smoke, a lamp under the open sky seen from inside.
 
@@ -88,7 +90,8 @@ pub const QUICK: f64 = 8.0;
 const ROUNDS: f64 = 6.0;
 
 /// WHERE A LINE ENDS: how far (cm), what it meets (the metre before the surface, or one of the words below), whose surface (what that sends back is its box's to say, as it
-/// is painted: its place in the list and one, 0 = bare floor), and the sun's cosine there (of 255; 0 = it is in shade)
+/// is painted: its place in the list and one, 0 = bare floor), the sun's cosine there (of 255; 0 = it is in shade), and how far the sun's way was followed from
+/// there (half metres and one, 0 = it was not, WHOLE = to the top), with OWN where the metre it reads is the one it ends in
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Ray {
@@ -96,6 +99,7 @@ struct Ray {
     to: u16,
     of: u16,
     sun: u8,
+    way: u8,
 }
 const _: () = assert!(MAX_BOXES < 0xffff);
 const TO_SKY: u16 = 0xffff;
@@ -109,9 +113,16 @@ const _: () = assert!(MAX_GLOW < TO_DARK as usize);
 /// A WORLD'S TABLE, made from its statics
 struct Cast {
     rays: [[Ray; RAYS]; MAX_GLOW],
-    /// is a metre's row of the statics as they stand · what its lines cross of the plan (x0 z0 x1 z1), the sun's ways from where they end with them
-    cast: [bool; MAX_GLOW],
-    reach: [[f32; 4]; MAX_GLOW],
+    /// how many times the statics were found changed, and the last of those that a metre's lines are of (0 = they were never followed)
+    now: u32,
+    traced: [u32; MAX_GLOW],
+    /// the last change that touched a half metre of the plan (a path that passes it), the last that did and stood under the lines' start all of it (a line that rises
+    /// never meets it), and one near a metre's middle (where a line may end)
+    half: [u32; MAX_HALF],
+    low: [u32; MAX_HALF],
+    near: [u32; MAX_GLOW],
+    /// the change every metre under a roof is made for
+    made: u32,
     /// 0 not asked · 1 the open sky · 2 a roof
     roof: [u8; MAX_HALF],
     /// is a metre one place with the next along x (1) and the next along z (2) · 4 = it was asked
@@ -124,11 +135,15 @@ struct Cast {
     seen: Seen,
 }
 // (all zeros: a table that is not would be in the module's file)
-const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0 };
+const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0, way: 0 };
 const NO_CAST: Cast = Cast {
     rays: [[NO_RAY; RAYS]; MAX_GLOW],
-    cast: [false; MAX_GLOW],
-    reach: [[0.0; 4]; MAX_GLOW],
+    now: 0,
+    traced: [0; MAX_GLOW],
+    half: [0; MAX_HALF],
+    low: [0; MAX_HALF],
+    near: [0; MAX_GLOW],
+    made: 0,
     roof: [0; MAX_HALF],
     joined: [0; MAX_GLOW],
     nx: 0,
@@ -196,6 +211,19 @@ fn plan_of(r: &[f64]) -> [f32; 4] {
 fn over(a: &[f32; 4], b: &[f32; 4]) -> bool {
     a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
 }
+/// how far from a static a path's samples (PACE apart) and a half metre's own middle may be, and a line's end from what is asked round it: the metres round it
+/// and the ways between
+const BY: f32 = 0.55;
+const ROUND: f32 = 2.3;
+const PACE: f64 = 0.5;
+const OWN: u8 = 128;
+const WHOLE: u8 = 127;
+/// …and round its row, with how high it stands
+fn round_of(r: &[f64]) -> [f64; 5] {
+    let p = plan_of(r);
+    let up = if r[R_KIND] as u32 & K_ROT != 0 { r[R_H] + r[R_H + 1] + r[R_H + 2] } else { r[R_H + 1] };
+    [p[0] as f64, p[1] as f64, p[2] as f64, p[3] as f64, r[R_C + 1] + up]
+}
 /// THE TABLE IS OF THE STATICS AS THEY STAND: on another plan or under another sun all of it is made again; where rows differ from those it was made
 /// from, what crosses them
 fn fresh(g: usize, w: &World, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) -> &'static mut Cast {
@@ -206,36 +234,48 @@ fn fresh(g: usize, w: &World, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) ->
         c.nz = nz;
         c.roof = [0; MAX_HALF];
         c.joined = [0; MAX_GLOW];
-        c.cast = [false; MAX_GLOW];
+        c.traced = [0; MAX_GLOW];
+        c.now += 1;
         c.seen.forget();
     }
     if let Some(s) = to_sun {
         if c.to_sun != s {
             c.to_sun = s;
-            c.cast = [false; MAX_GLOW];
+            c.traced = [0; MAX_GLOW];
+            c.now += 1;
         }
     }
-    let Cast { seen, cast, joined, roof, reach, nx, nz, .. } = c;
-    seen.look(w, |r| plan_of(r).map(f64::from), |r| stale(cast, joined, roof, reach, *nx, *nz, &r.map(|v| v as f32)));
+    let Cast { seen, joined, roof, half, low, near, now, nx, nz, .. } = c;
+    let mut first = true;
+    seen.look(w, round_of, |r| {
+        *now += first as u32;
+        first = false;
+        let touched = if r[4] < HEIGHT - 0.01 { &mut *low } else { &mut *half };
+        stale(joined, roof, touched, near, *now, *nx, *nz, &[r[0] as f32, r[1] as f32, r[2] as f32, r[3] as f32]);
+    });
     c
 }
-/// what crosses this rectangle of the plan is to be made again
-fn stale(cast: &mut [bool; MAX_GLOW], joined: &mut [u8; MAX_GLOW], roof: &mut [u8; MAX_HALF], reach: &[[f32; 4]; MAX_GLOW], nx: usize, nz: usize, r: &[f32; 4]) {
+/// what crosses this rectangle of the plan is marked, or is to be made again
+#[allow(clippy::too_many_arguments)]
+fn stale(joined: &mut [u8; MAX_GLOW], roof: &mut [u8; MAX_HALF], touched: &mut [u32; MAX_HALF], near: &mut [u32; MAX_GLOW], now: u32, nx: usize, nz: usize, r: &[f32; 4]) {
     for m in 0..nx * nz {
-        if cast[m] && over(&reach[m], r) {
-            cast[m] = false;
-        }
         let (x, z) = ((m % nx) as f32 + 0.5, (m / nx) as f32 + 0.5);
         if over(&[x - JOIN, z - JOIN, x + JOIN, z + JOIN], r) {
             joined[m] = 0;
         }
     }
-    let lim = |v: f32, n: usize| -> usize { js_min(js_max(floor(v as f64 * 2.0), 0.0), n as f64 * 2.0 - 1.0) as usize };
-    for z in lim(r[1], nz)..=lim(r[3], nz) {
-        for x in lim(r[0], nx)..=lim(r[2], nx) {
-            roof[z * nx * 2 + x] = 0;
+    let cells = |r: [f32; 4], per: f64, mut f: &mut dyn FnMut(usize)| {
+        let lim = |v: f32, n: usize| -> usize { js_min(js_max(floor(v as f64 * per), 0.0), n as f64 * per - 1.0) as usize };
+        for z in lim(r[1], nz)..=lim(r[3], nz) {
+            for x in lim(r[0], nx)..=lim(r[2], nx) {
+                (&mut f)(z * nx * per as usize + x);
+            }
         }
-    }
+    };
+    let wide = |by: f32| [r[0] - by, r[1] - by, r[2] + by, r[3] + by];
+    cells(*r, 2.0, &mut |i| roof[i] = 0);
+    cells(wide(BY), 2.0, &mut |i| touched[i] = now);
+    cells(wide(ROUND), 1.0, &mut |m| near[m] = now);
 }
 
 /// the first static a line meets, panes of glass let by: how far, its face's normal, which
@@ -293,78 +333,125 @@ fn metre_of(w: &World, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(u
     None
 }
 
-/// a metre's lines, followed among the statics
-fn cast(c: &mut Cast, w: &World, m: usize, tune: &Knobs) {
+/// nothing stands higher over a level than this: a line or the sun's way is followed on the plan to there
+fn to_top(y: f64, up: f64) -> f64 {
+    if up > 0.05 { js_min(FAR, js_max(0.0, TOP - y) / up) } else { FAR }
+}
+/// A METRE'S LINES OF THE STATICS AS THEY STAND: all of them the first time, then those that pass something that has changed since. → how many were followed
+fn cast(c: &mut Cast, w: &World, m: usize, tune: &Knobs) -> usize {
+    let (since, mut n) = (c.traced[m], 0);
+    if since != c.now {
+        for i in 0..RAYS {
+            if since == 0 || changed(c, m, i, since) {
+                c.rays[m][i] = trace(c, w, m, i, tune);
+                n += 1;
+            }
+        }
+        c.traced[m] = c.now;
+    }
+    n
+}
+/// whether anything line `i` of metre `m` hangs on has changed since: the way it went, what stands round its end, and the sun's way from there
+fn changed(c: &Cast, m: usize, i: usize, since: u32) -> bool {
+    let (r, d) = (&c.rays[m][i], ways().d[i]);
+    let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
+    let cell = |v: f64, per: f64, n: usize| js_min(js_max(floor(v * per), 0.0), n as f64 * per - 1.0) as usize;
+    let passed = |x: f64, z: f64| {
+        let k = cell(z, 2.0, c.nz) * c.nx * 2 + cell(x, 2.0, c.nx);
+        c.half[k] > since || (d[1] < 0.0 && c.low[k] > since)
+    };
+    let along = |x: f64, z: f64, dx: f64, dz: f64, far: f64| {
+        let mut t = 0.0;
+        while t < far {
+            if passed(x + dx * t, z + dz * t) {
+                return true;
+            }
+            t += PACE;
+        }
+        passed(x + dx * far, z + dz * far)
+    };
+    // (a length is kept in whole centimetres, rounded down)
+    let end = r.cm as f64 / 100.0 + 0.01;
+    // (one that went out and met something is followed again whatever it was: where it ended out there is not kept)
+    if r.to == TO_OUTSIDE && r.way & WHOLE > 0 && d[1] > 0.0 {
+        return true;
+    }
+    let far = if r.to >= TO_OUTSIDE && d[1] > 0.0 { js_max(end, to_top(a[1], d[1])) } else { end };
+    if along(a[0], a[2], d[0], d[2], far) {
+        return true;
+    }
+    if r.to == TO_SKY || r.to == TO_GROUND {
+        return false;
+    }
+    let h = [a[0] + d[0] * end, a[1] + d[1] * end, a[2] + d[2] * end];
+    // (the metre it reads, and the way there: its own, or any of those round it)
+    if r.way & OWN != 0 {
+        let (k, way) = (r.to as usize, |v: f64, at: usize| at as f64 + 0.5 - v);
+        if along(h[0], h[2], way(h[0], k % c.nx), way(h[2], k / c.nx), 1.0) {
+            return true;
+        }
+    } else if c.near[cell(h[2], 1.0, c.nz) * c.nx + cell(h[0], 1.0, c.nx)] > since {
+        return true;
+    }
+    let sun = r.way & WHOLE;
+    sun > 0 && along(h[0], h[2], c.to_sun[0], c.to_sun[2], if sun == WHOLE { to_top(h[1], c.to_sun[1]) } else { sun as f64 * 0.5 })
+}
+/// one line of a metre's, followed among the statics
+fn trace(c: &mut Cast, w: &World, m: usize, i: usize, tune: &Knobs) -> Ray {
     let (nx, nz) = (c.nx, c.nz);
     let a = [(m % nx) as f64 + 0.5, HEIGHT, (m / nx) as f64 + 0.5];
     let to_sun = c.to_sun;
-    let mut box_ = [a[0], a[2], a[0], a[2]];
-    let mut see = |x: f64, z: f64| {
-        box_ = [js_min(box_[0], x), js_min(box_[1], z), js_max(box_[2], x), js_max(box_[3], z)];
+    let d = ways().d[i];
+    let hit = first(w, a, d, FAR, tune);
+    let down = if d[1] < -1e-6 { a[1] / -d[1] } else { FAR };
+    // (the floor is a box in most places; where it is not, it is bare)
+    let (far, normal, of) = match hit {
+        Some((t, n, bi)) if t < down + 0.05 => (t, n, bi as u16 + 1),
+        _ => (down, [0.0, 1.0, 0.0], 0),
     };
-    // (nothing stands higher over a level than this: a line or the sun's way is followed on the plan to there)
-    let to_top = |y: f64, up: f64| if up > 0.05 { js_min(FAR, js_max(0.0, TOP - y) / up) } else { FAR };
-    for i in 0..RAYS {
-        let d = ways().d[i];
-        let hit = first(w, a, d, FAR, tune);
-        let down = if d[1] < -1e-6 { a[1] / -d[1] } else { FAR };
-        // (the floor is a box in most places; where it is not, it is bare)
-        let (far, normal, of) = match hit {
-            Some((t, n, bi)) if t < down + 0.05 => (t, n, bi as u16 + 1),
-            _ => (down, [0.0, 1.0, 0.0], 0),
-        };
-        let mut out = None;
-        let mut t = 0.1;
-        while t < far - 0.02 {
-            if !roof(c, w, a[0] + d[0] * t, a[2] + d[2] * t, tune) {
-                out = Some(t);
-                break;
-            }
-            t += 0.25;
+    let mut out = None;
+    let mut t = 0.1;
+    while t < far - 0.02 {
+        if !roof(c, w, a[0] + d[0] * t, a[2] + d[2] * t, tune) {
+            out = Some(t);
+            break;
         }
-        let end = if let Some(t) = out { t } else { far };
-        let seen = if out.is_some() && d[1] > 0.0 { js_max(end, to_top(a[1], d[1])) } else { end };
-        see(a[0] + d[0] * seen, a[2] + d[2] * seen);
-        let sun_at = |h: [f64; 3], n: [f64; 3]| -> u8 {
-            let ns = n[0] * to_sun[0] + n[1] * to_sun[1] + n[2] * to_sun[2];
-            if to_sun[1] > 0.0 && ns > 0.0 && first(w, [h[0] + n[0] * 0.02, h[1] + n[1] * 0.02, h[2] + n[2] * 0.02], to_sun, FAR, tune).is_none() {
-                js_max(1.0, js_min(255.0, ns * 255.0)) as u8
-            } else {
-                0
-            }
-        };
-        let h = [a[0] + d[0] * far, a[1] + d[1] * far, a[2] + d[2] * far];
-        let (to, sun) = if out.is_some() || far >= FAR {
-            if d[1] <= 0.0 {
-                (TO_GROUND, 0)
-            } else if far >= FAR {
-                (TO_SKY, 0)
-            } else {
-                let run = to_top(h[1], to_sun[1]);
-                see(h[0] + to_sun[0] * run, h[2] + to_sun[2] * run);
-                (TO_OUTSIDE, sun_at(h, normal))
-            }
-        } else {
-            let q = [h[0] + normal[0] * 0.25, js_max(0.3, js_min(2.4, h[1] + normal[1] * 0.25)), h[2] + normal[2] * 0.25];
-            match metre_of(w, nx, nz, q, |_| true, tune) {
-                // (the metre before it is out under the sky: it is an eave's, or a wall's beside an opening)
-                Some(k) if !roof(c, w, (k % nx) as f64 + 0.5, (k / nx) as f64 + 0.5, tune) => {
-                    let run = to_top(h[1], to_sun[1]);
-                    see(h[0] + to_sun[0] * run, h[2] + to_sun[2] * run);
-                    (TO_OUTSIDE, sun_at(h, normal))
-                }
-                Some(k) => {
-                    let run = to_top(h[1], to_sun[1]);
-                    see(h[0] + to_sun[0] * run, h[2] + to_sun[2] * run);
-                    (k as u16, sun_at(h, normal))
-                }
-                None => (TO_DARK, 0),
-            }
-        };
-        c.rays[m][i] = Ray { cm: js_min(65535.0, end * 100.0) as u16, to, of, sun };
+        t += 0.25;
     }
-    c.reach[m] = [box_[0] as f32 - 0.6, box_[1] as f32 - 0.6, box_[2] as f32 + 0.6, box_[3] as f32 + 0.6];
-    c.cast[m] = true;
+    let end = if let Some(t) = out { t } else { far };
+    // the sun's cosine, and how far its way was followed
+    let sun_at = |h: [f64; 3], n: [f64; 3]| -> (u8, u8) {
+        let ns = n[0] * to_sun[0] + n[1] * to_sun[1] + n[2] * to_sun[2];
+        if !(to_sun[1] > 0.0 && ns > 0.0) {
+            return (0, 0);
+        }
+        match first(w, [h[0] + n[0] * 0.02, h[1] + n[1] * 0.02, h[2] + n[2] * 0.02], to_sun, FAR, tune) {
+            Some((t, _, _)) => (0, js_min(WHOLE as f64, t * 2.0 + 2.0) as u8),
+            None => (js_max(1.0, js_min(255.0, ns * 255.0)) as u8, WHOLE),
+        }
+    };
+    let h = [a[0] + d[0] * far, a[1] + d[1] * far, a[2] + d[2] * far];
+    let (to, (sun, way)) = if out.is_some() || far >= FAR {
+        if d[1] <= 0.0 {
+            (TO_GROUND, (0, 0))
+        } else if far >= FAR {
+            (TO_SKY, (0, 0))
+        } else {
+            (TO_OUTSIDE, sun_at(h, normal))
+        }
+    } else {
+        let q = [h[0] + normal[0] * 0.25, js_max(0.3, js_min(2.4, h[1] + normal[1] * 0.25)), h[2] + normal[2] * 0.25];
+        match metre_of(w, nx, nz, q, |_| true, tune) {
+            // (the metre before it is out under the sky: it is an eave's, or a wall's beside an opening)
+            Some(k) if !roof(c, w, (k % nx) as f64 + 0.5, (k / nx) as f64 + 0.5, tune) => (TO_OUTSIDE, sun_at(h, normal)),
+            Some(k) => {
+                let (sun, way) = sun_at(h, normal);
+                (k as u16, (sun, if k == floor(q[2]) as usize * nx + floor(q[0]) as usize { way | OWN } else { way }))
+            }
+            None => (TO_DARK, (0, 0)),
+        }
+    };
+    Ray { cm: js_min(65535.0, end * 100.0) as u16, to, of, sun, way }
 }
 
 /// IS A METRE ONE PLACE WITH THE NEXT, along x or along z: the way between them past the statics, panes among them, and no doorway
@@ -463,8 +550,7 @@ fn mean(v: &[f64; 6]) -> f64 {
 
 /// ONE METRE WORKED OUT: what its lines bring of the metres as they are
 fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, tune: &Knobs) {
-    if !c.cast[m] {
-        cast(c, w, m, tune);
+    if cast(c, w, m, tune) > 0 {
         unsafe { SWEPT[1] += 1 };
     }
     let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
@@ -564,6 +650,33 @@ pub fn step(g: usize, w: &World, st: &mut [f64; LEN], nbx: usize, nbz: usize, k:
     }
     levels(c, w, st, new, LEVELS[young as usize], open_air(&k.sky), tune);
 }
+/// what a tick between two steps makes ahead, in lines followed (a metre looked through counts as some)
+const AHEAD: usize = 350;
+const LOOK: usize = 6;
+/// BETWEEN STEPS, some of what the next ones will want, in the order they come by: a static that is written is paid for over the ticks until then. No state is
+/// in it: a step finds what was made, or makes it.
+pub fn ahead(g: usize, w: &World, st: &[f64; LEN], nbx: usize, nbz: usize, tune: &Knobs) {
+    let (nx, nz) = (nbx * PER, nbz * PER);
+    let n = nx * nz;
+    if n == 0 || n > MAX_GLOW || st[O_GLOW_LAMPS] == 0.0 {
+        return;
+    }
+    let c = fresh(g, w, nx, nz, None);
+    if c.made == c.now {
+        return;
+    }
+    let (at, mut done) = (if st[O_GLOW_AT] >= 0.0 && st[O_GLOW_AT] < n as f64 { st[O_GLOW_AT] as usize } else { 0 }, 0);
+    for k in 0..n {
+        let m = (at + k) % n;
+        if c.traced[m] != c.now && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
+            done += LOOK + cast(c, w, m, tune);
+            if done >= AHEAD {
+                return;
+            }
+        }
+    }
+    c.made = c.now;
+}
 /// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands: the lines of every metre under a roof and which metres are one place. No state is in it: a step that finds it
 /// wanting makes what it wants.
 pub fn ready(g: usize, w: &World, nbx: usize, nbz: usize, to_sun: [f64; 3], tune: &Knobs) {
@@ -574,7 +687,7 @@ pub fn ready(g: usize, w: &World, nbx: usize, nbz: usize, to_sun: [f64; 3], tune
     let c = fresh(g, w, nx, nz, Some(to_sun));
     for m in 0..nx * nz {
         join(c, w, m, tune);
-        if !c.cast[m] && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
+        if roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
             cast(c, w, m, tune);
         }
     }
