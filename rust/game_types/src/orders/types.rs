@@ -382,8 +382,8 @@ pub struct Assignment {
     pub upper: crate::character::UpperMode,
     pub stack_side: f64,
     pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub going: String,
-    pub there: String,
+    pub going: crate::orders::Doing,
+    pub there: crate::orders::Doing,
     pub set_line: Option<String>,
     pub group: f64,
     pub set_said: bool,
@@ -475,10 +475,10 @@ pub struct SquadOrdersSceneHit {
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersAssignA {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -741,3 +741,29 @@ pub struct Shown {
     /// the quick key's line for what the seat's cursor is on: the row it would give, and what it is on. None: a menu is up, or the key gives nothing there
     pub quick: Option<String>,
 }
+
+/// what a man on an order is at, where a rule asks
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum At {
+    #[default] Other,
+    /// on his place at a door, before its word
+    Stacked,
+    /// the same, with the order waiting on the word alone
+    Ready,
+    /// clear of somebody's charge
+    StandingOff,
+    /// he could not get to his place
+    StoppedShort,
+}
+
+/// what a man on an order is doing: the fact a rule asks, and the words his row says
+#[derive(Clone, PartialEq, Debug, ToBytes, Default)]
+pub struct Doing {
+    pub at: crate::orders::At,
+    pub words: String,
+}
+impl Doing {
+    pub fn new(at: crate::orders::At, words: impl Into<String>) -> Self { Doing { at, words: words.into() } }
+}
+impl From<String> for Doing { fn from(words: String) -> Self { Doing { at: At::Other, words } } }
+impl From<&str> for Doing { fn from(words: &str) -> Self { String::from(words).into() } }

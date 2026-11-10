@@ -119,7 +119,7 @@ pub fn back_on(g: &mut Game, d: RoomfightDefId, h: Held, by: &'static str) {
     let gd = g.tab.roomfight_def[d].gd;
     crate::control::set_hold(g, gd, h.hold, by);
     crate::control::set_pinned(g, gd, h.pinned, by);
-    let (state, seen) = (alloc::string::String::from(g.gd[gd].state.as_str()), g.gd[gd].last_seen_t);
+    let (state, seen) = (g.gd[gd].state, g.gd[gd].last_seen_t);
     let row = &mut g.tab.roomfight_def[d];
     row.mode = DefMode::Hold;
     row.station = h.station;

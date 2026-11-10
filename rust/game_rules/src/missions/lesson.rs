@@ -762,7 +762,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
     }
     for &id in &seat.door_tools.ops {
         let op = &g.tab.doortools_door_op[id];
-        if !s.words.has(op.door) && op.beats.iter().any(|b| b.what == "the word" && b.t > s.t0) {
+        if !s.words.has(op.door) && op.beats.iter().any(|b| b.is == crate::doortools::Beat::Word && b.t > s.t0) {
             s.words.add(op.door);
         }
     }

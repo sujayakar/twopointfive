@@ -63,7 +63,7 @@ pub struct EntryOpsItem {
     pub side: bool,
     pub seen: f64,
     pub kicked: bool,
-    pub ended: Option<String>,
+    pub ended: Option<crate::doortools::Ended>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -149,7 +149,7 @@ pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
     pub face: Option<f64>,
     pub watch: Option<V3>,
-    pub there: String,
+    pub there: crate::orders::Doing,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

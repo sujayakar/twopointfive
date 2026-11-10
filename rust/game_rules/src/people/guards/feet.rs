@@ -202,19 +202,23 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     crate::guards::StandoffAlert { move_, aim: look_at, crouch: gh.map_or(0.0, |h| h.crouch) }
 }
 
+/// why a standoff is over
+#[derive(Clone, Copy, PartialEq)]
+enum Off { Posted, NotAlert, PairDown, HolderDown, Freed, Lost }
+
 /// Every frame for a man carrying a standoff record: is it still one? The pair when it stands.
 pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
     let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
-        Some("off")
+        Some(Off::Posted)
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
-        Some("state")
+        Some(Off::NotAlert)
     } else if p.map_or(true, |q| q.held != pair) {
-        Some(if crate::condition::down(g, g.gd[pair].ch) { "dead" } else if crate::condition::down(g, g.pl[g.player].ch) { "samDown" } else { "free" })
+        Some(if crate::condition::down(g, g.gd[pair].ch) { Off::PairDown } else if crate::condition::down(g, g.pl[g.player].ch) { Off::HolderDown } else { Off::Freed })
     } else if g.time - g.tab.guards_standoff[s].seen_t > STANDOFF_LOSE_SECS && !crate::gunhold::standoff_fix_kept(g, gd) {
-        Some("lost")
+        Some(Off::Lost)
     } else {
         None
     };
@@ -227,7 +231,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     reset_chase(g, gd);
     let seen_t = g.tab.guards_standoff[s].seen_t;
     let watched = g.time - seen_t < 0.6;
-    if why == "dead" && watched {
+    if why == Off::PairDown && watched {
         let b = pair;
         if crate::condition::down(g, g.gd[b].ch) {
             if g.guards.contains(&b) {
@@ -250,10 +254,10 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
             let cd = g.arms[g.gd[gd].ch].fire_cd;
             m::min(cd, 0.15 + crate::dice::draw_of(g, "guards::standoff_upkeep#2", gd) * 0.3)
         };
-    } else if why == "free" && watched {
+    } else if why == Off::Freed && watched {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Freed, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
         g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
-    } else if why == "lost" {
+    } else if why == Off::Lost {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Lost, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, seen_t);
     }

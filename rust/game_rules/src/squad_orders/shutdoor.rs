@@ -266,8 +266,8 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
         door: Some(d),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: alloc::format!("shutting · {}", name),
-        there: alloc::format!("at · {}", name),
+        going: alloc::format!("shutting · {}", name).into(),
+        there: alloc::format!("at · {}", name).into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);
@@ -291,8 +291,8 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
             post: None,
             follow: Some(99.0),
             face: None,
-            going: String::from("falling in"),
-            there: String::from("with you"),
+            going: "falling in".into(),
+            there: "with you".into(),
             ..Default::default()
         };
         crate::orders::squad_orders_assign(g, gd, &a);
@@ -306,8 +306,8 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
-        going: String::from("holding"),
-        there,
+        going: "holding".into(),
+        there: there.into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);

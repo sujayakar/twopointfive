@@ -44,7 +44,7 @@ fn fight(seed: u32, how: How) -> (Option<f64>, usize, String) {
             let face = p.facing(gd);
             game::orders::squad_orders_assign(&mut p.g, gd, &SquadOrdersAssignA {
                 order: String::from("hold"), post: Some([at[0], 0.0, at[1]]), face: Some(face), stance: Some(stance), upper: Some(upper), crouch: Some(crouch),
-                going: String::from("holding"), there: String::from("holding"), ..Default::default()
+                going: "holding".into(), there: "holding".into(), ..Default::default()
             });
         },
     }

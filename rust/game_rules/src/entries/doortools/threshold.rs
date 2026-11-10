@@ -401,7 +401,7 @@ pub(super) fn door_tools_last_stack(g: &mut crate::game::Game, op: DoorOpId) {
         let q = match q { Some(q) => q, None => continue };
         let np = crate::orders::StackPost { pos: q, face: lp.face, stack_side: lp.stack_side, lead: false, ..p };
         o!(g, op).post.set(gd, np);
-        door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(q), face: Some(np.face), watch: Some(watch), stance: Some(Stance::HighReady), upper: Some(UpperMode::None), move_: Some(DoorToolsDoneItemLaneBackMove { stance: Stance::None, upper: UpperMode::Aim }), stack_side: Some(np.stack_side), going: format!("stacking · {}", name), there: format!("stacked · {}", name), ..Default::default() });
+        door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(q), face: Some(np.face), watch: Some(watch), stance: Some(Stance::HighReady), upper: Some(UpperMode::None), move_: Some(DoorToolsDoneItemLaneBackMove { stance: Stance::None, upper: UpperMode::Aim }), stack_side: Some(np.stack_side), going: format!("stacking · {}", name).into(), there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", name)), ..Default::default() });
     }
     let mut what = format!("last warning · not waiting for {}", names(g, &late));
     if handed { what.push_str(&format!(" · the door is {}'s", g.gd[lead].callsign)); }
@@ -425,7 +425,7 @@ fn thr_run_out(g: &mut Game, op: DoorOpId, out: &ThresholdOut) {
     if o!(g, op).men.contains(&lead) {
         let search = thr_lit(g, lead, lead);
         let (p0, l0) = (sl.pts[0], sl.looks[0][0]);
-        door_tools_assign(g, op, lead, &DoorToolsAssignA { post: Some(p0), face: Some(v3::yaw_to(p0, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: if sl.pie.is_some() { format!("slicing · {}", name) } else { format!("on the jamb · {}", name) }, there: if sl.pts.len() > 1 { format!("slicing · {}", name) } else { format!("holding the jamb · {}", name) }, ..Default::default() });
+        door_tools_assign(g, op, lead, &DoorToolsAssignA { post: Some(p0), face: Some(v3::yaw_to(p0, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: if sl.pie.is_some() { format!("slicing · {}", name).into() } else { format!("on the jamb · {}", name).into() }, there: if sl.pts.len() > 1 { format!("slicing · {}", name).into() } else { format!("holding the jamb · {}", name).into() }, ..Default::default() });
     }
     let fr = match f { Some(x) => *x, None => return };
     let far = fr.far;
@@ -433,11 +433,11 @@ fn thr_run_out(g: &mut Game, op: DoorOpId, out: &ThresholdOut) {
     let search = thr_lit(g, far, lead);
     if let Some(s) = sf {
         let (p0, l0) = (s.pts[0], s.looks[0][0]);
-        door_tools_assign(g, op, far, &DoorToolsAssignA { post: Some(p0), face: Some(v3::yaw_to(p0, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: format!("slicing · {}", name), there: if s.pts.len() > 1 { format!("slicing · {}", name) } else { format!("holding the jamb · {}", name) }, ..Default::default() });
+        door_tools_assign(g, op, far, &DoorToolsAssignA { post: Some(p0), face: Some(v3::yaw_to(p0, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: format!("slicing · {}", name).into(), there: if s.pts.len() > 1 { format!("slicing · {}", name).into() } else { format!("holding the jamb · {}", name).into() }, ..Default::default() });
     } else {
         let l = door_tools_slice_looks(g, op, fr.here, fr.fs);
         let mid = l[l.len() >> 1];
-        door_tools_assign(g, op, far, &DoorToolsAssignA { post: Some(fr.here), face: Some(v3::yaw_to(fr.here, mid)), watch: Some(mid), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: format!("on the jamb · {}", name), there: format!("holding the jamb · {}", name), ..Default::default() });
+        door_tools_assign(g, op, far, &DoorToolsAssignA { post: Some(fr.here), face: Some(v3::yaw_to(fr.here, mid)), watch: Some(mid), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), pace, going: format!("on the jamb · {}", name).into(), there: format!("holding the jamb · {}", name).into(), ..Default::default() });
     }
 }
 /// The leaf is moving and nobody goes in: the two jamb men hold, the rest keep the squad's back
@@ -559,7 +559,7 @@ pub(super) fn door_tools_thr_out(g: &mut crate::game::Game, op: DoorOpId, why: O
     if thr!(g, op).early == Some(true) {   // (the word, given while the can was in the air)
         let r = thr!(g, op);
         r.early = Some(false); 
-        door_tools_beat(g, op, "the word");
+        door_tools_beat_is(g, op, crate::doortools::Beat::Word, "the word");
         door_tools_to_pockets(g, op);
     }
 }
@@ -587,7 +587,7 @@ pub(super) fn door_tools_thr_men(g: &mut crate::game::Game, op: DoorOpId) {
     let fc = g.dr[d].frame_centre;
     let light = lights_of(&crate::seats::here(g));
     let search = !crate::nvg::nvg_worn(g, gd);
-    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some([p[0], 0.0, p[2]]), face: Some(v3::yaw_to(p, fc)), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), going: format!("on the door · {}", name), there: format!("holding the door · {}", name), ..Default::default() });
+    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some([p[0], 0.0, p[2]]), face: Some(v3::yaw_to(p, fc)), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(search), going: format!("on the door · {}", name).into(), there: format!("holding the door · {}", name).into(), ..Default::default() });
     let what = format!("the door is {}'s", g.gd[gd].callsign);
     door_tools_beat(g, op, &what);
 }

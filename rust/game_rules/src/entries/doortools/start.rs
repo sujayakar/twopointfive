@@ -46,8 +46,8 @@ fn stacked_a(post: V3, face: f64, watch: V3, stance: crate::character::Stance, s
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
         stack_side: Some(stack_side),
-        going: format!("stacking · {}", name),
-        there: format!("stacked · {}", name),
+        going: format!("stacking · {}", name).into(),
+        there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", name)),
         ..Default::default()
     }
 }
@@ -139,7 +139,7 @@ pub(super) fn door_tools_frame_answer(g: &mut crate::game::Game, op: DoorOpId) -
     if !door_tools_pickable(g, d) {
         let said = door_tools_no_boot(g, &crate::seats::here(g), d);
         crate::game::game_say(g, lead, &said, None, None);
-        door_tools_end(g, op, "opens toward us · no boot");
+        door_tools_end(g, op, crate::doortools::Ended::OpensTowardUs);
         return true;
     }
     if crate::silent::silent_no_boot(g) { return false; }
@@ -306,7 +306,7 @@ pub(super) fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> boo
     if crate::silent::squad_silent(g, &crate::seats::here(g)) || door_tools_frame_held(g, d, side) { return false; }
     let why = door_tools_shut_said(g, lead, d);
     door_tools_beat(g, op, &format!("tried the door · {} · halted", why));
-    door_tools_end(g, op, "found shut");
+    door_tools_end(g, op, crate::doortools::Ended::FoundShut);
     let men = g.tab.doortools_door_op[op].men.clone();
     let mut left = Vec::new();
     for &m in &men {
@@ -459,8 +459,8 @@ fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<Guar
             upper: Some(crate::character::UpperMode::None),
             move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
             stack_side: Some(p.stack_side),
-            going: format!("stacking · {}", name),
-            there: format!("stacked · {}{}", name, note),
+            going: format!("stacking · {}", name).into(),
+            there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}{}", name, note)),
             ..Default::default()
         };
         crate::orders::squad_orders_assign(g, m, &a);
@@ -489,9 +489,12 @@ pub fn door_tools_held_plain(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// a beat of an order, and its line in the log
-pub(super) fn door_tools_beat(g: &mut crate::game::Game, op: DoorOpId, what: &str) {
+pub(super) fn door_tools_beat(g: &mut crate::game::Game, op: DoorOpId, what: &str) { door_tools_beat_is(g, op, crate::doortools::Beat::Other, what); }
+
+/// A beat a rule asks for.
+pub(super) fn door_tools_beat_is(g: &mut crate::game::Game, op: DoorOpId, is: crate::doortools::Beat, what: &str) {
     let t = g.time;
-    g.tab.doortools_door_op[op].beats.push(crate::doortools::DoorToolsDoneItemBeatsItem { t, what: String::from(what) });
+    g.tab.doortools_door_op[op].beats.push(crate::doortools::DoorToolsDoneItemBeatsItem { t, is, what: String::from(what) });
 }
 
 // ------------------------------------------------------------ orders in
@@ -509,7 +512,7 @@ pub(super) fn door_tools_assign(g: &mut crate::game::Game, op: DoorOpId, gd: Gua
 pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, d: DoorId, side: f64, men: &[GuardId], phase: crate::doortools::Phase) -> DoorOpId {
     for o in g.sets[g.seat].door_tools.ops.clone() {
         g.tab.doortools_door_op[o].men.retain(|m| !men.contains(m));
-        if g.tab.doortools_door_op[o].men.is_empty() { door_tools_end(g, o, "re-ordered"); }
+        if g.tab.doortools_door_op[o].men.is_empty() { door_tools_end(g, o, crate::doortools::Ended::ReOrdered); }
     }
     let mut from = JsMap::new();
     for &m in men {
@@ -945,7 +948,7 @@ mod tests {
     /// What a mark says for itself stands; the op's kind and door fill only what it leaves out. `shy: None` is its own word: this door is no longer shied from.
     #[test]
     fn a_mark_s_own_order_door_and_shy_win_over_the_op_s() {
-        let a = crate::doortools::DoorToolsAssignA { going: String::from("g"), there: String::from("t"), ..Default::default() };
+        let a = crate::doortools::DoorToolsAssignA { going: "g".into(), there: "t".into(), ..Default::default() };
         let m = merged_assign("openClear", DoorId(3), &a);
         assert_eq!(m.order, "openClear");
         assert_eq!(m.door, Some(DoorId(3)));

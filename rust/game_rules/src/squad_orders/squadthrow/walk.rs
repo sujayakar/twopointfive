@@ -115,8 +115,8 @@ fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::Squa
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-        going: format!("moving to throw · {}", w),
-        there: format!("throwing · {}", w),
+        going: format!("moving to throw · {}", w).into(),
+        there: format!("throwing · {}", w).into(),
         set_line: None,
         ..Default::default()
     });
@@ -272,8 +272,8 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-        going: String::from(if back { "moving back" } else { "holding" }),
-        there: String::from("holding"),
+        going: String::from(if back { "moving back" } else { "holding" }).into(),
+        there: "holding".into(),
         set_line: None,
         ..Default::default()
     });
@@ -345,8 +345,8 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             face: Some(face),
             stance: Some(crate::character::Stance::LowReady),
             upper: Some(crate::character::UpperMode::None),
-            going: String::from("holding"),
-            there: String::from("holding"),
+            going: "holding".into(),
+            there: "holding".into(),
             set_line: None,
             ..Default::default()
         });

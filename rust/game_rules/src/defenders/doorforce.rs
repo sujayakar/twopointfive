@@ -253,7 +253,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
         let cf = crate::coverfire::coverfire_on(g, gd);
-        let theirs = match &cf { Some(x) => x.kind == "thru", None => false };
+        let theirs = match &cf { Some(x) => x.kind.is_none(), None => false };
         if theirs && cf.as_ref().unwrap().fired > 0.0 { man!(g, gd).cf_t = time; }
         // a stand or a boot the alert branch has stopped asking about is over: taken up again it starts again
         {

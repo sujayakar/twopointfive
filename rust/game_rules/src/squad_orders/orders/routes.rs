@@ -930,8 +930,8 @@ pub(super) fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: 
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
         stack_side: Some(t.post.stack_side),
-        going: String::from("moving"),
-        there: String::from("moving"),
+        going: "moving".into(),
+        there: "moving".into(),
         tries: Some(Tries { door: t.door, side: t.side, post: t.post, at: v3::copy(at), on: assign_to_on(on) }),
         ..SquadOrdersAssignA::default()
     };
@@ -946,7 +946,7 @@ fn tries_of(g: &Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<Tries>
 fn walk_stop(g: &mut Game, mm: GuardId) {
     let p = g.ch[g.gd[mm].ch].pos;
     let on = tries_of(g, &crate::seats::here(g), mm).unwrap().on;
-    let a = SquadOrdersAssignA { post: Some([p[0], 0.0, p[2]]), there: String::from("stopped short"), set_line: None, fit: None, ..on_to_assign(&on) };
+    let a = SquadOrdersAssignA { post: Some([p[0], 0.0, p[2]]), there: crate::orders::Doing::new(crate::orders::At::StoppedShort, "stopped short"), set_line: None, fit: None, ..on_to_assign(&on) };
     squad_orders_assign(g, mm, &a);
 }
 
