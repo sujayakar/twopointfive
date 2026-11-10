@@ -4,8 +4,8 @@
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums
 //!
 //! Each mission is stood from its address as a click on its row stands it, Sam unhurt. A commander who is
-//! no tactician gives the squad an order every five seconds: "open and clear" the door nearest the nearest enemy, then "move" onto him, by turns. He is the same for
-//! every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
+//! no tactician gives the squad an order every four to seven seconds, by a die of his own: "open and clear" a door by one of the enemies nearest them, then "move" onto
+//! one, by turns. He is the same for every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
 //! `--played`: no commander; the hands-off player (hands_off.rs) plays it to its end, as the gate's `played` rows have him, 240 seconds at most. He looks, waits and
 //! fights beside his men, so it is slower (a run is some six seconds) and nearer a player's evening. `--secs` is not asked.
 //!
@@ -17,6 +17,7 @@
 //!
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of the hostage in a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
+use game::dice::Die;
 use game::game::GuardState;
 use game::ids::GuardId;
 use game::orders::Who;
@@ -33,9 +34,6 @@ fn every_mission() -> Vec<String> {
     clears.chain(game::scene_scenario_list::scenarios().into_iter().filter(|e| matches!(e.kind, Nightbreach | Rescue)).map(|e| e.id)).collect()
 }
 
-/// an order every so many frames, the first half a second in
-const ORDER_EVERY: usize = 300;
-const ORDER_FIRST: usize = 30;
 /// the open ways near the squad are counted every so many frames, within so far of a man
 const WAYS_EVERY: usize = 10;
 const WAYS_M: f64 = 4.0;
@@ -48,16 +46,35 @@ fn file_of(level: &str) -> String { format!("{level}.json") }
 
 fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
 
-fn order(p: &mut Play, clear: bool) -> bool {
-    let Some(lead) = p.mates().into_iter().find(|&m| p.up(m)) else { return false };
-    let at = p.at(lead);
-    let near = |a: &[f64; 2], b: &[f64; 2], to: [f64; 2]| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap();
-    let Some(man) = enemies(p).into_iter().filter(|&m| p.up(m)).map(|m| p.at(m)).min_by(|a, b| near(a, b, at)) else { return false };
-    let door = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).min_by(|a, b| near(a, b, man));
-    let to = if clear { door.unwrap_or(man) } else { man };
-    let target = game::orders::squad_orders_target_at(&mut p.g, [to[0], 0.0, to[1]]);
-    let _ = game::orders::squad_orders_give(&mut p.g, if clear { "openClear" } else { "move" }, Some(&target), Some(Who::All), None);
-    true
+/// The commander: an order every four to seven seconds, onto one of the three men nearest the squad, "open and clear" the door nearest that man (or the next one) or
+/// "move" onto him, by turns. His die is his own, so two seeds are two fights: on a fixed beat onto the nearest man the seeds of a mission were one fight over again.
+struct Commander { die: Die, next: usize, clear: bool }
+
+impl Commander {
+    fn new(seed: u32) -> Commander { Commander { die: Die::new(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
+    fn one_of(&mut self, mut v: Vec<[f64; 2]>, to: [f64; 2], n: usize) -> Option<[f64; 2]> {
+        v.sort_by(|a, b| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap());
+        v.truncate(n);
+        let i = (self.die.roll() * v.len() as f64) as usize;
+        v.get(i).copied()
+    }
+    /// false: nobody is left to order, or to be sent at
+    fn order(&mut self, p: &mut Play) -> bool {
+        let Some(lead) = p.mates().into_iter().find(|&m| p.up(m)) else { return false };
+        let men = enemies(p).into_iter().filter(|&m| p.up(m)).map(|m| p.at(m)).collect();
+        let Some(man) = self.one_of(men, p.at(lead), 3) else { return false };
+        let doors = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
+        let to = if self.clear { self.one_of(doors, man, 2).unwrap_or(man) } else { man };
+        let target = game::orders::squad_orders_target_at(&mut p.g, [to[0], 0.0, to[1]]);
+        let _ = game::orders::squad_orders_give(&mut p.g, if self.clear { "openClear" } else { "move" }, Some(&target), Some(Who::All), None);
+        self.clear = !self.clear;
+        true
+    }
+    fn tick(&mut self, p: &mut Play, f: usize) -> bool {
+        if f < self.next { return true; }
+        self.next = f + 240 + (self.die.roll() * 180.0) as usize;
+        self.order(p)
+    }
 }
 
 /// the seconds after which the hands-off player stops
@@ -74,11 +91,12 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
     let mut was: BTreeMap<u32, (bool, f64)> = BTreeMap::new();
     let t0 = p.time();
     let mut owes = game_start::owes::Owes::new();
+    let mut commander = Commander::new(seed);
     let mut him = played.then(|| HandsOff::new(p.g.seats[0], Plan { seed, cap: CAP, ..Default::default() }));
     for f in 0..((if played { CAP + 5.0 } else { secs }) * 60.0) as usize {
         match &mut him {
             Some(h) => { if h.over() { break; } p.played_by(h); }
-            None => { if f % ORDER_EVERY == ORDER_FIRST && !order(&mut p, (f / ORDER_EVERY) % 2 == 0) { break; } p.frame(); }
+            None => { if !commander.tick(&mut p, f) { break; } p.frame(); }
         }
         owes.tick(&mut p.g);
         let t = p.time() - t0;
