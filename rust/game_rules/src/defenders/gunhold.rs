@@ -483,15 +483,6 @@ fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &m
     } else {
         g.k.gunhold.show_m
     };
-    let mut mates: Vec<V3> = Vec::new();
-    for &o in &g.guards {
-        if o == gd || crate::condition::down(g, g.gd[o].ch) {
-            continue;
-        }
-        if let Some(goal) = g.gd[o].standoff.and_then(|os| g.m.gunhold.states.get(os)).and_then(|r| r.goal) {
-            mates.push(goal);
-        }
-    }
     let side = g.tab.guards_standoff[s].side;
     for off in [40.0, 20.0, 60.0, 0.0, -25.0] {
         for r in [4.2, 3.5, 4.8] {
@@ -514,7 +505,7 @@ fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &m
             if shut {
                 continue;
             }
-            if mates.iter().any(|&m8| flat(m8, p) < 1.2) {
+            if crate::places::taken(g, gd, p, 1.2) {
                 continue;
             }
             plans += 1;

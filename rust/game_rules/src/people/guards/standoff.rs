@@ -579,18 +579,6 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
             return Some(ap);
         }
     }
-    let mut others: Vec<GuardId> = Vec::new();
-    for i in 0..g.guards.len() {
-        let o = g.guards[i];
-        if o == gd || crate::condition::down(g, g.gd[o].ch) {
-            continue;
-        }
-        if let Some(os) = g.gd[o].standoff {
-            if g.tab.guards_standoff[os].pair == p.held {
-                others.push(o);
-            }
-        }
-    }
     let mut plans = 0;
     let ways: Vec<f64> = if js::truthy(going) { vec![dir] } else { vec![dir, -dir] };
     let steps: &[f64] = if round { &[0.0] } else { &[50.0, 30.0, 70.0] };
@@ -609,11 +597,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
                 if no_sight_at(g, (q[0] + pos[0]) / 2.0, (q[2] + pos[2]) / 2.0, c_2) {
                     continue;
                 }
-                let taken = others.iter().any(|&o| {
-                    let at = g.gd[o].standoff.and_then(|os| g.tab.guards_standoff[os].orbit_goal).unwrap_or(g.ch[g.gd[o].ch].pos);
-                    v3::dist_xz(at, q) < 1.5
-                });
-                if taken {
+                if crate::places::taken(g, gd, q, 1.5) {
                     continue;
                 }
                 plans += 1;

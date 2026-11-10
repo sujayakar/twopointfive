@@ -626,13 +626,6 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         let t: V3 = [p[0] + ux * k, 1.2, p[2] + uz * k];
         if !crate::scene_collision::nav_grid_is_blocked(g, t[0], t[2]) { stack.push(t); }
     }
-    let mut taken: Vec<V3> = Vec::new();
-    for &o in &g.staged.foes {
-        if o != h && !crate::condition::down(g, g.gd[o].ch) {
-            taken.push(pos_of(g, o));
-            if let Some(s) = def_of(g, o).spot { taken.push(s); }
-        }
-    }
     if fires(g, c, p, out, &stack) { return Some(v3::copy(c)); }
     let cell = g.col.nav.cell;
     let (x0, x1, z0, z1) = (m::floor((c[0] - walk) / cell), m::ceil((c[0] + walk) / cell), m::floor((c[2] - walk) / cell), m::ceil((c[2] + walk) / cell));
@@ -644,7 +637,7 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
             let q: V3 = [(ix + 0.5) * cell, 0.0, (iz + 0.5) * cell];
             let d = v3::dist_xz(q, c);
             ix += 1.0;
-            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || taken.iter().any(|&t| v3::dist_xz(t, q) < 1.5) { continue; }
+            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || crate::places::taken(g, h, q, 1.5) { continue; }
             let x = rescue_crew_seen(g, q, p, 4.0);
             cand.push((q, x, d));
         }

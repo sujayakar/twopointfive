@@ -213,12 +213,7 @@ fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
     if let Some(room) = g.tab.roomfight_def[d].room {
         if g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(p, e.at) < 1.2) { return false; }
     }
-    if !(v3::dist_xz(p, threat) >= far) { return false; }
-    !g.guards.iter().any(|&o| {
-        if o == gd || crate::condition::down(g, g.gd[o].ch) { return false; }
-        let sent = g.m.darkfoe.state_of.get(o).and_then(|s| s.to);
-        v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.9 || sent.map_or(false, |t| v3::dist_xz(t, p) < 0.9)
-    })
+    v3::dist_xz(p, threat) >= far && !crate::places::taken(g, gd, p, 0.9)
 }
 
 /// Where a man with no light goes: the nearest floor of his room he can see from, else the shoulder of a mate whose lamp burns.

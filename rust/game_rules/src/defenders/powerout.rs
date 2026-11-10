@@ -233,7 +233,7 @@ fn way_to(g: &mut crate::game::Game, from: V3, to: V3) -> Option<crate::powerout
 }
 
 /// the second man's place: free floor `coverM` short of the lever with a line to it, nearest the way they came; and what he watches from it.
-fn cover_spot(g: &mut crate::game::Game, lever: V3, way: &[V3], from: V3) -> crate::powerout::CoverSpot {
+fn cover_spot(g: &mut crate::game::Game, gd: GuardId, lever: V3, way: &[V3], from: V3) -> crate::powerout::CoverSpot {
     let [r0, r1] = g.k.powerout.cover_m;
     // the point of the way about six metres before its end: where anybody following them would come from
     let mut back = from;
@@ -254,7 +254,7 @@ fn cover_spot(g: &mut crate::game::Game, lever: V3, way: &[V3], from: V3) -> cra
             let a = (k as f64) * m::PI / 6.0;
             k += 1;
             let p: V3 = [lever[0] + m::sin(a) * r, 0.0, lever[2] + m::cos(a) * r];
-            if !crate::places::roomy(g, p) { continue; }
+            if !crate::places::roomy(g, p) || crate::places::taken(g, gd, p, 0.9) { continue; }
             if crate::scene_collision::segment_blocked(g, [p[0], 1.2, p[2]], [lever[0], 1.2, lever[2]], None, None, None) {
                 continue;
             }
@@ -622,9 +622,10 @@ fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
     st(g).men.push(lead_man);
     if let Some(second) = &second {
         let from = pos_of(g, lead_gd);
-        let c = cover_spot(g, lever, &lead.1.path, from);
+        let gd = g.tab.roomfight_def[second.0].gd;
+        let c = cover_spot(g, gd, lever, &lead.1.path, from);
         let cover_man = Man {
-            gd: g.tab.roomfight_def[second.0].gd,
+            gd,
             role: ManRole::Cover,
             phase: Phase::Wait,
             goal: c.spot,

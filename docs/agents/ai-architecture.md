@@ -113,6 +113,8 @@ man. No panel of the page shows any of this: ask from a native test.
 - **Alert is not "has a man to fight".** A bang alone makes a man alert. A rule that means a fight asks `saw_his_man_within`.
 - **A question lives in `control/man.rs`:** one line, takes `&Game`, and its comment says what it does not tell you. Add the missing one there instead
   of reading fields in a rule.
+- **Floor is asked of `world/places.rs`** before a rule sends a man to it: nobody stands there, goes there or is sent there by any rule (`taken`), his
+  shoulders fit (`roomy`), his walk ends there (`walk`). What else suits it, hidden from whom or in sight of what, is the rule's own.
 - **A new tasker asks `kept`** and keeps no list of its own. Add no assignment to `awareness`, `state`, `last_known` or `foe`: they go through
   `mind.rs`.
 
@@ -185,8 +187,8 @@ Agreed and not built. Assume none of it.
 - **The whole list in bands:** incapable, staged, reflex, scripted, close, task, initiative, routine, with his script, fight, search and patrol as
   rules in it, and the room fight's `Def` and `Op` as taskers and rules.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door, every `transition` run every tick.
-- **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. `Foe`
-  names a man (`Foe::Player` does not). A squad's knowledge is one record of contacts.
+- **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. A
+  squad's knowledge is one record of contacts.
 - **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen
