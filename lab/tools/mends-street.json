@@ -7,11 +7,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "street night",
 "dist": 27,
 "look": [
@@ -32,11 +31,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "street day",
 "dist": 27,
 "look": [
@@ -57,41 +55,15 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "store night",
 "dist": 14,
 "look": [
 -1.5,
 0.8,
--5
-],
-"yaw": 0.4,
-"pitch": 0.75,
-"hour": 22.2,
-"cut": 2.5
-},
-{
-"w": 960,
-"h": 540,
-"tick": 300,
-"samples": 300,
-"methods": [
-"mend0",
-"mend1",
-"mend2",
-"mend4",
-"mend7"
-],
-"paths": 900,
-"name": "shelf",
-"dist": 4.5,
-"look": [
--1.5,
-1.0,
 -5
 ],
 "yaw": 0.4,

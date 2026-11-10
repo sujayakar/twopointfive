@@ -7,11 +7,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "garden",
 "dist": 22,
 "hour": 14.0,
@@ -30,11 +29,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "roof day",
 "dist": 50,
 "hour": 16.0
@@ -47,11 +45,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "ground day",
 "dist": 34,
 "hour": 15.0,
@@ -71,11 +68,10 @@
 "methods": [
 "mend0",
 "mend1",
-"mend2",
-"mend4",
-"mend7"
+"mend8",
+"mend9"
 ],
-"paths": 900,
+"paths": 700,
 "name": "ground night",
 "dist": 34,
 "hour": 21.5,
