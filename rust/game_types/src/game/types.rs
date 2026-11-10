@@ -1287,7 +1287,11 @@ impl Game {
 pub struct Tabs {
     pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
     pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
@@ -1455,7 +1459,6 @@ pub struct Mods {
     pub squadthrow: crate::squadthrow::SquadthrowMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
-    pub cmd: crate::cmd::CmdMod,
     pub fireline: crate::fireline::FirelineMod,
     pub doorforce: crate::doorforce::DoorforceMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
